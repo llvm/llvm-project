@@ -387,14 +387,14 @@ _mm512_maskz_cvts_rops_hf8(__mmask16 __U, __m512 __A) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8 instruction.
 ///
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_cvtbiasps_bf8(__m512i __A, __m512 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_512((__v64qi)__A, (__v16sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_512((__v16si)__A, (__v16sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -410,7 +410,7 @@ _mm512_cvtbiasps_bf8(__m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -432,7 +432,7 @@ _mm512_mask_cvtbiasps_bf8(__m128i __W, __mmask16 __U, __m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -453,14 +453,14 @@ _mm512_maskz_cvtbiasps_bf8(__mmask16 __U, __m512i __A, __m512 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8S instruction.
 ///
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_cvts_biasps_bf8(__m512i __A, __m512 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_512((__v64qi)__A,
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_512((__v16si)__A,
                                                      (__v16sf)__B);
 }
 
@@ -477,7 +477,7 @@ _mm512_cvts_biasps_bf8(__m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -499,7 +499,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS512 _mm512_mask_cvts_biasps_bf8(
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -520,14 +520,14 @@ _mm512_maskz_cvts_biasps_bf8(__mmask16 __U, __m512i __A, __m512 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8 instruction.
 ///
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_cvtbiasps_hf8(__m512i __A, __m512 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_512((__v64qi)__A, (__v16sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_512((__v16si)__A, (__v16sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -543,7 +543,7 @@ _mm512_cvtbiasps_hf8(__m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -565,7 +565,7 @@ _mm512_mask_cvtbiasps_hf8(__m128i __W, __mmask16 __U, __m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -586,14 +586,14 @@ _mm512_maskz_cvtbiasps_hf8(__mmask16 __U, __m512i __A, __m512 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8S instruction.
 ///
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
 _mm512_cvts_biasps_hf8(__m512i __A, __m512 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_512((__v64qi)__A,
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_512((__v16si)__A,
                                                      (__v16sf)__B);
 }
 
@@ -610,7 +610,7 @@ _mm512_cvts_biasps_hf8(__m512i __A, __m512 __B) {
 /// \param __U
 ///    A 16-bit mask indicating which elements to write.
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -632,7 +632,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS512 _mm512_mask_cvts_biasps_hf8(
 /// \param __U
 ///    A 16-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 512-bit vector of [64 x i8] containing bias values.
+///    A 512-bit vector of [16 x i32] containing bias values.
 /// \param __B
 ///    A 512-bit vector of [16 x float].
 /// \returns
@@ -775,7 +775,7 @@ _mm512_maskz_cvthf8_ps(__mmask16 __U, __m128i __A) {
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the converted BF6 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_cvtbf8_bf6s(__m512i __A) {
+_mm512_cvts_bf8_bf6(__m512i __A) {
   return (__m512i)__builtin_ia32_vcvtbf82bf6s_512((__v64qi)__A);
 }
 
@@ -792,7 +792,7 @@ _mm512_cvtbf8_bf6s(__m512i __A) {
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the converted HF6 values.
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
-_mm512_cvthf8_hf6s(__m512i __A) {
+_mm512_cvts_hf8_hf6(__m512i __A) {
   return (__m512i)__builtin_ia32_vcvthf82hf6s_512((__v64qi)__A);
 }
 
@@ -809,7 +809,7 @@ _mm512_cvthf8_hf6s(__m512i __A) {
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted BF4 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS512
-_mm512_cvtbf8_bf4s(__m512i __A) {
+_mm512_cvts_bf8_bf4(__m512i __A) {
   return (__m256i)__builtin_ia32_vcvtbf82bf4s_512((__v64qi)__A);
 }
 
@@ -826,7 +826,7 @@ _mm512_cvtbf8_bf4s(__m512i __A) {
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted BF4 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS512
-_mm512_cvthf8_bf4s(__m512i __A) {
+_mm512_cvts_hf8_bf4(__m512i __A) {
   return (__m256i)__builtin_ia32_vcvthf82bf4s_512((__v64qi)__A);
 }
 
@@ -844,7 +844,7 @@ _mm512_cvthf8_bf4s(__m512i __A) {
 /// \param __A
 ///    A 512-bit vector of [64 x i8] containing BF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_cvtbf8_bf4s_storeu(void *__P, __m512i __A) {
+_mm512_cvts_bf8_bf4_storeu(void *__P, __m512i __A) {
   __builtin_ia32_vcvtbf82bf4s_512_mem(__P, (__v64qi)__A);
 }
 
@@ -862,7 +862,7 @@ _mm512_cvtbf8_bf4s_storeu(void *__P, __m512i __A) {
 /// \param __A
 ///    A 512-bit vector of [64 x i8] containing HF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_cvthf8_bf4s_storeu(void *__P, __m512i __A) {
+_mm512_cvts_hf8_bf4_storeu(void *__P, __m512i __A) {
   __builtin_ia32_vcvthf82bf4s_512_mem(__P, (__v64qi)__A);
 }
 
@@ -1053,7 +1053,7 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
-#define _mm512_unpackb_epi8(A, imm)                                            \
+#define _mm512_unpack_epi8(A, imm)                                             \
   ((__m512i)__builtin_ia32_vunpackb512((__v64qi)(__m512i)(A), (int)(imm)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -1073,9 +1073,9 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
-#define _mm512_mask_unpackb_epi8(W, U, A, imm)                                 \
+#define _mm512_mask_unpack_epi8(W, U, A, imm)                                  \
   ((__m512i)__builtin_ia32_selectb_512(                                        \
-      (__mmask64)(U), (__v64qi)_mm512_unpackb_epi8((A), (imm)),                \
+      (__mmask64)(U), (__v64qi)_mm512_unpack_epi8((A), (imm)),                 \
       (__v64qi)(__m512i)(W)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -1093,12 +1093,10 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
-#define _mm512_maskz_unpackb_epi8(U, A, imm)                                   \
+#define _mm512_maskz_unpack_epi8(U, A, imm)                                    \
   ((__m512i)__builtin_ia32_selectb_512(                                        \
-      (__mmask64)(U), (__v64qi)_mm512_unpackb_epi8((A), (imm)),                \
+      (__mmask64)(U), (__v64qi)_mm512_unpack_epi8((A), (imm)),                 \
       (__v64qi)_mm512_setzero_si512()))
-
-/* VPMOVSSDB - Symmetric Signed Saturation DWord to Byte */
 
 /// Convert packed signed 32-bit integers in \a __A to packed 8-bit integers
 ///    with symmetric signed saturation (clamp to [-127, +127]), and store
@@ -1113,7 +1111,7 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
-_mm512_cvtss_epi32_epi8(__m512i __A) {
+_mm512_cvtssepi32_epi8(__m512i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb512_mask(
       (__v16si)__A, (__v16qi)_mm_setzero_si128(), (__mmask16)-1);
 }
@@ -1134,7 +1132,7 @@ _mm512_cvtss_epi32_epi8(__m512i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
-_mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
+_mm512_mask_cvtssepi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb512_mask((__v16si)__A, (__v16qi)__W,
                                                    __U);
 }
@@ -1153,7 +1151,7 @@ _mm512_mask_cvtss_epi32_epi8(__m128i __W, __mmask16 __U, __m512i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS512
-_mm512_maskz_cvtss_epi32_epi8(__mmask16 __U, __m512i __A) {
+_mm512_maskz_cvtssepi32_epi8(__mmask16 __U, __m512i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb512_mask(
       (__v16si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
@@ -1173,7 +1171,7 @@ _mm512_maskz_cvtss_epi32_epi8(__mmask16 __U, __m512i __A) {
 /// \param __A
 ///    A 512-bit vector of [16 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS512
-_mm512_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask16 __M, __m512i __A) {
+_mm512_mask_cvtssepi32_storeu_epi8(void *__P, __mmask16 __M, __m512i __A) {
   __builtin_ia32_vpmovssdb512mem_mask((__v16qi *)__P, (__v16si)__A, __M);
 }
 

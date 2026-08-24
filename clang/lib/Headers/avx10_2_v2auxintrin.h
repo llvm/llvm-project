@@ -56,12 +56,14 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtps_bf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_bf8(__m128i __W,
                                                                    __mmask8 __U,
                                                                    __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtps_bf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2bf8_128_mask((__v4sf)__A, (__v16qi)__W,
+                                                     (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -77,12 +79,12 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_bf8(__m128i __W,
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvtps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -117,11 +119,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtps_bf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtps_bf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2bf8_256_mask((__v8sf)__A, (__v16qi)__W,
+                                                     (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -137,12 +141,12 @@ _mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvtps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -176,11 +180,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ps_bf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_ps_bf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_128_mask((__v4sf)__A, (__v16qi)__W,
+                                                      (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -196,12 +202,12 @@ _mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvts_ps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -235,11 +241,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvts_ps_bf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_ps_bf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_256_mask((__v8sf)__A, (__v16qi)__W,
+                                                      (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -255,12 +263,12 @@ _mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvts_ps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -294,12 +302,14 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtps_hf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_hf8(__m128i __W,
                                                                    __mmask8 __U,
                                                                    __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtps_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2hf8_128_mask((__v4sf)__A, (__v16qi)__W,
+                                                     (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -315,12 +325,12 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_hf8(__m128i __W,
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvtps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -354,11 +364,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtps_hf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtps_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2hf8_256_mask((__v8sf)__A, (__v16qi)__W,
+                                                     (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -374,12 +386,12 @@ _mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvtps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -413,11 +425,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ps_hf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_ps_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_128_mask((__v4sf)__A, (__v16qi)__W,
+                                                      (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -433,12 +447,12 @@ _mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvts_ps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -472,11 +486,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvts_ps_hf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_ps_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_256_mask((__v8sf)__A, (__v16qi)__W,
+                                                      (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -492,12 +508,12 @@ _mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvts_ps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -531,11 +547,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtrops_hf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtrops_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -551,12 +569,12 @@ _mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvtrops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -590,11 +608,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtrops_hf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtrops_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -610,12 +630,12 @@ _mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvtrops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -649,11 +669,13 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_rops_hf8(__m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_rops_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -669,12 +691,12 @@ _mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm_cvts_rops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -709,11 +731,13 @@ _mm256_cvts_rops_hf8(__m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_rops_hf8(__A), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -729,12 +753,12 @@ _mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask16)__U,
-                                             (__v16qi)_mm256_cvts_rops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -746,14 +770,14 @@ _mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_bf8(__m128i __A,
                                                                   __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128((__v16qi)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128((__v4si)__A, (__v4sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -769,15 +793,17 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_bf8(__m128i __A,
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtbiasps_bf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -791,16 +817,16 @@ _mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtbiasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -812,14 +838,14 @@ _mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8 instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtbiasps_bf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256((__v32qi)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256((__v8si)__A, (__v8sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -835,15 +861,17 @@ _mm256_cvtbiasps_bf8(__m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtbiasps_bf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -857,16 +885,16 @@ _mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtbiasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -878,14 +906,14 @@ _mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8S instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvts_biasps_bf8(__m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128((__v16qi)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128((__v4si)__A, (__v4sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -901,15 +929,17 @@ _mm_cvts_biasps_bf8(__m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_biasps_bf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -923,16 +953,16 @@ _mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_biasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -944,14 +974,14 @@ _mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2BF8S instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_biasps_bf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256((__v32qi)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256((__v8si)__A, (__v8sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -967,15 +997,17 @@ _mm256_cvts_biasps_bf8(__m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_bf8(
     __m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_biasps_bf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -989,16 +1021,16 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_bf8(
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_biasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1010,14 +1042,14 @@ _mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8 instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_hf8(__m128i __A,
                                                                   __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128((__v16qi)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128((__v4si)__A, (__v4sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1033,15 +1065,17 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_hf8(__m128i __A,
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtbiasps_hf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1055,16 +1089,16 @@ _mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvtbiasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1076,14 +1110,14 @@ _mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8 instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtbiasps_hf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256((__v32qi)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256((__v8si)__A, (__v8sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1099,15 +1133,17 @@ _mm256_cvtbiasps_hf8(__m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtbiasps_hf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1121,16 +1157,16 @@ _mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvtbiasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1142,14 +1178,14 @@ _mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8S instruction.
 ///
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvts_biasps_hf8(__m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128((__v16qi)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128((__v4si)__A, (__v4sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1165,15 +1201,17 @@ _mm_cvts_biasps_hf8(__m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_biasps_hf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1187,16 +1225,16 @@ _mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 128-bit vector of [16 x i8] containing bias values.
+///    A 128-bit vector of [4 x i32] containing bias values.
 /// \param __B
 ///    A 128-bit vector of [4 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm_cvts_biasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1208,14 +1246,14 @@ _mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
 /// This intrinsic corresponds to the \c VCVTBIASPS2HF8S instruction.
 ///
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_biasps_hf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256((__v32qi)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256((__v8si)__A, (__v8sf)__B);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1231,15 +1269,17 @@ _mm256_cvts_biasps_hf8(__m256i __A, __m256 __B) {
 /// \param __U
 ///    A 8-bit mask indicating which elements to write.
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or the corresponding bytes of \a __W where the mask bit is clear;
+///    the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_hf8(
     __m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_biasps_hf8(__A, __B), (__v16qi)__W);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)__W, (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1253,16 +1293,16 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_hf8(
 /// \param __U
 ///    A 8-bit mask indicating which elements to write (zero otherwise).
 /// \param __A
-///    A 256-bit vector of [32 x i8] containing bias values.
+///    A 256-bit vector of [8 x i32] containing bias values.
 /// \param __B
 ///    A 256-bit vector of [8 x float].
 /// \returns
-///    A 128-bit vector of [16 x i8] containing the converted values.
+///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
+///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask16)__U, (__v16qi)_mm256_cvts_biasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -1513,7 +1553,7 @@ _mm256_maskz_cvthf8_ps(__mmask8 __U, __m128i __A) {
 ///    A 128-bit vector of [16 x i8] containing BF8 values.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted BF6 values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf8_bf6s(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf6(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf6s_128((__v16qi)__A);
 }
 
@@ -1530,7 +1570,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf8_bf6s(__m128i __A) {
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted BF6 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtbf8_bf6s(__m256i __A) {
+_mm256_cvts_bf8_bf6(__m256i __A) {
   return (__m256i)__builtin_ia32_vcvtbf82bf6s_256((__v32qi)__A);
 }
 
@@ -1546,7 +1586,7 @@ _mm256_cvtbf8_bf6s(__m256i __A) {
 ///    A 128-bit vector of [16 x i8] containing HF8 values.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted HF6 values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf8_hf6s(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_hf6(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvthf82hf6s_128((__v16qi)__A);
 }
 
@@ -1563,7 +1603,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf8_hf6s(__m128i __A) {
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the converted HF6 values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvthf8_hf6s(__m256i __A) {
+_mm256_cvts_hf8_hf6(__m256i __A) {
   return (__m256i)__builtin_ia32_vcvthf82hf6s_256((__v32qi)__A);
 }
 
@@ -1580,7 +1620,7 @@ _mm256_cvthf8_hf6s(__m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted BF4 values
 ///    (lower 8 bytes used).
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf8_bf4s(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_bf8_bf4(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf4s_128((__v16qi)__A);
 }
 
@@ -1597,7 +1637,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbf8_bf4s(__m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted BF4 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtbf8_bf4s(__m256i __A) {
+_mm256_cvts_bf8_bf4(__m256i __A) {
   return (__m128i)__builtin_ia32_vcvtbf82bf4s_256((__v32qi)__A);
 }
 
@@ -1614,7 +1654,7 @@ _mm256_cvtbf8_bf4s(__m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted BF4 values
 ///    (lower 8 bytes used).
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf8_bf4s(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_hf8_bf4(__m128i __A) {
   return (__m128i)__builtin_ia32_vcvthf82bf4s_128((__v16qi)__A);
 }
 
@@ -1631,7 +1671,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvthf8_bf4s(__m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted BF4 values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvthf8_bf4s(__m256i __A) {
+_mm256_cvts_hf8_bf4(__m256i __A) {
   return (__m128i)__builtin_ia32_vcvthf82bf4s_256((__v32qi)__A);
 }
 
@@ -1649,7 +1689,7 @@ _mm256_cvthf8_bf4s(__m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing BF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_cvtbf8_bf4s_storeu(void *__P, __m128i __A) {
+_mm_cvts_bf8_bf4_storeu(void *__P, __m128i __A) {
   __builtin_ia32_vcvtbf82bf4s_128_mem(__P, (__v16qi)__A);
 }
 
@@ -1667,7 +1707,7 @@ _mm_cvtbf8_bf4s_storeu(void *__P, __m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing BF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_cvtbf8_bf4s_storeu(void *__P, __m256i __A) {
+_mm256_cvts_bf8_bf4_storeu(void *__P, __m256i __A) {
   __builtin_ia32_vcvtbf82bf4s_256_mem(__P, (__v32qi)__A);
 }
 
@@ -1685,7 +1725,7 @@ _mm256_cvtbf8_bf4s_storeu(void *__P, __m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [16 x i8] containing HF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_cvthf8_bf4s_storeu(void *__P, __m128i __A) {
+_mm_cvts_hf8_bf4_storeu(void *__P, __m128i __A) {
   __builtin_ia32_vcvthf82bf4s_128_mem(__P, (__v16qi)__A);
 }
 
@@ -1703,7 +1743,7 @@ _mm_cvthf8_bf4s_storeu(void *__P, __m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [32 x i8] containing HF8 values.
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_cvthf8_bf4s_storeu(void *__P, __m256i __A) {
+_mm256_cvts_hf8_bf4_storeu(void *__P, __m256i __A) {
   __builtin_ia32_vcvthf82bf4s_256_mem(__P, (__v32qi)__A);
 }
 
@@ -2055,6 +2095,36 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
       __U, (__v32qi)_mm256_cvthf6_hf8(__A), (__v32qi)_mm256_setzero_si256());
 }
 
+/// Compose the \c size field of the immediate operand of \c VUNPACKB, which
+///    selects the size in bits of the packed source elements.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param n
+///    The packed element size in bits, in the range [2, 7].
+/// \returns
+///    Bits [4:2] of the immediate operand.
+#define _MM_UNPACKB_SIZE(n) (((n)&0x7) << 2)
+
+/// Compose the \c start field of the immediate operand of \c VUNPACKB, which
+///    selects which block of packed elements is extracted from the source.
+///
+/// \headerfile <immintrin.h>
+///
+/// \param s
+///    The starting offset, in the range [0, 3]. The permitted values depend on
+///    the element size; only offsets that allow a full extraction are valid.
+/// \returns
+///    Bits [1:0] of the immediate operand.
+#define _MM_UNPACKB_START(s) (((s)&0x3) << 0)
+
+/// The \c sign \c ext field of the immediate operand of \c VUNPACKB,
+///    requesting that unpacked elements be sign-extended to 8 bits instead of
+///    zero-extended.
+///
+/// \headerfile <immintrin.h>
+#define _MM_UNPACKB_SEXT (1 << 5)
+
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
 ///    the results in a 128-bit vector.
 ///
@@ -2068,7 +2138,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
-#define _mm_unpackb_epi8(A, imm)                                               \
+#define _mm_unpack_epi8(A, imm)                                                \
   ((__m128i)__builtin_ia32_vunpackb128((__v16qi)(__m128i)(A), (int)(imm)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -2088,9 +2158,9 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
-#define _mm_mask_unpackb_epi8(W, U, A, imm)                                    \
+#define _mm_mask_unpack_epi8(W, U, A, imm)                                     \
   ((__m128i)__builtin_ia32_selectb_128((__mmask16)(U),                         \
-                                       (__v16qi)_mm_unpackb_epi8((A), (imm)),  \
+                                       (__v16qi)_mm_unpack_epi8((A), (imm)),   \
                                        (__v16qi)(__m128i)(W)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -2108,9 +2178,9 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
-#define _mm_maskz_unpackb_epi8(U, A, imm)                                      \
+#define _mm_maskz_unpack_epi8(U, A, imm)                                       \
   ((__m128i)__builtin_ia32_selectb_128((__mmask16)(U),                         \
-                                       (__v16qi)_mm_unpackb_epi8((A), (imm)),  \
+                                       (__v16qi)_mm_unpack_epi8((A), (imm)),   \
                                        (__v16qi)_mm_setzero_si128()))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -2126,7 +2196,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
-#define _mm256_unpackb_epi8(A, imm)                                            \
+#define _mm256_unpack_epi8(A, imm)                                             \
   ((__m256i)__builtin_ia32_vunpackb256((__v32qi)(__m256i)(A), (int)(imm)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -2146,9 +2216,9 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
-#define _mm256_mask_unpackb_epi8(W, U, A, imm)                                 \
+#define _mm256_mask_unpack_epi8(W, U, A, imm)                                  \
   ((__m256i)__builtin_ia32_selectb_256(                                        \
-      (__mmask32)(U), (__v32qi)_mm256_unpackb_epi8((A), (imm)),                \
+      (__mmask32)(U), (__v32qi)_mm256_unpack_epi8((A), (imm)),                 \
       (__v32qi)(__m256i)(W)))
 
 /// Unpack bytes from \a A according to the immediate value \a imm, and store
@@ -2166,12 +2236,10 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    An immediate value specifying the unpack operation.
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
-#define _mm256_maskz_unpackb_epi8(U, A, imm)                                   \
+#define _mm256_maskz_unpack_epi8(U, A, imm)                                    \
   ((__m256i)__builtin_ia32_selectb_256(                                        \
-      (__mmask32)(U), (__v32qi)_mm256_unpackb_epi8((A), (imm)),                \
+      (__mmask32)(U), (__v32qi)_mm256_unpack_epi8((A), (imm)),                 \
       (__v32qi)_mm256_setzero_si256()))
-
-/* VPMOVSSDB - Symmetric Signed Saturation DWord to Byte */
 
 /// Convert packed signed 32-bit integers in \a __A to packed 8-bit integers
 ///    with symmetric signed saturation (clamp to [-127, +127]), and store
@@ -2187,7 +2255,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtss_epi32_epi8(__m128i __A) {
+_mm_cvtssepi32_epi8(__m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
@@ -2208,7 +2276,7 @@ _mm_cvtss_epi32_epi8(__m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
+_mm_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask((__v4si)__A, (__v16qi)__W,
                                                    __U);
 }
@@ -2227,7 +2295,7 @@ _mm_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m128i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
+_mm_maskz_cvtssepi32_epi8(__mmask8 __U, __m128i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb128_mask(
       (__v4si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
@@ -2246,7 +2314,7 @@ _mm_maskz_cvtss_epi32_epi8(__mmask8 __U, __m128i __A) {
 ///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtss_epi32_epi8(__m256i __A) {
+_mm256_cvtssepi32_epi8(__m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)-1);
 }
@@ -2267,7 +2335,7 @@ _mm256_cvtss_epi32_epi8(__m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
+_mm256_mask_cvtssepi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask((__v8si)__A, (__v16qi)__W,
                                                    __U);
 }
@@ -2286,7 +2354,7 @@ _mm256_mask_cvtss_epi32_epi8(__m128i __W, __mmask8 __U, __m256i __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
+_mm256_maskz_cvtssepi32_epi8(__mmask8 __U, __m256i __A) {
   return (__m128i)__builtin_ia32_vpmovssdb256_mask(
       (__v8si)__A, (__v16qi)_mm_setzero_si128(), __U);
 }
@@ -2306,7 +2374,7 @@ _mm256_maskz_cvtss_epi32_epi8(__mmask8 __U, __m256i __A) {
 /// \param __A
 ///    A 128-bit vector of [4 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS128
-_mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
+_mm_mask_cvtssepi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
   __builtin_ia32_vpmovssdb128mem_mask((__v16qi *)__P, (__v4si)__A, __M);
 }
 
@@ -2325,7 +2393,7 @@ _mm_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m128i __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x i32].
 static __inline__ void __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
+_mm256_mask_cvtssepi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
   __builtin_ia32_vpmovssdb256mem_mask((__v16qi *)__P, (__v8si)__A, __M);
 }
 

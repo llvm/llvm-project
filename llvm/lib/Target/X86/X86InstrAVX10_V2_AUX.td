@@ -17,7 +17,6 @@
 
 // Convert from FP32 to FP8: truncating conversion, quarter-size output
 // Output is always xmm for all VL variants.
-// Adapts avx512_vcvt_fp for each VL level with explicit dest/src type mappings.
 multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
                                         SDPatternOperator OpNode,
                                         SDPatternOperator MaskOpNode> {
@@ -44,16 +43,16 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
   // InstAliases for x/y suffixes
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst,
-                  VR128X:$src), 0>;
+                   VR128X:$src), 0>;
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst,
-                  f128mem:$src), 0, "intel">;
+                   f128mem:$src), 0, "intel">;
   def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst,
-                  VR256X:$src), 0>;
+                   VR256X:$src), 0>;
   def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst,
-                  f256mem:$src), 0, "intel">;
+                   f256mem:$src), 0, "intel">;
 
   // Explicit patterns for Z256 (8 source elements, VK8WM mask)
   // Unmasked
@@ -61,33 +60,33 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
             (!cast<Instruction>(NAME # "Z256rr") VR256X:$src)>;
   // Masked (merge)
   def : Pat<(MaskOpNode (v8f32 VR256X:$src), (v16i8 VR128X:$src0),
-                         VK8WM:$mask),
+                        VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rrk") VR128X:$src0, VK8WM:$mask,
                                 VR256X:$src)>;
   // Masked (zero)
   def : Pat<(MaskOpNode (v8f32 VR256X:$src), v16i8x_info.ImmAllZerosV,
-                         VK8WM:$mask),
+                        VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rrkz") VK8WM:$mask,
                                 VR256X:$src)>;
   // Memory
   def : Pat<(v16i8 (OpNode (loadv8f32 addr:$src))),
             (!cast<Instruction>(NAME # "Z256rm") addr:$src)>;
   def : Pat<(MaskOpNode (loadv8f32 addr:$src), (v16i8 VR128X:$src0),
-                         VK8WM:$mask),
+                        VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmk") VR128X:$src0, VK8WM:$mask,
                                 addr:$src)>;
   def : Pat<(MaskOpNode (loadv8f32 addr:$src), v16i8x_info.ImmAllZerosV,
-                         VK8WM:$mask),
+                        VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmkz") VK8WM:$mask, addr:$src)>;
   // Broadcast
   def : Pat<(v16i8 (OpNode (v8f32 (X86VBroadcastld32 addr:$src)))),
             (!cast<Instruction>(NAME # "Z256rmb") addr:$src)>;
   def : Pat<(MaskOpNode (v8f32 (X86VBroadcastld32 addr:$src)),
-                          (v16i8 VR128X:$src0), VK8WM:$mask),
+                        (v16i8 VR128X:$src0), VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmbk") VR128X:$src0, VK8WM:$mask,
                                 addr:$src)>;
   def : Pat<(MaskOpNode (v8f32 (X86VBroadcastld32 addr:$src)),
-                          v16i8x_info.ImmAllZerosV, VK8WM:$mask),
+                        v16i8x_info.ImmAllZerosV, VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmbkz") VK8WM:$mask, addr:$src)>;
 
   // Explicit patterns for Z128 (4 source elements, VK4WM mask)
@@ -96,130 +95,129 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
             (!cast<Instruction>(NAME # "Z128rr") VR128X:$src)>;
   // Masked (merge)
   def : Pat<(MaskOpNode (v4f32 VR128X:$src), (v16i8 VR128X:$src0),
-                         VK4WM:$mask),
+                        VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rrk") VR128X:$src0, VK4WM:$mask,
                                 VR128X:$src)>;
   // Masked (zero)
   def : Pat<(MaskOpNode (v4f32 VR128X:$src), v16i8x_info.ImmAllZerosV,
-                         VK4WM:$mask),
+                        VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rrkz") VK4WM:$mask,
                                 VR128X:$src)>;
   // Memory
   def : Pat<(v16i8 (OpNode (loadv4f32 addr:$src))),
             (!cast<Instruction>(NAME # "Z128rm") addr:$src)>;
   def : Pat<(MaskOpNode (loadv4f32 addr:$src), (v16i8 VR128X:$src0),
-                         VK4WM:$mask),
+                        VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmk") VR128X:$src0, VK4WM:$mask,
                                 addr:$src)>;
   def : Pat<(MaskOpNode (loadv4f32 addr:$src), v16i8x_info.ImmAllZerosV,
-                         VK4WM:$mask),
+                        VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmkz") VK4WM:$mask, addr:$src)>;
   // Broadcast
   def : Pat<(v16i8 (OpNode (v4f32 (X86VBroadcastld32 addr:$src)))),
             (!cast<Instruction>(NAME # "Z128rmb") addr:$src)>;
   def : Pat<(MaskOpNode (v4f32 (X86VBroadcastld32 addr:$src)),
-                          (v16i8 VR128X:$src0), VK4WM:$mask),
+                        (v16i8 VR128X:$src0), VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$src0, VK4WM:$mask,
                                 addr:$src)>;
   def : Pat<(MaskOpNode (v4f32 (X86VBroadcastld32 addr:$src)),
-                          v16i8x_info.ImmAllZerosV, VK4WM:$mask),
+                        v16i8x_info.ImmAllZerosV, VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmbkz") VK4WM:$mask, addr:$src)>;
 }
 
 // Convert from FP32 to FP8 with bias: 3-operand, quarter-size output
-// bias + f32 source -> i8 dest
-// Reuses avx10_convert_3op_packed from X86InstrAVX10.td for each VL variant.
+// bias dword per FP32 lane + f32 source -> i8 dest
 multiclass avx10_v2aux_cvt_3op_ps<bits<8> opc, string OpcodeStr,
                                   SDPatternOperator OpNode,
                                   SDPatternOperator MaskOpNode> {
-  // Z (512-bit): bias=v64i8(zmm), src=v16f32(zmm), dst=v16i8(xmm)
+  // Z (512-bit): bias=v16i32(zmm), src=v16f32(zmm), dst=v16i8(xmm)
   // Element counts match (16), so vselect_mask works directly.
   defm Z : avx10_convert_3op_packed<opc, OpcodeStr, v16i8x_info,
-             v64i8_info, v16f32_info, OpNode, OpNode, WriteCvtPH2PSZ>,
+             v16i32_info, v16f32_info, OpNode, OpNode, WriteCvtPH2PSZ>,
              EVEX_V512, EVEX_CD8<32, CD8VF>;
   // Z256/Z128: use null_frag because element count mismatch between
   // dest (v16i8) and source (v8f32/v4f32) prevents vselect_mask from
   // generating correct masked patterns. Explicit Pat patterns below.
   defm Z256 : avx10_convert_3op_packed<opc, OpcodeStr, v16i8x_info,
-                v32i8x_info, v8f32x_info,
+                v8i32x_info, v8f32x_info,
                 null_frag, null_frag, WriteCvtPH2PSZ>,
                 EVEX_V256, EVEX_CD8<32, CD8VF>;
   defm Z128 : avx10_convert_3op_packed<opc, OpcodeStr, v16i8x_info,
-                v16i8x_info, v4f32x_info,
+                v4i32x_info, v4f32x_info,
                 null_frag, null_frag, WriteCvtPH2PSZ>,
                 EVEX_V128, EVEX_CD8<32, CD8VF>;
 
   // Explicit patterns for Z256 (8 source elements, VK8WM mask)
-  def : Pat<(v16i8 (OpNode (v32i8 VR256X:$src1), (v8f32 VR256X:$src2))),
+  def : Pat<(v16i8 (OpNode (v8i32 VR256X:$src1), (v8f32 VR256X:$src2))),
             (!cast<Instruction>(NAME # "Z256rr") VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1), (v8f32 VR256X:$src2),
-                         (v16i8 VR128X:$src0), VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1), (v8f32 VR256X:$src2),
+                        (v16i8 VR128X:$src0), VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rrk") VR128X:$src0, VK8WM:$mask,
                                 VR256X:$src1, VR256X:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1), (v8f32 VR256X:$src2),
-                         v16i8x_info.ImmAllZerosV, VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1), (v8f32 VR256X:$src2),
+                        v16i8x_info.ImmAllZerosV, VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rrkz") VK8WM:$mask,
                                 VR256X:$src1, VR256X:$src2)>;
   // Memory
-  def : Pat<(v16i8 (OpNode (v32i8 VR256X:$src1), (loadv8f32 addr:$src2))),
+  def : Pat<(v16i8 (OpNode (v8i32 VR256X:$src1), (loadv8f32 addr:$src2))),
             (!cast<Instruction>(NAME # "Z256rm") VR256X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1), (loadv8f32 addr:$src2),
-                         (v16i8 VR128X:$src0), VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1), (loadv8f32 addr:$src2),
+                        (v16i8 VR128X:$src0), VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmk") VR128X:$src0, VK8WM:$mask,
                                 VR256X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1), (loadv8f32 addr:$src2),
-                         v16i8x_info.ImmAllZerosV, VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1), (loadv8f32 addr:$src2),
+                        v16i8x_info.ImmAllZerosV, VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmkz") VK8WM:$mask,
                                 VR256X:$src1, addr:$src2)>;
   // Broadcast
-  def : Pat<(v16i8 (OpNode (v32i8 VR256X:$src1),
-                            (v8f32 (X86VBroadcastld32 addr:$src2)))),
+  def : Pat<(v16i8 (OpNode (v8i32 VR256X:$src1),
+                           (v8f32 (X86VBroadcastld32 addr:$src2)))),
             (!cast<Instruction>(NAME # "Z256rmb") VR256X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1),
-                          (v8f32 (X86VBroadcastld32 addr:$src2)),
-                          (v16i8 VR128X:$src0), VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1),
+                        (v8f32 (X86VBroadcastld32 addr:$src2)),
+                        (v16i8 VR128X:$src0), VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmbk") VR128X:$src0, VK8WM:$mask,
                                 VR256X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v32i8 VR256X:$src1),
-                          (v8f32 (X86VBroadcastld32 addr:$src2)),
-                          v16i8x_info.ImmAllZerosV, VK8WM:$mask),
+  def : Pat<(MaskOpNode (v8i32 VR256X:$src1),
+                        (v8f32 (X86VBroadcastld32 addr:$src2)),
+                        v16i8x_info.ImmAllZerosV, VK8WM:$mask),
             (!cast<Instruction>(NAME # "Z256rmbkz") VK8WM:$mask,
                                 VR256X:$src1, addr:$src2)>;
 
   // Explicit patterns for Z128 (4 source elements, VK4WM mask)
-  def : Pat<(v16i8 (OpNode (v16i8 VR128X:$src1), (v4f32 VR128X:$src2))),
+  def : Pat<(v16i8 (OpNode (v4i32 VR128X:$src1), (v4f32 VR128X:$src2))),
             (!cast<Instruction>(NAME # "Z128rr") VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1), (v4f32 VR128X:$src2),
-                         (v16i8 VR128X:$src0), VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1), (v4f32 VR128X:$src2),
+                        (v16i8 VR128X:$src0), VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rrk") VR128X:$src0, VK4WM:$mask,
                                 VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1), (v4f32 VR128X:$src2),
-                         v16i8x_info.ImmAllZerosV, VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1), (v4f32 VR128X:$src2),
+                        v16i8x_info.ImmAllZerosV, VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rrkz") VK4WM:$mask,
                                 VR128X:$src1, VR128X:$src2)>;
   // Memory
-  def : Pat<(v16i8 (OpNode (v16i8 VR128X:$src1), (loadv4f32 addr:$src2))),
+  def : Pat<(v16i8 (OpNode (v4i32 VR128X:$src1), (loadv4f32 addr:$src2))),
             (!cast<Instruction>(NAME # "Z128rm") VR128X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1), (loadv4f32 addr:$src2),
-                         (v16i8 VR128X:$src0), VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1), (loadv4f32 addr:$src2),
+                        (v16i8 VR128X:$src0), VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmk") VR128X:$src0, VK4WM:$mask,
                                 VR128X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1), (loadv4f32 addr:$src2),
-                         v16i8x_info.ImmAllZerosV, VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1), (loadv4f32 addr:$src2),
+                        v16i8x_info.ImmAllZerosV, VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmkz") VK4WM:$mask,
                                 VR128X:$src1, addr:$src2)>;
   // Broadcast
-  def : Pat<(v16i8 (OpNode (v16i8 VR128X:$src1),
-                            (v4f32 (X86VBroadcastld32 addr:$src2)))),
+  def : Pat<(v16i8 (OpNode (v4i32 VR128X:$src1),
+                           (v4f32 (X86VBroadcastld32 addr:$src2)))),
             (!cast<Instruction>(NAME # "Z128rmb") VR128X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1),
-                          (v4f32 (X86VBroadcastld32 addr:$src2)),
-                          (v16i8 VR128X:$src0), VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1),
+                        (v4f32 (X86VBroadcastld32 addr:$src2)),
+                        (v16i8 VR128X:$src0), VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$src0, VK4WM:$mask,
                                 VR128X:$src1, addr:$src2)>;
-  def : Pat<(MaskOpNode (v16i8 VR128X:$src1),
-                          (v4f32 (X86VBroadcastld32 addr:$src2)),
-                          v16i8x_info.ImmAllZerosV, VK4WM:$mask),
+  def : Pat<(MaskOpNode (v4i32 VR128X:$src1),
+                        (v4f32 (X86VBroadcastld32 addr:$src2)),
+                        v16i8x_info.ImmAllZerosV, VK4WM:$mask),
             (!cast<Instruction>(NAME # "Z128rmbkz") VK4WM:$mask,
                                 VR128X:$src1, addr:$src2)>;
 }
@@ -259,10 +257,10 @@ multiclass avx10_v2aux_cvt_trunc_base<bits<8> opc, string OpcodeStr,
   }
 
   def : Pat<(_dest.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size)
-                        (_src.VT _src.RC:$src))),
+                       (_src.VT _src.RC:$src))),
             (!cast<Instruction>(NAME # "rr") _src.RC:$src)>;
   def : Pat<(!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_src.Size#"_mem")
-                addr:$dst, (_src.VT _src.RC:$src)),
+             addr:$dst, (_src.VT _src.RC:$src)),
             (!cast<Instruction>(NAME # "mr") addr:$dst, _src.RC:$src)>;
 }
 
@@ -283,7 +281,8 @@ multiclass avx10_v2aux_cvt_expand_masked_base<bits<8> opc, string OpcodeStr,
                                               X86VectorVTInfo _,
                                               X86VectorVTInfo _src,
                                               X86MemOperand x86memop,
-                                              X86FoldableSchedWrite sched> {
+                                              X86FoldableSchedWrite sched,
+                                              dag ld_dag = (load addr:$src)> {
   let ExeDomain = _.ExeDomain in {
     defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
                               (ins _src.RC:$src),
@@ -296,7 +295,7 @@ multiclass avx10_v2aux_cvt_expand_masked_base<bits<8> opc, string OpcodeStr,
                                 (ins x86memop:$src),
                                 OpcodeStr, "$src", "$src",
                                 (_.VT (!cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"_"#_.Size)
-                                       (_src.VT (load addr:$src))))>,
+                                       (_src.VT ld_dag)))>,
                                 Sched<[sched.Folded]>, EVEX, EVEX_CD8<8, CD8VH>;
   }
 }
@@ -308,9 +307,12 @@ multiclass avx10_v2aux_cvt_expand_masked_b<bits<8> opc, string OpcodeStr> {
   defm Z256 : avx10_v2aux_cvt_expand_masked_base<opc, OpcodeStr, v32i8x_info,
                                                  v16i8x_info, f128mem,
                                                  WriteCvtPH2PSY>, EVEX_V256;
+  // Z128 reads only 8 bytes, so match a vzload rather than a full 16-byte load.
   defm Z128 : avx10_v2aux_cvt_expand_masked_base<opc, OpcodeStr, v16i8x_info,
                                                  v16i8x_info, f64mem,
-                                                 WriteCvtPH2PS>, EVEX_V128;
+                                                 WriteCvtPH2PS,
+                                                 (bitconvert (v2i64 (X86vzload64 addr:$src)))>,
+                                                 EVEX_V128;
 }
 
 // Convert from FP6 to FP8: widening conversion with masking (reg-only)
@@ -484,6 +486,11 @@ let Predicates = [HasAVX10_V2_AUX] in {
 let Predicates = [HasAVX10_V2_AUX] in {
   defm VCVTBF42HF8 : avx10_v2aux_cvt_expand_masked_b<0x37, "vcvtbf42hf8">,
                      T_MAP5, PS;
+
+  // Pattern match vcvtbf42hf8 of a scalar i64 load.
+  def : Pat<(v16i8 (int_x86_avx10_vcvtbf42hf8_128 (v16i8 (bitconvert
+              (v2i64 (scalar_to_vector (loadi64 addr:$src))))))),
+            (VCVTBF42HF8Z128rm addr:$src)>;
 }
 let Predicates = [HasAVX10_V2_AUX] in {
   // VCVTBF62HF8: widening (6-bit to 8-bit) with masking, reg-only
@@ -508,10 +515,10 @@ let Predicates = [HasAVX10_V2_AUX] in {
   // Explicit patterns for 512-bit VMTRUNCSS (intrinsic lowering produces this
   // SDNode directly, but avx512_trunc_db generates vselect_mask patterns for Z)
   def : Pat<(v16i8 (X86vmtruncss (v16i32 VR512:$src), (v16i8 VR128X:$src0),
-                                  VK16WM:$mask)),
+                                 VK16WM:$mask)),
             (VPMOVSSDBZrrk VR128X:$src0, VK16WM:$mask, VR512:$src)>;
   def : Pat<(v16i8 (X86vmtruncss (v16i32 VR512:$src), v16i8x_info.ImmAllZerosV,
-                                  VK16WM:$mask)),
+                                 VK16WM:$mask)),
             (VPMOVSSDBZrrkz VK16WM:$mask, VR512:$src)>;
 }
 
