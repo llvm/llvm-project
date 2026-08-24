@@ -672,11 +672,7 @@ llvm::DIFile *CGDebugInfo::createFile(
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
-  SmallString<256> P = Path;
-  for (auto &[From, To] : llvm::reverse(CGM.getCodeGenOpts().DebugPrefixMap))
-    if (llvm::sys::path::replace_path_prefix(P, From, To))
-      break;
-  return P.str().str();
+  return CGM.getCodeGenOpts().remapDebugPathPrefix(Path);
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
@@ -1825,8 +1821,6 @@ static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
     return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
   case CC_IntelOclBicc:
     return llvm::dwarf::DW_CC_LLVM_IntelOclBicc;
-  case CC_SpirFunction:
-    return llvm::dwarf::DW_CC_LLVM_SpirFunction;
   case CC_DeviceKernel:
     return llvm::dwarf::DW_CC_LLVM_DeviceKernel;
   case CC_Swift:
@@ -5168,13 +5162,18 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     return;
   if (Func->getSubprogram())
     return;
+  // If the function has a definition, it either already has a
+  // subprogram or it is a nodebug function.
+  if (!Func->isDeclaration())
+    return;
 
   const FunctionDecl *CalleeDecl =
       cast<FunctionDecl>(CalleeGlobalDecl.getDecl());
 
   // Do not emit a declaration subprogram for a function with nodebug
-  // attribute, or if call site info isn't required.
-  if (CalleeDecl->hasAttr<NoDebugAttr>() ||
+  // attribute, or if call site info isn't required.  The attribute
+  // could be on a later redeclaration than the one the call resolves to.
+  if (CalleeDecl->getMostRecentDecl()->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
     return;
 

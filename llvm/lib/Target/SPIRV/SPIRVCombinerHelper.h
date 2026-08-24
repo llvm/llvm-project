@@ -35,9 +35,7 @@ public:
   void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
-  bool matchMatrixTranspose(MachineInstr &MI) const;
   void applyMatrixTranspose(MachineInstr &MI) const;
-  bool matchMatrixMultiply(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
 
 private:

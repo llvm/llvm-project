@@ -13,7 +13,6 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolLocator.h"
@@ -26,10 +25,13 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-interfaces.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <cassert>
@@ -245,13 +247,11 @@ GetBinaryNotFoundMessage(const DynamicLoader::BinarySpec &bin_spec) {
   return msg.GetString().str();
 }
 
-/// Search for a binary with a known UUID, and create a module for it.
+/// Reads the Target, so it has to be called for one binary at a time.
 ///
-/// Does not mutate the Target, but does read from it, and reaches the global
-/// shared module list, the symbol locator plugins, and a locate module callback
-/// the user may have installed.
-static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
-                            const FileSpecList &search_paths) {
+/// \return What to search for, or nothing when the binary is already in hand.
+static std::optional<SymbolLocator::Request>
+PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleSpec module_spec;
   module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = bin_spec.uuid;
@@ -266,19 +266,23 @@ static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
                               /*invoke_locate_callback=*/true,
                               /*invoke_symbol_locators=*/false);
   if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFileFileSpec())
-    return;
+    return std::nullopt;
 
-  // Search for the binary and its symbols.
   SymbolLocator::Request request;
   request.module_spec = module_spec;
   request.platform = target.GetPlatform();
   request.external_lookup = bin_spec.force_symbol_search;
+  request.description = GetBinaryDescription(bin_spec);
+  return request;
+}
 
-  llvm::Expected<SymbolLocator::Result> located =
-      SymbolLocator::Locate(request, search_paths);
+/// The module is not registered with the Target until LoadBinaryInTarget.
+static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
+                         llvm::Expected<SymbolLocator::Result> &&located) {
   if (!located) {
-    // This function's caller names the binary it could not find, so a plain
-    // miss needs nothing added to it. An explanation from a symbol server does.
+    // Loading a binary that was never found already reports that, so a bare
+    // not-found error would only say it a second time. Any other error says
+    // something that report cannot.
     llvm::Error error = located.takeError();
     if (error.isA<SymbolLocator::NotFound>())
       llvm::consumeError(std::move(error));
@@ -287,14 +291,9 @@ static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
     return;
   }
 
-  // A binary was found. Its symbols are another matter, and the caller reports
-  // that in its own order.
   if (located->symbol_error)
     bin_spec.error = Status::FromError(std::move(*located->symbol_error));
 
-  // Create a module for what was found, sharing it with any other Target that
-  // asks for the same binary. The module is not registered with this Target
-  // until LoadBinaryInTarget. The locators have run, so don't run them again.
   ModuleSP located_module_sp;
   ModuleList::GetSharedModule(located->module_spec, located_module_sp, nullptr,
                               nullptr, /*invoke_locate_callback=*/false,
@@ -324,14 +323,29 @@ void DynamicLoader::LocateBinaries(
   Target &target = process->GetTarget();
   const FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
 
+  // Reading a binary's UUID out of memory has to happen on this thread, and
+  // before any search, so that a binary whose UUID is not known yet still joins
+  // the batch.
+  llvm::SmallVector<BinarySpec *> to_search;
+  std::vector<SymbolLocator::Request> requests;
   for (BinarySpec &bin_spec : bin_specs) {
     if (!bin_spec.uuid.IsValid() && !bin_spec.value_is_offset)
       FindBinaryUUIDInMemory(process, bin_spec);
     if (!bin_spec.uuid.IsValid())
       continue;
-    Progress progress("Locating binary", GetBinaryDescription(bin_spec));
-    SearchForBinary(target, bin_spec, search_paths);
+    if (std::optional<SymbolLocator::Request> request =
+            PrepareSearch(target, bin_spec)) {
+      to_search.push_back(&bin_spec);
+      requests.push_back(std::move(*request));
+    }
   }
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> located =
+      SymbolLocator::Locate(requests, search_paths,
+                            target.GetParallelModuleLoad());
+
+  for (auto [bin_spec, result] : llvm::zip_equal(to_search, located))
+    FinishSearch(*bin_spec, std::move(result));
 }
 
 llvm::Expected<ModuleSP>

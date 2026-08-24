@@ -203,6 +203,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
+  case Intrinsic::copysign:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::exp:
@@ -1017,6 +1018,52 @@ static Value *expandSignIntrinsic(CallInst *Orig) {
   return Builder.CreateSub(ZextGT, ZextLT);
 }
 
+// Expand llvm.copysign by combining the sign bit with the magnitude bits using
+// bitwise operations.
+static Value *expandCopySignIntrinsic(CallInst *Orig) {
+  Value *Magnitude = Orig->getOperand(0);
+  Value *Sign = Orig->getOperand(1);
+  Type *Ty = Orig->getType();
+
+  IRBuilder<> Builder(Orig);
+
+  bool IsDouble = Ty->getScalarType()->isDoubleTy();
+  unsigned BitWidth = IsDouble ? 32 : Ty->getScalarSizeInBits();
+  Type *IntTy = Ty->getWithNewType(Builder.getIntNTy(BitWidth));
+
+  auto CopySignBit = [&](Value *MagnitudeInt, Value *SignInt) {
+    APInt SignMaskVal = APInt::getSignMask(BitWidth);
+    // `ConstantInt::get` broadcasts to a splat when `IntTy` is a vector.
+    Constant *SignMask = ConstantInt::get(IntTy, SignMaskVal);
+    Constant *NotSignMask = ConstantInt::get(IntTy, ~SignMaskVal);
+
+    Value *MagnitudeBits = Builder.CreateAnd(MagnitudeInt, NotSignMask);
+    Value *SignBits = Builder.CreateAnd(SignInt, SignMask);
+    return Builder.CreateOr(MagnitudeBits, SignBits);
+  };
+
+  // Avoid i64 bitwise ops, which require the Int64Ops shader feature.
+  if (IsDouble) {
+    auto *SplitTy = StructType::get(IntTy, IntTy);
+    Value *MagnitudeHalves = Builder.CreateIntrinsic(
+        SplitTy, Intrinsic::dx_splitdouble, {Magnitude});
+    Value *SignHalves =
+        Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble, {Sign});
+    Value *MagnitudeLow = Builder.CreateExtractValue(MagnitudeHalves, 0);
+    Value *MagnitudeHigh = Builder.CreateExtractValue(MagnitudeHalves, 1);
+    Value *SignHigh = Builder.CreateExtractValue(SignHalves, 1);
+
+    Value *CombinedHigh = CopySignBit(MagnitudeHigh, SignHigh);
+    return Builder.CreateIntrinsic(Ty, Intrinsic::dx_asdouble,
+                                   {MagnitudeLow, CombinedHigh});
+  }
+
+  Value *MagnitudeInt = Builder.CreateBitCast(Magnitude, IntTy);
+  Value *SignInt = Builder.CreateBitCast(Sign, IntTy);
+  Value *CombinedInt = CopySignBit(MagnitudeInt, SignInt);
+  return Builder.CreateBitCast(CombinedInt, Ty);
+}
+
 // Expand llvm.matrix.multiply by extracting row/column vectors and computing
 // dot products.
 // Result[r,c] = dot(row_r(LHS), col_c(RHS))
@@ -1210,6 +1257,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
+    break;
+  case Intrinsic::copysign:
+    Result = expandCopySignIntrinsic(Orig);
     break;
   case Intrinsic::fshl:
     Result = expandFunnelShiftIntrinsic<true>(Orig);

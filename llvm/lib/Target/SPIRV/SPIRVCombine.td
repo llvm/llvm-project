@@ -30,16 +30,20 @@ def vector_select_to_faceforward_lowering : GICombineRule <
 >;
 
 def matrix_transpose_lowering
-    : GICombineRule<(defs root:$root),
-                    (match (wip_match_opcode G_INTRINSIC):$root,
-                        [{ return Helper.matchMatrixTranspose(*${root}); }]),
-                    (apply [{ Helper.applyMatrixTranspose(*${root}); }])>;
+    : GICombineRule<
+          (defs root:$root),
+          (match (wip_match_opcode G_INTRINSIC):$root,
+              [{ return mi_match(*${root}, MRI,
+                                 m_GIntrinsic<Intrinsic::matrix_transpose>()); }]),
+          (apply [{ Helper.applyMatrixTranspose(*${root}); }])>;
 
 def matrix_multiply_lowering
-    : GICombineRule<(defs root:$root),
-                    (match (wip_match_opcode G_INTRINSIC):$root,
-                        [{ return Helper.matchMatrixMultiply(*${root}); }]),
-                    (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
+    : GICombineRule<
+          (defs root:$root),
+          (match (wip_match_opcode G_INTRINSIC):$root,
+              [{ return mi_match(*${root}, MRI,
+                                 m_GIntrinsic<Intrinsic::matrix_multiply>()); }]),
+          (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
