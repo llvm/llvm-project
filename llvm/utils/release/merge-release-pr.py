@@ -147,7 +147,9 @@ class PRMerger:
             capture_output=True,
             text=True,
         )
-        upstream_remote_type = remote.stdout.strip().replace("llvm/llvm-project.git", "")
+        upstream_remote_type = remote.stdout.strip().replace(
+            "llvm/llvm-project.git", ""
+        )
 
         # save the baseRefName (target branch) so that we know where to push
         self.target_branch = self.prdata["baseRefName"]
