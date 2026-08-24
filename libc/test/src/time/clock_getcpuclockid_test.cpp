@@ -30,6 +30,7 @@ TEST_F(LlvmLibcClockGetCpuClockIdTest, CurrentProcessZeroPid) {
   // On Linux, pid 0 translates to (~0 << 3) | 2 == -6.
   EXPECT_EQ(clock_id, static_cast<clockid_t>(-6));
 
+  // Validate that we can use resulting clock_id to get time.
   struct timespec ts;
   EXPECT_EQ(LIBC_NAMESPACE::clock_gettime(clock_id, &ts), 0);
   EXPECT_GE(ts.tv_sec, static_cast<time_t>(0));
@@ -42,6 +43,7 @@ TEST_F(LlvmLibcClockGetCpuClockIdTest, CurrentProcessExplicitPid) {
   EXPECT_EQ(clock_id,
             static_cast<clockid_t>((static_cast<unsigned int>(~pid) << 3) | 2));
 
+  // Validate that we can use resulting clock_id to get time.
   struct timespec ts;
   EXPECT_EQ(LIBC_NAMESPACE::clock_gettime(clock_id, &ts), 0);
   EXPECT_GE(ts.tv_sec, static_cast<time_t>(0));

@@ -24,8 +24,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, clock_getcpuclockid, (pid_t pid, clockid_t *clock_id)) {
   if (pid < 0)
     return ESRCH;
-  // In Linux, process CPU clocks are encoded as
-  // (~pid << 3) | clock_id with clock_id CPUCLOCK_SCHED being 2:
+  // On Linux, process CPU clocks are encoded as (~pid << 3) | clock_id with
+  // clock_id CPUCLOCK_SCHED being 2:
   // https://github.com/torvalds/linux/blob/master/include/linux/posix-timers.h#L22
   const clockid_t pid_clockid =
       static_cast<clockid_t>((static_cast<unsigned int>(~pid) << 3) | 2);
