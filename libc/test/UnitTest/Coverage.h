@@ -106,8 +106,7 @@ extern "C" void write_raw_profile() {
 
   FixedSizeBuffer filename;
   char pid_buf[LIBC_NAMESPACE::IntegerToString<long>::buffer_size()];
-  auto pid_str =
-      LIBC_NAMESPACE::IntegerToString<long>::format_to(pid_buf, pid);
+  auto pid_str = LIBC_NAMESPACE::IntegerToString<long>::format_to(pid_buf, pid);
   if (!pid_str || !filename.append("libc_cov_") || !filename.append(*pid_str) ||
       !filename.append(".profraw")) {
     LIBC_NAMESPACE::linux_syscalls::munmap(profile_buffer, required_size);

@@ -68,7 +68,7 @@ int ProcessStatus::get_fatal_signal() {
 static void coverage_fatal_signal_handler(int sig) {
   if (write_raw_profile)
     write_raw_profile();
-  
+
   // Restore default signal handler
 #ifdef LIBC_FULL_BUILD
   struct sigaction sa = {};
@@ -77,7 +77,7 @@ static void coverage_fatal_signal_handler(int sig) {
 #else
   ::signal(sig, SIG_DFL);
 #endif
-  
+
   // Re-raise the signal
   LIBC_IMPL::kill(LIBC_IMPL::getpid(), sig);
 }
