@@ -290,9 +290,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         SVal OrigV = State->getSVal(MR);
         // evalCast converts the value, but we are doing a bitcast here, which
         // is unmodeled for floats.
-        if (!OrigV.getAs<nonloc::ConcreteFloat>())
+        if (!OrigV.getAs<nonloc::ConcreteFloat>()) {
           CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
                                          CastE->getType(), Ex->getType());
+        }
       }
       Dst.insert(Engine.makeNodeWithBinding(Node, CastE, CastedV));
     }
@@ -977,11 +978,12 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           } else if (Ex->getType()->isRealFloatingType()) {
             // Create a zero with matching semantics to the floating point.
             DefinedOrUnknownSVal X = svalBuilder.makeZeroVal(Ex->getType());
-            if (std::optional<NonLoc> ZeroNL = X.getAs<NonLoc>())
+            if (std::optional<NonLoc> ZeroNL = X.getAs<NonLoc>()) {
               Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), *ZeroNL,
                                  U->getType());
-            else
+            } else {
               Result = UnknownVal();
+            }
           } else if (Ex->getType()->isFloatingType()) {
             // FIXME: handle complex floating point types.
             Result = UnknownVal();
@@ -1043,18 +1045,19 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     SVal RHS;
     SVal Result;
 
-    if (U->getType()->isAnyPointerType())
+    if (U->getType()->isAnyPointerType()) {
       RHS = svalBuilder.makeArrayIndex(1);
-    else if (U->getType()->isIntegralOrEnumerationType())
+    } else if (U->getType()->isIntegralOrEnumerationType()) {
       RHS = svalBuilder.makeIntVal(1, U->getType());
-    else if (U->getType()->isRealFloatingType())
+    } else if (U->getType()->isRealFloatingType()) {
       // C99 6.5.3.1: ++E is equivalent to (E += 1). Then the usual arithmetic
       // conversions convert the 1 to E's type, so just build it as that type
       // here.
       RHS = svalBuilder.makeFloatVal(llvm::APFloat::getOne(
           getContext().getFloatTypeSemantics(U->getType())));
-    else
+    } else {
       RHS = UnknownVal();
+    }
 
     // The use of an operand of type bool with the ++ operators is deprecated
     // but valid until C++17. And if the operand of the ++ operator is of type

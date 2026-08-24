@@ -227,8 +227,6 @@ DefinedSVal SValBuilder::getConjuredHeapSymbolVal(ConstCFGElementRef elem,
   assert(Loc::isLocType(type));
   assert(SymbolManager::canSymbolicate(type));
   if (type->isNullPtrType()) {
-    // The assert above establishes this is a Loc type, for which makeZeroVal()
-    // always returns a defined value.
     return makeZeroVal(type).castAs<DefinedSVal>();
   }
 
@@ -473,8 +471,8 @@ SVal SValBuilder::evalMinus(NonLoc X) {
   case nonloc::ConcreteIntKind:
     return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::ConcreteFloatKind: {
-    // Negation is well-defined regardless of floating-point semantics (it's
-    // just a sign bit flip).
+    // Negation is well-defined regardless of floating-point semantics
+    // (it's just a sign bit flip).
     llvm::APFloat Value = *X.castAs<nonloc::ConcreteFloat>().getValue();
     Value.changeSign();
     return makeFloatVal(Value);

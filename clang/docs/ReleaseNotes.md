@@ -559,11 +559,8 @@ features cannot lower the translation-unit ABI level;
   literals, simple arithmetic operations, and casts, including to and from
   integer types, are tracked as concrete values instead of being treated as
   unknown. Only results that are exact (independent of rounding mode and
-  evaluation precision) are modeled. Infinities and NaNs remain unknown, because
-  a NaN's bit pattern is non-deterministic. Subnormals remain unknown because
-  their semantics are controlled by factors the analyzer cannot see.
-  ``__ibm128`` is not modeled, since LLVM implements several of its operations
-  through an inaccurate fallback format. Fixes #GH82910.
+  evaluation precision) are modeled. Infinities, NaNs, subnormals remain
+  unknown. (#GH82910)
 
 #### Moved checkers
 
