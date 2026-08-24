@@ -2303,7 +2303,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
-  if ((Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) || (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
+  if ((Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
+      (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
     // With +sve2p2/+sme2p2 the full range of vector types are supported.
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
       setOperationAction(ISD::MSTORE, VT, Custom);
