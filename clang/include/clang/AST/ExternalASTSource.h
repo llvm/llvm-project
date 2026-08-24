@@ -467,12 +467,6 @@ public:
   explicit LazyGenerationalDeclPtr(const ASTContext &Ctx, Decl *Value = nullptr)
       : Value(makeValue(Ctx, Value)) {}
 
-  /// Create a pointer that is not potentially updated by later generations of
-  /// the external AST source.
-  enum NotUpdatedTag { NotUpdated };
-  LazyGenerationalDeclPtr(NotUpdatedTag, Decl *Value = nullptr)
-      : Value(Value) {}
-
   /// Forcibly set this pointer (which must be lazy) as needing updates.
   void markIncomplete() { cast<LazyData *>(Value)->LastGeneration = 0; }
 
@@ -484,9 +478,6 @@ public:
     }
     Value = NewValue;
   }
-
-  /// Set the value of this pointer, for this and all future generations.
-  void setNotUpdated(Decl *NewValue) { Value = NewValue; }
 
   /// Get the value of this pointer, updating its owner if necessary.
   Decl *get(const Decl *O) {
