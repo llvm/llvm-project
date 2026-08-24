@@ -46,8 +46,8 @@ define void @phi_vec1bf16_to_f32(ptr %src, ptr %dst) #0 {
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pslld $16, %xmm0
 ; CHECK-NEXT:    jmp LBB1_1
 ; CHECK-NEXT:  LBB1_1: ## %bb
 ; CHECK-NEXT:    callq ___truncsfbf2

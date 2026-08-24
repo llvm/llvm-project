@@ -462,6 +462,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, VT, Expand);
     setOperationAction(ISD::FP_TO_BF16, VT, Custom);
   }
+  // The vector-based lowering below needs SSE2 registers.
+  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+  }
 
   setOperationAction(ISD::PARITY, MVT::i8, Custom);
   setOperationAction(ISD::PARITY, MVT::i16, Custom);
@@ -22973,6 +22978,40 @@ static SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  // Operand is usually already softened to i16 by type legalization.
+  if (Src.getValueType() == MVT::bf16)
+    Src = DAG.getBitcast(MVT::i16, Src);
+  else
+    Src = DAG.getAnyExtOrTrunc(Src, DL, MVT::i16);
+
+  // Peek through to bf16's underlying f16 register
+  MVT VecVT = MVT::v8i16;
+  SDValue VecSrc = Src;
+  if (Src.getOpcode() == ISD::BITCAST &&
+      Src.getOperand(0).getValueType() == MVT::f16) {
+    VecSrc = Src.getOperand(0);
+    VecVT = MVT::v8f16;
+  }
+
+  // Shift the bf16 bits into the high half of the f32.
+  SDValue Vec = DAG.getBitcast(
+      MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, VecSrc));
+  Vec = DAG.getBitcast(MVT::v4i32, Vec);
+  Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
+  Vec = DAG.getBitcast(MVT::v4f32, Vec);
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Vec,
+                            DAG.getVectorIdxConstant(0, DL));
+
+  EVT DstVT = Op.getValueType();
+  if (DstVT != MVT::f32)
+    Res = DAG.getNode(ISD::FP_EXTEND, DL, DstVT, Res);
+  return Res;
+}
+
 SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -34541,6 +34580,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP16_TO_FP:  return LowerFP16_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16:
   case ISD::STRICT_FP_TO_FP16:  return LowerFP_TO_FP16(Op, DAG);
+  case ISD::BF16_TO_FP:         return LowerBF16_TO_FP(Op, DAG);
   case ISD::FP_TO_BF16:         return LowerFP_TO_BF16(Op, DAG);
   case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
