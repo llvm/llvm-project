@@ -86,7 +86,7 @@ define amdgpu_ps <3 x float> @sample_load(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-TRUE16-LABEL: sample_load:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -105,7 +105,7 @@ define amdgpu_ps <3 x float> @sample_load(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX1150-TRUE16-LABEL: sample_load:
 ; GFX1150-TRUE16:       ; %bb.0:
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
-; GFX1150-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
+; GFX1150-TRUE16-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
 ; GFX1150-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1150-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX1150-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -158,7 +158,7 @@ define amdgpu_ps <3 x float> @load_sample(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-TRUE16-LABEL: load_sample:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    image_sample_lz v2, [v4, v4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -177,7 +177,7 @@ define amdgpu_ps <3 x float> @load_sample(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX1150-TRUE16-LABEL: load_sample:
 ; GFX1150-TRUE16:       ; %bb.0:
 ; GFX1150-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
-; GFX1150-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
+; GFX1150-TRUE16-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
 ; GFX1150-TRUE16-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1150-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[12:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX1150-TRUE16-NEXT:    s_waitcnt vmcnt(0)
