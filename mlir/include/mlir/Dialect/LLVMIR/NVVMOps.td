@@ -5405,7 +5405,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMf<[100, 101, 1
     llvm::SmallVector<llvm::Value *> args;
     auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
       *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
@@ -6241,13 +6241,15 @@ def Tcgen05MMAKindI8           : I32EnumAttrCase<"I8",       3, "i8">;
 def Tcgen05MMAKindMXF8F6F4     : I32EnumAttrCase<"MXF8F6F4", 4, "mxf8f6f4">;
 def Tcgen05MMAKindMXF4         : I32EnumAttrCase<"MXF4",     5, "mxf4">;
 def Tcgen05MMAKindMXF4NVF4     : I32EnumAttrCase<"MXF4NVF4", 6, "mxf4nvf4">;
+def Tcgen05MMAKindTI16         : I32EnumAttrCase<"TI16",     7, "ti16">;
 
 def Tcgen05MMAKind : I32EnumAttr<
   "Tcgen05MMAKind",
   "tcgen05 MMA Supported Types",
   [Tcgen05MMAKindF16, Tcgen05MMAKindTF32, Tcgen05MMAKindF8F6F4,
    Tcgen05MMAKindI8, Tcgen05MMAKindMXF8F6F4, Tcgen05MMAKindMXF4,
-   Tcgen05MMAKindMXF4NVF4]> {
+   Tcgen05MMAKindMXF4NVF4, Tcgen05MMAKindTI16
+  ]> {
     let cppNamespace = "::mlir::NVVM";
     let genSpecializedAttr = 0;
 }
@@ -6303,8 +6305,9 @@ def Tcgen05MMACollectorOpAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorOp, "t
 }
 
 defvar Tcgen05MMANonBlockScaleKindList =
-  [Tcgen05MMAKindF16, Tcgen05MMAKindTF32,
-   Tcgen05MMAKindF8F6F4, Tcgen05MMAKindI8];
+  [Tcgen05MMAKindF16, Tcgen05MMAKindTF32, Tcgen05MMAKindF8F6F4,
+   Tcgen05MMAKindI8, Tcgen05MMAKindTI16
+  ];
 
 defvar Tcgen05MMABlockScaleKindList =
   [Tcgen05MMAKindMXF8F6F4, Tcgen05MMAKindMXF4, Tcgen05MMAKindMXF4NVF4];

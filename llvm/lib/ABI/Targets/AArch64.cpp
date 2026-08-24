@@ -51,8 +51,6 @@ private:
 
 std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
                                                     AArch64ABIKind Kind) {
-  if (Kind == AArch64ABIKind::Win64)
-    reportFatalUsageError("Win64 ABI is not supported yet for AArch64");
   return std::make_unique<AArch64TargetInfo>(TB, Kind);
 }
 
@@ -94,6 +92,8 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 ArgInfo AArch64TargetInfo::classifyArgumentType(
     const Type *Ty, bool IsVariadicFn, bool IsNamedArg,
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
   // TODO: Handle variadic functins here when Windows Arm64 EC is supported.
 
   if (Ty->isVector()) {

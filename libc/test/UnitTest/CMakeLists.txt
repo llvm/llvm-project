@@ -107,6 +107,7 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
+    libc.src.__support.wchar.string_converter
     libc.src.__support.uint128
     ${test_logger_osutil}
 )
