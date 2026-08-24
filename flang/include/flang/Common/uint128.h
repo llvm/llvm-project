@@ -335,36 +335,9 @@ public:
   static constexpr bool is_specialized{true};
   static constexpr bool is_signed{false};
   static constexpr bool is_integer{true};
-  static constexpr bool is_exact{true};
-  static constexpr bool has_infinity{false};
-  static constexpr bool has_quiet_NaN{false};
-  static constexpr bool has_signaling_NaN{false};
-  static constexpr float_denorm_style has_denorm{denorm_absent};
-  static constexpr bool has_denorm_loss{false};
-  static constexpr float_round_style round_style{round_toward_zero};
-  static constexpr bool is_iec559{false};
-  static constexpr bool is_bounded{true};
-  static constexpr bool is_modulo{true};
-  static constexpr int digits{128};
-  static constexpr int digits10{38};
-  static constexpr int max_digits10{0};
-  static constexpr int radix{2};
-  static constexpr int min_exponent{0};
-  static constexpr int min_exponent10{0};
-  static constexpr int max_exponent{0};
-  static constexpr int max_exponent10{0};
-  static constexpr bool traps{true};
-  static constexpr bool tinyness_before{false};
 
   static constexpr T min() { return T{0, 0}; }
   static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
-  static constexpr T lowest() { return min(); }
-  static constexpr T epsilon() { return T{}; }
-  static constexpr T round_error() { return T{}; }
-  static constexpr T infinity() { return T{}; }
-  static constexpr T quiet_NaN() { return T{}; }
-  static constexpr T signaling_NaN() { return T{}; }
-  static constexpr T denorm_min() { return T{}; }
 };
 
 template <> class numeric_limits<Fortran::common::SignedInt128> {
@@ -374,26 +347,6 @@ public:
   static constexpr bool is_specialized{true};
   static constexpr bool is_signed{true};
   static constexpr bool is_integer{true};
-  static constexpr bool is_exact{true};
-  static constexpr bool has_infinity{false};
-  static constexpr bool has_quiet_NaN{false};
-  static constexpr bool has_signaling_NaN{false};
-  static constexpr float_denorm_style has_denorm{denorm_absent};
-  static constexpr bool has_denorm_loss{false};
-  static constexpr float_round_style round_style{round_toward_zero};
-  static constexpr bool is_iec559{false};
-  static constexpr bool is_bounded{true};
-  static constexpr bool is_modulo{true};
-  static constexpr int digits{127};
-  static constexpr int digits10{38};
-  static constexpr int max_digits10{0};
-  static constexpr int radix{2};
-  static constexpr int min_exponent{0};
-  static constexpr int min_exponent10{0};
-  static constexpr int max_exponent{0};
-  static constexpr int max_exponent10{0};
-  static constexpr bool traps{true};
-  static constexpr bool tinyness_before{false};
 
   static constexpr T min() {
     return T{static_cast<std::uint64_t>(INT64_MIN), 0};
@@ -401,14 +354,40 @@ public:
   static constexpr T max() {
     return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
   }
-  static constexpr T lowest() { return min(); }
-  static constexpr T epsilon() { return T{}; }
-  static constexpr T round_error() { return T{}; }
-  static constexpr T infinity() { return T{}; }
-  static constexpr T quiet_NaN() { return T{}; }
-  static constexpr T signaling_NaN() { return T{}; }
-  static constexpr T denorm_min() { return T{}; }
 };
+
+#if defined(__SIZEOF_INT128__) && defined(_MSVC_STL_VERSION)
+// clang-cl knows __int128 and will be used for (u)int128_t, but the MSVC STL
+// does not define stl::numeric_limits for it.
+
+template <> class numeric_limits<unsigned __int128> {
+public:
+  using T = unsigned __int128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() { return static_cast<T>(0); }
+  static constexpr T max() { return ~static_cast<T>(0); }
+};
+
+template <> class numeric_limits<__int128> {
+public:
+  using T = __int128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() {
+    return static_cast<T>(static_cast<unsigned __int128>(1) << 127u);
+  }
+  static constexpr T max() {
+    return static_cast<T>(~(static_cast<unsigned __int128>(1) << 127u));
+  }
+};
+#endif
 
 } // namespace std
 #endif

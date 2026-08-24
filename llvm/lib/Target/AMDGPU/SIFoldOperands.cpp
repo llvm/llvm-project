@@ -2441,30 +2441,26 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
          MFI->getMode().FP64FP16Denormals.Output !=
              DenormalMode::PreserveSign) ||
         MI.mayRaiseFPException())
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
-    const MachineOperand *RegOp = nullptr;
-    const MachineOperand *ImmOp = nullptr;
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    if (Src0->isImm()) {
-      ImmOp = Src0;
-      RegOp = Src1;
-    } else if (Src1->isImm()) {
-      ImmOp = Src1;
-      RegOp = Src0;
-    } else
-      return std::pair(nullptr, SIOutMods::NONE);
 
-    int OMod = getOModValue(Op, ImmOp->getImm());
+    // If there is an immediate operand, it must be Src1
+    std::optional<int64_t> Src1Imm =
+        TII->getImmOrMaterializedImm(const_cast<MachineOperand &>(*Src1));
+    if (!Src1Imm)
+      return {nullptr, SIOutMods::NONE};
+
+    int OMod = getOModValue(Op, *Src1Imm);
     if (OMod == SIOutMods::NONE ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
-    return std::pair(RegOp, OMod);
+    return {Src0, OMod};
   }
   case AMDGPU::V_ADD_F64_e64:
   case AMDGPU::V_ADD_F64_pseudo_e64:
@@ -2479,7 +2475,7 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
           Op == AMDGPU::V_ADD_F16_e64 || Op == AMDGPU::V_ADD_F16_t16_e64 ||
           Op == AMDGPU::V_ADD_F16_fake16_e64) &&
          MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
-      return std::pair(nullptr, SIOutMods::NONE);
+      return {nullptr, SIOutMods::NONE};
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x
     const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -2491,12 +2487,12 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
         !TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
         !TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
-      return std::pair(Src0, SIOutMods::MUL2);
+      return {Src0, SIOutMods::MUL2};
 
-    return std::pair(nullptr, SIOutMods::NONE);
+    return {nullptr, SIOutMods::NONE};
   }
   default:
-    return std::pair(nullptr, SIOutMods::NONE);
+    return {nullptr, SIOutMods::NONE};
   }
 }
 
@@ -2526,10 +2522,11 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def);
 
   DefOMod->setImm(OMod);
-  MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
+  Register OModSrcReg = Def->getOperand(0).getReg();
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), OModSrcReg);
   // Kill flags can be wrong if we replaced a def inside a loop with a def
   // outside the loop.
-  MRI->clearKillFlags(Def->getOperand(0).getReg());
+  MRI->clearKillFlags(OModSrcReg);
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
