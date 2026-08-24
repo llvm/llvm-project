@@ -819,8 +819,8 @@ AMDGPUVGPRMSBAffinity::collectHotRoots(const ClusterForest &Forest,
   // with no significant same-slot neighbours are left unhinted so the allocator
   // packs them naturally instead of being forced into a MSB group.
   uint64_t MaxWeight = 0;
-  for (auto &Entry : ClusterWeight)
-    MaxWeight = std::max(MaxWeight, Entry.second);
+  for (const auto &[_, Weight] : ClusterWeight)
+    MaxWeight = std::max(MaxWeight, Weight);
   uint64_t WeightCutoff = MaxWeight / 4;
 
   SmallVector<unsigned, 0> Roots;
