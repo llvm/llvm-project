@@ -21,8 +21,9 @@ namespace llvm {
 class CallInst;
 class Module;
 
-/// Lower \p CI as a loop. \p CI is a unary intrinsic with a vector argument and
-/// is deleted and replaced with a loop.
+/// Lower \p CI as a loop. \p CI is a unary intrinsic with a vector argument,
+/// returning either a vector or a struct of vectors of the same type. \p CI is
+/// deleted and replaced with a loop.
 LLVM_ABI bool lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI);
 
 } // namespace llvm
