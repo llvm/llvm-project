@@ -99,6 +99,11 @@ public:
 
   bool GetData(DataExtractor &data) const;
 
+  /// Copy this value into \p data using \p byte_order and the byte size from
+  /// \p reg_info.
+  bool GetData(DataExtractor &data, const RegisterInfo &reg_info,
+               lldb::ByteOrder byte_order) const;
+
   // Copy the register value from this object into a buffer in "dst" and obey
   // the "dst_byte_order" when copying the data. Also watch out in case
   // "dst_len" is longer or shorter than the register value described by
