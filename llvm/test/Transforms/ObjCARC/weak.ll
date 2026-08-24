@@ -58,3 +58,141 @@ entry:
 
   ret void
 }
+
+declare void @use_pointer(ptr)
+
+; Test that copyWeak enables eliminating a redundant loadWeak.
+define void @test_copyweak(ptr %src, ptr %dest, ptr %val) {
+; CHECK-LABEL: @test_copyweak(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.copyWeak(ptr [[DEST:%.*]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[DEST]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)
+  call void @llvm.objc.copyWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %dest)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that moveWeak enables eliminating a redundant loadWeak.
+define void @test_moveweak(ptr %src, ptr %dest, ptr %val) {
+; CHECK-LABEL: @test_moveweak(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.moveWeak(ptr [[DEST:%.*]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[DEST]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)
+  call void @llvm.objc.moveWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %dest)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that moveWeak clobbers a load from its source.
+define void @test_moveweak_clobber(ptr %src, ptr %dest, ptr %val) {
+; CHECK-LABEL: @test_moveweak_clobber(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.moveWeak(ptr [[DEST:%.*]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[SRC]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)
+  call void @llvm.objc.moveWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %src)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that copyWeak does NOT clobber a load from its source.
+define void @test_copyweak_no_clobber(ptr %src, ptr %dest, ptr %val) {
+; CHECK-LABEL: @test_copyweak_no_clobber(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.copyWeak(ptr [[DEST:%.*]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[SRC]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)
+  call void @llvm.objc.copyWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %src)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that moveWeak(p, p) clobbers the load. We are conservative here because
+; moveWeak might clear the source pointer even if it is the same as the
+; destination.
+define void @test_moveweak_self_alias(ptr %p, ptr %val) {
+; CHECK-LABEL: @test_moveweak_self_alias(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[P:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.moveWeak(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[P]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %p, ptr %val)
+  call void @llvm.objc.moveWeak(ptr %p, ptr %p)
+  %x = call ptr @llvm.objc.loadWeak(ptr %p)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that copyWeak(p, p) is safely handled.
+define void @test_copyweak_self_alias(ptr %p, ptr %val) {
+; CHECK-LABEL: @test_copyweak_self_alias(
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[P:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.copyWeak(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[P]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  call ptr @llvm.objc.storeWeak(ptr %p, ptr %val)
+  call void @llvm.objc.copyWeak(ptr %p, ptr %p)
+  %x = call ptr @llvm.objc.loadWeak(ptr %p)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+declare ptr @get_may_alias()
+
+; Test that moveWeak with a MayAlias destination clobbers the load.
+define void @test_moveweak_mayalias_dest(ptr %src, ptr %val) {
+; CHECK-LABEL: @test_moveweak_mayalias_dest(
+; CHECK-NEXT:    [[DEST:%.*]] = call ptr @get_may_alias()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[SRC:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.moveWeak(ptr [[DEST]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[SRC]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  %dest = call ptr @get_may_alias()
+  call ptr @llvm.objc.storeWeak(ptr %src, ptr %val)
+  call void @llvm.objc.moveWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %src)
+  call void @use_pointer(ptr %x)
+  ret void
+}
+
+; Test that moveWeak with a MayAlias source clobbers the load.
+define void @test_moveweak_mayalias_src(ptr %dest, ptr %val) {
+; CHECK-LABEL: @test_moveweak_mayalias_src(
+; CHECK-NEXT:    [[SRC:%.*]] = call ptr @get_may_alias()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.storeWeak(ptr [[DEST:%.*]], ptr [[VAL:%.*]])
+; CHECK-NEXT:    call void @llvm.objc.moveWeak(ptr [[DEST]], ptr [[SRC]])
+; CHECK-NEXT:    [[X:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[DEST]])
+; CHECK-NEXT:    call void @use_pointer(ptr [[X]])
+; CHECK-NEXT:    ret void
+;
+  %src = call ptr @get_may_alias()
+  call ptr @llvm.objc.storeWeak(ptr %dest, ptr %val)
+  call void @llvm.objc.moveWeak(ptr %dest, ptr %src)
+  %x = call ptr @llvm.objc.loadWeak(ptr %dest)
+  call void @use_pointer(ptr %x)
+  ret void
+}
