@@ -69,11 +69,6 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-          persist-credentials: false
-
     - name: Validate Release Version
       if: inputs.release-version != ''
       uses: $/.github/workflows/validate-release-version
@@ -84,7 +79,7 @@ jobs:
     # to fetch it here.
     - id: version-from-source
       if: runner.os == 'Windows'
-      uses: ./.github/workflows/get-llvm-version
+      uses: $/.github/workflows/get-llvm-version
 
     - name: Collect Variables
       id: vars
