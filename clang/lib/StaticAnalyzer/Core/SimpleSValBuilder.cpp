@@ -427,6 +427,11 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   NonLoc InputLHS = lhs;
   NonLoc InputRHS = rhs;
 
+  // Default handler for when we give up on folding.
+  auto AsNN = [&] {
+    return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+  };
+
   // Constraints may have changed since the creation of a bound SVal. Check if
   // the values can be simplified based on those new constraints.
   SVal simplifiedLhs = simplifySVal(state, lhs);
@@ -436,9 +441,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   if (auto simplifiedRhsAsNonLoc = simplifiedRhs.getAs<NonLoc>())
     rhs = *simplifiedRhsAsNonLoc;
 
-  // Handle trivial case where left-side and right-side are the same. Exclude
-  // floating points: the ConcreteFloat case below folds these correctly
-  // instead.
+  // Handle trivial case where left-side and right-side are the same.
+  // Exclude floating points: the ConcreteFloat case below folds these
+  // correctly instead.
   if (lhs == rhs && !lhs.getAs<nonloc::ConcreteFloat>())
     switch (op) {
       default:
@@ -521,7 +526,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               return makeTruthVal(true, resultTy);
             default:
               // This case also handles pointer arithmetic.
-              return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+              return AsNN();
           }
         }
     }
@@ -529,15 +534,14 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       // Only fold operations between concrete floats that have the same
       // semantics; normally implicit casts are inserted in the AST so they
       // match, but check anyway for robustness.
-      std::optional<nonloc::ConcreteFloat> RHSFloat =
-          rhs.getAs<nonloc::ConcreteFloat>();
+      auto RHSFloat = rhs.getAs<nonloc::ConcreteFloat>();
       if (!RHSFloat)
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return AsNN();
 
       const llvm::APFloat &L = *lhs.castAs<nonloc::ConcreteFloat>().getValue();
       const llvm::APFloat &R = *RHSFloat->getValue();
       if (&L.getSemantics() != &R.getSemantics())
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return AsNN();
 
       // We can model comparisons between floats since they are defined for
       // every value regardless of rounding mode or excess precision.
@@ -586,13 +590,13 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         Status = Result.divide(R, llvm::APFloat::rmNearestTiesToEven);
         break;
       default:
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return AsNN();
       }
 
       if (Status == llvm::APFloat::opOK && isModeledFloatValue(Result))
         return makeFloatVal(Result);
 
-      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      return AsNN();
     }
     case nonloc::ConcreteIntKind: {
       llvm::APSInt LHSValue = lhs.castAs<nonloc::ConcreteInt>().getValue();
@@ -664,7 +668,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // 0<<a and 0>>a
         if (LHSValue == 0)
           return evalCast(lhs, resultTy, QualType{});
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return AsNN();
       case BO_Div:
         // 0 / x == 0
       case BO_Rem:
@@ -673,7 +677,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           return makeZeroVal(resultTy);
         [[fallthrough]];
       default:
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return AsNN();
       }
     }
     case nonloc::SymbolValKind: {
@@ -785,7 +789,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return *V;
 
       // Give up -- this is not a symbolic expression we can handle.
-      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      return AsNN();
     }
     }
   }

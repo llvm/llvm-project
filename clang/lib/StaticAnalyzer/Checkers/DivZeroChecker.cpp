@@ -91,8 +91,9 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if (!B->getRHS()->getType()->isScalarType())
     return;
 
-  // Floating-point divide by zero is defined when floating semantics conform
-  // to IEC 60559.
+  // Now that concrete floats are modeled (and thus can be reasoned about),
+  // bail on floating-point values, since division by zero is well-defined when
+  // semantics conform to IEC 60559.
   if (B->getRHS()->getType()->isRealFloatingType())
     return;
 

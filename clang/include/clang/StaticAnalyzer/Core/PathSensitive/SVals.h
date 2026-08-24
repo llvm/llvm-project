@@ -304,12 +304,17 @@ public:
 };
 
 /// Value representing floating-point constant.
+///
+/// The value wrapped here will always satisfy
+/// \c SValBuilder::isModeledFloatValue() such that it is finite and
+/// non-subnormal. Since infinities and NaNs are unmodeled, testing such values
+/// with \c isZero alone is sufficient to evaluate them in boolean contexts.
 class ConcreteFloat : public NonLoc {
 public:
   explicit ConcreteFloat(APFloatPtr V) : NonLoc(ConcreteFloatKind, V.get()) {}
 
   APFloatPtr getValue() const {
-    return APFloatPtr::unsafeConstructor(castDataAs<llvm::APFloat>());
+    return APFloatPtr(castDataAs<llvm::APFloat>());
   }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteFloatKind; }

@@ -34,8 +34,6 @@
 using namespace clang;
 using namespace ento;
 
-/// Returns a human-readable name for the most common floating-point semantics.
-/// Anything else is reported as "unknown."
 static StringRef getFloatSemanticsName(const llvm::fltSemantics &Sem) {
   switch (llvm::APFloat::SemanticsToEnum(Sem)) {
   case llvm::APFloat::S_IEEEhalf:
@@ -357,9 +355,7 @@ void NonLoc::dumpToStream(raw_ostream &os) const {
   switch (getKind()) {
   case nonloc::ConcreteFloatKind: {
     const llvm::APFloat &Value = *castAs<nonloc::ConcreteFloat>().getValue();
-    llvm::SmallString<16> Str;
-    Value.toString(Str);
-    os << Str << ' ' << getFloatSemanticsName(Value.getSemantics());
+    os << Value << ' ' << getFloatSemanticsName(Value.getSemantics());
     break;
   }
   case nonloc::ConcreteIntKind: {

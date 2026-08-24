@@ -141,7 +141,7 @@ APFloatPtr BasicValueFactory::getFloatValue(const llvm::APFloat &X) {
     APFloatSet.InsertNode(P, InsertPos);
   }
 
-  return APFloatPtr::unsafeConstructor(&P->getValue());
+  return APFloatPtr(&P->getValue());
 }
 
 const CompoundValData*
