@@ -3756,6 +3756,19 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static QualType createCounterHandleType(ASTContext &AST,
+                                        QualType MainHandleTy) {
+  assert(MainHandleTy->isHLSLAttributedResourceType() &&
+         "expected resource handle type");
+  auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
+  auto MainAttrs = MainResType->getAttrs();
+  assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
+  MainAttrs.IsCounter = true;
+  return AST.getHLSLAttributedResourceType(MainResType->getWrappedType(),
+                                           MainResType->getContainedType(),
+                                           MainAttrs);
+}
+
 static bool CheckVectorElementCount(Sema *S, QualType PassedType,
                                     QualType BaseType, unsigned ExpectedCount,
                                     SourceLocation Loc) {
@@ -4364,15 +4377,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
     ASTContext &AST = SemaRef.getASTContext();
     QualType MainHandleTy = TheCall->getArg(0)->getType();
-    auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
-    auto MainAttrs = MainResType->getAttrs();
-    assert(!MainAttrs.IsCounter && "cannot create a counter from a counter");
-    MainAttrs.IsCounter = true;
-    QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
-        MainResType->getWrappedType(), MainResType->getContainedType(),
-        MainAttrs);
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
+    QualType CounterHandleTy =
+        createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
     TheCall->setType(CounterHandleTy);
     break;
   }
