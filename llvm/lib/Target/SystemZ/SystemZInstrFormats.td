@@ -3032,15 +3032,15 @@ class SideEffectAddressS<string mnemonic, bits<16> opcode,
 
 class LoadAddressRX<string mnemonic, bits<8> opcode,
                     SDPatternOperator operator, AddressingMode mode>
-  : InstRXa<opcode, (outs GR64:$R1), (ins (mode $B2, $D2, $X2):$XBD2),
+  : InstRXa<opcode, (outs GR:$R1), (ins (mode $B2, $D2, $X2):$XBD2),
             mnemonic#"\t$R1, $XBD2",
-            [(set GR64:$R1, (operator mode:$XBD2))]>;
+            [(set GR:$R1, (operator mode:$XBD2))]>;
 
 class LoadAddressRXY<string mnemonic, bits<16> opcode,
                      SDPatternOperator operator, AddressingMode mode>
-  : InstRXYa<opcode, (outs GR64:$R1), (ins (mode $B2, $D2, $X2):$XBD2),
+  : InstRXYa<opcode, (outs GR:$R1), (ins (mode $B2, $D2, $X2):$XBD2),
              mnemonic#"\t$R1, $XBD2",
-             [(set GR64:$R1, (operator mode:$XBD2))]>;
+             [(set GR:$R1, (operator mode:$XBD2))]>;
 
 multiclass LoadAddressRXPair<string mnemonic, bits<8> rxOpcode,
                              bits<16> rxyOpcode, SDPatternOperator operator> {

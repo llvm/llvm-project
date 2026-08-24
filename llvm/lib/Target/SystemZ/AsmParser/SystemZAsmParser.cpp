@@ -366,6 +366,7 @@ public:
   bool isGRX32() const { return false; }
   bool isGR64() const { return isReg(GR64Reg); }
   bool isGR128() const { return isReg(GR128Reg); }
+  bool isGR() const { return isGR64() || isGR32(); }
   bool isADDR32() const { return isReg(GR32Reg); }
   bool isADDR64() const { return isReg(GR64Reg); }
   bool isADDR128() const { return false; }
@@ -381,17 +382,15 @@ public:
   bool isAR32() const { return isReg(AR32Reg); }
   bool isCR64() const { return isReg(CR64Reg); }
   bool isAnyReg() const { return (isReg() || isImm(0, 15)); }
-  bool isBDAddr32Disp12() const { return isMemDisp12(BDMem, GR32Reg); }
-  bool isBDAddr32Disp20() const { return isMemDisp20(BDMem, GR32Reg); }
-  bool isBDAddr64Disp12() const { return isMemDisp12(BDMem, GR64Reg); }
-  bool isBDAddr64Disp20() const { return isMemDisp20(BDMem, GR64Reg); }
-  bool isBDXAddr64Disp12() const { return isMemDisp12(BDXMem, GR64Reg); }
-  bool isBDXAddr64Disp20() const { return isMemDisp20(BDXMem, GR64Reg); }
-  bool isBDLAddr64Disp12Len4() const { return isMemDisp12Len4(GR64Reg); }
-  bool isBDLAddr64Disp12Len8() const { return isMemDisp12Len8(GR64Reg); }
-  bool isBDRAddr64Disp12() const { return isMemDisp12(BDRMem, GR64Reg); }
-  bool isBDVAddr64Disp12() const { return isMemDisp12(BDVMem, GR64Reg); }
-  bool isLXAAddr64Disp20() const { return isMemDisp20(LXAMem, GR64Reg); }
+  bool isBDAddrDisp12() const { return isMemDisp12(BDMem, GR64Reg); }
+  bool isBDAddrDisp20() const { return isMemDisp20(BDMem, GR64Reg); }
+  bool isBDXAddrDisp12() const { return isMemDisp12(BDXMem, GR64Reg); }
+  bool isBDXAddrDisp20() const { return isMemDisp20(BDXMem, GR64Reg); }
+  bool isBDLAddrDisp12Len4() const { return isMemDisp12Len4(GR64Reg); }
+  bool isBDLAddrDisp12Len8() const { return isMemDisp12Len8(GR64Reg); }
+  bool isBDRAddrDisp12() const { return isMemDisp12(BDRMem, GR64Reg); }
+  bool isBDVAddrDisp12() const { return isMemDisp12(BDVMem, GR64Reg); }
+  bool isLXAAddrDisp20() const { return isMemDisp20(LXAMem, GR64Reg); }
   bool isU1Imm() const { return isImm(0, 1); }
   bool isU2Imm() const { return isImm(0, 3); }
   bool isU3Imm() const { return isImm(0, 7); }
@@ -544,6 +543,10 @@ public:
   ParseStatus parseGR128(OperandVector &Operands) {
     return parseRegister(Operands, GR128Reg);
   }
+  ParseStatus parseGR(OperandVector &Operands) {
+    // TODO GR is hardware-mode-aware; update for AMODE32.
+    return parseRegister(Operands, GR64Reg);
+  }
   ParseStatus parseADDR32(OperandVector &Operands) {
     // For the AsmParser, we will accept %r0 for ADDR32 as well.
     return parseRegister(Operands, GR32Reg);
@@ -591,25 +594,22 @@ public:
   ParseStatus parseAnyReg(OperandVector &Operands) {
     return parseAnyRegister(Operands);
   }
-  ParseStatus parseBDAddr32(OperandVector &Operands) {
-    return parseAddress(Operands, BDMem, GR32Reg);
-  }
-  ParseStatus parseBDAddr64(OperandVector &Operands) {
+  ParseStatus parseBDAddr(OperandVector &Operands) {
     return parseAddress(Operands, BDMem, GR64Reg);
   }
-  ParseStatus parseBDXAddr64(OperandVector &Operands) {
+  ParseStatus parseBDXAddr(OperandVector &Operands) {
     return parseAddress(Operands, BDXMem, GR64Reg);
   }
-  ParseStatus parseBDLAddr64(OperandVector &Operands) {
+  ParseStatus parseBDLAddr(OperandVector &Operands) {
     return parseAddress(Operands, BDLMem, GR64Reg);
   }
-  ParseStatus parseBDRAddr64(OperandVector &Operands) {
+  ParseStatus parseBDRAddr(OperandVector &Operands) {
     return parseAddress(Operands, BDRMem, GR64Reg);
   }
-  ParseStatus parseBDVAddr64(OperandVector &Operands) {
+  ParseStatus parseBDVAddr(OperandVector &Operands) {
     return parseAddress(Operands, BDVMem, GR64Reg);
   }
-  ParseStatus parseLXAAddr64(OperandVector &Operands) {
+  ParseStatus parseLXAAddr(OperandVector &Operands) {
     return parseAddress(Operands, LXAMem, GR64Reg);
   }
   ParseStatus parsePCRel12(OperandVector &Operands) {
@@ -676,7 +676,7 @@ static struct InsnMatchEntry InsnMatchTable[] = {
   { "rilu", SystemZ::InsnRILU, 3,
     { MCK_U48Imm, MCK_AnyReg, MCK_U32Imm } },
   { "ris", SystemZ::InsnRIS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddrDisp12 } },
   { "rr", SystemZ::InsnRR, 3,
     { MCK_U16Imm, MCK_AnyReg, MCK_AnyReg } },
   { "rre", SystemZ::InsnRRE, 3,
@@ -684,50 +684,50 @@ static struct InsnMatchEntry InsnMatchTable[] = {
   { "rrf", SystemZ::InsnRRF, 5,
     { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm } },
   { "rrs", SystemZ::InsnRRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddrDisp12 } },
   { "rs", SystemZ::InsnRS, 4,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
+    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddrDisp12 } },
   { "rse", SystemZ::InsnRSE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddrDisp12 } },
   { "rsi", SystemZ::InsnRSI, 4,
     { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
   { "rsy", SystemZ::InsnRSY, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddrDisp20 } },
   { "rx", SystemZ::InsnRX, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddrDisp12 } },
   { "rxe", SystemZ::InsnRXE, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddrDisp12 } },
   { "rxf", SystemZ::InsnRXF, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddrDisp12 } },
   { "rxy", SystemZ::InsnRXY, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20 } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddrDisp20 } },
   { "s", SystemZ::InsnS, 2,
-    { MCK_U32Imm, MCK_BDAddr64Disp12 } },
+    { MCK_U32Imm, MCK_BDAddrDisp12 } },
   { "si", SystemZ::InsnSI, 3,
-    { MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm } },
+    { MCK_U32Imm, MCK_BDAddrDisp12, MCK_S8Imm } },
   { "sil", SystemZ::InsnSIL, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm } },
+    { MCK_U48Imm, MCK_BDAddrDisp12, MCK_U16Imm } },
   { "siy", SystemZ::InsnSIY, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm } },
+    { MCK_U48Imm, MCK_BDAddrDisp20, MCK_U8Imm } },
   { "ss", SystemZ::InsnSS, 4,
-    { MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
+    { MCK_U48Imm, MCK_BDXAddrDisp12, MCK_BDAddrDisp12, MCK_AnyReg } },
   { "sse", SystemZ::InsnSSE, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12 } },
+    { MCK_U48Imm, MCK_BDAddrDisp12, MCK_BDAddrDisp12 } },
   { "ssf", SystemZ::InsnSSF, 4,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
+    { MCK_U48Imm, MCK_BDAddrDisp12, MCK_BDAddrDisp12, MCK_AnyReg } },
   { "vri", SystemZ::InsnVRI, 6,
     { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
   { "vrr", SystemZ::InsnVRR, 7,
     { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
       MCK_U4Imm } },
   { "vrs", SystemZ::InsnVRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddrDisp12, MCK_U4Imm } },
   { "vrv", SystemZ::InsnVRV, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_VR128, MCK_BDVAddrDisp12, MCK_U4Imm } },
   { "vrx", SystemZ::InsnVRX, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_VR128, MCK_BDXAddrDisp12, MCK_U4Imm } },
   { "vsi", SystemZ::InsnVSI, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
+    { MCK_U48Imm, MCK_VR128, MCK_BDAddrDisp12, MCK_U8Imm } }
 };
 
 void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
@@ -1300,14 +1300,14 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       ResTy = parseAnyReg(Operands);
     else if (Kind == MCK_VR128)
       ResTy = parseVR128(Operands);
-    else if (Kind == MCK_BDXAddr64Disp12 || Kind == MCK_BDXAddr64Disp20)
-      ResTy = parseBDXAddr64(Operands);
-    else if (Kind == MCK_BDAddr64Disp12 || Kind == MCK_BDAddr64Disp20)
-      ResTy = parseBDAddr64(Operands);
-    else if (Kind == MCK_BDVAddr64Disp12)
-      ResTy = parseBDVAddr64(Operands);
-    else if (Kind == MCK_LXAAddr64Disp20)
-      ResTy = parseLXAAddr64(Operands);
+    else if (Kind == MCK_BDXAddrDisp12 || Kind == MCK_BDXAddrDisp20)
+      ResTy = parseBDXAddr(Operands);
+    else if (Kind == MCK_BDAddrDisp12 || Kind == MCK_BDAddrDisp20)
+      ResTy = parseBDAddr(Operands);
+    else if (Kind == MCK_BDVAddrDisp12)
+      ResTy = parseBDVAddr(Operands);
+    else if (Kind == MCK_LXAAddrDisp20)
+      ResTy = parseLXAAddr(Operands);
     else if (Kind == MCK_PCRel32)
       ResTy = parsePCRel32(Operands);
     else if (Kind == MCK_PCRel16)

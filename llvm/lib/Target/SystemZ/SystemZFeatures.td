@@ -198,6 +198,13 @@ def FeatureNoVector : SystemZMissingFeature<"Vector">;
 
 def NoVecHwMode : HwMode<[FeatureNoVector]>;
 
+
+// Define Amode32. Default mode is Amode64.
+def IsAmode64 : Predicate<"Subtarget->is64Bit()">;
+def IsAmode32 : Predicate<"Subtarget->is32Bit()">;
+defvar Amode64 = DefaultMode;
+def Amode32 : HwMode<[IsAmode32, FeatureVector]>;
+
 def Arch11NewFeatures : SystemZFeatureList<[
     FeatureLoadAndZeroRightmostByte,
     FeatureLoadStoreOnCond2,

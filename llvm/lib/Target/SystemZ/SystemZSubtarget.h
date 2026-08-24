@@ -40,6 +40,7 @@ protected:
 
 private:
   Triple TargetTriple;
+  bool In64BitMode;
   std::unique_ptr<SystemZCallingConventionRegisters> SpecialRegisters;
   SystemZInstrInfo InstrInfo;
   SystemZTargetLowering TLInfo;
@@ -113,6 +114,10 @@ public:
   // Return true if GV can be accessed using LARL for reloc model RM
   // and code model CM.
   bool isPC32DBLSymbol(const GlobalValue *GV, CodeModel::Model CM) const;
+
+  bool is64Bit() const { return In64BitMode; }
+
+  bool is32Bit() const { return !In64BitMode; }
 
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
 
