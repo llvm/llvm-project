@@ -150,10 +150,17 @@
 #  define _LIBCPP_EXCEPTIONS_SIG e
 #endif
 
-#define _LIBCPP_ODR_SIGNATURE                                                                                          \
-  _LIBCPP_CONCAT(                                                                                                      \
-      _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_HARDENING_SIG, _LIBCPP_ASSERTION_SEMANTIC_SIG), _LIBCPP_EXCEPTIONS_SIG),   \
-      _LIBCPP_VERSION)
+#define _LIBCPP_STANDARD_VERSION_SIG _LIBCPP_CONCAT(std, _LIBCPP_STD_VER)
+
+// clang-format off
+#define _LIBCPP_ODR_SIGNATURE                                                                                           \
+  _LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(_LIBCPP_CONCAT(                                                          \
+    _LIBCPP_HARDENING_SIG,                                                                                              \
+    _LIBCPP_ASSERTION_SEMANTIC_SIG),                                                                                    \
+    _LIBCPP_EXCEPTIONS_SIG),                                                                                            \
+    _LIBCPP_VERSION),                                                                                                   \
+    _LIBCPP_STANDARD_VERSION_SIG)
+// clang-format on
 
 // This macro marks a symbol as being hidden from libc++'s ABI. This is achieved
 // on two levels:
