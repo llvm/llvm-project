@@ -1432,15 +1432,8 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   case Stmt::CXXNewExprClass:
     return true;
 
-  // FIXME:
-  // The engine calls both PreStmt and PostStmt checkers before
-  // actually evaluating this kind of expression. In a separate
-  // non NFC patch, the order should be modified to calling PreStmt
-  // checkers, then evaluating and finally calling PostStmt.
-  // Once that patch is merged, this stmt kind can also be refactored
-  // to the new algorithmic scheme.
   case Stmt::CXXDeleteExprClass:
-    return false;
+    return true;
 
   // FIXME: Does not call checkers
   case Stmt::ChooseExprClass:
@@ -2546,21 +2539,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitCXXNewExpr(cast<CXXNewExpr>(S), Pred, Dst);
       break;
 
-    case Stmt::CXXDeleteExprClass: {
-      ExplodedNodeSet PreVisit;
-      const auto *CDE = cast<CXXDeleteExpr>(S);
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto i : PreVisit)
-        VisitCXXDeleteExpr(CDE, i, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::CXXDeleteExprClass:
+      VisitCXXDeleteExpr(cast<CXXDeleteExpr>(S), Pred, Dst);
       break;
-    }
-      // FIXME: ChooseExpr is really a constant.  We need to fix
-      //        the CFG do not model them as explicit control-flow.
 
+    // FIXME: ChooseExpr is really a constant.  We need to fix
+    //        the CFG do not model them as explicit control-flow.
     case Stmt::ChooseExprClass: { // __builtin_choose_expr
       const auto *C = cast<ChooseExpr>(S);
       VisitGuardedExpr(C, C->getLHS(), C->getRHS(), Pred, Dst);
