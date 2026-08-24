@@ -473,7 +473,12 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   if (!ConstructorDecl && !MethodDecl->isMoveAssignmentOperator())
     return;
 
-  const auto ArgRegion = AFC->getArgSVal(0).getAsRegion();
+  // For an explicit-object member function, the object parameter is part of
+  // the function's parameter list.  In that case, the object being moved from
+  // is the second argument rather than the first one.
+  const unsigned MoveArgIndex =
+      MethodDecl->isExplicitObjectMemberFunction() ? 1 : 0;
+  const auto ArgRegion = AFC->getArgSVal(MoveArgIndex).getAsRegion();
   if (!ArgRegion)
     return;
 
@@ -482,14 +487,17 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   if (CC && CC->getCXXThisVal().getAsRegion() == ArgRegion)
     return;
 
-  if (const auto *IC = dyn_cast<CXXInstanceCall>(AFC))
+  if (MethodDecl->isExplicitObjectMemberFunction()) {
+    if (AFC->getArgSVal(0).getAsRegion() == ArgRegion)
+      return;
+  } else if (const auto *IC = dyn_cast<CXXInstanceCall>(AFC))
     if (IC->getCXXThisVal().getAsRegion() == ArgRegion)
       return;
 
   const MemRegion *BaseRegion = ArgRegion->getBaseRegion();
   // Skip temp objects because of their short lifetime.
   if (BaseRegion->getAs<CXXTempObjectRegion>() ||
-      AFC->getArgExpr(0)->isPRValue())
+      AFC->getArgExpr(MoveArgIndex)->isPRValue())
     return;
   // If it has already been reported do not need to modify the state.
 
@@ -703,6 +711,31 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
       modelUse(State, ArgRegion, RD, MK, C);
       return;
     }
+  }
+
+  // Calls to explicit-object member functions are represented as ordinary
+  // function calls because they have no implicit 'this' argument.  Model an
+  // explicit-object assignment here before handling instance calls below.
+  const auto *ExplicitObjectMethod =
+      dyn_cast_or_null<CXXMethodDecl>(Call.getDecl());
+  if (ExplicitObjectMethod &&
+      ExplicitObjectMethod->isExplicitObjectMemberFunction() &&
+      ExplicitObjectMethod->getOverloadedOperator() == OO_Equal) {
+    const MemRegion *ThisRegion = Call.getArgSVal(0).getAsRegion();
+    State = removeFromState(State, ThisRegion);
+
+    if (ExplicitObjectMethod->isCopyAssignmentOperator() ||
+        ExplicitObjectMethod->isMoveAssignmentOperator()) {
+      const MemRegion *ArgRegion = Call.getArgSVal(1).getAsRegion();
+      const CXXRecordDecl *RD = ExplicitObjectMethod->getParent();
+      MisuseKind MK = ExplicitObjectMethod->isMoveAssignmentOperator()
+                          ? MK_Move
+                          : MK_Copy;
+      modelUse(State, ArgRegion, RD, MK, C);
+      return;
+    }
+    C.addTransition(State);
+    return;
   }
 
   const auto IC = dyn_cast<CXXInstanceCall>(&Call);
