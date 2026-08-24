@@ -375,9 +375,6 @@ public:
 
   /// Whether a symbol that this object file has not itself tagged as a
   /// re-export can still be shadowed by one of GetReExportedLibraries().
-
-  /// \return
-  ///     Returns bool.
   virtual bool ReExportedLibrariesShadowLocalDefinitions() const {
     return false;
   }
