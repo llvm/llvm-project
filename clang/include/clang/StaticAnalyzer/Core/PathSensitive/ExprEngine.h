@@ -83,7 +83,6 @@ class ConstraintManager;
 class ExplodedNodeSet;
 class ExplodedNode;
 class MemRegion;
-class NodeBuilderContext;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
