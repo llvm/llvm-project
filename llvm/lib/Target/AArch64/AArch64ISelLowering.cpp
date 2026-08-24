@@ -17801,8 +17801,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
   assert(VT.isScalableVector() &&
          "Custom lowering expected for scalable vectors only.");
 
-  if (isUnpackedType(VT, DAG)) { // Broadcast into a packed container before
-                                 // extracting the low lanes, which
+  if (isUnpackedType(VT, DAG)) {
+    // Broadcast into a packed container before extracting the low lanes, which
     // places the result elements at the spacing required by the unpacked type.
     EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
     SDValue Broadcast =
@@ -17814,10 +17814,10 @@ SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
 
-  // We are broadcasting a NEON-sized vector to a packed (legal) SVE type.
-  // This is a legal operation and there are patterns for it.
   if (ElementCount::isKnownGE(VT.getVectorElementCount(),
                               SrcVT.getVectorElementCount())) {
+    // We are broadcasting a NEON-sized vector to a packed (legal) SVE type.
+    // This is a legal operation and there are patterns for it.
     assert(SrcVT.getFixedSizeInBits() <= AArch64::SVEBitsPerBlock &&
            "Expected NEON-sized source");
     return Op;
