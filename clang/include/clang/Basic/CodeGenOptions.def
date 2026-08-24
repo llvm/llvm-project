@@ -471,6 +471,9 @@ CODEGENOPT(KeepStaticConsts, 1, 0, Benign)
 /// including global, static and thread local variables.
 CODEGENOPT(KeepPersistentStorageVariables, 1, 0, Benign)
 
+/// Whether to emit inline functions into the object file, even if inlined into all callers.
+CODEGENOPT(KeepInlineFunctions, 1, 0, Benign)
+
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0, Benign)
 

@@ -2834,6 +2834,36 @@ $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
 :::
 
+:::{option} -f[no-]keep-inline-functions
+
+Force inline functions to be emitted into the object file, even when they
+have been inlined into all callers or are otherwise unused.
+
+Except as noted below, the option keeps definitions of inline functions that
+are available in the current translation unit. LTO observes the kept
+definitions as being marked as used.
+
+In C, functions declared with inline are kept, except where they are
+C99 inline definitions or GNU C89/C90 extern inline functions. This
+includes __attribute__((gnu_inline)) extern inline functions.
+
+In C++, the option applies to functions declared inline (explicitly
+or implicitly via constexpr or an in-class member-function definition),
+including template specializations whose definitions are generated in this
+translation unit. Inline functions with the gnu_inline attribute and
+specializations subject to C++ explicit instantiation declarations
+(extern template) are not kept.
+
+With C++20 named modules, the option applies to inline functions defined
+in the current module unit, including functions that are not exported.
+Imported definitions are affected when their definition is available in the
+current translation unit.
+
+-fno-keep-inline-functions (the default) restores normal inlining
+behaviour.
+
+:::
+
 :::{option} -f[no-]basic-block-address-map:
 Emits a `SHT_LLVM_BB_ADDR_MAP` section which includes address offsets for each
 basic block in the program, relative to the parent function address.

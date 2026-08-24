@@ -325,8 +325,6 @@
 // RUN: -fexpensive-optimizations                                             \
 // RUN: -fno-expensive-optimizations                                          \
 // RUN: -fno-defer-pop                                                        \
-// RUN: -fkeep-inline-functions                                               \
-// RUN: -fno-keep-inline-functions                                            \
 // RUN: -freorder-blocks                                                      \
 // RUN: -ffloat-store                                                         \
 // RUN: -fgcse                                                                \
@@ -385,8 +383,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fexpensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-expensive-optimizations' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-defer-pop' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fkeep-inline-functions' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fno-keep-inline-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ffloat-store' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fgcse' is not supported

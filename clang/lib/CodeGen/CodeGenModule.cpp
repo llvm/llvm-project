@@ -3327,6 +3327,30 @@ void CodeGenModule::addSYCLModuleIdAttr(llvm::Function *Fn) {
   Fn->addFnAttr("sycl-module-id", getModule().getModuleIdentifier());
 }
 
+// Construct a GlobalDecl suitable for linkage queries.
+// GlobalDecl(FunctionDecl *) asserts for constructors and destructors because
+// they require an explicit ctor/dtor variant. Use the complete variant since
+// the variant does not affect linkage.
+static GlobalDecl getGlobalDeclForLinkage(const FunctionDecl *FD) {
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+    return GlobalDecl(CD, Ctor_Complete);
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(FD))
+    return GlobalDecl(DD, Dtor_Complete);
+  return GlobalDecl(FD);
+}
+
+// Returns true if FD should be kept in the object file when
+// -fkeep-inline-functions is enabled.
+static bool shouldKeepInlineFunction(llvm::GlobalValue::LinkageTypes Linkage,
+                                     const FunctionDecl *FD) {
+  // Keep inline function definitions that are available in the current
+  // translation unit. Exclude available_externally definitions, which are
+  // inlining hints whose authoritative definition is expected to be emitted by
+  // another translation unit.
+  return FD->isInlined() &&
+         Linkage != llvm::GlobalValue::AvailableExternallyLinkage;
+}
+
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   const Decl *D = GD.getDecl();
   if (isa_and_nonnull<NamedDecl>(D))
@@ -3345,6 +3369,11 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
         VD->getType().isConstQualified())))
     addUsedOrCompilerUsedGlobal(GV);
+
+  if (CodeGenOpts.KeepInlineFunctions)
+    if (const auto *FD = dyn_cast_if_present<FunctionDecl>(D))
+      if (shouldKeepInlineFunction(getFunctionLinkage(GD), FD))
+        addUsedOrCompilerUsedGlobal(GV);
 }
 
 /// Get the feature delta from the default feature map for the given target CPU.
@@ -4441,6 +4470,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
         VD->getType().isConstQualified())))
     return true;
+
+  if (CodeGenOpts.KeepInlineFunctions)
+    if (const auto *FD = dyn_cast<FunctionDecl>(Global))
+      if (shouldKeepInlineFunction(
+              getFunctionLinkage(getGlobalDeclForLinkage(FD)), FD))
+        return true;
 
   return getContext().DeclMustBeEmitted(Global);
 }
