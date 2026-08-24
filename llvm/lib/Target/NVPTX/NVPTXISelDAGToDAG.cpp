@@ -1334,17 +1334,18 @@ NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
   return {getI32Imm(EvictionAndPrefetchHint, DL), PolicyReg};
 }
 
-bool NVPTXDAGToDAGISel::SelectAtomicADDR(
-    SDNode *Root, SDValue Addr, SDValue &Base, SDValue &Offset,
-    SDValue &EvictionAndPrefetchHint, SDValue &CachePolicyReg) {
+bool NVPTXDAGToDAGISel::SelectAtomicADDR(SDNode *Root, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         SDValue &EvictionAndPrefetchHint,
+                                         SDValue &CachePolicyReg) {
   if (!SelectADDR(Addr, Base, Offset))
     return false;
 
   auto *MN = cast<MemSDNode>(Root);
   unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
-  NVPTXMemCacheHintAccess Access{
-      NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
-      /*NumElts=*/1, EltWidth, MN->isVolatile()};
+  NVPTXMemCacheHintAccess Access{NVPTXMemCacheHintInstruction::Atom,
+                                 getAddrSpace(MN),
+                                 /*NumElts=*/1, EltWidth, MN->isVolatile()};
   NVPTXMemCacheHintOperands CacheHintOperands =
       getMemCacheHintOperands(MN, Access, SDLoc(Root));
   EvictionAndPrefetchHint = CacheHintOperands.EvictionAndPrefetchHint;
