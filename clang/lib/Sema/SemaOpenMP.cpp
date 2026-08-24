@@ -4670,7 +4670,19 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   QualType Ty = Init->getType();
   if (CaptureExpr->getObjectKind() == OK_Ordinary && CaptureExpr->isGLValue()) {
     if (S.getLangOpts().CPlusPlus) {
-      Ty = C.getLValueReferenceType(Ty);
+      // For class types (iterators), capture by value to avoid dangling
+      // references to temporaries from expressions like vec.begin() or
+      // vec.end(). Use references for simple variable references
+      // (DeclRefExpr, MemberExpr) to maintain compatibility.
+      bool ShouldCaptureByValue = false;
+      if (CaptureExpr->getType()->isRecordType()) {
+        const Expr *InnerExpr = CaptureExpr->IgnoreParenImpCasts();
+        ShouldCaptureByValue =
+            !isa<DeclRefExpr>(InnerExpr) && !isa<MemberExpr>(InnerExpr);
+      }
+      if (!ShouldCaptureByValue) {
+        Ty = C.getLValueReferenceType(Ty);
+      }
     } else {
       Ty = C.getPointerType(Ty);
       ExprResult Res =
@@ -4706,7 +4718,12 @@ static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
 
 static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref,
                                StringRef Name) {
-  CaptureExpr = S.DefaultLvalueConversion(CaptureExpr).get();
+  // For class types (like iterators), capture the object value directly
+  // without lvalue conversion to avoid dangling references to temporaries.
+  const bool IsClassType = CaptureExpr->getType()->isRecordType();
+  if (!IsClassType)
+    CaptureExpr = S.DefaultLvalueConversion(CaptureExpr).get();
+
   if (!Ref) {
     OMPCapturedExprDecl *CD = buildCaptureDecl(
         S, &S.getASTContext().Idents.get(Name), CaptureExpr,
@@ -4722,6 +4739,9 @@ static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref,
     if (!Res.isUsable())
       return ExprError();
   }
+  // For class types, return the object directly without lvalue conversion
+  if (IsClassType)
+    return Res;
   return S.DefaultLvalueConversion(Res.get());
 }
 
@@ -10740,15 +10760,12 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      // For iterator-based loops (range-based for or explicit iterator loops)
-      // in loop transformation directives, skip finalization entirely.
+      // Range-based for loops manage their own iterators internally, so skip
+      // explicit finalization for them.
       ExprResult Final;
-      bool IsIteratorLoop =
-          IS.IsRangeFor || (!IS.CounterVar->getType()->isArithmeticType() &&
-                            !IS.CounterVar->getType()->isPointerType());
-      if (IsIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
-        // Iterator-based loops in transformation directives don't need
-        // explicit finalization - the iterator is already at the end.
+      if (IS.IsRangeFor && isOpenMPLoopTransformationDirective(DKind)) {
+        // Range-based for loops have hidden iterators managed by
+        // compiler-generated machinery, no explicit finalization needed.
         Final = nullptr;
       } else {
         Final =

@@ -157,8 +157,12 @@ int main() {
 // CHECK-NEXT: [range] iterator deref: 0
 // CHECK-NEXT: v=0
 // CHECK-NEXT: [range] iterator dtor
+// CHECK-NEXT: [range] iterator distance: 3
+// CHECK-NEXT: [range] iterator advance: 0 += 3
+// CHECK-NEXT: [range] iterator move assign
+// CHECK-NEXT: [range] iterator dtor
+// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: done
-// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] dtor
