@@ -82,11 +82,6 @@ Error L0QueueTy::memoryFill(void *Ptr, const void *Pattern, size_t PatternSize,
   // detection of repeating power-of-two patterns could be added here to allow
   // native L0 memory fill for those cases as well.
 
-  return memoryFillFallbackImpl(Ptr, Pattern, PatternSize, Size);
-}
-
-Error L0QueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
-                                        size_t PatternSize, size_t Size) {
   return memoryFillReplicateImpl(Ptr, Pattern, PatternSize, Size);
 }
 
@@ -450,25 +445,6 @@ Error L0SyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
   if (auto Err = L0QueueTy::memoryFillImpl(Ptr, Pattern, PatternSize, Size))
     return Err;
   return CmdList->hostSynchronize();
-}
-
-Error L0SyncQueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
-                                            size_t PatternSize, size_t Size) {
-  const auto TgtType = Device.getMemAllocType(Ptr);
-  if (TgtType == ZE_MEMORY_TYPE_HOST ||
-      (TgtType == ZE_MEMORY_TYPE_SHARED && !Device.isDiscreteDevice()))
-    return memoryFillHostImpl(Ptr, Pattern, PatternSize, Size);
-  return L0QueueTy::memoryFillFallbackImpl(Ptr, Pattern, PatternSize, Size);
-}
-
-Error L0SyncQueueTy::memoryFillHostImpl(void *Ptr, const void *Pattern,
-                                        size_t PatternSize, size_t Size) {
-  auto *Dst = static_cast<unsigned char *>(Ptr);
-  const auto *Pat = static_cast<const unsigned char *>(Pattern);
-  std::copy_n(Pat, PatternSize, Dst);
-  for (size_t Offset = PatternSize; Offset < Size; ++Offset)
-    Dst[Offset] = Dst[Offset - PatternSize];
-  return Plugin::success();
 }
 
 // L0QueueCache implementation.

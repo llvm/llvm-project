@@ -140,8 +140,6 @@ public:
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
-  virtual Error memoryFillFallbackImpl(void *Ptr, const void *Pattern,
-                                       size_t PatternSize, size_t Size);
   virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
     return CmdList->appendMemoryPrefetch(Ptr, Size);
   }
@@ -266,13 +264,6 @@ public:
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
-  Error memoryFillFallbackImpl(void *Ptr, const void *Pattern,
-                               size_t PatternSize, size_t Size) override;
-
-private:
-  /// Fill host-accessible memory directly from the calling thread.
-  Error memoryFillHostImpl(void *Ptr, const void *Pattern, size_t PatternSize,
-                           size_t Size);
 };
 
 /// Simple cache for queue objects.
