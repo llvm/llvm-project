@@ -102,6 +102,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`llvm-invalid-regex-pattern
+  <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
+
+  Detects malformed regex patterns defined in a single string literal.
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
@@ -127,6 +132,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
+
+- Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
+  <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
+  the pointer points to an incomplete (forward-declared) type.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
@@ -164,6 +173,10 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Fixed a crash in {doc}`modernize-use-noexcept
+  <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
+  code with an unparsed exception specification.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
@@ -193,6 +206,12 @@ infrastructure are described first, followed by tool-specific sections.
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
+  positives on designated initializers, where initializer lists synthesized
+  for intermediate subobjects caused the trailing comma of the enclosing
+  list to be incorrectly rewritten.
 
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious

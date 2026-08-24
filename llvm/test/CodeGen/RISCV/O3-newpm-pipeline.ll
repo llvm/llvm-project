@@ -60,7 +60,7 @@
 ; CHECK-NEXT:     peephole-opt
 ; CHECK-NEXT:     dead-mi-elimination
 ; RV64-NEXT:      riscv-opt-w-instrs
-; CHECK-NEXT:     riscv-prera-expand-pseudo
+; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     process-imp-defs
@@ -87,6 +87,7 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     riscv-expand-pseudo-post-ra
 ; CHECK-NEXT:     kcfi
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement
@@ -104,6 +105,8 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     stack-frame-layout
+; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
+; CHECK-NEXT:     riscv-expand-pseudo-atomics
 ; CHECK-NEXT:     unpack-mi-bundles
 ; CHECK-NEXT:     verify
 ; CHECK-NEXT:     riscv-asm-printer

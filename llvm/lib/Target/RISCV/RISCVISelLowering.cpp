@@ -9449,10 +9449,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDLoc DL(Op);
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
-      unsigned LoOpc =
-          Opc == ISD::MULHU ? RISCVISD::PMULU_H_B00 : RISCVISD::PMUL_H_B00;
-      unsigned HiOpc =
-          Opc == ISD::MULHU ? RISCVISD::PMULU_H_B11 : RISCVISD::PMUL_H_B11;
+      unsigned LoOpc = Opc == ISD::MULHU ? RISCVISD::PMULU_HALVES_00
+                                         : RISCVISD::PMUL_HALVES_00;
+      unsigned HiOpc = Opc == ISD::MULHU ? RISCVISD::PMULU_HALVES_11
+                                         : RISCVISD::PMUL_HALVES_11;
       SDValue Lo = DAG.getNode(LoOpc, DL, MVT::v4i16, LHS, RHS);
       SDValue Hi = DAG.getNode(HiOpc, DL, MVT::v4i16, LHS, RHS);
       return DAG.getNode(RISCVISD::PPAIRO, DL, VT, DAG.getBitcast(VT, Lo),
@@ -17804,8 +17804,8 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
   // pair of widening byte multiplies recombined with PPAIRO.
   if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::v8i8) {
     SDValue C = Mulh.getOperand(1);
-    SDValue Lo = DAG.getNode(RISCVISD::PMULSU_H_B00, DL, MVT::v4i16, X, C);
-    SDValue Hi = DAG.getNode(RISCVISD::PMULSU_H_B11, DL, MVT::v4i16, X, C);
+    SDValue Lo = DAG.getNode(RISCVISD::PMULSU_HALVES_00, DL, MVT::v4i16, X, C);
+    SDValue Hi = DAG.getNode(RISCVISD::PMULSU_HALVES_11, DL, MVT::v4i16, X, C);
     return DAG.getNode(RISCVISD::PPAIRO, DL, VT, DAG.getBitcast(VT, Lo),
                        DAG.getBitcast(VT, Hi));
   }
@@ -18209,8 +18209,10 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     // (picking out the even/odd result lanes) recombined with PPAIRO.
     if (Subtarget.is64Bit() && VT == MVT::v8i8 && Opc == RISCVISD::MULHSU) {
       SDLoc DL(N);
-      SDValue Lo = DAG.getNode(RISCVISD::PMULSU_H_B00, DL, MVT::v4i16, A, B);
-      SDValue Hi = DAG.getNode(RISCVISD::PMULSU_H_B11, DL, MVT::v4i16, A, B);
+      SDValue Lo =
+          DAG.getNode(RISCVISD::PMULSU_HALVES_00, DL, MVT::v4i16, A, B);
+      SDValue Hi =
+          DAG.getNode(RISCVISD::PMULSU_HALVES_11, DL, MVT::v4i16, A, B);
       return DAG.getNode(RISCVISD::PPAIRO, DL, VT, DAG.getBitcast(VT, Lo),
                          DAG.getBitcast(VT, Hi));
     }
@@ -19029,15 +19031,14 @@ static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
   bool IsSignedUnsigned = false;
   if (N0IsSExt && N1IsSExt) {
     RV32Opc = RISCVISD::PWMUL;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMUL_H_B01 : RISCVISD::PMUL_W_H01;
+    RV64Opc = RISCVISD::PMUL_HALVES_01;
   } else if (N0IsZExt && N1IsZExt) {
     RV32Opc = RISCVISD::PWMULU;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMULU_H_B01 : RISCVISD::PMULU_W_H01;
+    RV64Opc = RISCVISD::PMULU_HALVES_01;
   } else {
     IsSignedUnsigned = true;
     RV32Opc = RISCVISD::PWMULSU;
-    RV64Opc =
-        VT == MVT::v4i16 ? RISCVISD::PMULSU_H_B00 : RISCVISD::PMULSU_W_H00;
+    RV64Opc = RISCVISD::PMULSU_HALVES_00;
     if (N0IsZExt && N1IsSExt)
       std::swap(A, B);
   }
@@ -26446,8 +26447,10 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
-                            "have a frame pointer");
+      Func.getContext().diagnose(DiagnosticInfoUnsupported{
+          Func,
+          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
+          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
