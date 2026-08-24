@@ -1152,8 +1152,8 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
 }
 
-PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
-                                                FunctionAnalysisManager &AM) {
+PreservedAnalyses SPIRVStructurizerPass::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   ConvergenceRegionInfo &RegionInfo =
       AM.getResult<SPIRVConvergenceRegionAnalysis>(F);

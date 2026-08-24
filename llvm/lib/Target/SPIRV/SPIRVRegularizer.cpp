@@ -213,8 +213,8 @@ static bool runImpl(Function &F) {
   return true;
 }
 
-PreservedAnalyses SPIRVRegularizer::run(Function &F,
-                                        FunctionAnalysisManager &AM) {
+PreservedAnalyses SPIRVRegularizerPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
   return runImpl(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 

@@ -134,8 +134,8 @@ static bool replaceCBufferAccesses(Module &M) {
   return true;
 }
 
-PreservedAnalyses SPIRVCBufferAccess::run(Module &M,
-                                          ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVCBufferAccessPass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
   if (replaceCBufferAccesses(M)) {
     return PreservedAnalyses::none();
   }

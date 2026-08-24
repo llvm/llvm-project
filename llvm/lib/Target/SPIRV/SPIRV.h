@@ -20,93 +20,96 @@ class SPIRVSubtarget;
 class InstructionSelector;
 class RegisterBankInfo;
 
-class SPIRVPrepareFunctions
-    : public RequiredPassInfoMixin<SPIRVPrepareFunctions> {
+class SPIRVPrepareFunctionsPass
+    : public RequiredPassInfoMixin<SPIRVPrepareFunctionsPass> {
   const SPIRVTargetMachine &TM;
 
 public:
-  explicit SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : TM(TM) {}
+  explicit SPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
 
-class SPIRVStructurizerWrapper
-    : public RequiredPassInfoMixin<SPIRVStructurizerWrapper> {
+class SPIRVStructurizerPass
+    : public RequiredPassInfoMixin<SPIRVStructurizerPass> {
 public:
   PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };
 
 FunctionPass *createSPIRVStructurizerPass();
 
-class SPIRVCBufferAccess : public RequiredPassInfoMixin<SPIRVCBufferAccess> {
+class SPIRVCBufferAccessPass
+    : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVCBufferAccessLegacyPass();
 
-class SPIRVPushConstantAccess
-    : public RequiredPassInfoMixin<SPIRVPushConstantAccess> {
+class SPIRVPushConstantAccessPass
+    : public RequiredPassInfoMixin<SPIRVPushConstantAccessPass> {
   const SPIRVTargetMachine &TM;
 
 public:
-  SPIRVPushConstantAccess(const SPIRVTargetMachine &TM) : TM(TM) {}
+  SPIRVPushConstantAccessPass(const SPIRVTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVPushConstantAccessLegacyPass(SPIRVTargetMachine *TM);
 
-class SPIRVMergeRegionExitTargets
-    : public RequiredPassInfoMixin<SPIRVMergeRegionExitTargets> {
+class SPIRVMergeRegionExitTargetsPass
+    : public RequiredPassInfoMixin<SPIRVMergeRegionExitTargetsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 
-class SPIRVLegalizeImplicitBinding
-    : public RequiredPassInfoMixin<SPIRVLegalizeImplicitBinding> {
+class SPIRVLegalizeImplicitBindingPass
+    : public RequiredPassInfoMixin<SPIRVLegalizeImplicitBindingPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
 
-class SPIRVLegalizeZeroSizeArrays
-    : public RequiredPassInfoMixin<SPIRVLegalizeZeroSizeArrays> {
+class SPIRVLegalizeZeroSizeArraysPass
+    : public RequiredPassInfoMixin<SPIRVLegalizeZeroSizeArraysPass> {
   const SPIRVTargetMachine &TM;
 
 public:
-  SPIRVLegalizeZeroSizeArrays(const SPIRVTargetMachine &TM) : TM(TM) {}
+  SPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM);
 
-class SPIRVFinalizeShaderLinkage
-    : public RequiredPassInfoMixin<SPIRVFinalizeShaderLinkage> {
+class SPIRVFinalizeShaderLinkagePass
+    : public RequiredPassInfoMixin<SPIRVFinalizeShaderLinkagePass> {
   const SPIRVTargetMachine &TM;
 
 public:
-  SPIRVFinalizeShaderLinkage(const SPIRVTargetMachine &TM) : TM(TM) {}
+  SPIRVFinalizeShaderLinkagePass(const SPIRVTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 ModulePass *createSPIRVFinalizeShaderLinkagePass(const SPIRVTargetMachine &TM);
 
-class SPIRVLegalizePointerCast
-    : public RequiredPassInfoMixin<SPIRVLegalizePointerCast> {
+class SPIRVLegalizePointerCastPass
+    : public RequiredPassInfoMixin<SPIRVLegalizePointerCastPass> {
   const SPIRVTargetMachine &TM;
 
 public:
-  explicit SPIRVLegalizePointerCast(const SPIRVTargetMachine &TM) : TM(TM) {}
+  explicit SPIRVLegalizePointerCastPass(const SPIRVTargetMachine &TM)
+      : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
 
-class SPIRVRegularizer : public RequiredPassInfoMixin<SPIRVRegularizer> {
+class SPIRVRegularizerPass
+    : public RequiredPassInfoMixin<SPIRVRegularizerPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -127,7 +130,8 @@ public:
 
 ModulePass *createSPIRVEmitIntrinsicsPass(const SPIRVTargetMachine &TM);
 
-class SPIRVPrepareGlobals : public RequiredPassInfoMixin<SPIRVPrepareGlobals> {
+class SPIRVPrepareGlobalsPass
+    : public RequiredPassInfoMixin<SPIRVPrepareGlobalsPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

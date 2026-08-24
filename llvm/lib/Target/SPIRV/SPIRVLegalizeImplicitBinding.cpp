@@ -221,8 +221,8 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
 }
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeImplicitBinding::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
   return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
