@@ -145,6 +145,7 @@ readability/*
 | {doc}`bugprone-signed-char-misuse <bugprone/signed-char-misuse>` |  |
 | {doc}`bugprone-sizeof-container <bugprone/sizeof-container>` |  |
 | {doc}`bugprone-sizeof-expression <bugprone/sizeof-expression>` |  |
+| {doc}`bugprone-smart-ptr-initialization <bugprone/smart-ptr-initialization>` |  |
 | {doc}`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>` |  |
 | {doc}`bugprone-standalone-empty <bugprone/standalone-empty>` | Yes |
 | {doc}`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>` |  |
@@ -473,6 +474,7 @@ readability/*
 | {doc}`cert-flp30-c <cert/flp30-c>` | {doc}`bugprone-float-loop-counter <bugprone/float-loop-counter>` |  |
 | {doc}`cert-flp37-c <cert/flp37-c>` | {doc}`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>` |  |
 | {doc}`cert-int09-c <cert/int09-c>` | {doc}`readability-enum-initial-value <readability/enum-initial-value>` | Yes |
+| {doc}`cert-mem56-cpp <cert/mem56-cpp>` | {doc}`bugprone-smart-ptr-initialization <bugprone/smart-ptr-initialization>` |  |
 | {doc}`cert-mem57-cpp <cert/mem57-cpp>` | {doc}`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>` |  |
 | {doc}`cert-msc24-c <cert/msc24-c>` | {doc}`bugprone-unsafe-functions <bugprone/unsafe-functions>` |  |
 | {doc}`cert-msc30-c <cert/msc30-c>` | {doc}`misc-predictable-rand <misc/predictable-rand>` |  |

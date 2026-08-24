@@ -102,6 +102,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>` check.
+
+  Detects dangerous initialization of smart pointers with raw pointers that are
+  already owned elsewhere, which can lead to double deletion.
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
@@ -121,6 +127,11 @@ infrastructure are described first, followed by tool-specific sections.
   braces.
 
 #### New check aliases
+
+- New alias {doc}`cert-mem56-cpp <clang-tidy/checks/cert/mem56-cpp>` to
+  {doc}`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>`
+  was added.
 
 #### Changes in existing checks
 
