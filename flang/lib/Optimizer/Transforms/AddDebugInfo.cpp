@@ -1021,8 +1021,8 @@ void AddDebugInfoPass::markSubmoduleAncestorsDefined(mlir::ModuleOp module) {
     if (funcOp.isExternal())
       continue;
     mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
-    llvm::StringRef name = attr ? mlir::cast<mlir::StringAttr>(attr).getValue()
-                                : funcOp.getName();
+    llvm::StringRef name =
+        attr ? mlir::cast<mlir::StringAttr>(attr).getValue() : funcOp.getName();
     std::pair result = fir::NameUniquer::deconstruct(name);
     if (!result.second.modules.empty())
       definedModuleNames.insert(result.second.modules.front());
