@@ -4,12 +4,19 @@
 @Ints9    = internal addrspace(10) global [9 x i32] poison
 @Bools9   = internal addrspace(10) global [9 x i32] poison
 @Ints12   = internal addrspace(10) global [12 x i32] poison
+@Ints12B  = internal addrspace(10) global [12 x i32] poison
 @Bools12  = internal addrspace(10) global [12 x i32] poison
+@Floats12 = internal addrspace(10) global [12 x float] poison
+@Floats12B = internal addrspace(10) global [12 x float] poison
 @Ints16   = internal addrspace(10) global [16 x i32] poison
 @Bools16  = internal addrspace(10) global [16 x i32] poison
 
+; CHECK-DAG: %[[Bool:[0-9]+]] = OpTypeBool
 ; CHECK-DAG: %[[Int32:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Vec4Int32:[0-9]+]] = OpTypeVector %[[Int32]] 4
+; CHECK-DAG: %[[Vec4Bool:[0-9]+]] = OpTypeVector %[[Bool]] 4
+; CHECK-DAG: %[[Float32:[0-9]+]] = OpTypeFloat 32
+; CHECK-DAG: %[[Vec4Float32:[0-9]+]] = OpTypeVector %[[Float32]] 4
 
 ; No vector wider than 4 lanes is ever materialized for shader targets.
 ; CHECK-NOT: OpTypeVector %[[Int32]] 8
@@ -204,6 +211,32 @@ define internal void @narrow_16elem_sext() {
   ret void
 }
 
+;--- G_ICMP/G_FCMP: split the flattened matrix into 4-lane comparisons ---
+
+; CHECK-LABEL: ; -- Begin function icmp_12elem
+; CHECK-COUNT-3: OpIEqual %[[Vec4Bool]] %{{[0-9]+}} %{{[0-9]+}}
+; CHECK-NOT: OpIEqual
+define internal void @icmp_12elem() {
+  %a = load <12 x i32>, ptr addrspace(10) @Ints12
+  %b = load <12 x i32>, ptr addrspace(10) @Ints12B
+  %cmp = icmp eq <12 x i32> %a, %b
+  %ext = zext <12 x i1> %cmp to <12 x i32>
+  store <12 x i32> %ext, ptr addrspace(10) @Bools12
+  ret void
+}
+
+; CHECK-LABEL: ; -- Begin function fcmp_12elem
+; CHECK-COUNT-3: OpFOrdEqual %[[Vec4Bool]] %{{[0-9]+}} %{{[0-9]+}}
+; CHECK-NOT: OpFOrdEqual
+define internal void @fcmp_12elem() {
+  %a = load <12 x float>, ptr addrspace(10) @Floats12
+  %b = load <12 x float>, ptr addrspace(10) @Floats12B
+  %cmp = fcmp oeq <12 x float> %a, %b
+  %ext = zext <12 x i1> %cmp to <12 x i32>
+  store <12 x i32> %ext, ptr addrspace(10) @Bools12
+  ret void
+}
+
 define void @main() #0 {
   call void @copy_bool3x3()
   call void @copy_bool_12elem()
@@ -216,6 +249,8 @@ define void @main() #0 {
   call void @bool4x4_sext()
   call void @narrow_12elem_zext()
   call void @narrow_16elem_sext()
+  call void @icmp_12elem()
+  call void @fcmp_12elem()
   ret void
 }
 
