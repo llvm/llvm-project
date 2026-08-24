@@ -2222,6 +2222,29 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_out_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
     FuncAttrs.addAttribute("aarch64_inout_zt0");
+
+  unsigned RISCVBits = FPT->getRISCVAttributes();
+  switch (FunctionType::getRISCVXsfmmState(RISCVBits)) {
+  case FunctionType::RISCVNone:
+    break;
+  case FunctionType::RISCVIn:
+    FuncAttrs.addAttribute("riscv_in");
+    break;
+  case FunctionType::RISCVOut:
+    FuncAttrs.addAttribute("riscv_out");
+    break;
+  case FunctionType::RISCVInOut:
+    FuncAttrs.addAttribute("riscv_inout");
+    break;
+  case FunctionType::RISCVPreserves:
+    FuncAttrs.addAttribute("riscv_preserves");
+    break;
+  case FunctionType::RISCVNew:
+    FuncAttrs.addAttribute("riscv_new");
+    break;
+  default:
+    llvm_unreachable("Unimplemented RISC-V attribute type");
+  }
 }
 
 static void AddAttributesFromOMPAssumes(llvm::AttrBuilder &FuncAttrs,

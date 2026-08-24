@@ -3686,6 +3686,18 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
   return BaseT::shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
 }
 
+bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
+                                       const Function *Callee) const {
+  // riscv_new is the only function that can be called in an non-attributed
+  // function, we need to prevent inlining this kind of function in case any
+  // compiler generated non-attributed call in attributed function is inlined so
+  // it passes the check silently.
+  if (Callee->hasFnAttribute("riscv_new"))
+    return false;
+
+  return BaseT::areInlineCompatible(Caller, Callee);
+}
+
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale

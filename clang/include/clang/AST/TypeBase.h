@@ -4867,13 +4867,16 @@ public:
     unsigned HasArmTypeAttributes : 1;
 
     LLVM_PREFERRED_TYPE(bool)
+    unsigned HasRISCVTypeAttributes : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EffectsHaveConditions : 1;
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasExtraAttributeInfo(false),
-          HasArmTypeAttributes(false), EffectsHaveConditions(false),
-          NumFunctionEffects(0) {}
+          HasArmTypeAttributes(false), HasRISCVTypeAttributes(false),
+          EffectsHaveConditions(false), NumFunctionEffects(0) {}
   };
 
   /// A holder for extra information from attributes which aren't part of an
@@ -4919,12 +4922,57 @@ public:
     ARM_InOut = 4,
   };
 
+  /// RISC-V type attributes for states.
+  enum RISCVTypeAttributes : uint8_t {
+    RISCVNormalFunction = 0,
+
+    // Describes the value of the xsfmm tile state using RISCVStateValue.
+    // Each tile gets 3 bits to store its state.
+    RISCVXsfmmShift = 0,
+    RISCVXsfmmMask = 0b111 << RISCVXsfmmShift,
+
+    // Currently using 3 bits for xsfmm
+    RISCVAttributeMask = 0b111
+  };
+
+  enum RISCVStateValue : unsigned {
+    RISCVNone = 0,
+    RISCVIn = 1,
+    RISCVOut = 2,
+    RISCVInOut = 3,
+    RISCVPreserves = 4,
+    RISCVNew = 5,
+  };
+
+  static const char *ToRISCVStateString(RISCVStateValue St) {
+    switch (St) {
+    case RISCVNone:
+      return "none";
+    case RISCVIn:
+      return "__riscv_in";
+    case RISCVOut:
+      return "__riscv_out";
+    case RISCVInOut:
+      return "__riscv_inout";
+    case RISCVPreserves:
+      return "__riscv_preserves";
+    case RISCVNew:
+      return "__riscv_new";
+    }
+    llvm_unreachable("Invalid RISC-V state value");
+  }
+
   static ArmStateValue getArmZAState(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   static ArmStateValue getArmZT0State(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+  }
+
+  static RISCVStateValue getRISCVXsfmmState(unsigned AttrBits) {
+    return static_cast<RISCVStateValue>((AttrBits & RISCVXsfmmMask) >>
+                                        RISCVXsfmmShift);
   }
 
   /// A holder for Arm type attributes as described in the Arm C/C++
@@ -4937,6 +4985,13 @@ public:
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
+  };
+
+  struct alignas(void *) FunctionTypeRISCVAttributes {
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
+
+    FunctionTypeRISCVAttributes() : RISCVAttributes(RISCVNormalFunction) {}
   };
 
 protected:
@@ -5416,9 +5471,11 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeExtraAttributeInfo,
-          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
-          FunctionEffect, EffectConditionExpr> {
+          FunctionType::FunctionTypeArmAttributes,
+          FunctionType::FunctionTypeRISCVAttributes,
+          FunctionType::ExceptionType, Expr *, FunctionDecl *,
+          FunctionType::ExtParameterInfo, Qualifiers, FunctionEffect,
+          EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -5521,14 +5578,18 @@ public:
     unsigned CFIUncheckedCallee : 1;
     LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
-          AArch64SMEAttributes(SME_NormalFunction) {}
+          AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
-          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
+          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
@@ -5545,6 +5606,7 @@ public:
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||
+             requiresFunctionProtoTypeRISCVAttributes() ||
              requiresFunctionProtoTypeExtraAttributeInfo() ||
              !FunctionEffects.empty();
     }
@@ -5563,6 +5625,14 @@ public:
       else
         AArch64SMEAttributes &= ~Kind;
     }
+
+    bool requiresFunctionProtoTypeRISCVAttributes() const {
+      return RISCVAttributes != RISCVNormalFunction;
+    }
+
+    void setRISCVAttribute(RISCVTypeAttributes Kind) {
+      RISCVAttributes |= Kind;
+    }
   };
 
 private:
@@ -5576,6 +5646,11 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeArmAttributes>) const {
     return hasArmTypeAttributes();
+  }
+
+  unsigned
+  numTrailingObjects(OverloadToken<FunctionTypeRISCVAttributes>) const {
+    return hasRISCVTypeAttributes();
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
@@ -5691,6 +5766,12 @@ private:
                ->HasArmTypeAttributes;
   }
 
+  bool hasRISCVTypeAttributes() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasRISCVTypeAttributes;
+  }
+
   bool hasExtQualifiers() const {
     return FunctionTypeBits.HasExtQuals;
   }
@@ -5720,6 +5801,7 @@ public:
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     EPI.ExtraAttributeInfo = getExtraAttributeInfo();
     EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
+    EPI.RISCVAttributes = getRISCVAttributes();
     EPI.FunctionEffects = getFunctionEffects();
     return EPI;
   }
@@ -5920,6 +6002,12 @@ public:
       return SME_NormalFunction;
     return getTrailingObjects<FunctionTypeArmAttributes>()
         ->AArch64SMEAttributes;
+  }
+
+  unsigned getRISCVAttributes() const {
+    if (!hasRISCVTypeAttributes())
+      return RISCVNormalFunction;
+    return getTrailingObjects<FunctionTypeRISCVAttributes>()->RISCVAttributes;
   }
 
   ExtParameterInfo getExtParameterInfo(unsigned I) const {

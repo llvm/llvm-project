@@ -145,6 +145,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
+  initializeRISCVStateCheckPass(*PR);
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
@@ -583,6 +584,8 @@ void RISCVPassConfig::addPreEmitPass() {
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
+  addPass(createRISCVStateCheckPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMoveMergePass());
     // Schedule PushPop Optimization before expansion of Pseudo instruction,
