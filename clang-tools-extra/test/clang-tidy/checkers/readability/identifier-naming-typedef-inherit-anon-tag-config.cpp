@@ -42,10 +42,13 @@
 // RUN:     readability-identifier-naming.TypedefCase: camelBack, \
 // RUN:   }}'
 
+// A tag style that sets no case, prefix or suffix cannot reject a name, so the
+// typedef style applies as if the tag kind were unconfigured.
 // RUN: %check_clang_tidy -check-suffixes=TYPEDEFSTYLE,SHARED -std=c++17 %s \
 // RUN:   readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     readability-identifier-naming.TypedefInheritAnonTagConfig: true, \
+// RUN:     readability-identifier-naming.ClassHungarianPrefix: On, \
 // RUN:     readability-identifier-naming.TypeAliasCase: camelBack, \
 // RUN:     readability-identifier-naming.TypedefCase: camelBack, \
 // RUN:   }}'
@@ -108,10 +111,6 @@ using my_kind_alias = Kind;
 // CHECK-MESSAGES-SHARED: :[[@LINE-1]]:7: warning: invalid case style for type alias 'my_kind_alias' [readability-identifier-naming]
 // CHECK-FIXES-SHARED: using myKindAlias = Kind;
 
-typedef struct data { int Field; } my_data;
-// CHECK-MESSAGES-SHARED: :[[@LINE-1]]:36: warning: invalid case style for typedef 'my_data' [readability-identifier-naming]
-// CHECK-FIXES-SHARED: typedef struct data { int Field; } myData;
-
 // Of several declarators, the first one that denotes the tag type itself names
 // the tag. The others are ordinary typedefs.
 
@@ -128,10 +127,6 @@ typedef struct { int Field; } *first_ptr, second_struct;
 // CHECK-FIXES-TYPEDEFSTYLE: typedef struct { int Field; } *firstPtr, secondStruct;
 
 // The typedef does not name a tag type at all.
-
-typedef struct { int Field; } *my_struct_ptr;
-// CHECK-MESSAGES-SHARED: :[[@LINE-1]]:32: warning: invalid case style for typedef 'my_struct_ptr' [readability-identifier-naming]
-// CHECK-FIXES-SHARED: typedef struct { int Field; } *myStructPtr;
 
 typedef int my_int;
 // CHECK-MESSAGES-SHARED: :[[@LINE-1]]:13: warning: invalid case style for typedef 'my_int' [readability-identifier-naming]

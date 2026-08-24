@@ -2741,9 +2741,9 @@ After:
     (``AbstractClass``, ``Class``, ``Enum``, ``Struct`` or ``Union``, i.e.
     :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix` and
     :option:`EnumIgnoredRegexp` for an enum) rather than against the typedef
-    or type alias style. If no style is configured for that kind, the typedef
-    or type alias style still applies. Typedefs of named tags, of other
-    typedefs and of non-tag types are not affected. Default is `false`.
+    or type alias style. If that kind configures no case, prefix or suffix,
+    the typedef or type alias style still applies. Typedefs of named tags, of
+    other typedefs and of non-tag types are not affected. Default is `false`.
 
 For example using values of:
 

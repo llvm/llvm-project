@@ -1120,6 +1120,14 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix).str();
 }
 
+/// Returns \c true if \p Style can reject a name. A Hungarian prefix cannot
+/// (it is empty for a type declaration).
+static bool canConstrainName(
+    const std::optional<IdentifierNamingCheck::NamingStyle> &Style) {
+  return Style &&
+         (Style->Case || !Style->Prefix.empty() || !Style->Suffix.empty());
+}
+
 StyleKind IdentifierNamingCheck::findStyleKind(
     const NamedDecl *D,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
@@ -1139,7 +1147,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
         cast<TypedefNameDecl>(D)->getUnderlyingType()->getAsTagDecl();
     if (Tag && Tag->getTypedefNameForAnonDecl() == D) {
       const StyleKind SK = findStyleKindForTag(Tag, NamingStyles);
-      if (SK != SK_Invalid)
+      if (SK != SK_Invalid && canConstrainName(NamingStyles[SK]))
         return SK;
     }
   }

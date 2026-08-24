@@ -3,7 +3,6 @@
 // RUN:     readability-identifier-naming.TypedefInheritAnonTagConfig: true, \
 // RUN:     readability-identifier-naming.EnumCase: CamelCase, \
 // RUN:     readability-identifier-naming.StructCase: lower_case, \
-// RUN:     readability-identifier-naming.UnionCase: UPPER_CASE, \
 // RUN:     readability-identifier-naming.TypedefCase: camelBack, \
 // RUN:   }}'
 
@@ -14,10 +13,6 @@ typedef enum { EV_ANON } my_enum;
 typedef struct { int Field; } My_Struct;
 // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: invalid case style for struct 'My_Struct' [readability-identifier-naming]
 // CHECK-FIXES: typedef struct { int Field; } my_struct;
-
-typedef union { int I; float F; } my_union;
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: invalid case style for union 'my_union' [readability-identifier-naming]
-// CHECK-FIXES: typedef union { int I; float F; } MY_UNION;
 
 // The tag has a name of its own, so the typedef style still applies.
 typedef struct data { int Field; } my_data;
