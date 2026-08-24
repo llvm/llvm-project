@@ -3066,8 +3066,12 @@ auto HvxIdioms::processFxpMulChopped(IRBuilderBase &Builder, Instruction &In,
                                            {Hi, Lo, ShiftAmt},
                                            /*FMFSource*/ nullptr, "int");
     } else {
-      // The shift of the most significant word.
-      WordP[Dst] = Builder.CreateAShr(Lo, ShiftAmt, "asr");
+      // The shift of the most significant word. The product is signed only
+      // if one of the operands is, otherwise the top bit is a value bit and
+      // must not be replicated.
+      WordP[Dst] = Op.X.Sgn == Signed || Op.Y.Sgn == Signed
+                       ? Builder.CreateAShr(Lo, ShiftAmt, "asr")
+                       : Builder.CreateLShr(Lo, ShiftAmt, "lsr");
     }
   }
   if (SkipWords != 0)
