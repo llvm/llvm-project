@@ -11,10 +11,10 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
-#include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -110,21 +110,20 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
     // run.
     addMachineFunctionPass(EarlyMachineLICMPass(), PMW);
-    // TODO: RISCVVLOptimizerPass
+    addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
-  // TODO: RISCVVectorPeepholePass
-  // TODO: RISCVFoldMemOffsetPass
+  addMachineFunctionPass(RISCVVectorPeepholePass(), PMW);
+  addMachineFunctionPass(RISCVFoldMemOffsetPass(), PMW);
 
   Base::addMachineSSAOptimization(PMW);
 
-  if (TM.getTargetTriple().isRISCV64()) {
-    // TODO: RISCVOptWInstrsPass
-  }
+  if (TM.getTargetTriple().isRISCV64())
+    addMachineFunctionPass(RISCVOptWInstrsPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO: RISCVPreRAExpandPseudoPass
+  addMachineFunctionPass(RISCVPreRAExpandPseudoPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO: RISCVMergeBaseOffsetOptPass
     // TODO: RISCVPreAllocZilsdOptPass
@@ -146,7 +145,7 @@ void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  // TODO: RISCVPostRAExpandPseudoPass
+  addMachineFunctionPass(RISCVPostRAExpandPseudoPass(), PMW);
 
   addMachineFunctionPass(MachineKCFIPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
@@ -177,7 +176,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVMoveMergePass
     // TODO: RISCVPushPopOptimizationPass
   }
-  // TODO: RISCVExpandPseudoPass
+  addMachineFunctionPass(RISCVExpandPseudoPass(), PMW);
 
   // Add QC Relaxation Markers as late as possible, and only for RV32
   if (getOptLevel() != CodeGenOptLevel::None &&
@@ -185,7 +184,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
     // TODO: RISCVQCRelaxMarkingPass
   }
 
-  // TODO: RISCVExpandAtomicPseudoPass
+  addMachineFunctionPass(RISCVExpandAtomicPseudoPass(), PMW);
 
   // KCFI indirect call checks are lowered to a bundle.
   addMachineFunctionPass(
@@ -194,7 +193,13 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
       }),
       PMW);
 
-  // TODO: CFIInstrInserterPass
+  // RISCVTargetMachine's constructor sets Options.EnableCFIFixup to the
+  // inverse of -riscv-enable-cfi-instr-inserter (a flag private to
+  // RISCVTargetMachine.cpp), so checking it here is equivalent to checking
+  // that flag directly -- the two passes solve overlapping problems and
+  // this target picks exactly one.
+  if (!TM.Options.EnableCFIFixup)
+    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
