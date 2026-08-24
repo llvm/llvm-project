@@ -326,7 +326,10 @@ loc::MemRegionVal SValBuilder::getCXXThis(const CXXRecordDecl *D,
 std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   E = E->IgnoreParens();
 
-  if (E->getType()->isFunctionPointerType()) {
+  // A function used as a constant initializer can either decay to a function
+  // pointer or bind directly to a function reference.
+  if (E->getType()->isFunctionPointerType() ||
+      E->getType()->isFunctionType()) {
     if (const auto *FD =
             dyn_cast_or_null<FunctionDecl>(E->getReferencedDeclOfCallee()))
       return getFunctionPointer(FD);
