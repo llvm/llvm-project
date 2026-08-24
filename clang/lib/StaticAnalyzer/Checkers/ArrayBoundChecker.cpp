@@ -495,7 +495,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
           OffsetName = "index";
 
       BugDescription Desc = describeTaintBug(Res, RegName, OffsetName);
-      reportOOB(C, State, Desc, ByteOffset, Extent, /*IsTaintBug=*/true);
+      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow(),
+                /*IsTaintBug=*/true);
       return;
     }
 

@@ -391,6 +391,34 @@ int *mallocRegionDeref(void) {
   return mem;
 }
 
+void taintedExtentNotInteresting(void) {
+  // This is a potential underflow report, so the extent is not interesting
+  // (and e.g. we should not print notes about its taintedness).
+  int n;
+  scanf("%d", &n);
+  // expected-note@+4 {{Assuming 'n' is >= 1}}
+  // expected-note@+3 {{Left side of '||' is false}}
+  // expected-note@+2 {{Assuming 'n' is <= 100}}
+  // expected-note@+1 {{Taking false branch}}
+  if (n < 1 || n > 100)
+    return;
+
+  char *p = (char *)malloc(n);
+  int index;
+  // expected-note@+2 {{Taint originated here}}
+  // expected-note@+1 {{Taint propagated to the 2nd argument}}
+  scanf("%d", &index);
+  // expected-note@+2 {{Assuming 'index' is < 'n'}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= n) {
+    free(p);
+    return;
+  }
+  p[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to the heap area with tainted index}}
+  // expected-note@-2 {{Access of the heap area with a tainted index that may be negative}}
+}
+
 void *alloca(size_t size);
 
 int allocaRegion(void) {
