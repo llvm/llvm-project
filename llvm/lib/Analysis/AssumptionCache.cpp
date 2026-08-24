@@ -116,11 +116,14 @@ void AssumptionCache::updateAffectedValues(AssumeInst *CI) {
   for (auto &AV : Affected) {
     auto &AVV = getOrInsertAffectedValues(AV.Assume);
 
-    // Callers walk every entry cached for a value, including the ones left
-    // behind by erased assumptions, so cache no more of them than an analysis
-    // should walk.
-    if (AVV.size() >= MaxAssumesPerValue)
-      continue;
+    // Callers walk every assumption cached for a value, so cache no more of
+    // them than an analysis should walk. Erased assumptions keep their entry
+    // until the value is gone, so drop those before giving up on this value.
+    if (AVV.size() >= MaxAssumesPerValue) {
+      llvm::erase_if(AVV, [](const ResultElem &Elem) { return !Elem.Assume; });
+      if (AVV.size() >= MaxAssumesPerValue)
+        continue;
+    }
 
     if (llvm::none_of(AVV, [&](ResultElem &Elem) {
           return Elem.Assume == CI && Elem.Index == AV.Index;
