@@ -366,10 +366,10 @@ static cl::opt<unsigned>
                cl::desc("Seed for the random number generator used by "
                         "-memprof-random-hotness and temporal profile "
                         "reservoir sampling"));
-static cl::alias
-    MemprofGenerateRandomHotnessSeed("memprof-random-hotness-seed", cl::Hidden,
-                                     cl::desc("Alias for -random-seed"),
-                                     cl::aliasopt(RandomSeed));
+static cl::alias MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::Hidden,
+    cl::desc("Alias for -random-seed. Deprecated, please use -random-seed"),
+    cl::aliasopt(RandomSeed));
 
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
