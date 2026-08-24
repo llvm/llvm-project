@@ -111,7 +111,10 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
     } else if (RegCB != ConstrainingRegCB)
       return false;
   }
-  if (ConstrainingRegTy.isValid())
+  // Refine an any-scalar element type to the constraining type, but do not
+  // discard a more specific extended LLT in favor of an any-scalar type.
+  if (ConstrainingRegTy.isValid() &&
+      (!RegTy.isValid() || RegTy.getScalarType().isAnyScalar()))
     setType(Reg, ConstrainingRegTy);
   return true;
 }
