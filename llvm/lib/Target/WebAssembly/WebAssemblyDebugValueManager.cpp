@@ -15,7 +15,9 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 
@@ -35,26 +37,33 @@ WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def)
 
   // Collect all the uses of this def.
   MachineRegisterInfo &MRI = Def->getMF()->getRegInfo();
-  SmallVector<MachineInstr *, 2> Candidates;
-  for (MachineInstr &MI : MRI.use_instructions(CurrentReg)) {
-    if (MI.isDebugValue() && MI.getParent() == Def->getParent())
-      Candidates.push_back(&MI);
-  }
-  if (Candidates.empty())
+  MachineBasicBlock *MBB = Def->getParent();
+  unsigned RemainingUses = 0;
+  for (MachineInstr &MI : MRI.use_instructions(CurrentReg))
+    if (MI.isDebugValue() && MI.getParent() == MBB)
+      ++RemainingUses;
+  if (RemainingUses == 0)
     return;
 
   // To preserve the order of DBG_VALUEs and correctly handle non-SSA cases,
   // we scan the BB as far as needed to find all candidates.
-  for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
-                                   ME = Def->getParent()->end();
-       MI != ME; ++MI) {
-    // If another definition appears, stop
-    if (MI->definesRegister(CurrentReg, /*TRI=*/nullptr))
+  MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
+                              DownEnd = MBB->end(), Up = Def->getIterator(),
+                              UpBegin = MBB->begin();
+  while (RemainingUses > 0 && Down != DownEnd) {
+    if (Down->isDebugValue()) {
+      if (Down->hasDebugOperandForReg(CurrentReg)) {
+        DbgValues.push_back(&*Down);
+        --RemainingUses;
+      }
+    } else if (Down->definesRegister(CurrentReg, /*TRI=*/nullptr)) {
       break;
-    if (MI->isDebugValue() && MI->hasDebugOperandForReg(CurrentReg)) {
-      DbgValues.push_back(&*MI);
-      if (DbgValues.size() == Candidates.size())
-        break;
+    }
+    ++Down;
+    if (Up != UpBegin) {
+      --Up;
+      if (Up->isDebugValue() && Up->hasDebugOperandForReg(CurrentReg))
+        --RemainingUses;
     }
   }
 }
@@ -79,44 +88,65 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
     MachineInstr *Insert) const {
   if (DbgValues.empty())
     return {};
-  // DBG_VALUEs between Def and Insert
+
+  // If Def and Insert are in different BBs, we only handle a simple case in
+  // which Insert's BB is a successor of Def's BB.
+  if (Def->getParent() != Insert->getParent() &&
+      !Def->getParent()->isSuccessor(Insert->getParent()))
+    return {};
+
+  SmallDenseSet<std::pair<const DILocalVariable *, const DILocation *>, 4>
+      OurVars;
+  for (MachineInstr *DV : DbgValues)
+    OurVars.insert({DV->getDebugVariable(), DV->getDebugLoc()->getInlinedAt()});
+  auto IsRelevantDbgValue = [&](const MachineInstr &MI) {
+    return MI.isDebugValue() &&
+           OurVars.count(
+               {MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()});
+  };
+
   SmallVector<MachineInstr *, 8> DbgValuesInBetween;
 
   if (Def->getParent() == Insert->getParent()) {
     // When Def and Insert are within the same BB, check if Insert comes after
     // Def, because we only support sinking.
+    MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
+                                DownEnd = Def->getParent()->end(),
+                                Up = Def->getIterator(),
+                                UpBegin = Def->getParent()->begin();
     bool DefFirst = false;
-    for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
-                                     ME = Def->getParent()->end();
-         MI != ME; ++MI) {
-      if (&*MI == Insert) {
-        DefFirst = true;
-        break;
+    while (Down != DownEnd || Up != UpBegin) {
+      if (Down != DownEnd) {
+        if (&*Down == Insert) {
+          DefFirst = true;
+          break;
+        }
+        if (IsRelevantDbgValue(*Down))
+          DbgValuesInBetween.push_back(&*Down);
+        ++Down;
       }
-      if (MI->isDebugValue())
-        DbgValuesInBetween.push_back(&*MI);
+      if (Up != UpBegin) {
+        --Up;
+        if (&*Up == Insert)
+          break;
+      }
     }
     if (!DefFirst) // Not a sink
       return {};
 
   } else { // Def and Insert are in different BBs
-    // If Def and Insert are in different BBs, we only handle a simple case in
-    // which Insert's BB is a successor of Def's BB.
-    if (!Def->getParent()->isSuccessor(Insert->getParent()))
-      return {};
-
     // Gather DBG_VALUEs between 'Def~Def BB's end' and
     // 'Insert BB's begin~Insert'
     for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
                                      ME = Def->getParent()->end();
          MI != ME; ++MI) {
-      if (MI->isDebugValue())
+      if (IsRelevantDbgValue(*MI))
         DbgValuesInBetween.push_back(&*MI);
     }
     for (MachineBasicBlock::iterator MI = Insert->getParent()->begin(),
                                      ME = Insert->getIterator();
          MI != ME; ++MI) {
-      if (MI->isDebugValue())
+      if (IsRelevantDbgValue(*MI))
         DbgValuesInBetween.push_back(&*MI);
     }
   }
