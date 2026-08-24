@@ -2612,6 +2612,16 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
+namespace Hwreg {
+
+unsigned getDebuggingEnabledHwregImm(const MCSubtargetInfo &STI) {
+  if (isGFX12(STI))
+    return HwregEncoding::encode(ID_STATE_PRIV, 16, 2);
+  return HwregEncoding::encode(ID_STATUS, 20, 2);
+}
+
+} // namespace Hwreg
+
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250(STI))
     return false;
