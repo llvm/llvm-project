@@ -37,6 +37,18 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/task-shared-element.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASK-SHARED-ELEMENT
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/task-shared-full-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASK-SHARED-FULL-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/task-shared-full-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASK-SHARED-FULL-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASK-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASK-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskgroup-udr-element.f90 2>&1 | FileCheck %s --check-prefix=TASKGROUP-UDR-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskgroup-udr-element.f90 2>&1 | FileCheck %s --check-prefix=TASKGROUP-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-max-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-MAX-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-max-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-MAX-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-UDR-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-udr-shared-element.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-UDR-SHARED-ELEMENT
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
 
@@ -61,6 +73,11 @@
 ! TASKLOOP-IN-SHARED-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of a partial array section
 ! EAGER-TASK-SHARED-ELEMENT: not yet implemented: TASK construct with IN_REDUCTION of an array element when delayed privatization is disabled
 ! EAGER-TASK-SHARED-FULL-SECTION: not yet implemented: TASK construct with IN_REDUCTION when delayed privatization is disabled
+! TASK-UDR-SHARED-ELEMENT: not yet implemented: TASK construct with IN_REDUCTION of an array element using a user-defined reduction
+! TASKGROUP-UDR-ELEMENT: not yet implemented: TASKGROUP construct with TASK_REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-MAX-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-IN-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element using a user-defined reduction
 ! TARGET-ELEMENT: not yet implemented: TARGET construct with IN_REDUCTION of an array element
 
 !--- task.f90
@@ -92,6 +109,26 @@ subroutine task_in_reduction_shared_full_section(a)
   !$omp task shared(a) in_reduction(+: a(:))
   a(:) = a(:) + 1
   !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+!--- task-udr-shared-element.f90
+subroutine task_in_reduction_udr_shared_element(a)
+  integer :: a(4)
+  !$omp declare reduction(+: integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp task shared(a) in_reduction(+: a(2))
+  a(2) = a(2) + 1
+  !$omp end task
+end subroutine
+
+!--- taskgroup-udr-element.f90
+subroutine taskgroup_udr_element(a)
+  integer :: a(4)
+  !$omp declare reduction(+: integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp taskgroup task_reduction(+: a(2))
+  a(2) = a(2) + 1
   !$omp end taskgroup
 end subroutine
 
@@ -162,6 +199,52 @@ subroutine taskloop_udr_shared_section(a)
   !$omp taskloop reduction(myred : a(2:3))
   do i = 1, 1
     a(2:3) = a(2:3) + i
+  end do
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+!--- taskloop-udr-shared-element.f90
+subroutine taskloop_udr_shared_element(a)
+  integer :: a(4), i
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop reduction(myred : a(2))
+  do i = 1, 1
+    a(2) = a(2) + i
+  end do
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+!--- taskloop-max-udr-shared-element.f90
+subroutine taskloop_max_udr_shared_element(a)
+  integer :: a(4), i
+  intrinsic :: max
+  !$omp declare reduction(max : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop reduction(max : a(2))
+  do i = 1, 1
+    a(2) = a(2) + i
+  end do
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+!--- taskloop-in-udr-shared-element.f90
+subroutine taskloop_in_reduction_udr_shared_element(a)
+  integer :: a(4), i
+  !$omp declare reduction(+: integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop in_reduction(+: a(2))
+  do i = 1, 1
+    a(2) = a(2) + i
   end do
   !$omp end single
   !$omp end parallel

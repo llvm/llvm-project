@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenMP.h"
 
 #include "Atomic.h"
+#include "ClauseFinder.h"
 #include "ClauseProcessor.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
@@ -192,23 +193,100 @@ hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
   return false;
 }
 
+static bool isArrayElementReductionObject(const Object &object) {
+  return object.ref() && object.ref()->Rank() == 0 &&
+         evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false);
+}
+
 static bool
 hasArrayElementReductionObject(llvm::ArrayRef<Object> reductionObjects) {
-  for (const Object &object : reductionObjects) {
-    if (!object.ref())
-      continue;
-    std::optional<evaluate::DataRef> dataRef =
-        evaluate::ExtractDataRef(*object.ref());
-    if (!dataRef)
-      continue;
-    const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
-    if (arrayRef && llvm::all_of(arrayRef->subscript(),
-                                 [](const evaluate::Subscript &subscript) {
-                                   return subscript.Rank() == 0;
-                                 }))
-      return true;
-  }
-  return false;
+  return llvm::any_of(reductionObjects, isArrayElementReductionObject);
+}
+
+static bool isUserDefinedReductionOperator(
+    const clause::ReductionOperator &reductionOperator, const Object &object,
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx) {
+  const semantics::Symbol *objectSymbol = object.sym();
+  const semantics::DeclTypeSpec *objectType =
+      objectSymbol ? objectSymbol->GetUltimate().GetType() : nullptr;
+  if (!objectType)
+    return false;
+
+  return common::visit(
+      common::visitors{
+          [&](const clause::DefinedOperator &definedOperator) {
+            return common::visit(
+                common::visitors{
+                    [&](const clause::DefinedOperator::IntrinsicOperator &op) {
+                      using IntrinsicOperator =
+                          clause::DefinedOperator::IntrinsicOperator;
+                      switch (op) {
+                      case IntrinsicOperator::Add:
+                      case IntrinsicOperator::Multiply:
+                      case IntrinsicOperator::AND:
+                      case IntrinsicOperator::OR:
+                      case IntrinsicOperator::EQV:
+                      case IntrinsicOperator::NEQV:
+                        break;
+                      default:
+                        return false;
+                      }
+
+                      parser::CharBlock mangledName =
+                          semantics::omp::MangledIntrinsicOperatorReductionName(
+                              ReductionProcessor::toParserIntrinsicOperator(op),
+                              semaCtx);
+                      return semantics::omp::FindUserReductionSymbol(
+                                 converter.getCurrentScope(), mangledName,
+                                 objectType) != nullptr;
+                    },
+                    [&](const clause::DefinedOperator::DefinedOpName &op) {
+                      const semantics::Symbol *operatorSymbol = op.v.sym();
+                      return operatorSymbol &&
+                             semantics::omp::FindOperatorUserReductionSymbol(
+                                 converter.getCurrentScope(), *operatorSymbol,
+                                 objectType);
+                    },
+                },
+                definedOperator.u);
+          },
+          [&](const clause::ProcedureDesignator &procedureDesignator) {
+            const semantics::Symbol *symbol = procedureDesignator.v.sym();
+            return (symbol &&
+                    symbol->GetUltimate()
+                        .detailsIf<semantics::UserReductionDetails>()) ||
+                   ReductionProcessor::findUserDefinedReductionForIntrinsic(
+                       converter.getCurrentScope(), procedureDesignator,
+                       objectType) != nullptr;
+          },
+      },
+      reductionOperator.u);
+}
+
+template <typename ReductionClause>
+static bool
+hasUserDefinedArrayElementReduction(const List<Clause> &clauses,
+                                    lower::AbstractConverter &converter,
+                                    semantics::SemanticsContext &semaCtx) {
+  bool found = false;
+  ClauseFinder::findRepeatableClause<ReductionClause>(
+      clauses,
+      [&](const ReductionClause &reductionClause, const parser::CharBlock &) {
+        if (found)
+          return;
+
+        const auto &reductionOperators =
+            std::get<clause::ReductionOperatorList>(reductionClause.t);
+        assert(reductionOperators.size() == 1 &&
+               "expected one reduction operator");
+        const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
+        found = llvm::any_of(objects, [&](const Object &object) {
+          return isArrayElementReductionObject(object) &&
+                 isUserDefinedReductionOperator(reductionOperators.front(),
+                                                object, converter, semaCtx);
+        });
+      });
+  return found;
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -4369,6 +4447,11 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
                  clauseOps, inReductionObjects);
 
+  if (hasUserDefinedArrayElementReduction<clause::InReduction>(
+          item->clauses, converter, semaCtx))
+    TODO(loc, "TASK construct with IN_REDUCTION of an array element using a "
+              "user-defined reduction");
+
   if (!enableDelayedPrivatization) {
     if (hasArrayElementReductionObject(inReductionObjects))
       TODO(loc, "TASK construct with IN_REDUCTION of an array element when "
@@ -4419,6 +4502,12 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<Object> taskReductionObjects;
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
                       taskReductionObjects);
+
+  if (hasUserDefinedArrayElementReduction<clause::TaskReduction>(
+          item->clauses, converter, semaCtx))
+    TODO(loc,
+         "TASKGROUP construct with TASK_REDUCTION of an array element using a "
+         "user-defined reduction");
 
   ObjectEntryBlockArgs taskgroupArgs;
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
@@ -5011,6 +5100,16 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&taskloopClauseOps);
+
+  if (hasUserDefinedArrayElementReduction<clause::InReduction>(
+          item->clauses, converter, semaCtx))
+    TODO(loc,
+         "TASKLOOP construct with IN_REDUCTION of an array element using a "
+         "user-defined reduction");
+  if (hasUserDefinedArrayElementReduction<clause::Reduction>(
+          item->clauses, converter, semaCtx))
+    TODO(loc, "TASKLOOP construct with REDUCTION of an array element using a "
+              "user-defined reduction");
 
   llvm::ArrayRef<const semantics::Symbol *> privatizedSymbols =
       enableDelayedPrivatization ? dsp.getDelayedPrivSymbols()
