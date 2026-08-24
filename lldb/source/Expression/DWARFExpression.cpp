@@ -2043,6 +2043,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_call_frame_cfa:
       if (llvm::Error err = Evaluate_DW_OP_call_frame_cfa(eval_ctx))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_form_tls_address:
@@ -2071,7 +2073,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       uint64_t index = op->getRawOperand(0);
       lldb::addr_t value =
           eval_ctx.dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      stack.push_back(Scalar(value));
+      stack.push_back(to_generic(value));
     } break;
 
     case DW_OP_GNU_entry_value:

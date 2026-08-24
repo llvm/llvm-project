@@ -388,6 +388,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -716,12 +719,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogbl
     libc.src.math.iscanonical
     libc.src.math.iscanonicalf
+    libc.src.math.iscanonicalf128
     libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
+    libc.src.math.isnanf128
     libc.src.math.isnanl
     libc.src.math.issignaling
     libc.src.math.issignalingf
+    libc.src.math.issignalingf128
     libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
@@ -1024,9 +1030,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
-    libc.src.math.iscanonicalf128
-    libc.src.math.isnanf128
-    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.logbf128
@@ -1309,6 +1312,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
@@ -1539,6 +1543,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # locale.h entrypoints
     libc.src.locale.localeconv

@@ -172,6 +172,17 @@ struct FactOrCheck {
   bool isConditionFact() const { return Ty == EntryTy::ConditionFact; }
 };
 
+/// The senses in which an induction phi is monotonic, together with the
+/// direction it moves in.
+struct MonotonicInfo {
+  /// True if the phi steps by a negative constant.
+  bool Decreasing = false;
+  /// True if the phi is monotonic in the unsigned sense.
+  bool Unsigned = false;
+  /// True if the phi is monotonic in the signed sense.
+  bool Signed = false;
+};
+
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
@@ -188,16 +199,16 @@ struct State {
   void addInfoFor(BasicBlock &BB);
 
   /// If \p BB is a loop header, bound each induction phi in it by its start
-  /// value, if it is non-decreasing.
-  void addLowerBoundsForHeaderInductions(BasicBlock &BB);
+  /// value.
+  void addBoundsForHeaderInductions(BasicBlock &BB);
 
   /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
   /// controlling the loop header.
   void addInfoForInductions(BasicBlock &BB);
 
-  /// Returns the senses, {unsigned, signed}, in which stepping the induction
-  /// phi \p PN, starting at \p Start, to \p Step cannot decrease it.
-  std::pair<bool, bool> getNonDecreasingInfo(PHINode &PN, Value *Step);
+  /// Returns the direction the induction phi \p PN with backedge value \p Step
+  /// moves in, and the senses in which it is monotonic in that direction.
+  MonotonicInfo getMonotonicityInfo(PHINode &PN, Value *Step);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -986,40 +997,46 @@ getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
-std::pair<bool, bool> State::getNonDecreasingInfo(PHINode &PN, Value *Step) {
-  bool Unsigned = false, Signed = false;
+MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
+  MonotonicInfo Info;
   const APInt *StepOffset = nullptr;
   if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
-    if (StepOffset->isNegative())
-      return {false, false};
+    Info.Decreasing = StepOffset->isNegative();
     const auto *Add = cast<OverflowingBinaryOperator>(Step);
-    Unsigned = Add->hasNoUnsignedWrap();
-    Signed = Add->hasNoSignedWrap();
+    Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+    Info.Signed = Add->hasNoSignedWrap();
   } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
+    // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
+    // negative constant offset.
     const DataLayout &DL = PN.getDataLayout();
     APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-    Unsigned = GEP->getPointerOperand() == &PN &&
-               (GEP->hasNoUnsignedWrap() ||
-                ((GEP->hasNoUnsignedSignedWrap() &&
-                  GEP->accumulateConstantOffset(DL, GEPOffset) &&
-                  !GEPOffset.isNegative())));
+    Info.Unsigned = GEP->getPointerOperand() == &PN &&
+                    (GEP->hasNoUnsignedWrap() ||
+                     ((GEP->hasNoUnsignedSignedWrap() &&
+                       GEP->accumulateConstantOffset(DL, GEPOffset) &&
+                       !GEPOffset.isNegative())));
   }
 
   // Forming the SCEV of a phi is expensive, so only consult it for a PN + C
   // step whose no-wrap flags prove nothing.
-  if (Unsigned || Signed || !StepOffset)
-    return {Unsigned, Signed};
+  if (Info.Unsigned || Info.Signed || !StepOffset)
+    return Info;
 
   const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
   if (!AR)
-    return {false, false};
-  return {SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT) ==
-              ScalarEvolution::MonotonicallyIncreasing,
-          SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT) ==
-              ScalarEvolution::MonotonicallyIncreasing};
+    return Info;
+  ScalarEvolution::MonotonicPredicateType Expected =
+      Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
+                      : ScalarEvolution::MonotonicallyIncreasing;
+  auto IsMonotonic = [&](CmpInst::Predicate Pred) {
+    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+  };
+  Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
+  Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
+  return Info;
 }
 
-void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
+void State::addBoundsForHeaderInductions(BasicBlock &BB) {
   Loop *L = LI.getLoopFor(&BB);
   if (!L || L->getHeader() != &BB)
     return;
@@ -1036,17 +1053,22 @@ void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
     if (!Start)
       continue;
 
-    auto [Unsigned, Signed] = getNonDecreasingInfo(PN, Step);
+    MonotonicInfo Info = getMonotonicityInfo(PN, Step);
     // Every variable in the unsigned system already has a `V >= 0` row, so a
     // zero start value would just duplicate it.
     if (match(Start, m_Zero()))
-      Unsigned = false;
-    if (!Unsigned && !Signed)
+      Info.Unsigned = false;
+    if (!Info.Unsigned && !Info.Signed)
       continue;
 
-    CmpPredicate Pred(Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
-                      /*HasSameSign=*/Unsigned && Signed);
-    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, &PN, Start));
+    // A non-decreasing induction cannot step below its start value, and a
+    // non-increasing one cannot step above it.
+    Value *LHS = &PN, *RHS = Start;
+    if (Info.Decreasing)
+      std::swap(LHS, RHS);
+    CmpPredicate Pred(Info.Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
+                      /*HasSameSign=*/Info.Unsigned && Info.Signed);
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, LHS, RHS));
   }
 }
 
@@ -1122,6 +1144,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (IncStep && (*IncStep != *StepOffset || StepOffset->isNegative()))
     return;
 
+  MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+
   // Handle negative steps.
   if (StepOffset->isNegative()) {
     // TODO: Extend to allow steps > -1.
@@ -1134,9 +1158,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, StartValue, PN,
         ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, StartValue, PN,
-        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
+    if (!(Info.Decreasing && Info.Signed))
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SGE, StartValue, PN,
+          ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
     // Add PN > B conditional on B <= StartValue which guarantees that the loop
     // exits when reaching B with a step of -1.
     WorkList.push_back(FactOrCheck::getConditionFact(
@@ -1147,9 +1172,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
         ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
     return;
   }
-
-  auto [MonotonicallyIncreasingUnsigned, MonotonicallyIncreasingSigned] =
-      getNonDecreasingInfo(*PN, Backedge);
 
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
@@ -1186,10 +1208,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // restrictions on B and the step above.
   ConditionTy StartBeforeBoundULE = {CmpInst::ICMP_ULE, LowerBound, B};
   ConditionTy StartBeforeBoundSLE = {CmpInst::ICMP_SLE, LowerBound, B};
-  if (!MonotonicallyIncreasingUnsigned && LowerBoundNUW)
+  if (!Info.Unsigned && LowerBoundNUW)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundULE));
-  if (!MonotonicallyIncreasingSigned && LowerBoundNSW)
+  if (!Info.Signed && LowerBoundNSW)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSLE));
 
@@ -1264,7 +1286,7 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
 }
 
 void State::addInfoFor(BasicBlock &BB) {
-  addLowerBoundsForHeaderInductions(BB);
+  addBoundsForHeaderInductions(BB);
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 

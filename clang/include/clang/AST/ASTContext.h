@@ -2156,7 +2156,7 @@ public:
   /// C++11 deduced auto type.
   QualType
   getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
-              TemplateDecl *TypeConstraintConcept = nullptr,
+              TemplateName TypeConstraintConcept = TemplateName(),
               ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.

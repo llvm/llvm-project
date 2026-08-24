@@ -1683,7 +1683,7 @@ add_header_library(
   HDRS
     iscanonicalf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -1730,7 +1730,7 @@ add_header_library(
   HDRS
     isnanf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -1787,7 +1787,7 @@ add_header_library(
   HDRS
     issignalingf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -2451,7 +2451,10 @@ add_header_library(
     round.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -2541,6 +2544,10 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.cpu_features
   FLAGS
     ROUND_OPT
 )
@@ -3076,6 +3083,19 @@ add_header_library(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  expf_integer_eval
+  HDRS
+    expf_integer_eval.h
+  DEPENDS
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac64
 )
 
 add_header_library(
