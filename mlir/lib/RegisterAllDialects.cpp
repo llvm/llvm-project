@@ -52,6 +52,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/AllInterfaces.h"
 #include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
+#include "mlir/Dialect/MIR/IR/MIRDialect.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/MLProgram/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
@@ -135,6 +136,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   LLVM::LLVMDialect,
                   math::MathDialect,
                   memref::MemRefDialect,
+                  mir::MIRDialect,
                   shard::ShardDialect,
                   ml_program::MLProgramDialect,
                   mpi::MPIDialect,
