@@ -53,14 +53,10 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
   // Construct an edge representing the starting location in the callee.
   BlockEdge Loc(Entry, Succ, CE.getCalleeStackFrame());
 
-  ProgramStateRef state = Pred->getState();
-
   // Construct a new node, notify checkers that analysis of the function has
   // begun, and add the resultant nodes to the worklist.
-  bool isNew;
-  ExplodedNode *Node = G.getNode(Loc, state, false, &isNew);
-  Node->addPredecessor(Pred, G);
-  if (isNew) {
+  ExplodedNode *Node = Engine.makeNode(Loc, Pred->getState(), Pred);
+  if (Node) {
     // FIXME: In the `processBeginOfFunction` callback
     // `ExprEngine::getCurrStackFrame()` can be different from the
     // `StackFrame` queried from e.g. the `ExplodedNode`s. I'm not
