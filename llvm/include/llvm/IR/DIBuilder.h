@@ -38,10 +38,7 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class Value;
-  class DbgAssignIntrinsic;
   class DbgRecord;
-
-  using DbgInstPtr = PointerUnion<Instruction *, DbgRecord *>;
 
   class DIBuilder {
     Module &M;
@@ -53,7 +50,7 @@ namespace llvm {
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
-    SmallVector<Metadata *, 4> AllGVs;
+    SmallVector<Metadata *, 4> Globals;
     SmallVector<TrackingMDNodeRef, 4> ImportedModules;
     /// Map Macro parent (which can be DIMacroFile or nullptr) to a list of
     /// Metadata all of type DIMacroNode.
@@ -64,8 +61,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels, imported entities,
-    /// and types.
+    /// Each subprogram's preserved local and static local variables, labels,
+    /// imported entities, and types.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
@@ -92,12 +89,6 @@ namespace llvm {
     /// Internal helper. Track metadata if untracked and insert \p DVR.
     void insertDbgVariableRecord(DbgVariableRecord *DVR,
                                  InsertPosition InsertPt);
-
-    /// Internal helper with common code used by insertDbg{Value,Addr}Intrinsic.
-    Instruction *insertDbgIntrinsic(llvm::Function *Intrinsic, llvm::Value *Val,
-                                    DILocalVariable *VarInfo,
-                                    DIExpression *Expr, const DILocation *DL,
-                                    InsertPosition InsertPt);
 
   public:
     /// Construct a builder for a module.
@@ -1157,22 +1148,21 @@ namespace llvm {
                               unsigned Line, StringRef Name = "",
                               DINodeArray Elements = nullptr);
 
-    /// Insert a new llvm.dbg.declare intrinsic call.
+    /// Insert a new #dbg_declare record.
     /// \param Storage     llvm::Value of the variable
     /// \param VarInfo     Variable's debug info descriptor.
     /// \param Expr        A complex location expression.
     /// \param DL          Debug info location.
-    /// \param InsertAtEnd Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertDeclare(llvm::Value *Storage,
-                                      DILocalVariable *VarInfo,
+    /// \param InsertAtEnd Location for the new record.
+    LLVM_ABI DbgRecord *insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       BasicBlock *InsertAtEnd);
 
-    /// Insert a new llvm.dbg.assign intrinsic call.
+    /// Insert a new #dbg_assign record.
     /// \param LinkedInstr   Instruction with a DIAssignID to link with the new
-    ///                      intrinsic. The intrinsic will be inserted after
-    ///                      this instruction.
-    /// \param Val           The value component of this dbg.assign.
+    ///                      record. The record will be inserted after this
+    ///                      instruction.
+    /// \param Val           The value component of this #dbg_assign.
     /// \param SrcVar        Variable's debug info descriptor.
     /// \param ValExpr       A complex location expression to modify \p Val.
     /// \param Addr          The address component (store destination).
@@ -1182,53 +1172,52 @@ namespace llvm {
     /// \param DL            Debug info location, usually: (line: 0,
     ///                      column: 0, scope: var-decl-scope). See
     ///                      getDebugValueLoc.
-    LLVM_ABI DbgInstPtr insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+    LLVM_ABI DbgRecord *insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                         DILocalVariable *SrcVar,
                                         DIExpression *ValExpr, Value *Addr,
                                         DIExpression *AddrExpr,
                                         const DILocation *DL);
 
-    /// Insert a new llvm.dbg.declare intrinsic call.
+    /// Insert a new #dbg_declare record.
     /// \param Storage      llvm::Value of the variable
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
-    /// \param InsertPt     Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertDeclare(llvm::Value *Storage,
+    /// \param InsertPt     Location for the new record.
+    LLVM_ABI DbgRecord *insertDeclare(llvm::Value *Storage,
                                       DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
 
-    /// Insert a new llvm.dbg.declare_value intrinsic call.
+    /// Insert a new #dbg_declare_value record.
     /// \param Storage      llvm::Value of the variable
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
-    /// \param InsertPt     Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertDeclareValue(llvm::Value *Storage,
+    /// \param InsertPt     Location for the new record.
+    LLVM_ABI DbgRecord *insertDeclareValue(Value *Storage,
                                            DILocalVariable *VarInfo,
                                            DIExpression *Expr,
                                            const DILocation *DL,
                                            InsertPosition InsertPt);
 
-    /// Insert a new llvm.dbg.label intrinsic call.
+    /// Insert a new #dbg_label record.
     /// \param LabelInfo    Label's debug info descriptor.
     /// \param DL           Debug info location.
-    /// \param InsertBefore Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
+    /// \param InsertPt     Location for the new record.
+    LLVM_ABI DbgRecord *insertLabel(DILabel *LabelInfo, const DILocation *DL,
                                     InsertPosition InsertPt);
 
-    /// Insert a new llvm.dbg.value intrinsic call.
+    /// Insert a new #dbg_value record.
     /// \param Val          llvm::Value of the variable
     /// \param VarInfo      Variable's debug info descriptor.
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
-    /// \param InsertPt     Location for the new intrinsic.
-    LLVM_ABI DbgInstPtr insertDbgValueIntrinsic(llvm::Value *Val,
-                                                DILocalVariable *VarInfo,
-                                                DIExpression *Expr,
-                                                const DILocation *DL,
-                                                InsertPosition InsertPt);
+    /// \param InsertPt     Location for the new record.
+    LLVM_ABI DbgRecord *insertDbgValue(llvm::Value *Val,
+                                       DILocalVariable *VarInfo,
+                                       DIExpression *Expr, const DILocation *DL,
+                                       InsertPosition InsertPt);
 
     /// Replace the vtable holder in the given type.
     ///

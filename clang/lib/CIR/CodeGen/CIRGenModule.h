@@ -32,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
@@ -45,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -191,23 +195,6 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
-  /// LabelOp. This provides the main lookup table used to resolve block
-  /// addresses into their label operations.
-  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
-  /// Used once a block address has been successfully lowered to a label.
-  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
-  /// Track CIR BlockAddressOps that cannot be resolved immediately
-  /// because their LabelOp has not yet been emitted. These entries
-  /// are solved later once the corresponding label is available.
-  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
-  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
-  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
-  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
-  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
-  void updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                  cir::LabelOp newLabel);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
@@ -577,6 +564,16 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool mustBeEmitted(const clang::ValueDecl *d);
 
+  /// Check if `fd` ends up calling itself directly through asm label or
+  /// builtin-pointer-to-self trickery (e.g., glibc's `extern inline` libc
+  /// wrappers that call `__builtin_strrchr`, which the codegen lowers to a
+  /// call on the same asm-named symbol).  Emitting an
+  /// `available_externally` body for such a function feeds the LLVM
+  /// Decide whether to emit the body of `gd` to CIR.  Returns false for
+  /// available_externally functions that are trivially recursive (PR9614).
+  /// Mirrors classic CodeGen's `CodeGenModule::shouldEmitFunction`.
+  bool shouldEmitFunction(clang::GlobalDecl gd);
+
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function
@@ -644,7 +641,7 @@ public:
                   bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
@@ -658,9 +655,18 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Emit the SYCL kernel caller offload entry point function generated for a
+  /// function declared with the sycl_kernel_entry_point attribute.
+  void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
+                            clang::ASTContext &ctx);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
@@ -726,6 +732,13 @@ public:
   /// Returns std::nullopt and emits errorNYI for virtual-base paths.
   std::optional<llvm::SmallVector<int32_t>>
   buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
+  /// Returns true if \p field is an empty field that isn't laid out in the CIR
+  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
+  /// CIR field index, so a pointer-to-data-member to them is represented by an
+  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
+  /// path.
+  bool isEmptyFieldForMemberPointer(const FieldDecl *field);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
@@ -799,20 +812,15 @@ public:
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
 
-  /// Mark the function as a special member (e.g. constructor, destructor)
-  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
-                               const clang::FunctionDecl *funcDecl);
+  /// Record the func_info tag for a function, either a C++ special member
+  /// form (constructor, destructor, assignment) or a known standard library
+  /// entity that passes can recognize without the AST.
+  void setFuncInfoAttr(cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,
                                     bool assumeConvergent = false);
-
-  static constexpr const char *builtinCoroId = "__builtin_coro_id";
-  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
-  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
-  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
-  static constexpr const char *builtinCoroFree = "__builtin_coro_free";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

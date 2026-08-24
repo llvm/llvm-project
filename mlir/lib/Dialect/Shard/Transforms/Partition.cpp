@@ -898,11 +898,6 @@ struct Partition : public impl::PartitionBase<Partition> {
       return signalPassFailure();
     }
   }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    reshardingRegisterDependentDialects(registry);
-    registry.insert<shard::ShardDialect>();
-  }
 };
 
 } // namespace

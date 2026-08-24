@@ -57,8 +57,10 @@ struct PtrView {
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
-  bool isRoot() const {
-    return Base == Pointee->getDescriptor()->getMetadataSize();
+  bool isRoot() const { return Base == Pointee->getMetadataSize(); }
+
+  bool isConst() const {
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   InlineDescriptor *getInlineDesc() const {
@@ -128,13 +130,19 @@ struct PtrView {
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    const Descriptor *Desc =
-        (Next == Pointee->getDescriptor()->getMetadataSize())
-            ? getDeclDesc()
-            : getDescriptor(Next)->Desc;
+    const Descriptor *Desc = (Next == Pointee->getMetadataSize())
+                                 ? getDeclDesc()
+                                 : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
+  }
+
+  [[nodiscard]] PtrView stripBaseCasts() const {
+    PtrView V = *this;
+    while (V.isBaseClass())
+      V = V.getBase();
+    return V;
   }
 
   [[nodiscard]] PtrView getArray() const {
@@ -181,9 +189,21 @@ struct PtrView {
     if (!Pointee)
       return false;
 
-    if (isUnknownSizeArray())
+    const Descriptor *Desc = getFieldDesc();
+    if (Desc->isUnknownSizeArray())
       return false;
-    return isPastEnd() || (getSize() == getOffset());
+
+    if (isPastEnd())
+      return true;
+
+    if (Offset != Base) {
+      unsigned Adjust =
+          Desc->ElemDesc ? sizeof(InlineDescriptor) : sizeof(InitMapPtr);
+      unsigned Off = Offset - Base - Adjust;
+      return Desc->getSize() == Off;
+    }
+
+    return Desc->getSize() == 0;
   }
 
   PtrView atIndex(unsigned Idx) const {
@@ -240,7 +260,7 @@ struct PtrView {
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
-    assert(ReadOffset + sizeof(T) <= Pointee->getDescriptor()->getAllocSize());
+    assert(ReadOffset + sizeof(T) <= Pointee->getSize());
 
     return *reinterpret_cast<T *>(Pointee->rawData() + ReadOffset);
   }
@@ -533,15 +553,15 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns the expression or declaration the pointer has been created for.
-  DeclTy getSource() const {
+  DeclOrExpr getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
     if (isFunctionPointer()) {
       const Function *F = Fn.Func;
-      return F ? F->getDecl() : DeclTy();
+      return F ? F->getDecl() : DeclOrExpr();
     }
     llvm_unreachable("Unsupported pointer type in getSource()");
-    return DeclTy();
+    return DeclOrExpr();
   }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -575,6 +595,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
 
@@ -758,7 +779,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+    return view().isConst();
   }
   bool isConstInMutable() const {
     if (!isBlockPointer())
@@ -825,10 +846,7 @@ public:
     if (!BS.Pointee)
       return false;
 
-    if (isUnknownSizeArray())
-      return false;
-
-    return isPastEnd() || (getSize() == getOffset());
+    return view().isOnePastEnd();
   }
 
   /// Checks if the pointer points past the end of the object.
@@ -866,7 +884,7 @@ public:
     assert(isBlockPointer());
     assert(BS.Pointee);
     assert(isDereferencable());
-    assert(Offset + sizeof(T) <= BS.Pointee->getDescriptor()->getAllocSize());
+    assert(Offset + sizeof(T) <= BS.Pointee->getSize());
 
     return view().deref<T>();
   }
@@ -946,23 +964,7 @@ public:
   Lifetime getLifetime() const {
     if (!isBlockPointer())
       return Lifetime::Started;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return Lifetime::Started;
-
-    if (inArray() && !isArrayRoot()) {
-      InitMapPtr &IM = getInitMap();
-
-      if (!IM.hasInitMap()) {
-        if (IM.allInitialized())
-          return Lifetime::Started;
-        return getArray().getLifetime();
-      }
-
-      return IM->isElementAlive(getIndex()) ? Lifetime::Started
-                                            : Lifetime::Ended;
-    }
-
-    return getInlineDesc()->LifeState;
+    return view().getLifetime();
   }
 
   /// Start the lifetime of this pointer. This works for pointer with an
@@ -985,10 +987,7 @@ public:
   /// The result is either a root pointer or something
   /// that isn't a base class anymore.
   [[nodiscard]] Pointer stripBaseCasts() const {
-    PtrView V = view();
-    while (V.isBaseClass())
-      V = V.getBase();
-    return Pointer(V);
+    return Pointer(view().stripBaseCasts());
   }
 
   /// Compare two pointers.
@@ -1007,7 +1006,7 @@ public:
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
-  static bool hasSameArray(const Pointer &A, const Pointer &B);
+  static bool elemsOfSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
@@ -1035,6 +1034,9 @@ public:
   /// regarding the AST record layout.
   std::optional<size_t>
   computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  /// Compute the pointer offset as given by the ASTRecordLayout.
+  /// Returns the result in bytes.
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;

@@ -70,6 +70,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -104,6 +105,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -156,6 +158,9 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 #define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
   case Type::CLASS_ID: return TYPE_##CODE_ID;
 #include "clang/Serialization/TypeBitCodes.def"
+  case Type::LateParsedAttr:
+    llvm_unreachable(
+        "should be replaced with a concrete type before serialization");
   case Type::Builtin:
     llvm_unreachable("shouldn't be serializing a builtin type this way");
   }
@@ -535,7 +540,7 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
   AddSourceLocation(CR->getTemplateKWLoc());
   AddDeclarationNameInfo(CR->getConceptNameInfo());
   AddDeclRef(CR->getFoundDecl());
-  AddDeclRef(CR->getNamedConcept());
+  AddTemplateName(CR->getNamedConcept());
   push_back(CR->getTemplateArgsAsWritten() != nullptr);
   if (CR->getTemplateArgsAsWritten())
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());
@@ -585,6 +590,11 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
 
 void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   // Nothing to do
+}
+
+void TypeLocWriter::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  llvm_unreachable(
+      "should be replaced with a concrete type before serialization");
 }
 
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -850,6 +860,7 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_CXX_PSEUDO_DESTRUCTOR);
   RECORD(EXPR_EXPR_WITH_CLEANUPS);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_MEMBER);
+  RECORD(EXPR_DEPENDENT_TEMPLATE_ID);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_DECL_REF);
   RECORD(EXPR_CXX_UNRESOLVED_CONSTRUCT);
   RECORD(EXPR_CXX_UNRESOLVED_MEMBER);
@@ -1608,6 +1619,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
+  Record.push_back(static_cast<unsigned>(LangOpts.LangStd));
   const uint64_t LanguageOptionValues[] = {
 #define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
@@ -5720,6 +5732,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.VaListTagDecl, PREDEF_DECL_VA_LIST_TAG);
   RegisterPredefDecl(Context.BuiltinMSVaListDecl,
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
+  RegisterPredefDecl(Context.BuiltinZOSVaListDecl,
+                     PREDEF_DECL_BUILTIN_ZOS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.MSTypeInfoTagDecl,
@@ -5794,8 +5808,11 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I)
       GetDeclRef(SemaRef.VTableUses[I].first);
 
-  // Writing all of the UnusedLocalTypedefNameCandidates.
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  // Writing all of the UnusedLocalTypedefNameCandidates in a deterministic
+  // order.
+  SmallVector<const TypedefNameDecl *, 4> UnusedLocalTypedefs;
+  SemaRef.getSortedUnusedLocalTypedefNameCandidates(UnusedLocalTypedefs);
+  for (const TypedefNameDecl *TD : UnusedLocalTypedefs)
     GetDeclRef(TD);
 
   // Writing all of pending implicit instantiations.
@@ -5922,9 +5939,12 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(VTABLE_USES, VTableUses);
   }
 
-  // Write the record containing potentially unused local typedefs.
+  // Write the record containing potentially unused local typedefs, in a
+  // deterministic order.
   RecordData UnusedLocalTypedefNameCandidates;
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+  SmallVector<const TypedefNameDecl *, 4> SortedCandidates;
+  SemaRef.getSortedUnusedLocalTypedefNameCandidates(SortedCandidates);
+  for (const TypedefNameDecl *TD : SortedCandidates)
     AddEmittedDeclRef(TD, UnusedLocalTypedefNameCandidates);
   if (!UnusedLocalTypedefNameCandidates.empty())
     Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
@@ -7526,7 +7546,7 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     assert(ES->CheckedForSideEffects);
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
-    APValue *Evaluated = VD->getEvaluatedValue();
+    const APValue *Evaluated = VD->getEvaluatedValue();
     // If the evaluated result is constant, emit it.
     if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
       Val |= 8;
@@ -8190,13 +8210,13 @@ void OMPClauseWriter::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseWriter::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *C) {
-  Record.push_back(C->isExtended() ? 1 : 0);
-  if (C->isExtended()) {
-    Record.AddSourceLocation(C->getLParenLoc());
-    Record.AddSourceLocation(C->getArgumentLoc());
-    Record.writeEnum(C->getDependencyKind());
-  }
+void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseWriter::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getArgumentLoc());
+  Record.writeEnum(C->getDependencyKind());
 }
 
 void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
@@ -8588,6 +8608,9 @@ void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
 
 void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())
@@ -8596,6 +8619,9 @@ void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 
 void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
   Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  Record.AddStmt(C->getModifierExpr());
   VisitOMPClauseWithPreInit(C);
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlist())

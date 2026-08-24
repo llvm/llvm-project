@@ -2345,7 +2345,9 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 }
 
 /// Find a constant NewC that has property:
-///   shuffle(NewC, ShMask) = C
+///   shuffle(NewC, poison, ShMask) = C
+/// for lanes that select NewC. Lanes that select the poison operand are not
+/// constrained.
 /// Returns nullptr if such a constant does not exist e.g. ShMask=<0,0> C=<1,2>
 ///
 /// A 1-to-1 mapping is not required. Example:
@@ -2370,8 +2372,11 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   for (unsigned I = 0; I < NumElts; ++I) {
     Constant *CElt = C->getAggregateElement(I);
     if (ShMask[I] >= 0) {
-      assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
-      Constant *NewCElt = NewVecC[ShMask[I]];
+      int MaskElt = ShMask[I];
+      if (MaskElt >= (int)NewCNumElts)
+        continue;
+
+      Constant *NewCElt = NewVecC[MaskElt];
       // Bail out if:
       // 1. The constant vector contains a constant expression.
       // 2. The shuffle needs an element of the constant vector that can't
@@ -2381,7 +2386,7 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
       if (!CElt || (!isa<PoisonValue>(NewCElt) && NewCElt != CElt) ||
           I >= NewCNumElts)
         return nullptr;
-      NewVecC[ShMask[I]] = CElt;
+      NewVecC[MaskElt] = CElt;
     }
   }
   return ConstantVector::get(NewVecC);
@@ -2483,30 +2488,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
           /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
     return Folded;
 
-  // If both operands of the binop are vector concatenations, then perform the
-  // narrow binop on each pair of the source operands followed by concatenation
-  // of the results.
-  Value *L0, *L1, *R0, *R1;
-  ArrayRef<int> Mask;
-  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
-      LHS->hasOneUse() && RHS->hasOneUse() &&
-      cast<ShuffleVectorInst>(LHS)->isConcat() &&
-      cast<ShuffleVectorInst>(RHS)->isConcat()) {
-    // This transform does not have the speculative execution constraint as
-    // below because the shuffle is a concatenation. The new binops are
-    // operating on exactly the same elements as the existing binop.
-    // TODO: We could ease the mask requirement to allow different undef lanes,
-    //       but that requires an analysis of the binop-with-undef output value.
-    Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
-      BO->copyIRFlags(&Inst);
-    Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
-      BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
-  }
-
   auto createBinOpReverse = [&](Value *X, Value *Y) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
     if (auto *BO = dyn_cast<BinaryOperator>(V))
@@ -2591,9 +2572,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
   if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
       match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
-      V1->getType() == V2->getType() &&
+      Inst.getType() == V1->getType() && V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
     return createBinOpShuffle(V1, V2, Mask);
@@ -3800,10 +3782,9 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                  Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
         };
         auto *CB = dyn_cast<CallBase>(AI);
-        LibFunc TheLibFunc;
-        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
-            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
-            !AlignmentAndSizeKnownValid(CB))
+        if (CB &&
+            TLI.getLibFunc(*CB->getCalledFunction()) == LibFunc_aligned_alloc &&
+            TLI.has(LibFunc_aligned_alloc) && !AlignmentAndSizeKnownValid(CB))
           return std::nullopt;
         Users.emplace_back(I);
         continue;
@@ -4185,8 +4166,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // 'operator delete'; there is no 'operator delete' symbol for which we are
   // permitted to invent a call, even if we're passing in a null pointer.
   if (MinimizeSize) {
-    LibFunc Func;
-    if (TLI.getLibFunc(FI, Func) && TLI.has(Func) && Func == LibFunc_free)
+    if (TLI.getLibFunc(FI) == LibFunc_free && TLI.has(LibFunc_free))
       if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
         return I;
   }
@@ -5511,15 +5491,10 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     auto *VTy = dyn_cast<FixedVectorType>(Ty);
     if (!VTy)
       return nullptr;
-    unsigned NumElts = VTy->getNumElements();
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *EltC = C->getAggregateElement(i);
-      if (EltC && !match(EltC, m_Undef())) {
-        BestValue = EltC;
-        break;
-      }
-    }
+    Constant *BestValue;
+    if (!match(C, m_ContainsMatchingVectorElement(m_CombineAnd(
+                      m_Unless(m_Undef()), m_Constant(BestValue)))))
+      BestValue = Constant::getNullValue(VTy->getScalarType());
     return Constant::replaceUndefsWith(C, BestValue);
   };
 
@@ -5629,7 +5604,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 
@@ -6321,9 +6296,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);

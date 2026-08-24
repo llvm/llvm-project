@@ -1,6 +1,6 @@
 // This module contains headers related to the configuration of the library. These headers
 // are free of any dependency on the rest of libc++.
-module std_config [system] {
+module std_config {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
@@ -13,11 +13,17 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/pstl.h"
   textual header "__configuration/utility.h"
   textual header "version"
 }
 
-module std_core [system] {
+module std_core {
+  module cmath {
+    module lerp              { header "__cmath/lerp.h" }
+    module special_functions { header "__cmath/special_functions.h" }
+  }
+
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -64,7 +70,6 @@ module std_core [system] {
     module remainder                        { header "__math/remainder.h" }
     module roots                            { header "__math/roots.h" }
     module rounding_functions               { header "__math/rounding_functions.h" }
-    module special_functions                { header "__math/special_functions.h" }
     module traits                           { header "__math/traits.h" }
     module trigonometric_functions          { header "__math/trigonometric_functions.h" }
   }
@@ -350,6 +355,7 @@ module std_core [system] {
       header "__type_traits/reference_converts_from_temporary.h"
       export std_core.type_traits.integral_constant
     }
+    module register_passable                          { header "__type_traits/register_passable.h" }
     module remove_all_extents                         { header "__type_traits/remove_all_extents.h" }
     module remove_const_ref                           { header "__type_traits/remove_const_ref.h" }
     module remove_const                               { header "__type_traits/remove_const.h" }
@@ -379,7 +385,7 @@ module std_core [system] {
   }
 } // module std_core
 
-module std [system] {
+module std {
   module algorithm {
     module adjacent_find                          { header "__algorithm/adjacent_find.h" }
     module all_of                                 { header "__algorithm/all_of.h" }
@@ -407,7 +413,10 @@ module std [system] {
     module find_if_not                            { header "__algorithm/find_if_not.h" }
     module find_if                                { header "__algorithm/find_if.h" }
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
-    module find                                   { header "__algorithm/find.h" }
+    module find                                   {
+      header "__algorithm/find.h"
+      export std.algorithm.simd_utils // TODO: Workaround for https://llvm.org/PR120108
+    }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
@@ -883,6 +892,7 @@ module std [system] {
       export std.atomic.atomic_base // most of std::atomic methods are defined there
     }
     module check_memory_order     { header "__atomic/check_memory_order.h" }
+    module clear_padding          { header "__atomic/clear_padding.h" }
     module contention_t           { header "__atomic/contention_t.h" }
     module fence                  { header "__atomic/fence.h" }
     module floating_point_helper  { header "__atomic/floating_point_helper.h" }
@@ -947,7 +957,10 @@ module std [system] {
       header "__charconv/to_chars_integral.h"
       export std.charconv.to_chars_result
     }
-    module to_chars_result            { header "__charconv/to_chars_result.h" }
+    module to_chars_result            {
+      header "__charconv/to_chars_result.h"
+      export std.system_error.errc
+    }
     module traits                     { header "__charconv/traits.h" }
 
     header "charconv"
@@ -1385,7 +1398,11 @@ module std [system] {
     module formatter_tuple                    { header "__format/formatter_tuple.h" }
     module fwd                                { header "__fwd/format.h" }
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
-    module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
+    module parser_std_format_spec             {
+      header "__format/parser_std_format_spec.h"
+      export std.format.parser_std_format_spec_data
+    }
+    module parser_std_format_spec_data        { header "__format/parser_std_format_spec_data.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
     module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
@@ -1434,6 +1451,9 @@ module std [system] {
     }
     module default_searcher             { header "__functional/default_searcher.h" }
     module function                     { header "__functional/function.h" }
+    module function_ref                 { header "__functional/function_ref.h" }
+    module function_ref_common          { header "__functional/function_ref_common.h" }
+    module function_ref_impl            { textual header "__functional/function_ref_impl.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
     module invoke                       { header "__functional/invoke.h" }
@@ -1555,7 +1575,10 @@ module std [system] {
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
-    module reverse_access             { header "__iterator/reverse_access.h" }
+    module reverse_access {
+      header "__iterator/reverse_access.h"
+      export std.iterator.reverse_iterator
+    }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
@@ -1623,9 +1646,16 @@ module std [system] {
     export *
   }
 
-  // TODO: Understand why this needs to live in its own module
-  module locale_base [system] {
-    header "__locale"
+  // These headers can't be submodules of std.locale: they are used by <ios> and <streambuf>,
+  // which are in turn used by the facet headers that make up std.locale, so making them part
+  // of std.locale would create a cycle.
+  module locale_base {
+    module codecvt          { header "__locale_dir/codecvt.h"          export * }
+    module collate          { header "__locale_dir/collate.h"          export * }
+    module ctype            { header "__locale_dir/ctype.h"            export * }
+    module ctype_base       { header "__locale_dir/ctype_base.h"       export * }
+    module locale           { header "__locale_dir/locale.h"           export * }
+    module utf8_conversions { header "__locale_dir/utf8_conversions.h" export * }
     export *
   }
 
@@ -1678,6 +1708,7 @@ module std [system] {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -1700,6 +1731,9 @@ module std [system] {
       header "__memory/uninitialized_algorithms.h"
       export std.memory.destroy
       export std.utility.pair
+    }
+    module uninitialized_multidimensional_algorithms {
+      header "__memory/uninitialized_multidimensional_algorithms.h"
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
@@ -1795,6 +1829,33 @@ module std [system] {
   }
 
   module optional {
+    module fwd { header "__fwd/optional.h" }
+    module hash {
+      header "__optional/hash.h"
+      export std.functional.hash
+    }
+    module common {
+      header "__optional/common.h"
+      export std.format.fwd
+    }
+
+    module comparison { header "__optional/comparison.h" }
+    module make_optional { header "__optional/make_optional.h" }
+    module nullopt_t { header "__optional/nullopt_t.h" }
+    module optional {
+      header "__optional/optional.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module optional_ref {
+      header "__optional/optional_ref.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module swap { header "__optional/swap.h" }
+
     header "optional"
     export *
   }
@@ -2125,6 +2186,11 @@ module std [system] {
     export *
   }
 
+  module text_encoding {
+    header "text_encoding"
+    export *
+  }
+
   module thread {
     module formatter              { header "__thread/formatter.h" }
     module id                     { header "__thread/id.h" }
@@ -2252,6 +2318,7 @@ module std [system] {
 
       export std.format.formatter
     }
+    module layout                { header "__vector/layout.h" }
     module pmr                   {
       header "__vector/pmr.h"
 
@@ -2371,6 +2438,18 @@ module std [system] {
       module merge {
         header "__pstl/cpu_algos/merge.h"
       }
+      module mismatch {
+        header "__pstl/cpu_algos/mismatch.h"
+      }
+      module reverse {
+        header "__pstl/cpu_algos/reverse.h"
+      }
+      module search {
+        header "__pstl/cpu_algos/search.h"
+      }
+      module search_n {
+        header "__pstl/cpu_algos/search_n.h"
+      }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"
         export std_core.utility_core.empty
@@ -2445,57 +2524,57 @@ module std [system] {
 // These modules need to be their own top-level modules because they depend on the system-provided
 // headers (via include_next), which are then free to include other C headers provided by libc++.
 // If we group these headers in a single module, we would end up with circular dependencies.
-module std_complex_h [system] {
+module std_complex_h {
   header "complex.h"
   export *
 }
-module std_errno_h [system] {
+module std_errno_h {
   header "errno.h"
   export *
 }
-module std_math_h [system] {
+module std_math_h {
   header "math.h"
   export *
 }
-module std_stdatomic_h [system] {
+module std_stdatomic_h {
   header "stdatomic.h"
   export *
 }
-module std_stddef_h [system] {
+module std_stddef_h {
   // <stddef.h> supports being included multiple times with different pre-defined macros
   textual header "stddef.h"
 }
-module std_stdio_h [system] {
+module std_stdio_h {
   // <stdio.h> supports being included multiple times with different pre-defined macros
   textual header "stdio.h"
 }
-module std_stdlib_h [system] {
+module std_stdlib_h {
   // <stdlib.h> supports being included multiple times with different pre-defined macros
   textual header "stdlib.h"
 }
-module std_string_h [system] {
+module std_string_h {
   header "string.h"
   export *
 }
-module std_tgmath_h [system] {
+module std_tgmath_h {
   header "tgmath.h"
   export *
 }
-module std_uchar_h [system] {
+module std_uchar_h {
   header "uchar.h"
   export *
 }
-module std_wchar_h [system] {
+module std_wchar_h {
   // <wchar.h> supports being included multiple times with different pre-defined macros
   textual header "wchar.h"
 }
-module std_wctype_h [system] {
+module std_wctype_h {
   header "wctype.h"
   export *
 }
 
 // This header is used by other C compatibility headers so it needs to be in its own module.
-module std_private_mbstate_t [system] {
+module std_private_mbstate_t {
   header "__mbstate_t.h"
   export *
 }

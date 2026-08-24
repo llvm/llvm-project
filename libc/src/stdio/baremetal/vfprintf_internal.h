@@ -17,10 +17,10 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
-#include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/printf_main.h"
+#include "src/__support/printf_core/writer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

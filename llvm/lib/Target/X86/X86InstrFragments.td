@@ -1052,9 +1052,9 @@ def fpimmneg0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
+  return Imm.isOne();
 }]>;
 
 def fpimmneg1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-1.0);
+  return Imm.isMinusOne();
 }]>;

@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
@@ -223,7 +223,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       return nullptr;
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
-      return convertOp.getInputLayoutAttr();
+      return convertOp.getEffectiveInputLayout();
     }
     auto layout = anchorOp.getAnchorLayout();
 
@@ -773,29 +773,44 @@ template int
 xegpu::getLargestDivisor<unsigned>(unsigned dim, ArrayRef<unsigned> candidates,
                                    ArrayRef<unsigned> candidateMultiples);
 
+std::optional<SmallVector<int64_t>>
+xegpu::getInner2DIfUnitLeadingDims(ArrayRef<int64_t> vals) {
+  if (vals.size() < 2)
+    return std::nullopt;
+  if (llvm::any_of(vals.drop_back(2), [](int64_t v) { return v != 1; }))
+    return std::nullopt;
+  return SmallVector<int64_t>(vals.take_back(2));
+}
+
 bool xegpu::requirePacked(const xegpu::DistributeLayoutAttr layout) {
   if (!layout)
     return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
+  auto laneData =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneDataAsInt());
+  return laneData && (*laneData)[0] != 1;
 }
 
 bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
                              const xegpu::uArch::uArch *uArch) {
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg") &&
-      uArch->getName().equals_insensitive("cri"))
+  if (!isa<xegpu::uArch::Xe2>(uArch) && !isa<xegpu::uArch::Xe3>(uArch))
     return false;
   if (!layout)
     return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
+  auto laneLayout =
+      getInner2DIfUnitLeadingDims(layout.getEffectiveLaneLayoutAsInt());
+  return laneLayout && (*laneLayout)[0] == uArch->getSubgroupSize() &&
+         (*laneLayout)[1] == 1;
+}
+
+bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
+  if (!type.hasStaticShape())
     return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  return succeeded(type.getStridesAndOffset(strides, offset)) &&
+         llvm::none_of(strides, ShapedType::isDynamic);
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
@@ -864,12 +879,13 @@ bool xegpu::matchSplitDimExpansion(
 //===----------------------------------------------------------------------===//
 
 // Pre-computes distributed VectorType mappings for every value carried through
-// an SCF loop (scf.while, scf.for): block args (iter_args /
-// before-/after-args), loop results, and the terminator operands feeding them.
+// an SCF region-branch op (scf.while, scf.for, scf.if): block args (iter_args /
+// before-/after-args), op results, and the terminator operands feeding them.
 // These positions share one logical value and must convert identically, so each
 // is derived from a single source -- the layout of the feeding value (loop
-// init, or `scf.condition` operand) -- via `getDistributeLayoutAttr(Value)`,
-// and keyed by `Value`. Keying by Value is required because the SCF converters
+// init, `scf.condition` operand, or `scf.if` result) -- via
+// `getDistributeLayoutAttr(Value)`, and keyed by `Value`. Keying by Value is
+// required because the SCF converters
 // detach/replace the loop body mid-conversion (scf.while detaches before/after
 // blocks -> a detached-arg layout query trips an ilist assertion; scf.for
 // rebuilds the op, which loses the temporary `layout_operand_N` attrs -> the
@@ -924,6 +940,19 @@ xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
            llvm::zip(forOp.getInitArgs(), forOp.getRegionIterArgs(),
                      forOp.getResults(), yieldOp.getOperands()))
         recordTypes(init, {arg, res, yieldVal});
+      return;
+    }
+    if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
+      // Each result and its then/else yield operands share one position and
+      // must convert identically; derive all from the result's layout.
+      scf::YieldOp thenYield = ifOp.thenYield();
+      scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
+      for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
+        SmallVector<Value> dests{res, thenYield.getOperand(idx)};
+        if (elseYield)
+          dests.push_back(elseYield.getOperand(idx));
+        recordTypes(res, dests);
+      }
       return;
     }
   });

@@ -250,15 +250,37 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   TheLoop->setLoopID(NewLoopID);
 }
 
+void llvm::addStringMetadataToLoop(Loop *TheLoop, StringRef StringMD) {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  SmallVector<Metadata *, 4> MDs(1);
+  // Retain existing metadata, skipping a name-only node with the same string.
+  if (MDNode *LoopID = TheLoop->getLoopID())
+    for (const MDOperand &Op : drop_begin(LoopID->operands())) {
+      MDNode *Node = cast<MDNode>(Op);
+      if (Node->getNumOperands() == 1)
+        if (auto *S = dyn_cast<MDString>(Node->getOperand(0)))
+          if (S->getString() == StringMD)
+            return;
+      MDs.push_back(Node);
+    }
+  MDs.push_back(MDNode::get(Context, {MDString::get(Context, StringMD)}));
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  TheLoop->setLoopID(NewLoopID);
+}
+
 std::optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   std::optional<int> Width =
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
   if (Width) {
-    std::optional<int> IsScalable = getOptionalIntLoopAttribute(
-        TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width, IsScalable.value_or(false));
+    // Presence of the scalable.enable unit node means a scalable ElementCount;
+    // disable or absence both mean fixed-width.
+    bool IsScalable =
+        getBooleanLoopAttribute(TheLoop, "llvm.loop.vectorize.scalable.enable");
+    return ElementCount::get(*Width, IsScalable);
   }
 
   return std::nullopt;
@@ -405,11 +427,10 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
-  std::optional<bool> Enable =
-      getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
-
-  if (Enable == false)
+  if (getBooleanLoopAttribute(L, "llvm.loop.vectorize.disable"))
     return TM_SuppressedByUser;
+
+  bool Enable = getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable");
 
   std::optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);
@@ -418,14 +439,14 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 
   // 'Forcing' vector width and interleave count to one effectively disables
   // this tranformation.
-  if (Enable == true && VectorizeWidth && VectorizeWidth->isScalar() &&
+  if (Enable && VectorizeWidth && VectorizeWidth->isScalar() &&
       InterleaveCount == 1)
     return TM_SuppressedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
     return TM_Disable;
 
-  if (Enable == true)
+  if (Enable)
     return TM_ForcedByUser;
 
   if ((VectorizeWidth && VectorizeWidth->isScalar()) && InterleaveCount == 1)
@@ -441,6 +462,9 @@ TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasDistributeTransformation(const Loop *L) {
+  if (getBooleanLoopAttribute(L, "llvm.loop.distribute.disable"))
+    return TM_SuppressedByUser;
+
   if (getBooleanLoopAttribute(L, "llvm.loop.distribute.enable"))
     return TM_ForcedByUser;
 
@@ -598,7 +622,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
   } else {
-    assert(L->hasNoExitBlocks() &&
+    assert((!LI || LI->hasNoExitBlocks(*L)) &&
            "Loop should have either zero or one exit blocks.");
 
     Builder.SetInsertPoint(OldTerm);
@@ -1180,6 +1204,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
     return Instruction::ICmp;
   case Intrinsic::vector_reduce_fmax:
   case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1275,6 +1301,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
     return RecurKind::FMin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return RecurKind::FMaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return RecurKind::FMinimum;
   default:
     return RecurKind::None;
   }
@@ -1530,7 +1560,7 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
   case Intrinsic::vector_reduce_fminimum: {
     bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
                          RdxID == Intrinsic::vector_reduce_fmaximum;
-    const fltSemantics &Semantics = Ty->getFltSemantics();
+    const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
     return (!Flags.noNaNs() && !PropagatesNaN)
                ? ConstantFP::getQNaN(Ty, Negative)
            : !Flags.noInfs()
@@ -1588,15 +1618,50 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
+static Intrinsic::ID getVPReductionIntrinsicID(Intrinsic::ID Id) {
+  switch (Id) {
+  default:
+    llvm_unreachable("Unexpected reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+    return Intrinsic::vp_reduce_add;
+  case Intrinsic::vector_reduce_mul:
+    return Intrinsic::vp_reduce_mul;
+  case Intrinsic::vector_reduce_and:
+    return Intrinsic::vp_reduce_and;
+  case Intrinsic::vector_reduce_or:
+    return Intrinsic::vp_reduce_or;
+  case Intrinsic::vector_reduce_xor:
+    return Intrinsic::vp_reduce_xor;
+  case Intrinsic::vector_reduce_smax:
+    return Intrinsic::vp_reduce_smax;
+  case Intrinsic::vector_reduce_smin:
+    return Intrinsic::vp_reduce_smin;
+  case Intrinsic::vector_reduce_umax:
+    return Intrinsic::vp_reduce_umax;
+  case Intrinsic::vector_reduce_umin:
+    return Intrinsic::vp_reduce_umin;
+  case Intrinsic::vector_reduce_fmax:
+    return Intrinsic::vp_reduce_fmax;
+  case Intrinsic::vector_reduce_fmin:
+    return Intrinsic::vp_reduce_fmin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return Intrinsic::vp_reduce_fmaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return Intrinsic::vp_reduce_fminimum;
+  case Intrinsic::vector_reduce_fadd:
+    return Intrinsic::vp_reduce_fadd;
+  case Intrinsic::vector_reduce_fmul:
+    return Intrinsic::vp_reduce_fmul;
+  }
+}
+
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
@@ -1622,9 +1687,7 @@ Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Ops[] = {Start, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
@@ -2250,27 +2313,10 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-namespace {
-/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
-/// type matches the pointer address type. This allows expressions mixing
-/// ptrtoint and ptrtoaddr to simplify properly.
-struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
-  const DataLayout &DL;
-  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
-      : SCEVRewriteVisitor(SE), DL(DL) {}
-
-  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
-    const SCEV *Op = visit(E->getOperand());
-    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
-      return SE.getPtrToAddrExpr(Op);
-    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
-  }
-};
-} // namespace
-
-Value *llvm::addDiffRuntimeChecks(
-    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
+Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
+                                  ArrayRef<PointerDiffInfo> Checks,
+                                  SCEVExpander &Expander, ElementCount VF,
+                                  unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
@@ -2279,31 +2325,31 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
-  const DataLayout &DL = Loc->getDataLayout();
-  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    assert(IC * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
-    // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
-    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
-    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
-    Value *Diff = Expander.expandCodeFor(
-        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
+    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * IC * AccessSize);
+    Value *ThresholdMinusOne = Expander.expandCodeFor(
+        SE.getMinusSCEV(TotalAccessSize, SE.getConstant(Ty, 1)), Ty, Loc);
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, ThresholdMinusOne});
     if (IsConflict)
       continue;
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(
+        ChkBuilder.CreateSub(Diff, ConstantInt::get(Ty, 1)), ThresholdMinusOne,
+        "diff.check");
+    SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

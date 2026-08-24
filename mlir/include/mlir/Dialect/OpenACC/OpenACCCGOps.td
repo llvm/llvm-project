@@ -30,7 +30,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 
 def OpenACC_ReductionInitOp
     : OpenACC_Op<"reduction_init",
-                 [SameOperandsAndResultType, RecursiveMemoryEffects,
+                 [AllTypesMatch<["var", "result"]>, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getRegionInvocationBounds",
                                              "getSuccessorInputs"]>,
@@ -42,16 +42,33 @@ def OpenACC_ReductionInitOp
     contains the recipe's init code and must yield a single value (the private
     reduction storage) via `acc.yield`.
 
-    The var operand is the original/shared reduction variable. The
-    reduction_operator specifies the reduction kind (e.g. add, mul).
+    The `var` operand is the original/shared reduction variable. The
+    `reduction_operator` specifies the reduction kind (e.g. add, mul).
+
+    The optional `bounds` operands describe the element range of the reduction
+    variable (as `acc.bounds` ops) when it refers to an array section. They
+    carry the section's bound information.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
   let results = (outs OpenACC_AnyPointerOrMappableType:$result);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    $var $reductionOperator `:` type($result) $region attr-dict
+    $var (`bounds` `(` $bounds^ `)`)? $reductionOperator `:` type($result)
+    $region attr-dict
   }];
+  let builders = [
+    // Convenience builder for reductions without array-section bounds.
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+  ];
   let hasVerifier = 1;
 }
 
@@ -74,8 +91,8 @@ def OpenACC_ReductionCombineRegionOp
     value(s) in the original/shared reduction variable. The region is
     terminated by `acc.yield` with no operands.
 
-    The destVar operand is the original/shared reduction variable.
-    The srcVar operand is typically the result of acc.reduction_init.
+    The `destVar` operand is the original/shared reduction variable.
+    The `srcVar` operand is typically the result of acc.reduction_init.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destVar,
                        OpenACC_AnyPointerOrMappableType:$srcVar);
@@ -101,7 +118,8 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
     decisions (such as generate an atomic update). E.g.
 
     ```
-      acc.reduction_combine %src into %dest <addi> : memref<i32>
+      acc.reduction_combine %src into %dest <addi>
+          par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
 
     Might lower to something similar to
@@ -113,21 +131,38 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
       memref.store %combine, %dest[] : memref<i32>
     ```
     
-    The $destMemref operand is a "pointer" to the original reduction 
-    variable (typically shared). The $srcMemref operand is a "pointer"
+    The `destMemref` operand is a "pointer" to the original reduction 
+    variable (typically shared). The `srcMemref` operand is a "pointer"
     to the partial sum of the reduction (typically private).
 
-    The $kind is the OpenACC reduction operator that determines how to 
+    The `kind` is the OpenACC reduction operator that determines how to 
     accumulate the two values.
   }];
 
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
                        OpenACC_AnyPointerOrMappableType:$srcMemref,
-                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   
   let assemblyFormat = [{
-    $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
+    $srcMemref `into` $destMemref $reductionOperator
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    `:` type($destMemref) attr-dict
   }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -153,9 +188,9 @@ def OpenACC_ReductionAccumulateOp
       }
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_accumulate %partial to %private <add>
-        : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
-    acc.reduction_combine %private into %shared <add> : memref<i32>
-        {acc.par_dims = #acc<par_dims[thread_x]>}
+        par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
+    acc.reduction_combine %private into %shared <add>
+        par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
   }];
   let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,
@@ -165,7 +200,33 @@ def OpenACC_ReductionAccumulateOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    $value `to` $memref $reductionOperator `:` type($value) `->` type($memref) attr-dict
+    $value `to` $memref $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($value) `->`
+    type($memref) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.reduction_accumulate_array
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionAccumulateArrayOp
+    : OpenACC_Op<"reduction_accumulate_array", []> {
+  let summary = "Accumulates elements of an array";
+  let description = [{
+    Accumulates elements of an array across the specified parallel dimension 
+    given an acc.bounds op.
+  }];
+  let arguments = (ins Arg<OpenACC_PointerLikeTypeInterface,
+                           "Reduction variable to update",
+                           [MemRead, MemWrite]>:$memref,
+                       OpenACC_DataBoundsType:$bounds,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OpenACC_GPUParallelDimsAttr:$par_dims);
+  let assemblyFormat = [{
+    $memref `bounds` `(` $bounds `)` $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -277,14 +338,16 @@ def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
     Optional `index` operands supply dynamic sizes when the privatized shape
     depends on SSA values (for example `memref<?xi32>` row lengths).
 
-    The optional `acc.par_dims` attribute records which GPU parallel dimensions
+    The optional `par_dims` attribute records which GPU parallel dimensions
     participate in the privatization.
   }];
   let arguments = (ins Variadic<Index>:$dynamicSizes,
                        OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   let results = (outs OpenACC_PrivateType:$result);
   let assemblyFormat = [{
-    (`(` $dynamicSizes^ `)`)? (`[` qualified($par_dims)^ `]`)? attr-dict `:` functional-type(operands, results)
+    (`(` $dynamicSizes^ `)`)?
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
   let builders = [
     OpBuilder<(ins "::mlir::Type":$resultType,
@@ -369,18 +432,119 @@ def OpenACC_ParWidthOp
 
     ```mlir
     // Known width from SSA value
-    %w1 = acc.par_width %vector_len {par_dim = #acc.par_dim<thread_x>}
+    %w1 = acc.par_width %vector_len par_dim(#acc.par_dim<thread_x>)
 
     // Unknown width (to be computed later)
-    %w2 = acc.par_width {par_dim = #acc.par_dim<block_x>}
+    %w2 = acc.par_width par_dim(#acc.par_dim<block_x>)
     ```
   }];
   let arguments = (ins Optional<Index>:$launchArg,
                        OpenACC_GPUParallelDimAttr:$par_dim);
   let results = (outs Index:$output);
   let assemblyFormat = [{
-    ($launchArg^)? attr-dict
+    ($launchArg^)? `par_dim` `(` qualified($par_dim) `)` attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.gpu_shared_memory
+//===----------------------------------------------------------------------===//
+
+def OpenACC_GPUSharedMemoryOp : OpenACC_Op<"gpu_shared_memory"> {
+  let summary = "GPU workgroup (shared) memory allocation in a compute region";
+  let description = [{
+    Represents a GPU workgroup-memory allocation in a compute region.
+    The result is a typed `memref` view into a byte slab which is later
+    replaced by `memref.view` into a dynamic shared-memory blob at the
+    byte offset within the workgroup allocation.
+
+    Each operation occupies a distinct slot in that collective allocation.
+    `static_upper_bound_bytes` is the conservative byte-size upper bound for
+    the slot. `dynamic_sizes` supply values for dynamic memref result
+    dimensions. The in-kernel layout of the slot is given by
+    `static_upper_bound_bytes` and `dynamic_sizes`.
+
+    Optional `dynamic_shared_memory_scaling_bytes` and
+    `dynamic_shared_memory_fixed_bytes` parameterize
+    `dynamic_shared_memory_size` when the slot footprint depends on launch
+    geometry. They must be specified together. When present:
+
+      dynamic_shared_memory_size =
+          dynamic_shared_memory_scaling_bytes * W
+          + dynamic_shared_memory_fixed_bytes
+
+    where `W` is the launch width that scales the allocation.
+
+    This linear model arises for `acc.cache` regions with dynamic bounds: one
+    cache dimension grows with the thread-parallel launch width, while
+    `dynamic_shared_memory_fixed_bytes` covers bytes that do not scale (for
+    example overlap cells at cache tile boundaries so threads can read
+    neighboring source elements without extra global memory traffic).
+    For a 1D dynamic cache with stencil extent `E`:
+
+      dynamic_shared_memory_fixed_bytes =
+          (E - 1) * dynamic_shared_memory_scaling_bytes
+
+    ```
+    Global array:  ... | a | b | c | d | e | f | ...
+                          [---- cached tile ----]
+    Thread 0 primary:     a       (reads neighbor b)
+    Thread 1 primary:         b   (reads neighbors a, c)
+    ...
+    Scaling portion:  dynamic_shared_memory_scaling_bytes * W
+    Fixed portion:    dynamic_shared_memory_fixed_bytes  ((E - 1) cells)
+    ```
+
+    The scaling attributes affect only `dynamic_shared_memory_size`, not
+    the slot layout. For purely static allocations both are omitted and
+    `dynamic_shared_memory_size` is the sum of aligned
+    `static_upper_bound_bytes` across all slots.
+
+    Example:
+
+    ```mlir
+    %sz = arith.constant 128 : index
+    %cache = acc.gpu_shared_memory(%sz)
+        <{num_copies = 1 : i64,
+         static_upper_bound_bytes = 1560 : i64,
+         dynamic_shared_memory_scaling_bytes = 12 : i64,
+         dynamic_shared_memory_fixed_bytes = 24 : i64}>
+        : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins
+    I64Attr:$num_copies,
+    I64Attr:$static_upper_bound_bytes,
+    Variadic<Index>:$dynamic_sizes,
+    OptionalAttr<I64Attr>:$dynamic_shared_memory_scaling_bytes,
+    OptionalAttr<I64Attr>:$dynamic_shared_memory_fixed_bytes
+  );
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource, 0,
+                                           FullEffect>]>:$result);
+  let assemblyFormat = [{
+    (`(` $dynamic_sizes^ `)`)? prop-dict attr-dict
+    `:` functional-type(operands, results)
+  }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$resultType,
+                   "::mlir::IntegerAttr":$numCopies,
+                   "::mlir::IntegerAttr":$staticUpperBoundBytes,
+                   CArg<"::mlir::ValueRange", "{}">:$dynamicSizes,
+                   CArg<"::mlir::IntegerAttr", "{}">:$dynamicSharedMemoryScalingBytes,
+                   CArg<"::mlir::IntegerAttr", "{}">:$dynamicSharedMemoryFixedBytes), [{
+      $_state.addAttribute("num_copies", numCopies);
+      $_state.addAttribute("static_upper_bound_bytes", staticUpperBoundBytes);
+      $_state.addOperands(dynamicSizes);
+      if (dynamicSharedMemoryScalingBytes)
+        $_state.addAttribute("dynamic_shared_memory_scaling_bytes",
+                            dynamicSharedMemoryScalingBytes);
+      if (dynamicSharedMemoryFixedBytes)
+        $_state.addAttribute("dynamic_shared_memory_fixed_bytes",
+                            dynamicSharedMemoryFixedBytes);
+      $_state.addTypes(resultType);
+    }]>
+  ];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -433,8 +597,8 @@ def OpenACC_ComputeRegionOp
     Example:
 
     ```mlir
-    %w0 = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
-    %w1 = acc.par_width %c8 {par_dim = #acc.par_dim<block_x>}
+    %w0 = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+    %w1 = acc.par_width %c8 par_dim(#acc.par_dim<block_x>)
     acc.compute_region launch(%arg0 = %w0, %arg1 = %w1)
         ins(%arg2 = %data) : (memref<1024xf32>) {
       %c0 = arith.constant 0 : index

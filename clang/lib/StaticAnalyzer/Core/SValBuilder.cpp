@@ -368,6 +368,8 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     const auto *TE = cast<TypeTraitExpr>(E);
     if (TE->isStoredAsBoolean())
       return makeTruthVal(TE->getBoolValue(), TE->getType());
+    if (TE->isStoredAsComparisonResult())
+      return UnknownVal();
     assert(TE->getAPValue().isInt() && "APValue type not supported");
     return makeIntVal(TE->getAPValue().getInt());
   }
@@ -977,7 +979,7 @@ public:
                                     .getAnalyzerOptions();
         // If appropriate option is disabled, ignore the cast.
         // NOTE: ShouldSupportSymbolicIntegerCasts is `false` by default.
-        if (!Opts.ShouldSupportSymbolicIntegerCasts)
+        if (!Opts.analyzerSymbolicIntegerCasts())
           return V;
         return simplifySymbolCast(V, CastTy);
       }

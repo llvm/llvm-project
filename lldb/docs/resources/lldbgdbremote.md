@@ -646,19 +646,16 @@ $jMultiBreakpoint:{"breakpoint_requests" : ["request"[,"request"]*]}
 ```
 
 Where each `request` is one of:
-
-```
-* z0,addr,kind
-* z1,addr,kind
-* z2,addr,kind
-* z3,addr,kind
-* z4,addr,kind
-* Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]
-* Z2,addr,kind
-* Z3,addr,kind
-* Z4,addr,kind
-```
+* `z0,addr,kind`
+* `z1,addr,kind`
+* `z2,addr,kind`
+* `z3,addr,kind`
+* `z4,addr,kind`
+* `Z0,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z1,addr,kind[;cond_list…][;cmds:persist,cmd_list…]`
+* `Z2,addr,kind`
+* `Z3,addr,kind`
+* `Z4,addr,kind`
 
 Each field has the same meaning as the corresponding packet in the GDB Remote
 Protocol.
@@ -825,7 +822,7 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
-### MultiMemRead
+## MultiMemRead
 
 Read memory from multiple memory ranges.
 
@@ -1443,13 +1440,13 @@ Key value pairs are one of:
 * `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
 * `endian`: is one of "little", "big", or "pdp"
 * `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
-* `hostname`: the hostname of the host that is running the GDB server if available
-* `os_build`: a string for the OS build for the remote host as a string value
-* `os_kernel`: a string describing the kernel version
+* `hostname`: optional, a hex encoded string of the hostname of the host that is running the GDB server
+* `os_build`: a hex encoded string for the OS build for the remote host as a string value
+* `os_kernel`: a hex encoded string describing the kernel version
 * `os_version`: a version string that represents the current OS version (10.8.2)
 * `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
 * `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
-* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
+* `distribution_id`: optional hex encoded string. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
 * `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 * `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 * `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
@@ -2135,10 +2132,10 @@ symbol:
 read packet: qSymbol:6578616D706C65
 ```
 
-This should be looked up by LLDB then sent back to the server. Include the name
-again, with the vaue as a hex number:
+This should be looked up by LLDB then sent back to the server. Include the value
+as a hex number, then the name of the symbol:
 ```
-read packet: qSymbol:6578616D706C65:CAFEF00D
+read packet: qSymbol:CAFEF00D:6578616D706C65
 ```
 
 If LLDB cannot find the value, it should respond with only the name. Note that
@@ -2641,6 +2638,20 @@ The packet below are supported by the
 [WAMR](https://github.com/bytecodealliance/wasm-micro-runtime) and
 [V8](https://v8.dev) Wasm runtimes.
 
+An address is 64 bits wide: an address space tag in bits 63:62, the id of the
+module instance the address belongs to in bits 61:32, and a 32-bit offset into
+that space. The tag is 0 for linear memory and 1 for the object space, which
+holds the module image, so bit 63 is always clear on the wire. A stub therefore
+reports the load address of an instance in `qXfer:libraries:read` as
+`(1 << 62) | (<instance id> << 32)`, the base of its module in the object space,
+and the same id appears in the PCs returned by `qWasmCallStack`. An id is unique
+among live instances, and zero is an id like any other. LLDB keys a module on
+the name it is reported under, so each instance needs a name of its own.
+
+An address the running code computed, such as one relative to a frame base,
+carries no id, and a stub serves it from the instance the current thread is
+executing.
+
 
 ### qWasmCallStack
 
@@ -2660,17 +2671,56 @@ stack traces.
 
 ### qWasmGlobal
 
-Get the value of a Wasm global variable for the given frame index at the given
-variable index. The indexes are encoded as base 10. The result is a hex-encoded
-little-endian value of the global.
+Get the value of a Wasm global variable at the given variable index. The indexes
+are encoded as base 10. The result is a hex-encoded little-endian value of the
+whole global, or `E<nn>`.
+
+A global index space belongs to a module instance, so an index only names a
+global together with the module instance to read it from. A stub that advertises
+`qWasmInstance+` requires that module instance to be named explicitly:
 
 ```
-send packet: $qWasmGlobal:0;2#cb
+send packet: $qWasmGlobal:2;instance:16;#32
 read packet: $e0030100#b9
 ```
 
+A stub that does not advertise `qWasmInstance+` is given a frame index instead,
+which only reaches the module instance that frame is executing:
+
+```
+send packet: $qWasmGlobal:0;2#31
+read packet: $e0030100#b9
+```
+
+A stub tells the two apart by the presence of the `instance:` key, the only key
+this packet takes. Where it is absent, the first field is a frame index rather
+than a global index. An unrecognized instance id must be answered with an error
+rather than with another instance's global.
+
 **Priority to Implement:** Only required for Wasm support. Necessary to show
 variables.
+
+
+### qWasmInstance (qSupported feature)
+
+A stub advertises `qWasmInstance+` when a query may name the module instance it
+is about, rather than only the instance some frame is executing. LLDB needs this
+to read a global of an instance with no frame on the stack, which it finds by
+name in the debug info of a module.
+
+```
+send packet: qSupported:xmlRegisters=i386,arm,mips
+read packet: qXfer:libraries:read+;qWasmInstance+;PacketSize=1000
+```
+
+An instance is named with a `;instance:<id>;` suffix in place of a frame index,
+in which the id is encoded as base 10. `qWasmGlobal` is the only packet that
+carries it today, because a global is the only Wasm state with no address to
+identify its instance. A later query for instance-scoped state carries the same
+suffix rather than adding a packet of its own.
+
+**Priority to Implement:** Only required for Wasm support. Necessary to show the
+globals of a module instance that has no active frame.
 
 
 ### qWasmLocal
@@ -2814,9 +2864,18 @@ packet when one is hit. Each breakpoint object has the following fields:
 Exactly one of `by_name` or `by_address` must be provided for each
 breakpoint.
 
-In future patches, each `accelerator_action` will include additional fields
-such as connection info for secondary debug sessions and synchronization
-options.
+An `accelerator_action` may also include a `connect_info` object asking the
+client to create a new target and connect to a separate GDB server that
+serves the accelerator's state (for example a GPU debug stub). It has the
+following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `connect_url`   | string | Connection URL to connect to, as used by `process connect <url>`. |
+| `platform_name` | string | Name of the platform to select when creating the accelerator target. The platform must be able to handle `triple` and is used to connect to the accelerator's GDB server. |
+| `triple`        | string | Target triple for the accelerator target, used to ensure the architecture is compatible with `platform_name`. |
+| `exe_path`      | string | Optional path to the executable to use when creating the accelerator target. If omitted, an empty target is created. |
+| `synchronous`   | bool   | If true, connect synchronously: the client blocks until the accelerator process is connected and stopped before continuing. If false, the connection is made asynchronously. |
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.

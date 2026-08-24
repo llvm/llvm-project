@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefix=BEFORE,BOTH
 // RUN: FileCheck %s --input-file=%t.cir --check-prefix=AFTER
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t.ll 2>&1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll 2>&1
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o %t-og.ll 2>&1
@@ -14,8 +16,8 @@
 
 // BEFORE: #cmpinfo_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmpinfo_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
-// BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.struct<class "std::__1::partial_ordering" {!s8i}>
-// BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.struct<class "std::__1::strong_ordering" {!s8i}>
+// BEFORE: !rec_std3A3A__13A3Apartial_ordering = !cir.struct<class "std::__1::partial_ordering" {data !s8i}>
+// BEFORE: !rec_std3A3A__13A3Astrong_ordering = !cir.struct<class "std::__1::strong_ordering" {data !s8i}>
 
 auto three_way_strong(int x, int y) {
   return x <=> y;
@@ -105,6 +107,13 @@ struct HasMember {
 };
 
 void use_pseudo_ordering(HasMember m1, HasMember m2) {
+  // BOTH: cir.func {{.*}} @_Z19use_pseudo_ordering9HasMemberS_(%[[M1:.*]]: !rec_HasMember{{.*}}, %[[M2:.*]]: !rec_HasMember{{.*}})
+  // BOTH: %[[M1_ALLOCA:.*]] = cir.alloca "m1" {{.*}} init : !cir.ptr<!rec_HasMember>
+  // BOTH: %[[M2_ALLOCA:.*]] = cir.alloca "m2" align(1) init : !cir.ptr<!rec_HasMember>
+  // BOTH: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH: %[[CALL_RES:.*]] = cir.call @_ZNK9HasMemberssERKS_(%[[M1_ALLOCA]], %[[M2_ALLOCA]]) : (!cir.ptr<!rec_HasMember> {{.*}}, !cir.ptr<!rec_HasMember> {{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
+  // BOTH: cir.store {{.*}}%[[CALL_RES]], %[[G_ALLOCA]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+
   // BOTH: cir.func {{.*}}@_ZNK9HasMemberssERKS_(%{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}, %{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
   // BOTH: %[[LHS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasMember>>
   // BOTH: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasMember>>
@@ -131,29 +140,31 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH:     }) : (!cir.bool) -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:     cir.yield %[[TERN_LT_RES]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:   }) : (!cir.bool) -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH:   cir.copy %[[TOP_TERN_RES]] to %[[CMP_RES]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH:   cir.copy %[[CMP_RES]] to %[[CMP_TEMP]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:   cir.copy %[[TOP_TERN_RES]] align(1) to %[[CMP_RES]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:   cir.copy %[[CMP_RES]] align(1) to %[[CMP_TEMP]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:   %[[UNSPEC_TEMP:.*]] = cir.const #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}>
   // BOTH:   %[[CMP_TEMP_LOAD:.*]] = cir.load {{.*}}%[[CMP_TEMP]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH:   %[[SO_NE_RES:.*]] = cir.call @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(%14, %[[UNSPEC_TEMP]])
   // BOTH:   cir.if %[[SO_NE_RES]] {
-  // BOTH:     cir.copy %[[CMP_RES]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:     cir.copy %[[CMP_RES]] align(1) to %[[RET_ALLOCA]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:     %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH:     cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
   // BOTH:   }
   // BOTH: }
   // BOTH: %[[EQ_GLOB:.*]] = cir.get_global @_ZNSt3__115strong_ordering5equalE : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH: cir.copy %[[EQ_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH: cir.copy %[[EQ_GLOB]] align(1) to %[[RET_ALLOCA]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH: cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
-
-  // BOTH: cir.func {{.*}} @_Z19use_pseudo_ordering9HasMemberS_(%[[M1:.*]]: !rec_HasMember{{.*}}, %[[M2:.*]]: !rec_HasMember{{.*}})
-  // BOTH: %[[M1_ALLOCA:.*]] = cir.alloca "m1" {{.*}} init : !cir.ptr<!rec_HasMember>
-  // BOTH: %[[M2_ALLOCA:.*]] = cir.alloca "m2" align(1) init : !cir.ptr<!rec_HasMember>
-  // BOTH: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH: %[[CALL_RES:.*]] = cir.call @_ZNK9HasMemberssERKS_(%[[M1_ALLOCA]], %[[M2_ALLOCA]]) : (!cir.ptr<!rec_HasMember> {{.*}}, !cir.ptr<!rec_HasMember> {{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
-  // BOTH: cir.store {{.*}}%[[CALL_RES]], %[[G_ALLOCA]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   std::strong_ordering g = (m1 <=> m2);
+  // LLVM: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_(%struct.HasMember %{{.*}}, %struct.HasMember %{{.*}}) #0 {
+  // LLVM:   %[[M1_ALLOCA:.*]] = alloca %struct.HasMember
+  // LLVM:   %[[M2_ALLOCA:.*]] = alloca %struct.HasMember
+  // LLVM:   %[[G_ALLOCA:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[CALL_RES:.*]] = call %"class.std::__1::strong_ordering" @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
+  // LLVM:   store %"class.std::__1::strong_ordering" %[[CALL_RES]], ptr %[[G_ALLOCA]]
+  // LLVM:   ret void
+  // LLVM: }
+
   // LLVM: define {{.*}} @_ZNK9HasMemberssERKS_(ptr {{.*}}, ptr {{.*}})
   // LLVM:   %[[TMP_SO:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[RET_ALLOCA:.*]] = alloca %"class.std::__1::strong_ordering"
@@ -191,14 +202,14 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   br label %[[AFTER_CMPS_CTD:.*]]
   //
   // LLVM: [[AFTER_CMPS_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO]], ptr %[[CMP_RES]], i64 1, i1 false)
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[RET_ALLOCA]], ptr %[[TMP_SO]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RET_ALLOCA]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
   // LLVM:   %[[RET_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RET_ALLOCA]]
   // LLVM:   %[[SO_NE_RES:.*]] = call noundef i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(%"class.std::__1::strong_ordering" %[[RET_LOAD]],
   // LLVM:   br i1 %[[SO_NE_RES]], label %[[SO_NE_RES_TRUE:.*]], label %[[SO_NE_RES_FALSE:.*]]
   //
   // LLVM: [[SO_NE_RES_TRUE]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO2]], ptr %[[TMP_SO]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
   // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
   // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
   //
@@ -206,18 +217,9 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   br label %[[SO_NE_RES_FALSE_CTD:.*]]
   //
   // LLVM: [[SO_NE_RES_FALSE_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO2]], ptr @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
   // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
   // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
-  // LLVM: }
-
-  // LLVM: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_(%struct.HasMember %{{.*}}, %struct.HasMember %{{.*}}) #0 {
-  // LLVM:   %[[M1_ALLOCA:.*]] = alloca %struct.HasMember
-  // LLVM:   %[[M2_ALLOCA:.*]] = alloca %struct.HasMember
-  // LLVM:   %[[G_ALLOCA:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[CALL_RES:.*]] = call %"class.std::__1::strong_ordering" @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[CALL_RES]], ptr %[[G_ALLOCA]]
-  // LLVM:   ret void
   // LLVM: }
 
   // OGCG: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_()

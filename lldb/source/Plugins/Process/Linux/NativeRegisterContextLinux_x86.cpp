@@ -9,14 +9,18 @@
 #if defined(__i386__) || defined(__x86_64__)
 
 #include "NativeRegisterContextLinux_x86.h"
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include <algorithm>
+#include <asm/ldt.h>
 #include <cpuid.h>
 #include <linux/elf.h>
 #include <optional>
@@ -40,6 +44,10 @@ static inline int get_cpuid_count(unsigned int __leaf,
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
+
+// Linux exposes the i386 thread pointer as a synthetic register between the
+// always-available FPU registers and the optional extended register sets.
+constexpr uint32_t k_i386_thread_pointer_index = k_first_avx_i386;
 
 // x86 32-bit general purpose registers.
 static const uint32_t g_gpr_regnums_i386[] = {
@@ -300,13 +308,33 @@ NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch).release()),
       NativeRegisterContextLinux(native_thread),
-      NativeRegisterContextDBReg_x86(native_thread),
       m_xstate_type(XStateType::Invalid), m_ymm_set(), m_mpx_set(),
       m_reg_info(), m_gpr_x86_64() {
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
-  case llvm::Triple::x86:
-    m_reg_info.num_registers = k_num_registers_i386;
+  case llvm::Triple::x86: {
+    const RegisterInfoInterface &register_info = GetRegisterInfoInterface();
+    // Place the synthetic value after all existing user data so existing
+    // g-packet offsets remain unchanged.
+    uint32_t byte_offset = 0;
+    for (uint32_t i = 0; i < register_info.GetUserRegisterCount(); ++i) {
+      const RegisterInfo &info = register_info.GetRegisterInfo()[i];
+      byte_offset = std::max(byte_offset, info.byte_offset + info.byte_size);
+    }
+    m_i386_thread_pointer_info = {"gs_base",
+                                  nullptr,
+                                  sizeof(uint32_t),
+                                  byte_offset,
+                                  lldb::eEncodingUint,
+                                  lldb::eFormatHex,
+                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,
+                                   LLDB_REGNUM_GENERIC_TP, LLDB_INVALID_REGNUM,
+                                   LLDB_INVALID_REGNUM},
+                                  nullptr,
+                                  nullptr,
+                                  nullptr};
+
+    m_reg_info.num_registers = k_num_registers_i386 + 1;
     m_reg_info.num_gpr_registers = k_num_gpr_registers_i386;
     m_reg_info.num_fpr_registers = k_num_fpr_registers_i386;
     m_reg_info.num_avx_registers = k_num_avx_registers_i386;
@@ -330,6 +358,7 @@ NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
     m_reg_info.last_dr = lldb_dr7_i386;
     m_reg_info.gpr_flags = lldb_eflags_i386;
     break;
+  }
   case llvm::Triple::x86_64:
     m_reg_info.num_registers = x86_64_with_base::k_num_registers;
     m_reg_info.num_gpr_registers = x86_64_with_base::k_num_gpr_registers;
@@ -373,6 +402,27 @@ NativeRegisterContextLinux_x86::NativeRegisterContextLinux_x86(
   m_fctrl_offset_in_userarea = reg_info_fctrl->byte_offset;
 }
 
+uint32_t NativeRegisterContextLinux_x86::GetRegisterCount() const {
+  uint32_t count = NativeRegisterContextRegisterInfo::GetRegisterCount();
+  if (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine() ==
+      llvm::Triple::x86)
+    ++count;
+  return count;
+}
+
+const RegisterInfo *
+NativeRegisterContextLinux_x86::GetRegisterInfoAtIndex(uint32_t reg) const {
+  if (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine() ==
+      llvm::Triple::x86) {
+    if (reg == k_i386_thread_pointer_index)
+      return &m_i386_thread_pointer_info;
+    // Translate the public index back to the unchanged underlying table.
+    if (reg > k_i386_thread_pointer_index)
+      --reg;
+  }
+  return NativeRegisterContextRegisterInfo::GetRegisterInfoAtIndex(reg);
+}
+
 // CONSIDER after local and llgs debugging are merged, register set support can
 // be moved into a base x86-64 class with IsRegisterSetAvailable made virtual.
 uint32_t NativeRegisterContextLinux_x86::GetRegisterSetCount() const {
@@ -392,6 +442,9 @@ uint32_t NativeRegisterContextLinux_x86::GetUserRegisterCount() const {
     if (set)
       count += set->num_registers;
   }
+  if (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine() ==
+      llvm::Triple::x86)
+    ++count;
   return count;
 }
 
@@ -423,6 +476,9 @@ NativeRegisterContextLinux_x86::ReadRegister(const RegisterInfo *reg_info,
     return error;
   }
 
+  if (IsThreadPointer(*reg_info))
+    return ReadThreadPointer(reg_value);
+
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
@@ -448,7 +504,7 @@ NativeRegisterContextLinux_x86::ReadRegister(const RegisterInfo *reg_info,
       full_reg = reg_info->invalidate_regs[0];
     }
 
-    error = ReadRegisterRaw(full_reg, reg_value);
+    error = ReadRegisterRaw(GetRegisterInfoIndex(full_reg), reg_value);
 
     if (error.Success()) {
       // If our read was not aligned (for ah,bh,ch,dh), shift our returned
@@ -586,6 +642,9 @@ Status NativeRegisterContextLinux_x86::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
   assert(reg_info && "reg_info is null");
 
+  if (IsThreadPointer(*reg_info))
+    return Status::FromErrorString("the i386 thread pointer is read-only");
+
   const uint32_t reg_index = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg_index == LLDB_INVALID_REGNUM)
     return Status::FromErrorStringWithFormat(
@@ -595,7 +654,7 @@ Status NativeRegisterContextLinux_x86::WriteRegister(
   UpdateXSTATEforWrite(reg_index);
 
   if (IsGPR(reg_index) || IsDR(reg_index))
-    return WriteRegisterRaw(reg_index, reg_value);
+    return WriteRegisterRaw(GetRegisterInfoIndex(reg_index), reg_value);
 
   if (IsFPR(reg_index) || IsAVX(reg_index) || IsMPX(reg_index)) {
     if (reg_info->encoding == lldb::eEncodingVector) {
@@ -1003,6 +1062,53 @@ bool NativeRegisterContextLinux_x86::IsMPX(uint32_t reg_index) const {
           reg_index <= m_reg_info.last_mpxc);
 }
 
+bool NativeRegisterContextLinux_x86::IsThreadPointer(
+    const RegisterInfo &reg_info) const {
+  return GetRegisterInfoInterface().GetTargetArchitecture().GetMachine() ==
+             llvm::Triple::x86 &&
+         reg_info.kinds[lldb::eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_TP;
+}
+
+Status
+NativeRegisterContextLinux_x86::ReadThreadPointer(RegisterValue &reg_value) {
+  RegisterValue selector;
+  Status error = ReadRegisterRaw(lldb_gs_i386, selector);
+  if (error.Fail())
+    return error;
+
+  const uint32_t gs = selector.GetAsUInt32();
+  // Selectors 0 through 3 refer to the null GDT descriptor with different
+  // requested privilege levels.
+  if (gs < 4) {
+    reg_value.SetUInt32(0);
+    return Status();
+  }
+  if (gs & 4)
+    return Status::FromErrorString(
+        "cannot read the i386 thread pointer from an LDT selector");
+
+  const uintptr_t entry_number = gs >> 3;
+  user_desc descriptor = {};
+  error = NativeProcessLinux::PtraceWrapper(
+      PTRACE_GET_THREAD_AREA, m_thread.GetID(),
+      reinterpret_cast<void *>(entry_number), &descriptor, sizeof(descriptor));
+  if (error.Fail())
+    return error;
+
+  reg_value.SetUInt32(descriptor.base_addr);
+  return Status();
+}
+
+uint32_t
+NativeRegisterContextLinux_x86::GetRegisterInfoIndex(uint32_t lldb_reg) const {
+  // Raw register helpers take register-info indices rather than LLDB numbers.
+  if (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine() ==
+          llvm::Triple::x86 &&
+      lldb_reg >= k_i386_thread_pointer_index)
+    return lldb_reg + 1;
+  return lldb_reg;
+}
+
 bool NativeRegisterContextLinux_x86::CopyXSTATEtoMPX(uint32_t reg) {
   if (!IsMPX(reg))
     return false;
@@ -1078,7 +1184,7 @@ const RegisterInfo *NativeRegisterContextLinux_x86::GetDR(int num) const {
   assert(num >= 0 && num <= 7);
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
-    return GetRegisterInfoAtIndex(lldb_dr0_i386 + num);
+    return GetRegisterInfoAtIndex(GetRegisterInfoIndex(lldb_dr0_i386 + num));
   case llvm::Triple::x86_64:
     return GetRegisterInfoAtIndex(x86_64_with_base::lldb_dr0 + num);
   default:

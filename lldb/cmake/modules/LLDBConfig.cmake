@@ -79,6 +79,11 @@ set(LLDB_GLOBAL_INIT_DIRECTORY "" CACHE STRING
   "Path to the global lldbinit directory. Relative paths are resolved relative to the
   directory containing the LLDB library.")
 
+set(LLDB_DWO_DIAGNOSTIC_SUFFIX "Debugging will be degraded." CACHE STRING
+  "Text appended to diagnostics when LLDB cannot locate DWO debug information files. Clients can
+  customize this message with a URL or additional information to help users know how to fix or
+  troubleshoot the issue.")
+
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
   # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
@@ -190,7 +195,7 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   set(default_enable_dynamic_scriptinterpreters ON)
 else()
   set(default_enable_dynamic_scriptinterpreters OFF)
@@ -313,6 +318,7 @@ if( MSVC )
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
     -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
+    -wd4250 # Suppress 'warning C4250: 'class1' : inherits 'class2::member' via dominance
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'

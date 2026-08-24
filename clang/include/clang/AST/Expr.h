@@ -24,10 +24,10 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,31 +40,32 @@
 #include <optional>
 
 namespace clang {
-  class AllocSizeAttr;
-  class APValue;
-  class ASTContext;
-  class BlockDecl;
-  class CXXBaseSpecifier;
-  class CXXMemberCallExpr;
-  class CXXOperatorCallExpr;
-  class CastExpr;
-  class Decl;
-  class IdentifierInfo;
-  class MaterializeTemporaryExpr;
-  class NamedDecl;
-  class ObjCPropertyRefExpr;
-  class OpaqueValueExpr;
-  class ParmVarDecl;
-  class StringLiteral;
-  class TargetInfo;
-  class ValueDecl;
-  class WarnUnusedResultAttr;
+class AllocSizeAttr;
+class APValue;
+class ASTContext;
+class BlockDecl;
+class CXXBaseSpecifier;
+class CXXMemberCallExpr;
+class CXXOperatorCallExpr;
+class CastExpr;
+class Decl;
+class IdentifierInfo;
+class MaterializeTemporaryExpr;
+class NamedDecl;
+class ObjCPropertyRefExpr;
+class OpaqueValueExpr;
+class ParmVarDecl;
+class StringLiteral;
+class TargetInfo;
+class ValueDecl;
+class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
-typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
+typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
 
 /// An adjustment to be made to the temporary created when emitting a
-/// reference binding, which accesses a particular subobject of that temporary.
+/// reference binding, which accesses a particular subobject of that
+/// temporary.
 struct SubobjectAdjustment {
   enum {
     DerivedToBaseAdjustment,
@@ -90,7 +91,7 @@ struct SubobjectAdjustment {
 
   SubobjectAdjustment(const CastExpr *BasePath,
                       const CXXRecordDecl *DerivedClass)
-    : Kind(DerivedToBaseAdjustment) {
+      : Kind(DerivedToBaseAdjustment) {
     DerivedToBase.BasePath = BasePath;
     DerivedToBase.DerivedClass = DerivedClass;
   }
@@ -100,7 +101,7 @@ struct SubobjectAdjustment {
   }
 
   SubobjectAdjustment(const MemberPointerType *MPT, Expr *RHS)
-    : Kind(MemberPointerAdjustment) {
+      : Kind(MemberPointerAdjustment) {
     this->Ptr.MPT = MPT;
     this->Ptr.RHS = RHS;
   }
@@ -561,8 +562,13 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
+  ///
+  /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
+  /// are not valid per the specification.
+  // FIXME: Add proper documentation about the constructs we allow.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx) const;
+  getIntegerConstantExpr(const ASTContext &Ctx,
+                         bool AllowRelaxedEval = false) const;
   bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
@@ -574,8 +580,12 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx,
-                           APValue *Result = nullptr) const;
+  ///
+  /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
+  /// are not valid per the specification.
+  // FIXME: Add proper documentation about the constructs we allow.
+  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
+                           bool AllowRelaxedEval = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -638,6 +648,10 @@ public:
     /// (which may include expensive operations like converting APValue objects
     /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
+
+    /// Location where we spot ptr to int cast or null subobject while
+    /// evaluating constant expression in MS compatibility mode.
+    SmallVectorImpl<PartialDiagnosticAt> *ExtendedDiag = nullptr;
 
     EvalStatus() = default;
 
@@ -2468,7 +2482,7 @@ public:
         Data(reinterpret_cast<uintptr_t>(Field) | OffsetOfNode::Field) {}
 
   /// Create an offsetof node that refers to an identifier.
-  OffsetOfNode(SourceLocation DotLoc, IdentifierInfo *Name,
+  OffsetOfNode(SourceLocation DotLoc, const IdentifierInfo *Name,
                SourceLocation NameLoc)
       : Range(DotLoc.isValid() ? DotLoc : NameLoc, NameLoc),
         Data(reinterpret_cast<uintptr_t>(Name) | Identifier) {}
@@ -2495,7 +2509,7 @@ public:
 
   /// For a field or identifier offsetof node, returns the name of
   /// the field.
-  IdentifierInfo *getFieldName() const;
+  const IdentifierInfo *getFieldName() const;
 
   /// For a base class node, returns the base specifier.
   CXXBaseSpecifier *getBase() const {
@@ -4961,28 +4975,37 @@ public:
 
 /// Represents a call to the builtin function \c __builtin_va_arg.
 class VAArgExpr : public Expr {
+public:
+  enum VarArgKind { VA_Std = 0, VA_MS, VA_ZOS };
+
+private:
   Stmt *Val;
-  llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfo;
+  llvm::PointerIntPair<TypeSourceInfo *, 2, VarArgKind> TInfo;
   SourceLocation BuiltinLoc, RParenLoc;
 public:
   VAArgExpr(SourceLocation BLoc, Expr *e, TypeSourceInfo *TInfo,
-            SourceLocation RPLoc, QualType t, bool IsMS)
+            SourceLocation RPLoc, QualType t, VarArgKind VaKind)
       : Expr(VAArgExprClass, t, VK_PRValue, OK_Ordinary), Val(e),
-        TInfo(TInfo, IsMS), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
+        TInfo(TInfo, VaKind), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
     setDependence(computeDependence(this));
   }
 
   /// Create an empty __builtin_va_arg expression.
   explicit VAArgExpr(EmptyShell Empty)
-      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, false) {}
+      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, VA_Std) {}
 
   const Expr *getSubExpr() const { return cast<Expr>(Val); }
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
+  VarArgKind getVarargABI() const { return TInfo.getInt(); }
+  void setVarargABI(VarArgKind Kind) { TInfo.setInt(Kind); }
+
   /// Returns whether this is really a Win64 ABI va_arg expression.
-  bool isMicrosoftABI() const { return TInfo.getInt(); }
-  void setIsMicrosoftABI(bool IsMS) { TInfo.setInt(IsMS); }
+  bool isMicrosoftABI() const { return TInfo.getInt() == VA_MS; }
+
+  /// Returns whether this is really a z/OS ABI va_arg expression.
+  bool isZOSABI() const { return TInfo.getInt() == VA_ZOS; }
 
   TypeSourceInfo *getWrittenTypeInfo() const { return TInfo.getPointer(); }
   void setWrittenTypeInfo(TypeSourceInfo *TI) { TInfo.setPointer(TI); }

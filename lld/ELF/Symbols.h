@@ -56,9 +56,9 @@ enum {
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
-  NEEDS_GOT_NONAUTH = 1 << 10,
+  // 1 << 10 unused
   NEEDS_TLSDESC_AUTH = 1 << 11,
-  NEEDS_TLSDESC_NONAUTH = 1 << 12,
+  // 1 << 12 unused
 };
 
 // The base class for real symbol classes.
@@ -78,9 +78,12 @@ public:
   // The file from which this symbol was created.
   InputFile *file;
 
-  // The default copy constructor is deleted due to atomic flags. Define one for
-  // places where no atomic is needed.
-  Symbol(const Symbol &o) { memcpy(static_cast<void *>(this), &o, sizeof(o)); }
+  // Symbols are referenced by pointer throughout the linker, so an implicit
+  // copy would create a dangerous duplicate; copy the needed members
+  // explicitly instead. Deleting the copy operations also suppresses the
+  // implicit move operations.
+  Symbol(const Symbol &o) = delete;
+  Symbol &operator=(const Symbol &) = delete;
 
 protected:
   const char *nameData;
@@ -198,6 +201,7 @@ public:
   uint64_t getGotVA(Ctx &) const;
   uint64_t getGotPltOffset(Ctx &) const;
   uint64_t getGotPltVA(Ctx &) const;
+  uint64_t getPltOffset(Ctx &) const;
   uint64_t getPltVA(Ctx &) const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
@@ -351,7 +355,8 @@ public:
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE | NEEDS_GOT_AUTH |
+            NEEDS_TLSDESC_AUTH);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);

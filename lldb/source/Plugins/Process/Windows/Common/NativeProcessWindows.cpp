@@ -84,6 +84,8 @@ NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
   if (E)
     return;
 
+  m_expecting_loader_int3 = true;
+
   SetID(GetDebuggedProcessId());
 
   ProcessInstanceInfo info;
@@ -150,13 +152,15 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
 
     // Resume the debug loop.
     ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
+        m_session_data->m_debugger->GetActiveException();
     if (active_exception) {
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
       // anything happened.
       m_session_data->m_debugger->ContinueAsyncException(
           ExceptionResult::MaskException);
+    } else {
+      m_session_data->m_debugger->ContinueAsyncDllEvent();
     }
   } else {
     LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
@@ -228,13 +232,15 @@ Status NativeProcessWindows::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return ProcessDebugger::GetMemoryRegionInfo(load_addr, range_info);
 }
 
-Status NativeProcessWindows::ReadMemory(lldb::addr_t addr, void *buf,
-                                        size_t size, size_t &bytes_read) {
+Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
+                                        void *buf, size_t size,
+                                        size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 
-Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessWindows::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 
@@ -470,14 +476,24 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   if (GetID() == LLDB_INVALID_PROCESS_ID)
     SetID(GetDebuggedProcessId());
 
+  ProcessInstanceInfo info;
+  bool got_info = Host::GetProcessInfo(GetDebuggedProcessId(), info);
+
   if (GetArchitecture().GetMachine() == llvm::Triple::UnknownArch) {
-    ProcessInstanceInfo process_info;
-    if (!Host::GetProcessInfo(GetDebuggedProcessId(), process_info)) {
+    if (!got_info) {
       LLDB_LOG(log, "Cannot get process information during debugger connecting "
                     "to process");
       return;
     }
-    SetArchitecture(process_info.GetArchitecture());
+    SetArchitecture(info.GetArchitecture());
+  }
+
+  if (got_info) {
+    FileSpec exe = info.GetExecutableFile();
+    if (exe) {
+      FileSystem::Instance().Resolve(exe);
+      m_loaded_modules[exe] = image_base;
+    }
   }
 
   // The very first one shall always be the main thread.
@@ -585,9 +601,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     return ExceptionResult::BreakInDebugger;
   }
 
-  // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
-  // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
-  // Stop the debugger and let the user decide what to do.
+  // Our own DebugBreakProcess() injection, used to implement
+  // Halt()/Interrupt().
   if (m_pending_halt) {
     LLDB_LOG(log,
              "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
@@ -612,6 +627,15 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
       injected->SetStopReason(signal_info, "interrupt");
     SetState(eStateStopped, true);
     return ExceptionResult::BreakInDebugger;
+  }
+
+  if (m_expecting_loader_int3 && IsSystemModuleAddress(exception_addr)) {
+    m_expecting_loader_int3 = false;
+    LLDB_LOG(log,
+             "Skipping expected loader breakpoint at address {0:x} in a "
+             "system module.",
+             exception_addr);
+    return ExceptionResult::MaskException;
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
@@ -653,19 +677,26 @@ NativeProcessWindows::OnDebugException(bool first_chance,
                                        const ExceptionRecord &record) {
   llvm::sys::ScopedLock lock(m_mutex);
 
-  // Let the debugger establish the internal status.
-  ProcessDebugger::OnDebugException(first_chance, record);
-
+  // Handle the exception first to keep track of the stop reason.
+  ExceptionResult result;
   switch (record.GetExceptionValue()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP:
-    return HandleSingleStepException(record);
+    result = HandleSingleStepException(record);
+    break;
   case DWORD(STATUS_BREAKPOINT):
   case STATUS_WX86_BREAKPOINT:
-    return HandleBreakpointException(record);
+    result = HandleBreakpointException(record);
+    break;
   default:
-    return HandleGenericException(first_chance, record);
+    result = HandleGenericException(first_chance, record);
+    break;
   }
+
+  // Let the debugger establish the internal status.
+  ProcessDebugger::OnDebugException(first_chance, record);
+
+  return result;
 }
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
@@ -702,15 +733,88 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
   });
 }
 
-void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                                     lldb::addr_t module_addr) {
-  m_loaded_modules.clear();
+DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+                                               lldb::addr_t module_addr,
+                                               lldb::tid_t thread_id) {
+  Log *log = GetLog(WindowsLog::Process);
+  llvm::sys::ScopedLock lock(m_mutex);
+
+  FileSpec resolved = module_spec.GetFileSpec();
+  if (resolved) {
+    FileSystem::Instance().Resolve(resolved);
+    m_loaded_modules[resolved] = module_addr;
+  }
   m_pending_library_events = true;
+
+  if (!m_initial_stop_seen || !m_client_supports_libraries_read)
+    return DllEventAction::ContinueDebugLoop;
+
+  // Can't resolve a breakpoint in a system DLL.
+  if (!resolved || ProcessDebugger::IsSystemDLL(resolved.GetPath()))
+    return DllEventAction::ContinueDebugLoop;
+
+  NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
+  if (!loader_thread && !m_threads.empty()) {
+    LLDB_LOG(log, "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+             thread_id);
+    loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+  }
+  if (loader_thread) {
+    SetCurrentThreadID(loader_thread->GetID());
+    if (loader_thread->DoStop().Fail())
+      LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
+               loader_thread->GetID());
+    ThreadStopInfo info;
+    info.reason = lldb::eStopReasonNone;
+    info.signo = 0;
+    loader_thread->SetStopReason(info, "");
+  }
+  SetState(eStateStopped, true);
+
+  return DllEventAction::ParkDebugLoop;
 }
 
-void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  m_loaded_modules.clear();
+DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                                 lldb::tid_t thread_id) {
+  Log *log = GetLog(WindowsLog::Process);
+  llvm::sys::ScopedLock lock(m_mutex);
+
+  FileSpec unloaded_spec;
+  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
+    if (it->second == module_addr) {
+      unloaded_spec = it->first;
+      it = m_loaded_modules.erase(it);
+    } else {
+      ++it;
+    }
+  }
   m_pending_library_events = true;
+
+  if (!m_initial_stop_seen || !m_client_supports_libraries_read)
+    return DllEventAction::ContinueDebugLoop;
+
+  if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec.GetPath()))
+    return DllEventAction::ContinueDebugLoop;
+
+  NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
+  if (!unloader_thread && !m_threads.empty()) {
+    LLDB_LOG(log,
+             "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+             thread_id);
+    unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+  }
+  if (unloader_thread) {
+    SetCurrentThreadID(unloader_thread->GetID());
+    if (unloader_thread->DoStop().Fail())
+      LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
+               unloader_thread->GetID());
+    ThreadStopInfo info;
+    info.reason = lldb::eStopReasonNone;
+    info.signo = 0;
+    unloader_thread->SetStopReason(info, "");
+  }
+  SetState(eStateStopped, true);
+  return DllEventAction::ParkDebugLoop;
 }
 
 void NativeProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,

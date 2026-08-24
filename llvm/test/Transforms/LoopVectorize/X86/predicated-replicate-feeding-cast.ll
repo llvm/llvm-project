@@ -12,7 +12,7 @@ define i8 @predicated_replicate_feeding_cast(i16 %n, i1 %c1, i1 %c2, i16 %a, i8 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C1]], true
@@ -23,19 +23,14 @@ define i8 @predicated_replicate_feeding_cast(i16 %n, i1 %c1, i1 %c2, i16 %a, i8 
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i16 1, [[A]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i16> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i16 [ poison, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i16 1, [[A]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP7]], i16 [[TMP8]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP7]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_SDIV_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C1]], <2 x i16> zeroinitializer, <2 x i16> [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[C1]], i16 0, i16 [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i16 [[TMP11]] to i8
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF3:.*]], label %[[PRED_SDIV_CONTINUE4:.*]]
 ; CHECK:       [[PRED_SDIV_IF3]]:
@@ -122,7 +117,7 @@ define i8 @predicated_replicate_feeding_cast_non_uniform(i64 %n, i1 %c1, i1 %c2,
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1]], true
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C2]], true

@@ -1423,6 +1423,11 @@ struct BlockPackMatmulOptions {
   /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
+  /// Scalable flags for block factors. When true, the corresponding block
+  /// factor is considered scalable. Must be empty (all static) or have the same
+  /// size as blockFactors.
+  SmallVector<bool, 3> scalableBlockFactors;
+
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
   bool allowPadding = true;
@@ -1922,6 +1927,11 @@ void populateLinalgGenericOpsSpecializationPatterns(
 /// to equivalent `linalg.elementwise`.
 void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
 
+/// Populates `patterns` that convert linalg category ops (e.g.
+/// `linalg.elementwise`, `linalg.contract`) to equivalent linalg named ops
+/// (e.g. `linalg.add`, `linalg.matmul`).
+void populateLinalgCategoryToNamedPatterns(RewritePatternSet &patterns);
+
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
@@ -1980,9 +1990,6 @@ void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
 /// Populate patterns that convert `ElementwiseMappable` ops to linalg
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(RewritePatternSet &patterns);
-
-/// Populate patterns that are only useful in the context of sparse tensors.
-void populateSparseTensorRewriting(RewritePatternSet &patterns);
 
 /// Function type which is used to control when to stop fusion. It is expected
 /// that OpOperand is not modified in the callback. The OpOperand is not marked

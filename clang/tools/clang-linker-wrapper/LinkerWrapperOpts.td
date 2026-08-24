@@ -39,9 +39,6 @@ def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
   HelpText<"Print the wrapped module's IR for testing">;
 def save_temps : Flag<["--"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;
-def no_lto : Flag<["--"], "no-lto">,
-             Flags<[WrapperOnlyOption]>,
-             HelpText<"Use the non-LTO device compilation pipeline">;
 def compress : Flag<["--"], "compress">,
   Flags<[WrapperOnlyOption]>, HelpText<"Compress bundled files">;
 def compression_level_eq : Joined<["--"], "compression-level=">,
@@ -123,9 +120,9 @@ def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
 def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
   HelpText<"Search for library <libname>">;
 def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+  Alias<library>;
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+  Alias<library>;
 
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
@@ -142,4 +139,5 @@ def r : Flag<["-"], "r">, Alias<relocatable>;
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;
-def wholearchive_flag : Joined<["/", "-", "/?", "-?"], "wholearchive">, Flags<[HelpHidden]>;
+def wholearchive_file : Joined<["/", "-", "/?", "-?"], "wholearchive:">, Flags<[HelpHidden]>;
+def wholearchive_flag : Flag<["/", "-", "/?", "-?"], "wholearchive">, Flags<[HelpHidden]>;

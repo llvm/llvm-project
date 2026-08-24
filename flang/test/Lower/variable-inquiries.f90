@@ -5,8 +5,8 @@ module inquired
   real(8), allocatable :: a(:)
 end module
 
-! CHECK-LABEL: @_QPissue844()
-subroutine issue844()
+! CHECK-LABEL: @_QPuse_associated_descriptor_inquiry()
+subroutine use_associated_descriptor_inquiry()
   use inquired
   ! Verify that evaluate::DescriptorInquiry are made using the symbol mapped
   ! in lowering (the use associated one, and not directly the ultimate

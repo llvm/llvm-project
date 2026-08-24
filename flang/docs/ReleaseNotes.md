@@ -3,13 +3,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # Flang {{version}} {{in_progress}}Release Notes
 
-````{only} PreRelease
-```{warning}
+::::{only} PreRelease
+:::{warning}
 These are in-progress notes for the upcoming LLVM {{version}} release.
 Release notes for previous releases can be found on [the Download
 Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -39,9 +39,29 @@ page](https://llvm.org/releases/).
   `omp` counterparts when OpenMP is enabled.
 
 ## New Compiler Flags
+- The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
+  `fir.array_update`, `fir.array_modify`, `fir.array_access`,
+  `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
+  together with the `array-value-copy` pass that legalized them and its
+  `-mmlir -disable-avc` option. Nothing in flang has produced these
+  operations since the legacy (non-HLFIR) expression lowering was deleted.
+  Downstream projects that still construct them must migrate to HLFIR (or
+  their own legalization) before rebasing. `fir.array_coor` is unrelated
+  and remains supported.
 
-- The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
-- The `-Werror` flag will cause all warnings to become errors. This includes warnings about support for OpenMP versions, which will now prevent the compilation from happening with the `-Werror` flag. These OpenMP warnings can be disabled with `-Wno-experimental-option`.
+- Added support for compressed DWARF debug sections. Flang now supports
+  compressing DWARF debug info in ELF object files using zlib or zstd,
+  reducing debug information size in compiled binaries.
+
+## New Compiler Flags
+- Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
+  floating-point exception halting mode of the main program. It takes a
+  comma-separated list of `invalid`, `zero`, `overflow`, `underflow`, `inexact`,
+  and the extension `denormal`, or `none` to disable halting. See the Flang
+  command line reference for the supported targets and details.
+
+- Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
+  sections. Supported formats are `zlib`, `zstd`, and `none`.
 
 ## Windows Support
 

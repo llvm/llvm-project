@@ -60,7 +60,8 @@ using llvm::dxil::ResourceClass;
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr,
+    Expr *SampleCountExpr = nullptr);
 
 enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
 
@@ -148,8 +149,7 @@ public:
   // Returns the result of converting ConstantBuffer<T> to
   // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
   // then the return value is `std::nullopt`.
-  std::optional<ExprResult>
-  tryPerformConstantBufferConversion(ExprResult &BaseExpr);
+  std::optional<ExprResult> tryPerformConstantBufferConversion(Expr *BaseExpr);
 
   // Returns the conversion operator to convert `RD` to `const hlsl_constant
   // Type&`. Returns `nullptr` if it could not be found.

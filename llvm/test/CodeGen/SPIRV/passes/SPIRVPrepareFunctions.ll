@@ -1,5 +1,8 @@
 ; RUN: opt -S -passes=spirv-prepare-functions -mtriple=spirv64-unknown-unknown < %s | FileCheck %s
 
+@fp = global ptr addrspace(4) @callback
+; CHECK: @fp = global ptr addrspace(4) @callback
+
 ; @llvm.bswap.* is replaced with a call to a SPIR-V helper function whose
 ; body implements the byte-swap with shifts/masks/ors.
 define i32 @bswap_i32(i32 %x) {
@@ -23,6 +26,24 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK: call i32 @spirv.llvm_fshr_i32(i32 %a, i32 %b, i32 %c)
   %r = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
   ret i32 %r
+}
+
+; Parameter attributes of the original intrinsic are propagated
+; to the generated SPIR-V.
+define void @memset_attrs(ptr %p, i8 %v, i32 %n) {
+; CHECK-LABEL: define void @memset_attrs(
+  call void @llvm.memset.p0.i32(ptr nocapture writeonly %p, i8 %v, i32 %n, i1 false)
+  ret void
+}
+
+; @fp keeps pointing at @callback across the clone/rename via RAUW.
+; CHECK-LABEL: define void @caller(
+; CHECK: %ptr = load ptr addrspace(4), ptr @fp
+; CHECK: call addrspace(4) i32 %ptr(i32 0), !spv.mutated_callsite ![[#MUTATED_CS:]]
+define void @caller() {
+  %ptr = load ptr addrspace(4), ptr @fp
+  %r = call addrspace(4) { float, float } %ptr(i32 0)
+  ret void
 }
 
 ; The bswap helper is materialized with the standard shift/mask/or unrolling.
@@ -54,6 +75,23 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK:       %[[#OR:]]  = or i32 %[[#A]], %[[#B]]
 ; CHECK:       ret i32 %[[#OR]]
 
+; The memset helper definition carries the destination attributes propagated
+; from the original @llvm.memset intrinsic.
+; CHECK-LABEL: define void @spirv.llvm_memset_p0_i32(
+; CHECK-SAME:    ptr writeonly {{.*}}captures(none) %dest,
+
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
 declare i32 @llvm.bswap.i32(i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
+
+; CHECK-LABEL: define i32 @callback(
+define { float, float } @callback({ float, float } %x) addrspace(4) {
+  ret { float, float } %x
+}
+
+; CHECK-DAG: ![[#MUTATED_CS]] = !{!"spv.mutated_callsite.caller.0"}
+; CHECK-DAG: !spv.cloned_funcs = !{![[#CLONED:]]}
+; CHECK-DAG: ![[#CLONED]] = !{!"callback", ![[#RET:]], ![[#ARG:]]}
+; CHECK-DAG: ![[#RET]] = !{i32 -1, { float, float } zeroinitializer}
+; CHECK-DAG: ![[#ARG]] = !{i32 0, { float, float } zeroinitializer}

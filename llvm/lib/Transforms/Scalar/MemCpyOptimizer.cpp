@@ -1075,7 +1075,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+    AllocaInst *DestAlloca = cast<AllocaInst>(cpyDest);
+    DestAlloca->setAlignment(std::max(DestAlloca->getAlign(), srcAlign));
   }
 
   if (NeedMoveGEP) {
@@ -1571,6 +1572,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
+  if (*SrcOffset) {
+    // Make sure that the copied offset is actually part of the alloca. There
+    // might be an out-of-bounds copy in dead code.
+    if (!Size.isFixed() || *SrcOffset + Size > *SrcSize)
+      return false;
+  }
+
   // Check if it will be legal to combine allocas without breaking dominator.
   bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
   if (MoveSrc) {
@@ -1963,7 +1971,8 @@ bool MemCpyOptPass::isMemMoveMemSetDependency(MemMoveInst *M) {
 
   // Memset length must be sufficiently large.
   auto *MemSetLength = dyn_cast<ConstantInt>(MS->getLength());
-  if (!MemSetLength || MemSetLength->getZExtValue() < MemMoveSize)
+  if (!MemSetLength ||
+      MemSetLength->getZExtValue() < Offset.getZExtValue() + MemMoveSize)
     return false;
 
   // The destination buffer must have been memset'd.

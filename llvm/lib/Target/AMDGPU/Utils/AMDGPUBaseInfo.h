@@ -11,7 +11,9 @@
 
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -19,6 +21,7 @@
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <array>
 #include <functional>
+#include <optional>
 #include <utility>
 
 // Pull in OpName enum definition and getNamedOperandIdx() declaration.
@@ -58,8 +61,10 @@ static constexpr unsigned GFX9_4 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
+static constexpr unsigned GFX11_7 = 1;
 static constexpr unsigned GFX12 = 1;
 static constexpr unsigned GFX12_5 = 1;
+static constexpr unsigned GFX13 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -143,119 +148,26 @@ struct WMMAInstInfo {
 #define GET_WMMAInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
+using TargetIDSetting = AMDGPU::TargetIDSetting;
+using TargetID = AMDGPU::TargetID;
+
+/// Construct TargetID from MCSubtargetInfo. \p FeatureString is used to
+/// determine explicitly requested xnack/sramecc settings.
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString);
+
 namespace IsaInfo {
 
 enum {
-  // The closed Vulkan driver sets 96, which limits the wave count to 8 but
-  // doesn't spill SGPRs as much as when 80 is set.
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
+  FIXED_NUM_SGPRS_FOR_INIT_BUG = AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG,
   TRAP_NUM_SGPRS = 16
 };
 
-enum class TargetIDSetting { Unsupported, Any, Off, On };
-
-class AMDGPUTargetID {
-private:
-  GPUKind Arch;
-  std::string TargetTripleString;
-  TargetIDSetting XnackSetting;
-  TargetIDSetting SramEccSetting;
-  bool IsAMDHSA;
-
-public:
-  explicit AMDGPUTargetID(const MCSubtargetInfo &STI, StringRef FeatureString);
-
-  AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
-                 TargetIDSetting XnackSetting, TargetIDSetting SramEccSetting,
-                 bool IsAMDHSA);
-
-  ~AMDGPUTargetID() = default;
-
-  /// \return True if the current xnack setting is not "Unsupported".
-  bool isXnackSupported() const {
-    return XnackSetting != TargetIDSetting::Unsupported;
-  }
-
-  /// \returns True if the current xnack setting is "On" or "Any".
-  bool isXnackOnOrAny() const {
-    return XnackSetting == TargetIDSetting::On ||
-           XnackSetting == TargetIDSetting::Any;
-  }
-
-  /// \returns True if current xnack setting is "On" or "Off",
-  /// false otherwise.
-  bool isXnackOnOrOff() const {
-    return getXnackSetting() == TargetIDSetting::On ||
-           getXnackSetting() == TargetIDSetting::Off;
-  }
-
-  /// \returns The current xnack TargetIDSetting, possible options are
-  /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getXnackSetting() const { return XnackSetting; }
-
-  /// Sets xnack setting to \p NewXnackSetting.
-  void setXnackSetting(TargetIDSetting NewXnackSetting) {
-    XnackSetting = NewXnackSetting;
-  }
-
-  /// \return True if the current sramecc setting is not "Unsupported".
-  bool isSramEccSupported() const {
-    return SramEccSetting != TargetIDSetting::Unsupported;
-  }
-
-  /// \returns True if the current sramecc setting is "On" or "Any".
-  bool isSramEccOnOrAny() const {
-    return SramEccSetting == TargetIDSetting::On ||
-           SramEccSetting == TargetIDSetting::Any;
-  }
-
-  /// \returns True if current sramecc setting is "On" or "Off",
-  /// false otherwise.
-  bool isSramEccOnOrOff() const {
-    return getSramEccSetting() == TargetIDSetting::On ||
-           getSramEccSetting() == TargetIDSetting::Off;
-  }
-
-  /// \returns The current sramecc TargetIDSetting, possible options are
-  /// "Unsupported", "Any", "Off", and "On".
-  TargetIDSetting getSramEccSetting() const { return SramEccSetting; }
-
-  /// Sets sramecc setting to \p NewSramEccSetting.
-  void setSramEccSetting(TargetIDSetting NewSramEccSetting) {
-    SramEccSetting = NewSramEccSetting;
-  }
-
-  void setTargetIDFromTargetIDStream(StringRef TargetID);
-
-  GPUKind getGPUKind() const { return Arch; }
-
-  StringRef getTargetTripleString() const { return TargetTripleString; }
-
-  /// \returns True if this is an AMDHSA target.
-  bool isAMDHSA() const { return IsAMDHSA; }
-
-  /// Parse a target ID directive string (e.g.,
-  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
-  /// \returns AMDGPUTargetID or std::nullopt if malformed.
-  static std::optional<AMDGPUTargetID>
-  parseTargetIDString(StringRef TargetIDDirective);
-
-  /// Write string representation to \p OS
-  void print(raw_ostream &OS) const;
-
-  /// \returns String representation of an object.
-  std::string toString() const;
-
-  bool operator==(const AMDGPUTargetID &Other) const;
-  bool operator!=(const AMDGPUTargetID &Other) const {
-    return !(*this == Other);
-  }
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS,
-                               const AMDGPUTargetID &TargetID) {
-  TargetID.print(OS);
-  return OS;
+/// Returns true if \p Lhs and \p Rhs are incompatible (both specific but
+/// different).
+inline bool targetIDSettingsConflict(TargetIDSetting Lhs, TargetIDSetting Rhs) {
+  return Lhs != TargetIDSetting::Any && Rhs != TargetIDSetting::Any &&
+         Lhs != Rhs;
 }
 
 /// \returns Instruction cache line size in bytes for given subtarget \p STI.
@@ -307,17 +219,8 @@ constexpr unsigned getMaxFlatWorkGroupSize() {
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize);
 
-/// \returns SGPR allocation granularity for given subtarget \p STI.
-unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI);
-
 /// \returns SGPR encoding granularity for given subtarget \p STI.
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI);
-
-/// \returns Total number of SGPRs for given subtarget \p STI.
-unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI);
-
-/// \returns Addressable number of SGPRs for given subtarget \p STI.
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Minimum number of SGPRs that meets the given number of waves per
 /// execution unit requirement for given subtarget \p STI.
@@ -507,16 +410,19 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
+  MIMGDim NonArrayDim;
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool MSAA;
   bool DA;
   uint8_t Encoding;
-  const char *AsmSuffix;
+  StringTable::Offset AsmSuffix;
 };
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfo(unsigned DimEnum);
+
+LLVM_READONLY StringRef getMIMGDimInfoStr(StringTable::Offset);
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfoByEncoding(uint8_t DimEnc);
@@ -1127,6 +1033,13 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
+/// \returns The maximum number of workgroups for the function.
+SmallVector<unsigned> getMaxNumWorkGroups(const Function &F);
+
+inline bool isTgSplitEnabled(const Function &F) {
+  return F.hasFnAttribute("amdgpu-tg-split");
+}
+
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
@@ -1601,11 +1514,15 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) and not just on two.
+bool isFullSIMDMode(const MCSubtargetInfo &STI);
+
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
 bool isGCN3Encoding(const MCSubtargetInfo &STI);
-bool isGFX10_AEncoding(const MCSubtargetInfo &STI);
 bool isGFX10_BEncoding(const MCSubtargetInfo &STI);
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI);
 bool isGFX10_3_GFX11(const MCSubtargetInfo &STI);
@@ -1613,12 +1530,15 @@ bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
-
-inline bool supportsWave32(const MCSubtargetInfo &STI) {
-  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
-}
 
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
@@ -1780,11 +1700,17 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
-LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+/// The opcode is a packed fp32 instruction which only reads low 32 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPRFP32Inst(unsigned Opc);
 
-LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+/// The opcode is a packed 64-bit instruction which only reads low 64 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPR64BitInst(unsigned Opc);
 
-LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
+/// Packed instructions that read a single SGPR for SGPR operands, except for
+/// 64-bit elements which read two SGPRs.
+LLVM_READONLY bool isSingleSGPRReadInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
@@ -1928,10 +1854,15 @@ private:
   Kind AttrKind = Kind::Unknown;
 };
 
+/// Evaluate the constant-folded result of v_rcp for \p Val, accounting for
+/// the hardware's denormal flushing on f32/f64 and its approximate rounding.
+/// Returns std::nullopt if the hardware result is not guaranteed to match the
+/// exact reciprocal.
+std::optional<APFloat> evaluateRcp(const APFloat &Val);
+
 } // namespace AMDGPU
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S);
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S);
 
 } // end namespace llvm
 

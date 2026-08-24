@@ -21,34 +21,8 @@
 namespace clang {
 namespace targets {
 
-static const unsigned WebAssemblyAddrSpaceMap[] = {
-    0,  // Default
-    0,  // opencl_global
-    0,  // opencl_local
-    0,  // opencl_constant
-    0,  // opencl_private
-    0,  // opencl_generic
-    0,  // opencl_global_device
-    0,  // opencl_global_host
-    0,  // cuda_device
-    0,  // cuda_constant
-    0,  // cuda_shared
-    0,  // sycl_global
-    0,  // sycl_global_device
-    0,  // sycl_global_host
-    0,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    0,  // hlsl_groupshared
-    0,  // hlsl_constant
-    0,  // hlsl_private
-    0,  // hlsl_device
-    0,  // hlsl_input
-    0,  // hlsl_output
-    0,  // hlsl_push_constant
-    20, // wasm_funcref
+static constexpr LangASMap WebAssemblyAddrSpaceMap = {
+    {LangAS::wasm_funcref, 20},
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
@@ -63,6 +37,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCooperativeThreading = false;
   bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
@@ -111,13 +86,14 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
-    if (T.getOS() == llvm::Triple::WASIp3)
+    if (T.getOS() == llvm::Triple::WASIp3) {
       HasLibcallThreadContext = true;
+      HasCooperativeThreading = true;
+    }
   }
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,
