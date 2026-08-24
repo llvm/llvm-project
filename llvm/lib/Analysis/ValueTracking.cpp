@@ -118,6 +118,12 @@ static ConstantRange getRISCVVSetVLMaxRange(const IntrinsicInst &II) {
   unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
   ConstantRange VLRange = VLenRange.udiv(ConstantRange(APInt(Width, Ratio)));
 
+  // A valid vtype always has VLMAX >= 1; encodings that would produce a smaller
+  // VLMAX are reserved. Dividing the raw VLEN range can introduce a spurious
+  // zero for fractional LMUL at the low end (which only corresponds to those
+  // reserved encodings), so clamp it away.
+  VLRange = VLRange.umax(ConstantRange(APInt(Width, 1)));
+
   // The result of vsetvli is no larger than the AVL operand. When the AVL is
   // a constant we can compute a tighter bound, otherwise the result may be as
   // small as zero.
@@ -2897,13 +2903,10 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         if (II->getArgOperand(0) == II->getArgOperand(1))
           return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Q, Depth);
         break;
-      case Intrinsic::riscv_vsetvlimax: {
-        // VLMAX is VLEN * LMUL / SEW, which is always a power of two. It can
-        // still be zero for a fractional LMUL with a large SEW and small VLEN
-        // (e.g. e64mf8), so consult the range to rule out zero unless OrZero.
-        ConstantRange Range = getRISCVVSetVLMaxRange(*II);
-        return OrZero || !Range.contains(APInt(Range.getBitWidth(), 0));
-      }
+      case Intrinsic::riscv_vsetvlimax:
+        // VLMAX is VLEN * LMUL / SEW, which is always a non-zero power of two
+        // for any valid vtype, so it is a power of two regardless of OrZero.
+        return true;
       default:
         break;
       }
