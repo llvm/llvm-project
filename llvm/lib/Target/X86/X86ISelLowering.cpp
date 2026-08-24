@@ -22557,10 +22557,10 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                         APFloat::rmTowardZero);
         PosOvfBoundFlt.changeSign();
         SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
-        EVT CCVT =
-            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
-        EVT SelCCVT =
-            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+        EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                          *DAG.getContext(), SrcVT);
+        EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                             *DAG.getContext(), DstVT);
 
         SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
         SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
@@ -22592,11 +22592,11 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
         OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
                                      /*IsSigned=*/false, APFloat::rmTowardZero);
         SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
-        EVT CCVT =
-            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+        EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                          *DAG.getContext(), SrcVT);
         SDValue IsOvf = DAG.getSetCC(dl, CCVT, Clamped, OvfBound, ISD::SETOGE);
-        EVT SelCCVT =
-            TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+        EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                             *DAG.getContext(), DstVT);
         if (CCVT != SelCCVT)
           IsOvf = DAG.getSExtOrTrunc(IsOvf, dl, SelCCVT);
         // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
