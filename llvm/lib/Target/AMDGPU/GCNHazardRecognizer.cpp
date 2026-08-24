@@ -3225,52 +3225,52 @@ static int GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(int NumPasses,
 }
 
 int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
-    const MachineInstr *MI, const MachineInstr *MI1) const {
-  const int SMFMA4x4WritesVGPROverlappedSMFMASrcCWaitStates = 2;
-  const int SMFMA16x16WritesVGPROverlappedSMFMASrcCWaitStates = 8;
-  const int SMFMA32x32WritesVGPROverlappedSMFMASrcCWaitStates = 16;
-  const int SMFMA4x4WritesVGPROverlappedDMFMASrcCWaitStates = 3;
-  const int SMFMA16x16WritesVGPROverlappedDMFMASrcCWaitStates = 9;
-  const int SMFMA32x32WritesVGPROverlappedDMFMASrcCWaitStates = 17;
-  const int DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 9;
-  const int GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 17;
-  const int DMFMA4x4WritesVGPROverlappedSrcCWaitStates = 4;
+    const MachineInstr *Reader, const MachineInstr *Writer) const {
+  constexpr int SMFMA4x4WritesVGPROverlappedSMFMASrcCWaitStates = 2;
+  constexpr int SMFMA16x16WritesVGPROverlappedSMFMASrcCWaitStates = 8;
+  constexpr int SMFMA32x32WritesVGPROverlappedSMFMASrcCWaitStates = 16;
+  constexpr int SMFMA4x4WritesVGPROverlappedDMFMASrcCWaitStates = 3;
+  constexpr int SMFMA16x16WritesVGPROverlappedDMFMASrcCWaitStates = 9;
+  constexpr int SMFMA32x32WritesVGPROverlappedDMFMASrcCWaitStates = 17;
+  constexpr int DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 9;
+  constexpr int GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 17;
+  constexpr int DMFMA4x4WritesVGPROverlappedSrcCWaitStates = 4;
 
-  switch (MI1->getOpcode()) {
+  switch (Writer->getOpcode()) {
   case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-    if (TII.isXDL(*MI))
+    if (TII.isXDL(*Reader))
       return 0;
     return ST.hasGFX950Insts()
                ? GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates
                : DMFMA16x16WritesVGPROverlappedSrcCWaitStates;
   case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
   case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
-    if (TII.isXDL(*MI))
+    if (TII.isXDL(*Reader))
       return 0;
     return DMFMA4x4WritesVGPROverlappedSrcCWaitStates;
   default:
     break;
   }
 
-  int NumPasses = TSchedModel.computeInstrLatency(MI1);
+  int NumPasses = TSchedModel.computeInstrLatency(Writer);
   if (ST.hasGFX940Insts()) {
-    if (TII.isXDL(*MI) && !TII.isXDL(*MI1))
+    if (TII.isXDL(*Reader) && !TII.isXDL(*Writer))
       return 0;
 
-    if (!TII.isXDL(*MI1))
+    if (!TII.isXDL(*Writer))
       return GFX940_SMFMA_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
           NumPasses);
-    return TII.isXDL(*MI)
+    return TII.isXDL(*Reader)
                ? GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(
                      NumPasses, ST.hasGFX950Insts())
                : GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(
                      NumPasses, ST.hasGFX950Insts());
   }
 
-  bool IsDGEMM = SIInstrInfo::isDGEMM(MI->getOpcode());
+  bool IsDGEMM = SIInstrInfo::isDGEMM(Reader->getOpcode());
   switch (NumPasses) {
   case 2:
     return IsDGEMM ? SMFMA4x4WritesVGPROverlappedDMFMASrcCWaitStates
