@@ -24,7 +24,7 @@ class CPlusPlusLanguage : public Language {
 public:
   class CxxMethodName : public Language::MethodName {
   public:
-    CxxMethodName(ConstString s) : Language::MethodName(s) {}
+    CxxMethodName(std::string s) : Language::MethodName(s) {}
 
     bool ContainsPath(llvm::StringRef path);
 
@@ -53,7 +53,7 @@ public:
   ~CPlusPlusLanguage() override = default;
 
   virtual std::unique_ptr<Language::MethodName>
-  GetMethodName(ConstString name) const override;
+  GetMethodName(llvm::StringRef name) const override;
 
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
