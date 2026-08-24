@@ -41,7 +41,6 @@ void registerPrintSpirvAvailabilityPass();
 void registerRegionTestPasses();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
-void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerTestAffineAccessAnalysisPass();
 void registerTestAffineDataCopyPass();
@@ -178,6 +177,7 @@ void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
 void registerIrdlTestDialect(DialectRegistry &);
 void registerTestTransformsTransformDialectExtension(DialectRegistry &);
+void registerTestAnalysisTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
@@ -191,7 +191,6 @@ static void registerTestPasses() {
   registerRegionTestPasses();
   registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
-  registerSliceAnalysisTestPass();
   registerSymbolTestPasses();
   registerTestAffineAccessAnalysisPass();
   registerTestAffineDataCopyPass();
@@ -341,6 +340,7 @@ int main(int argc, char **argv) {
   ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTransformsTransformDialectExtension(registry);
+  ::test::registerTestAnalysisTransformDialectExtension(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));
