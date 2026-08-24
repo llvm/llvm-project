@@ -55,8 +55,6 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
     uint32_t OrderId;
     ze_device_handle_t ZeDevice;
     L0ContextTy *Driver;
-    uint32_t DriverVersion;
-    ze_driver_uuid_t DriverUuid;
     bool IsDiscrete;
   };
   llvm::SmallVector<RootInfoTy> RootDevices;
@@ -73,11 +71,6 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
       continue;
     }
 
-    ze_driver_properties_t DriverProperties{};
-    DriverProperties.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
-    DriverProperties.pNext = nullptr;
-    CALL_ZE_RET_ERROR(zeDriverGetProperties, Driver, &DriverProperties);
-
     // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver,
                              static_cast<int32_t>(ContextList.size()));
@@ -92,8 +85,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
 
     for (auto &zeDevice : FoundDevices)
       RootDevices.push_back(
-          {OrderId++, zeDevice, &DrvInfo, DriverProperties.driverVersion,
-           DriverProperties.uuid, L0DeviceTy::isDiscrete(zeDevice)});
+          {OrderId++, zeDevice, &DrvInfo, L0DeviceTy::isDiscrete(zeDevice)});
   }
 
   // Move discrete devices to the front.
@@ -113,13 +105,8 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
   for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
     const auto ZeDevice = RootDevices[RootId].ZeDevice;
     auto *RootDriver = RootDevices[RootId].Driver;
-    auto DriverVersion = RootDevices[RootId].DriverVersion;
-    auto DriverUuid = RootDevices[RootId].DriverUuid;
-    DetectedDevices.push_back(
-        DeviceInfoTy{{ZeDevice, static_cast<int32_t>(RootId), -1, -1},
-                     RootDriver,
-                     DriverVersion,
-                     DriverUuid});
+    DetectedDevices.push_back(DeviceInfoTy{
+        {ZeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
   }
   int32_t NumDevices = DetectedDevices.size();
 
@@ -137,19 +124,6 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
         << "\n";
   });
   return NumDevices;
-}
-
-std::string LevelZeroPluginTy::getDriverVersion(int32_t DeviceId) const {
-  assert(DeviceId >= 0 &&
-         static_cast<size_t>(DeviceId) < DetectedDevices.size());
-  const auto &DeviceInfo = DetectedDevices[DeviceId];
-
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  OS << DeviceInfo.DriverVersion << " (";
-  OS.write_uuid(DeviceInfo.DriverUuid.id);
-  OS << ")";
-  return OS.str();
 }
 
 Expected<int32_t> LevelZeroPluginTy::initImpl() {
