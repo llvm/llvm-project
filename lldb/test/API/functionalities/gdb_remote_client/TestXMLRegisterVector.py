@@ -408,3 +408,68 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             vector = frame.FindRegister(name)
             self.assert_float_children(vector, [1.5, 2.5])
             self.assertEqual(vector.Cast(ull).GetValueAsUnsigned(), 0x3FC0000040200000)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_direct_vector_cli(self):
+        self.setup_register_test(
+            """\
+            <vector id="v4f" type="ieee_single" count="4"/>
+            <reg name="v0" regnum="0" bitsize="128" type="v4f"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03f000020400000604000009040" + "00" * 8,
+        )
+
+        self.expect(
+            "register read v0",
+            patterns=[
+                r"v0 = \{0x00 0x00 0xc0 0x3f 0x00 0x00 0x20 0x40 "
+                r"0x00 0x00 0x60 0x40 0x00 0x00 0x90 0x40\}\r?\n"
+                r"     = \(\[0\] = 1\.5, \[1\] = 2\.5, \[2\] = 3\.5, "
+                r"\[3\] = 4\.5\)"
+            ],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_nested_vector_cli(self):
+        self.setup_register_test(
+            """\
+            <vector id="v2f" type="ieee_single" count="2"/>
+            <vector id="v2v2f" type="v2f" count="2"/>
+            <reg name="v0" regnum="0" bitsize="128" type="v2v2f"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03f000020400000604000009040" + "00" * 8,
+        )
+
+        self.expect(
+            "register read v0",
+            substrs=[
+                "[0] = ([0] = 1.5, [1] = 2.5)",
+                "[1] = ([0] = 3.5, [1] = 4.5)",
+            ],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("SystemZ")
+    def test_big_endian_vector_cli(self):
+        self.setup_register_test(
+            """\
+            <vector id="v2f" type="ieee_single" count="2"/>
+            <reg name="v0" regnum="0" bitsize="64" type="v2f"/>
+            <reg name="v1" regnum="1" bitsize="64" type="v2f"
+                 encoding="uint"/>
+            <reg name="pswa" regnum="2" bitsize="64"/>""",
+            "3fc0000040200000" * 2 + "00" * 8,
+            architecture="s390x",
+        )
+
+        self.expect(
+            "register read v0",
+            patterns=[
+                r"v0 = \{0x3f 0xc0 0x00 0x00 0x40 0x20 0x00 0x00\}\r?\n"
+                r"     = \(\[0\] = 1\.5, \[1\] = 2\.5\)"
+            ],
+        )
+        self.expect("register read v1", substrs=["([0] = 1.5, [1] = 2.5)"])
