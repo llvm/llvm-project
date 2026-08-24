@@ -104,6 +104,154 @@ TEST(APFloatTest, isSignaling) {
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
 }
 
+TEST(APFloatTest, IsLosslesslyConvertibleToSelf) {
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    const fltSemantics &Semantics =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(Semantics, Semantics, false))
+        << "Semantics = " << I;
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(Semantics, Semantics, true))
+        << "Semantics = " << I;
+  }
+}
+
+TEST(APFloatTest, IsLosslesslyConvertibleToKnownWiderSemantics) {
+  struct TestCase {
+    APFloat::Semantics From;
+    APFloat::Semantics To;
+    bool IgnoreNaNs;
+  };
+  const TestCase Cases[] = {
+      {APFloat::S_IEEEhalf, APFloat::S_IEEEsingle, true},
+      {APFloat::S_BFloat, APFloat::S_IEEEsingle, true},
+      {APFloat::S_IEEEsingle, APFloat::S_IEEEdouble, true},
+      {APFloat::S_IEEEdouble, APFloat::S_IEEEquad, true},
+      {APFloat::S_PPCDoubleDoubleLegacy, APFloat::S_IEEEquad, true},
+      {APFloat::S_Float8E5M2, APFloat::S_IEEEhalf, true},
+      {APFloat::S_Float8E5M2FNUZ, APFloat::S_IEEEsingle, false},
+      {APFloat::S_Float8E4M3, APFloat::S_IEEEhalf, true},
+      {APFloat::S_Float8E4M3FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E4M3FNUZ, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E4M3B11FNUZ, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E3M4, APFloat::S_IEEEhalf, true},
+      {APFloat::S_FloatTF32, APFloat::S_IEEEsingle, true},
+      {APFloat::S_Float8E8M0FNU, APFloat::S_x87DoubleExtended, false},
+      {APFloat::S_Float8E5M3FNU, APFloat::S_IEEEsingle, false},
+      {APFloat::S_Float6E3M2FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float6E2M3FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float4E2M1FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_x87DoubleExtended, APFloat::S_IEEEquad, true},
+  };
+
+  for (const TestCase &Case : Cases) {
+    const fltSemantics &From = APFloat::EnumToSemantics(Case.From);
+    const fltSemantics &To = APFloat::EnumToSemantics(Case.To);
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(From, To, Case.IgnoreNaNs))
+        << "From = " << Case.From << ", To = " << Case.To
+        << ", IgnoreNaNs = " << Case.IgnoreNaNs;
+  }
+}
+
+TEST(APFloatTest, IsLosslesslyConvertibleToRejectsInformationLoss) {
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(APFloat::IEEEhalf(),
+                                                      APFloat::IEEEsingle()));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEsingle(), APFloat::IEEEhalf(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::Float8E4M3FN(), APFloat::Float8E4M3FNUZ(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::Float4E2M1FN(), APFloat::Float8E8M0FNU(), true));
+
+  // IgnoreNaNs does not permit a NaN or infinity to change categories. Model
+  // possible future wider formats for combinations not currently present in
+  // the supported semantics.
+  fltSemantics WiderNanOnly = APFloat::IEEEsingle();
+  WiderNanOnly.nonFiniteBehavior = fltNonfiniteBehavior::NanOnly;
+  WiderNanOnly.nanEncoding = fltNanEncoding::AllOnes;
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(APFloat::IEEEhalf(),
+                                                      WiderNanOnly, true));
+
+  fltSemantics NarrowNanOnly = APFloat::IEEEhalf();
+  NarrowNanOnly.nonFiniteBehavior = fltNonfiniteBehavior::NanOnly;
+  NarrowNanOnly.nanEncoding = fltNanEncoding::AllOnes;
+  fltSemantics WiderFiniteOnly = APFloat::IEEEsingle();
+  WiderFiniteOnly.nonFiniteBehavior = fltNonfiniteBehavior::FiniteOnly;
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(NarrowNanOnly,
+                                                      WiderFiniteOnly, true));
+
+  // PPC double-double's low component is not described by its fltSemantics
+  // exponent and precision fields, so only identity is known to be lossless.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::PPCDoubleDouble(), APFloat::IEEEquad(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEquad(), APFloat::PPCDoubleDouble(), true));
+}
+
+TEST(APFloatTest, LosslessConversionsPreserveRepresentativeValues) {
+  for (unsigned FromIndex = 0; FromIndex != APFloat::S_MaxSemantics + 1;
+       ++FromIndex) {
+    const fltSemantics &From =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(FromIndex));
+    for (unsigned ToIndex = 0; ToIndex != APFloat::S_MaxSemantics + 1;
+         ++ToIndex) {
+      const fltSemantics &To =
+          APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(ToIndex));
+      for (bool IgnoreNaNs : {false, true}) {
+        if (!APFloatBase::isLosslesslyConvertibleTo(From, To, IgnoreNaNs))
+          continue;
+
+        SCOPED_TRACE("From = " + std::to_string(FromIndex) +
+                     ", To = " + std::to_string(ToIndex) +
+                     ", IgnoreNaNs = " + std::to_string(IgnoreNaNs));
+        auto CheckValue = [&](APFloat Value) {
+          APFloat Original = Value;
+          bool WasNaN = Value.isNaN();
+          bool LosesInfo = false;
+          (void)Value.convert(To, APFloat::rmNearestTiesToEven, &LosesInfo);
+
+          if (WasNaN && IgnoreNaNs) {
+            EXPECT_TRUE(Value.isNaN());
+            return;
+          }
+
+          EXPECT_FALSE(LosesInfo);
+          bool LosesInfoOnReturn = false;
+          (void)Value.convert(From, APFloat::rmNearestTiesToEven,
+                              &LosesInfoOnReturn);
+          EXPECT_TRUE(Value.bitwiseIsEqual(Original));
+        };
+
+        CheckValue(APFloat::getLargest(From));
+        CheckValue(APFloat::getSmallest(From));
+        CheckValue(APFloat::getSmallestNormalized(From));
+        if (From.hasSignedRepr) {
+          CheckValue(APFloat::getLargest(From, true));
+          CheckValue(APFloat::getSmallest(From, true));
+          CheckValue(APFloat::getSmallestNormalized(From, true));
+        }
+        if (From.hasZero) {
+          CheckValue(APFloat::getZero(From));
+          if (From.hasSignedRepr)
+            CheckValue(APFloat::getZero(From, true));
+        }
+        if (APFloat::semanticsHasInf(From)) {
+          CheckValue(APFloat::getInf(From));
+          if (From.hasSignedRepr)
+            CheckValue(APFloat::getInf(From, true));
+        }
+        if (APFloat::semanticsHasNaN(From)) {
+          CheckValue(APFloat::getQNaN(From));
+          if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+            CheckValue(APFloat::getSNaN(From));
+        }
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, next) {
 
   APFloat test(APFloat::IEEEquad(), APFloat::uninitialized);

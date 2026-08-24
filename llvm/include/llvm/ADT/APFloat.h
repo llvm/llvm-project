@@ -337,6 +337,14 @@ public:
   LLVM_ABI static bool isRepresentableBy(const fltSemantics &A,
                                          const fltSemantics &B);
 
+  /// Returns whether converting a value from \p From to \p To is known to
+  /// preserve all information. If \p IgnoreNaNs is true, differences between
+  /// NaN representations are ignored, but NaNs must remain NaNs and infinities
+  /// must remain infinities.
+  LLVM_ABI static bool isLosslesslyConvertibleTo(const fltSemantics &From,
+                                                 const fltSemantics &To,
+                                                 bool IgnoreNaNs = false);
+
   /// @}
 
   /// IEEE-754R 5.11: Floating Point Comparison Relations.
