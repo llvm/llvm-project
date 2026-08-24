@@ -73,8 +73,6 @@ public:
 
 #### Restrictions
 
-*   Patterns must transform verifiable IR into verifiable IR, i.e., the IR must
-    be verifiable after every pattern application.
 *   All IR mutations, including creation, *must* be performed by the given
     `PatternRewriter`. This class provides hooks for performing all of the
     possible mutations that may take place within a pattern. For example, this
@@ -88,8 +86,18 @@ public:
     In particular, this means that the pattern is not allowed to have made any
     modification if it returns "failure".
 
-**Note:** These restrictions can be checked at runtime by building with
-`-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally paired with ASan).
+Additionally, there are some best practices that patterns are advised to follow:
+
+*   Patterns *should* transform verifiable IR into verifiable IR, i.e., the IR
+    should remain verifiable after every pattern application. However, there are
+    cases where rewrites are best split into several patterns and ensuring
+    verifiability would be cumbersome, such as changing a function declaration
+    and its call sites. In such cases it may be acceptable to temporarily have
+    unverifiable IR.
+
+**Note:** These restrictions and best practices can be checked at runtime by
+building with `-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally paired
+with ASan).
 
 
 ### Application Recursion
