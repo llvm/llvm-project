@@ -5,6 +5,7 @@
 ;; Test if the .llvm.callgraph section contains unique direct callees.
 
 ; RUN: llc -mtriple=arm-unknown-linux --call-graph-section -o - < %s | FileCheck %s
+; RUN: llc -mtriple=thumbv7m-unknown-none-eabi --call-graph-section -o - < %s | FileCheck %s
 
 declare !callgraph !0 void @direct_foo()
 declare !callgraph !1 i32 @direct_bar(i8)
