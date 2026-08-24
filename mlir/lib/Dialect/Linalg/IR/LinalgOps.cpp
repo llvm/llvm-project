@@ -5074,8 +5074,13 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
 }
 
 /// Check if the given elementwise op matches a scalar-combinable binary op.
-static bool isElementwiseScalarBinaryFoldable(ElementwiseOp op) {
-  auto groupAndKind = getArityGroupAndKind(op.getKind());
+static bool isElementwiseScalarBinaryFoldable(Operation *op) {
+  auto elementwiseOp = dyn_cast_or_null<ElementwiseOpInterface>(op);
+  if (!elementwiseOp)
+    return false;
+
+  auto groupAndKind =
+      getArityGroupAndKind(elementwiseOp.getElementwiseKind());
   if (groupAndKind.arityGroup != ElementwiseArityGroup::Binary)
     return false;
 
@@ -5096,8 +5101,8 @@ static bool isElementwiseScalarBinaryFoldable(ElementwiseOp op) {
 /// Check if the given operation is a Linalg binary op with scalar-combinable
 /// semantics.
 static bool isLinalgScalarBinaryFoldable(Operation *op) {
-  if (auto elemOp = dyn_cast_or_null<ElementwiseOp>(op))
-    return isElementwiseScalarBinaryFoldable(elemOp);
+  if (auto elementwiseOp = dyn_cast_or_null<ElementwiseOpInterface>(op))
+    return isElementwiseScalarBinaryFoldable(elementwiseOp.getOperation());
   return isa_and_nonnull<linalg::AddOp, linalg::SubOp, linalg::MulOp,
                          linalg::MaxOp, linalg::MinOp>(op);
 }
