@@ -2054,6 +2054,8 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_f32 $a, NoFTZ)>;
 // Fma
 //
 
+defvar FPRoundingModes = ["_rn", "_rz", "_rm", "_rp"];
+
 class FMA_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
                 list<Predicate> Preds = []> {
   string Variant = V;
@@ -2128,7 +2130,7 @@ multiclass FMA_INST {
 
 defm INT_NVVM_FMA : FMA_INST;
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+foreach rnd = FPRoundingModes in {
   foreach sat = ["", "_sat"] in {
     foreach type = [f16, bf16] in {
       def INT_NVVM_MIXED_FMA # rnd # sat # _f32_ # type : 
@@ -2266,29 +2268,35 @@ let Predicates = [doRsqrtOpt] in {
 
 defvar BF16ArithPreds = [hasBF16Math, PTX78, SM90];
 
-class RndModeImm<string mode> : TImmLeaf<i32,
+class FPRndModeImm<string mode> : TImmLeaf<i32,
   "return Imm == static_cast<int>(RoundingMode::" # mode # ");">;
 
-def rnd_rn_imm : RndModeImm<"NearestTiesToEven">;
-def rnd_rz_imm : RndModeImm<"TowardZero">;
-def rnd_rm_imm : RndModeImm<"TowardNegative">;
-def rnd_rp_imm : RndModeImm<"TowardPositive">;
+def fp_rnd_rn_imm : FPRndModeImm<"NearestTiesToEven">;
+def fp_rnd_rz_imm : FPRndModeImm<"TowardZero">;
+def fp_rnd_rm_imm : FPRndModeImm<"TowardNegative">;
+def fp_rnd_rp_imm : FPRndModeImm<"TowardPositive">;
 
 foreach t = [F16RT, F16X2RT] in
-  foreach ftz = ["", "_ftz"] in
-    foreach sat = ["", "_sat"] in
-      def INT_NVVM_ADD_RN # !toupper(ftz # sat # "_" # t.PtxType) :
-        F_MATH_2_RND_TY<!subst("_", ".", "add_rn" # ftz # sat # "_" # t.PtxType),
-                        t, !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat),
-                        rnd_rn_imm>;
+  foreach ftz = ["", "ftz"] in
+    foreach sat = ["", "sat"] in {
+      // drop empty strings from the modifier list
+      defvar mods = !filter(m, [ftz, sat], !not(!empty(m)));
+      defvar suffix = !listconcat(mods, [t.PtxType]);
+      defvar add_intrin =
+        !cast<Intrinsic>(!interleave(!listconcat(["int_nvvm_fadd"], mods), "_"));
+
+      def INT_NVVM_ADD_RN_ # !toupper(!interleave(suffix, "_")) :
+        F_MATH_2_RND_TY<!interleave(!listconcat(["add", "rn"], suffix), "."), t,
+                        add_intrin, fp_rnd_rn_imm>;
+    }
 
 foreach t = [BF16RT, BF16X2RT] in
   def INT_NVVM_ADD_RN_ # !toupper(t.PtxType) :
-    F_MATH_2_RND_TY<"add.rn." # t.PtxType, t, int_nvvm_fadd, rnd_rn_imm,
+    F_MATH_2_RND_TY<"add.rn." # t.PtxType, t, int_nvvm_fadd, fp_rnd_rn_imm,
                     BF16ArithPreds>;
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-  defvar rnd_imm = !cast<TImmLeaf>("rnd" # rnd # "_imm");
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
 
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in
@@ -2308,8 +2316,8 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
                     int_nvvm_fadd, rnd_imm>;
 }
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-  defvar rnd_imm = !cast<TImmLeaf>("rnd" # rnd # "_imm");
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
 
   foreach sat = ["", "_sat"] in {
     foreach type = [f16, bf16] in {
@@ -2342,7 +2350,7 @@ def sub_rn_sat : SDNode<"NVPTXISD::SUB_RN_SAT", SDTFPBinOp>;
 def sub_rn_ftz_sat : 
   SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in
+foreach rnd = FPRoundingModes in
   foreach ftz = ["", "_ftz"] in
     def sub # rnd # ftz :
       SDNode<"NVPTXISD::SUB" # !toupper(rnd # ftz), SDTFPBinOp>;
@@ -2364,12 +2372,12 @@ let Predicates = BF16ArithPreds in
     def INT_NVVM_SUB_RN_ # !toupper(t.PtxType) : INT_NVVM_SUB<t, "_rn">;
 
 let Predicates = [hasF32x2Instructions] in
-  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in
+  foreach rnd = FPRoundingModes in
     foreach ftz = ["", "_ftz"] in
       def INT_NVVM_SUB # rnd # ftz # _F32X2 : INT_NVVM_SUB<F32X2RT, rnd # ftz>;
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-  defvar rnd_imm = !cast<TImmLeaf>("rnd" # rnd # "_imm");
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
 
   foreach ftz = ["", "_ftz"] in {
     foreach sat = ["", "_sat"] in {
@@ -2389,8 +2397,8 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
         (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), rnd_imm))]>;
 }
 
-foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-  defvar rnd_imm = !cast<TImmLeaf>("rnd" # rnd # "_imm");
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
 
   foreach sat = ["", "_sat"] in {
     foreach type = [f16, bf16] in {

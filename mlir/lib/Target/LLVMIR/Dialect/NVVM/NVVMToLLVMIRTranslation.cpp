@@ -448,6 +448,22 @@ getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
                    nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
+static llvm::RoundingMode getLLVMRoundingMode(NVVM::FPRoundingMode rndMode) {
+  switch (rndMode) {
+  case NVVM::FPRoundingMode::NONE:
+  case NVVM::FPRoundingMode::RN:
+    return llvm::RoundingMode::NearestTiesToEven;
+  case NVVM::FPRoundingMode::RM:
+    return llvm::RoundingMode::TowardNegative;
+  case NVVM::FPRoundingMode::RP:
+    return llvm::RoundingMode::TowardPositive;
+  case NVVM::FPRoundingMode::RZ:
+    return llvm::RoundingMode::TowardZero;
+  default:
+    llvm_unreachable("unsupported rounding mode for nvvm fp arithmetic");
+  }
+}
+
 // Calls an LLVM intrinsic on the given operands. For f32/f64 vector types,
 // the intrinsic is called per-element and the results are packed back into a
 // vector. If retType is non-null, it is forwarded as the return-type
@@ -489,14 +505,9 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
       {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
       {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
 
-  static constexpr llvm::RoundingMode roundingModes[5] = {
-      llvm::RoundingMode::NearestTiesToEven,
-      llvm::RoundingMode::NearestTiesToEven, llvm::RoundingMode::TowardNegative,
-      llvm::RoundingMode::TowardPositive, llvm::RoundingMode::TowardZero};
-
   llvm::Intrinsic::ID id = addIDs[isFTZ][isSat];
-  llvm::Value *rnd = builder.getInt32(
-      static_cast<int>(roundingModes[static_cast<unsigned>(rndMode)]));
+  llvm::Value *rnd =
+      builder.getInt32(static_cast<int>(getLLVMRoundingMode(rndMode)));
 
   // For f64 vector addition, and f32 vector addition with saturation,
   // we need to scalarize the intrinsic call.

@@ -1422,15 +1422,19 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
 }
 
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFAddUpgrade(StringRef Modifiers) {
-  std::optional<RoundingMode> RM =
-      StringSwitch<std::optional<RoundingMode>>(Modifiers.take_front(2))
-          .Case("rn", RoundingMode::NearestTiesToEven)
-          .Case("rz", RoundingMode::TowardZero)
-          .Case("rm", RoundingMode::TowardNegative)
-          .Case("rp", RoundingMode::TowardPositive)
+getNVVMFAddUpgrade(StringRef Name) {
+  auto [Modifiers, Type] = Name.rsplit('.');
+  if (Type != "f" && Type != "d" && Type != "f16" && Type != "v2f16")
+    return std::nullopt;
+
+  std::optional<llvm::RoundingMode> RoundingMode =
+      StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
+          .Case("rn", llvm::RoundingMode::NearestTiesToEven)
+          .Case("rz", llvm::RoundingMode::TowardZero)
+          .Case("rm", llvm::RoundingMode::TowardNegative)
+          .Case("rp", llvm::RoundingMode::TowardPositive)
           .Default(std::nullopt);
-  if (!RM)
+  if (!RoundingMode)
     return std::nullopt;
 
   Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
@@ -1441,7 +1445,8 @@ getNVVMFAddUpgrade(StringRef Modifiers) {
                           .Default(Intrinsic::not_intrinsic);
   if (IID == Intrinsic::not_intrinsic)
     return std::nullopt;
-  return std::make_pair(IID, *RM);
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -2016,21 +2021,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return NewFn != F;
       }
 
-      // Upgrade the FP add intrinsics, which are overloaded on the operand type
-      // and take the rounding mode as an operand:
-      // llvm.nvvm.add.<rnd>{.ftz}{.sat}.<type> =>
-      //     llvm.nvvm.fadd{.ftz}{.sat}.<mangled type>
-      // The extra operand means these are expanded in UpgradeIntrinsicCall.
-      if (Name.starts_with("add.")) {
-        auto [Base, TypeSuffix] = Name.rsplit('.');
-        if ((TypeSuffix == "f" || TypeSuffix == "d" || TypeSuffix == "f16" ||
-             TypeSuffix == "v2f16") &&
-            getNVVMFAddUpgrade(Base.drop_front(strlen("add.")))) {
-          NewFn = nullptr;
-          return true;
-        }
-      }
-
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //
@@ -2043,6 +2033,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
+      else if (Name.consume_front("add."))
+        // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFAddUpgrade(Name).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -3123,12 +3116,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                                                : Intrinsic::nvvm_fabs;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.consume_front("add.")) {
-    // nvvm.add.<rnd>[.ftz][.sat].{f,d,f16,v2f16}
-    auto [IID, RM] = *getNVVMFAddUpgrade(Name.rsplit('.').first);
+    // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    auto FAdd = getNVVMFAddUpgrade(Name);
+    assert(FAdd && "unsupported nvvm.add.* intrinsic");
+    auto [IID, RoundingMode] = *FAdd;
     Value *A = CI->getArgOperand(0);
     Rep = Builder.CreateIntrinsic(
         A->getType(), IID,
-        {A, CI->getArgOperand(1), Builder.getInt32(static_cast<int>(RM))});
+        {A, CI->getArgOperand(1),
+         Builder.getInt32(static_cast<int>(RoundingMode))});
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
