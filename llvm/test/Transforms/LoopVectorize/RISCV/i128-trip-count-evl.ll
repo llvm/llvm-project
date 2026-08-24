@@ -11,14 +11,15 @@ define void @i128_trip_count(ptr %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i128 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i128 [ 18446744073709551617, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i128(i128 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[P]], i128 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16> splat (i16 1), ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i128
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i128 [[TMP2]], [[INDEX]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16> splat (i16 1), ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i128 [[AVL]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i128 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i128 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

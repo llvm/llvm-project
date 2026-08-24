@@ -24,19 +24,20 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi ptr [ [[A]], %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ [[B]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi ptr [ [[C]], %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[CURRENT_ITERATION_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP4]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[VP_OP_LOAD3:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i8> @llvm.vp.sdiv.nxv16i8(<vscale x 16 x i8> [[VP_OP_LOAD3]], <vscale x 16 x i8> [[VP_OP_LOAD]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP7]], ptr align 1 [[TMP8]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP9]], [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP13]] = getelementptr i8, ptr [[TMP8]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -28,16 +28,15 @@ define void @foo(i32 %0, ptr %p) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP16]], [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 524, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP18]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i1> @llvm.vp.merge.nxv8i1(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> zeroinitializer, i32 [[TMP18]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 8 x i1> [[TMP19]], splat (i1 true)
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv8i8.p0(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP23]], <vscale x 8 x i1> [[TMP20]], i32 [[TMP18]])
-; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP18]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP24]], [[CURRENT_ITERATION_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP24]]
+; CHECK-NEXT:    [[TMP26]] = getelementptr i8, ptr [[TMP23]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -65,28 +65,27 @@ define void @stride_zext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias 
 ; CHECK-LABEL: define void @stride_zext_exceeds_i32_max(
 ; CHECK-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias [[DST:%.*]], i16 [[START:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[START]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i64 [[TMP3]], 3000000000
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i16 -1, [[START]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[START]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i64 [[TMP3]], 3000000000
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x ptr> poison, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 16 x ptr> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi ptr [ [[TMP5]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 3000000000
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP9]], i64 3000000000, <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP6]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 3000000000, [[TMP13]]
+; CHECK-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP9]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

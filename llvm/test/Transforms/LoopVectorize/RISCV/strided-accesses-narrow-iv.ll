@@ -12,16 +12,15 @@ define void @narrow_iv_i8_sext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV64-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
-; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; RV64-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 12
+; RV64-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP7]]
 ; RV64-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV64-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
@@ -38,15 +37,14 @@ define void @narrow_iv_i8_sext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV32-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV32-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV32-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr align 1 [[TMP2]], i32 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV32-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV32-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 12
+; RV32-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i32 [[TMP6]]
 ; RV32-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV32-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:
@@ -81,16 +79,15 @@ define void @narrow_iv_i8_sext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV64-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
-; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; RV64-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 12
+; RV64-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP7]]
 ; RV64-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV64-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
@@ -107,15 +104,14 @@ define void @narrow_iv_i8_sext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV32-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV32-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV32-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr align 1 [[TMP2]], i32 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV32-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV32-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 12
+; RV32-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i32 [[TMP6]]
 ; RV32-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV32-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:
@@ -150,16 +146,15 @@ define void @narrow_iv_i8_zext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV64-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
-; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; RV64-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 12
+; RV64-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP7]]
 ; RV64-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV64-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
@@ -176,15 +171,14 @@ define void @narrow_iv_i8_zext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV32-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV32-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV32-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr align 1 [[TMP2]], i32 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV32-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV32-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 12
+; RV32-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i32 [[TMP6]]
 ; RV32-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV32-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:
@@ -219,16 +213,15 @@ define void @narrow_iv_i8_zext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV64-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
-; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
+; RV64-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 12
+; RV64-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP7]]
 ; RV64-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV64-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
@@ -245,15 +238,14 @@ define void @narrow_iv_i8_zext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV32-NEXT:    [[TMP2:%.*]] = phi ptr [ [[ARR]], %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV32-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV32-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
 ; RV32-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr align 1 [[TMP2]], i32 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV32-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
-; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP0]]
+; RV32-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 12
+; RV32-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP2]], i32 [[TMP6]]
 ; RV32-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; RV32-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:

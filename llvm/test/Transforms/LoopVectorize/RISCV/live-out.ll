@@ -15,14 +15,14 @@ define i32 @live_out(ptr %p, i64 %n) {
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV64-NEXT:    [[TMP1:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
-; RV64-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64
-; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[CURRENT_ITERATION_IV]]
+; RV64-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]
+; RV64-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP2]], 2
+; RV64-NEXT:    [[TMP6]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP7]]
 ; RV64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; RV64-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
@@ -39,14 +39,14 @@ define i32 @live_out(ptr %p, i64 %n) {
 ; RV32:       [[VECTOR_PH]]:
 ; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; RV32-NEXT:    [[TMP1:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; RV32-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
 ; RV32-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV32-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64
-; RV32-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[CURRENT_ITERATION_IV]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]
+; RV32-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP0]], 2
+; RV32-NEXT:    [[TMP6]] = getelementptr i8, ptr [[TMP1]], i32 [[TMP7]]
 ; RV32-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; RV32-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:
@@ -63,14 +63,14 @@ define i32 @live_out(ptr %p, i64 %n) {
 ; ZVE32X:       [[VECTOR_PH]]:
 ; ZVE32X-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVE32X:       [[VECTOR_BODY]]:
-; ZVE32X-NEXT:    [[CURRENT_ITERATION_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVE32X-NEXT:    [[TMP1:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; ZVE32X-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVE32X-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; ZVE32X-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], i64 [[CURRENT_ITERATION_IV]]
 ; ZVE32X-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; ZVE32X-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64
-; ZVE32X-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[CURRENT_ITERATION_IV]]
 ; ZVE32X-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]
+; ZVE32X-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP0]], 2
+; ZVE32X-NEXT:    [[TMP6]] = getelementptr i8, ptr [[TMP1]], i32 [[TMP7]]
 ; ZVE32X-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; ZVE32X-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; ZVE32X:       [[MIDDLE_BLOCK]]:

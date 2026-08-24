@@ -331,6 +331,10 @@ struct VPlanTransforms {
   ///  * Such a widen memory load/store is masked, but not with the header mask.
   static void dropPoisonGeneratingRecipes(VPlan &Plan);
 
+  /// Converts IV-based vector addresses to loop-carried phis.
+  static void strengthReduceAddrs(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                  Loop &L, const TargetTransformInfo &TTI);
+
   /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses of the canonical IV except for the canonical IV
   /// increment with a VPCurrentIterationPHIRecipe. The canonical IV is only

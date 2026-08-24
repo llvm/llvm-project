@@ -14,19 +14,18 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[FOR_BODY1]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = phi ptr [ [[INDEX:%.*]], [[FOR_BODY1]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY1]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[INDEX1]], 2
-; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[INDEX:%.*]], i64 [[TMP1]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP2]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[IN:%.*]], <vscale x 2 x i64> [[TMP3]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x float> @llvm.vp.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> align 4 [[TMP4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[OUT:%.*]], <vscale x 2 x i64> [[TMP3]]
 ; IF-EVL-NEXT:    call void @llvm.vp.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> [[WIDE_MASKED_GATHER]], <vscale x 2 x ptr> align 4 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP0]])
-; IF-EVL-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP0]] to i64
-; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP6]], [[INDEX1]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 2
+; IF-EVL-NEXT:    [[TMP8]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP9]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
