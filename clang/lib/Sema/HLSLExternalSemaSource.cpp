@@ -828,6 +828,27 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                      /*IsArray=*/false, ResourceDimension::Cube)
         .completeDefinition();
   });
+
+  // TextureCubeArray — same as TextureCube but IsArray=true, so locations gain
+  // an array slice and are float4.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "TextureCubeArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Cube)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecCubeArray = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecCubeArray, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     /*IsArray=*/true, ResourceDimension::Cube)
+        .completeDefinition();
+  });
 }
 
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.

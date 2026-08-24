@@ -9,6 +9,11 @@
 // RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 -verify \
 // RUN:   %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_GATHER -DHAS_LOD \
+// RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -DOFFSET_TYPE=int3 \
+// RUN:   -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
