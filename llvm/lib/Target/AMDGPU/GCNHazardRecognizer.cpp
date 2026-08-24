@@ -987,24 +987,20 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
     return 2;
   };
 
-  // For each hazard producer reached, accumulate the wait states still
-  // needed using that producer's own window. The predicate always returns
-  // false so the walk runs to MaxWaitStates.
-  int Distance = 0;
-  auto Counter = [&](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    if (DataIdx >= 0 &&
-        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
-      int Need = WindowFor(MI) - Distance;
-      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
-    }
-    // Mirror getWaitStatesSince's accounting, which does not count inline asm
-    // towards the wait-state distance.
-    if (!MI.isInlineAsm())
-      Distance += SIInstrInfo::getNumWaitStates(MI);
-    return false;
-  };
-  getWaitStatesSince(Counter, MaxWaitStates);
+  // Scan each producer class separately so getWaitStatesSince keeps distance
+  // path-local across control-flow joins.
+  for (int RequiredWaitStates = 1; RequiredWaitStates <= MaxWaitStates;
+       ++RequiredWaitStates) {
+    auto IsHazardFn = [&](const MachineInstr &MI) {
+      int DataIdx = createsVALUHazard(MI);
+      return DataIdx >= 0 && WindowFor(MI) == RequiredWaitStates &&
+             TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+    };
+    int WaitStatesSince =
+        getWaitStatesSince(IsHazardFn, RequiredWaitStates);
+    WaitStatesNeeded = std::max(
+        WaitStatesNeeded, RequiredWaitStates - WaitStatesSince);
+  }
 
   return WaitStatesNeeded;
 }
