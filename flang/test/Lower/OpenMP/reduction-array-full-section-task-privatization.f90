@@ -3,6 +3,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-default.f90 | FileCheck %s --check-prefix=TASK-DEFAULT --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate --implicit-check-not=Ea_private
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop.f90 | FileCheck %s --check-prefix=TASKLOOP --implicit-check-not="not yet implemented" --implicit-check-not=Ea_firstprivate
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/task-modifier.f90 | FileCheck %s --check-prefix=TASK-MODIFIER --implicit-check-not="not yet implemented"
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/task-modifier.f90 | FileCheck %s --check-prefix=TASK-MODIFIER --implicit-check-not="not yet implemented"
 
 ! A full-extent section uses the same descriptor as its base array. Check that
 ! it is bound only to the reduction argument, rather than also being captured
@@ -99,6 +101,19 @@
 
 ! TASKLOOP-LABEL: func.func @_QPtaskloop_rank_two_explicit_full_section
 ! TASKLOOP: omp.taskloop.context {{.*}}reduction(byref @add_reduction_byref_box_4x4xi32
+
+! TASK-MODIFIER-LABEL: func.func @_QPparallel_task_udr_full_section
+! TASK-MODIFIER: omp.parallel reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.target {{.*}}in_reduction(byref @{{.*}} %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+
+! TASK-MODIFIER-LABEL: func.func @_QPsections_task_udr_full_section
+! TASK-MODIFIER: omp.sections reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+
+! TASK-MODIFIER-LABEL: func.func @_QPscope_task_udr_full_section
+! TASK-MODIFIER: omp.scope reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+
+! TASK-MODIFIER-LABEL: func.func @_QPdo_task_udr_full_section
+! TASK-MODIFIER: omp.wsloop {{.*}}reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 
 !--- task.f90
 subroutine task_full_section(a)
@@ -205,4 +220,46 @@ subroutine taskloop_rank_two_explicit_full_section(a)
   end do
   !$omp end single
   !$omp end parallel
+end subroutine
+
+!--- task-modifier.f90
+subroutine parallel_task_udr_full_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel reduction(task, + : a(:))
+  !$omp target map(tofrom: a) in_reduction(+ : a(:))
+  a(:) = a(:) + 1
+  !$omp end target
+  !$omp end parallel
+end subroutine
+
+subroutine sections_task_udr_full_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp sections reduction(task, + : a(:))
+  !$omp section
+  a(:) = a(:) + 1
+  !$omp end sections
+end subroutine
+
+subroutine scope_task_udr_full_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp scope reduction(task, + : a(:))
+  a(:) = a(:) + 1
+  !$omp end scope
+end subroutine
+
+subroutine do_task_udr_full_section(a)
+  integer :: a(4), i
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp do reduction(task, + : a(:))
+  do i = 1, 1
+    a(:) = a(:) + i
+  end do
+  !$omp end do
 end subroutine

@@ -193,6 +193,16 @@ hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
   return false;
 }
 
+static void checkTaskModifierPartialArrayReduction(
+    mlir::Location loc, semantics::SemanticsContext &semaCtx,
+    mlir::omp::ReductionModifierAttr reductionMod,
+    llvm::ArrayRef<Object> reductionObjects) {
+  if (reductionMod &&
+      reductionMod.getValue() == mlir::omp::ReductionModifier::task &&
+      hasPartialArrayReductionObject(reductionObjects, semaCtx))
+    TODO(loc, "REDUCTION with TASK modifier of a partial array section");
+}
+
 static bool isArrayElementReductionObject(const Object &object) {
   return object.ref() && object.ref()->Rank() == 0 &&
          evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false);
@@ -2543,6 +2553,8 @@ static void genParallelClauses(
 
   cp.processProcBind(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
+  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
+                                         reductionObjects);
 }
 
 static void genScanClauses(lower::AbstractConverter &converter,
@@ -2564,6 +2576,8 @@ genSectionsClauses(lower::AbstractConverter &converter,
   cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
+  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
+                                         reductionObjects);
   // TODO Support delayed privatization.
 }
 
@@ -2664,6 +2678,8 @@ static void genScopeClauses(lower::AbstractConverter &converter,
   cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
+  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
+                                         reductionObjects);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -2890,6 +2906,8 @@ static void genWsloopClauses(
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects, reductionVarCache);
+  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
+                                         reductionObjects);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
 }

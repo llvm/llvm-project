@@ -53,6 +53,14 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SHARED-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/parallel-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=PARALLEL-TASK-UDR-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/parallel-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=PARALLEL-TASK-UDR-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/sections-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=SECTIONS-TASK-UDR-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/sections-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=SECTIONS-TASK-UDR-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/scope-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-TASK-UDR-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/scope-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-TASK-UDR-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=DO-TASK-UDR-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-task-udr-section.f90 2>&1 | FileCheck %s --check-prefix=DO-TASK-UDR-SECTION
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -82,6 +90,10 @@
 ! TASKLOOP-IN-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element using a user-defined reduction
 ! TASK-SHARED-SECTION: not yet implemented: TASK construct with IN_REDUCTION of a partial array section
 ! TARGET-ELEMENT: not yet implemented: TARGET construct with IN_REDUCTION of an array element
+! PARALLEL-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
+! SECTIONS-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
+! SCOPE-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
+! DO-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -308,4 +320,49 @@ contains
     !$omp end task
     !$omp end taskgroup
   end subroutine
+end subroutine
+
+!--- parallel-task-udr-section.f90
+subroutine parallel_task_udr_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel reduction(task, + : a(2:3))
+  !$omp target map(tofrom: a) in_reduction(+ : a(2:3))
+  a(2:3) = a(2:3) + 1
+  !$omp end target
+  !$omp end parallel
+end subroutine
+
+!--- sections-task-udr-section.f90
+subroutine sections_task_udr_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp sections reduction(task, + : a(2:3))
+  !$omp section
+  a(2:3) = a(2:3) + 1
+  !$omp end sections
+end subroutine
+
+!--- scope-task-udr-section.f90
+subroutine scope_task_udr_section(a)
+  integer :: a(4)
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp scope reduction(task, + : a(2:3))
+  a(2:3) = a(2:3) + 1
+  !$omp end scope
+end subroutine
+
+!--- do-task-udr-section.f90
+subroutine do_task_udr_section(a)
+  integer :: a(4), i
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp do reduction(task, + : a(2:3))
+  do i = 1, 1
+    a(2:3) = a(2:3) + i
+  end do
+  !$omp end do
 end subroutine
