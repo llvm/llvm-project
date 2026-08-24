@@ -12,7 +12,7 @@
 
 DeviceInfoProperties JustSupportedProperties = mergeProperties(
     {BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
-     IrrelevantForHostGTUint32Properties, ContextGroupIndexProperties});
+     IrrelevantForHostGTUint32Properties});
 
 DeviceInfoProperties NonZeroProperties =
     mergeProperties({RelevantGTCapabilitiesProperties,

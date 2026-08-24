@@ -94,14 +94,11 @@ inline const DeviceInfoProp PropUint32{
     OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY,
     OL_DEVICE_INFO_MEMORY_CLOCK_RATE,
     OL_DEVICE_INFO_ADDRESS_BITS,
-    OL_DEVICE_INFO_NUM_LANES};
+    OL_DEVICE_INFO_NUM_LANES,
+    OL_DEVICE_INFO_CONTEXT_GROUP_INDEX};
+
 inline const DeviceInfoProperties Uint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), PropUint32);
-
-inline const DeviceInfoProp PropContextGroupIndex{
-    OL_DEVICE_INFO_CONTEXT_GROUP_INDEX};
-inline const DeviceInfoProperties ContextGroupIndexProperties =
-    createPropertiesWithSizeContainer(sizeof(uint32_t), PropContextGroupIndex);
 
 inline const DeviceInfoProp PropUint64{
     OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
@@ -131,7 +128,8 @@ inline const DeviceInfoProperties RelevantGTCapabilitiesProperties =
                                       Prop_RelevantGTCapabilites);
 
 inline const DeviceInfoProp PropIrrelevantForHostGTUint32 = {
-    OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF};
+    OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF,
+    OL_DEVICE_INFO_CONTEXT_GROUP_INDEX}; 
 inline const DeviceInfoProperties IrrelevantForHostGTUint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t),
                                       PropIrrelevantForHostGTUint32);
