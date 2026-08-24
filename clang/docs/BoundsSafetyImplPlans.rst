@@ -5,7 +5,6 @@ Implementation plans for ``-fbounds-safety``
 .. contents::
    :local:
 
-
 .. _bounds-safety-current-upstream-status:
 
 Current status of ``-fbounds-safety`` support in upstream Clang
@@ -14,7 +13,6 @@ Current status of ``-fbounds-safety`` support in upstream Clang
 .. FIXME: This is just a placeholder
 
 Not fully implemented upstream.
-
 
 Gradual updates with experimental flag
 ======================================
