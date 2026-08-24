@@ -47,8 +47,7 @@ protected:
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc F;
-    if (!TLI.getLibFunc(*FDecl, F))
+    if (TLI.getLibFunc(*FDecl) == NotLibFunc)
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
     return ::testing::AssertionSuccess() << ExpectedLFName << " is LibFunc";
@@ -699,6 +698,25 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
   }
 }
 
+TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
+  using TLII = TargetLibraryInfoImpl;
+
+  // Errno is defined as a function call on the following environments.
+  EXPECT_TRUE(TLII(Triple("arm64-apple-macosx")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("arm--linux-androideabi")).isErrnoFunctionCall());
+  EXPECT_TRUE(
+      TLII(Triple("armv7-unknown-freebsd-gnueabihf")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("riscv32-unknown-linux-musl")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-pc-windows-msvc")).isErrnoFunctionCall());
+  EXPECT_TRUE(TLII(Triple("x86_64-unknown-linux-gnu")).isErrnoFunctionCall());
+
+  // Unknown.
+  EXPECT_FALSE(TLII(Triple("aarch64-unknown-unknown")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("arm-none-eabi")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("powerpc-none-none")).isErrnoFunctionCall());
+  EXPECT_FALSE(TLII(Triple("x86_64-pc-linux")).isErrnoFunctionCall());
+}
+
 namespace {
 
 /// Creates TLI for AArch64 and uses it to get the LibFunc names for the given
@@ -721,8 +739,8 @@ protected:
 
   /// Returns the TLI function name for the given \p Opcode and type \p Ty.
   StringRef getScalarName(unsigned int Opcode, Type *Ty) {
-    LibFunc Func;
-    if (!TLI->getLibFunc(Opcode, Ty, Func))
+    LibFunc Func = TLI->getLibFunc(Opcode, Ty);
+    if (Func == NotLibFunc)
       return "";
     return TLI->getName(Func);
   }

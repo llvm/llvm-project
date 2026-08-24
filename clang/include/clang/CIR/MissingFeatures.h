@@ -228,6 +228,7 @@ struct MissingFeatures {
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
+  static bool lifetimeMarkersBypass() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
@@ -318,7 +319,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }
