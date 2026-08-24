@@ -1481,6 +1481,8 @@ cc_library(
         ],
     ) + ["include/llvm-c/Analysis.h"],
     copts = llvm_copts + select({
+        ":is_windows_clang_cl": ["/fp:except"],
+        ":is_windows_msvc": ["/fp:except"],
         "@platforms//os:emscripten": [],
         "//conditions:default": ["-ftrapping-math"],
     }),
@@ -2049,6 +2051,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -2059,6 +2062,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",
