@@ -160,6 +160,18 @@ void taintedOffset(void) {
   // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be negative or too large}}
 }
 
+void taintedIndexCast(void) {
+  // '(unsigned)index < 10' guarantees that index is non-negative and less than
+  // 10, because the cast converts negative values to large positive values.
+  int index;
+  scanf("%d", &index);
+  if ((unsigned)index < 10)
+    TenElements[index] = 5; // no-warning
+  unsigned uidx = (unsigned)index;
+  if (uidx < 10)
+    TenElements[index] = 5; // no-warning
+}
+
 void arrayOverflow(void) {
   TenElements[12] = 5;
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
