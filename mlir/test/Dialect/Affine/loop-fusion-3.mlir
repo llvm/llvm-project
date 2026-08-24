@@ -1,5 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer maximal}))' -split-input-file | FileCheck %s --check-prefix=PC-MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part II of fusion tests in mlir/test/Transforms/loop-fusion-2.mlir
@@ -1294,5 +1295,202 @@ func.func @unknown_memref_def_op() {
 }
 func.func private @bar() -> memref<10xf32>
 
+// -----
+
+// A producer-read/consumer-write dependence becomes backward if the producer
+// is sliced pointwise: source iteration 2 would read %a[1] after destination
+// iteration 1 writes it.
+
+// CHECK-LABEL: func.func @producer_read_consumer_write_backward
+// MAXIMAL-LABEL: func.func @producer_read_consumer_write_backward
+// PC-MAXIMAL-LABEL: func.func @producer_read_consumer_write_backward
+func.func @producer_read_consumer_write_backward(
+    %a: memref<3xf32>, %scratch: memref<3xf32>) {
+  affine.for %s = 1 to 3 {
+    %value = affine.load %a[1] : memref<3xf32>
+    affine.store %value, %scratch[%s] : memref<3xf32>
+  }
+  // PC-MAXIMAL: affine.for %[[S:.*]] = 1 to 3
+  // PC-MAXIMAL:   affine.load %{{.*}}[1]
+  // PC-MAXIMAL: affine.for %[[D:.*]] = 1 to 3
+  // PC-MAXIMAL:   affine.load %{{.*}}[%[[D]]]
+  affine.for %d = 1 to 3 {
+    %value = affine.load %scratch[%d] : memref<3xf32>
+    affine.store %value, %a[%d] : memref<3xf32>
+  }
+  return
+}
+
+// -----
+
+// The producer iteration s is scheduled at destination iteration s + 1. The
+// additional dependence also targets s + 1, so it remains forward.
+
+// CHECK-LABEL: func.func @offset_slice_forward_war
+// MAXIMAL-LABEL: func.func @offset_slice_forward_war
+// PC-MAXIMAL-LABEL: func.func @offset_slice_forward_war
+// PC-MAXIMAL-SAME: %[[A:[a-zA-Z0-9_]+]]: memref<10xf32>
+func.func @offset_slice_forward_war(
+    %a: memref<10xf32>, %scratch: memref<10xf32>) {
+  affine.for %s = 0 to 8 {
+    %value = affine.load %a[%s + 1] : memref<10xf32>
+    affine.store %value, %scratch[%s + 1] : memref<10xf32>
+  }
+  // The source slice is cloned into the destination loop.
+  // PC-MAXIMAL: affine.for %{{.*}} = 0 to 8
+  // PC-MAXIMAL: affine.for %[[D:.*]] = 1 to 9
+  // PC-MAXIMAL:   affine.load %[[A]][%{{.*}} + 1]
+  // PC-MAXIMAL:   affine.store %{{.*}}, %[[A]][%[[D]]]
+  affine.for %d = 1 to 9 {
+    %value = affine.load %scratch[%d] : memref<10xf32>
+    affine.store %value, %a[%d] : memref<10xf32>
+  }
+  return
+}
+
+// -----
+
+// Here the same source iteration is scheduled at s + 1, but its read must
+// precede destination iteration s. Fusion would reverse that dependence.
+
+// CHECK-LABEL: func.func @offset_slice_backward_war
+// MAXIMAL-LABEL: func.func @offset_slice_backward_war
+// PC-MAXIMAL-LABEL: func.func @offset_slice_backward_war
+// PC-MAXIMAL-SAME: %[[A:[a-zA-Z0-9_]+]]: memref<10xf32>, %[[SCRATCH:[a-zA-Z0-9_]+]]: memref<10xf32>
+func.func @offset_slice_backward_war(
+    %a: memref<10xf32>, %scratch: memref<10xf32>) {
+  affine.for %s = 0 to 8 {
+    %value = affine.load %a[%s] : memref<10xf32>
+    affine.store %value, %scratch[%s + 1] : memref<10xf32>
+  }
+  // PC-MAXIMAL: affine.for %{{.*}} = 0 to 8
+  // PC-MAXIMAL: affine.for %[[D:.*]] = 1 to 9
+  // PC-MAXIMAL-NOT: affine.load %[[A]]
+  // PC-MAXIMAL:   affine.load %[[SCRATCH]][%[[D]]]
+  // PC-MAXIMAL:   affine.store %{{.*}}, %[[A]][%[[D]]]
+  affine.for %d = 1 to 9 {
+    %value = affine.load %scratch[%d] : memref<10xf32>
+    affine.store %value, %a[%d] : memref<10xf32>
+  }
+  return
+}
+
+// -----
+
+// Verify that common surrounding loops remain parameters of the composed
+// schedule relation and do not prevent a safe pointwise fusion.
+
+// CHECK-LABEL: func.func @common_outer_pointwise_war
+// MAXIMAL-LABEL: func.func @common_outer_pointwise_war
+// PC-MAXIMAL-LABEL: func.func @common_outer_pointwise_war
+// PC-MAXIMAL-SAME: %[[A:[a-zA-Z0-9_]+]]: memref<4x10xf32>
+func.func @common_outer_pointwise_war(
+    %a: memref<4x10xf32>, %scratch: memref<4x10xf32>) {
+  affine.for %outer = 0 to 4 {
+    affine.for %s = 1 to 9 {
+      %value = affine.load %a[%outer, %s] : memref<4x10xf32>
+      affine.store %value, %scratch[%outer, %s] : memref<4x10xf32>
+    }
+    // The source slice is cloned into the destination loop.
+    // PC-MAXIMAL: affine.for %[[OUTER:.*]] = 0 to 4
+    // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 9
+    // PC-MAXIMAL:   affine.for %[[D:.*]] = 1 to 9
+    // PC-MAXIMAL:     affine.load %[[A]][%[[OUTER]], %[[D]]]
+    affine.for %d = 1 to 9 {
+      %value = affine.load %scratch[%outer, %d] : memref<4x10xf32>
+      affine.store %value, %a[%outer, %d] : memref<4x10xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @common_outer_backward_war
+// MAXIMAL-LABEL: func.func @common_outer_backward_war
+// PC-MAXIMAL-LABEL: func.func @common_outer_backward_war
+// PC-MAXIMAL-SAME: %[[A:[a-zA-Z0-9_]+]]: memref<4x10xf32>, %[[SCRATCH:[a-zA-Z0-9_]+]]: memref<4x10xf32>
+func.func @common_outer_backward_war(
+    %a: memref<4x10xf32>, %scratch: memref<4x10xf32>) {
+  affine.for %outer = 0 to 4 {
+    affine.for %s = 1 to 9 {
+      %value = affine.load %a[%outer, 1] : memref<4x10xf32>
+      affine.store %value, %scratch[%outer, %s] : memref<4x10xf32>
+    }
+    // PC-MAXIMAL: affine.for %[[OUTER:.*]] = 0 to 4
+    // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 9
+    // PC-MAXIMAL:   affine.for %[[D:.*]] = 1 to 9
+    // PC-MAXIMAL-NOT: affine.load %[[A]]
+    // PC-MAXIMAL:     affine.load %[[SCRATCH]][%[[OUTER]], %[[D]]]
+    // PC-MAXIMAL:     affine.store %{{.*}}, %[[A]][%[[OUTER]], %[[D]]]
+    affine.for %d = 1 to 9 {
+      %value = affine.load %scratch[%outer, %d] : memref<4x10xf32>
+      affine.store %value, %a[%outer, %d] : memref<4x10xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// An inner-dimension backward dependence prevents depth-2 fusion, while
+// depth-1 fusion remains legal because each full source inner loop still
+// executes before the corresponding destination inner loop.
+
+// CHECK-LABEL: func.func @two_dimensional_inner_backward_war
+// MAXIMAL-LABEL: func.func @two_dimensional_inner_backward_war
+// PC-MAXIMAL-LABEL: func.func @two_dimensional_inner_backward_war
+func.func @two_dimensional_inner_backward_war(
+    %a: memref<6x6xf32>, %scratch: memref<6x6xf32>) {
+  affine.for %s0 = 1 to 5 {
+    affine.for %s1 = 1 to 5 {
+      %value = affine.load %a[%s0, %s1 - 1] : memref<6x6xf32>
+      affine.store %value, %scratch[%s0, %s1] : memref<6x6xf32>
+    }
+  }
+  // PC-MAXIMAL: affine.for %[[OUTER:.*]] = 1 to 5
+  // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL-NOT: affine.for
+  // PC-MAXIMAL: return
+  affine.for %d0 = 1 to 5 {
+    affine.for %d1 = 1 to 5 {
+      %value = affine.load %scratch[%d0, %d1] : memref<6x6xf32>
+      affine.store %value, %a[%d0, %d1] : memref<6x6xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// A backward dependence in the outer dimension prevents fusion at every
+// depth, irrespective of the inner-dimension direction.
+
+// CHECK-LABEL: func.func @two_dimensional_outer_backward_war
+// MAXIMAL-LABEL: func.func @two_dimensional_outer_backward_war
+// PC-MAXIMAL-LABEL: func.func @two_dimensional_outer_backward_war
+func.func @two_dimensional_outer_backward_war(
+    %a: memref<6x6xf32>, %scratch: memref<6x6xf32>) {
+  affine.for %s0 = 1 to 5 {
+    affine.for %s1 = 1 to 5 {
+      %value = affine.load %a[%s0 - 1, %s1 + 1] : memref<6x6xf32>
+      affine.store %value, %scratch[%s0, %s1] : memref<6x6xf32>
+    }
+  }
+  // PC-MAXIMAL: affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL: affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL:   affine.for %{{.*}} = 1 to 5
+  // PC-MAXIMAL-NOT: affine.for
+  // PC-MAXIMAL: return
+  affine.for %d0 = 1 to 5 {
+    affine.for %d1 = 1 to 5 {
+      %value = affine.load %scratch[%d0, %d1] : memref<6x6xf32>
+      affine.store %value, %a[%d0, %d1] : memref<6x6xf32>
+    }
+  }
+  return
+}
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
