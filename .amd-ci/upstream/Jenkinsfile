@@ -2,7 +2,7 @@ import groovy.transform.Field
 import hudson.model.Result
 
 // Load aocc-devops shared library for PipelineUtils.
-String devopsLibPin = 'cede91d'
+String devopsLibPin = 'a8e58b3'
 Object devopsLib = library(
     changelog: false,
     identifier: 'aoccDevopsUtils@' + devopsLibPin,
@@ -405,28 +405,10 @@ String theUrl
 Boolean hasSourceChanges = true, isSkippableMerge = false
 Integer zero = 0, successStat = zero
 
-// llvmVer is processed by automation:
-String llvmVer = '23.0.0'
-// stageBuildNum is processed during branch creation:
 String stageBuildNum = env.BUILD_NUMBER
-// versionVal is processed during branch creation:
-String versionVal = 'AOCC_' + llvmVer + dash + (buildType == buildTypePresub ? 'Presub' : 'Stage')
 
-// relMode should be changed to 'CANDIDATE' when the release is close to readiness:
+// relMode is always 'PRE' since AMD does not release from this branch:
 String relMode = 'PRE'
-
-String jobName
-if (postsub && targetIsRelBranch) {
-    jobName = 'aocc-compiler-llvm-flang-rel' + dash + llvmVer + dash + stageBuildNum
-} else {
-    jobName = (
-        (isPrBranch ? 'presub' : 'update') + underScore +
-            (env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName'))
-    )
-    if (env.CHANGE_BRANCH) {
-        jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
-    }
-}
 
 def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
 String prBaseCommit = '', prLatestCommit = ''
@@ -614,6 +596,26 @@ try {
             if (isSkippableMerge || !hasSourceChanges) {
                 cleanWs()
                 return // From node
+            }
+            // Compute LLVM version from the checked-out cmake file.
+            String llvmVer = putils.extractLlvmVersionString(
+                this, llvmProj + '/cmake/Modules/LLVMVersion.cmake'
+            )
+            String versionVal = (
+                'AMDLLVM_' + llvmVer + dash +
+                    (buildType == buildTypePresub ? 'Presub' : 'Stage')
+            )
+            String jobName
+            if (postsub && targetIsRelBranch) {
+                jobName = 'aocc-compiler-llvm-flang-rel' + dash + llvmVer + dash + stageBuildNum
+            } else {
+                jobName = (
+                    (isPrBranch ? 'presub' : 'update') + underScore +
+                        (env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName'))
+                )
+                if (env.CHANGE_BRANCH) {
+                    jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
+                }
             }
             // ----------------------------------------------------------------
             // Clone the spec-configs git repo into the workspace (mirrors
