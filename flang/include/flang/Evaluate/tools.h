@@ -1131,8 +1131,9 @@ bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
 bool CanBuildSplitSumExpressionTree(
     FoldingContext &, const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
 
-// Try to rewrite a scalar real or complex sum as a split sum expression tree.
-std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+// Try to rewrite eligible scalar real or complex sums within an expression as
+// split sum expression trees.
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTrees(
     const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol

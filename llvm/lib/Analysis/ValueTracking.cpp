@@ -335,6 +335,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
                             unsigned Depth);
 
+static bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
+                            const Value *RHS);
+
 bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
                            const SimplifyQuery &Q, unsigned Depth) {
   // We don't support looking through casts.
@@ -4173,6 +4176,22 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
   return false;
 }
 
+static bool isNonEqualURem(const Value *X, const Value *Rem,
+                           const SimplifyQuery &Q) {
+  const Value *Y;
+  if (!match(Rem, m_URem(m_Specific(X), m_Value(Y))))
+    return false;
+
+  // For a defined urem, X != X urem Y exactly when X u>= Y.
+  // isTruePredicate does not handle UGE, so use the equivalent Y u<= X.
+  if (isTruePredicate(ICmpInst::ICMP_ULE, Y, X))
+    return true;
+
+  std::optional<bool> Implied =
+      isImpliedByDomCondition(ICmpInst::ICMP_UGE, X, Y, Q.CxtI, Q.DL);
+  return Implied && *Implied;
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
                             const APInt &DemandedElts, const SimplifyQuery &Q,
@@ -4243,6 +4262,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
   if (match(V1, m_PtrToIntSameSize(Q.DL, m_Value(A))) &&
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Q, Depth + 1);
+
+  if (isNonEqualURem(V1, V2, Q) || isNonEqualURem(V2, V1, Q))
+    return true;
 
   if (isKnownNonEqualFromContext(V1, V2, Q, Depth))
     return true;
@@ -6411,8 +6433,7 @@ bool llvm::canIgnoreSignBitOfZero(const Use &U) {
         return true;
       case Intrinsic::copysign:
         return U.getOperandNo() == 0;
-      case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass: {
+      case Intrinsic::is_fpclass: {
         auto Test =
             static_cast<FPClassTest>(
                 cast<ConstantInt>(II->getArgOperand(1))->getZExtValue()) &
@@ -6482,7 +6503,6 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
       case Intrinsic::fptoui_sat:
       case Intrinsic::fptosi_sat:
       case Intrinsic::is_fpclass:
-      case Intrinsic::vp_is_fpclass:
         return true;
       default:
         return false;
