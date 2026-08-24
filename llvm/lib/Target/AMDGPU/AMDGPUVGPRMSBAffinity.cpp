@@ -39,6 +39,9 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <climits>
+#include <limits>
+#include <optional>
 #include <queue>
 
 using namespace llvm;
@@ -77,20 +80,16 @@ class AffinityGraph {
 public:
   // Canonical (order-independent) key for the edge between vreg indices A and
   // B.
-  static uint64_t makeKey(unsigned A, unsigned B) {
+  static uint64_t makeKey(uint32_t A, uint32_t B) {
     if (A > B)
       std::swap(A, B);
-    return (static_cast<uint64_t>(A) << 32) | B;
+    return (static_cast<uint64_t>(A) << HalfWidth) | B;
   }
-  static unsigned lowEnd(uint64_t Key) {
-    return static_cast<unsigned>(Key >> 32);
-  }
-  static unsigned highEnd(uint64_t Key) {
-    return static_cast<unsigned>(Key & 0xffffffff);
-  }
+  static uint32_t lowEnd(uint64_t Key) { return Key >> HalfWidth; }
+  static uint32_t highEnd(uint64_t Key) { return Key & HalfMask; }
 
   // Accumulate Weight on the edge (A, B) and remember its earliest Ordinal.
-  void addEdge(unsigned A, unsigned B, uint64_t Weight, unsigned Ordinal) {
+  void addEdge(uint32_t A, uint32_t B, uint64_t Weight, unsigned Ordinal) {
     if (A == B)
       return;
     uint64_t Key = makeKey(A, B);
@@ -104,6 +103,9 @@ public:
   const DenseMap<uint64_t, uint64_t> &edges() const { return Weights; }
 
 private:
+  static constexpr unsigned HalfWidth = sizeof(uint32_t) * CHAR_BIT;
+  static constexpr uint64_t HalfMask = (UINT64_C(1) << HalfWidth) - 1;
+
   DenseMap<uint64_t, uint64_t> Weights;
   DenseMap<uint64_t, unsigned> FirstOrdinal;
 };
@@ -127,7 +129,8 @@ public:
   // Seed the singleton cluster for node Idx with register Reg.
   void addNode(unsigned Idx, Register Reg) { Nodes[Idx].push_back(Reg); }
 
-  unsigned find(unsigned X) {
+  // Path compression only caches, hence const.
+  unsigned find(unsigned X) const {
     while (Parent[X] != X) {
       Parent[X] = Parent[Parent[X]];
       X = Parent[X];
@@ -226,7 +229,7 @@ private:
     ++Epoch[RootA];
   }
 
-  SmallVector<unsigned, 0> Parent;
+  mutable SmallVector<unsigned, 0> Parent;
   SmallVector<unsigned, 0> Rank;
   SmallVector<uint64_t, 0> Epoch;
   SmallVector<int, 0> Footprint; // cached per-root footprint, -1 = stale.
@@ -257,13 +260,13 @@ private:
 
   AffinityGraph buildAffinityGraph(ArrayRef<MachineBasicBlock *> Blocks) const;
 
-  SmallVector<unsigned, 0> collectHotRoots(ClusterForest &Forest,
+  SmallVector<unsigned, 0> collectHotRoots(const ClusterForest &Forest,
                                            const AffinityGraph &Graph) const;
 
-  void packClusters(ClusterForest &Forest, ArrayRef<unsigned> Roots,
+  void packClusters(const ClusterForest &Forest, ArrayRef<unsigned> Roots,
                     unsigned EffMSBGroups, unsigned VGPRBudget, PackMode Mode,
-                    MutableArrayRef<int> MSBLoad,
-                    DenseMap<unsigned, int> &ClusterMSB) const;
+                    MutableArrayRef<unsigned> MSBLoad,
+                    DenseMap<unsigned, unsigned> &ClusterMSB) const;
 
   // Per-group register cap. For power-of-two occupancy VGPRBudget is a whole
   // number of 256-groups so every cap is 256; at a fractional occupancy the
@@ -801,7 +804,7 @@ AffinityGraph AMDGPUVGPRMSBAffinity::buildAffinityGraph(
 
 // Cluster roots carrying real (loop-level) affinity, hottest-first.
 SmallVector<unsigned, 0>
-AMDGPUVGPRMSBAffinity::collectHotRoots(ClusterForest &Forest,
+AMDGPUVGPRMSBAffinity::collectHotRoots(const ClusterForest &Forest,
                                        const AffinityGraph &Graph) const {
   // Cluster weight = total internal affinity (how costly it is to split).
   DenseMap<unsigned, uint64_t> ClusterWeight;
@@ -844,9 +847,10 @@ AMDGPUVGPRMSBAffinity::collectHotRoots(ClusterForest &Forest,
 // group instead of each reserving 256 registers -- this is what keeps the VGPR
 // count from ballooning on software-pipelined kernels.
 void AMDGPUVGPRMSBAffinity::packClusters(
-    ClusterForest &Forest, ArrayRef<unsigned> Roots, unsigned EffMSBGroups,
-    unsigned VGPRBudget, PackMode Mode, MutableArrayRef<int> MSBLoad,
-    DenseMap<unsigned, int> &ClusterMSB) const {
+    const ClusterForest &Forest, ArrayRef<unsigned> Roots,
+    unsigned EffMSBGroups, unsigned VGPRBudget, PackMode Mode,
+    MutableArrayRef<unsigned> MSBLoad,
+    DenseMap<unsigned, unsigned> &ClusterMSB) const {
   SmallVector<SmallVector<Register, 0>, 8> GroupNodes(EffMSBGroups);
   for (unsigned Root : Roots) {
     ArrayRef<Register> RootNodes = Forest.nodes(Root);
@@ -854,36 +858,37 @@ void AMDGPUVGPRMSBAffinity::packClusters(
     // group 0, which is reset-free after the loop header). Balanced: place in
     // the group that minimizes the resulting load, so clusters spread across
     // all groups and every used group keeps slack for the soft hints.
-    int Best = -1, BestLoad = 0, BestResult = INT_MAX;
+    std::optional<unsigned> Best;
+    unsigned BestLoad = 0;
+    unsigned BestResult = std::numeric_limits<unsigned>::max();
     for (unsigned Group = 0; Group < EffMSBGroups; ++Group) {
       SmallVector<Register, 16> Combined(GroupNodes[Group].begin(),
                                          GroupNodes[Group].end());
       Combined.append(RootNodes.begin(), RootNodes.end());
-      int Load = static_cast<int>(maxSimultaneousDwords(Combined));
+      unsigned Load = maxSimultaneousDwords(Combined);
       if (Mode == PackMode::Compact) {
-        if (Load <= static_cast<int>(groupCap(Group, VGPRBudget))) {
+        if (Load <= groupCap(Group, VGPRBudget)) {
           Best = Group;
           BestLoad = Load;
           break; // lowest MSB group that fits
         }
-      } else if (Load <= static_cast<int>(groupCap(Group, VGPRBudget)) &&
-                 Load < BestResult) {
+      } else if (Load <= groupCap(Group, VGPRBudget) && Load < BestResult) {
         BestResult = Load;
         Best = Group;
         BestLoad = Load;
       }
     }
-    if (Best < 0) {
+    if (!Best) {
       // No MSB group fits this cluster within capacity; over-subscribe the
       // least-loaded one (the soft hint may spill).
       Best = llvm::min_element(MSBLoad) - MSBLoad.begin();
-      GroupNodes[Best].append(RootNodes.begin(), RootNodes.end());
-      BestLoad = static_cast<int>(maxSimultaneousDwords(GroupNodes[Best]));
+      GroupNodes[*Best].append(RootNodes.begin(), RootNodes.end());
+      BestLoad = maxSimultaneousDwords(GroupNodes[*Best]);
     } else {
-      GroupNodes[Best].append(RootNodes.begin(), RootNodes.end());
+      GroupNodes[*Best].append(RootNodes.begin(), RootNodes.end());
     }
-    MSBLoad[Best] = BestLoad;
-    ClusterMSB[Root] = Best;
+    MSBLoad[*Best] = BestLoad;
+    ClusterMSB[Root] = *Best;
   }
 }
 
@@ -920,21 +925,20 @@ void AMDGPUVGPRMSBAffinity::processRegion(
   Forest.clusterByWeight(Graph, MergeCap);
 
   SmallVector<unsigned, 0> Roots = collectHotRoots(Forest, Graph);
-  SmallVector<int, 8> MSBLoad(EffMSBGroups, 0);
-  DenseMap<unsigned, int> ClusterMSB;
+  SmallVector<unsigned, 8> MSBLoad(EffMSBGroups, 0);
+  DenseMap<unsigned, unsigned> ClusterMSB;
   packClusters(Forest, Roots, EffMSBGroups, VGPRBudget, Mode, MSBLoad,
                ClusterMSB);
   unsigned NumClusters = Roots.size();
 
-  // Skip a *severely* over-subscribed plan. Mild overflow is realizable (the
-  // allocator spills a few, most hints honored); past cap*OverflowPct/100 the
-  // plan is unrealizable and the allocator drops the hints. Per-group cap so a
-  // fractional last group is not silently over-packed.
-  bool Infeasible = false;
-  for (unsigned Group = 0; Group < EffMSBGroups; ++Group)
-    if (static_cast<uint64_t>(MSBLoad[Group]) * 100 >
-        static_cast<uint64_t>(groupCap(Group, VGPRBudget)) * OverflowPct)
-      Infeasible = true;
+  // Skip a *severely* over-subscribed plan. Slightly over cap still helps: RA
+  // honors most hints and spills at most a few more than it would have. Past
+  // cap*OverflowPct/100 the hints are just dropped. Per group so a fractional
+  // last group is not over-packed.
+  bool Infeasible = llvm::any_of(llvm::seq(0u, EffMSBGroups), [&](unsigned G) {
+    return static_cast<uint64_t>(MSBLoad[G]) * 100 >
+           static_cast<uint64_t>(groupCap(G, VGPRBudget)) * OverflowPct;
+  });
 
   // Self-benefit gate: on an already MSB-coherent schedule our partition can
   // *raise* the switch count, so commit only if the plan's predicted switches

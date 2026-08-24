@@ -4128,14 +4128,15 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     int MSB = MFI->getVGPRMSBAffinity(VirtReg);
     if (MSB < 0)
       return;
-    SmallDenseSet<MCPhysReg, 32> Existing(Hints.begin(), Hints.end());
-    // A soft bias needs only a few preferred regs; cap it.
+    // Hints must be a subset of Order, and a group is not contiguous there, so
+    // filter it. Stop at a few regs: this is only a bias.
     constexpr unsigned SoftHintCap = 8;
+    SmallDenseSet<MCPhysReg, 32> Existing(Hints.begin(), Hints.end());
     unsigned Added = 0;
     for (MCPhysReg PhysReg : Order) {
       if (Added >= SoftHintCap)
         break;
-      if (static_cast<int>(getHWRegIndex(PhysReg) >> 8) != MSB)
+      if (getHWRegIndex(PhysReg) >> 8 != static_cast<unsigned>(MSB))
         continue;
       if (Existing.insert(PhysReg).second) {
         Hints.push_back(PhysReg);

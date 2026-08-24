@@ -662,8 +662,7 @@ public:
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
 
-  // Desired VGPR MSB group (HW index >> 8) for a vreg, set by
-  // AMDGPUVGPRMSBAffinity and consumed by getRegAllocationHints below.
+  // Sets desired VGPR MSB group (HW index >> 8) for \p Reg.
   void setVGPRMSBAffinity(Register Reg, unsigned MSB) {
     VGPRMSBAffinity[Reg] = static_cast<uint8_t>(MSB);
   }
