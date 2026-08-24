@@ -281,6 +281,8 @@ static StringRef getPreposition(const bounds::CheckResult &R) {
 
 static BugDescription describeInvalidAccess(bounds::CheckResult Res,
                                             StringRef RegName, SizeUnit SU) {
+  assert(Res.mayBeInvalid());
+
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
   std::optional<int64_t> ExtentN =
       getConcreteValue(Res.getExtentIfMayOverflow());
@@ -337,6 +339,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
 static BugDescription describeTaintBug(bounds::CheckResult Res,
                                        StringRef RegName,
                                        StringRef OffsetName) {
+  assert(Res.mayBeInvalid());
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}",
