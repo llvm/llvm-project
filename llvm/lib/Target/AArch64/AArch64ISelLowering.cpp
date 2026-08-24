@@ -17801,43 +17801,48 @@ SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
   assert(VT.isScalableVector() &&
          "Custom lowering expected for scalable vectors only.");
 
-  if (isPackedVectorType(VT, DAG)) {
-    SDValue Src = Op.getOperand(0);
-    EVT SrcVT = Src.getValueType();
-    if (ElementCount::isKnownGE(VT.getVectorElementCount(),
-                                SrcVT.getVectorElementCount()))
-      return Op;
-
-    // We are broadcasting to a packed scalable vector for a wider-than-NEON
-    // vector. Deinterleave smaller source vectors until we get to a quad.
-    // This is similar to SplitVecRes_VECTOR_BROADCAST, but we are past type
-    // legalisation so it cannot be reused.
-    // TODO: tbl might be cheaper? Or or repeated dup z.q[idx] followed by zip1
-    // z.q, but that requires +F64MM+NS
-    assert(SrcVT.isFixedLengthVector() &&
-           SrcVT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock &&
-           "Expected a fixed source for a vscale-dependent broadcast");
-    auto [SrcLo, SrcHi] = DAG.SplitVector(Src, DL);
-    EVT SplitVT = SrcLo.getValueType();
-    SDValue Deinterleaved =
-        DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
-                    DAG.getVTList(SplitVT, SplitVT), SrcLo, SrcHi);
-    SDValue Even = DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved);
-    SDValue Odd =
-        DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(1));
-    SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                                      DAG.getVTList(VT, VT), Even, Odd);
-    return Interleaved.getValue(0);
+  if (isUnpackedType(VT, DAG)) { // Broadcast into a packed container before
+                                 // extracting the low lanes, which
+    // places the result elements at the spacing required by the unpacked type.
+    EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+    SDValue Broadcast =
+        DAG.getNode(ISD::VECTOR_BROADCAST, DL, PackedVT, Op.getOperand(0));
+    return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
   }
 
-  assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
+  assert(isPackedVectorType(VT, DAG) && "Expected a packed vector type!");
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
 
-  // Broadcast into a packed container before extracting the low lanes, which
-  // places the result elements at the spacing required by the unpacked type.
-  EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
-  SDValue Broadcast =
-      DAG.getNode(ISD::VECTOR_BROADCAST, DL, PackedVT, Op.getOperand(0));
-  return DAG.getExtractSubvector(DL, VT, Broadcast, 0);
+  // We are broadcasting a NEON-sized vector to a packed (legal) SVE type.
+  // This is a legal operation and there are patterns for it.
+  if (ElementCount::isKnownGE(VT.getVectorElementCount(),
+                              SrcVT.getVectorElementCount())) {
+    assert(SrcVT.getFixedSizeInBits() <= AArch64::SVEBitsPerBlock &&
+           "Expected NEON-sized source");
+    return Op;
+  }
+
+  // We are broadcasting to a packed scalable vector for a wider-than-NEON
+  // vector. Deinterleave smaller source vectors until we get to a quad.
+  // This is similar to SplitVecRes_VECTOR_BROADCAST, but we are past type
+  // legalisation so it cannot be reused.
+  // TODO: tbl might be cheaper? Or repeated dup z.q[idx] followed by zip1
+  // z.q, but that requires +F64MM+NS
+  assert(SrcVT.isFixedLengthVector() &&
+         SrcVT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock &&
+         "Expected a fixed source for a vscale-dependent broadcast");
+  auto [SrcLo, SrcHi] = DAG.SplitVector(Src, DL);
+  EVT SplitVT = SrcLo.getValueType();
+  SDValue Deinterleaved =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, DAG.getVTList(SplitVT, SplitVT),
+                  SrcLo, SrcHi);
+  SDValue Even = DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved);
+  SDValue Odd =
+      DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(1));
+  SDValue Interleaved =
+      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(VT, VT), Even, Odd);
+  return Interleaved.getValue(0);
 }
 
 SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
