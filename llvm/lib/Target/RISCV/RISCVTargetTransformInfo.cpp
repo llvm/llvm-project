@@ -353,17 +353,81 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
+  // vdot4a* reduces four i8 products into an i32 result; an i64 accumulator is
+  // additionally supported by widening the i32 partial sums to i64 (see
+  // lowerPARTIAL_REDUCE_MLA). VF is the number of i8 input elements, so the
+  // reduction factor is AccumBits / 8 (4 for i32, 8 for i64).
   if (!ST->hasStdExtZvdot4a8i() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
-      !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
+      (!AccumType->isIntegerTy(32) && !AccumType->isIntegerTy(64)))
     return InstructionCost::getInvalid();
 
-  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  unsigned Ratio = AccumType->getScalarSizeInBits() / 8;
+  if (!VF.isKnownMultipleOf(Ratio))
+    return InstructionCost::getInvalid();
+
+  // Cost of the vdot4a* itself, which operates on the i32 intermediate type
+  // holding VF/4 elements.
+  Type *DotTp = VectorType::get(Type::getInt32Ty(AccumType->getContext()),
+                                VF.divideCoefficientBy(4));
+  std::pair<InstructionCost, MVT> DotLT = getTypeLegalizationCost(DotTp);
   // Note: Asuming all vdot4a* variants are equal cost
-  return LT.first *
-         getRISCVInstructionCost(RISCV::VDOT4A_VV, LT.second, CostKind);
+  InstructionCost Cost =
+      DotLT.first *
+      getRISCVInstructionCost(RISCV::VDOT4A_VV, DotLT.second, CostKind);
+
+  // Account for reducing the i32 partial sums down to the i64 accumulator's
+  // element count and accumulating into it (see lowerPARTIAL_REDUCE_MLA), which
+  // has two shapes depending on the accumulator's LMUL.
+  if (AccumType->isIntegerTy(64)) {
+    LLVMContext &Ctx = AccumType->getContext();
+    Type *I32Ty = Type::getInt32Ty(Ctx);
+    ElementCount AccVF = VF.divideCoefficientBy(Ratio);
+    std::pair<InstructionCost, MVT> AccLT =
+        getTypeLegalizationCost(VectorType::get(AccumType, AccVF));
+
+    // When the i32 subvectors of a single-vector scalable accumulator are a
+    // fractional LMUL, extracting the high subvector would need a vslidedown,
+    // so instead the i32 dot result is widened to i64 first (vsext.vf2 /
+    // vzext.vf2) and then reduced and accumulated with register-aligned i64
+    // vadd.vv.
+    bool WidenFirst = false;
+    if (VF.isScalable() && AccLT.second.isScalableVector()) {
+      MVT NarrowMVT = AccLT.second.changeVectorElementType(MVT::i32);
+      WidenFirst =
+          RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(NarrowMVT))
+              .second;
+    }
+
+    if (WidenFirst) {
+      // The widened i64 dot result has VF/4 elements, i.e. twice the
+      // accumulator's element count, so the reduction plus the accumulate are
+      // two i64 vadd.vv.
+      std::pair<InstructionCost, MVT> WideLT = getTypeLegalizationCost(
+          VectorType::get(AccumType, VF.divideCoefficientBy(4)));
+      Cost +=
+          WideLT.first * getRISCVInstructionCost(RISCV::VSEXT_VF2,
+                                                 WideLT.second, CostKind) +
+          2 * AccLT.first *
+              getRISCVInstructionCost(RISCV::VADD_VV, AccLT.second, CostKind);
+    } else {
+      // Otherwise the scale-4 i32 sums are halved with a single i32 vadd.vv,
+      // then widened and added into the i64 result with a vwadd.wv.
+      std::pair<InstructionCost, MVT> RedLT =
+          getTypeLegalizationCost(VectorType::get(I32Ty, AccVF));
+      Cost += RedLT.first * getRISCVInstructionCost(RISCV::VADD_VV,
+                                                    RedLT.second, CostKind) +
+              AccLT.first * getRISCVInstructionCost(RISCV::VWADD_WV,
+                                                    AccLT.second, CostKind);
+      // Fixed-length vectors extract the high i32 subvector with a vslidedown.
+      if (VF.isFixed())
+        Cost += DotLT.first * getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI,
+                                                      DotLT.second, CostKind);
+    }
+  }
+
+  return Cost;
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
@@ -1130,14 +1194,18 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Some processors optimize segment loads/stores as one wide memory op +
-        // Factor * LMUL shuffle ops.
+        // Some processors optimize segment loads/stores as N * DLEN sized
+        // load ops + Factor * LMUL shuffle ops.
         if (ST->hasOptimizedSegmentLoadStore(Factor)) {
-          InstructionCost Cost =
-              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          unsigned VecSizeInBits =
+              getEstimatedVLFor(VTy) * VTy->getScalarSizeInBits();
+          unsigned VLENForTuning =
+              *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
+          unsigned DLENForTuning = VLENForTuning / ST->getDLenFactor();
+          InstructionCost Cost = divideCeil(VecSizeInBits, DLENForTuning);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
           Cost += Factor * TLI->getLMULCost(SubVecVT);
-          return LT.first * Cost;
+          return Cost;
         }
 
         // Otherwise, the cost is proportional to the number of elements (VL *
@@ -1359,25 +1427,10 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::bswap, MVT::i16, 3},
     {Intrinsic::bswap, MVT::i32, 12},
     {Intrinsic::bswap, MVT::i64, 31},
-    {Intrinsic::vp_bswap, MVT::i16, 3},
-    {Intrinsic::vp_bswap, MVT::i32, 12},
-    {Intrinsic::vp_bswap, MVT::i64, 31},
-    {Intrinsic::vp_fshl, MVT::i8, 7},
-    {Intrinsic::vp_fshl, MVT::i16, 7},
-    {Intrinsic::vp_fshl, MVT::i32, 7},
-    {Intrinsic::vp_fshl, MVT::i64, 7},
-    {Intrinsic::vp_fshr, MVT::i8, 7},
-    {Intrinsic::vp_fshr, MVT::i16, 7},
-    {Intrinsic::vp_fshr, MVT::i32, 7},
-    {Intrinsic::vp_fshr, MVT::i64, 7},
     {Intrinsic::bitreverse, MVT::i8, 17},
     {Intrinsic::bitreverse, MVT::i16, 24},
     {Intrinsic::bitreverse, MVT::i32, 33},
     {Intrinsic::bitreverse, MVT::i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::i64, 52},
     {Intrinsic::ctpop, MVT::i8, 12},
     {Intrinsic::ctpop, MVT::i16, 19},
     {Intrinsic::ctpop, MVT::i32, 20},
@@ -1390,18 +1443,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::cttz, MVT::i16, 23},
     {Intrinsic::cttz, MVT::i32, 24},
     {Intrinsic::cttz, MVT::i64, 25},
-    {Intrinsic::vp_ctpop, MVT::i8, 12},
-    {Intrinsic::vp_ctpop, MVT::i16, 19},
-    {Intrinsic::vp_ctpop, MVT::i32, 20},
-    {Intrinsic::vp_ctpop, MVT::i64, 21},
-    {Intrinsic::vp_ctlz, MVT::i8, 19},
-    {Intrinsic::vp_ctlz, MVT::i16, 28},
-    {Intrinsic::vp_ctlz, MVT::i32, 31},
-    {Intrinsic::vp_ctlz, MVT::i64, 35},
-    {Intrinsic::vp_cttz, MVT::i8, 16},
-    {Intrinsic::vp_cttz, MVT::i16, 23},
-    {Intrinsic::vp_cttz, MVT::i32, 24},
-    {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
 InstructionCost
@@ -2932,7 +2973,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 InstructionCost RISCVTTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) const {
+    const TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTI::TCC_Free;
   // In the basic model we take into account GEP instructions only
   // (although here can come alloca instruction, a value, constants and/or
@@ -3539,49 +3580,22 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::fma:
-  case Intrinsic::vp_fma:
   case Intrinsic::fmuladd:
-  case Intrinsic::vp_fmuladd:
     return Operand == 0 || Operand == 1;
-  case Intrinsic::vp_shl:
-  case Intrinsic::vp_lshr:
-  case Intrinsic::vp_ashr:
   case Intrinsic::vp_udiv:
   case Intrinsic::vp_sdiv:
   case Intrinsic::vp_urem:
   case Intrinsic::vp_srem:
   case Intrinsic::ssub_sat:
-  case Intrinsic::vp_ssub_sat:
   case Intrinsic::usub_sat:
-  case Intrinsic::vp_usub_sat:
-  case Intrinsic::vp_select:
     return Operand == 1;
     // These intrinsics are commutative.
-  case Intrinsic::vp_add:
-  case Intrinsic::vp_mul:
-  case Intrinsic::vp_and:
-  case Intrinsic::vp_or:
-  case Intrinsic::vp_xor:
-  case Intrinsic::vp_fadd:
-  case Intrinsic::vp_fmul:
-  case Intrinsic::vp_icmp:
-  case Intrinsic::vp_fcmp:
   case Intrinsic::smin:
-  case Intrinsic::vp_smin:
   case Intrinsic::umin:
-  case Intrinsic::vp_umin:
   case Intrinsic::smax:
-  case Intrinsic::vp_smax:
   case Intrinsic::umax:
-  case Intrinsic::vp_umax:
   case Intrinsic::sadd_sat:
-  case Intrinsic::vp_sadd_sat:
   case Intrinsic::uadd_sat:
-  case Intrinsic::vp_uadd_sat:
-    // These intrinsics have 'vr' versions.
-  case Intrinsic::vp_sub:
-  case Intrinsic::vp_fsub:
-  case Intrinsic::vp_fdiv:
     return Operand == 0 || Operand == 1;
   default:
     return false;

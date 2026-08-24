@@ -87,6 +87,14 @@ math_test(
     hdrs = ["IsCanonicalTest.h"],
 )
 
+math_test(
+    name = "iscanonicalf128",
+    hdrs = ["IsCanonicalTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
+)
+
 math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
@@ -532,6 +540,9 @@ math_test(
 math_test(
     name = "fmaxf128",
     hdrs = ["FMaxTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -657,6 +668,9 @@ math_test(
 math_test(
     name = "fminf128",
     hdrs = ["FMinTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1017,6 +1031,9 @@ math_test(
 math_test(
     name = "isnanf128",
     hdrs = ["IsNanTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1042,6 +1059,9 @@ math_test(
 math_test(
     name = "llrintf128",
     hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1072,6 +1092,9 @@ math_test(
 math_test(
     name = "llroundf128",
     hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1143,6 +1166,9 @@ math_test(
 math_test(
     name = "lrintf128",
     hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1163,6 +1189,9 @@ math_test(
 math_test(
     name = "lroundf128",
     hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1210,6 +1239,9 @@ math_test(
 math_test(
     name = "nearbyintf128",
     hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1364,6 +1396,9 @@ math_test(
 math_test(
     name = "rintf128",
     hdrs = ["RIntTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1389,6 +1424,9 @@ math_test(
 math_test(
     name = "roundevenf128",
     hdrs = ["RoundEvenTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1647,6 +1685,9 @@ math_test(
 math_test(
     name = "truncf128",
     hdrs = ["TruncTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1732,6 +1773,14 @@ math_test(name = "expm1f16")
 math_test(
     name = "issignalingf16",
     hdrs = ["IsSignalingTest.h"],
+)
+
+math_test(
+    name = "issignalingf128",
+    hdrs = ["IsSignalingTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(name = "log10f16")

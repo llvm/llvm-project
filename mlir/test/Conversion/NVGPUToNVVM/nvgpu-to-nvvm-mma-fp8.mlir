@@ -6,7 +6,7 @@ func.func @fp8_mma_e4m3_e4m3_m16n8k16(%arg0: vector<2x4xf8E4M3FN>, %arg1: vector
   // CHECK-SAME: shape = <m = 16, n = 8, k = 16>
   // CHECK-SAME: multiplicand_a_ptx_type = e4m3
   // CHECK-SAME: multiplicand_b_ptx_type = e4m3
-  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<2x4xf8E4M3FN>, vector<1x4xf8E4M3FN>, vector<2x2xf32>) -> vector<2x2xf32>
+  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) mmaShape = [16, 8, 16] : (vector<2x4xf8E4M3FN>, vector<1x4xf8E4M3FN>, vector<2x2xf32>) -> vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
 
@@ -18,7 +18,7 @@ func.func @fp8_mma_e4m3_e4m3_m16n8k32(%arg0: vector<4x4xf8E4M3FN>, %arg1: vector
   // CHECK-SAME: shape = <m = 16, n = 8, k = 32>
   // CHECK-SAME: multiplicand_a_ptx_type = e4m3
   // CHECK-SAME: multiplicand_b_ptx_type = e4m3
-  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = [16, 8, 32]} : (vector<4x4xf8E4M3FN>, vector<2x4xf8E4M3FN>, vector<2x2xf32>) -> vector<2x2xf32>
+  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) mmaShape = [16, 8, 32] : (vector<4x4xf8E4M3FN>, vector<2x4xf8E4M3FN>, vector<2x2xf32>) -> vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
 
@@ -30,7 +30,7 @@ func.func @fp8_mma_e5m2_e5m2_m16n8k16(%arg0: vector<2x4xf8E5M2>, %arg1: vector<1
   // CHECK-SAME: shape = <m = 16, n = 8, k = 16>
   // CHECK-SAME: multiplicand_a_ptx_type = e5m2
   // CHECK-SAME: multiplicand_b_ptx_type = e5m2
-  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<2x4xf8E5M2>, vector<1x4xf8E5M2>, vector<2x2xf32>) -> vector<2x2xf32>
+  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) mmaShape = [16, 8, 16] : (vector<2x4xf8E5M2>, vector<1x4xf8E5M2>, vector<2x2xf32>) -> vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
 
@@ -42,6 +42,6 @@ func.func @fp8_mma_e5m2_e5m2_m16n8k32(%arg0: vector<4x4xf8E5M2>, %arg1: vector<2
   // CHECK-SAME: shape = <m = 16, n = 8, k = 32>
   // CHECK-SAME: multiplicand_a_ptx_type = e5m2
   // CHECK-SAME: multiplicand_b_ptx_type = e5m2
-  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) {mmaShape = [16, 8, 32]} : (vector<4x4xf8E5M2>, vector<2x4xf8E5M2>, vector<2x2xf32>) -> vector<2x2xf32>
+  %0 = nvgpu.mma.sync(%arg0, %arg1, %arg2) mmaShape = [16, 8, 32] : (vector<4x4xf8E5M2>, vector<2x4xf8E5M2>, vector<2x2xf32>) -> vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
