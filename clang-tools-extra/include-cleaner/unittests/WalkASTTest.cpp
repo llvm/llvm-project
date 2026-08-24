@@ -1250,7 +1250,6 @@ TEST(WalkAST, ObjCTollFreeBridgeCStyleCast) {
            {"-x", "objective-c"});
 }
 
-
 TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
   // Note this test case is handled by TraverseObjCProtocolLoc instead of
   // VisitCastExpr.
@@ -1548,7 +1547,7 @@ TEST(WalkAST, ObjCEncodeExpr) {
 
 TEST(WalkAST, ObjCBoxedExprInt) {
   testWalk(R"objc(
-    @interface $implicit^NSNumber
+    @interface $explicit^NSNumber
     + (id)numberWithInt:(int)val;
     @end
   )objc",
@@ -1560,18 +1559,19 @@ TEST(WalkAST, ObjCBoxedExprInt) {
            {"-x", "objective-c"});
 }
 
-
-TEST(WalkAST, ObjCBoxedExprCategory) {
+TEST(WalkAST, ObjCBoxedExprStruct) {
   testWalk(R"objc(
-    @interface $implicit^NSNumber
-    @end
-    @interface $explicit^NSNumber (CustomCategory)
-    + (id)numberWithInt:(int)val;
+    struct __attribute__((objc_boxable)) Point {
+      int x, y;
+    };
+    @interface $explicit^NSValue
+    + (id)valueWithBytes:(const void *)bytes objCType:(const char *)type;
     @end
   )objc",
            R"objc(
     void test() {
-      id x = ^@42;
+    struct Point p = {1, 2};
+      id x = ^@(p);
     }
   )objc",
            {"-x", "objective-c"});
@@ -1579,7 +1579,7 @@ TEST(WalkAST, ObjCBoxedExprCategory) {
 
 TEST(WalkAST, ObjCArrayLiteral) {
   testWalk(R"objc(
-    @interface $implicit^NSArray
+    @interface $explicit^NSArray
     + (id)arrayWithObjects:(const id *)objects count:(unsigned long)cnt;
     @end
   )objc",
@@ -1593,8 +1593,10 @@ TEST(WalkAST, ObjCArrayLiteral) {
 
 TEST(WalkAST, ObjCDictionaryLiteral) {
   testWalk(R"objc(
-    @interface $implicit^NSDictionary
-    + (id)dictionaryWithObjects:(const id *)objects forKeys:(const id *)keys count:(unsigned long)cnt;
+    @interface $explicit^NSDictionary
+    + (id)dictionaryWithObjects:(const id *)objects
+                        forKeys:(const id *)keys
+                          count:(unsigned long)cnt;
     @end
   )objc",
            R"objc(
@@ -1607,7 +1609,7 @@ TEST(WalkAST, ObjCDictionaryLiteral) {
 
 TEST(WalkAST, ObjCStringLiteral) {
   testWalk(R"objc(
-    @interface $implicit^NSString
+    @interface $explicit^NSString
     @end
   )objc",
            R"objc(
