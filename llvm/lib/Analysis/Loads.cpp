@@ -455,8 +455,9 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                        const APInt &Size,
-                                       const SimplifyQuery &SQ) {
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ)) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, IgnoreFree)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!SQ.CxtI || !suppressSpeculativeLoadForSanitizers(*SQ.CxtI))
@@ -528,13 +529,14 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 }
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                       const SimplifyQuery &SQ) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
   TypeSize TySize = SQ.DL.getTypeStoreSize(Ty);
   if (TySize.isScalable())
     return false;
   APInt Size(SQ.DL.getIndexTypeSizeInBits(V->getType()),
              TySize.getFixedValue());
-  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ);
+  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ, IgnoreFree);
 }
 
 /// DefMaxInstsToScan - the default number of maximum instructions

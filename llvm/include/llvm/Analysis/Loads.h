@@ -77,7 +77,8 @@ LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
 /// the address is already accessed.
 LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                           const APInt &Size,
-                                          const SimplifyQuery &SQ);
+                                          const SimplifyQuery &SQ,
+                                          bool IgnoreFree = false);
 
 /// Return true if we can prove that the given load (which is assumed to be
 /// within the specified loop) would access only dereferenceable memory, and
@@ -115,7 +116,8 @@ isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 /// quick local scan of the basic block containing SQ.CxtI, to determine if
 /// the address is already accessed.
 LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                          const SimplifyQuery &SQ);
+                                          const SimplifyQuery &SQ,
+                                          bool IgnoreFree = false);
 
 /// Return true if speculation of the given load must be suppressed to avoid
 /// ordering or interfering with an active sanitizer.  If not suppressed,

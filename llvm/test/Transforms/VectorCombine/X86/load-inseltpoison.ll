@@ -172,8 +172,8 @@ define <4 x float> @load_f32_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
 define <4 x float> @load_f32_insert_v4f32_may_free(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_f32_insert_v4f32_may_free(
 ; CHECK-NEXT:    call void @may_free()
-; CHECK-NEXT:    [[S:%.*]] = load float, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   call void @may_free()
@@ -294,9 +294,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref(ptr align 16 dereferenceable
 define <8 x i16> @gep01_load_i16_insert_v8i16_deref_may_free(ptr align 16 dereferenceable(17) %p) {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref_may_free(
 ; CHECK-NEXT:    call void @may_free()
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[S:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[S]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   call void @may_free()
@@ -610,9 +609,8 @@ define <4 x float> @load_v2f32_extract_insert_v4f32(ptr align 16 dereferenceable
 define <4 x float> @load_v2f32_extract_insert_v4f32_may_free(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v2f32_extract_insert_v4f32_may_free(
 ; CHECK-NEXT:    call void @may_free()
-; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   call void @may_free()

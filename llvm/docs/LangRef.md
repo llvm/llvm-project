@@ -3764,8 +3764,8 @@ can also be created by means not recognized by LLVM, e.g., by directly calling
 `mmap`. Those allocated objects are allowed to grow to the right (i.e.,
 keeping the same base address, but increasing their size) while maintaining the
 validity of existing pointers, as long as they always satisfy the properties
-described above. Currently, allocated objects are not permitted to grow to the
-left or to shrink, nor can they have holes.
+described above. Allocated objects are not permitted to grow to the left or to
+shrink, nor can they have holes.
 
 (objectlifetime)=
 
