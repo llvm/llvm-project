@@ -255,11 +255,12 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
-  // MOVUPS takes 1 less byte of code size. Only replace when
-  // there is no move domain-delay penalty on the target.
-  auto ProcessMOVUPDToMOVUPS = [&](unsigned NewOpc) -> bool {
-    if (!ST->hasNoDomainDelayMov() ||
-        !NewOpcPreferable(NewOpc, /*ReplaceInTie*/ true))
+  // MOVUPS/MOVAPS takes 1 less byte of code size. Only replace when
+  // there is no move domain-delay penalty on the target, or -Oz is set.
+  auto ProcessMOVPDToMOVPS = [&](unsigned NewOpc) -> bool {
+    assert(NewOpcPreferable(NewOpc) &&
+           "MOVUPS/MOVAPS should be preferred over MOVUPD/MOVAPD");
+    if (!ST->hasNoDomainDelayMov() && !MF.getFunction().hasMinSize())
       return false;
     LLVM_DEBUG(dbgs() << "Replacing: " << MI);
     MI.setDesc(TII->get(NewOpc));
@@ -710,11 +711,17 @@ bool X86FixupInstTuningImpl::processInstruction(
   case X86::VPSLLQZri:
     return ProcessShiftLeftToAdd(X86::VPADDQZrr);
   case X86::MOVUPDrr:
-    return ProcessMOVUPDToMOVUPS(X86::MOVUPSrr);
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrr);
   case X86::MOVUPDrm:
-    return ProcessMOVUPDToMOVUPS(X86::MOVUPSrm);
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrm);
   case X86::MOVUPDmr:
-    return ProcessMOVUPDToMOVUPS(X86::MOVUPSmr);
+    return ProcessMOVPDToMOVPS(X86::MOVUPSmr);
+  case X86::MOVAPDrr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrr);
+  case X86::MOVAPDrm:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrm);
+  case X86::MOVAPDmr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSmr);
 
   default:
     return false;
