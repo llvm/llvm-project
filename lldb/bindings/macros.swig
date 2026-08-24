@@ -44,8 +44,8 @@
     if (required_len <= 0)
       return std::string{};
 
-    std::string buf(required_len, '\0');
-    $self->Method(buf.data(), buf.size() + 1);
+    std::string buf(required_len - 1, '\0');
+    $self->Method(buf.data(), required_len);
 
     return buf;
   }
