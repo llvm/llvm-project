@@ -10,6 +10,8 @@
 // REQUIRES: host-has-gdb-with-python
 // UNSUPPORTED: android
 // UNSUPPORTED: availability-debugging-missing
+// LeakSanitizer does not work under ptrace
+// UNSUPPORTED: asan
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
