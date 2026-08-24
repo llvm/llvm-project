@@ -356,10 +356,11 @@ static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden, cl::sub(MergeSubcommand),
-                                 cl::desc("Generate random hotness values"));
+static cl::opt<bool> MemprofGenerateRandomHotness(
+    "memprof-random-hotness", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Generate random hotness values. Use -random-seed to set the seed "
+             "value, otherwise the constant default seed is used"));
 static cl::opt<unsigned>
     RandomSeed("random-seed", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
                cl::desc("Seed for the random number generator used by "
