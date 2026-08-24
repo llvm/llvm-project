@@ -1687,7 +1687,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     // However, load and store *are* legal.
     setOperationAction(ISD::LOAD, MVT::v2i32, Legal);
     setOperationAction(ISD::STORE, MVT::v2i32, Legal);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
 
     // And we need to promote i64 loads/stores into vector load/store
@@ -3169,6 +3169,22 @@ static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Idx = Op.getOperand(1);
+  assert(Vec.getSimpleValueType() == MVT::v2i32 && "Unexpected vector type");
+
+  // Constant indices are handled by the TableGen patterns.
+  if (isa<ConstantSDNode>(Idx))
+    return Op;
+
+  SDValue Even = DAG.getTargetExtractSubreg(SP::sub_even, DL, MVT::i32, Vec);
+  SDValue Odd = DAG.getTargetExtractSubreg(SP::sub_odd, DL, MVT::i32, Vec);
+  return DAG.getSelectCC(DL, Idx, DAG.getConstant(0, DL, Idx.getValueType()),
+                         Even, Odd, ISD::SETEQ);
+}
+
 SDValue SparcTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -3239,6 +3255,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_ROUND:           return LowerF128_FPROUND(Op, DAG, *this);
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:       return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return LowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
