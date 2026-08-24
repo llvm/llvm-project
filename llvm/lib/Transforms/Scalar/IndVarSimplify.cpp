@@ -642,7 +642,7 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
   // because at least an ADD is required to increment the induction variable. We
   // could compute more comprehensively the cost of all instructions on the
   // induction variable when necessary.
-  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   if (TTI && TTI->getArithmeticInstrCost(Instruction::Add, Ty, CostKind) >
                  TTI->getArithmeticInstrCost(Instruction::Add,
                                              Cast->getOperand(0)->getType(),
