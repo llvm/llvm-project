@@ -40,12 +40,6 @@ if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
 
-# Install GTest only if requested.
-set(BUILDTREE_ONLY BUILDTREE_ONLY)
-if (LLVM_INSTALL_GTEST)
-  set(BUILDTREE_ONLY "")
-endif ()
-
 if (LLVM_RUNTIMES_BUILD)
   # We cannot use llvm_gtest for the target; it would clash with
   # find_package(LLVM) with LLVM_EXPORT_GTEST=ON. Instead, we define an alias
@@ -53,7 +47,7 @@ if (LLVM_RUNTIMES_BUILD)
   # runtimes_gtest in an runtimes build.
   set(gtest_name "runtimes_gtest")
 
-  # This instance of GTest is use for unittests for the runtime libraries. It
+  # This instance of GTest is used for unittests for the runtime libraries. It
   # must not link to LLVMSupport (used for llvm::raw_ostream and llvm::cl
   # support) of the host build: It may be a different architecture and/or
   # using a different C++ ABI such as libcxx/libstdc++.
@@ -63,7 +57,7 @@ if (LLVM_RUNTIMES_BUILD)
   )
   target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
   target_link_libraries("${gtest_name}"
-    PUBLIC # STATIC -OR- PRIVATE for SHARED
+    PUBLIC
       ${LIBS}
   )
 
@@ -74,8 +68,15 @@ if (LLVM_RUNTIMES_BUILD)
     PUBLIC
       ${gtest_name}
   )
+  set_target_properties("${gtest_name}" "${gtest_name}_main" PROPERTIES FOLDER "Third-Party/Google Test")
 else()
   set(gtest_name "llvm_gtest")
+
+  # Install GTest only if requested.
+  set(BUILDTREE_ONLY BUILDTREE_ONLY)
+  if (LLVM_INSTALL_GTEST)
+    set(BUILDTREE_ONLY "")
+  endif ()
 
   add_llvm_library("${gtest_name}"
     googletest/src/gtest-all.cc
