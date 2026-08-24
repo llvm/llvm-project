@@ -330,22 +330,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
-/// Return the lowest address of pointer type \p PtrTy, i.e. a null pointer.
-/// Returns nullptr if it cannot be used as a lower bound.
-static const SCEV *getLowestAddress(Type *PtrTy, ScalarEvolution &SE,
-                                    const DataLayout &DL) {
-  if (!DL.getNullPtrValue(PtrTy->getPointerAddressSpace()).isZero())
-    return nullptr;
-  return SE.getSCEV(Constant::getNullValue(PtrTy));
-}
-
-/// Return the highest address of pointer type \p PtrTy.
-static const SCEV *getHighestAddress(Type *PtrTy, ScalarEvolution &SE,
-                                     const DataLayout &DL) {
-  return SE.getSCEV(ConstantExpr::getIntToPtr(
-      Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
-}
-
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -406,16 +390,21 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const SCEV *Start = AR->getStart();
     Type *PtrTy = AR->getType();
     if (SE->isKnownNegative(Step)) {
-      ScStart = LastAddr ? LastAddr : getLowestAddress(PtrTy, *SE, DL);
-      if (!ScStart)
-        return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
+      ScStart =
+          LastAddr
+              ? LastAddr
+              : SE->getSCEV(ConstantExpr::getIntToPtr(
+                    Constant::getNullValue(DL.getIndexType(PtrTy)), PtrTy));
       ScEnd = SE->getAddExpr(Start, EltSizeSCEV);
     } else if (SE->isKnownNonNegative(Step)) {
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would
       // wrap to the start of the address space.
-      ScEnd = LastAddr ? SE->getAddExpr(LastAddr, EltSizeSCEV)
-                       : getHighestAddress(PtrTy, *SE, DL);
+      ScEnd =
+          LastAddr
+              ? SE->getAddExpr(LastAddr, EltSizeSCEV)
+              : SE->getSCEV(ConstantExpr::getIntToPtr(
+                    Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
       if (!LastAddr)
         return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};

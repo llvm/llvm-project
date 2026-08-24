@@ -5,15 +5,26 @@ target datalayout = "po1:64:64"
 
 ; Tests with an address space that has an all-ones nullptr.
 
-; The step is negative and evaluating at the symbolic max BTC may wrap, so the
-; lowest accessed address is unknown and no runtime checks can be formed.
+; The step is negative and evaluating at the symbolic max BTC may wrap, so we
+; need a zero pointer as lower bound.
 define void @negative_step_all_ones_null(ptr addrspace(1) %P, ptr addrspace(1) %S) {
 ; CHECK-LABEL: 'negative_step_all_ones_null'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ptr.iv = phi ptr addrspace(1) [ %P, %entry ], [ %ptr.iv.next, %loop ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr addrspace(1) %S
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: null High: (4 + %P))
+; CHECK-NEXT:            Member: {%P,+,-4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
