@@ -110,7 +110,7 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "slsr"
-#define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE( DEBUG_TYPE "-rp", X)
+#define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp", X)
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -1499,16 +1499,17 @@ bool StraightLineStrengthReduce::basisTooFarInSameBlock(
 
 namespace {
 
-// TODO: Currently, I am considering (Basis, Cand) pair that are both in the same BB.
-//       The restriction may not be needed. 
+// TODO: Currently, I am considering (Basis, Cand) pair that are both in the
+// same BB.
+//       The restriction may not be needed.
 class RPFilter {
 public:
   using Candidate = StraightLineStrengthReduce::Candidate;
 
   RPFilter(const Function *F,
-           DenseMap<Instruction *, Candidate *> &PickedCandidateMap,
-           const TargetTransformInfo *TTI)
-      : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
+           DenseMap<Instruction *, Candidate *> &PickedCandidateMap)
+      //, const TargetTransformInfo *TTI)
+      : F(F), PickedCandidateMap(PickedCandidateMap) {} //, TTI(TTI) {}
   void run() {
     buildBBToNumCandsAndBasises(PickedCandidateMap);
     // TODO: 16 is an arbitrary threshold.
@@ -1525,18 +1526,18 @@ public:
         dbgs() << "MaxRP:" << BB.getName() << ":" << RP << "," << RPBackward << "\n";
       });
 #else
-      unsigned RPBackward = maxPressureInBlockBackward(BB, BBToLiveness[&BB].LiveIn,
-        BBToLiveness[&BB].LiveOut);
-      DEBUG_SLSR_RP(dbgs() << "MaxRPBackward:" << BB.getName() << ":" << RPBackward << "\n");
+      unsigned RPBackward = maxPressureInBlockBackward(
+          BB, BBToLiveness[&BB].LiveIn, BBToLiveness[&BB].LiveOut);
+      DEBUG_SLSR_RP(dbgs() << "MaxRPBackward:" << BB.getName() << ":"
+                           << RPBackward << "\n");
 #endif
-
     }
   }
 
 private:
   const Function *F;
   DenseMap<Instruction *, Candidate *> &PickedCandidateMap;
-  const TargetTransformInfo *TTI;
+  // const TargetTransformInfo *TTI;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>>
       BBToNumCandsAndBasises;
@@ -1734,9 +1735,10 @@ private:
         auto RW = regWeight(V);
         W += RW;
         if (IsDebugBlock && StoreCount == 32) {
-          DEBUG_SLSR_RP(
-                 {dbgs() << "regweight: " << "i: " << i << " value: " << *V
-                 << " RW: " << RW << ", ";});
+          DEBUG_SLSR_RP({
+            dbgs() << "regweight: " << "i: " << i << " value: " << *V
+                   << " RW: " << RW << ", ";
+          });
           // dbgs() << "W: " << W << "\n";
         }
 
@@ -1760,17 +1762,19 @@ private:
     return MaxW;
   }
 
-  // Return true if I is a candidate and its basis is in the same bb, false otherwise. 
-  bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR, DenseSet<const Value*> &SeenLastUse) const {
+  // Return true if I is a candidate and its basis is in the same bb, false
+  // otherwise.
+  bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR,
+                         DenseSet<const Value *> &SeenLastUse) const {
     auto It = PickedCandidateMap.find(I);
     if (It == PickedCandidateMap.end())
       return false;
 
-    // I is a Candidate 
+    // I is a Candidate
     const Instruction *Basis = It->second->Basis->Ins;
     if (Basis->getParent() == I->getParent()) {
       LiveSetWithSLSR.insert(Basis);
-      // I and its Basis are in the same bb. 
+      // I and its Basis are in the same bb.
 
       SeenLastUse.insert(Basis);
       return true;
@@ -1780,14 +1784,14 @@ private:
   }
 
   // TODO: Remove
-  void updateLiveSetWithSLSR(ValueSet &LiveSetWithSLSR, 
-                             const DenseSet<const Value*> &SeenLastUse, 
+  void updateLiveSetWithSLSR(ValueSet &LiveSetWithSLSR,
+                             const DenseSet<const Value *> &SeenLastUse,
                              const Instruction &I, const Value *Op) const {
     // LiveSet += {Cand.Basis} <-- Done already
-    // LiveSet -= {Op} if this is the last use of Op (i.e. SeenLastUse.contains(Op))
+    // LiveSet -= {Op} if this is the last use of Op (i.e.
+    // SeenLastUse.contains(Op))
     if (SeenLastUse.contains(Op))
       LiveSetWithSLSR.erase(Op);
-
   }
 
   unsigned maxPressureInBlockBackward(const BasicBlock &BB,
@@ -1795,36 +1799,37 @@ private:
                                       const ValueSet &LiveOut) const {
 
     // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
-    //       Could be a better-fitting data structure.                                          
+    //       Could be a better-fitting data structure.
     ValueSet LiveSet = LiveOut;
     unsigned MaxW = 0;
-    for (const Value *V : LiveSet) 
+    for (const Value *V : LiveSet)
       MaxW += regWeight(V);
 
     // Initial LiveSetWithSLSR is the same as LiveOut.
-    // SLSR changes 
+    // SLSR changes
     // Basis = ..
     // ..
-    // Cand = f(op1, op2, ..) 
+    // Cand = f(op1, op2, ..)
     //
     // to
     // Basis = ..
     // Cand = f(Basis, Delta, // possibly some of the original operands ..)
     //
     // We consider here only the case both Cand and Basis are in the same BB.
-    // Therefore, if an original operand of Cand is a liveout, it means it was used
-    // outside the BB, and will stay so. 
-    // Likewise, if a Basis is a liveout, it means it was used outside the BB,
-    // and will stay so. SLSR does not delete existing defs or create new defs.
+    // Therefore, if an original operand of Cand is a liveout, it means it was
+    // used outside the BB, and will stay so. Likewise, if a Basis is a liveout,
+    // it means it was used outside the BB, and will stay so. SLSR does not
+    // delete existing defs or create new defs.
     ValueSet LiveSetWithSLSR = LiveOut;
     unsigned MaxWWithSLSR = MaxW;
 
     // This is required for calculating LiveSetWithSLSR without updating IR.
     // IR is still in the original form.
-    // Intialize it with LiveOut. LiveOuts are never removed from LiveSetWithSLSR.
+    // Intialize it with LiveOut. LiveOuts are never removed from
+    // LiveSetWithSLSR.
     DenseSet<const Value *> SeenLastUse(LiveOut.begin(), LiveOut.end());
-      
-    // Scan BB backward 
+
+    // Scan BB backward
     for (const Instruction &I : reverse(BB)) {
       if (I.isDebugOrPseudoInst() || isa<PHINode>(&I))
         continue;
@@ -1834,12 +1839,14 @@ private:
         if (isRegisterLike(Op)) {
           LiveSet.insert(Op);
           if (IsCand && !SeenLastUse.contains(Op)) {
-            // Op is the last use. It will be replaced by Basis, so it isremoved from LiveSetWithSLSR.
-            // As a heuristic, we don't dicern which Op of I is replaced by Basis. 
-            // When IsCand is true, there is only reg-like one Op in practice.
+            // Op is the last use. It will be replaced by Basis, so it isremoved
+            // from LiveSetWithSLSR. As a heuristic, we don't dicern which Op of
+            // I is replaced by Basis. When IsCand is true, there is only
+            // reg-like one Op in practice.
             // TODO: Can further restrict by Candidate's type and DeltaKind.
             LiveSetWithSLSR.erase(Op);
-            DEBUG_SLSR_RP(dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op << " in inst " << I << "\n");
+            DEBUG_SLSR_RP(dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op
+                                 << " in inst " << I << "\n");
           } else {
             LiveSetWithSLSR.insert(Op);
           }
@@ -1864,7 +1871,8 @@ private:
       }
       MaxWWithSLSR = std::max(MaxWWithSLSR, W);
 
-      // Remove the def (Instruction) from LiveSet for the next upward instruction.
+      // Remove the def (Instruction) from LiveSet for the next upward
+      // instruction.
       if (!I.getType()->isVoidTy()) {
         LiveSet.erase(&I);
         LiveSetWithSLSR.erase(&I);
@@ -1900,7 +1908,8 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     if (Candidate *C = pickRewriteCandidate(I))
       PickedCandidateMap[I] = C;
 
-  RPFilter RPFilter(&F, PickedCandidateMap, TTI);
+  // RPFilter RPFilter(&F, PickedCandidateMap, TTI);
+  RPFilter RPFilter(&F, PickedCandidateMap);
   RPFilter.run();
 
 #if 0
