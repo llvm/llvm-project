@@ -409,14 +409,8 @@ __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")
 
 ## Managed Variables
 
-The `__managed__` attribute can be applied to a global variable to indicate that
-the variable's memory is accessible by both host and device.
-A managed variable is emitted as an undefined global symbol in the device binary
-and is registered with the HIP runtime by `__hipRegisterManagedVariable` in the
-module init functions.
-
-### Restrictions
-`__managed__` variables have the following restrictions:
+Clang currently implements the following diagnostics involving
+`__managed__` variables:
 
 - No dynamic initialization. Only constant initialization is permitted:
 
@@ -462,6 +456,14 @@ module init functions.
   }
   int *p = getX();                // No error emitted.
   ```
+
+A managed variable is accessible from both host and device and its host and
+device initializers must be consistent; otherwise the behavior is undefined.
+A managed variable is emitted as an undefined global symbol in the device binary
+and is registered with the HIP runtime by `__hipRegisterManagedVar` function
+call during device module loading. Clang replaces device accesses to
+a managed variable with loads from a pointer to a chunk of managed memory
+allocated by the HIP runtime.
 
 ## C++17 Class Template Argument Deduction (CTAD) Support
 
