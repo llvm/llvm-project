@@ -4743,15 +4743,24 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
     // Enumerate all top-level modules.
     SmallVector<Module *, 8> Modules;
     SemaRef.PP.getHeaderSearchInfo().collectAllModules(Modules);
-    Module *CurrentModule = SemaRef.getCurrentModule();
+    // Determine the primary module interface name of the current file's
+    // declared module, if any. Prefer Sema's view, but fall back to the
+    // preprocessor's module declaration state: module declarations are
+    // processed as preprocessor directives, so the preprocessor may know the
+    // declared module before Sema has acted on it (e.g. when completing an
+    // import right after the module declaration).
+    StringRef CurrentPrimary;
+    if (Module *CurrentModule = SemaRef.getCurrentModule())
+      CurrentPrimary = CurrentModule->getPrimaryModuleInterfaceName();
+    else if (SemaRef.PP.isInNamedModule())
+      CurrentPrimary = SemaRef.PP.getNamedModuleName().split(':').first;
     llvm::StringSet<> AddedModules;
     for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
       // Skip module partitions that don't belong to the current file's declared
       // module.
       if (Modules[I]->isModulePartition()) {
-        if (!CurrentModule ||
-            Modules[I]->getPrimaryModuleInterfaceName() !=
-                CurrentModule->getPrimaryModuleInterfaceName())
+        if (CurrentPrimary.empty() ||
+            Modules[I]->getPrimaryModuleInterfaceName() != CurrentPrimary)
           continue;
       }
       Builder.AddTypedTextChunk(
@@ -4773,8 +4782,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
       StringRef Name = Entry.first;
       // Apply the same partition filtering as above.
       if (auto [Primary, Partition] = Name.split(':'); !Partition.empty()) {
-        if (!CurrentModule ||
-            Primary != CurrentModule->getPrimaryModuleInterfaceName())
+        if (CurrentPrimary.empty() || Primary != CurrentPrimary)
           continue;
       }
       Builder.AddTypedTextChunk(Builder.getAllocator().CopyString(Name));

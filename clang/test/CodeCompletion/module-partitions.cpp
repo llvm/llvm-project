@@ -1,11 +1,11 @@
 // RUN: rm -rf %t && mkdir %t
 
 // Set up a partition of module M.
-// RUN: echo 'export module M:Part; export int mpart_func();' > %t/m-part.cppm
+// RUN: printf 'export module M:Part;\nexport int mpart_func();\n' > %t/m-part.cppm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/m-part.cppm -o %t/M-Part.pcm
 
 // Set up module N with a partition.
-// RUN: echo 'export module N:OtherPart; export int npart_func();' > %t/n-otherpart.cppm
+// RUN: printf 'export module N:OtherPart;\nexport int npart_func();\n' > %t/n-otherpart.cppm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/n-otherpart.cppm -o %t/N-OtherPart.pcm
 // RUN: printf 'export module N;\nexport import :OtherPart;\n' > %t/n.cppm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/n.cppm -fmodule-file=N:OtherPart=%t/N-OtherPart.pcm -o %t/N.pcm
