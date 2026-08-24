@@ -641,16 +641,14 @@ void BuiltinTypeMethodBuilder::createDecl() {
 
 Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
   ensureCompleteDecl();
-  CXXThisExpr *This = createThisExpr();
   FieldDecl *HandleField = DeclBuilder.getResourceHandleField();
-  return createMemberExpr(This, HandleField);
+  return createMemberExpr(createThisExpr(), HandleField);
 }
 
 Expr *BuiltinTypeMethodBuilder::getResourceCounterHandleExpr() {
   ensureCompleteDecl();
-  CXXThisExpr *This = createThisExpr();
   FieldDecl *HandleField = DeclBuilder.getResourceCounterHandleField();
-  return createMemberExpr(This, HandleField);
+  return createMemberExpr(createThisExpr(), HandleField);
 }
 
 template <typename T>
@@ -726,8 +724,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::concat(V Vec, S Scalar,
 }
 
 BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::returnThis() {
-  CXXThisExpr *ThisExpr = createThisExpr();
-  StmtsList.push_back(ThisExpr);
+  StmtsList.push_back(createThisExpr());
   return *this;
 }
 

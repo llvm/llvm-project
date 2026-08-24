@@ -4375,7 +4375,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
-    ASTContext &AST = SemaRef.getASTContext();
     QualType MainHandleTy = TheCall->getArg(0)->getType();
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
