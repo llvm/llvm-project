@@ -496,6 +496,15 @@ that is already conditionally held by another try-acquire is tracked separately:
 each is resolved by the branch on its own return value. Asserting the capability
 (`ASSERT_CAPABILITY`) upgrades it to held without a warning.
 
+Under `-Wthread-safety-beta`, a try-acquire additionally warns where the
+analysis loses track of its result -- at a branch merge with a path that does
+not hold the capability, or at the end of the function -- since the capability
+may then be leaked. That covers a result never used to determine success, and
+also one the analysis cannot follow to a branch: stored in a member or a
+parameter, or simply returned to the caller. One acquisition is reported once,
+at the first merge that loses it. Loop merges are exempt for now: a result may
+be checked on the paths around the loop.
+
 ```c++
 Mutex mu;
 int a GUARDED_BY(mu);
@@ -518,8 +527,9 @@ are likewise acquired conditionally, managed by the scoped object. A
 constructor has no return value to branch on, so uses under the guard remain
 diagnosed as unverified; but the destructor's conditional release -- it
 releases each capability only if the guard holds it -- pairs exactly with the
-conditional acquisition, so the guard's death discharges it silently and
-establishes that the capability is no longer held. An explicit `RELEASE`
+conditional acquisition, so the guard's death discharges it silently (no
+unchecked-result warning) and establishes that the capability is no longer
+held. An explicit `RELEASE`
 member function, by contrast, demands an unconditional release (releasing a
 guard that does not hold the capability is a runtime error) and warns that the
 capability may not be held. A try-acquire made directly on the underlying

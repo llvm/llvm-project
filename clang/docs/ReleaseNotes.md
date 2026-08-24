@@ -554,6 +554,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   guard warns that the capability may not be held. Some diagnostics under
   `-Wthread-safety` change accordingly.
 
+- Thread safety analysis has a new `-Wthread-safety-beta` diagnostic for a
+  try-acquire whose result the analysis never sees checked: the capability may
+  be leaked, and the warning is reported where the analysis loses track of the
+  result, or at the end of the function. One acquisition is reported once.
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
