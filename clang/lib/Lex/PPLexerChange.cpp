@@ -616,9 +616,6 @@ bool Preprocessor::HandleEndOfTokenLexer(Token &Result) {
   return HandleEndOfFile(Result, true);
 }
 
-/// RemoveTopOfLexerStack - Pop the current lexer/macro exp off the top of the
-/// lexer stack.  This should only be used in situations where the current
-/// state of the top-of-stack lexer is unknown.
 void Preprocessor::RemoveTopOfLexerStack() {
   assert(!IncludeMacroStack.empty() && "Ran out of stack entries to load");
 
