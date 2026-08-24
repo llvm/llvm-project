@@ -33932,6 +33932,7 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
       ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
       Store->getMask(), Store->getMask());
+
   SDValue CompressedValue =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
                   Store->getMask(), DAG.getPOISON(VT));
