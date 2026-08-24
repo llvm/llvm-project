@@ -1237,7 +1237,8 @@ TEST(WalkAST, ObjCBridgedCastExprBridgeRetained) {
 
 TEST(WalkAST, ObjCTollFreeBridgeCStyleCast) {
   testWalk(R"objc(
-    typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStringRef;
+    typedef const struct __attribute__((objc_bridge(NSString)))
+      __CFString * CFStringRef;
     @interface $explicit^NSString
     @end
   )objc",
@@ -1265,6 +1266,19 @@ TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
     }
   )objc",
            {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCImplicitPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+  )objc",
+           R"objc(
+    NSString *foo(void *p) {
+      return ^p;
+    }
+  )objc",
+           {"-x", "objective-c"});
 }
 
 TEST(WalkAST, ObjCSelectorExprPropertyGetter) {
@@ -1511,10 +1525,10 @@ TEST(WalkAST, ObjCEncodeExpr) {
            R"objc(
     void test() {
       const char *enc = @encode(struct ^MyStruct);
-    }
+     }
   )objc",
            {"-x", "objective-c"});
-}
+}     
 
 } // namespace
 } // namespace clang::include_cleaner

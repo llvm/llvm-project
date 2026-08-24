@@ -539,6 +539,7 @@ public:
     const auto *SrcPtr = SourceType->getAs<ObjCObjectPointerType>();
     const auto *DestPtr = DestType->getAs<ObjCObjectPointerType>();
 
+    // Handles non-arc CPointer to ObjCPointer casts.
     if (E->getCastKind() == CK_CPointerToObjCPointerCast) {
       if (DestPtr && DestPtr->getInterfaceDecl())
         report(E->getExprLoc(), DestPtr->getInterfaceDecl(), RefType::Implicit);
