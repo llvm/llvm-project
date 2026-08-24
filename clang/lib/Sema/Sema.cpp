@@ -1209,8 +1209,8 @@ static void DiagnoseInvalidFlagEnumOperators(Sema &S, const EnumDecl *ED) {
 
   QualType T = S.Context.getCanonicalTagType(ED);
 
-  Expr *LHS = new (S.Context) OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
-  Expr *RHS = new (S.Context) OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
+  auto LHS = OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
+  auto RHS = OpaqueValueExpr(SourceLocation(), T, VK_PRValue);
 
   OverloadedOperatorKind OPs[] = {OO_Pipe, OO_Amp, OO_Caret, OO_Tilde};
   for (const auto OP : OPs) {
@@ -1224,10 +1224,10 @@ static void DiagnoseInvalidFlagEnumOperators(Sema &S, const EnumDecl *ED) {
 
     SmallVector<Expr *, 2> Args;
     if (OP == OO_Tilde) {
-      Args = {LHS};
+      Args = {&LHS};
       S.LookupOverloadedUnaryOp(CandidateSet, OP, R.asUnresolvedSet(), Args);
     } else {
-      Args = {LHS, RHS};
+      Args = {&LHS, &RHS};
       S.LookupOverloadedBinOp(CandidateSet, OP, R.asUnresolvedSet(), Args);
     }
 
