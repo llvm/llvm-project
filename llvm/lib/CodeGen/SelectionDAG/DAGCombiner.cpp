@@ -16453,6 +16453,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   }
 
   // fold (aext (load x)) -> (aext (truncate (extload x)))
+  // fold (aext (freeze (load x))) -> (aext (truncate (freeze (extload x))))
   // None of the supported targets knows how to perform load and any_ext
   // on vectors in one instruction, so attempt to fold to zext instead.
   if (VT.isVector()) {
@@ -16461,33 +16462,43 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
             tryToFoldExtOfLoad(DAG, *this, TLI, VT, LegalOperations, N, N0,
                                ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
       return foldedExt;
-  } else if (ISD::isNON_EXTLoad(N0.getNode()) &&
-             ISD::isUNINDEXEDLoad(N0.getNode())) {
-    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-    if (TLI.isLoadLegalOrCustom(VT, N0.getValueType(), LN0->getAlign(),
-                                LN0->getAddressSpace(), ISD::EXTLOAD, false)) {
-      bool DoXform = true;
-      SmallVector<SDNode *, 4> SetCCs;
-      if (!N0.hasOneUse())
-        DoXform =
-            ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
-      if (DoXform) {
-        SDValue ExtLoad = DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
-                                         LN0->getBasePtr(), N0.getValueType(),
-                                         LN0->getMemOperand());
-        ExtendSetCCUses(SetCCs, N0, ExtLoad, ISD::ANY_EXTEND);
-        // If the load value is used only by N, replace it via CombineTo N.
-        bool NoReplaceTrunc = N0.hasOneUse();
-        CombineTo(N, ExtLoad);
-        if (NoReplaceTrunc) {
-          DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-          recursivelyDeleteUnusedNodes(LN0);
-        } else {
-          SDValue Trunc =
-              DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
-          CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+  } else {
+    bool Frozen = N0.getOpcode() == ISD::FREEZE;
+    SDValue LoadOp = Frozen ? N0.getOperand(0) : N0;
+    EVT LoadVT = LoadOp.getValueType();
+    // TODO: Support multiple uses of the load when frozen.
+    if (ISD::isNON_EXTLoad(LoadOp.getNode()) &&
+        ISD::isUNINDEXEDLoad(LoadOp.getNode()) &&
+        (!Frozen || LoadOp->hasNUsesOfValue(1, 0))) {
+      LoadSDNode *LN0 = cast<LoadSDNode>(LoadOp);
+      if (TLI.isLoadLegalOrCustom(VT, LoadVT, LN0->getAlign(),
+                                  LN0->getAddressSpace(), ISD::EXTLOAD,
+                                  false)) {
+        bool DoXform = true;
+        SmallVector<SDNode *, 4> SetCCs;
+        // N0 is a Load and has multiple uses.
+        if (!Frozen && !N0.hasOneUse())
+          DoXform =
+              ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
+        if (DoXform) {
+          SDValue ExtLoad =
+              DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
+                             LN0->getBasePtr(), LoadVT, LN0->getMemOperand());
+          SDValue Res = Frozen ? DAG.getFreeze(ExtLoad) : ExtLoad;
+          ExtendSetCCUses(SetCCs, N0, Res, ISD::ANY_EXTEND);
+          // If the load or freeze value is used only by N, replace it via
+          // CombineTo N.
+          bool NoReplaceTrunc = N0.hasOneUse();
+          CombineTo(N, Res);
+          if (NoReplaceTrunc) {
+            DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+            recursivelyDeleteUnusedNodes(N0.getNode());
+          } else {
+            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0), LoadVT, Res);
+            CombineTo(LN0, Trunc, ExtLoad.getValue(1));
+          }
+          return SDValue(N, 0); // Return N so it doesn't get rechecked!
         }
-        return SDValue(N, 0); // Return N so it doesn't get rechecked!
       }
     }
   }
