@@ -72,11 +72,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE FIXUPBW_NAME
 
-static cl::opt<bool> EliminateRedundantZExts(
-    "fixup-bw-eliminate-redundant-zext",
-    cl::desc("Remove zero extends of already zero extended values"),
-    cl::init(true), cl::Hidden);
-
 namespace {
 class X86FixupBWInstImpl {
 public:
@@ -116,7 +111,7 @@ private:
   MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
 
   /// Remove the zero extends in \p MBB of values that an earlier instruction
-  /// in the same block (widened by this pass) has already zero extended. 
+  /// in the same block (widened by this pass) has already zero extended.
   void eliminateRedundantZeroExtends(MachineBasicBlock &MBB);
 
   MachineFunction *MF = nullptr;
@@ -183,11 +178,8 @@ bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
 
   // Process all basic blocks.
-  for (auto &MBB : MF) {
+  for (auto &MBB : MF)
     processBasicBlock(MF, MBB);
-    if (EliminateRedundantZExts)
-      eliminateRedundantZeroExtends(MBB);
-  }
 
   LLVM_DEBUG(dbgs() << "End X86FixupBWInsts\n";);
 
@@ -575,6 +567,9 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
     MBB.insert(MI, NewMI);
     MBB.erase(MI);
   }
+
+  // Finally, clean up any zero extends made redundant by widening.
+  eliminateRedundantZeroExtends(MBB);
 }
 
 bool X86FixupBWInstLegacy::runOnMachineFunction(MachineFunction &MF) {
