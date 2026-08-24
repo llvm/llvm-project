@@ -2351,7 +2351,7 @@ func.func @fold_unpack_cast_inner_tile_inlined_mismatch(%arg0: tensor<1x3x8x1xi3
 
 // -----
 
-// CHECK-LABEL: func.func @no_fold_pack_cast_inner_tile_dynamic_arg
+// CHECK-LABEL: func.func @negative_fold_pack_cast_inner_tile_dynamic_arg
 // CHECK-SAME:  %[[SRC:.+]]: tensor<8x3xi32>, %[[TILE:.+]]: index, %[[DEST:.+]]: tensor<?x3x?x1xi32>
 // CHECK:       %[[PACK:.+]] = linalg.pack
 // CHECK:         padding_value
@@ -2359,7 +2359,7 @@ func.func @fold_unpack_cast_inner_tile_inlined_mismatch(%arg0: tensor<1x3x8x1xi3
 // CHECK:         inner_tiles = [%[[TILE]], 1]
 // CHECK:         into %[[DEST]] : tensor
 // CHECK:       return %[[PACK]] : tensor<?x3x?x1xi32>
-func.func @no_fold_pack_cast_inner_tile_dynamic_arg(%arg0: tensor<8x3xi32>, %arg1: index,
+func.func @negative_fold_pack_cast_inner_tile_dynamic_arg(%arg0: tensor<8x3xi32>, %arg1: index,
     %dest: tensor<?x3x?x1xi32>) -> tensor<?x3x?x1xi32> {
   %c0 = arith.constant 0 : i32
   %cast = tensor.cast %arg0 : tensor<8x3xi32> to tensor<?x?xi32>
@@ -2373,7 +2373,7 @@ func.func @no_fold_pack_cast_inner_tile_dynamic_arg(%arg0: tensor<8x3xi32>, %arg
 
 // -----
 
-// CHECK-LABEL: func.func @no_fold_pack_cast_inner_tile_inlined_mismatch
+// CHECK-LABEL: func.func @negative_fold_pack_cast_inner_tile_inlined_mismatch
 // CHECK-DAG:   %[[C256:.+]] = arith.constant 256 : index
 // CHECK:       %[[PACK:.+]] = linalg.pack
 // CHECK:         padding_value
@@ -2381,7 +2381,7 @@ func.func @no_fold_pack_cast_inner_tile_dynamic_arg(%arg0: tensor<8x3xi32>, %arg
 // CHECK:         inner_tiles = [%[[C256]], 1]
 // CHECK:         into %{{.+}} : tensor
 // CHECK:       return %[[PACK]] : tensor<?x3x?x1xi32>
-func.func @no_fold_pack_cast_inner_tile_inlined_mismatch(%arg0: tensor<8x3xi32>,
+func.func @negative_fold_pack_cast_inner_tile_inlined_mismatch(%arg0: tensor<8x3xi32>,
     %dest: tensor<?x3x?x1xi32>) -> tensor<?x3x?x1xi32> {
   %c0 = arith.constant 0 : i32
   %c256 = arith.constant 256 : index
@@ -2392,4 +2392,357 @@ func.func @no_fold_pack_cast_inner_tile_inlined_mismatch(%arg0: tensor<8x3xi32>,
     inner_tiles = [%c256, 1]
     into %dest : tensor<?x?xi32> -> tensor<?x3x?x1xi32>
   return %pack : tensor<?x3x?x1xi32>
+}
+
+// CHECK-LABEL: func @fold_consecutive_scalar_mul_f32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xf32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<6.000000e+00> : tensor<4x8xf32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xf32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xf32>, tensor<4x8xf32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xf32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_mul_f32(%arg0: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %cst2 = arith.constant dense<2.0> : tensor<4x8xf32>
+  %cst3 = arith.constant dense<3.0> : tensor<4x8xf32>
+  %empty = tensor.empty() : tensor<4x8xf32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%arg0, %cst2 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%mul1, %cst3 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %mul2 : tensor<4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_mul_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<15> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_mul_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%mul1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %mul2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_mul_named_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<15> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.mul
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>) -> tensor<4x8xi32>
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_mul_named_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %mul1 = linalg.mul ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %mul2 = linalg.mul ins(%mul1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %mul2 : tensor<4x8xi32>
+}
+
+// -----
+
+// Scalar constant on the left-hand side.
+// CHECK-LABEL: func @fold_scalar_mul_lhs
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xf32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<1.200000e+01> : tensor<4x8xf32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xf32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xf32>, tensor<4x8xf32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xf32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_scalar_mul_lhs(%arg0: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %cst4 = arith.constant dense<4.0> : tensor<4x8xf32>
+  %cst3 = arith.constant dense<3.0> : tensor<4x8xf32>
+  %empty = tensor.empty() : tensor<4x8xf32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%cst4, %arg0 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%cst3, %mul1 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %mul2 : tensor<4x8xf32>
+}
+
+// -----
+
+// Do not fold when the inner mul has multiple uses.
+// CHECK-LABEL: func @negative_fold_multi_use
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+func.func @negative_fold_multi_use(%arg0: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %cst2 = arith.constant dense<2.0> : tensor<4x8xf32>
+  %cst3 = arith.constant dense<3.0> : tensor<4x8xf32>
+  %empty = tensor.empty() : tensor<4x8xf32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%arg0, %cst2 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%mul1, %cst3 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  // Extra use of mul1 prevents folding.
+  %add = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%mul2, %mul1 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %add : tensor<4x8xf32>
+}
+
+// -----
+
+// Do not fold when neither operand is a scalar constant.
+// CHECK-LABEL: func @negative_fold_non_const
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+func.func @negative_fold_non_const(%arg0: tensor<4x8xf32>, %arg1: tensor<4x8xf32>,
+                             %arg2: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  %empty = tensor.empty() : tensor<4x8xf32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%arg0, %arg1 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%mul1, %arg2 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%empty : tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %mul2 : tensor<4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_add_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<8> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_add_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %add1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %add2 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%add1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %add2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_add_named_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<8> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.add
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>) -> tensor<4x8xi32>
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_add_named_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %add1 = linalg.add ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %add2 = linalg.add ins(%add1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %add2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_max_signed_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<9> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_max_signed_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst9 = arith.constant dense<9> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %max1 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %max2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%max1, %cst9 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %max2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_max_named_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<9> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.max
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>) -> tensor<4x8xi32>
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_max_named_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst9 = arith.constant dense<9> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %max1 = linalg.max ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %max2 = linalg.max ins(%max1, %cst9 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %max2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_sub_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<8> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_sub_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %sub1 = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %sub2 = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%sub1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %sub2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_sub_named_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<8> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.sub
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>) -> tensor<4x8xi32>
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_sub_named_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %sub1 = linalg.sub ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %sub2 = linalg.sub ins(%sub1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %sub2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_min_signed_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<3> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_min_signed_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %min1 = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %min2 = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+    ins(%min1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %min2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_min_named_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<3> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.min
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>) -> tensor<4x8xi32>
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_min_named_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %min1 = linalg.min ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %min2 = linalg.min ins(%min1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %min2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_max_unsigned_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<9> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<max_unsigned>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_max_unsigned_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst9 = arith.constant dense<9> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %max1 = linalg.elementwise kind=#linalg.elementwise_kind<max_unsigned>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %max2 = linalg.elementwise kind=#linalg.elementwise_kind<max_unsigned>
+    ins(%max1, %cst9 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %max2 : tensor<4x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_consecutive_scalar_min_unsigned_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<3> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<min_unsigned>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_min_unsigned_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant dense<5> : tensor<4x8xi32>
+  %cst3 = arith.constant dense<3> : tensor<4x8xi32>
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %min1 = linalg.elementwise kind=#linalg.elementwise_kind<min_unsigned>
+    ins(%arg0, %cst5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %min2 = linalg.elementwise kind=#linalg.elementwise_kind<min_unsigned>
+    ins(%min1, %cst3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %min2 : tensor<4x8xi32>
 }
