@@ -4173,10 +4173,11 @@ happens-before must be perfectly overlapping to act atomically.
     the relevant modification order.
 
     Atomic accesses that are `monotonic` (or stronger) satisfy coherence rules:
-    - read-read coherence: If one atomic read happens before another
-        perfectly overlapping atomic read and both are at least
-        `monotonic`, the later read must not see an earlier value in the
-        address's modification order.
+    - read-read coherence: If an atomic read R1 happens before another
+        perfectly overlapping atomic read R2, R1 reads from a
+        perfectly overlapping atomic write W, and R1, R2, and W are all
+        at least `monotonic`, then R2 must not read from writes that are
+        earlier than W in the address's modification order.
     - read-write coherence: If an atomic read R happens before a
         perfectly overlapping atomic write W and both are at least
         `monotonic`, R must not read from writes that are later than W
