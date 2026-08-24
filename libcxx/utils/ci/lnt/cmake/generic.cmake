@@ -1,0 +1,1 @@
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "")
