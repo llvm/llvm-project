@@ -10,7 +10,7 @@
 define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) {
 ; GFX7-HSA-LABEL: define amdgpu_kernel void @kern_lds_ptr(
 ; GFX7-HSA-SAME: ptr addrspace(3) [[LDS:%.*]]) {
-; GFX7-HSA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; GFX7-HSA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nofreeobj nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GFX7-HSA-NEXT:    [[LDS_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_LDS_PTR_KERNARG_SEGMENT]], i64 0
 ; GFX7-HSA-NEXT:    [[LDS_LOAD:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[LDS_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
 ; GFX7-HSA-NEXT:    store i32 0, ptr addrspace(3) [[LDS_LOAD]], align 4
@@ -18,7 +18,7 @@ define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) {
 ;
 ; GFX7-MESA-LABEL: define amdgpu_kernel void @kern_lds_ptr(
 ; GFX7-MESA-SAME: ptr addrspace(3) [[LDS:%.*]]) {
-; GFX7-MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; GFX7-MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nofreeobj nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GFX7-MESA-NEXT:    [[LDS_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_LDS_PTR_KERNARG_SEGMENT]], i64 36
 ; GFX7-MESA-NEXT:    [[LDS_LOAD:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[LDS_KERNARG_OFFSET]], align 4, !invariant.load [[META0:![0-9]+]]
 ; GFX7-MESA-NEXT:    store i32 0, ptr addrspace(3) [[LDS_LOAD]], align 4
@@ -26,13 +26,13 @@ define amdgpu_kernel void @kern_lds_ptr(ptr addrspace(3) %lds) {
 ;
 ; GFX6-HSA-LABEL: define amdgpu_kernel void @kern_lds_ptr(
 ; GFX6-HSA-SAME: ptr addrspace(3) [[LDS:%.*]]) {
-; GFX6-HSA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; GFX6-HSA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nofreeobj nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GFX6-HSA-NEXT:    store i32 0, ptr addrspace(3) [[LDS]], align 4
 ; GFX6-HSA-NEXT:    ret void
 ;
 ; GFX6-MESA-LABEL: define amdgpu_kernel void @kern_lds_ptr(
 ; GFX6-MESA-SAME: ptr addrspace(3) [[LDS:%.*]]) {
-; GFX6-MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; GFX6-MESA-NEXT:    [[KERN_LDS_PTR_KERNARG_SEGMENT:%.*]] = call nofreeobj nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; GFX6-MESA-NEXT:    store i32 0, ptr addrspace(3) [[LDS]], align 4
 ; GFX6-MESA-NEXT:    ret void
 ;
