@@ -4,7 +4,7 @@
 define i64 @anyext_freeze_load_i8(ptr %p) {
 ; CHECK-LABEL: anyext_freeze_load_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %load = load i8, ptr %p, align 4
@@ -17,7 +17,7 @@ define i64 @anyext_freeze_load_i8(ptr %p) {
 define i32 @anyext_freeze_load_i16(ptr %p) {
 ; CHECK-LABEL: anyext_freeze_load_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    andl $7, %eax
 ; CHECK-NEXT:    retq
   %load = load i16, ptr %p, align 4
@@ -30,8 +30,8 @@ define i32 @anyext_freeze_load_i16(ptr %p) {
 define i64 @anyext_freeze_load_i8_multiuse_freeze(ptr %p, ptr %q) {
 ; CHECK-LABEL: anyext_freeze_load_i8_multiuse_freeze:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movb %cl, (%rsi)
 ; CHECK-NEXT:    retq
@@ -46,8 +46,8 @@ define i64 @anyext_freeze_load_i8_multiuse_freeze(ptr %p, ptr %q) {
 define i64 @anyext_freeze_load_i8_multiuse_load(ptr %p, ptr %q) {
 ; CHECK-LABEL: anyext_freeze_load_i8_multiuse_load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    movb %cl, (%rsi)
 ; CHECK-NEXT:    retq
