@@ -195,6 +195,9 @@ func.func @source_and_result_mismatch(%arg0 : f32) -> vector<1xi1> {
 
 // -----
 
+// Verify that the elementwise computation is performed on the lowest-rank
+// vector and only the result is broadcast to the original shape.
+//
 // CHECK-LABEL: func.func @broadcast_vector_and_scalar_cmpf(
 //  CHECK-SAME: %[[ARG0:.*]]: f32, %[[ARG1:.*]]: vector<4xf32>) -> vector<1x4xi1>
 //       CHECK: %[[ARG0_BCAST:.*]] = vector.broadcast %[[ARG0]] : f32 to vector<4xf32>
@@ -245,8 +248,11 @@ func.func @fma_mixed_scalar_and_vector_broadcast_source(%arg0: vector<4xf32>, %a
 
 // -----
 
-// The vector source may occur after a scalar source. It still determines the
-// shape used for the smaller FMA.
+// Verify that the elementwise computation is performed on the lowest-rank
+// vector and only the result is broadcast to the original shape.
+//
+// The vector source may occur after a scalar source. The later vector source
+// still determines the shape used for the smaller FMA.
 
 // CHECK-LABEL: func.func @fma_mixed_scalar_first_broadcast_source(
 //  CHECK-SAME:   %[[ARG0:.*]]: f32, %[[ARG1:.*]]: vector<4xf32>, %[[ARG2:.*]]: vector<4xf32>)

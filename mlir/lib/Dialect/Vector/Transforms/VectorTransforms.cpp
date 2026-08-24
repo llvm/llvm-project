@@ -1046,9 +1046,10 @@ struct ReorderElementwiseOpsOnBroadcast final
 
     Type resultElemType = resultType.getElementType();
 
-    // Prefer a vector source when one is available. This is important for
-    // mixed scalar/vector broadcasts: the vector source determines the shape
-    // to which the scalar is promoted.
+    // Select the source shape for the reordered computation. Prefer the first
+    // non-constant vector source so that scalar sources can be broadcast to its
+    // shape. The compatibility check below ensures that all vector sources have
+    // the same shape and scalable dimensions. 
     Value broadcastSource;
     Value firstBroadcastSource;
     for (Value operand : op->getOperands()) {
@@ -1067,6 +1068,7 @@ struct ReorderElementwiseOpsOnBroadcast final
         break;
       }
     }
+    // If all non-constant operands are scalar, choose the first source.
     if (!broadcastSource)
       broadcastSource = firstBroadcastSource;
     if (!broadcastSource)
