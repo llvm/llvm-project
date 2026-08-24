@@ -92,6 +92,7 @@ static bool removeUnusedResources(Function &F) {
   for (auto *Instr : DeadInstr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Instr)) {
       assert(isResourceHandleCreation(II->getIntrinsicID()));
+      // A heap resource does not have an associated global variable to remove.
       if (II->getIntrinsicID() == Intrinsic::dx_resource_handlefromheap)
         continue;
       const unsigned ResourceNameOpIndex = 4;
