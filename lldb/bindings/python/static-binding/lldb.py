@@ -18603,12 +18603,29 @@ class SBValue(object):
             Returns whether this value can be modified through SetValueFromCString()
             or SetData().
 
+            Deprecated, use CanSet() instead, which reports why the value is not
+            writable.
+
             Returns False when the value is not writable. An example would be a
             variable value reconstructed from debug info via a computation or a constant.
             A True result does not guarantee a write will succeed; other
             runtime conditions may still prevent a successful write.
         """
         return _lldb.SBValue_CanSetValue(self)
+
+    def CanSet(self):
+        r"""
+        CanSet(SBValue self) -> SBError
+
+            Returns whether this value can be modified through SetValueFromCString()
+            or SetData().
+
+            Returns an SBError describing why the value is not writable. An example
+            would be a variable value reconstructed from debug info via a computation
+            or a constant. A success result does not guarantee a write will succeed;
+            other runtime conditions may still prevent a successful write.
+        """
+        return _lldb.SBValue_CanSet(self)
 
     def GetTypeFormat(self):
         r"""GetTypeFormat(SBValue self) -> SBTypeFormat"""
@@ -19073,7 +19090,7 @@ class SBValue(object):
     type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
     size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
     is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
-    format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
+    format = property(GetFormat, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
     value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
     value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
     changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
