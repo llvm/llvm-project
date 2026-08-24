@@ -75,13 +75,12 @@ bb3:
 define void @test_ult_rhsc_invalid_cond(i8 %x, i8 %y) {
 ; CHECK-LABEL: define void @test_ult_rhsc_invalid_cond(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[VAL:%.*]] = add nsw i8 [[X]], -2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y]], 11
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[VAL]], i8 6
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i8 [[X]], i8 8
 ; CHECK-NEXT:    switch i8 [[COND]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i8 0, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 10, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 13, label [[BB3]]
+; CHECK-NEXT:      i8 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 12, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 15, label [[BB3]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @func1()
@@ -154,6 +153,335 @@ bb3:
   unreachable
 }
 
+define void @remove_redundant_binop_add(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_add(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND_INV:%.*]] = icmp ult i8 [[LHS]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND_INV]], i8 2, i8 [[VALUE]]
+; CHECK-NEXT:    switch i8 [[TMP1]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 2, label [[BB1]]
+; CHECK-NEXT:      i8 3, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 4, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = add nuw nsw i8 %value, 25
+  %select = select i1 %cond, i8 %binop, i8 27
+  switch i8 %select, label %bb1 [
+  i8 27, label %bb1
+  i8 28, label %bb2
+  i8 29, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_binop_sub(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_sub(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 [[VALUE]], i8 0
+; CHECK-NEXT:    switch i8 [[TMP1]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 0, label [[BB1]]
+; CHECK-NEXT:      i8 1, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 2, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = sub nuw nsw i8 %value, 10
+  %select = select i1 %cond, i8 %binop, i8 -10
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_binop_multiuse_binop_negative(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_multiuse_binop_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[BINOP:%.*]] = add nsw i8 [[VALUE]], -10
+; CHECK-NEXT:    call void @use(i8 [[BINOP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 -10
+; CHECK-NEXT:    switch i8 [[TMP1]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = sub nuw nsw i8 %value, 10
+  call void @use(i8 %binop)
+  %select = select i1 %cond, i8 %binop, i8 -10
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_binop_unknown_binop_negative(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_unknown_binop_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[BINOP:%.*]] = mul nuw nsw i8 [[VALUE]], 10
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 -10
+; CHECK-NEXT:    switch i8 [[SELECT]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = mul nuw nsw i8 %value, 10
+  %select = select i1 %cond, i8 %binop, i8 -10
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_binop_no_binop_negative(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_no_binop_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[VALUE]], i8 -10
+; CHECK-NEXT:    switch i8 [[SELECT]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %select = select i1 %cond, i8 %value, i8 -10
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_binop_multiuse_select_negative(i8 %lhs, i8 %value) {
+; CHECK-LABEL: define void @remove_redundant_binop_multiuse_select_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[BINOP:%.*]] = add nsw i8 [[VALUE]], -10
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 -10
+; CHECK-NEXT:    call void @use(i8 [[SELECT]])
+; CHECK-NEXT:    switch i8 [[SELECT]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = sub nuw nsw i8 %value, 10
+  %select = select i1 %cond, i8 %binop, i8 -10
+  call void @use(i8 %select)
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @redundant_binop_variable_binop_negative(i8 %lhs, i8 %value, i8 %rhs) {
+; CHECK-LABEL: define void @redundant_binop_variable_binop_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]], i8 [[RHS:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[BINOP:%.*]] = sub nuw nsw i8 [[VALUE]], [[RHS]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 -10
+; CHECK-NEXT:    switch i8 [[SELECT]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = sub nuw nsw i8 %value, %rhs
+  %select = select i1 %cond, i8 %binop, i8 -10
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
+define void @remove_redundant_op_variable_select_negative(i8 %lhs, i8 %value, i8 %falseVal) {
+; CHECK-LABEL: define void @remove_redundant_op_variable_select_negative(
+; CHECK-SAME: i8 [[LHS:%.*]], i8 [[VALUE:%.*]], i8 [[FALSEVAL:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i8 [[LHS]], 1
+; CHECK-NEXT:    [[BINOP:%.*]] = add nsw i8 [[VALUE]], -10
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i8 [[BINOP]], i8 [[FALSEVAL]]
+; CHECK-NEXT:    switch i8 [[SELECT]], label [[BB1:%.*]] [
+; CHECK-NEXT:      i8 -10, label [[BB1]]
+; CHECK-NEXT:      i8 -9, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 -8, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+  %cond = icmp samesign ugt i8 %lhs, 1
+  %binop = sub nuw nsw i8 %value, 10
+  %select = select i1 %cond, i8 %binop, i8 %falseVal
+  switch i8 %select, label %bb1 [
+  i8 -10, label %bb1
+  i8 -9, label %bb2
+  i8 -8, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
 declare void @func1()
 declare void @func2()
 declare void @func3()
+declare void @use(i8)
