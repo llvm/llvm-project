@@ -528,6 +528,8 @@ features cannot lower the translation-unit ABI level;
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
+- Allow redeclaration lookup to consider conversion function templates allowing Clang to match an in-class specialization such as `template<> operator int()` against a prior conversion function template `template<class T> operator T()`.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
