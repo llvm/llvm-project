@@ -3740,7 +3740,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+unsigned getLdsGranularityEncodingDw(const MCSubtargetInfo &ST) {
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 64;
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
@@ -3752,6 +3752,16 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 512;
   return 64; // In sync with getAddressableLocalMemorySize
+}
+
+/// Returns the actual LDS allocation block size in dwords. This can
+/// be different from the value expected in the kernel metadata.
+unsigned getLdsGranularityAllocDw(const MCSubtargetInfo &ST) {
+  if (hasGFX10_3Insts(ST) &&
+      ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
+    return 256;
+
+  return getLdsGranularityEncodingDw(ST);
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
