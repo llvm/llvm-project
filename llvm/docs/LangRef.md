@@ -4184,8 +4184,8 @@ happens-before must be perfectly overlapping to act atomically.
         in the address's modification order.
     - write-read coherence: If an atomic read R happens after a
         perfectly overlapping atomic write W and both are at least
-        `monotonic`, R must not read from from writes that are earlier
-        than W in the address's modification order.
+        `monotonic`, R must not read from writes that are earlier than W
+        in the address's modification order.
 
     This disallows reordering of perfectly
     overlapping `monotonic` (or stronger) operations. If an address is
