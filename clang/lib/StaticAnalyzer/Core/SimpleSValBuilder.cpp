@@ -593,8 +593,10 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return AsNN();
       }
 
-      if (Status == llvm::APFloat::opOK && isModeledFloatValue(Result))
-        return makeFloatVal(Result);
+      if (Status == llvm::APFloat::opOK) {
+        if (auto Folded = makeFloatVal(Result))
+          return *Folded;
+      }
 
       return AsNN();
     }

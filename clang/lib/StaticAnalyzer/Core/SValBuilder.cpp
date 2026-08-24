@@ -67,11 +67,10 @@ DefinedOrUnknownSVal SValBuilder::makeZeroVal(QualType type) {
     return makeIntVal(0, type);
 
   if (type->isRealFloatingType()) {
-    llvm::APFloat Zero =
-        llvm::APFloat::getZero(Context.getFloatTypeSemantics(type));
-    if (!isModeledFloatValue(Zero))
-      return UnknownVal();
-    return makeFloatVal(Zero);
+    if (auto Zero = makeFloatVal(
+            llvm::APFloat::getZero(Context.getFloatTypeSemantics(type))))
+      return *Zero;
+    return UnknownVal();
   }
 
   if (type->isArrayType() || type->isRecordType() || type->isVectorType() ||
@@ -381,10 +380,9 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     return makeIntVal(cast<IntegerLiteral>(E));
 
   case Stmt::FloatingLiteralClass: {
-    const auto *FL = cast<FloatingLiteral>(E);
-    if (!isModeledFloatValue(FL->getValue()))
-      return UnknownVal();
-    return makeFloatVal(FL);
+    if (auto V = makeFloatVal(cast<FloatingLiteral>(E)))
+      return *V;
+    return UnknownVal();
   }
 
   case Stmt::ObjCBoolLiteralExprClass:
@@ -475,7 +473,9 @@ SVal SValBuilder::evalMinus(NonLoc X) {
     // (it's just a sign bit flip).
     llvm::APFloat Value = *X.castAs<nonloc::ConcreteFloat>().getValue();
     Value.changeSign();
-    return makeFloatVal(Value);
+    if (auto Negated = makeFloatVal(Value))
+      return *Negated;
+    return UnknownVal();
   }
   case nonloc::SymbolValKind:
     return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
@@ -904,8 +904,10 @@ public:
       llvm::APFloat Value = *V.getValue();
       bool LosesInfo = false;
       Value.convert(TargetSem, llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
-      if (!LosesInfo && SValBuilder::isModeledFloatValue(Value))
-        return VB.makeFloatVal(Value);
+      if (!LosesInfo) {
+        if (auto Converted = VB.makeFloatVal(Value))
+          return *Converted;
+      }
       return UnknownVal();
     }
 
@@ -962,9 +964,10 @@ public:
       llvm::APFloat Result(TargetSem);
       llvm::APFloat::opStatus Status = Result.convertFromAPInt(
           Value, Value.isSigned(), llvm::APFloat::rmNearestTiesToEven);
-      if (Status == llvm::APFloat::opOK &&
-          SValBuilder::isModeledFloatValue(Result))
-        return VB.makeFloatVal(Result);
+      if (Status == llvm::APFloat::opOK) {
+        if (auto Converted = VB.makeFloatVal(Result))
+          return *Converted;
+      }
       return UnknownVal();
     }
 

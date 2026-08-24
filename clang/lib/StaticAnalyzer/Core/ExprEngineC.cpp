@@ -1053,8 +1053,11 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
       // C99 6.5.3.1: ++E is equivalent to (E += 1). Then the usual arithmetic
       // conversions convert the 1 to E's type, so just build it as that type
       // here.
-      RHS = svalBuilder.makeFloatVal(llvm::APFloat::getOne(
-          getContext().getFloatTypeSemantics(U->getType())));
+      if (auto One = svalBuilder.makeFloatVal(llvm::APFloat::getOne(
+              getContext().getFloatTypeSemantics(U->getType()))))
+        RHS = *One;
+      else
+        RHS = UnknownVal();
     } else {
       RHS = UnknownVal();
     }
