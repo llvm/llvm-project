@@ -103,7 +103,7 @@ define void @_Z4foo7Pi(ptr %a) local_unnamed_addr #1 {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 ; CHECK:       [[DELETE_NOTNULL]]:
-; CHECK-NEXT:    tail call void @_ZdlPv(ptr [[A]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    tail call void @_ZdlPv(ptr [[A]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    br label %[[DELETE_END]]
 ; CHECK:       [[DELETE_END]]:
 ; CHECK-NEXT:    ret void
@@ -130,7 +130,7 @@ define void @_Z4foo8Pi(ptr %a) local_unnamed_addr #1 {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 ; CHECK:       [[DELETE_NOTNULL]]:
-; CHECK-NEXT:    tail call void @_ZdaPv(ptr [[A]]) #[[ATTR8]]
+; CHECK-NEXT:    tail call void @_ZdaPv(ptr [[A]]) #[[ATTR9]]
 ; CHECK-NEXT:    br label %[[DELETE_END]]
 ; CHECK:       [[DELETE_END]]:
 ; CHECK-NEXT:    ret void
@@ -252,7 +252,7 @@ define void @passed_to_nofree_fn_maybe_capture_arg(ptr %p) {
 define void @passed_to_readonly_fn_nocapture_arg(ptr %p) {
 ; CHECK-LABEL: define void @passed_to_readonly_fn_nocapture_arg(
 ; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]]) {
-; CHECK-NEXT:    call void @takes_ptr(ptr captures(address, read_provenance) [[P]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @takes_ptr(ptr captures(address, read_provenance) [[P]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    call void @may_free()
 ; CHECK-NEXT:    ret void
 ;
@@ -295,6 +295,25 @@ define void @passed_to_unknown_bundle(ptr %p) {
 ;
   call void @may_free() ["unknown"(ptr %p)]
   call void @may_free()
+  ret void
+}
+
+define void @already_nofreeobj(ptr nofreeobj %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define void @already_nofreeobj(
+; CHECK-SAME: ptr nofree nofreeobj readnone captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define void @call_with_nofreeobj(ptr %p) {
+; CHECK-LABEL: define void @call_with_nofreeobj(
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr nofreeobj captures(none) [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr nofreeobj captures(none) %p)
   ret void
 }
 
