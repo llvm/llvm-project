@@ -1534,13 +1534,14 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
     return false;
   }
 
-  if (classifyPrim(E) != PT_Ptr) {
-    if (!this->emitDecayPtr(PT_Ptr, classifyPrim(E), E))
+  PrimType ExprT = classifyPrim(E);
+  if (ExprT != PT_Ptr) {
+    if (!this->emitDecayPtr(PT_Ptr, ExprT, E))
       return false;
   }
 
   if (DiscardResult)
-    return this->emitPop(classifyPrim(E), E);
+    return this->emitPop(ExprT, E);
   return true;
 }
 
