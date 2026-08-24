@@ -122,6 +122,8 @@ Makes programs 10x faster by doing Special New Thing.
   vectoring extensions.
 * Added experimental MC support for the `Smip` and `Ssip` interrupt handler
   push/pop extensions.
+* Fixed SiFive CLIC interrupt epilogue instructions being incorrectly marked as
+  frame setup code.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 
