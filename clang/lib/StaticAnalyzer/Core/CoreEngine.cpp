@@ -670,14 +670,3 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
     }
   }
 }
-
-ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
-                                        ProgramStateRef State,
-                                        ExplodedNode *FromN, bool MarkAsSink) {
-  Frontier.erase(FromN);
-  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
-
-  Frontier.insert(N);
-
-  return N;
-}

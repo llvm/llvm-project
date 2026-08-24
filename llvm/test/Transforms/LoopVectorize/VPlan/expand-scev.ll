@@ -283,7 +283,6 @@ exit:
   ret void
 }
 
-; FIXME: shl incorrectly carries nsw.
 ; Test for https://github.com/llvm/llvm-project/issues/205252.
 define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
 ; CHECK-LABEL: VPlan for loop in 'mul_by_signed_min_expanded_to_shl'

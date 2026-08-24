@@ -131,7 +131,8 @@ public:
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())

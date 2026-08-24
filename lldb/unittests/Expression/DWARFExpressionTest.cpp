@@ -1533,6 +1533,26 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_fbreg_address_size) {
   EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_call_frame_cfa_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux"));
+  auto frame_sp = std::make_shared<StackFrame>(
+      ctx.thread_sp, /*frame_idx=*/0, /*concrete_frame_idx=*/0, /*cfa=*/0x2a,
+      /*cfa_is_valid=*/true, /*pc=*/0x1000, StackFrame::Kind::Regular,
+      /*artificial=*/false, /*behaves_like_zeroth_frame=*/true,
+      /*sc_ptr=*/nullptr);
+  ExecutionContext exe_ctx(frame_sp);
+
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result =
+      Evaluate({DW_OP_call_frame_cfa, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 

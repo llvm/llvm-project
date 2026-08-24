@@ -629,3 +629,15 @@ static_assert(MutabilityAlias<Constant::alias>);
 static_assert(MutabilityAlias<Mutable::alias>);
 
 }
+
+namespace GH218035 {
+
+template <class T, class UnusedParam>
+concept same_as_impl = sizeof(T) == 8;
+template <typename... P>
+void f()
+  requires(same_as_impl<P...[0], P> && ...)
+{}
+void g() { f<long long, float>(); }
+
+}

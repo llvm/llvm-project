@@ -238,12 +238,6 @@ static cl::opt<bool> UseExpensiveRangeSharpening(
     cl::desc("Use more powerful methods of sharpening expression ranges. May "
              "be costly in terms of compile time"));
 
-static cl::opt<unsigned> MaxPhiSCCAnalysisSize(
-    "scalar-evolution-max-scc-analysis-depth", cl::Hidden,
-    cl::desc("Maximum amount of nodes to process while searching SCEVUnknown "
-             "Phi strongly connected components"),
-    cl::init(8));
-
 static cl::opt<bool>
     EnableFiniteLoopControl("scalar-evolution-finite-loop", cl::Hidden,
                             cl::desc("Handle <= and >= in finite loops"),

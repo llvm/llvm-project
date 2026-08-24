@@ -15378,12 +15378,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       FinalizeVarWithDestructor(var, RD);
 
   // If this variable must be emitted, add it as an initializer for the current
-  // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
-      (ModuleScopes.back().Module->isHeaderLikeModule() ||
-       // For named modules, we may only emit non discardable variables.
-       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
-    Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  // module. For named modules, discardable inline variables may be deferred
+  // until they are odr-used. Non-inline variables that must be emitted,
+  // including those with side-effecting initialization, must still be emitted
+  // even if they have internal linkage.
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty()) {
+    GVALinkage Linkage = Context.GetGVALinkageForVariable(var);
+    if (ModuleScopes.back().Module->isHeaderLikeModule() ||
+        !isDiscardableGVALinkage(Linkage) ||
+        (Linkage == GVA_Internal && !var->isInline()))
+      Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  }
 
   // Build the bindings if this is a structured binding declaration.
   if (auto *DD = dyn_cast<DecompositionDecl>(var))

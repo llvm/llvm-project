@@ -161,7 +161,11 @@ LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
+/// \deprecated Use getFeatureBitset and test the relevant FEAT_* bits instead.
+/// The legacy ArchFeatureKind bitfield is being removed.
+LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
 LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
 LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 

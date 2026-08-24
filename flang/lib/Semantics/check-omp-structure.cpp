@@ -2159,19 +2159,20 @@ void OmpStructureChecker::CheckInitOnDepobj(
       auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
       context_.Say(OmpGetModifierSource(modifiers, depInfo),
           "'%s' is not an allowed value of the '%s' modifier"_err_en_US,
-          parser::ToUpperCaseLetters(EnumToString(depKind)), desc.name.str());
+          parser::ToUpperCaseLetters(EnumToString(depKind)),
+          desc.getName().str());
     }
   } else {
     auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
     context_.Say(initClause.source,
         "The '%s' modifier is required on a DEPOBJ construct"_err_en_US,
-        desc.name.str());
+        desc.getName().str());
   }
   if (auto *prefType{OmpGetUniqueModifier<parser::OmpPreferType>(modifiers)}) {
     auto &desc{OmpGetDescriptor<parser::OmpPreferType>()};
     context_.Say(OmpGetModifierSource(modifiers, prefType),
         "The '%s' modifier is not allowed on a DEPOBJ construct"_err_en_US,
-        desc.name.str());
+        desc.getName().str());
   }
 }
 
@@ -3283,27 +3284,6 @@ void OmpStructureChecker::CheckTaskDependenceType(
         "%s task dependence type is not supported in %s, %s"_warn_en_US,
         parser::ToUpperCaseLetters(EnumToString(x)), ThisVersion(version),
         TryVersion(since));
-  }
-}
-
-void OmpStructureChecker::CheckDependenceType(
-    const parser::OmpDependenceType::Value &x) {
-  // Common checks for dependence-type (DEPEND and UPDATE clauses).
-  unsigned version{context_.langOptions().OpenMPVersion};
-  unsigned deprecatedIn{~0u};
-
-  switch (x) {
-  case parser::OmpDependenceType::Value::Source:
-  case parser::OmpDependenceType::Value::Sink:
-    deprecatedIn = 52;
-    break;
-  }
-
-  if (version >= deprecatedIn) {
-    context_.Say(GetContext().clauseSource,
-        "%s dependence type is deprecated in %s"_warn_en_US,
-        parser::ToUpperCaseLetters(parser::OmpDependenceType::EnumToString(x)),
-        ThisVersion(deprecatedIn));
   }
 }
 
@@ -4687,7 +4667,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
 
     parser::CharBlock modifierSource{OmpGetModifierSource(modifiers, dnm)};
     auto desc{OmpGetDescriptor<parser::OmpDirectiveNameModifier>()};
-    std::string modName{desc.name.str()};
+    std::string modName{desc.getName().str()};
 
     if (!isConstituent(dir, sub)) {
       context_.Say(modifierSource,
@@ -4914,7 +4894,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
       const auto &desc{OmpGetDescriptor<parser::OmpAttachModifier>()};
       context_.Say(OmpGetModifierSource(modifiers, attach),
           "The '%s' modifier can only appear on a map-entering construct or on a DECLARE_MAPPER directive"_err_en_US,
-          desc.name.str());
+          desc.getName().str());
     }
 
     auto hasBasePointer{[&](const SomeExpr &item) {
@@ -5070,7 +5050,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
             OmpGetUniqueModifier<parser::OmpDeviceModifier>(modifiers)}) {
       using Value = parser::OmpDeviceModifier::Value;
       if (dir != llvm::omp::OMPD_target && deviceMod->v == Value::Ancestor) {
-        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().name};
+        auto name{OmpGetDescriptor<parser::OmpDeviceModifier>().getName()};
         context_.Say(OmpGetModifierSource(modifiers, deviceMod),
             "The ANCESTOR %s must not appear on the DEVICE clause on any directive other than the TARGET construct. Found on %s construct."_err_en_US,
             name.str(), parser::omp::GetUpperName(dir, version));
@@ -5090,7 +5070,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
   if (doaDep) {
     CheckDoacross(*doaDep, llvm::omp::Clause::OMPC_depend);
-    CheckDependenceType(doaDep->GetDepType());
   } else {
     using Modifier = parser::OmpDependClause::TaskDep::Modifier;
     auto &modifiers{std::get<std::optional<std::list<Modifier>>>(taskDep->t)};
@@ -5436,12 +5415,8 @@ void OmpStructureChecker::Enter(
     const parser::OmpClause::UpdateDependObjects &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  auto *depType = std::get_if<parser::OmpDependenceType>(&x.v.u);
   auto *taskType = std::get_if<parser::OmpTaskDependenceType>(&x.v.u);
-
-  if (depType) {
-    CheckDependenceType(depType->v);
-  } else if (taskType) {
+  if (taskType) {
     CheckTaskDependenceType(taskType->v);
   }
 
@@ -5743,7 +5718,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
     bool ok{
         memSpaceName && IsUsesAllocatorsMemSpaceName(*memSpaceName, version)};
     if (!ok) {
-      auto name{OmpGetDescriptor<parser::OmpMemSpace>().name};
+      auto name{OmpGetDescriptor<parser::OmpMemSpace>().getName()};
       context_.Say(memSpaceSource,
           "The '%s' modifier must name a predefined memory space"_err_en_US,
           name.str());
@@ -6432,7 +6407,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
 
 void OmpStructureChecker::CheckDimsModifier(parser::CharBlock source,
     size_t numValues, const parser::OmpDimsModifier &x) {
-  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().name.str()};
+  std::string name{OmpGetDescriptor<parser::OmpDimsModifier>().getName().str()};
 
   if (auto dimsVal{GetIntValue(x.v)}) {
     if (*dimsVal > 0) {
@@ -6610,7 +6585,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                   auto &desc{OmpGetDescriptor<parser::OmpDepinfoModifier>()};
                   context_.Say(OmpGetModifierSource(modifiers, depInfo),
                       "The '%s' is not allowed on INTEROP construct"_err_en_US,
-                      desc.name.str());
+                      desc.getName().str());
                 }
                 // A prefer_type foreign-runtime-identifier must be a
                 // constant expression of integer OpenMP type or a base

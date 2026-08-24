@@ -108,6 +108,12 @@ static cl::opt<bool> ForceToDataRelocations(
 
     cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> MergeTextSections(
+    "merge-text-sections",
+    cl::desc("emit new hot and cold code under a single .text section header "
+             "instead of separate .text/.text.cold sections (relocation mode)"),
+    cl::init(false), cl::cat(BoltCategory));
+
 static cl::opt<std::string>
     BoltID("bolt-id",
            cl::desc("add any string to tag this execution in the "
@@ -2618,6 +2624,19 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::UseOldText = false;
   }
 
+  if (opts::MergeTextSections) {
+    if (!BC->HasRelocations) {
+      BC->errs() << "BOLT-ERROR: --merge-text-sections requires relocation "
+                    "mode\n";
+      exit(1);
+    }
+    if (!BC->isELF()) {
+      BC->errs() << "BOLT-ERROR: --merge-text-sections is only supported for "
+                    "ELF binaries\n";
+      exit(1);
+    }
+  }
+
   if (!opts::AlignText.getNumOccurrences())
     opts::AlignText = BC->PageAlign;
 
@@ -4625,6 +4644,52 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     BC->outs() << "BOLT-INFO: padding code to 0x"
                << Twine::utohexstr(NextAvailableAddress)
                << " to accommodate hot text\n";
+
+  if (opts::MergeTextSections)
+    mergeCodeSections(CodeSections);
+}
+
+void RewriteInstance::mergeCodeSections(
+    const std::vector<BinarySection *> &CodeSections) {
+  if (CodeSections.size() < 2)
+    return;
+
+  // The header carrier is the lowest-addressed section and the merged extent
+  // runs to the end of the highest-addressed one. The order of hot and cold
+  // code within the range (e.g. --hot-functions-at-end) does not matter and
+  // is kept unchanged.
+  BinarySection *Head = *llvm::min_element(
+      CodeSections, [](const BinarySection *A, const BinarySection *B) {
+        return A->getOutputAddress() < B->getOutputAddress();
+      });
+  uint64_t End = 0;
+  for (const BinarySection *Section : CodeSections)
+    End = std::max(End, Section->getOutputAddress() + Section->getOutputSize());
+
+  // Record the pre-merge identity of every section while the names are intact.
+  for (const BinarySection *Section : CodeSections)
+    MergedTextMarkers.push_back(
+        {(Twine(".bolt.pre_merge") + Section->getOutputName()).str(),
+         Section->getOutputAddress()});
+
+  MergedTextSection = Head;
+  MergedTextSize = End - Head->getOutputAddress();
+
+  for (BinarySection *Section : CodeSections) {
+    if (Section == Head)
+      continue;
+    Section->setAnonymous(true);
+    MergedAwayTextSections.push_back(Section);
+  }
+
+  // The merged section has the canonical name regardless of which original
+  // section is allocated first.
+  Head->setOutputName(BC->getMainCodeSectionName());
+
+  BC->outs() << "BOLT-INFO: merged " << CodeSections.size()
+             << " code sections into " << BC->getMainCodeSectionName() << " [0x"
+             << Twine::utohexstr(Head->getOutputAddress()) << ", 0x"
+             << Twine::utohexstr(End) << ")\n";
 }
 
 void RewriteInstance::mapCodeSectionsInPlace(
@@ -5265,7 +5330,9 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_type = ELF::SHT_PROGBITS;
     NewSection.sh_addr = Section.getOutputAddress();
     NewSection.sh_offset = Section.getOutputFileOffset();
-    NewSection.sh_size = Section.getOutputSize();
+    NewSection.sh_size = (&Section == MergedTextSection)
+                             ? MergedTextSize
+                             : Section.getOutputSize();
     NewSection.sh_entsize = 0;
     NewSection.sh_flags = Section.getELFFlags();
     NewSection.sh_link = 0;
@@ -5377,6 +5444,12 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   // Assign indices to sections.
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
+
+  // Sections folded into the merged code section emit no header of their own.
+  // Point symbols defined in them at the merged section.
+  if (MergedTextSection)
+    for (BinarySection *Section : MergedAwayTextSections)
+      Section->setIndex(MergedTextSection->getIndex());
 
   // Update section index mapping
   NewSectionIndex.clear();
@@ -5907,6 +5980,24 @@ void RewriteInstance::updateELFSymbolTable(
   if (opts::HotData && !NumHotDataSymsUpdated) {
     AddEmittedSymbol("__hot_data_start");
     AddEmittedSymbol("__hot_data_end");
+  }
+
+  // The code sections folded into the merged .text have no section header in
+  // the output. Emit a local marker per section so the name and start address
+  // each one had before the merge stay recoverable from the symbol table. The
+  // marker symbols have size zero: a sized NOTYPE symbol spanning the section
+  // might compete with the STT_FUNC symbols inside it during symbolization.
+  assert((MergedTextMarkers.empty() || MergedTextSection) &&
+         "merged code section must be set when markers exist");
+  for (const MergedTextMarker &Marker : MergedTextMarkers) {
+    ELFSymTy Symbol;
+    Symbol.st_value = Marker.Address;
+    Symbol.st_size = 0;
+    Symbol.st_shndx = MergedTextSection->getIndex();
+    Symbol.st_name = AddToStrTab(Marker.Name);
+    Symbol.st_other = 0;
+    Symbol.setBindingAndType(ELF::STB_LOCAL, ELF::STT_NOTYPE);
+    Symbols.emplace_back(Symbol);
   }
 
   // Put local symbols at the beginning.

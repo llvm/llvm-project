@@ -2043,6 +2043,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_call_frame_cfa:
       if (llvm::Error err = Evaluate_DW_OP_call_frame_cfa(eval_ctx))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_form_tls_address:

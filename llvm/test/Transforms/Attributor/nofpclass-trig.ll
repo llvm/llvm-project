@@ -136,6 +136,16 @@ define float @ret_asin_nonneg(float nofpclass(ninf nzero nsub nnorm) %arg) {
   ret float %call
 }
 
+define float @ret_asin_nonnegfinite(float nofpclass(nzero nsub nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_asin_nonnegfinite
+; CHECK-SAME: (float nofpclass(nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.asin.f32(float nofpclass(nzero nsub nnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.asin.f32(float %arg)
+  ret float %call
+}
+
 define float @ret_asin_nonan(float nofpclass(nan) %arg) {
 ; CHECK-LABEL: define nofpclass(snan inf) float @ret_asin_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {

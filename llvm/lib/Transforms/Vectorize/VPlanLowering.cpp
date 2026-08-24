@@ -87,7 +87,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, CostKind);
   InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
   if (PHICost > BroadcastCost)
     return;

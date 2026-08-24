@@ -40,9 +40,11 @@ static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
   if (!argUserOp->use_empty())
     return false;
 
-  // Check that argUser is a yield.
+  // Check that argUser is this op's own terminator. A nested op's
+  // `linalg.yield` also matches, but leaves the argument live inside that
+  // region.
   auto yieldOp = dyn_cast<linalg::YieldOp>(argUserOp);
-  if (!yieldOp)
+  if (!yieldOp || yieldOp != genericOp.getBody()->getTerminator())
     return false;
 
   // Check outArg data is not being used by other outArgs.

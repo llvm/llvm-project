@@ -1044,8 +1044,8 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   const MachineOperand &SlideAmt = MI.getOperand(3);
   if (!SlideAmt.getReg().isVirtual())
     return std::nullopt;
-  MachineInstr *SlideAmtDef = MRI->getUniqueVRegDef(SlideAmt.getReg());
-  if (SlideAmtDef->getOpcode() != RISCV::ADDI ||
+  MachineInstr *SlideAmtDef = MRI->getVRegDef(SlideAmt.getReg());
+  if (!SlideAmtDef || SlideAmtDef->getOpcode() != RISCV::ADDI ||
       SlideAmtDef->getOperand(2).getImm() != -AVL.getImm() ||
       !SlideAmtDef->getOperand(1).getReg().isVirtual())
     return std::nullopt;

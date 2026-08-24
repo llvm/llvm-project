@@ -102,6 +102,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`llvm-invalid-regex-pattern
+  <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
+
+  Detects malformed regex patterns defined in a single string literal.
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
@@ -167,6 +172,10 @@ infrastructure are described first, followed by tool-specific sections.
   rewrite the return value when the constructed type has a
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
+
+- Fixed a crash in {doc}`modernize-use-noexcept
+  <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
+  code with an unparsed exception specification.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer

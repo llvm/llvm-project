@@ -1716,22 +1716,6 @@ bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &Obj = S.Stk.peek<Pointer>();
-  if (!CheckNull(S, OpPC, Obj, CSK_Field))
-    return false;
-  if (!CheckRange(S, OpPC, Obj, CSK_Field))
-    return false;
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckStore(S, OpPC, Field))
-    return false;
-  Field.initialize();
-  Field.deref<T>() = Value;
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression())
     return false;
@@ -1742,21 +1726,6 @@ bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!CheckLoad(S, OpPC, Field))
     return false;
   S.Stk.push<T>(Field.deref<T>());
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression())
-    return false;
-  if (!CheckThis(S, OpPC))
-    return false;
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &This = S.Current->getThis();
-  const Pointer &Field = This.atField(I);
-  if (!CheckStore(S, OpPC, Field))
-    return false;
-  Field.deref<T>() = Value;
   return true;
 }
 

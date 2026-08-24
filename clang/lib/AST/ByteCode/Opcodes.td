@@ -534,11 +534,6 @@ def GetFieldPop : AccessOpcode;
 // [] -> [Value]
 def GetThisField : AccessOpcode;
 
-// [Pointer, Value] -> [Pointer]
-def SetField : AccessOpcode;
-// [Value] -> []
-def SetThisField : AccessOpcode;
-
 // [Value] -> []
 def InitThisField : AccessOpcode;
 def InitThisFieldActivate : AccessOpcode;

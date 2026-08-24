@@ -446,7 +446,8 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                                  int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : Plugin(Plugin), MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
+    : Plugin(Plugin), MemoryManager(nullptr), HostMemoryManager(nullptr),
+      SharedMemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
       OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
@@ -563,6 +564,14 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
       ThresholdMM = getMemoryManagerSizeThreshold();
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
   }
+  if (!OMPX_TrackAllocationTraces) {
+    // Keep the threshold for pooling sizes conservative since we're dealing
+    // with pinned memory for the host.
+    HostMemoryManager = new MemoryManagerTy(
+        *this, MemoryManagerTy::DefaultSizeThreshold, TARGET_ALLOC_HOST);
+    SharedMemoryManager = new MemoryManagerTy(
+        *this, MemoryManagerTy::DefaultSizeThreshold, TARGET_ALLOC_SHARED);
+  }
 
   return Plugin::success();
 }
@@ -610,6 +619,12 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (MemoryManager)
     delete MemoryManager;
   MemoryManager = nullptr;
+  if (HostMemoryManager)
+    delete HostMemoryManager;
+  HostMemoryManager = nullptr;
+  if (SharedMemoryManager)
+    delete SharedMemoryManager;
+  SharedMemoryManager = nullptr;
 
   if (RecordReplay) {
     if (auto Err = RecordReplay->deinit())
@@ -970,22 +985,15 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
     return RecordReplay->allocate(Size);
 
-  switch (Kind) {
-  case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE:
-    if (MemoryManager) {
-      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr, Alignment);
-      if (!AllocOrErr)
-        return AllocOrErr.takeError();
-      Alloc = *AllocOrErr;
-      if (!Alloc)
-        return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
-                             "failed to allocate from memory manager");
-      break;
-    }
-    [[fallthrough]];
-  case TARGET_ALLOC_HOST:
-  case TARGET_ALLOC_SHARED: {
+  if (MemoryManagerTy *MM = getMemoryManagerFor(Kind)) {
+    auto AllocOrErr = MM->allocate(Size, HostPtr, Alignment);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    Alloc = *AllocOrErr;
+    if (!Alloc)
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "failed to allocate from memory manager");
+  } else {
     auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
@@ -994,7 +1002,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate from device allocator");
   }
-  }
 
   // Report error if the memory manager or the device allocator did not return
   // any memory buffer.
@@ -1002,11 +1009,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     return Plugin::error(ErrorCode::UNIMPLEMENTED,
                          "invalid target data allocation kind or requested "
                          "allocator not implemented yet");
-
-  // Register allocated buffer as pinned memory if the type is host memory.
-  if (Kind == TARGET_ALLOC_HOST)
-    if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
-      return std::move(Err);
 
   // Keep track of the allocation stack if we track allocation traces.
   if (OMPX_TrackAllocationTraces) {
@@ -1064,25 +1066,12 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
     ATI->DeallocationTrace = StackTrace;
   }
 
-  switch (Kind) {
-  case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE:
-    if (MemoryManager) {
-      if (auto Err = MemoryManager->free(TgtPtr))
-        return Err;
-      break;
-    }
-    [[fallthrough]];
-  case TARGET_ALLOC_HOST:
-  case TARGET_ALLOC_SHARED:
-    if (auto Err = free(TgtPtr, Kind))
+  if (MemoryManagerTy *MM = getMemoryManagerFor(Kind)) {
+    if (auto Err = MM->free(TgtPtr))
       return Err;
+  } else if (auto Err = free(TgtPtr, Kind)) {
+    return Err;
   }
-
-  // Unregister deallocated pinned memory buffer if the type is host memory.
-  if (Kind == TARGET_ALLOC_HOST)
-    if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
-      return Err;
 
   return Plugin::success();
 }
