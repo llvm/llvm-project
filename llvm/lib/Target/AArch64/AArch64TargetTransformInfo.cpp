@@ -7225,8 +7225,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
+        // Analyze assuming predicates will be added, but discard them; this
+        // query only guides tail-folding and must not add runtime checks to the
+        // loop.
+        SmallVector<const SCEVPredicate *> Predicates;
         if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, DT, Strides,
-                         /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                         /*ShouldCheckWrap=*/false, &Predicates)
                 .value_or(0) < 0)
           return true;
       }
