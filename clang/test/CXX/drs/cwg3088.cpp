@@ -554,12 +554,12 @@ namespace cwg3088 { // cwg3088: partial
 
 #define import
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef import
+#undef import // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define import()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define module
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef module
+#undef module // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define module()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 
