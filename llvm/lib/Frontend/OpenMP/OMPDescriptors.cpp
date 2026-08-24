@@ -34,6 +34,19 @@ const DescriptorMap<Modifier, descriptor::Modifier> &getModifierMap() {
   return Map;
 }
 
+const DescriptorMap<ModifierSet, descriptor::ModifierSet> &getModifierSetMap() {
+  static const DescriptorMap<ModifierSet, descriptor::ModifierSet> Map{
+#define GEN_OMP_MODIFIER_GROUP_DESCRIPTORS
+#include "OMPDescriptors.inc"
+#undef GEN_OMP_MODIFIER_GROUP_DESCRIPTORS
+
+#define GEN_OMP_MODIFIER_SET_DESCRIPTORS
+#include "OMPDescriptors.inc"
+#undef GEN_OMP_MODIFIER_SET_DESCRIPTORS
+  };
+  return Map;
+}
+
 #define GET_THING_OR_EMPTY(Thing, Member)                                      \
   template <typename DetailsTy>                                                \
   static Thing get##Thing##OrEmpty(const DetailsTy &D, unsigned V) {           \
@@ -46,10 +59,12 @@ const DescriptorMap<Modifier, descriptor::Modifier> &getModifierMap() {
 GET_THING_OR_EMPTY(Clauses, Cls)
 GET_THING_OR_EMPTY(Directives, Dirs)
 GET_THING_OR_EMPTY(Modifiers, Mods)
+GET_THING_OR_EMPTY(ModifierSets, ModSets)
 GET_THING_OR_EMPTY(Properties, Props)
 
 #undef GET_THING_OR_EMPTY
 
+// Clause
 Properties descriptor::Clause::getProperties(unsigned V) const {
   return getPropertiesOrEmpty(Details, V);
 }
@@ -59,19 +74,35 @@ Directives descriptor::Clause::getDirectives(unsigned V) const {
 Modifiers descriptor::Clause::getModifiers(unsigned V) const {
   return getModifiersOrEmpty(Details, V);
 }
+ModifierSets descriptor::Clause::getModifierSets(unsigned V) const {
+  return getModifierSetsOrEmpty(Details, V);
+}
+// Modifier
 Properties descriptor::Modifier::getProperties(unsigned V) const {
   return getPropertiesOrEmpty(Details, V);
 }
 Clauses descriptor::Modifier::getClauses(unsigned V) const {
   return getClausesOrEmpty(Details, V);
 }
+// ModifierSet
+Properties descriptor::ModifierSet::getProperties(unsigned V) const {
+  return getPropertiesOrEmpty(Details, V);
+}
+Modifiers descriptor::ModifierSet::getModifiers(unsigned V) const {
+  return getModifiersOrEmpty(Details, V);
+}
+Clauses descriptor::ModifierSet::getClauses(unsigned V) const {
+  return getClausesOrEmpty(Details, V);
+}
 
 const descriptor::Clause &getDescriptor(llvm::omp::Clause C) {
   return getClauseMap().at(C);
 }
-
 const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M) {
   return getModifierMap().at(M);
+}
+const descriptor::ModifierSet &getDescriptor(llvm::omp::ModifierSet S) {
+  return getModifierSetMap().at(S);
 }
 
 Properties getProperties(Clause C, unsigned Version) {

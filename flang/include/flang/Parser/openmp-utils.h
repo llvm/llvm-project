@@ -235,6 +235,7 @@ static constexpr bool HasModifier = detail::HasModifierImpl<ClauseTy>::value;
 
 struct AppliedModifier {
   llvm::omp::Modifier modifierId;
+  std::optional<llvm::omp::ModifierSet> setId;
   parser::CharBlock source;
 };
 
@@ -250,7 +251,15 @@ AppliedModifierInfo GetAppliedModifiers(
     for (auto &m : *modifiers) {
       common::visit(
           [&](auto &&s) {
-            info.modifiers.emplace_back(AppliedModifier{s.Id, m.source});
+            using TypeId = llvm::remove_cvref_t<decltype(s.Id)>;
+            if constexpr (std::is_same_v<TypeId, llvm::omp::ModifierSet>) {
+              info.modifiers.emplace_back(AppliedModifier{
+                  common::visit([](auto &&p) { return p.Id; }, s.u), s.Id,
+                  m.source});
+            } else if constexpr (std::is_same_v<TypeId, llvm::omp::Modifier>) {
+              info.modifiers.emplace_back(
+                  AppliedModifier{s.Id, std::nullopt, m.source});
+            }
           },
           m.u);
     }

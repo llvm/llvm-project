@@ -1191,6 +1191,32 @@ bool OmpStructureChecker::VerifyModifierRequired(
       }
     }
   }
+  for (llvm::omp::ModifierSet s : cdesc.getModifierSets(version)) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    // Is group is required, at least one modifier from that group must be
+    // present.
+    if (sdesc.getProperties(version).test(llvm::omp::Property::Required)) {
+      bool present{false};
+      for (llvm::omp::Modifier m : sdesc.getModifiers(version)) {
+        if (isPresent(m)) {
+          present = true;
+          break;
+        }
+      }
+      if (!present) {
+        if (llvm::omp::isModifierGroup(s)) {
+          context_.Say(clause.source,
+              "modifier from '%s' modifier group is required"_err_en_US,
+              sdesc.getName().str());
+        } else {
+          context_.Say(clause.source,
+              "modifier from the modifier set on %s clause is required"_err_en_US,
+              GetUpperName(clause.value, version));
+        }
+        valid = false;
+      }
+    }
+  }
 
   return valid;
 }
@@ -1208,6 +1234,12 @@ bool OmpStructureChecker::VerifyModifierUnique(
     // Exclusive modifiers should have the "unique" property present as well.
     if (mdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
       unique.set(m);
+    }
+  }
+  for (llvm::omp::ModifierSet s : cdesc.getModifierSets(version)) {
+    auto &sdesc{llvm::omp::getDescriptor(s)};
+    if (sdesc.getProperties(version).test(llvm::omp::Property::Unique)) {
+      unique |= sdesc.getModifiers(version);
     }
   }
 
@@ -1283,6 +1315,32 @@ bool OmpStructureChecker::VerifyModifierExclusive(
     }
   }
 
+  // Check modifier sets.
+  llvm::DenseMap<llvm::omp::ModifierSet, const AppliedModifier *> exclusive;
+  for (const AppliedModifier &am : info.modifiers) {
+    if (!am.setId) {
+      continue;
+    }
+    auto &sdesc{llvm::omp::getDescriptor(*am.setId)};
+    if (!sdesc.getProperties(version).test(llvm::omp::Property::Exclusive)) {
+      continue;
+    }
+    auto [where, inserted]{exclusive.insert({*am.setId, &am})};
+    if (!inserted) {
+      const AppliedModifier *prev{where->second};
+      if (prev->modifierId != am.modifierId) {
+        auto &prevDesc{llvm::omp::getDescriptor(prev->modifierId)};
+        auto &thisDesc{llvm::omp::getDescriptor(am.modifierId)};
+        context_
+            .Say(prev->source,
+                "The '%s' and '%s' modifiers are mutually exclusive"_err_en_US,
+                prevDesc.getName().str(), thisDesc.getName().str())
+            .Attach(am.source, "'%s' modifier specified here"_en_US,
+                thisDesc.getName().str());
+        valid = false;
+      }
+    }
+  }
   return valid;
 }
 
