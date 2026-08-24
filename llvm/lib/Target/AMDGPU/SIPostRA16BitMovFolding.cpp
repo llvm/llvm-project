@@ -40,11 +40,12 @@ private:
   bool mergeSingleMovB16Pair(MachineInstr &Lo, MachineInstr &Hi,
                              bool IsHiFirst) const;
   bool mergeMovB16Pairs(MachineFunction &MF) const;
+
 public:
   bool run(MachineFunction &MF);
 };
 
-class SIPostRA16BitMovFoldingLegacy: public MachineFunctionPass {
+class SIPostRA16BitMovFoldingLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -55,7 +56,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-	AU.setPreservesAll();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -76,11 +77,10 @@ char &llvm::SIPostRA16BitMovFoldingLegacyID = SIPostRA16BitMovFoldingLegacy::ID;
 // Helper: extract the src operand and whether it is from the hi16 half.
 // Post-RA, both V_MOV_B16_t16_e32 and V_MOV_B16_t16_e64 use VGPR_16 dst
 // physical registers whose encoding already encodes hi/lo (IS_HI16 bit).
-void SIPostRA16BitMovFolding::getMovB16Info(const MachineInstr &MI,
-                                      const SIRegisterInfo *TRI,
-                                      MCRegister &SrcReg16, bool &SrcIsVGPR,
-                                      MCRegister &SrcReg32, bool &SrcIsHi,
-                                      bool &SrcIsImm, int64_t &ImmVal) const {
+void SIPostRA16BitMovFolding::getMovB16Info(
+    const MachineInstr &MI, const SIRegisterInfo *TRI, MCRegister &SrcReg16,
+    bool &SrcIsVGPR, MCRegister &SrcReg32, bool &SrcIsHi, bool &SrcIsImm,
+    int64_t &ImmVal) const {
   SrcIsImm = false;
   SrcIsHi = false;
   SrcIsVGPR = false;
@@ -117,11 +117,11 @@ void SIPostRA16BitMovFolding::getMovB16Info(const MachineInstr &MI,
 //   v_mov_b16 v0.h, 0        v_mov_b16 v0.l, v2.h     => v_lshrrev_b32 v0,16,v2
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.l/s2  => v_lshlrev_b32 v0,16,v2/s2
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.h     => v_and_b32  v0,0xffff0000,v2
-//   v_mov_b16 v0.l, v.x/s    v_mov_b16 v0.h, v.y/s    => v_pack_b32_f16 v0, v/s, v/s
+//   v_mov_b16 v0.l, v.x/s    v_mov_b16 v0.h, v.y/s    => v_perm_b32_e64 v0, v.x/s, v.y/s, mask
 // clang-format on
 bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
-                                              MachineInstr &Hi,
-                                              bool IsHiFirst) const {
+                                                    MachineInstr &Hi,
+                                                    bool IsHiFirst) const {
   // Lo and Hi share the same Dst32
   MCRegister LoDst = Lo.getOperand(0).getReg().asMCReg();
   MCRegister HiDst = Hi.getOperand(0).getReg().asMCReg();
@@ -188,15 +188,17 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   // Insert on Selected MI location, then remove both mov.
 
   // Pattern: v_mov_b16 v0.l, v2.x/s2 + v_mov_b16 v0.h, v3.y/s3
-  //   => v_pack_b32_f16 v0,v2.x/s2,v3.y/s3
+  //   => v_perm_b32_e64  v0,v3.y/s3,v2.x/s2, mask
   if (!HiSrcIsImm && !LoSrcIsImm) {
-    BuildMI(MBB, Selected, DL, TII->get(AMDGPU::V_PACK_B32_F16_t16_e64), Dst32)
-        .addImm(0) // SrcMod
-        .addReg(LoSrc16)
-        .addImm(0) // SrcMod
-        .addReg(HiSrc16)
-        .addImm(0)  // Clamp
-        .addImm(0); // Opsel
+    // Violate constant bus restriction
+    if (!LoSrcIsVGPR && !HiSrcIsVGPR && HiSrc32 != LoSrc32)
+      return false;
+    unsigned MaskHiSrc = HiSrcIsHi ? 0x0706 : 0x0504;
+    unsigned MaskLoSrc = LoSrcIsHi ? 0x0302 : 0x0100;
+    BuildMI(MBB, Selected, DL, TII->get(AMDGPU::V_PERM_B32_e64), Dst32)
+        .addReg(HiSrc32)
+        .addReg(LoSrc32)
+        .addImm((MaskHiSrc << 16) | MaskLoSrc);
     Lo.eraseFromParent();
     Hi.eraseFromParent();
     return true;
@@ -304,7 +306,7 @@ bool SIPostRA16BitMovFolding::mergeMovB16Pairs(MachineFunction &MF) const {
         continue;
       }
 
-	  LLVM_DEBUG(dbgs() << "Checking MI:" << MI << "\n");
+      LLVM_DEBUG(dbgs() << "Checking MI:" << MI << "\n");
       MCRegister DstReg = MI.getOperand(0).getReg().asMCReg();
       bool DstIsHi = AMDGPU::isHi16Reg(DstReg, *TRI);
       MCRegister Dst32 = TRI->get32BitRegister(DstReg);
@@ -344,7 +346,7 @@ llvm::SIPostRA16BitMovFoldingPass::run(MachineFunction &MF,
 }
 
 bool SIPostRA16BitMovFolding::run(MachineFunction &MF) {
-  const GCNSubtarget& ST = MF.getSubtarget<GCNSubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   TII = ST.getInstrInfo();
   bool Changed = false;

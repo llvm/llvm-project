@@ -532,9 +532,8 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX11-TRUE16-SDAG:       ; %bb.0:
 ; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-SDAG-NEXT:    v_perm_b32 v0, v1, v0, 0x5040302
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
 ; GFX11-TRUE16-SDAG-NEXT:    ; use v[0:1]
 ; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
