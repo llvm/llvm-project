@@ -535,8 +535,10 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
 
-  // Carry LLVM attributes such as llvm.loop_annotation over to the innermost
-  // generated loop, which is the one whose latch will hold the loop metadata.
+  // Carry LLVM attributes such as llvm.loop_annotation over to the generated
+  // nest. A multi-dimensional scf.parallel has a single attribute dictionary
+  // but becomes several loops, so the attributes go to the innermost one, whose
+  // latch is where ForLowering will attach the loop metadata.
   if (innermostForOp)
     copyLLVMDialectAttrs(parallelOp, innermostForOp);
 
