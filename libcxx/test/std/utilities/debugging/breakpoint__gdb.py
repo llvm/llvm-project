@@ -15,6 +15,7 @@ import gdb
 class TestFail(Exception):
     pass
 
+
 def bp_handler(event):
     try:
         frame = gdb.newest_frame()
