@@ -622,3 +622,22 @@ define <2 x i64> @PR30986(ptr %0) {
   ret <2 x i64> %8
 }
 declare i64 @llvm.ctpop.i64(i64)
+
+define float @PR217598(ptr %p, i32 %bits) {
+; CHECK-LABEL: @PR217598(
+; CHECK-NEXT:    [[A:%.*]] = alloca [20 x i8], align 16
+; CHECK-NEXT:    store i32 [[BITS:%.*]], ptr [[A]], align 4
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[A]], i64 12
+; CHECK-NEXT:    store ptr [[P:%.*]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[X:%.*]] = extractelement <4 x float> [[V]], i64 0
+; CHECK-NEXT:    ret float [[X]]
+;
+  %a = alloca [20 x i8], align 16
+  store i32 %bits, ptr %a, align 4
+  %q = getelementptr i8, ptr %a, i64 12
+  store ptr %p, ptr %q, align 4
+  %v = load <4 x float>, ptr %a, align 4
+  %x = extractelement <4 x float> %v, i64 0
+  ret float %x
+}
