@@ -14,6 +14,20 @@
 # RUN: llvm-readelf -S --dynamic-table -r %t.mark | FileCheck %s --check-prefix=MARK
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.mark | FileCheck %s --check-prefix=DISASM-MARK
 
+## --apply-dynamic-relocs must not trip the dynamic relocation addend check:
+## the JUMP_SLOT addend is the PLT entry address while the .got.plt entry holds
+## the lazy-binding address.
+# RUN: ld.lld %t.o %t2.so -z mark-plt -z now --apply-dynamic-relocs -o %t.mark2
+# RUN: llvm-readelf -r %t.mark2 | FileCheck %s --check-prefix=MARK-RELA
+
+# MARK-RELA:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
+# MARK-RELA:      {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 weak + 2012c0
+# MARK-RELA-NEXT: {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 bar + 2012d0
+
+## -z mark-plt requires RELA relocations to carry the PLT entry address addend.
+# RUN: not ld.lld %t.o %t2.so -z mark-plt -z rel -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR-REL
+# ERR-REL: error: -z mark-plt requires -z rela
+
 # CHECK1:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK1:      .plt      PROGBITS 00000000002012e0 0002e0 000030 00 AX   0   0 16
 # CHECK1:      .got.plt  PROGBITS 00000000002033e0 0003e0 000028 00 WA   0   0  8

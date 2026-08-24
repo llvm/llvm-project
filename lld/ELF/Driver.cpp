@@ -399,8 +399,16 @@ static void checkOptions(Ctx &ctx) {
       ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
-  if (ctx.arg.emachine != EM_X86_64 && ctx.arg.zMarkPlt)
-    ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
+  if (ctx.arg.zMarkPlt) {
+    if (ctx.arg.emachine != EM_X86_64)
+      ErrAlways(ctx) << "-z mark-plt only supported on X86_64";
+    // The PLT entry address is stored in the JUMP_SLOT relocation's addend, so
+    // -z mark-plt requires RELA relocations. REL relocations have no addend
+    // field and the .got.plt entry is already occupied by the lazy-binding
+    // address, so the information would be silently lost.
+    else if (!ctx.arg.isRela)
+      ErrAlways(ctx) << "-z mark-plt requires -z rela";
+  }
 
   if (ctx.arg.pie && ctx.arg.shared)
     ErrAlways(ctx) << "-shared and -pie may not be used together";
