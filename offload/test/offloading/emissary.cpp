@@ -43,6 +43,7 @@ extern "C" double bar(int x, double y, double *darray) {
 // 4. === Define host selector function for Emissary API reserve
 //       Section 4 is only compiled on host pass
 #include <cstdint>
+#include <shared/rpc_server.h>
 #include <shared/emissary_rpc_server.h>
 #define _PTR_TO_64BIT_ (unsigned long long int)
 // This is the EmissaryReserve selector function. It is called when the emissary

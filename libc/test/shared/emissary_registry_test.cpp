@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/emissary_rpc_server.h"
+#include "shared/rpc_server.h"
 #include "test/UnitTest/Test.h"
 
 namespace {
