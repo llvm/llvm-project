@@ -81,11 +81,10 @@ public:
         cur_pos = cur_pos + static_cast<size_t>(result.parsed_len);
       }
 
-      // TODO(michaelrj): add posix allocate flag support.
-      // if (str[cur_pos] == 'm') {
-      //   ++cur_pos;
-      //   section.flags = FormatFlags::ALLOCATE;
-      // }
+      if (str[cur_pos] == 'm') {
+        ++cur_pos;
+        section.flags = FormatFlags::ALLOCATE;
+      }
 
       LengthModifier lm = parse_length_modifier(&cur_pos);
       section.length_modifier = lm;

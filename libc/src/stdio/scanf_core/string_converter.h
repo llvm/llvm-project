@@ -10,10 +10,14 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stddef.h>
 
@@ -40,8 +44,21 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     }
   }
 
-  char *output = reinterpret_cast<char *>(to_conv.output_ptr);
-
+  char *output;
+  size_t value;
+  AllocChecker ac;
+  if ((to_conv.flags & NO_WRITE) == 0 && (to_conv.flags & ALLOCATE) != 0) {
+    if (to_conv.conv_name == 'c')
+      value = max_width + 1;
+    else
+      value = (max_width < 32) ? max_width + 1 : 32;
+    output = new (ac) char[value];
+    if (!ac) {
+      libc_errno = ENOMEM;
+      return MATCHING_FAILURE;
+    }
+  } else
+    output = reinterpret_cast<char *>(to_conv.output_ptr);
   char cur_char = reader->getc();
   size_t i = 0;
   for (; i < max_width && cur_char != '\0'; ++i) {
@@ -52,14 +69,36 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
       break;
     }
     // if the NO_WRITE flag is not set, write to the output.
-    if ((to_conv.flags & NO_WRITE) == 0)
+    if ((to_conv.flags & NO_WRITE) == 0) {
       output[i] = cur_char;
+      if ((to_conv.flags & ALLOCATE) != 0) {
+        if ((i + 1) == value && value < max_width) {
+          value *= 2;
+          char *tmp = new (ac) char[value];
+          if (!ac) {
+            delete[] output;
+            libc_errno = ENOMEM;
+            reader->ungetc(cur_char);
+            return MATCHING_FAILURE;
+          }
+          inline_memcpy(tmp, output, i + 1);
+          delete[] output;
+          output = tmp;
+        }
+      }
+    }
     cur_char = reader->getc();
   }
 
   // We always read one more character than will be used, so we have to put the
   // last one back.
   reader->ungetc(cur_char);
+
+  if (i == 0) {
+    if ((to_conv.flags & ALLOCATE) != 0 && output)
+      delete[] output;
+    return MATCHING_FAILURE;
+  }
 
   // If this is %s or %[]
   if (to_conv.conv_name != 'c' && (to_conv.flags & NO_WRITE) == 0) {
@@ -70,8 +109,11 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     output[i] = '\0';
   }
 
-  if (i == 0)
-    return MATCHING_FAILURE;
+  if ((to_conv.flags & ALLOCATE) != 0) {
+    char **outptr = reinterpret_cast<char **>(to_conv.output_ptr);
+    *outptr = output;
+  }
+
   return READ_OK;
 }
 
