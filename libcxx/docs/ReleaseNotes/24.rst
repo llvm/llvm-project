@@ -69,6 +69,9 @@ Potentially breaking changes
 - Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
   be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
 
+- ``std::filesystem::canonical`` now reports an error when called with an empty path, per ``[fs.op.canonical]``.
+  (`Github <https://llvm.org/PR77170>`__)
+
 Announcements About Future Releases
 -----------------------------------
 
