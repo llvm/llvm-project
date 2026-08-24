@@ -305,7 +305,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa_a16(<8 x i32> inreg %rsrc, i16 %s, i16
 ; GFX11-TRUE16-LABEL: load_2dmsaa_a16:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v2.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v2, v1, v0, 0x5040100
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[2:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA unorm a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
@@ -338,8 +338,8 @@ main_body:
 define amdgpu_ps <4 x float> @load_2darraymsaa_a16(<8 x i32> inreg %rsrc, i16 %s, i16 %t, i16 %slice, i16 %fragid) {
 ; GFX11-TRUE16-LABEL: load_2darraymsaa_a16:
 ; GFX11-TRUE16:       ; %bb.0: ; %main_body
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v4, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v3, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_perm_b32 v4, v3, v2, 0x5040100
+; GFX11-TRUE16-NEXT:    v_perm_b32 v3, v1, v0, 0x5040100
 ; GFX11-TRUE16-NEXT:    image_msaa_load v[0:3], v[3:4], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
