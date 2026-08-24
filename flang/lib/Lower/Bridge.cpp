@@ -626,6 +626,11 @@ public:
             bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::markOpenMPImportedDeclareTargets(
+          *this, bridge.getSemanticsContext());
+    });
+
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
 

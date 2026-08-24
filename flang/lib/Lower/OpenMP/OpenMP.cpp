@@ -18,6 +18,7 @@
 #include "Decomposer.h"
 #include "Utils.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/reference-wrapper.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -1496,7 +1497,7 @@ static void promoteNonCPtrUseDevicePtrArgsToUseDeviceAddr(
 /// 'declare target' directive and return the intended device type for them.
 static void getDeclareTargetInfo(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::pft::Evaluation &eval,
+    std::optional<common::reference_wrapper<lower::pft::Evaluation>> eval,
     const parser::OmpDeclareTargetDirective &construct,
     mlir::omp::DeclareTargetOperands &clauseOps,
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause) {
@@ -1510,8 +1511,10 @@ static void getDeclareTargetInfo(
     List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
       // Case: implicit capture of the enclosing function/subroutine.
+      assert(eval.has_value() &&
+             "expected eval to have value when clauses is empty");
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
-          eval.getOwningProcedure();
+          eval->get().getOwningProcedure();
       bool owningProcNotMainProgram =
           owningProc && !owningProc->isMainProgram();
 
@@ -7830,12 +7833,8 @@ void Fortran::lower::genOpenMPSymbolProperties(
   if (sym.test(semantics::Symbol::Flag::OmpThreadprivate))
     lower::genThreadprivateOp(converter, var);
 
-  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget)) {
-    if (var.isGlobal())
-      lower::attachOpenMPDeclareTargetAttributes(converter, var);
-    else
-      lower::genDeclareTargetIntGlobal(converter, var);
-  }
+  if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
+    lower::genDeclareTargetIntGlobal(converter, var);
 }
 
 void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
@@ -7935,12 +7934,14 @@ void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
 // generation.
 void Fortran::lower::genDeclareTargetIntGlobal(
     lower::AbstractConverter &converter, const lower::pft::Variable &var) {
-  // A non-global variable which can be in a declare target directive must
-  // be a variable in the main program, and it has the implicit SAVE
-  // attribute. We create a GlobalOp for it to simplify the translation to
-  // LLVM IR.
-  globalInitialization(converter, converter.getFirOpBuilder(), var.getSymbol(),
-                       var, converter.getCurrentLocation());
+  if (!var.isGlobal()) {
+    // A non-global variable which can be in a declare target directive must
+    // be a variable in the main program, and it has the implicit SAVE
+    // attribute. We create a GlobalOp for it to simplify the translation to
+    // LLVM IR.
+    globalInitialization(converter, converter.getFirOpBuilder(),
+                         var.getSymbol(), var, converter.getCurrentLocation());
+  }
 }
 
 bool Fortran::lower::isOpenMPTargetConstruct(
@@ -8096,38 +8097,53 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
 // operator reductions imported from modules (deleted: replaced by lazy,
 // clause-driven materialization).
 
-void Fortran::lower::attachOpenMPDeclareTargetAttributes(
-    lower::AbstractConverter &converter, const lower::pft::Variable &var) {
-  assert(var.isGlobal());
-  auto module = converter.getModuleOp();
+// Visitor used to mark declare target globals from imported modules.
+struct ModuleDeclareTargetVisitor {
+  Fortran::lower::AbstractConverter &converter;
+  semantics::SemanticsContext &semaCtx;
 
-  mlir::Operation *globalOp =
-      module.lookupSymbol(converter.mangleName(var.getSymbol()));
+  explicit ModuleDeclareTargetVisitor(
+      Fortran::lower::AbstractConverter &converter,
+      semantics::SemanticsContext &ctx)
+      : converter(converter), semaCtx(ctx) {}
 
-  auto ultimateSymbol = var.getSymbol().GetUltimate();
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
 
-  if (globalOp && ultimateSymbol.IsFromModFile()) {
-    auto declareTargetOp =
-        llvm::cast<mlir::omp::DeclareTargetInterface>(globalOp);
-    Fortran::common::visit(
-        [&](const auto &details) {
-          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
-                                          std::decay_t<decltype(details)>>) {
-            mlir::omp::DeclareTargetDeviceType deviceType =
-                toMLIRDeclareTargetDeviceType(
-                    details.ompDeclTargetDeviceType().value_or(
-                        Fortran::common::OmpDeviceType::Any));
+  void Post(const parser::OmpDeclareTargetDirective &directive) {
+    mlir::omp::DeclareTargetOperands clauseOps;
+    llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
+    mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
 
-            mlir::omp::DeclareTargetCaptureClause clause;
-            if (details.ompDeclTarget().test(llvm::omp::Clause::OMPC_link))
-              clause = mlir::omp::DeclareTargetCaptureClause::link;
-            else
-              clause = mlir::omp::DeclareTargetCaptureClause::enter;
+    getDeclareTargetInfo(converter, semaCtx, std::nullopt, directive, clauseOps,
+                         symbolAndClause);
 
-            declareTargetOp.setDeclareTarget(deviceType, clause,
-                                             /*automap=*/false);
-          }
-        },
-        ultimateSymbol.details());
+    for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
+      mlir::Operation *op =
+          mod.lookupSymbol(converter.mangleName(symClause.symbol));
+
+      // op not found, so nothing to mark. This happens for variables
+      // and functions that are not actually used in the current
+      // translation unit.
+      if (!op)
+        continue;
+
+      markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
+                        symClause.automap);
+    }
+  }
+};
+
+void Fortran::lower::markOpenMPImportedDeclareTargets(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx) {
+  std::list<parser::Program> &modTrees = semaCtx.GetModFileParseTrees();
+  ModuleDeclareTargetVisitor visitor{converter, semaCtx};
+  for (auto &modTree : modTrees) {
+    parser::Walk(modTree, visitor);
   }
 }
