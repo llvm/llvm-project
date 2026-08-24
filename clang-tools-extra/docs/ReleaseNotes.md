@@ -180,6 +180,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
 
+- Improved {doc}`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` check by fixing a false
+  positive for macro arguments used as the type-name in a C11 `_Generic`
+  selection, where parenthesizing them would be invalid.
+
 #### Removed checks
 
 - Removed the deprecated `zircon-temporary-objects` check. Users should migrate to
