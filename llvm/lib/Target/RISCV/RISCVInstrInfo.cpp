@@ -3619,6 +3619,8 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_CALL, "riscv-call"},
       {MO_LO, "riscv-lo"},
       {MO_HI, "riscv-hi"},
+      {MO_BASE_IDX_LO, "riscv-base-idx-lo"},
+      {MO_BASE_IDX_ADD, "riscv-base-idx-add"},
       {MO_PCREL_LO, "riscv-pcrel-lo"},
       {MO_PCREL_HI, "riscv-pcrel-hi"},
       {MO_GOT_HI, "riscv-got-hi"},
