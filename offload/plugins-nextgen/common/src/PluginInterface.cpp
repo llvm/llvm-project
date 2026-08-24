@@ -973,9 +973,8 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
       return Err;
     }
 
-    // An async info belonging to a nowait task is never synchronized, so this
-    // is the only completion notification it ever gets. Without releasing its
-    // allocations here they are never freed at all.
+    // A completed query is a completion point like synchronize(), and may be
+    // the only one this async info ever gets, so release its allocations here.
     if (WorkCompleted)
       std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
   }
