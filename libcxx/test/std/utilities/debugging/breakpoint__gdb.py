@@ -36,7 +36,9 @@ def main():
 
         frame = gdb.newest_frame()
         found_main = False
+        print("Looking for main", file=sys.stderr)
         while frame is not None:
+            print(frame.name(), file=sys.stderr)
             if frame.name() == "main":
                 found_main = True
                 break
@@ -48,6 +50,7 @@ def main():
         print(f"Test Failure: {e}", file=sys.stderr)
         gdb.execute("quit 1")
 
+    print("Exiting successfully", file=sys.stderr)
     gdb.execute("quit 0")
 
 

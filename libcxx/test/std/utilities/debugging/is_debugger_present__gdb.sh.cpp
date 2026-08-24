@@ -13,10 +13,11 @@
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
 // support gdb anymore, favoring lldb instead.
 // UNSUPPORTED: android
+// UNSUPPORTED: asan
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{exec} "%{gdb}" --return-child-result -ex run %t.exe
+// RUN: %{exec} %{gdb} --return-child-result -ex run %t.exe
 
 // <debugging>
 

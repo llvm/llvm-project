@@ -15,7 +15,7 @@
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
-// RUN: %{exec} "%{gdb}" %t.exe -ex "source %S/breakpoint__gdb.py"
+// RUN: %{exec} %{gdb} %t.exe -ex "source %S/breakpoint__gdb.py"
 
 // breakpoint() noexcept
 
