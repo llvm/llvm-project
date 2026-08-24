@@ -41,40 +41,21 @@ def MIR_FuncOp : MIR_Op<"func", [IsolatedFromAbove, NoTerminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// Generic (G_*) opcodes — representative hand-written subset
+// Generic (G_*) opcodes
+//
+// The full set of generic opcodes is generated from
+// llvm/include/llvm/Target/GenericOpcodes.td by the `-gen-mir-generic-ops`
+// mlir-tblgen backend and checked in as MIRGenericOps.td.
 //===----------------------------------------------------------------------===//
 
-def MIR_GAddOp : MIR_Op<"g_add", [Pure, Commutative, SameOperandsAndResultType]> {
-  let summary = "G_ADD: integer addition";
-  let arguments = (ins MIR_AnyLLT:$src1, MIR_AnyLLT:$src2);
-  let results = (outs MIR_AnyLLT:$dst);
-  let assemblyFormat = "$src1 `,` $src2 attr-dict `:` type($dst)";
-}
-
-def MIR_GConstantOp : MIR_Op<"g_constant", [Pure]> {
-  let summary = "G_CONSTANT: a scalar integer constant";
-  let arguments = (ins I64Attr:$value);
-  let results = (outs MIR_ScalarType:$dst);
-  let assemblyFormat = "$value attr-dict `:` qualified(type($dst))";
-}
-
-def MIR_GLoadOp : MIR_Op<"g_load"> {
-  let summary = "G_LOAD: a generic load";
-  let arguments = (ins MIR_PointerType:$addr, MIR_MMOAttr:$mmo);
-  let results = (outs MIR_AnyLLT:$dst);
-  let assemblyFormat =
-      "$addr attr-dict `:` qualified(type($addr)) `->` type($dst)";
-}
-
-def MIR_GStoreOp : MIR_Op<"g_store"> {
-  let summary = "G_STORE: a generic store";
-  let arguments = (ins MIR_AnyLLT:$value, MIR_PointerType:$addr, MIR_MMOAttr:$mmo);
-  let assemblyFormat =
-      "$value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))";
-}
+include "mlir/Dialect/MIR/IR/MIRGenericOps.td"
 
 //===----------------------------------------------------------------------===//
 // COPY and ABI-boundary physical-register copies
+//
+// COPY is a shared TargetOpcode (not a GenericInstruction), and the physical
+// register copies are specific to this dialect's SSA modeling, so these are
+// defined by hand rather than generated.
 //===----------------------------------------------------------------------===//
 
 def MIR_CopyOp : MIR_Op<"copy", [Pure, SameOperandsAndResultType]> {

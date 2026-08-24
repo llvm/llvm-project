@@ -58,6 +58,17 @@ def MIR_Dialect : Dialect {
 class MIR_Op<string mnemonic, list<Trait> traits = []>
     : Op<MIR_Dialect, mnemonic, traits>;
 
+// Base class for generated generic (G_*) opcodes. Uses a uniform assembly
+// format that works for any operand/result/attribute shape: operands, then the
+// attribute dictionary (which carries immediates and MachineIR metadata), then
+// the functional type. This avoids per-op custom formats while the generated
+// op set is filled in from GenericOpcodes.td.
+class MIR_GenericOp<string mnemonic, list<Trait> traits = []>
+    : MIR_Op<mnemonic, traits> {
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
 class MIR_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<MIR_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
