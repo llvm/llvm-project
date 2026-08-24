@@ -22,9 +22,7 @@
 using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
 TEST_F(LlvmLibcFEnvTest, GetSetTestExceptFlag) {
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_ARM)) &&                                      \
-    !defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
   // Unsupported: no fenv
 #else
   // We will disable all exceptions to prevent invocation of the exception
@@ -81,5 +79,5 @@ TEST_F(LlvmLibcFEnvTest, GetSetTestExceptFlag) {
   // When we set the flags and test, we should only see FE_INVALID.
   LIBC_NAMESPACE::fesetexceptflag(&invalid_flag, FE_ALL_EXCEPT);
   EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT), FE_INVALID);
-#endif
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }

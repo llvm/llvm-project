@@ -24,9 +24,7 @@
 using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
 TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_ARM)) &&                                      \
-    !defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
   // Unsupported: no fenv
 #else
   // We will disable all exceptions to prevent invocation of the exception
@@ -47,13 +45,11 @@ TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
     ASSERT_EQ(LIBC_NAMESPACE::fesetenv(&env), 0);
     ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
   }
-#endif
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }
 
 TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_ARM)) &&                                      \
-    !defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
   // Unsupported: no fenv
 #else
   // We will disable all exceptions to prevent invocation of the exception
@@ -84,5 +80,5 @@ TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
   // Setting the default env should set rounding mode to FE_TONEAREST.
   int rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TONEAREST);
-#endif
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }

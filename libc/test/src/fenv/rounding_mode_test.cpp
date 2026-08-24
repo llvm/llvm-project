@@ -17,9 +17,7 @@
 using LlvmLibcRoundingModeTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 
 TEST_F(LlvmLibcRoundingModeTest, SetAndGet) {
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_ARM)) &&                                      \
-    !defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
   // Unsupported: no fenv
 #else
   struct ResetDefaultRoundingMode {
@@ -46,5 +44,5 @@ TEST_F(LlvmLibcRoundingModeTest, SetAndGet) {
   EXPECT_EQ(s, 0);
   rm = LIBC_NAMESPACE::fegetround();
   EXPECT_EQ(rm, FE_TOWARDZERO);
-#endif
+#endif // defined(LIBC_TARGET_ARCH_IS_ANY_ARM) && !defined(__ARM_FP)
 }
