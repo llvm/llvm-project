@@ -1452,16 +1452,13 @@ Error BinaryFunction::disassemble() {
                 TargetAddress < getAddress() + getMaxSize() &&
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
-              // Result of __builtin_unreachable().
+              // This may be an effect of source-level undefined behavior, such
+              // as __builtin_unreachable(). It may also be valid code at a
+              // temporary label omitted from the symbol table by the assembler.
+              // Since BOLT cannot distinguish these cases, preserve the branch.
               errs() << "BOLT-WARNING: jump past end detected at 0x"
                      << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
-                     << *this << " : replacing with nop.\n";
-              BC.MIB->createNoop(Instruction);
-              if (IsCondBranch) {
-                // Register branch offset for profile validation.
-                IgnoredBranches.emplace_back(Offset, Offset + Size);
-              }
-              goto add_instruction;
+                     << *this << ".\n";
             }
             // May update Instruction and IsCall
             TargetSymbol = handleExternalReference(Instruction, Size, Offset,
@@ -1539,7 +1536,6 @@ Error BinaryFunction::disassemble() {
       }
     }
 
-add_instruction:
     if (!getDWARFUnits().empty()) {
       SmallVector<DebugLineTableRowRef, 1> Rows;
       for (const auto &[_, Unit] : getDWARFUnits()) {
