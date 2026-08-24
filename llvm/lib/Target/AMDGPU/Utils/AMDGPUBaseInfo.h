@@ -1805,10 +1805,14 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
-/// \returns lds block size in terms of dwords. \p
-/// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
-/// must be defined in terms of bytes.
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+/// \returns LDS encoding granularity in dwords for PAL metadata.
+/// This is used to calculate the LDS size field value for COMPUTE_PGM_RSRC2.
+unsigned getLdsGranularityEncodingDw(const MCSubtargetInfo &ST);
+
+/// \returns LDS allocation granularity in dwords.
+/// This is the block size at which hardware allocates LDS to workgroups,
+/// used for occupancy calculations.
+unsigned getLdsGranularityAllocDw(const MCSubtargetInfo &ST);
 
 class ClusterDimsAttr {
 public:
