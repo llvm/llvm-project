@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -Wno-keyword-macro-undef %s -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
 
 // The list of keywords was taken fron [lex.key] for C++98, and the difference
 // between [lex.key] contents in N and N-1 revisions of the Standard otherwise.
@@ -16,317 +16,317 @@ namespace cwg3088 { // cwg3088: partial
 
 #define asm
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef asm
+#undef asm // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define asm()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define auto
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef auto
+#undef auto // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define auto()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define bool
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef bool
+#undef bool // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define bool()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define break
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef break
+#undef break // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define break()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define case
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef case
+#undef case // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define case()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define catch
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef catch
+#undef catch // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define catch()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define char
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef char
+#undef char // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define char()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define class
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef class
+#undef class // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define class()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define const
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef const
+#undef const // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define const()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define const_cast
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef const_cast
+#undef const_cast // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define const_cast()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define continue
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef continue
+#undef continue // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define continue()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define default
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef default
+#undef default // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define default()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define delete
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef delete
+#undef delete // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define delete()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define do
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef do
+#undef do // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define do()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define double
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef double
+#undef double // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define double()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define dynamic_cast
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef dynamic_cast
+#undef dynamic_cast // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define dynamic_cast()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define else
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef else
+#undef else // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define else()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define enum
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef enum
+#undef enum // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define enum()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define explicit
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef explicit
+#undef explicit // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define explicit()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define export
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef export
+#undef export // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define export()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define extern
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef extern
+#undef extern // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define extern()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define false
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef false
+#undef false // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define false()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define float
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef float
+#undef float // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define float()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define for
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef for
+#undef for // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define for()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define friend
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef friend
+#undef friend // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define friend()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define goto
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef goto
+#undef goto // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define goto()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define if
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef if
+#undef if // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define if()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define inline
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef inline
+#undef inline // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define inline()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define int
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef int
+#undef int // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define int()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define long
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef long
+#undef long // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define long()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define mutable
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef mutable
+#undef mutable // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define mutable()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define namespace
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef namespace
+#undef namespace // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define namespace()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define new
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef new
+#undef new // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define new()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define operator
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef operator
+#undef operator // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define operator()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define private
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef private
+#undef private // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define private()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define protected
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef protected
+#undef protected // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define protected()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define public
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef public
+#undef public // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define public()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define register
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef register
+#undef register // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define register()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define reinterpret_cast
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef reinterpret_cast
+#undef reinterpret_cast // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define reinterpret_cast()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define return
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef return
+#undef return // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define return()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define short
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef short
+#undef short // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define short()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define signed
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef signed
+#undef signed // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define signed()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define sizeof
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef sizeof
+#undef sizeof // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define sizeof()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define static
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef static
+#undef static // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define static()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define static_cast
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef static_cast
+#undef static_cast // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define static_cast()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define struct
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef struct
+#undef struct // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define struct()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define switch
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef switch
+#undef switch // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define switch()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define template
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef template
+#undef template // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define template()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define this
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef this
+#undef this // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define this()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define throw
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef throw
+#undef throw // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define throw()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define true
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef true
+#undef true // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define true()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define try
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef try
+#undef try // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define try()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define typedef
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef typedef
+#undef typedef // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define typedef()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define typeid
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef typeid
+#undef typeid // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define typeid()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define typename
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef typename
+#undef typename // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define typename()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define union
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef union
+#undef union // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define union()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define unsigned
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef unsigned
+#undef unsigned // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define unsigned()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define using
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef using
+#undef using // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define using()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define virtual
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef virtual
+#undef virtual // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define virtual()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define void
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef void
+#undef void // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define void()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define volatile
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef volatile
+#undef volatile // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define volatile()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define wchar_t
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef wchar_t
+#undef wchar_t // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define wchar_t()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 #define while
 // expected-error@-1 {{keyword is hidden by macro definition}}
-#undef while
+#undef while // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define while()
 // expected-error@-1 {{keyword is hidden by macro definition}}
 
@@ -404,52 +404,52 @@ namespace cwg3088 { // cwg3088: partial
 
 #define alignas
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef alignas
+#undef alignas // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define alignas()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define alignof
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef alignof
+#undef alignof // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define alignof()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define char16_t
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef char16_t
+#undef char16_t // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define char16_t()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define char32_t
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef char32_t
+#undef char32_t // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define char32_t()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define constexpr
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef constexpr
+#undef constexpr // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define constexpr()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define decltype
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef decltype
+#undef decltype // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define decltype()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define noexcept
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef noexcept
+#undef noexcept // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define noexcept()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define nullptr
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef nullptr
+#undef nullptr // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define nullptr()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define static_assert
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef static_assert
+#undef static_assert // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define static_assert()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define thread_local
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef thread_local
+#undef thread_local // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define thread_local()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 
@@ -457,12 +457,12 @@ namespace cwg3088 { // cwg3088: partial
 
 #define final
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef final
+#undef final // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define final()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 #define override
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
-#undef override
+#undef override // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define override()
 // since-cxx11-error@-1 {{keyword is hidden by macro definition}}
 
@@ -511,42 +511,42 @@ namespace cwg3088 { // cwg3088: partial
 
 #define char8_t
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef char8_t
+#undef char8_t // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define char8_t()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define concept
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef concept
+#undef concept // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define concept()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define consteval
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef consteval
+#undef consteval // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define consteval()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define constinit
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef constinit
+#undef constinit // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define constinit()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define co_await
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef co_await
+#undef co_await // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define co_await()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define co_return
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef co_return
+#undef co_return // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define co_return()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define co_yield
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef co_yield
+#undef co_yield // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define co_yield
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 #define requires
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
-#undef requires
+#undef requires // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define requires()
 // since-cxx20-error@-1 {{keyword is hidden by macro definition}}
 
@@ -595,7 +595,7 @@ namespace cwg3088 { // cwg3088: partial
 
 #define contract_assert
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef contract_assert
+#undef contract_assert // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define contract_assert()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 
@@ -603,12 +603,12 @@ namespace cwg3088 { // cwg3088: partial
 
 #define post
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef post
+#undef post // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define post()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 #define pre
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
-#undef pre
+#undef pre // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define pre()
 // FIXME-error@-1 {{keyword is hidden by macro definition}}
 
@@ -616,7 +616,7 @@ namespace cwg3088 { // cwg3088: partial
 
 #define indeterminate
 // FIXME-since-cxx26-error@-1 {{attribute is hidden by macro definition}}
-#undef indeterminate
+#undef indeterminate // expected-error {{keyword or identifier with special meaning is used as a macro name}}
 #define indeterminate()
 // FIXME-since-cxx26-error@-1 {{attribute is hidden by macro definition}}
 #endif
