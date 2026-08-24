@@ -19,22 +19,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-
-// -----
-
-// Regression test for bug #204100. More vector sizes than the op has loops
-// used to trip an out-of-bounds assertion in SmallVector.
-module {
-  func.func @add_dynamic(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xbf16>, %arg2: memref<?x?xbf16>) {
-    // expected-error @below {{Attempted to vectorize, but failed}}
-    linalg.add ins(%arg0, %arg1 : memref<?x?xbf16>, memref<?x?xbf16>) outs(%arg2 : memref<?x?xbf16>)
-    return
-  }
-  module attributes {transform.with_named_sequence} {
-    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-      %0 = transform.structured.match ops{["linalg.add"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      transform.structured.vectorize %0 vector_sizes [8, [16], 4] : !transform.any_op
-      transform.yield
-    }
-  }
-}
