@@ -1,4 +1,4 @@
-//===-- RISCVExpandAtomicPseudoInsts.cpp - Expand atomic pseudo instrs. ---===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,12 +23,12 @@
 
 using namespace llvm;
 
-#define RISCV_EXPAND_ATOMIC_PSEUDO_NAME                                        \
-  "RISC-V atomic pseudo instruction expansion pass"
+#define RISCV_EXPAND_PSEUDO_ATOMICS_NAME                                       \
+  "RISC-V Pseudo Instruction Expansion - Atomics"
 
 namespace {
 
-class RISCVExpandAtomicPseudoImpl final : public RISCVExpandPseudoImplBase {
+class RISCVExpandPseudoAtomicsImpl final : public RISCVExpandPseudoImplBase {
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI) const override;
 
@@ -83,24 +83,24 @@ class RISCVExpandAtomicPseudoImpl final : public RISCVExpandPseudoImplBase {
                                    MachineBasicBlock *&LoopHeadBNETarget) const;
 };
 
-class RISCVExpandAtomicPseudoLegacy : public MachineFunctionPass {
+class RISCVExpandPseudoAtomicsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVExpandAtomicPseudoLegacy() : MachineFunctionPass(ID) {}
+  RISCVExpandPseudoAtomicsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return RISCVExpandAtomicPseudoImpl().run(MF);
+    return RISCVExpandPseudoAtomicsImpl().run(MF);
   }
 
   StringRef getPassName() const override {
-    return RISCV_EXPAND_ATOMIC_PSEUDO_NAME;
+    return RISCV_EXPAND_PSEUDO_ATOMICS_NAME;
   }
 };
 
 } // anonymous namespace
 
-bool RISCVExpandAtomicPseudoImpl::expandMI(
+bool RISCVExpandPseudoAtomicsImpl::expandMI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) const {
   // RISCVInstrInfo::getInstSizeInBytes expects that the total size of the
@@ -205,7 +205,7 @@ bool RISCVExpandAtomicPseudoImpl::expandMI(
 }
 
 unsigned
-RISCVExpandAtomicPseudoImpl::getLRForRMW32(AtomicOrdering Ordering) const {
+RISCVExpandPseudoAtomicsImpl::getLRForRMW32(AtomicOrdering Ordering) const {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -227,7 +227,7 @@ RISCVExpandAtomicPseudoImpl::getLRForRMW32(AtomicOrdering Ordering) const {
 }
 
 unsigned
-RISCVExpandAtomicPseudoImpl::getSCForRMW32(AtomicOrdering Ordering) const {
+RISCVExpandPseudoAtomicsImpl::getSCForRMW32(AtomicOrdering Ordering) const {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -249,7 +249,7 @@ RISCVExpandAtomicPseudoImpl::getSCForRMW32(AtomicOrdering Ordering) const {
 }
 
 unsigned
-RISCVExpandAtomicPseudoImpl::getLRForRMW64(AtomicOrdering Ordering) const {
+RISCVExpandPseudoAtomicsImpl::getLRForRMW64(AtomicOrdering Ordering) const {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -271,7 +271,7 @@ RISCVExpandAtomicPseudoImpl::getLRForRMW64(AtomicOrdering Ordering) const {
 }
 
 unsigned
-RISCVExpandAtomicPseudoImpl::getSCForRMW64(AtomicOrdering Ordering) const {
+RISCVExpandPseudoAtomicsImpl::getSCForRMW64(AtomicOrdering Ordering) const {
   switch (Ordering) {
   default:
     llvm_unreachable("Unexpected AtomicOrdering");
@@ -292,8 +292,8 @@ RISCVExpandAtomicPseudoImpl::getSCForRMW64(AtomicOrdering Ordering) const {
   }
 }
 
-unsigned RISCVExpandAtomicPseudoImpl::getLRForRMW(AtomicOrdering Ordering,
-                                                  int Width) const {
+unsigned RISCVExpandPseudoAtomicsImpl::getLRForRMW(AtomicOrdering Ordering,
+                                                   int Width) const {
   if (Width == 32)
     return getLRForRMW32(Ordering);
   if (Width == 64)
@@ -301,8 +301,8 @@ unsigned RISCVExpandAtomicPseudoImpl::getLRForRMW(AtomicOrdering Ordering,
   llvm_unreachable("Unexpected LR width\n");
 }
 
-unsigned RISCVExpandAtomicPseudoImpl::getSCForRMW(AtomicOrdering Ordering,
-                                                  int Width) const {
+unsigned RISCVExpandPseudoAtomicsImpl::getSCForRMW(AtomicOrdering Ordering,
+                                                   int Width) const {
   if (Width == 32)
     return getSCForRMW32(Ordering);
   if (Width == 64)
@@ -310,7 +310,7 @@ unsigned RISCVExpandAtomicPseudoImpl::getSCForRMW(AtomicOrdering Ordering,
   llvm_unreachable("Unexpected SC width\n");
 }
 
-void RISCVExpandAtomicPseudoImpl::doAtomicBinOpExpansion(
+void RISCVExpandPseudoAtomicsImpl::doAtomicBinOpExpansion(
     MachineInstr &MI, MachineBasicBlock *LoopMBB, AtomicRMWInst::BinOp BinOp,
     int Width) const {
   DebugLoc DL = MI.getDebugLoc();
@@ -399,7 +399,7 @@ void RISCVExpandAtomicPseudoImpl::doAtomicBinOpExpansion(
       .addMBB(LoopMBB);
 }
 
-void RISCVExpandAtomicPseudoImpl::insertMaskedMerge(
+void RISCVExpandPseudoAtomicsImpl::insertMaskedMerge(
     DebugLoc DL, MachineBasicBlock *MBB, Register DestReg, Register OldValReg,
     Register NewValReg, Register MaskReg, Register ScratchReg) const {
   assert(OldValReg != ScratchReg && "OldValReg and ScratchReg must be unique");
@@ -420,7 +420,7 @@ void RISCVExpandAtomicPseudoImpl::insertMaskedMerge(
       .addReg(ScratchReg);
 }
 
-void RISCVExpandAtomicPseudoImpl::doMaskedAtomicBinOpExpansion(
+void RISCVExpandPseudoAtomicsImpl::doMaskedAtomicBinOpExpansion(
     MachineInstr &MI, MachineBasicBlock *LoopMBB, AtomicRMWInst::BinOp BinOp,
     int Width) const {
   DebugLoc DL = MI.getDebugLoc();
@@ -483,7 +483,7 @@ void RISCVExpandAtomicPseudoImpl::doMaskedAtomicBinOpExpansion(
       .addMBB(LoopMBB);
 }
 
-bool RISCVExpandAtomicPseudoImpl::expandAtomicBinOp(
+bool RISCVExpandPseudoAtomicsImpl::expandAtomicBinOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) const {
@@ -518,10 +518,10 @@ bool RISCVExpandAtomicPseudoImpl::expandAtomicBinOp(
   return true;
 }
 
-void RISCVExpandAtomicPseudoImpl::insertSext(DebugLoc DL,
-                                             MachineBasicBlock *MBB,
-                                             Register ValReg,
-                                             Register ShamtReg) const {
+void RISCVExpandPseudoAtomicsImpl::insertSext(DebugLoc DL,
+                                              MachineBasicBlock *MBB,
+                                              Register ValReg,
+                                              Register ShamtReg) const {
   BuildMI(MBB, DL, TII->get(RISCV::SLL), ValReg)
       .addReg(ValReg)
       .addReg(ShamtReg);
@@ -530,7 +530,7 @@ void RISCVExpandAtomicPseudoImpl::insertSext(DebugLoc DL,
       .addReg(ShamtReg);
 }
 
-void RISCVExpandAtomicPseudoImpl::doAtomicMinMaxOpExpansion(
+void RISCVExpandPseudoAtomicsImpl::doAtomicMinMaxOpExpansion(
     MachineInstr &MI, MachineBasicBlock *LoopHeadMBB,
     MachineBasicBlock *LoopIfBodyMBB, MachineBasicBlock *LoopTailMBB,
     AtomicRMWInst::BinOp BinOp, int Width) const {
@@ -600,7 +600,7 @@ void RISCVExpandAtomicPseudoImpl::doAtomicMinMaxOpExpansion(
       .addMBB(LoopHeadMBB);
 }
 
-void RISCVExpandAtomicPseudoImpl::doMaskedAtomicMinMaxOpExpansion(
+void RISCVExpandPseudoAtomicsImpl::doMaskedAtomicMinMaxOpExpansion(
     MachineInstr &MI, MachineBasicBlock *LoopHeadMBB,
     MachineBasicBlock *LoopIfBodyMBB, MachineBasicBlock *LoopTailMBB,
     AtomicRMWInst::BinOp BinOp, int Width) const {
@@ -684,7 +684,7 @@ void RISCVExpandAtomicPseudoImpl::doMaskedAtomicMinMaxOpExpansion(
       .addMBB(LoopHeadMBB);
 }
 
-bool RISCVExpandAtomicPseudoImpl::expandAtomicMinMaxOp(
+bool RISCVExpandPseudoAtomicsImpl::expandAtomicMinMaxOp(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
     MachineBasicBlock::iterator &NextMBBI) const {
@@ -745,7 +745,7 @@ bool RISCVExpandAtomicPseudoImpl::expandAtomicMinMaxOp(
 // On success, returns true and deletes the matching BNE or AND+BNE, sets the
 // LoopHeadBNETarget argument to the target that should be used within the
 // loop head, and removes that block as a successor to MBB.
-bool RISCVExpandAtomicPseudoImpl::tryToFoldBNEOnCmpXchgResult(
+bool RISCVExpandPseudoAtomicsImpl::tryToFoldBNEOnCmpXchgResult(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
     Register CmpValReg, Register MaskReg,
     MachineBasicBlock *&LoopHeadBNETarget) const {
@@ -799,7 +799,7 @@ bool RISCVExpandAtomicPseudoImpl::tryToFoldBNEOnCmpXchgResult(
   return true;
 }
 
-bool RISCVExpandAtomicPseudoImpl::expandAtomicCmpXchg(
+bool RISCVExpandPseudoAtomicsImpl::expandAtomicCmpXchg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, bool IsMasked,
     int Width, MachineBasicBlock::iterator &NextMBBI) const {
   MachineInstr &MI = *MBBI;
@@ -901,19 +901,19 @@ bool RISCVExpandAtomicPseudoImpl::expandAtomicCmpXchg(
   return true;
 }
 
-char RISCVExpandAtomicPseudoLegacy::ID = 0;
+char RISCVExpandPseudoAtomicsLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVExpandAtomicPseudoLegacy, "riscv-expand-atomic-pseudo",
-                RISCV_EXPAND_ATOMIC_PSEUDO_NAME, false, false)
+INITIALIZE_PASS(RISCVExpandPseudoAtomicsLegacy, "riscv-expand-pseudo-atomics",
+                RISCV_EXPAND_PSEUDO_ATOMICS_NAME, false, false)
 
-FunctionPass *llvm::createRISCVExpandAtomicPseudoLegacyPass() {
-  return new RISCVExpandAtomicPseudoLegacy();
+FunctionPass *llvm::createRISCVExpandPseudoAtomicsLegacyPass() {
+  return new RISCVExpandPseudoAtomicsLegacy();
 }
 
 PreservedAnalyses
-RISCVExpandAtomicPseudoPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = RISCVExpandAtomicPseudoImpl().run(MF);
+RISCVExpandPseudoAtomicsPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVExpandPseudoAtomicsImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   return getMachineFunctionPassPreservedAnalyses();
