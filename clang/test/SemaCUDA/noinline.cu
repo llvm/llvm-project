@@ -13,7 +13,7 @@ __attribute__((__noinline__)) void fun3() { }
 #define __noinline__ __attribute__((__noinline__))
 __noinline__ void fun5() {}
 
-#undef __noinline__
+#undef __noinline__ // pedantic-warning {{keyword or identifier with special meaning is used as a macro name}}
 #10 "cuda.h" 3 // pedantic-warning {{this style of line directive is a GNU extension}}
 #define __noinline__ __attribute__((__noinline__))
 __noinline__ void fun6() {}
