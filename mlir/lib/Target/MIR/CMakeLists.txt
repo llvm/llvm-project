@@ -1,5 +1,6 @@
 add_mlir_translation_library(MLIRTargetMIRImport
   MIRImport.cpp
+  MIRExport.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/MIR
