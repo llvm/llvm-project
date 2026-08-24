@@ -474,6 +474,24 @@ struct S {
 }
 
 #if __cplusplus >= 201103L
+namespace GH218261 {
+  struct S {
+    template <typename T>
+    constexpr operator T() const {
+      return 10;
+    }
+
+    template <>
+    constexpr operator int() const {
+      return 4;
+    }
+  };
+
+  static_assert(S().operator int() == 4, "");
+}
+#endif
+
+#if __cplusplus >= 201103L
 namespace dependent_conversion_function_id_lookup {
 namespace gh77583 {
 struct A1 {
