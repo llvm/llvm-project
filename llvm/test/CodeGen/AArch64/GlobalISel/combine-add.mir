@@ -360,6 +360,34 @@ body:             |
 ...
 
 ---
+name:            add_shl_neg_nuw
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; CHECK-LABEL: name: add_shl_neg_nuw
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[COPY1]], [[COPY2]](i32)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[COPY]], [[SHL]]
+    ; CHECK-NEXT: $w0 = COPY [[SUB]](i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %2:_(i32) = COPY $w2
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i32) = G_SUB %3, %1
+    %5:_(i32) = G_SHL %4, %2
+    %6:_(i32) = nuw G_ADD %0, %5
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+...
+
+---
 name:            add_shl_neg_commuted
 tracksRegLiveness: true
 body:             |

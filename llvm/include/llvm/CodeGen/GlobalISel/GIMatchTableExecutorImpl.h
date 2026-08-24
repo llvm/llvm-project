@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -58,7 +59,9 @@ bool GIMatchTableExecutor::executeMatchTable(
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint32_t Flags = State.MIs[0]->getFlags();
+  uint32_t Flags = State.MIs[0]->getFlags();
+  if (shouldDropRootPoisonGeneratingFlags())
+    Flags &= ~GenericMachineInstr::getPoisonGeneratingFlags();
   bool BuilderInitialized = false;
   const auto initializeBuilder = [&]() {
     if (BuilderInitialized)

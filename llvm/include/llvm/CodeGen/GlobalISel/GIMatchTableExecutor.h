@@ -739,6 +739,11 @@ protected:
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
+  /// Return true to drop root poison-generating flags from the implicit flag
+  /// propagation performed for newly-built instructions. Explicit MIFlags
+  /// actions in the match table still apply to the output instruction.
+  virtual bool shouldDropRootPoisonGeneratingFlags() const { return false; }
+
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                                   const MachineRegisterInfo &MRI,
                                   bool Splat = false) const;
