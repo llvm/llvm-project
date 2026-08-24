@@ -102,4 +102,5 @@ thread_local int hostglob5 = x;
 // expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
 
 int ok = sizeof(x);
+auto reader = [] { return x; };
 } // namespace gh198079
