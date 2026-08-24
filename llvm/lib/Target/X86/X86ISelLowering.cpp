@@ -319,26 +319,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     }
-  }
-
-  if (Subtarget.hasAVX10_2()) {
-    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
-    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
-                   MVT::v4i64}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
-    }
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
   }
 
   // Handle address space casts between mixed sized pointers.
@@ -1270,11 +1252,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v4i32, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::v2i32, Custom);
-    if (!Subtarget.hasAVX10_2()) {
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
-    }
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2i32, Custom);
 
     // Custom legalize these to avoid over promotion or custom promotion.
     for (auto VT : {MVT::v2i8, MVT::v4i8, MVT::v8i8, MVT::v2i16, MVT::v4i16}) {
@@ -1550,10 +1528,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, MVT::v8i16, MVT::v8i32);
     setOperationAction(ISD::FP_TO_SINT,                MVT::v8i32, Custom);
     setOperationAction(ISD::FP_TO_UINT,                MVT::v8i32, Custom);
-    if (!Subtarget.hasAVX10_2()) {
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i32, Custom);
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i32, Custom);
-    }
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v8i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Custom);
@@ -1954,10 +1930,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
     }
 
-    if (!Subtarget.hasAVX10_2()) {
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
-    }
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
@@ -2615,6 +2589,24 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
+    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
+    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
+                   MVT::v4i64}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+    }
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
+    }
+
     // Lower scalar bf16 arithmetic by widening to a vector op and extracting
     // the low element.
     setOperationAction(ISD::FADD, MVT::bf16, Custom);
@@ -22563,10 +22555,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
   }
-  if (!Subtarget.hasAVX10_2() &&
-      ((DstVT == MVT::v4i32 && Subtarget.hasSSE2()) ||
-       (DstVT == MVT::v8i32 && Subtarget.hasAVX()) ||
-       (DstVT == MVT::v16i32 && Subtarget.hasAVX512()))) {
+  if (DstVT == MVT::v4i32 || DstVT == MVT::v8i32 || DstVT == MVT::v16i32) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
