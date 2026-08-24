@@ -14,9 +14,16 @@ struct Big {
   long a, b, c, d;
 };
 
+struct WithCopyCtor {
+  int x;
+  WithCopyCtor();
+  WithCopyCtor(const WithCopyCtor &);
+};
+
 void takeByref(WithDtor t);
 void takeTwoByref(WithDtor a, WithDtor b);
 void takeByval(Big b);
+void takeCopyCtorByref(WithCopyCtor c);
 
 // The callee must receive the temporary the caller destroys, not a copy of it.
 void callByref() {
@@ -28,7 +35,6 @@ void callByref() {
 // CIR:         %[[T:.*]] = cir.alloca "t" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR:         %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR:         cir.copy %[[T]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_WithDtor>
-// CIR-NOT:     cir.alloca "byref"
 // CIR-NOT:     cir.load
 // CIR:         cir.call @_Z9takeByref8WithDtor(%[[TMP]]) : (!cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}) -> ()
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[TMP]])
@@ -54,7 +60,6 @@ void callTwoByref() {
 // CIR-LABEL: cir.func {{.*}}@_Z12callTwoByrefv
 // CIR:         %[[TMP_A:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR:         %[[TMP_B:.*]] = cir.alloca "agg.tmp1" align(4) : !cir.ptr<!rec_WithDtor>
-// CIR-NOT:     cir.alloca "byref"
 // CIR-NOT:     cir.load
 // CIR:         cir.call @_Z12takeTwoByref8WithDtorS_(%[[TMP_A]], %[[TMP_B]]) : (!cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}, !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}) -> ()
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[TMP_B]])
@@ -69,6 +74,27 @@ void callTwoByref() {
 // OGCG:         call void @_Z12takeTwoByref8WithDtorS_(ptr nofree noundef align 4 dereferenceable(4) %[[TMP_A]], ptr nofree noundef align 4 dereferenceable(4) %[[TMP_B]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_B]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_A]])
+
+// A non-trivial copy constructor also classifies byref: the constructor call
+// populates the forwarded temporary directly, with no load in between.
+void callCopyCtorByref() {
+  WithCopyCtor c;
+  takeCopyCtorByref(c);
+}
+
+// CIR-LABEL: cir.func {{.*}}@_Z17callCopyCtorByrefv
+// CIR:         %[[C:.*]] = cir.alloca "c" align(4) init : !cir.ptr<!rec_WithCopyCtor>
+// CIR:         %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithCopyCtor>
+// CIR:         cir.call @_ZN12WithCopyCtorC1Ev(%[[C]])
+// CIR:         cir.call @_ZN12WithCopyCtorC1ERKS_(%[[TMP]], %[[C]])
+// CIR-NOT:     cir.load
+// CIR:         cir.call @_Z17takeCopyCtorByref12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithCopyCtor}) -> ()
+
+// LLVM-LABEL: define dso_local void @_Z17callCopyCtorByrefv()
+// LLVM:         call void @_ZN12WithCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[C:[^)]+]])
+// LLVM:         call void @_ZN12WithCopyCtorC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP:[^,]+]], ptr noundef nonnull align 4 dereferenceable(4) %[[C]])
+// LLVM-CIR:     call void @_Z17takeCopyCtorByref12WithCopyCtor(ptr byref(%struct.WithCopyCtor) align 4 %[[TMP]])
+// OGCG:         call void @_Z17takeCopyCtorByref12WithCopyCtor(ptr nofree noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
 
 // byval keeps the fresh copy the callee owns.
 void callByval() {

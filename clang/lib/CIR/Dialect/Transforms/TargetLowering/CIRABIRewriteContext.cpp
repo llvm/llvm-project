@@ -22,6 +22,13 @@ using namespace mlir::abi;
 // Extend, Ignore, Indirect-return (sret), Indirect-argument (byval and
 // byref), and Expand (struct flattening) classifications.
 //
+// "byref" here is the llvm.byref case of an Indirect argument, not C++
+// pass-by-reference.  A C++ reference parameter is already a pointer by the
+// time this classifier runs, so it classifies Direct.  byref instead means
+// a by-value parameter whose type cannot be copied freely, because it has a
+// non-trivial copy constructor, move constructor, or destructor, so the ABI
+// passes it through a pointer instead of in registers.
+//
 // For byval (ArgClassification::byVal == true) the callee gets
 // llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
 // the callee gets llvm.byref without the ownership attrs.  At the call site
@@ -417,6 +424,9 @@ getWholeRecordSource(mlir::Value recordVal) {
   cir::LoadOp load = recordVal.getDefiningOp<cir::LoadOp>();
   if (!load || load.getIsVolatile() || load.getMemOrder())
     return {};
+  // TODO: look through cir.cast ops where isAllocaPreservingCast() is true,
+  // mirroring Address::getUnderlyingAllocaOp() (CodeGen/Address.h), so an
+  // address-space-cast alloca is still found here once offload targets need it.
   auto alloca = load.getAddr().getDefiningOp<cir::AllocaOp>();
   if (!alloca)
     return {};

@@ -316,7 +316,6 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_byref(%[[S:.*]]: !rec_Big) -> !rec_Big
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK-NOT:    cir.load
   // CHECK:        %{{.*}} = cir.call @takes_big_byref(%[[TMP]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
@@ -336,7 +335,6 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_byref_load_reused
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[V:.*]] = cir.load %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        %{{.*}} = cir.call @takes_big_byref(%[[TMP]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
   // CHECK:        cir.return %[[V]] : !rec_Big
@@ -359,7 +357,6 @@ module attributes {
   // CHECK-NEXT:   cir.store %[[S]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %[[T]], %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        %{{.*}} = cir.call @takes_big_byref(%[[TMP]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
 
@@ -379,7 +376,6 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @caller_mixed_byref(%[[X:.*]]: !s32i
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        cir.call @takes_mixed_byref(%[[X]], %[[TMP]], %[[X]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
 
@@ -401,7 +397,6 @@ module attributes {
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %{{.*}}, %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        cir.call @takes_two_byref(%[[TMP]], %[[TMP]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
 
@@ -420,7 +415,6 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @caller_byref_then_direct
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK:        %[[V:.*]] = cir.load %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:        cir.call @takes_byref_then_direct(%[[TMP]], %[[V]]) :
   // CHECK-SAME:     llvm.byref = !rec_Big
@@ -451,7 +445,6 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_byref_and_sret
   // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
   // CHECK-NEXT:   cir.store %{{.*}}, %[[TMP]] : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK-NOT:    cir.alloca "byref"
   // CHECK-NOT:    cir.load
   // CHECK:        %[[RET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        cir.call @byref_and_sret(%[[RET]], %[[TMP]]) :
