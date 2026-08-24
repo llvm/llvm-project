@@ -77,6 +77,7 @@ EOF
 
 # Create the libcxx-builder user
 RUN sudo useradd --create-home libcxx-builder
+USER libcxx-builder
 WORKDIR /home/libcxx-builder
 
 # Install the Buildkite agent and dependencies. This must be done as non-root
@@ -94,6 +95,7 @@ EOF
 ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 
 # Install Docker
+USER root
 RUN <<EOF
   set -e
   curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
