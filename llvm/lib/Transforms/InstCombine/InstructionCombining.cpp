@@ -4392,6 +4392,9 @@ Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
     // Swap destinations and condition.
     auto *Cmp = cast<CmpInst>(Cond);
     Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
+    // The comparison now has the inverse value. Keep attached debug records
+    // describing the original source predicate by adding a logical not.
+    freelyInvertAllUsersOf(Cmp, &BI);
     BI.swapSuccessors();
     if (BPI)
       BPI->swapSuccEdgesProbabilities(BI.getParent());
