@@ -12887,9 +12887,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptoui double 123.0 to i32      ; yields i32:123
-%Y = fptoui float 1.0E+300 to i1     ; yields undefined:1
-%Z = fptoui float 1.04E+17 to i8     ; yields undefined:1
+%X  = fptoui double 123.0 to i32     ; yields i32:123
+%Y  = fptoui float 1.0E-24 to i1     ; yields i1:false
+%Z  = fptoui float -1.04E+17 to i8   ; yields i8:poison
+%W1 = fptoui double -0.999 to i32    ; yields i32:0
+%W2 = fptoui double -1.0 to i32      ; yields i32:poison
 ```
 
 #### '`fptosi .. to`' Instruction
@@ -12922,9 +12924,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptosi double -123.0 to i32      ; yields i32:-123
-%Y = fptosi float 1.0E-247 to i1      ; yields undefined:1
-%Z = fptosi float 1.04E+17 to i8      ; yields undefined:1
+%X  = fptosi double -123.0 to i32     ; yields i32:-123
+%Y  = fptosi float 1.0E-24 to i1      ; yields i1:false
+%Z  = fptosi float 1.04E+17 to i8     ; yields i8:poison
+%W1 = fptosi double -128.9 to i8      ; yields i8:-128
+%W2 = fptosi double -129.0 to i8      ; yields i8:poison
 ```
 
 (i_uitofp)=

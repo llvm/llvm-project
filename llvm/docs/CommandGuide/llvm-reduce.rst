@@ -34,10 +34,16 @@ GENERIC OPTIONS
 
  Abort if any reduction results in invalid IR
 
-.. option::--delta-passes=<string>
+.. option:: --delta-passes=<string>
 
- Delta passes to run, separated by commas. By default, run all delta passes.
+ A comma-separated list of delta passes to run. By default, :program:`llvm-reduce`
+ runs all available delta passes for the input format (IR or MIR). When specified,
+ only the listed passes will be executed, in the given order.
 
+ Available delta passes can be listed using :option:`--print-delta-passes`.
+ Specific passes can also be excluded using :option:`--skip-delta-passes`.
+ If an unrecognized pass name is specified, :program:`llvm-reduce` will report an
+ error and exit.
 
 .. option:: --in-place
 
@@ -65,13 +71,13 @@ GENERIC OPTIONS
 
 .. option:: --print-delta-passes
 
- Print list of delta passes, passable to --delta-passes as a comma separated liste.
+ Print list of delta passes, passable to :option:`--delta-passes` as a comma-separated list.
 
 .. option:: --skip-delta-passes=<string>
 
  Delta passes to not run, separated by commas. By default, run all delta passes.
 
-.. option::--skip-verify-interesting-after-counting-chunks
+.. option:: --skip-verify-interesting-after-counting-chunks
 
  Do not validate testcase is interesting after counting chunks. This
  will save time by avoiding extra executions of the interestingness
