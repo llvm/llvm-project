@@ -21,7 +21,7 @@
 #define R_OK 4
 
 #define _SC_ARG_MAX 0
-#define _SC_CLK_TCK	2
+#define _SC_CLK_TCK 2
 #define _SC_OPEN_MAX 4
 #define _SC_PAGESIZE 30
 #define _SC_PAGE_SIZE _SC_PAGESIZE
