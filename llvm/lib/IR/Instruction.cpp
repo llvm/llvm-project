@@ -813,6 +813,24 @@ void Instruction::andIRFlags(const Value *V) {
       DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
 }
 
+void Instruction::intersectIRAttributes(const Instruction *I) {
+  // TODO: Should we intersect metadata here too?
+  andIRFlags(I);
+
+  auto IsLoadOrStore = [](const Instruction *I) {
+    return isa<LoadInst>(I) || isa<StoreInst>(I);
+  };
+  if (IsLoadOrStore(I) && IsLoadOrStore(this)) {
+    Align Common =
+        std::min(getLoadStoreAlignment(this), getLoadStoreAlignment(I));
+    assert(isAligned(Common, getLoadStoreAlignment(this).value()) &&
+           isAligned(Common, getLoadStoreAlignment(I).value()) &&
+           "Common alignment doesn't satisfy alignment constraints?");
+
+    setLoadStoreAlignment(this, Common);
+  }
+}
+
 const char *Instruction::getOpcodeName(unsigned OpCode) {
   switch (OpCode) {
   // Terminators

@@ -2248,7 +2248,8 @@ static bool canSinkInstructions(
   const Instruction *I0 = Insts.front();
   const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
-    if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs))
+    if (!I->isSameOperationAs(I0, Instruction::CompareUsingIntersectedAttrs |
+                                      Instruction::CompareIgnoringAlignment))
       return false;
 
     // Treat MMRAs conservatively. This pass can be quite aggressive and
@@ -2379,7 +2380,7 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       // instead of using complex API for N-way merge.
       I0->applyMergedLocation(I0->getDebugLoc(), I->getDebugLoc());
       combineMetadataForCSE(I0, I, true);
-      I0->andIRFlags(I);
+      I0->intersectIRAttributes(I);
       if (auto *CB = dyn_cast<CallBase>(I0)) {
         bool Success = CB->tryIntersectAttributes(cast<CallBase>(I));
         assert(Success && "We should not be trying to sink callbases "

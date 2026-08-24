@@ -2180,14 +2180,8 @@ join:
 define void @store_different_alignments(i1 %c, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @store_different_alignments(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF1:%.*]], label [[IF2:%.*]]
-; CHECK:       if1:
-; CHECK-NEXT:    store i8 0, ptr [[P1:%.*]], align 2
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       if2:
-; CHECK-NEXT:    store i8 0, ptr [[P2:%.*]], align 1
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
+; CHECK-NEXT:    [[P2:%.*]] = select i1 [[C:%.*]], ptr [[P1:%.*]], ptr [[P3:%.*]]
+; CHECK-NEXT:    store i8 0, ptr [[P2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

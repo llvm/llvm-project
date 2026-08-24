@@ -724,6 +724,13 @@ public:
   /// V and this instruction.
   LLVM_ABI void andIRFlags(const Value *V);
 
+  /// Restricts this instruction's attributes to those which are shared
+  /// with I. This will essentially:
+  ///  1) Do a logical 'and' of this instruction's flags with I's flags.
+  ///  2) Find a common alignment with I, if both instructions support a notion
+  ///  of alignment.
+  LLVM_ABI void intersectIRAttributes(const Instruction *I);
+
   /// Merge 2 debug locations and apply it to the Instruction. If the
   /// instruction is a CallIns, we need to traverse the inline chain to find
   /// the common scope. This is not efficient for N-way merging as each time
