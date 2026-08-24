@@ -7,8 +7,7 @@ declare i64 @llvm.riscv.vsetvli.i64(i64, i64, i64)
 define i32 @vsetvli_i32() nounwind #0 {
 ; CHECK-LABEL: @vsetvli_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   %0 = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
@@ -19,8 +18,7 @@ entry:
 define i64 @vsetvli_sext_i64() nounwind #0 {
 ; CHECK-LABEL: @vsetvli_sext_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    ret i64 [[TMP0]]
+; CHECK-NEXT:    ret i64 1
 ;
 entry:
   %0 = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
@@ -32,8 +30,7 @@ entry:
 define i64 @vsetvli_zext_i64() nounwind #0 {
 ; CHECK-LABEL: @vsetvli_zext_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    ret i64 [[TMP0]]
+; CHECK-NEXT:    ret i64 1
 ;
 entry:
   %0 = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
@@ -44,9 +41,7 @@ entry:
 
 define signext i32 @vsetvl_sext() nounwind #0 {
 ; CHECK-LABEL: @vsetvl_sext(
-; CHECK-NEXT:    [[A:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i64 [[A]] to i32
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    ret i32 1
 ;
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
   %b = trunc i64 %a to i32
@@ -55,9 +50,7 @@ define signext i32 @vsetvl_sext() nounwind #0 {
 
 define zeroext i32 @vsetvl_zext() nounwind #0 {
 ; CHECK-LABEL: @vsetvl_zext(
-; CHECK-NEXT:    [[A:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i64 [[A]] to i32
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    ret i32 1
 ;
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
   %b = trunc i64 %a to i32
@@ -67,8 +60,7 @@ define zeroext i32 @vsetvl_zext() nounwind #0 {
 define i32 @vsetvli_and17_i32() nounwind #0 {
 ; CHECK-LABEL: @vsetvli_and17_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   %0 = call i32 @llvm.riscv.vsetvli.i32(i32 1, i32 1, i32 1)
@@ -79,8 +71,7 @@ entry:
 define i64 @vsetvli_and17_i64() nounwind #0 {
 ; CHECK-LABEL: @vsetvli_and17_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    ret i64 [[TMP0]]
+; CHECK-NEXT:    ret i64 1
 ;
 entry:
   %0 = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
@@ -111,8 +102,7 @@ define i64 @vsetvl_e8m1_and13bits(i64 %avl) nounwind #0 {
 
 define i64 @vsetvl_e8m1_constant_avl() nounwind #0 {
 ; CHECK-LABEL: @vsetvl_e8m1_constant_avl(
-; CHECK-NEXT:    [[A:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 0, i64 0)
-; CHECK-NEXT:    ret i64 [[A]]
+; CHECK-NEXT:    ret i64 1
 ;
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 0, i64 0)
   %b = and i64 %a, 1
