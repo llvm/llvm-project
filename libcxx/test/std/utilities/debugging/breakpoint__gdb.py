@@ -11,16 +11,31 @@ import sys
 
 import gdb
 
+stop_event = None
+
+
+def bp_handler(event):
+    global stop_event
+    stop_event = event
+
 
 class TestFail(Exception):
     pass
 
 
-def bp_handler(event):
+def main():
+    gdb.execute("set height 0")
+    gdb.execute("set python print-stack full")
+    gdb.execute("set confirm off")
+    gdb.events.stop.connect(bp_handler)
+    gdb.execute("run")
+
     try:
+        if stop_event is None:
+            raise TestFail("Didn't stop at breakpoint")
+
         frame = gdb.newest_frame()
         found_main = False
-
         while frame is not None:
             if frame.name() == "main":
                 found_main = True
@@ -29,23 +44,11 @@ def bp_handler(event):
 
         if not found_main:
             raise TestFail("Could not find main in stopped frames")
-
-        gdb.execute("quit 0")
     except TestFail as e:
-        print(e, file=sys.stderr)
+        print(f"Test Failure: {e}", file=sys.stderr)
         gdb.execute("quit 1")
 
-
-def main():
-    gdb.execute("set height 0")
-    gdb.execute("set python print-stack full")
-    gdb.execute("set confirm off")
-
-    gdb.events.stop.connect(bp_handler)
-    gdb.execute("run")
-
-    print("Should have quit by now", file=sys.stderr)
-    sys.exit(1)
+    gdb.execute("quit 0")
 
 
 if __name__ == "__main__":
