@@ -10102,9 +10102,9 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
       return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
-    if (!MRI->hasOneDef(CopyVReg))
-      return false;
     DefMI = MRI->getVRegDef(CopyVReg);
+    if (!DefMI)
+      return false;
   }
 
   switch (DefMI->getOpcode()) {
@@ -10131,7 +10131,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!NewReg.isVirtual())
       return false;
 
-    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+    if (!MRI->getVRegDef(NewReg))
+      return false;
 
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI.getOperand(1).getMBB();
