@@ -58,3 +58,25 @@ func.func @test_scf_if_double_sink(%arg0: i1, %arg1: i32) {
   }
   return
 }
+
+// -----
+
+func.func private @consume(i32) -> ()
+
+// CHECK-LABEL: @test_scf_execute_region_multiblock_sink
+// CHECK-SAME:  (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32)
+// CHECK: scf.execute_region
+// CHECK-NEXT:   %[[V0:.*]] = arith.muli %[[ARG0]], %[[ARG1]]
+// CHECK-NEXT:   cf.br ^bb1
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   call @consume(%[[V0]])
+func.func @test_scf_execute_region_multiblock_sink(%arg0: i32, %arg1: i32) {
+  %0 = arith.muli %arg0, %arg1 : i32
+  scf.execute_region {
+    cf.br ^bb1
+  ^bb1:
+    func.call @consume(%0) : (i32) -> ()
+    scf.yield
+  }
+  return
+}

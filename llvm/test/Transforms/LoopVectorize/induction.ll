@@ -877,14 +877,14 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd fast <2 x float> [[VEC_PHI]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd fast <2 x float> [[TMP17]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP19]] = fadd fast <2 x float> [[TMP18]], [[TMP16]]
@@ -938,14 +938,14 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; IND-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; IND-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP5]], align 4
 ; IND-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP14]], align 4
-; IND-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; IND-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP30]], float [[TMP29]], i32 1
+; IND-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
+; IND-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP30]], float [[TMP29]], i64 1
 ; IND-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; IND-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
 ; IND-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP10]], align 4
 ; IND-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP11]], align 4
-; IND-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i32 0
-; IND-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP28]], float [[TMP13]], i32 1
+; IND-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i64 0
+; IND-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP28]], float [[TMP13]], i64 1
 ; IND-NEXT:    [[TMP16:%.*]] = fadd fast <2 x float> [[VEC_PHI]], splat (float 1.000000e+00)
 ; IND-NEXT:    [[TMP17:%.*]] = fadd fast <2 x float> [[TMP16]], [[TMP9]]
 ; IND-NEXT:    [[TMP18]] = fadd fast <2 x float> [[TMP17]], [[TMP15]]
@@ -1004,24 +1004,24 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP24]]
 ; UNROLL-NEXT:    [[TMP49:%.*]] = load float, ptr [[TMP48]], align 4
 ; UNROLL-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP10]], align 4
-; UNROLL-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> poison, float [[TMP49]], i32 0
-; UNROLL-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP28]], float [[TMP11]], i32 1
+; UNROLL-NEXT:    [[TMP28:%.*]] = insertelement <2 x float> poison, float [[TMP49]], i64 0
+; UNROLL-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP28]], float [[TMP11]], i64 1
 ; UNROLL-NEXT:    [[TMP14:%.*]] = load float, ptr [[TMP8]], align 4
 ; UNROLL-NEXT:    [[TMP15:%.*]] = load float, ptr [[TMP9]], align 4
-; UNROLL-NEXT:    [[TMP45:%.*]] = insertelement <2 x float> poison, float [[TMP14]], i32 0
-; UNROLL-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP45]], float [[TMP15]], i32 1
+; UNROLL-NEXT:    [[TMP45:%.*]] = insertelement <2 x float> poison, float [[TMP14]], i64 0
+; UNROLL-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP45]], float [[TMP15]], i64 1
 ; UNROLL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; UNROLL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP12]]
 ; UNROLL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP16]]
 ; UNROLL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP24]]
 ; UNROLL-NEXT:    [[TMP22:%.*]] = load float, ptr [[TMP18]], align 4
 ; UNROLL-NEXT:    [[TMP23:%.*]] = load float, ptr [[TMP19]], align 4
-; UNROLL-NEXT:    [[TMP46:%.*]] = insertelement <2 x float> poison, float [[TMP22]], i32 0
-; UNROLL-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> [[TMP46]], float [[TMP23]], i32 1
+; UNROLL-NEXT:    [[TMP46:%.*]] = insertelement <2 x float> poison, float [[TMP22]], i64 0
+; UNROLL-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> [[TMP46]], float [[TMP23]], i64 1
 ; UNROLL-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP20]], align 4
 ; UNROLL-NEXT:    [[TMP27:%.*]] = load float, ptr [[TMP21]], align 4
-; UNROLL-NEXT:    [[TMP47:%.*]] = insertelement <2 x float> poison, float [[TMP26]], i32 0
-; UNROLL-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> [[TMP47]], float [[TMP27]], i32 1
+; UNROLL-NEXT:    [[TMP47:%.*]] = insertelement <2 x float> poison, float [[TMP26]], i64 0
+; UNROLL-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> [[TMP47]], float [[TMP27]], i64 1
 ; UNROLL-NEXT:    [[TMP30:%.*]] = fadd fast <2 x float> [[VEC_PHI]], splat (float 1.000000e+00)
 ; UNROLL-NEXT:    [[TMP31:%.*]] = fadd fast <2 x float> [[VEC_PHI1]], splat (float 1.000000e+00)
 ; UNROLL-NEXT:    [[TMP32:%.*]] = fadd fast <2 x float> [[TMP30]], [[TMP13]]
@@ -1084,24 +1084,24 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = load float, ptr [[TMP7]], align 4
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP8]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP12]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP12]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = load float, ptr [[TMP9]], align 4
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = load float, ptr [[TMP10]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> poison, float [[TMP15]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> [[TMP17]], float [[TMP16]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> poison, float [[TMP15]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> [[TMP17]], float [[TMP16]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP5]]
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP6]]
 ; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = load float, ptr [[TMP19]], align 4
 ; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP20]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> poison, float [[TMP23]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = insertelement <2 x float> [[TMP25]], float [[TMP24]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> poison, float [[TMP23]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = insertelement <2 x float> [[TMP25]], float [[TMP24]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = load float, ptr [[TMP21]], align 4
 ; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = load float, ptr [[TMP22]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> poison, float [[TMP27]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> [[TMP29]], float [[TMP28]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> poison, float [[TMP27]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = insertelement <2 x float> [[TMP29]], float [[TMP28]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = fadd fast <2 x float> [[VEC_PHI]], splat (float 1.000000e+00)
 ; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = fadd fast <2 x float> [[VEC_PHI1]], splat (float 1.000000e+00)
 ; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = fadd fast <2 x float> [[TMP31]], [[TMP14]]
@@ -1253,8 +1253,8 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i32> [[TMP7]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP9]], ptr [[TMP2]], align 8
@@ -1299,8 +1299,8 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; IND-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP5]], i32 1
 ; IND-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 8
 ; IND-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 8
-; IND-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
-; IND-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP4]], i32 1
+; IND-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
+; IND-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP4]], i64 1
 ; IND-NEXT:    [[TMP7:%.*]] = xor <2 x i32> [[TMP6]], [[BROADCAST_SPLAT]]
 ; IND-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
 ; IND-NEXT:    store i32 [[TMP8]], ptr [[TMP1]], align 8
@@ -1349,12 +1349,12 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP9]], i32 1
 ; UNROLL-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 8
 ; UNROLL-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 8
-; UNROLL-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
-; UNROLL-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP8]], i32 1
+; UNROLL-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
+; UNROLL-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP8]], i64 1
 ; UNROLL-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP5]], align 8
 ; UNROLL-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP6]], align 8
-; UNROLL-NEXT:    [[TMP24:%.*]] = insertelement <2 x i32> poison, i32 [[TMP11]], i32 0
-; UNROLL-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP24]], i32 [[TMP12]], i32 1
+; UNROLL-NEXT:    [[TMP24:%.*]] = insertelement <2 x i32> poison, i32 [[TMP11]], i64 0
+; UNROLL-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP24]], i32 [[TMP12]], i64 1
 ; UNROLL-NEXT:    [[TMP15:%.*]] = xor <2 x i32> [[TMP10]], [[BROADCAST_SPLAT]]
 ; UNROLL-NEXT:    [[TMP16:%.*]] = xor <2 x i32> [[TMP14]], [[BROADCAST_SPLAT]]
 ; UNROLL-NEXT:    [[TMP17:%.*]] = extractelement <2 x i32> [[TMP15]], i64 0
@@ -1408,12 +1408,12 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP3]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 8
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP8]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[TMP9]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP8]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[TMP9]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP6]], align 8
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP7]], align 8
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> poison, i32 [[TMP12]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP14]], i32 [[TMP13]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> poison, i32 [[TMP12]], i64 0
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP14]], i32 [[TMP13]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = xor <2 x i32> [[TMP11]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = xor <2 x i32> [[TMP15]], [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = extractelement <2 x i32> [[TMP16]], i64 0
@@ -3074,7 +3074,7 @@ define i32 @testoverflowcheck() {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3119,7 +3119,7 @@ define i32 @testoverflowcheck() {
 ; IND-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; IND-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; IND-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
-; IND-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i32 0
+; IND-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3164,7 +3164,7 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; UNROLL-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; UNROLL-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
-; UNROLL-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i32 0
+; UNROLL-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3212,7 +3212,7 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3260,7 +3260,7 @@ define i32 @testoverflowcheck() {
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP3]], [[N_MOD_VF]]
 ; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i32 0
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> splat (i32 -1), i32 [[C_PROMOTED_I]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4965,7 +4965,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE2:%.*]] ]
@@ -5008,7 +5008,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; IND-NEXT:  entry:
 ; IND-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i32 0
+; IND-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i64 0
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE2:%.*]] ]
@@ -5051,7 +5051,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i32 0
+; UNROLL-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i64 0
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE7:%.*]] ]
@@ -5119,7 +5119,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
-; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[A:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE7:%.*]] ]
@@ -5187,7 +5187,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[A:%.*]], i32 0
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[A:%.*]], i64 0
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE15:%.*]] ]

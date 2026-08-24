@@ -1418,7 +1418,7 @@ bool SPIRVGlobalRegistry::isResourceType(SPIRVTypeInst Type) const {
   case SPIRV::OpTypeSampledImage:
     return true;
   case SPIRV::OpTypeStruct:
-    return hasBlockDecoration(Type);
+    return BlockDecoratedTypes.contains(Type);
   default:
     return false;
   }
@@ -1558,6 +1558,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 
   buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
                   SPIRV::Decoration::Block, {});
+  BlockDecoratedTypes.insert(BlockType);
 
   if (!IsWritable) {
     buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
@@ -1598,6 +1599,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
 
   buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
                   SPIRV::Decoration::Block, {});
+  BlockDecoratedTypes.insert(BlockType);
   SPIRVTypeInst R = BlockType;
   add(Key, R);
   return R;
@@ -2343,17 +2345,4 @@ void SPIRVGlobalRegistry::addArrayStrideDecorations(
   uint32_t SizeInBytes = DL.getTypeAllocSize(ElementType);
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
-}
-
-bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVTypeInst Type) const {
-  Register Def = getSPIRVTypeID(Type);
-  for (const MachineInstr &Use :
-       Type->getMF()->getRegInfo().use_instructions(Def)) {
-    if (Use.getOpcode() != SPIRV::OpDecorate)
-      continue;
-
-    if (Use.getOperand(1).getImm() == SPIRV::Decoration::Block)
-      return true;
-  }
-  return false;
 }

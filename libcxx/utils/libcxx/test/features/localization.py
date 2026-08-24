@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import compilerMacros, Feature, programSucceeds, hasAnyLocale, programOutput, AddSubstitution
+from libcxx.test.dsl import Feature, programSucceeds, hasAnyLocale, programOutput, testMacros, AddSubstitution
 import re
 
 features = [
@@ -23,8 +23,10 @@ features = [
               #include <locale.h>
             #endif
 
+            #include "test_macros.h"
+
               int main(int, char**) {
-            #if __has_include(<locale.h>) && (!defined(_LIBCPP_HAS_LOCALIZATION) || _LIBCPP_HAS_LOCALIZATION == 1)
+            #if __has_include(<locale.h>) && !defined(TEST_HAS_NO_LOCALIZATION)
                 setlocale(LC_ALL, "ru_RU.UTF-8");
                 return strcmp(localeconv()->mon_decimal_point, ".") == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
             #else
@@ -63,8 +65,7 @@ for locale, alts in _locales.items():
                 cfg, locale, alts, _provide_locale_conversions[locale]
             )
             if locale in _provide_locale_conversions
-            and ("_LIBCPP_HAS_WIDE_CHARACTERS" not in compilerMacros(cfg) or
-                 compilerMacros(cfg)["_LIBCPP_HAS_WIDE_CHARACTERS"] == "1")
+            and "TEST_HAS_NO_WIDE_CHARACTERS" not in testMacros(cfg)
             else [],
         ),
     )

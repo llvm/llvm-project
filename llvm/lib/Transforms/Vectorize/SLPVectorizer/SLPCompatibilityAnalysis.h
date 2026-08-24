@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
@@ -306,6 +307,18 @@ convertTo(Instruction *I, const InstructionsState &S);
 /// the given \p MainOp and \p AltOp instructions.
 bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
                             Instruction *AltOp, const TargetLibraryInfo &TLI);
+
+/// Peel the per-lane associative chains of an alternate node into operand
+/// columns. Lanes peel in lockstep and only chain links with the lane's own
+/// opcode, so every combine level keeps the root's main/alt opcode pattern
+/// and a subtract lane never becomes an add of a negated leaf. Only the
+/// leading (running) column peels: peeling a subtracted subtract would flip
+/// signs. \p SubLanes records the subtract lanes for the realignment sign
+/// query. Returns the flattened columns, empty when no level peels.
+SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
+    const InstructionsState &S, const TargetLibraryInfo &TLI,
+    ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
+    SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H

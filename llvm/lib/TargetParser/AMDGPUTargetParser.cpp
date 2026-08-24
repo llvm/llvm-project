@@ -310,7 +310,8 @@ unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
 }
 
 unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  return getArchAttrAMDGCN(getGPUKindFromSubArch(SubArch));
+  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
+  return Info ? Info->ArchFeatures : FEATURE_NONE;
 }
 
 R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
@@ -381,7 +382,7 @@ unsigned AMDGPU::getTotalNumSGPRs(Triple::SubArchType SubArch) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
-  if (getArchAttrAMDGCN(AK) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(AK).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(getSubArch(AK));
@@ -393,7 +394,7 @@ unsigned AMDGPU::getAddressableNumSGPRs(GPUKind AK) {
 }
 
 unsigned AMDGPU::getAddressableNumSGPRs(Triple::SubArchType SubArch) {
-  if (getArchAttrAMDGCN(SubArch) & FEATURE_SGPR_INIT_BUG)
+  if (getFeatureBitset(getGPUKindFromSubArch(SubArch)).test(FEAT_SGPR_INIT_BUG))
     return FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
   IsaVersion Version = getIsaVersion(SubArch);
@@ -431,12 +432,22 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
-// Add each frontend feature in \p Info's bitset to \p Features. With \p
+// Capability features clang queries via the feature bitset but must not
+// serialize into the target-feature string.
+//
+// FIXME: This is hacky, we shouldn't have mismatches between the bitset and
+// feature string map.
+static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
+    FEAT_FAST_FMAF,         FEAT_FAST_DENORMAL_F32, FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP,      FEAT_XNACK_SUPPORT,     FEAT_SRAMECC_SUPPORT,
+    FEAT_XNACK_ON_OFF_MODES};
+
+// Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.
 static void addGPUFeatures(const GPUInfo &Info, bool Overwrite,
                            StringMap<bool> &Features) {
   SmallVector<StringRef, NUM_FEATURES> Names;
-  getFeatureNames(Info.Features, Names);
+  getFeatureNames(Info.Features & ~FrontendOnlyFeatures, Names);
   for (StringRef Name : Names) {
     if (Overwrite)
       Features[Name] = true;
@@ -596,12 +607,13 @@ static GPUKind getGPUKindFromTargetID(const Triple &TT, StringRef TargetIDStr) {
 static bool computeTargetIDFeatures(GPUKind Arch, StringRef TargetIDStr,
                                     TargetIDSetting &XnackSetting,
                                     TargetIDSetting &SramEccSetting) {
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-  XnackSetting = (ArchAttr & FEATURE_XNACK_ON_OFF_MODES)
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(Arch);
+  XnackSetting = Features.test(FEAT_XNACK_ON_OFF_MODES)
                      ? TargetIDSetting::Any
                      : TargetIDSetting::Unsupported;
-  SramEccSetting = (ArchAttr & FEATURE_SRAMECC) ? TargetIDSetting::Any
-                                                : TargetIDSetting::Unsupported;
+  SramEccSetting = Features.test(FEAT_SRAMECC_SUPPORT)
+                       ? TargetIDSetting::Any
+                       : TargetIDSetting::Unsupported;
 
   // The first component is the processor; the rest are feature modifiers of the
   // form "<feature><+|->".

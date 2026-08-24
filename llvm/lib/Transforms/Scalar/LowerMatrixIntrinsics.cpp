@@ -1625,7 +1625,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost += TTI.getShuffleCost(
               TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1647,7 +1647,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost -= TTI.getShuffleCost(
               TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 

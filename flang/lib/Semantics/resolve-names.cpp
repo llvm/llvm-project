@@ -795,6 +795,9 @@ protected:
   bool deferImplicitTyping_{false};
   bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
+  // Whether the DATA statement whose objects are being visited appeared in
+  // a specification part (as opposed to an execution part)
+  bool dataStmtObjectInSpecPart_{false};
 
   // Some information is collected from a specification part for deferred
   // processing in DeclarationPartVisitor functions (e.g., CheckSaveStmts())
@@ -808,6 +811,10 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
+    // data-implied-do index variables whose typing is deferred to the end
+    // of the specification part, since the declaration typing the index's
+    // name may follow the DATA statement (F'2023 19.4 p5)
+    std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -4223,6 +4230,102 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+static bool AreSameProcedureForUseAssociation(
+    SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
+  const Symbol &ultimate1{p1.GetUltimate()};
+  const Symbol &ultimate2{p2.GetUltimate()};
+  if (&ultimate1 == &ultimate2) {
+    return true;
+  } else if (ultimate1.name() != ultimate2.name()) {
+    return false;
+  } else if (ultimate1.attrs().test(Attr::INTRINSIC) ||
+      ultimate2.attrs().test(Attr::INTRINSIC)) {
+    return ultimate1.attrs().test(Attr::INTRINSIC) &&
+        ultimate2.attrs().test(Attr::INTRINSIC);
+  }
+  if (!IsProcedure(ultimate1) || IsPointer(ultimate1) ||
+      !IsProcedure(ultimate2) || IsPointer(ultimate2) ||
+      ClassifyProcedure(ultimate1) != ClassifyProcedure(ultimate2)) {
+    return false;
+  }
+  auto classification{ClassifyProcedure(ultimate1)};
+  if (classification == ProcedureDefinitionClass::Module) {
+    return AreSameModuleSymbol(ultimate1, ultimate2);
+  }
+  if (classification != ProcedureDefinitionClass::External) {
+    return false;
+  }
+  const auto *subp1{ultimate1.detailsIf<SubprogramDetails>()};
+  const auto *subp2{ultimate2.detailsIf<SubprogramDetails>()};
+  if (!subp1 || !subp1->isInterface() || !subp2 || !subp2->isInterface()) {
+    return false;
+  }
+  auto chars1{evaluate::characteristics::Procedure::Characterize(
+      ultimate1, context.foldingContext())};
+  auto chars2{evaluate::characteristics::Procedure::Characterize(
+      ultimate2, context.foldingContext())};
+  return chars1 && chars2 && *chars1 == *chars2;
+}
+
+static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
+  if (const auto *subp{
+          procedure.GetUltimate().detailsIf<SubprogramDetails>()}) {
+    for (const Symbol *dummy : subp->dummyArgs()) {
+      if (dummy && GetCUDADataAttr(dummy)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+struct IntrinsicModuleUseAssociationRule {
+  const char *moduleName;
+  const char *genericName;
+  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+};
+
+static bool MatchesCublasGemm(SemanticsContext &context,
+    const GenericDetails &generic, const Symbol &other) {
+  const Symbol *specific{generic.specific()};
+  if (!specific ||
+      !AreSameProcedureForUseAssociation(context, *specific, other)) {
+    return false;
+  }
+  bool containsSpecific{false};
+  bool hasCUDAOverload{false};
+  for (const Symbol &candidate : generic.specificProcs()) {
+    containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
+    hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
+  }
+  return containsSpecific && hasCUDAOverload;
+}
+
+static const IntrinsicModuleUseAssociationRule *
+FindIntrinsicModuleUseAssociationRule(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Add entries here for intrinsic module generics that should take precedence
+  // over an equivalent external interface during USE association.
+  static const IntrinsicModuleUseAssociationRule rules[]{
+      {"cublas", "sgemm", MatchesCublasGemm},
+      {"cublas", "dgemm", MatchesCublasGemm},
+      {"cublas", "zgemm", MatchesCublasGemm},
+  };
+  const Scope &owner{generic.GetUltimate().owner()};
+  if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
+      !owner.GetName()) {
+    return nullptr;
+  }
+  for (const auto &rule : rules) {
+    if (owner.GetName().value() == rule.moduleName &&
+        generic.GetUltimate().name() == rule.genericName &&
+        rule.matches(context, generic.get<GenericDetails>(), other)) {
+      return &rule;
+    }
+  }
+  return nullptr;
+}
+
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
   Symbol *localSymbol{&originalLocal};
@@ -4450,6 +4553,40 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       return false;
     }
   }};
+
+  auto warnIntrinsicModuleUseAssociation{[&](const Symbol &generic) {
+    const Scope &owner{generic.GetUltimate().owner()};
+    if (auto *msg{context().Warn(
+            common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+            location,
+            "USE association selects intrinsic '%s' generic '%s' over an equivalent external interface"_warn_en_US,
+            owner.GetName().value(), generic.GetUltimate().name())}) {
+      msg->Attach(location,
+          "this extension can be disabled (-fno-prefer-intrinsic-module-use-association)"_en_US);
+    }
+  }};
+
+  if (context().IsEnabled(
+          common::LanguageFeature::PreferIntrinsicModuleUseAssociation)) {
+    if (localSymbol->has<UseDetails>() && !localGeneric && useGeneric &&
+        localProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), useUltimate, *localProcedure)) {
+      warnIntrinsicModuleUseAssociation(useUltimate);
+      EraseSymbol(*localSymbol);
+      Symbol &newSymbol{MakeSymbol(localName,
+          useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
+          UseDetails{localName, useUltimate})};
+      newSymbol.flags() = useSymbol.flags();
+      return;
+    } else if (localSymbol->has<UseDetails>() && localGeneric && !useGeneric &&
+        useProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), localUltimate, *useProcedure)) {
+      warnIntrinsicModuleUseAssociation(localUltimate);
+      return;
+    }
+  }
 
   // When two non-generic procedures arrived, try to combine them.
   const Symbol *combinedProcedure{nullptr};
@@ -8303,8 +8440,14 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // an explicit "integer(k)::" in an implied DO.
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
-    // F'2023 19.4 p5 ambiguous rule about outer declarations
-    declTypeSpec = prev->GetType();
+    if (!dataStmtObjectInSpecPart_ || type) {
+      // F'2023 19.4 p5: the index adopts the type of a visible declaration
+      // of its name (see Extensions.md on 19.4 p5).  But for a DATA
+      // statement in a specification part, defer typing to
+      // FinishSpecificationPart(), where a local declaration following the
+      // DATA statement takes precedence over this outer one.
+      declTypeSpec = prev->GetType();
+    }
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
   if (!symbol.has<ObjectEntityDetails>()) {
@@ -8319,6 +8462,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     auto restorer{
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
+  } else if (dataStmtObjectInSpecPart_) {
+    // F'2023 19.4 p5: the index takes the type its name has in the scoping
+    // unit, and that declaration may follow the DATA statement; defer
+    // typing to FinishSpecificationPart().  (8.6.7 p3 restricts only the
+    // data-stmt-objects, not this statement entity.)
+    specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
   }
@@ -8750,6 +8899,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // for purposes of implicit variable declaration vs. host association.
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
+  auto specPartRestorer{
+      common::ScopedSet(dataStmtObjectInSpecPart_, inSpecificationPart_)};
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(
       common::visitors{
@@ -10754,6 +10905,24 @@ void ResolveNamesVisitor::FinishSpecificationPart(
             context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
+  }
+  // Type the deferred data-implied-do index variables now that the whole
+  // specification part has been visited (F'2023 19.4 p5).  Plain
+  // Symbol::SetType suffices: the symbol is untyped, so no conflict
+  // diagnostics can arise.
+  for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
+    Symbol &symbol{*ref};
+    if (!symbol.GetType()) {
+      if (const Symbol *outer{currScope().FindSymbol(symbol.name())};
+          outer && outer->GetType()) {
+        symbol.SetType(*outer->GetType());
+        // Inhibit unused-variable diagnostics: the outer declaration may
+        // exist solely to give the index its type.
+        context().NoteDefinedSymbol(*outer);
+      } else {
+        ApplyImplicitRules(symbol);
       }
     }
   }

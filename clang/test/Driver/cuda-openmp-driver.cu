@@ -37,7 +37,7 @@
 // RUN: | FileCheck -check-prefix GPU-BINARY %s
 
 // GPU-BINARY: fatbinary{{.*}}"--create" "{{.*}}.fatbin"
-// GPU-BINARY: -cc1{{.*}}-fcuda-include-gpubinary" "{{.*}}.fatbin"
+// GPU-BINARY: -cc1{{.*}}-foffload-include-binary" "{{.*}}.fatbin"
 
 // RUN: %clang -### -target x86_64-linux-gnu -nocudalib -fgpu-rdc --cuda-emit-nvcc-abi \
 // RUN:   --offload-arch=sm_35 --offload-arch=sm_70 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
@@ -46,4 +46,4 @@
 // RUN:   --implicit-check-not=fembed-offload-object %s
 
 // NVCC-ABI: fatbinary{{.*}}"--create" "{{.*}}.fatbin"
-// NVCC-ABI: -cc1{{.*}}"-fcuda-include-gpubinary" "{{.*}}.fatbin"{{.*}}"--cuda-emit-nvcc-abi"
+// NVCC-ABI: -cc1{{.*}}"-foffload-include-binary" "{{.*}}.fatbin"{{.*}}"--cuda-emit-nvcc-abi"
