@@ -2417,6 +2417,31 @@ func.func @fold_consecutive_scalar_mul_f32(%arg0: tensor<4x8xf32>) -> tensor<4x8
 
 // -----
 
+// CHECK-LABEL: func @fold_consecutive_scalar_mul_fill_i32
+// CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
+// CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<15> : tensor<4x8xi32>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8xi32>
+// CHECK: %[[RESULT:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CHECK-SAME: ins(%[[ARG]], %[[COMBINED]] : tensor<4x8xi32>, tensor<4x8xi32>)
+// CHECK-SAME: outs(%[[EMPTY]] : tensor<4x8xi32>)
+// CHECK: return %[[RESULT]]
+func.func @fold_consecutive_scalar_mul_fill_i32(%arg0: tensor<4x8xi32>) -> tensor<4x8xi32> {
+  %cst5 = arith.constant 5 : i32
+  %cst3 = arith.constant 3 : i32
+  %empty = tensor.empty() : tensor<4x8xi32>
+  %fill5 = linalg.fill ins(%cst5 : i32) outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %fill3 = linalg.fill ins(%cst3 : i32) outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %mul1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%arg0, %fill5 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  %mul2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%mul1, %fill3 : tensor<4x8xi32>, tensor<4x8xi32>)
+    outs(%empty : tensor<4x8xi32>) -> tensor<4x8xi32>
+  return %mul2 : tensor<4x8xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_consecutive_scalar_mul_i32
 // CHECK-SAME: (%[[ARG:.*]]: tensor<4x8xi32>)
 // CHECK-DAG: %[[COMBINED:.*]] = arith.constant dense<15> : tensor<4x8xi32>
