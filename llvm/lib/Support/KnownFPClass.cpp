@@ -19,9 +19,7 @@
 using namespace llvm;
 
 KnownFPClass::KnownFPClass(const APFloat &C)
-    : KnownFPClassesValue(C.classify()) {
-  setSignBit(C.isNegative());
-}
+    : KnownFPClass(C.classify(), C.isNegative()) {}
 
 /// Return true if it's possible to assume IEEE treatment of input denormals in
 /// \p F for \p Val.
@@ -822,8 +820,10 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   }
 
   // Sign bit of a nan isn't guaranteed.
-  if (!Known.isKnownNeverNaN())
-    Known.setSignBit(std::nullopt);
+  if (Known.KnownFPMask & kfcSNan)
+    Known.KnownFPMask |= kfcSNan;
+  if (Known.KnownFPMask & kfcQNan)
+    Known.KnownFPMask |= kfcQNan;
 
   return Known;
 }
