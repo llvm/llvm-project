@@ -1592,7 +1592,7 @@ public:
     Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
 
-    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
     // Floating point reductions require reassocation.
     if (!IsIntVec && !FMF.allowReassoc())
@@ -1611,7 +1611,8 @@ public:
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
-    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+    auto GetCostForArg = [this, &CanBeFlattened, CostKind](Value *Op,
+                                                           unsigned N) {
       if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
