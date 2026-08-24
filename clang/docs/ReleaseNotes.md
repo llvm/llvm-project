@@ -698,6 +698,32 @@ features cannot lower the translation-unit ABI level;
 
 #### Improvements
 
+- SYCL compilations now default to `-std=c++17` when no explicit language
+  standard is specified. Standards below C++17 are rejected with a diagnostic.
+
+- Clang now assumes the default target for SYCL device compilation is 64-bit
+  SPIR-V and diagnoses if a non-supporting target is specified on the command
+  line. (#GH167358)
+
+- The SYCL runtime shared library has been renamed from `libsycl.so` to
+  `libLLVMSYCL.so` to align with LLVM naming conventions.
+
+- When SYCL based compilation is enabled, the compiler driver automatically
+  provides the necessary SYCL header include paths to both the host and
+  device compilations.
+
+- SYCL runtime library linking is now supported on Windows. When `-fsycl` is
+  specified, Clang automatically adds `/MD` if no explicit CRT flag is present,
+  links the appropriate debug (`LLVMSYCLd.lib`) or release (`LLVMSYCL.lib`)
+  library, and rejects static CRT flags (`/MT`, `/MTd`) with a diagnostic. Use
+  `-nolibsycl` to suppress automatic library linking.
+
+- Fixed `-nolibsycl` being silently ignored on Linux: the SYCL runtime library
+  was unconditionally added to the link line even when the flag was passed.
+
+- SYCL device compilations targeting SPIR-V now automatically link compiler
+  builtin functions at compile time. Pass `--no-offloadlib` to opt out.
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
