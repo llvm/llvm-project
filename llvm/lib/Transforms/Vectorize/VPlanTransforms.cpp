@@ -732,16 +732,17 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
-  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
-    if (!PhiR)
-      continue;
 
-    // Try to narrow wide and replicating recipes to uniform recipes, based on
-    // VPlan analysis.
-    // TODO: Apply to all recipes in the future, to replace legacy uniformity
-    // analysis.
+  SmallVector<VPWidenInductionRecipe *> WideIVs;
+  for (VPRecipeBase &Phi : HeaderVPBB->phis())
+    if (auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi))
+      WideIVs.push_back(PhiR);
+
+  // Try to narrow wide and replicating recipes to uniform recipes, based on
+  // VPlan analysis.
+  // TODO: Apply to all recipes in the future, to replace legacy uniformity
+  // analysis.
+  for (VPWidenInductionRecipe *PhiR : WideIVs) {
     auto Users = vputils::collectUsersRecursively(PhiR);
     for (VPUser *U : reverse(Users)) {
       auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
@@ -767,11 +768,15 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
           Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
+      Def->eraseFromParent();
     }
+  }
 
+  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+  for (VPWidenInductionRecipe *PhiR : WideIVs) {
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
-    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
+    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(PhiR)) {
       if (!Plan.hasScalarVFOnly() &&
           !PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
@@ -784,7 +789,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(PhiR);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
