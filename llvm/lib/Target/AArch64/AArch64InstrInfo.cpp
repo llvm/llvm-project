@@ -5761,7 +5761,8 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned NumRegs = Indices.size();
-  bool IsPred = AArch64::PPR2RegClass.contains(DestReg);
+  bool IsPred =
+      AArch64::PPRRegClass.contains(TRI->getSubReg(DestReg, Indices[0]));
 
   int SubReg = 0, End = NumRegs, Incr = 1;
   if (forwardCopyWillClobberTuple(DestEncoding, SrcEncoding, NumRegs, IsPred)) {
@@ -5773,7 +5774,7 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
   for (; SubReg != End; SubReg += Incr) {
     MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
     MCRegister SrcSubReg = TRI->getSubReg(SrcReg, Indices[SubReg]);
-    copyPhysReg(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
+    copyPhysRegImpl(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
   }
 }
 
@@ -5834,13 +5835,12 @@ static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
   return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
 }
 
-void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, bool KillSrc,
-                                   bool RenamableDest,
-                                   bool RenamableSrc) const {
-  ++NumCopyInstrs;
+void AArch64InstrInfo::copyPhysRegImpl(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       const DebugLoc &DL, Register DestReg,
+                                       Register SrcReg, bool KillSrc,
+                                       bool RenamableDest,
+                                       bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       AArch64::GPR32spRegClass.contains(SrcReg)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
@@ -6362,6 +6362,18 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
+}
+
+void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
+  ++NumCopyInstrs;
+  copyPhysRegImpl(MBB, I, DL, DestReg, SrcReg, KillSrc, RenamableDest,
+                  RenamableSrc);
+  return;
 }
 
 static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
