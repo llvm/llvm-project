@@ -42,7 +42,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizePointerCast.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -652,8 +651,8 @@ private:
 };
 } // namespace
 
-PreservedAnalyses SPIRVLegalizePointerCast::run(Function &F,
-                                                FunctionAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizePointerCastPass::run(Function &F, FunctionAnalysisManager &AM) {
   return SPIRVLegalizePointerCastImpl(TM).run(F) ? PreservedAnalyses::none()
                                                  : PreservedAnalyses::all();
 }
