@@ -250,14 +250,13 @@ define void @nested_loop_outer_iv_addrec_invariant_in_inner1(ptr %a, ptr %b, i64
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OUTER_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OUTER_IV]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_A]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
@@ -303,7 +302,6 @@ define void @nested_loop_outer_iv_addrec_invariant_in_inner2(ptr %a, ptr %b, i64
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OUTER_IV]], 2
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr nuw i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OUTER_IV]]
@@ -311,7 +309,7 @@ define void @nested_loop_outer_iv_addrec_invariant_in_inner2(ptr %a, ptr %b, i64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[GEP_A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;

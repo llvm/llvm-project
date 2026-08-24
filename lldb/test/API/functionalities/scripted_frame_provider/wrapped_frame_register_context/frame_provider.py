@@ -45,7 +45,10 @@ class WrappedFrame(ScriptedFrame):
         for reg_set in self._frame.registers:
             if "general purpose" in reg_set.name.lower():
                 for reg in reg_set:
-                    regs[reg.name] = int(reg.value, 16) if reg.value else 0
+                    regs[reg.name] = (
+                        int(reg.value, 16) if reg.value else 0,
+                        reg.GetByteSize(),
+                    )
                 break
         if not regs:
             return None
@@ -58,9 +61,22 @@ class WrappedFrame(ScriptedFrame):
             # uses. The register info carries that alias in "alt-name".
             if entry["name"] in regs:
                 return regs[entry["name"]]
-            return regs.get(entry.get("alt-name", ""), 0)
 
-        return struct.pack(f"{len(info)}Q", *(read(r) for r in info))
+            try:
+                return regs[entry["alt-name"]]
+            except KeyError:
+                return 0, entry["bitsize"] // 8
+
+        struct_format = ""
+        struct_data = []
+        sizes = {1: "B", 2: "H", 4: "I", 8: "Q"}
+
+        for reg in info:
+            value, size = read(reg)
+            struct_format += sizes[size]
+            struct_data.append(value)
+
+        return struct.pack(struct_format, *struct_data)
 
 
 class WrapVariablesProvider(ScriptedFrameProvider):
