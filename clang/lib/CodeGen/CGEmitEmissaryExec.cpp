@@ -168,7 +168,7 @@ static EmisTyID getEmisTyID(llvm::Type::TypeID TyId) {
   case llvm::Type::TypedPointerTyID: ///< Typed pointer used by some GPU targets
   case llvm::Type::TargetExtTyID:    ///< Target extension type
     return EmisInvalidTy;
-  break;
+    break;
   }
   return EmisInvalidTy;
 }
