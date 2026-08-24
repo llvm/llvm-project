@@ -231,12 +231,11 @@ static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
   if (P.isStringPointer()) {
     auto [B, Desc] = convertToBlockPointer(Ctx, P.asStringPointer());
 
-    if (enumerateData(Pointer(B).atIndex(P.getIndex()).view(), Ctx,
-                      Bits::zero(), BitsToRead, F,
-                      Initialize) == Result::Failure)
-      return false;
-    delete[] B;
-    return true;
+    bool Result = enumerateData(Pointer(B).atIndex(P.getIndex()).view(), Ctx,
+                                Bits::zero(), BitsToRead, F,
+                                Initialize) == Result::Failure;
+    delete[] reinterpret_cast<std::byte *>(B);
+    return Result;
   }
 
   return enumerateData(P.view(), Ctx, Bits::zero(), BitsToRead, F,

@@ -298,6 +298,10 @@ TEST(Pointer, Strings) {
   ASSERT_TRUE(Pointee.isStringPointer());
   ASSERT_EQ(Pointee.getNumElems(), 7u);
   ASSERT_EQ(Pointee.elemSize(), 1u);
+  ASSERT_EQ(Pointee.atIndex(3).getIndex(), 3u);
+  ASSERT_EQ(Pointee.atIndex(7).getIndex(), 7u);
+  ASSERT_TRUE(Pointee.atIndex(7).isOnePastEnd());
+  ASSERT_TRUE(Pointee.atIndex(7).isPastEnd());
 
   D = match(varDecl(hasGlobalStorage(), hasName("str2")).bind("str2"),
             ASTCtx)[0]

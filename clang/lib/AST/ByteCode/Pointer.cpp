@@ -83,6 +83,7 @@ Pointer::Pointer(Pointer &&P) : Offset(P.Offset), StorageKind(P.StorageKind) {
     break;
   case Storage::String:
     Str = P.Str;
+    break;
   }
 }
 
@@ -135,6 +136,7 @@ Pointer &Pointer::operator=(const Pointer &P) {
     break;
   case Storage::String:
     Str = P.Str;
+    break;
   }
   return *this;
 }
@@ -177,6 +179,7 @@ Pointer &Pointer::operator=(Pointer &&P) {
     break;
   case Storage::String:
     Str = P.Str;
+    break;
   }
   return *this;
 }

@@ -874,9 +874,11 @@ public:
   /// If backed by actual data (i.e. a block or string pointer), return
   /// an address to that data.
   const std::byte *getRawAddress() const {
-    if (isStringPointer())
+    if (isStringPointer()) {
+      const StringLiteral *Lit = Str.getLiteral();
       return reinterpret_cast<const std::byte *>(
-          Str.getLiteral()->getBytes().data());
+          Lit->getBytes().data() + (Offset * Lit->getCharByteWidth()));
+    }
     assert(isBlockPointer());
     return BS.Pointee->rawData() + Offset;
   }
