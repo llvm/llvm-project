@@ -900,6 +900,52 @@ exit:
   ret void
 }
 
+; The compared offset of -2 does not match the induction step of -1, so the
+; loop exits at %iv == B + 2.
+define void @postdec_incstep_ne_step_not_folded(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @postdec_incstep_ne_step_not_folded(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_MINUS2:%.*]] = add i8 [[IV]], -2
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_MINUS2]], [[B]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ult i8 %b, %start
+  br i1 %pre, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %loop.ph ], [ %iv.next, %loop.latch ]
+  %iv.minus2 = add i8 %iv, -2
+  %ec = icmp eq i8 %iv.minus2, %b
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %ugt = icmp ugt i8 %iv, %b
+  call void @use(i1 %ugt)
+  %iv.next = add i8 %iv, -1
+  br label %loop
+
+exit:
+  ret void
+}
+
 define void @latch_postdec_redundant_header_guard(i32 %n) {
 ; CHECK-LABEL: define void @latch_postdec_redundant_header_guard(
 ; CHECK-SAME: i32 [[N:%.*]]) {
