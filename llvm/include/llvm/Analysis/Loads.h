@@ -108,7 +108,7 @@ isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If SQ.CxtI are specified this method performs context-sensitive analysis
+/// If SQ.CxtI is specified this method performs context-sensitive analysis
 /// and returns true if it is safe to load immediately before SQ.CxtI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
