@@ -843,18 +843,10 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     if (!RISCVInstrInfo::isRVVCompare(Cmp))
       continue;
 
-    // Only fold unmasked comparisons whose active elements don't depend on the
-    // mask.
+    // Find the masked pseudo corresponding to the unmasked comparison.
     const RISCV::RISCVMaskedPseudoInfo *Info =
         RISCV::lookupMaskedIntrinsicByUnmasked(Cmp.getOpcode());
     if (!Info)
-      continue;
-    const MCInstrDesc &UnmaskedDesc = Cmp.getDesc();
-    if (RISCVII::isFirstDefTiedToFirstUse(UnmaskedDesc) ||
-        RISCVII::hasVecPolicyOp(UnmaskedDesc.TSFlags))
-      continue;
-    unsigned CmpMCOpc = RISCV::getRVVMCOpcode(Cmp.getOpcode());
-    if (RISCVII::elementsDependOnMask(TII->get(CmpMCOpc).TSFlags))
       continue;
 
     // The EEW of the comparison's dest must match vmand's SEW.
