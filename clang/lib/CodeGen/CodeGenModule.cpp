@@ -1296,9 +1296,10 @@ void CodeGenModule::Release() {
         llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
-  // Skip __hip_cuid_ under incremental extensions (clang-repl): a repl session is one
-  // semantic TU, so this per-TU marker is useless in host and device IR. On the host it
-  // also collides, as every module shares one CUID and emits the same symbol at JIT link.
+  // Skip __hip_cuid_ under incremental extensions (clang-repl): a repl session
+  // is one semantic TU, so this per-TU marker is useless in host and device IR.
+  // On the host it also collides, as every module shares one CUID and emits the
+  // same symbol at JIT link.
   if (LangOpts.HIP && !LangOpts.IncrementalExtensions) {
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
