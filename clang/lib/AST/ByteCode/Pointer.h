@@ -189,9 +189,21 @@ struct PtrView {
     if (!Pointee)
       return false;
 
-    if (isUnknownSizeArray())
+    const Descriptor *Desc = getFieldDesc();
+    if (Desc->isUnknownSizeArray())
       return false;
-    return isPastEnd() || (getSize() == getOffset());
+
+    if (isPastEnd())
+      return true;
+
+    if (Offset != Base) {
+      unsigned Adjust =
+          Desc->ElemDesc ? sizeof(InlineDescriptor) : sizeof(InitMapPtr);
+      unsigned Off = Offset - Base - Adjust;
+      return Desc->getSize() == Off;
+    }
+
+    return Desc->getSize() == 0;
   }
 
   PtrView atIndex(unsigned Idx) const {
@@ -834,10 +846,7 @@ public:
     if (!BS.Pointee)
       return false;
 
-    if (isUnknownSizeArray())
-      return false;
-
-    return isPastEnd() || (getSize() == getOffset());
+    return view().isOnePastEnd();
   }
 
   /// Checks if the pointer points past the end of the object.
