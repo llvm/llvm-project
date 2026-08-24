@@ -30,9 +30,14 @@ define i8 @sdiv_exact_even_even_fail_unknown(i8 %x, i8 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $-2, %dil
 ; CHECK-NEXT:    andb $-2, %sil
+; CHECK-NEXT:    movsbl %sil, %eax
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm0
 ; CHECK-NEXT:    movsbl %dil, %eax
-; CHECK-NEXT:    idivb %sil
+; CHECK-NEXT:    cvtsi2ss %eax, %xmm1
+; CHECK-NEXT:    divss %xmm0, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %eax
 ; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %num = and i8 %x, -2
   %denum = and i8 %y, -2
@@ -56,11 +61,14 @@ define i8 @udiv_exact_even_odd(i8 %x, i8 %y) {
 define i8 @udiv_exact_even_even_fail_unknown(i8 %x, i8 %y) {
 ; CHECK-LABEL: udiv_exact_even_even_fail_unknown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $-2, %dil
-; CHECK-NEXT:    andb $-2, %sil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    divb %sil
+; CHECK-NEXT:    andl $254, %esi
+; CHECK-NEXT:    cvtsi2ss %esi, %xmm0
+; CHECK-NEXT:    andl $254, %edi
+; CHECK-NEXT:    cvtsi2ss %edi, %xmm1
+; CHECK-NEXT:    divss %xmm0, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %eax
 ; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %num = and i8 %x, -2
   %denum = and i8 %y, -2

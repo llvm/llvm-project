@@ -17,28 +17,51 @@ define i32 @div32(i32 %a, i32 %b) {
 ; ATOM-NEXT:    testl $-256, %eax
 ; ATOM-NEXT:    je .LBB0_1
 ; ATOM-NEXT:  # %bb.2:
-; ATOM-NEXT:    movl %edi, %eax
-; ATOM-NEXT:    cltd
-; ATOM-NEXT:    idivl %esi
+; ATOM-NEXT:    cvtsi2sd %esi, %xmm0
+; ATOM-NEXT:    cvtsi2sd %edi, %xmm1
+; ATOM-NEXT:    divsd %xmm0, %xmm1
+; ATOM-NEXT:    cvttsd2si %xmm1, %eax
 ; ATOM-NEXT:    retq
 ; ATOM-NEXT:  .LBB0_1:
+; ATOM-NEXT:    movzbl %sil, %eax
+; ATOM-NEXT:    cvtsi2ss %eax, %xmm0
 ; ATOM-NEXT:    movzbl %dil, %eax
-; ATOM-NEXT:    divb %sil
+; ATOM-NEXT:    cvtsi2ss %eax, %xmm1
+; ATOM-NEXT:    divss %xmm0, %xmm1
+; ATOM-NEXT:    cvttss2si %xmm1, %eax
 ; ATOM-NEXT:    movzbl %al, %eax
 ; ATOM-NEXT:    retq
 ;
-; REST-LABEL: div32:
-; REST:       # %bb.0: # %entry
-; REST-NEXT:    movl %edi, %eax
-; REST-NEXT:    cltd
-; REST-NEXT:    idivl %esi
-; REST-NEXT:    retq
+; X64-LABEL: div32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    cvtsi2sd %esi, %xmm0
+; X64-NEXT:    cvtsi2sd %edi, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %eax
+; X64-NEXT:    retq
+;
+; SLM-LABEL: div32:
+; SLM:       # %bb.0: # %entry
+; SLM-NEXT:    cvtsi2sd %esi, %xmm0
+; SLM-NEXT:    cvtsi2sd %edi, %xmm1
+; SLM-NEXT:    divsd %xmm0, %xmm1
+; SLM-NEXT:    cvttsd2si %xmm1, %eax
+; SLM-NEXT:    retq
+;
+; SKL-LABEL: div32:
+; SKL:       # %bb.0: # %entry
+; SKL-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
+; SKL-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
+; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; SKL-NEXT:    vcvttsd2si %xmm0, %eax
+; SKL-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div32:
 ; HUGEWS:       # %bb.0: # %entry
-; HUGEWS-NEXT:    movl %edi, %eax
-; HUGEWS-NEXT:    cltd
-; HUGEWS-NEXT:    idivl %esi
+; HUGEWS-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
+; HUGEWS-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
+; HUGEWS-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; HUGEWS-NEXT:    vcvttsd2si %xmm0, %eax
 ; HUGEWS-NEXT:    retq
 entry:
   %div = sdiv i32 %a, %b
@@ -49,74 +72,86 @@ entry:
 define i64 @div64(i64 %a, i64 %b) {
 ; ATOM-LABEL: div64:
 ; ATOM:       # %bb.0: # %entry
-; ATOM-NEXT:    movq %rdi, %rcx
 ; ATOM-NEXT:    movq %rdi, %rax
-; ATOM-NEXT:    orq %rsi, %rcx
-; ATOM-NEXT:    shrq $32, %rcx
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    shrq $32, %rax
 ; ATOM-NEXT:    je .LBB1_1
 ; ATOM-NEXT:  # %bb.2:
+; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    cqto
 ; ATOM-NEXT:    idivq %rsi
 ; ATOM-NEXT:    retq
 ; ATOM-NEXT:  .LBB1_1:
-; ATOM-NEXT:    # kill: def $eax killed $eax killed $rax
-; ATOM-NEXT:    xorl %edx, %edx
-; ATOM-NEXT:    divl %esi
-; ATOM-NEXT:    # kill: def $eax killed $eax def $rax
+; ATOM-NEXT:    movl %esi, %eax
+; ATOM-NEXT:    cvtsi2sd %rax, %xmm0
+; ATOM-NEXT:    movl %edi, %eax
+; ATOM-NEXT:    cvtsi2sd %rax, %xmm1
+; ATOM-NEXT:    divsd %xmm0, %xmm1
+; ATOM-NEXT:    cvttsd2si %xmm1, %rax
+; ATOM-NEXT:    movl %eax, %eax
 ; ATOM-NEXT:    retq
 ;
 ; X64-LABEL: div64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    orq %rsi, %rcx
-; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    orq %rsi, %rax
+; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    je .LBB1_1
 ; X64-NEXT:  # %bb.2:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_1:
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
-; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    cvtsi2sd %rax, %xmm0
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cvtsi2sd %rax, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %rax
+; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    retq
 ;
 ; SLM-LABEL: div64:
 ; SLM:       # %bb.0: # %entry
-; SLM-NEXT:    movq %rdi, %rcx
 ; SLM-NEXT:    movq %rdi, %rax
-; SLM-NEXT:    orq %rsi, %rcx
-; SLM-NEXT:    shrq $32, %rcx
+; SLM-NEXT:    orq %rsi, %rax
+; SLM-NEXT:    shrq $32, %rax
 ; SLM-NEXT:    je .LBB1_1
 ; SLM-NEXT:  # %bb.2:
+; SLM-NEXT:    movq %rdi, %rax
 ; SLM-NEXT:    cqto
 ; SLM-NEXT:    idivq %rsi
 ; SLM-NEXT:    retq
 ; SLM-NEXT:  .LBB1_1:
-; SLM-NEXT:    xorl %edx, %edx
-; SLM-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLM-NEXT:    divl %esi
-; SLM-NEXT:    # kill: def $eax killed $eax def $rax
+; SLM-NEXT:    movl %esi, %eax
+; SLM-NEXT:    cvtsi2sd %rax, %xmm0
+; SLM-NEXT:    movl %edi, %eax
+; SLM-NEXT:    cvtsi2sd %rax, %xmm1
+; SLM-NEXT:    divsd %xmm0, %xmm1
+; SLM-NEXT:    cvttsd2si %xmm1, %rax
+; SLM-NEXT:    movl %eax, %eax
 ; SLM-NEXT:    retq
 ;
 ; SKL-LABEL: div64:
 ; SKL:       # %bb.0: # %entry
 ; SKL-NEXT:    movq %rdi, %rax
-; SKL-NEXT:    movq %rdi, %rcx
-; SKL-NEXT:    orq %rsi, %rcx
-; SKL-NEXT:    shrq $32, %rcx
+; SKL-NEXT:    orq %rsi, %rax
+; SKL-NEXT:    shrq $32, %rax
 ; SKL-NEXT:    je .LBB1_1
 ; SKL-NEXT:  # %bb.2:
+; SKL-NEXT:    movq %rdi, %rax
 ; SKL-NEXT:    cqto
 ; SKL-NEXT:    idivq %rsi
 ; SKL-NEXT:    retq
 ; SKL-NEXT:  .LBB1_1:
-; SKL-NEXT:    # kill: def $eax killed $eax killed $rax
-; SKL-NEXT:    xorl %edx, %edx
-; SKL-NEXT:    divl %esi
-; SKL-NEXT:    # kill: def $eax killed $eax def $rax
+; SKL-NEXT:    movl %esi, %eax
+; SKL-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; SKL-NEXT:    movl %edi, %eax
+; SKL-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; SKL-NEXT:    vcvttsd2si %xmm0, %rax
+; SKL-NEXT:    movl %eax, %eax
 ; SKL-NEXT:    retq
 ;
 ; GMT-LABEL: div64:
@@ -179,74 +214,86 @@ define i64 @div64_pgso(i64 %a, i64 %b) !prof !15 {
 define i64 @div64_hugews(i64 %a, i64 %b) {
 ; ATOM-LABEL: div64_hugews:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movq %rdi, %rcx
 ; ATOM-NEXT:    movq %rdi, %rax
-; ATOM-NEXT:    orq %rsi, %rcx
-; ATOM-NEXT:    shrq $32, %rcx
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    shrq $32, %rax
 ; ATOM-NEXT:    je .LBB4_1
 ; ATOM-NEXT:  # %bb.2:
+; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    cqto
 ; ATOM-NEXT:    idivq %rsi
 ; ATOM-NEXT:    retq
 ; ATOM-NEXT:  .LBB4_1:
-; ATOM-NEXT:    # kill: def $eax killed $eax killed $rax
-; ATOM-NEXT:    xorl %edx, %edx
-; ATOM-NEXT:    divl %esi
-; ATOM-NEXT:    # kill: def $eax killed $eax def $rax
+; ATOM-NEXT:    movl %esi, %eax
+; ATOM-NEXT:    cvtsi2sd %rax, %xmm0
+; ATOM-NEXT:    movl %edi, %eax
+; ATOM-NEXT:    cvtsi2sd %rax, %xmm1
+; ATOM-NEXT:    divsd %xmm0, %xmm1
+; ATOM-NEXT:    cvttsd2si %xmm1, %rax
+; ATOM-NEXT:    movl %eax, %eax
 ; ATOM-NEXT:    retq
 ;
 ; X64-LABEL: div64_hugews:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    orq %rsi, %rcx
-; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    orq %rsi, %rax
+; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    je .LBB4_1
 ; X64-NEXT:  # %bb.2:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_1:
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
-; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    cvtsi2sd %rax, %xmm0
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cvtsi2sd %rax, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %rax
+; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    retq
 ;
 ; SLM-LABEL: div64_hugews:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movq %rdi, %rcx
 ; SLM-NEXT:    movq %rdi, %rax
-; SLM-NEXT:    orq %rsi, %rcx
-; SLM-NEXT:    shrq $32, %rcx
+; SLM-NEXT:    orq %rsi, %rax
+; SLM-NEXT:    shrq $32, %rax
 ; SLM-NEXT:    je .LBB4_1
 ; SLM-NEXT:  # %bb.2:
+; SLM-NEXT:    movq %rdi, %rax
 ; SLM-NEXT:    cqto
 ; SLM-NEXT:    idivq %rsi
 ; SLM-NEXT:    retq
 ; SLM-NEXT:  .LBB4_1:
-; SLM-NEXT:    xorl %edx, %edx
-; SLM-NEXT:    # kill: def $eax killed $eax killed $rax
-; SLM-NEXT:    divl %esi
-; SLM-NEXT:    # kill: def $eax killed $eax def $rax
+; SLM-NEXT:    movl %esi, %eax
+; SLM-NEXT:    cvtsi2sd %rax, %xmm0
+; SLM-NEXT:    movl %edi, %eax
+; SLM-NEXT:    cvtsi2sd %rax, %xmm1
+; SLM-NEXT:    divsd %xmm0, %xmm1
+; SLM-NEXT:    cvttsd2si %xmm1, %rax
+; SLM-NEXT:    movl %eax, %eax
 ; SLM-NEXT:    retq
 ;
 ; SKL-LABEL: div64_hugews:
 ; SKL:       # %bb.0:
 ; SKL-NEXT:    movq %rdi, %rax
-; SKL-NEXT:    movq %rdi, %rcx
-; SKL-NEXT:    orq %rsi, %rcx
-; SKL-NEXT:    shrq $32, %rcx
+; SKL-NEXT:    orq %rsi, %rax
+; SKL-NEXT:    shrq $32, %rax
 ; SKL-NEXT:    je .LBB4_1
 ; SKL-NEXT:  # %bb.2:
+; SKL-NEXT:    movq %rdi, %rax
 ; SKL-NEXT:    cqto
 ; SKL-NEXT:    idivq %rsi
 ; SKL-NEXT:    retq
 ; SKL-NEXT:  .LBB4_1:
-; SKL-NEXT:    # kill: def $eax killed $eax killed $rax
-; SKL-NEXT:    xorl %edx, %edx
-; SKL-NEXT:    divl %esi
-; SKL-NEXT:    # kill: def $eax killed $eax def $rax
+; SKL-NEXT:    movl %esi, %eax
+; SKL-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; SKL-NEXT:    movl %edi, %eax
+; SKL-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; SKL-NEXT:    vcvttsd2si %xmm0, %rax
+; SKL-NEXT:    movl %eax, %eax
 ; SKL-NEXT:    retq
 ;
 ; GMT-LABEL: div64_hugews:
@@ -285,18 +332,44 @@ define i32 @div32_optsize(i32 %a, i32 %b) optsize {
 }
 
 define i32 @div32_pgso(i32 %a, i32 %b) !prof !15 {
-; CHECK-LABEL: div32_pgso:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    retq
+; ATOM-LABEL: div32_pgso:
+; ATOM:       # %bb.0:
+; ATOM-NEXT:    cvtsi2sd %esi, %xmm0
+; ATOM-NEXT:    cvtsi2sd %edi, %xmm1
+; ATOM-NEXT:    divsd %xmm0, %xmm1
+; ATOM-NEXT:    cvttsd2si %xmm1, %eax
+; ATOM-NEXT:    retq
+;
+; X64-LABEL: div32_pgso:
+; X64:       # %bb.0:
+; X64-NEXT:    cvtsi2sd %esi, %xmm0
+; X64-NEXT:    cvtsi2sd %edi, %xmm1
+; X64-NEXT:    divsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %eax
+; X64-NEXT:    retq
+;
+; SLM-LABEL: div32_pgso:
+; SLM:       # %bb.0:
+; SLM-NEXT:    cvtsi2sd %esi, %xmm0
+; SLM-NEXT:    cvtsi2sd %edi, %xmm1
+; SLM-NEXT:    divsd %xmm0, %xmm1
+; SLM-NEXT:    cvttsd2si %xmm1, %eax
+; SLM-NEXT:    retq
+;
+; SKL-LABEL: div32_pgso:
+; SKL:       # %bb.0:
+; SKL-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
+; SKL-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
+; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; SKL-NEXT:    vcvttsd2si %xmm0, %eax
+; SKL-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div32_pgso:
 ; HUGEWS:       # %bb.0:
-; HUGEWS-NEXT:    movl %edi, %eax
-; HUGEWS-NEXT:    cltd
-; HUGEWS-NEXT:    idivl %esi
+; HUGEWS-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
+; HUGEWS-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
+; HUGEWS-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; HUGEWS-NEXT:    vcvttsd2si %xmm0, %eax
 ; HUGEWS-NEXT:    retq
   %div = sdiv i32 %a, %b
   ret i32 %div
@@ -336,3 +409,5 @@ define i32 @div32_minsize(i32 %a, i32 %b) minsize {
 !13 = !{i32 999000, i64 1000, i32 3}
 !14 = !{i32 999999, i64 5, i32 3}
 !15 = !{!"function_entry_count", i64 0}
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; REST: {{.*}}

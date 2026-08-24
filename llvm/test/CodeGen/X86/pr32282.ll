@@ -35,26 +35,26 @@ define dso_local void @foo(i64 %x) nounwind {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq d(%rip), %rcx
-; X64-NEXT:    movabsq $3013716102212485120, %rdx # imm = 0x29D2DED3DE400000
-; X64-NEXT:    andnq %rdx, %rcx, %rcx
+; X64-NEXT:    movq d(%rip), %rax
+; X64-NEXT:    movabsq $3013716102212485120, %rcx # imm = 0x29D2DED3DE400000
+; X64-NEXT:    andnq %rcx, %rax, %rcx
 ; X64-NEXT:    shrq $21, %rcx
 ; X64-NEXT:    addq $7, %rcx
-; X64-NEXT:    movq %rdi, %rdx
-; X64-NEXT:    orq %rcx, %rdx
-; X64-NEXT:    shrq $32, %rdx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq %rcx, %rax
+; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    je .LBB0_1
 ; X64-NEXT:  # %bb.2:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    jmp .LBB0_3
 ; X64-NEXT:  .LBB0_1:
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %ecx
-; X64-NEXT:    # kill: def $eax killed $eax def $rax
-; X64-NEXT:  .LBB0_3:
+; X64-NEXT:    vcvtusi2sd %ecx, %xmm15, %xmm0
+; X64-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm1
+; X64-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; X64-NEXT:    vcvttsd2usi %xmm0, %eax
+; X64-NEXT:  .LBB0_3: # %.split
 ; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq

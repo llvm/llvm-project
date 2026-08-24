@@ -1489,75 +1489,84 @@ if.end:                                           ; preds = %entry, %if.then
 define void @cmp_srem(ptr %p, i32 %a, ptr %b) {
 ; CHECK-LABEL: cmp_srem:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    subl $1, %eax
-; CHECK-NEXT:    movl (%rdi), %edi
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    {nf} idivl %edi
-; CHECK-NEXT:    ctestnel {dfv=} %edx, %edx
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal -1(%rsi), %eax
+; CHECK-NEXT:    movl (%rdi), %ecx
+; CHECK-NEXT:    cvtsi2sd %ecx, %xmm0
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm1
+; CHECK-NEXT:    divsd %xmm0, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %eax
+; CHECK-NEXT:    imull %ecx, %eax
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    subl $1, %edi
+; CHECK-NEXT:    ccmpnel {dfv=} %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    cmpl $1, %esi
-; CHECK-NEXT:    ccmpael {dfv=zf} $1, %edi
-; CHECK-NEXT:    sete %dl
-; CHECK-NEXT:    orb %al, %dl
-; CHECK-NEXT:    movb %dl, (%rcx)
+; CHECK-NEXT:    ccmpael {dfv=zf} $1, %ecx
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movb %cl, (%rdx)
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: cmp_srem:
 ; NDD:       # %bb.0: # %bb
-; NDD-NEXT:    movq %rdx, %rcx
-; NDD-NEXT:    subl $1, %esi, %eax
-; NDD-NEXT:    movl (%rdi), %edi
-; NDD-NEXT:    cltd
-; NDD-NEXT:    {nf} idivl %edi
-; NDD-NEXT:    ctestnel {dfv=} %edx, %edx
+; NDD-NEXT:    {nf} subl $1, %esi, %eax
+; NDD-NEXT:    movl (%rdi), %ecx
+; NDD-NEXT:    cvtsi2sd %ecx, %xmm0
+; NDD-NEXT:    cvtsi2sd %eax, %xmm1
+; NDD-NEXT:    divsd %xmm0, %xmm1
+; NDD-NEXT:    cvttsd2si %xmm1, %eax
+; NDD-NEXT:    imull %ecx, %eax
+; NDD-NEXT:    subl $1, %esi, %edi
+; NDD-NEXT:    ccmpnel {dfv=} %eax, %edi
 ; NDD-NEXT:    sete %al
 ; NDD-NEXT:    cmpl $1, %esi
-; NDD-NEXT:    ccmpael {dfv=zf} $1, %edi
-; NDD-NEXT:    sete %dl
-; NDD-NEXT:    orb %dl, %al
-; NDD-NEXT:    movb %al, (%rcx)
+; NDD-NEXT:    ccmpael {dfv=zf} $1, %ecx
+; NDD-NEXT:    sete %cl
+; NDD-NEXT:    orb %cl, %al
+; NDD-NEXT:    movb %al, (%rdx)
 ; NDD-NEXT:    retq
 ;
 ; PREFER_NO_LEGACY_SETCC-LABEL: cmp_srem:
 ; PREFER_NO_LEGACY_SETCC:       # %bb.0: # %bb
-; PREFER_NO_LEGACY_SETCC-NEXT:    movq %rdx, %rcx # encoding: [0x48,0x89,0xd1]
-; PREFER_NO_LEGACY_SETCC-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; PREFER_NO_LEGACY_SETCC-NEXT:    movl (%rdi), %esi # encoding: [0x8b,0x37]
-; PREFER_NO_LEGACY_SETCC-NEXT:    cmpl $1, %esi # encoding: [0x83,0xfe,0x01]
-; PREFER_NO_LEGACY_SETCC-NEXT:    setzue %dl # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc2]
-; PREFER_NO_LEGACY_SETCC-NEXT:    subl $1, %eax # encoding: [0x83,0xe8,0x01]
+; PREFER_NO_LEGACY_SETCC-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; PREFER_NO_LEGACY_SETCC-NEXT:    cmpl $1, %eax # encoding: [0x83,0xf8,0x01]
+; PREFER_NO_LEGACY_SETCC-NEXT:    setzue %cl # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    subl $1, %esi # encoding: [0x83,0xee,0x01]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    setzub %dil # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc7]
-; PREFER_NO_LEGACY_SETCC-NEXT:    setzune %r8b # encoding: [0x62,0xd4,0x7f,0x18,0x45,0xc0]
-; PREFER_NO_LEGACY_SETCC-NEXT:    orb %dl, %dil # encoding: [0x40,0x08,0xd7]
-; PREFER_NO_LEGACY_SETCC-NEXT:    cltd # encoding: [0x99]
-; PREFER_NO_LEGACY_SETCC-NEXT:    idivl %esi # encoding: [0xf7,0xfe]
-; PREFER_NO_LEGACY_SETCC-NEXT:    testl %edx, %edx # encoding: [0x85,0xd2]
+; PREFER_NO_LEGACY_SETCC-NEXT:    cvtsi2sd %eax, %xmm0 # encoding: [0xf2,0x0f,0x2a,0xc0]
+; PREFER_NO_LEGACY_SETCC-NEXT:    cvtsi2sd %esi, %xmm1 # encoding: [0xf2,0x0f,0x2a,0xce]
+; PREFER_NO_LEGACY_SETCC-NEXT:    divsd %xmm0, %xmm1 # encoding: [0xf2,0x0f,0x5e,0xc8]
+; PREFER_NO_LEGACY_SETCC-NEXT:    cvttsd2si %xmm1, %r8d # encoding: [0xf2,0x44,0x0f,0x2c,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    setzune %r9b # encoding: [0x62,0xd4,0x7f,0x18,0x45,0xc1]
+; PREFER_NO_LEGACY_SETCC-NEXT:    orb %cl, %dil # encoding: [0x40,0x08,0xcf]
+; PREFER_NO_LEGACY_SETCC-NEXT:    imull %eax, %r8d # encoding: [0x44,0x0f,0xaf,0xc0]
+; PREFER_NO_LEGACY_SETCC-NEXT:    cmpl %r8d, %esi # encoding: [0x44,0x39,0xc6]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
-; PREFER_NO_LEGACY_SETCC-NEXT:    andb %r8b, %al # encoding: [0x44,0x20,0xc0]
+; PREFER_NO_LEGACY_SETCC-NEXT:    andb %r9b, %al # encoding: [0x44,0x20,0xc8]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    orb %dil, %al # encoding: [0x40,0x08,0xf8]
-; PREFER_NO_LEGACY_SETCC-NEXT:    movb %al, (%rcx) # encoding: [0x88,0x01]
+; PREFER_NO_LEGACY_SETCC-NEXT:    movb %al, (%rdx) # encoding: [0x88,0x02]
 ; PREFER_NO_LEGACY_SETCC-NEXT:    retq # encoding: [0xc3]
 ;
 ; PREFER_LEGACY_SETCC-LABEL: cmp_srem:
 ; PREFER_LEGACY_SETCC:       # %bb.0: # %bb
-; PREFER_LEGACY_SETCC-NEXT:    movq %rdx, %rcx # encoding: [0x48,0x89,0xd1]
-; PREFER_LEGACY_SETCC-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
-; PREFER_LEGACY_SETCC-NEXT:    movl (%rdi), %esi # encoding: [0x8b,0x37]
-; PREFER_LEGACY_SETCC-NEXT:    cmpl $1, %esi # encoding: [0x83,0xfe,0x01]
-; PREFER_LEGACY_SETCC-NEXT:    sete %dl # encoding: [0x0f,0x94,0xc2]
-; PREFER_LEGACY_SETCC-NEXT:    subl $1, %eax # encoding: [0x83,0xe8,0x01]
+; PREFER_LEGACY_SETCC-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; PREFER_LEGACY_SETCC-NEXT:    cmpl $1, %eax # encoding: [0x83,0xf8,0x01]
+; PREFER_LEGACY_SETCC-NEXT:    sete %cl # encoding: [0x0f,0x94,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    subl $1, %esi # encoding: [0x83,0xee,0x01]
 ; PREFER_LEGACY_SETCC-NEXT:    setb %dil # encoding: [0x40,0x0f,0x92,0xc7]
-; PREFER_LEGACY_SETCC-NEXT:    setne %r8b # encoding: [0x41,0x0f,0x95,0xc0]
-; PREFER_LEGACY_SETCC-NEXT:    orb %dl, %dil # encoding: [0x40,0x08,0xd7]
-; PREFER_LEGACY_SETCC-NEXT:    cltd # encoding: [0x99]
-; PREFER_LEGACY_SETCC-NEXT:    idivl %esi # encoding: [0xf7,0xfe]
-; PREFER_LEGACY_SETCC-NEXT:    testl %edx, %edx # encoding: [0x85,0xd2]
+; PREFER_LEGACY_SETCC-NEXT:    cvtsi2sd %eax, %xmm0 # encoding: [0xf2,0x0f,0x2a,0xc0]
+; PREFER_LEGACY_SETCC-NEXT:    cvtsi2sd %esi, %xmm1 # encoding: [0xf2,0x0f,0x2a,0xce]
+; PREFER_LEGACY_SETCC-NEXT:    divsd %xmm0, %xmm1 # encoding: [0xf2,0x0f,0x5e,0xc8]
+; PREFER_LEGACY_SETCC-NEXT:    cvttsd2si %xmm1, %r8d # encoding: [0xf2,0x44,0x0f,0x2c,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    setne %r9b # encoding: [0x41,0x0f,0x95,0xc1]
+; PREFER_LEGACY_SETCC-NEXT:    orb %cl, %dil # encoding: [0x40,0x08,0xcf]
+; PREFER_LEGACY_SETCC-NEXT:    imull %eax, %r8d # encoding: [0x44,0x0f,0xaf,0xc0]
+; PREFER_LEGACY_SETCC-NEXT:    cmpl %r8d, %esi # encoding: [0x44,0x39,0xc6]
 ; PREFER_LEGACY_SETCC-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; PREFER_LEGACY_SETCC-NEXT:    andb %r8b, %al # encoding: [0x44,0x20,0xc0]
+; PREFER_LEGACY_SETCC-NEXT:    andb %r9b, %al # encoding: [0x44,0x20,0xc8]
 ; PREFER_LEGACY_SETCC-NEXT:    orb %dil, %al # encoding: [0x40,0x08,0xf8]
-; PREFER_LEGACY_SETCC-NEXT:    movb %al, (%rcx) # encoding: [0x88,0x01]
+; PREFER_LEGACY_SETCC-NEXT:    movb %al, (%rdx) # encoding: [0x88,0x02]
 ; PREFER_LEGACY_SETCC-NEXT:    retq # encoding: [0xc3]
 bb:
   %i = icmp eq i32 %a, 0

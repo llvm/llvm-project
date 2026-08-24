@@ -13,12 +13,18 @@
 define dso_local void @PR37667() {
 ; CHECK-LABEL: PR37667:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl b(%rip), %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl d(%rip)
-; CHECK-NEXT:    orl c(%rip), %edx
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, a(%rip)
+; CHECK-NEXT:    movzbl c(%rip), %eax
+; CHECK-NEXT:    movl b(%rip), %ecx
+; CHECK-NEXT:    movl d(%rip), %edx
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm1
+; CHECK-NEXT:    divsd %xmm0, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %rsi
+; CHECK-NEXT:    imull %edx, %esi
+; CHECK-NEXT:    subl %esi, %ecx
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    movl %ecx, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, ptr @c, align 4
   %t1 = load i32, ptr @b, align 4
@@ -33,12 +39,17 @@ define dso_local void @PR37667() {
 define dso_local void @PR37060() {
 ; CHECK-LABEL: PR37060:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl c(%rip)
-; CHECK-NEXT:    xorl b(%rip), %edx
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, a(%rip)
+; CHECK-NEXT:    movl c(%rip), %eax
+; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-1.0E+0,0.0E+0]
+; CHECK-NEXT:    divsd %xmm0, %xmm1
+; CHECK-NEXT:    cvttsd2si %xmm1, %ecx
+; CHECK-NEXT:    imull %eax, %ecx
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movzbl b(%rip), %ecx
+; CHECK-NEXT:    xorl %eax, %ecx
+; CHECK-NEXT:    xorl $255, %ecx
+; CHECK-NEXT:    movl %ecx, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, ptr @c, align 4
   %rem = srem i32 -1, %t0

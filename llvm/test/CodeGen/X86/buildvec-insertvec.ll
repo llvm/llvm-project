@@ -790,29 +790,43 @@ define i32 @PR46586(ptr %p, <4 x i32> %v) {
 ; SSE2-NEXT:    pinsrw $6, %eax, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    cvtsi2sd %eax, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    cvtsi2sd %rcx, %xmm0
+; SSE2-NEXT:    divsd %xmm0, %xmm1
+; SSE2-NEXT:    cvttsd2si %xmm1, %rdx
+; SSE2-NEXT:    imull %ecx, %edx
+; SSE2-NEXT:    subl %edx, %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: PR46586:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movzbl 3(%rdi), %eax
+; SSE41-NEXT:    movl (%rdi), %eax
 ; SSE41-NEXT:    extractps $3, %xmm0, %ecx
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    divl %ecx
-; SSE41-NEXT:    movl %edx, %eax
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    cvtsi2sd %rcx, %xmm0
+; SSE41-NEXT:    shrl $24, %eax
+; SSE41-NEXT:    cvtsi2sd %eax, %xmm1
+; SSE41-NEXT:    divsd %xmm0, %xmm1
+; SSE41-NEXT:    cvttsd2si %xmm1, %rdx
+; SSE41-NEXT:    imull %ecx, %edx
+; SSE41-NEXT:    subl %edx, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR46586:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl 3(%rdi), %eax
+; AVX-NEXT:    movl (%rdi), %eax
 ; AVX-NEXT:    vextractps $3, %xmm0, %ecx
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divl %ecx
-; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
+; AVX-NEXT:    shrl $24, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm1
+; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcvttsd2si %xmm0, %rdx
+; AVX-NEXT:    imull %ecx, %edx
+; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    retq
   %p3 = getelementptr inbounds i8, ptr %p, i64 3
   %t25 = load i8, ptr %p

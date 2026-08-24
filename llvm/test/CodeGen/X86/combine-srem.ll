@@ -390,30 +390,67 @@ declare <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32>, i32)
 ; OSS-Fuzz #6883
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6883
 define i32 @ossfuzz6883() {
-; CHECK-LABEL: ossfuzz6883:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rax), %ecx
-; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %edi
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    retq
+; SSE-LABEL: ossfuzz6883:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rax), %ecx
+; SSE-NEXT:    cvtsi2sd %ecx, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [2.147483647E+9,0.0E+0]
+; SSE-NEXT:    movapd %xmm1, %xmm2
+; SSE-NEXT:    divsd %xmm0, %xmm2
+; SSE-NEXT:    cvttsd2si %xmm2, %eax
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm3
+; SSE-NEXT:    divsd %xmm3, %xmm1
+; SSE-NEXT:    cvttsd2si %xmm1, %rdx
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    cvtsi2sd %edx, %xmm1
+; SSE-NEXT:    cvttpd2dq %xmm2, %xmm2
+; SSE-NEXT:    cvtdq2pd %xmm2, %xmm2
+; SSE-NEXT:    divsd %xmm1, %xmm2
+; SSE-NEXT:    cvttsd2si %xmm2, %esi
+; SSE-NEXT:    imull %edx, %esi
+; SSE-NEXT:    subl %esi, %eax
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    cvtsi2sd %eax, %xmm1
+; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %edx
+; SSE-NEXT:    imull %eax, %edx
+; SSE-NEXT:    subl %edx, %ecx
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE-NEXT:    divsd %xmm0, %xmm3
+; SSE-NEXT:    cvttsd2si %xmm3, %rax
+; SSE-NEXT:    andl %ecx, %eax
+; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ossfuzz6883:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl (%rax), %ecx
+; AVX-NEXT:    vcvtsi2sd %ecx, %xmm15, %xmm0
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [2.147483647E+9,0.0E+0]
+; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vcvttsd2si %xmm2, %eax
+; AVX-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm3
+; AVX-NEXT:    vdivsd %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vcvttsd2si %xmm1, %rdx
+; AVX-NEXT:    vcvtsi2sd %edx, %xmm15, %xmm1
+; AVX-NEXT:    vcvttpd2dq %xmm2, %xmm2
+; AVX-NEXT:    vcvtdq2pd %xmm2, %xmm2
+; AVX-NEXT:    vdivsd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vcvttsd2si %xmm1, %esi
+; AVX-NEXT:    imull %edx, %esi
+; AVX-NEXT:    subl %esi, %eax
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm1
+; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vcvttsd2si %xmm0, %edx
+; AVX-NEXT:    imull %eax, %edx
+; AVX-NEXT:    subl %edx, %ecx
+; AVX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX-NEXT:    vdivsd %xmm0, %xmm3, %xmm0
+; AVX-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX-NEXT:    andl %ecx, %eax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
   %B17 = or i32 0, 2147483647
   %L6 = load i32, ptr undef
   %B11 = sdiv i32 %B17, %L6

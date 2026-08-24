@@ -7,12 +7,6 @@
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-linux-gnu | FileCheck %s --check-prefixes=X86,GISEL-X86
 
 define i8 @test_udiv_i8(i8 %arg1, i8 %arg2) nounwind {
-; X64-LABEL: test_udiv_i8:
-; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    retq
-;
 ; DAG-X86-LABEL: test_udiv_i8:
 ; DAG-X86:       # %bb.0:
 ; DAG-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -31,14 +25,6 @@ define i8 @test_udiv_i8(i8 %arg1, i8 %arg2) nounwind {
 }
 
 define i16 @test_udiv_i16(i16 %arg1, i16 %arg2) nounwind {
-; X64-LABEL: test_udiv_i16:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %si
-; X64-NEXT:    retq
-;
 ; DAG-X86-LABEL: test_udiv_i16:
 ; DAG-X86:       # %bb.0:
 ; DAG-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -59,13 +45,6 @@ define i16 @test_udiv_i16(i16 %arg1, i16 %arg2) nounwind {
 }
 
 define i32 @test_udiv_i32(i32 %arg1, i32 %arg2) nounwind {
-; X64-LABEL: test_udiv_i32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divl %esi
-; X64-NEXT:    retq
-;
 ; X86-LABEL: test_udiv_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax

@@ -424,35 +424,55 @@ define i32 @main() nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-32, %esp
 ; X86-SSE2-NEXT:    subl $64, %esp
-; X86-SSE2-NEXT:    movaps n1+16, %xmm0
-; X86-SSE2-NEXT:    movaps n1, %xmm1
-; X86-SSE2-NEXT:    movl zero+4, %ecx
-; X86-SSE2-NEXT:    movl zero+8, %eax
-; X86-SSE2-NEXT:    movaps %xmm1, zero
-; X86-SSE2-NEXT:    movaps %xmm0, zero+16
-; X86-SSE2-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2]
-; X86-SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    movaps %xmm0, (%esp)
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm0
-; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X86-SSE2-NEXT:    movd %xmm1, %esi
-; X86-SSE2-NEXT:    xorl %edx, %edx
-; X86-SSE2-NEXT:    divl %esi
-; X86-SSE2-NEXT:    movl %eax, %esi
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X86-SSE2-NEXT:    movd %xmm0, %edi
-; X86-SSE2-NEXT:    movl %ecx, %eax
-; X86-SSE2-NEXT:    xorl %edx, %edx
-; X86-SSE2-NEXT:    divl %edi
-; X86-SSE2-NEXT:    addl %esi, %eax
-; X86-SSE2-NEXT:    leal -8(%ebp), %esp
+; X86-SSE2-NEXT:    movapd zero, %xmm0
+; X86-SSE2-NEXT:    movaps n1+16, %xmm1
+; X86-SSE2-NEXT:    movaps n1, %xmm2
+; X86-SSE2-NEXT:    movaps %xmm2, zero
+; X86-SSE2-NEXT:    movaps %xmm1, zero+16
+; X86-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [2,2,2,2]
+; X86-SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movaps %xmm1, (%esp)
+; X86-SSE2-NEXT:    movapd (%esp), %xmm1
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2
+; X86-SSE2-NEXT:    xorpd %xmm3, %xmm3
+; X86-SSE2-NEXT:    movapd %xmm0, %xmm4
+; X86-SSE2-NEXT:    unpckhps {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm2 = [4.503599627370496E+15,0.0E+0]
+; X86-SSE2-NEXT:    orpd %xmm2, %xmm4
+; X86-SSE2-NEXT:    subsd %xmm2, %xmm4
+; X86-SSE2-NEXT:    movapd %xmm1, %xmm5
+; X86-SSE2-NEXT:    unpckhps {{.*#+}} xmm5 = xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; X86-SSE2-NEXT:    orpd %xmm2, %xmm5
+; X86-SSE2-NEXT:    subsd %xmm2, %xmm5
+; X86-SSE2-NEXT:    divsd %xmm5, %xmm4
+; X86-SSE2-NEXT:    cvttsd2si %xmm4, %eax
+; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    sarl $31, %edx
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm3 = [2.147483648E+9,0.0E+0]
+; X86-SSE2-NEXT:    subsd %xmm3, %xmm4
+; X86-SSE2-NEXT:    cvttsd2si %xmm4, %ecx
+; X86-SSE2-NEXT:    andl %edx, %ecx
+; X86-SSE2-NEXT:    orl %eax, %ecx
+; X86-SSE2-NEXT:    psrlq $32, %xmm0
+; X86-SSE2-NEXT:    por %xmm2, %xmm0
+; X86-SSE2-NEXT:    subsd %xmm2, %xmm0
+; X86-SSE2-NEXT:    psrlq $32, %xmm1
+; X86-SSE2-NEXT:    por %xmm2, %xmm1
+; X86-SSE2-NEXT:    subsd %xmm2, %xmm1
+; X86-SSE2-NEXT:    divsd %xmm1, %xmm0
+; X86-SSE2-NEXT:    cvttsd2si %xmm0, %edx
+; X86-SSE2-NEXT:    movl %edx, %esi
+; X86-SSE2-NEXT:    sarl $31, %esi
+; X86-SSE2-NEXT:    subsd %xmm3, %xmm0
+; X86-SSE2-NEXT:    cvttsd2si %xmm0, %eax
+; X86-SSE2-NEXT:    andl %esi, %eax
+; X86-SSE2-NEXT:    orl %edx, %eax
+; X86-SSE2-NEXT:    addl %ecx, %eax
+; X86-SSE2-NEXT:    leal -4(%ebp), %esp
 ; X86-SSE2-NEXT:    popl %esi
-; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -465,8 +485,8 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    movq n1@GOTPCREL(%rip), %rax
 ; X64-SSSE3-NEXT:    movaps (%rax), %xmm0
 ; X64-SSSE3-NEXT:    movaps 16(%rax), %xmm1
-; X64-SSSE3-NEXT:    movl zero+4(%rip), %ecx
-; X64-SSSE3-NEXT:    movl zero+8(%rip), %eax
+; X64-SSSE3-NEXT:    movl zero+4(%rip), %eax
+; X64-SSSE3-NEXT:    movl zero+8(%rip), %ecx
 ; X64-SSSE3-NEXT:    movaps %xmm0, zero(%rip)
 ; X64-SSSE3-NEXT:    movaps %xmm1, zero+16(%rip)
 ; X64-SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [2,2,2,2]
@@ -474,17 +494,24 @@ define i32 @main() nounwind {
 ; X64-SSSE3-NEXT:    movaps %xmm0, (%rsp)
 ; X64-SSSE3-NEXT:    movdqa (%rsp), %xmm0
 ; X64-SSSE3-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
-; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-SSSE3-NEXT:    movd %xmm1, %esi
-; X64-SSSE3-NEXT:    xorl %edx, %edx
-; X64-SSSE3-NEXT:    divl %esi
-; X64-SSSE3-NEXT:    movl %eax, %esi
+; X64-SSSE3-NEXT:    xorps %xmm1, %xmm1
+; X64-SSSE3-NEXT:    cvtsi2sd %rcx, %xmm1
+; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; X64-SSSE3-NEXT:    movd %xmm2, %ecx
+; X64-SSSE3-NEXT:    xorps %xmm2, %xmm2
+; X64-SSSE3-NEXT:    cvtsi2sd %rcx, %xmm2
+; X64-SSSE3-NEXT:    divsd %xmm2, %xmm1
+; X64-SSSE3-NEXT:    cvttsd2si %xmm1, %rcx
+; X64-SSSE3-NEXT:    xorps %xmm1, %xmm1
+; X64-SSSE3-NEXT:    cvtsi2sd %rax, %xmm1
 ; X64-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-SSSE3-NEXT:    movd %xmm0, %edi
-; X64-SSSE3-NEXT:    movl %ecx, %eax
-; X64-SSSE3-NEXT:    xorl %edx, %edx
-; X64-SSSE3-NEXT:    divl %edi
-; X64-SSSE3-NEXT:    addl %esi, %eax
+; X64-SSSE3-NEXT:    movd %xmm0, %eax
+; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
+; X64-SSSE3-NEXT:    cvtsi2sd %rax, %xmm0
+; X64-SSSE3-NEXT:    divsd %xmm0, %xmm1
+; X64-SSSE3-NEXT:    cvttsd2si %xmm1, %rax
+; X64-SSSE3-NEXT:    addl %ecx, %eax
+; X64-SSSE3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-SSSE3-NEXT:    movq %rbp, %rsp
 ; X64-SSSE3-NEXT:    popq %rbp
 ; X64-SSSE3-NEXT:    retq
@@ -497,21 +524,24 @@ define i32 @main() nounwind {
 ; X64-AVX-NEXT:    subq $64, %rsp
 ; X64-AVX-NEXT:    movq n1@GOTPCREL(%rip), %rax
 ; X64-AVX-NEXT:    vmovaps (%rax), %ymm0
-; X64-AVX-NEXT:    movl zero+4(%rip), %ecx
-; X64-AVX-NEXT:    movl zero+8(%rip), %eax
+; X64-AVX-NEXT:    movl zero+4(%rip), %eax
+; X64-AVX-NEXT:    movl zero+8(%rip), %ecx
 ; X64-AVX-NEXT:    vmovaps %ymm0, zero(%rip)
 ; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2,2,2,2,2,2,2,2]
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rsp)
-; X64-AVX-NEXT:    vmovaps (%rsp), %ymm0
-; X64-AVX-NEXT:    vextractps $2, %xmm0, %esi
-; X64-AVX-NEXT:    xorl %edx, %edx
-; X64-AVX-NEXT:    divl %esi
-; X64-AVX-NEXT:    movl %eax, %esi
-; X64-AVX-NEXT:    vextractps $1, %xmm0, %edi
-; X64-AVX-NEXT:    movl %ecx, %eax
-; X64-AVX-NEXT:    xorl %edx, %edx
-; X64-AVX-NEXT:    divl %edi
-; X64-AVX-NEXT:    addl %esi, %eax
+; X64-AVX-NEXT:    vmovapd (%rsp), %ymm0
+; X64-AVX-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm1
+; X64-AVX-NEXT:    vextractps $2, %xmm0, %ecx
+; X64-AVX-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm2
+; X64-AVX-NEXT:    vdivsd %xmm2, %xmm1, %xmm1
+; X64-AVX-NEXT:    vcvttsd2si %xmm1, %rcx
+; X64-AVX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; X64-AVX-NEXT:    vextractps $1, %xmm0, %eax
+; X64-AVX-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; X64-AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
+; X64-AVX-NEXT:    vcvttsd2si %xmm0, %rax
+; X64-AVX-NEXT:    addl %ecx, %eax
+; X64-AVX-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-AVX-NEXT:    movq %rbp, %rsp
 ; X64-AVX-NEXT:    popq %rbp
 ; X64-AVX-NEXT:    vzeroupper

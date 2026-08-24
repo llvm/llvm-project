@@ -26,20 +26,21 @@ define void @foo() {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl $0, b(%rip)
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %r8d
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl a(%rip)
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movl c(%rip), %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %r8d
-; CHECK-NEXT:    andl %edi, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    movl %eax, (%rax)
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    cvtsi2sdl -{{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    cvtsi2sdl a(%rip), %xmm1
+; CHECK-NEXT:    cvtsi2sdl c(%rip), %xmm2
+; CHECK-NEXT:    divsd %xmm0, %xmm2
+; CHECK-NEXT:    cvttsd2si %xmm2, %edx
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sdl -{{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    divsd %xmm1, %xmm0
+; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    andl %eax, %ecx
+; CHECK-NEXT:    movl %ecx, (%rax)
 ; CHECK-NEXT:    retq
 entry:
   %e = alloca i32, align 4

@@ -167,23 +167,38 @@ define <4 x i16> @test_ushort_div(<4 x i16> %num, <4 x i16> %div) {
 define <3 x i32> @test_uint_div(<3 x i32> %num, <3 x i32> %div) {
 ; CHECK-LABEL: test_uint_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrd $2, %xmm0, %eax
-; CHECK-NEXT:    pextrd $2, %xmm1, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    pextrd $1, %xmm0, %eax
-; CHECK-NEXT:    pextrd $1, %xmm1, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %edi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %edi
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrd $1, %esi, %xmm0
-; CHECK-NEXT:    pinsrd $2, %ecx, %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
+; CHECK-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; CHECK-NEXT:    por %xmm4, %xmm1
+; CHECK-NEXT:    subpd %xmm4, %xmm1
+; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero
+; CHECK-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; CHECK-NEXT:    por %xmm4, %xmm0
+; CHECK-NEXT:    subpd %xmm4, %xmm0
+; CHECK-NEXT:    divpd %xmm1, %xmm0
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm2
+; CHECK-NEXT:    psrad $31, %xmm2
+; CHECK-NEXT:    movapd {{.*#+}} xmm6 = [2.147483648E+9,2.147483648E+9]
+; CHECK-NEXT:    subpd %xmm6, %xmm0
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm7
+; CHECK-NEXT:    andpd %xmm2, %xmm7
+; CHECK-NEXT:    orpd %xmm1, %xmm7
+; CHECK-NEXT:    por %xmm4, %xmm3
+; CHECK-NEXT:    subpd %xmm4, %xmm3
+; CHECK-NEXT:    por %xmm4, %xmm5
+; CHECK-NEXT:    subpd %xmm4, %xmm5
+; CHECK-NEXT:    divpd %xmm3, %xmm5
+; CHECK-NEXT:    cvttpd2dq %xmm5, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm2
+; CHECK-NEXT:    psrad $31, %xmm2
+; CHECK-NEXT:    subpd %xmm6, %xmm5
+; CHECK-NEXT:    cvttpd2dq %xmm5, %xmm0
+; CHECK-NEXT:    andpd %xmm2, %xmm0
+; CHECK-NEXT:    orpd %xmm1, %xmm0
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm7[0]
 ; CHECK-NEXT:    retq
   %div.r = udiv <3 x i32> %num, %div
   ret <3 x i32>  %div.r

@@ -8,72 +8,76 @@
 define <4 x i32> @udiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; SSE2-LABEL: udiv_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pslld $31, %xmm2
+; SSE2-NEXT:    xorpd %xmm3, %xmm3
+; SSE2-NEXT:    movapd %xmm1, %xmm4
+; SSE2-NEXT:    unpckhps {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    orpd %xmm2, %xmm4
+; SSE2-NEXT:    subpd %xmm2, %xmm4
+; SSE2-NEXT:    movapd %xmm0, %xmm5
+; SSE2-NEXT:    unpckhps {{.*#+}} xmm5 = xmm5[2],xmm3[2],xmm5[3],xmm3[3]
+; SSE2-NEXT:    orpd %xmm2, %xmm5
+; SSE2-NEXT:    subpd %xmm2, %xmm5
+; SSE2-NEXT:    divpd %xmm4, %xmm5
+; SSE2-NEXT:    cvttpd2dq %xmm5, %xmm4
+; SSE2-NEXT:    movapd %xmm4, %xmm6
+; SSE2-NEXT:    psrad $31, %xmm6
+; SSE2-NEXT:    movapd {{.*#+}} xmm7 = [2.147483648E+9,2.147483648E+9]
+; SSE2-NEXT:    subpd %xmm7, %xmm5
+; SSE2-NEXT:    cvttpd2dq %xmm5, %xmm5
+; SSE2-NEXT:    andpd %xmm6, %xmm5
+; SSE2-NEXT:    orpd %xmm4, %xmm5
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    subpd %xmm2, %xmm1
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    subpd %xmm2, %xmm0
+; SSE2-NEXT:    divpd %xmm1, %xmm0
+; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm2
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    psubd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm3, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    subpd %xmm7, %xmm0
+; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    orpd %xmm1, %xmm0
+; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm5[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: udiv_v4i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    pslld $31, %xmm2
-; SSE42-NEXT:    movaps {{.*#+}} xmm4 = [1,1,1,1]
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    blendvps %xmm0, %xmm1, %xmm4
-; SSE42-NEXT:    extractps $1, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $1, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    movl %eax, %ecx
-; SSE42-NEXT:    movd %xmm4, %esi
-; SSE42-NEXT:    movd %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %esi
-; SSE42-NEXT:    movd %eax, %xmm0
-; SSE42-NEXT:    pinsrd $1, %ecx, %xmm0
-; SSE42-NEXT:    pextrd $2, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $2, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    pinsrd $2, %eax, %xmm0
-; SSE42-NEXT:    pextrd $3, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $3, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm1[0],zero,xmm1[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE42-NEXT:    por %xmm4, %xmm1
+; SSE42-NEXT:    subpd %xmm4, %xmm1
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero
+; SSE42-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE42-NEXT:    por %xmm4, %xmm0
+; SSE42-NEXT:    subpd %xmm4, %xmm0
+; SSE42-NEXT:    divpd %xmm1, %xmm0
+; SSE42-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE42-NEXT:    movapd %xmm1, %xmm2
+; SSE42-NEXT:    psrad $31, %xmm2
+; SSE42-NEXT:    movapd {{.*#+}} xmm6 = [2.147483648E+9,2.147483648E+9]
+; SSE42-NEXT:    subpd %xmm6, %xmm0
+; SSE42-NEXT:    cvttpd2dq %xmm0, %xmm7
+; SSE42-NEXT:    andpd %xmm2, %xmm7
+; SSE42-NEXT:    orpd %xmm1, %xmm7
+; SSE42-NEXT:    por %xmm4, %xmm3
+; SSE42-NEXT:    subpd %xmm4, %xmm3
+; SSE42-NEXT:    por %xmm4, %xmm5
+; SSE42-NEXT:    subpd %xmm4, %xmm5
+; SSE42-NEXT:    divpd %xmm3, %xmm5
+; SSE42-NEXT:    cvttpd2dq %xmm5, %xmm1
+; SSE42-NEXT:    movapd %xmm1, %xmm2
+; SSE42-NEXT:    psrad $31, %xmm2
+; SSE42-NEXT:    subpd %xmm6, %xmm5
+; SSE42-NEXT:    cvttpd2dq %xmm5, %xmm0
+; SSE42-NEXT:    andpd %xmm2, %xmm0
+; SSE42-NEXT:    orpd %xmm1, %xmm0
+; SSE42-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm7[0]
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: udiv_v4i32:
@@ -358,75 +362,41 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 define <2 x i32> @udiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 ; SSE2-LABEL: udiv_v2i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps %xmm3, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[2,3]
-; SSE2-NEXT:    pslld $31, %xmm2
+; SSE2-NEXT:    xorpd %xmm2, %xmm2
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE2-NEXT:    orpd %xmm3, %xmm1
+; SSE2-NEXT:    subpd %xmm3, %xmm1
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    orpd %xmm3, %xmm0
+; SSE2-NEXT:    subpd %xmm3, %xmm0
+; SSE2-NEXT:    divpd %xmm1, %xmm0
+; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm2
+; SSE2-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    paddd %xmm2, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    psubd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm3, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    andpd %xmm2, %xmm0
+; SSE2-NEXT:    orpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: udiv_v2i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,2],zero,zero
-; SSE42-NEXT:    pslld $31, %xmm2
-; SSE42-NEXT:    movaps {{.*#+}} xmm4 = [1,1,1,1]
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    blendvps %xmm0, %xmm1, %xmm4
-; SSE42-NEXT:    extractps $1, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $1, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    movl %eax, %ecx
-; SSE42-NEXT:    movd %xmm4, %esi
-; SSE42-NEXT:    movd %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %esi
-; SSE42-NEXT:    movd %eax, %xmm0
-; SSE42-NEXT:    pinsrd $1, %ecx, %xmm0
-; SSE42-NEXT:    pextrd $2, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $2, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    pinsrd $2, %eax, %xmm0
-; SSE42-NEXT:    pextrd $3, %xmm4, %ecx
-; SSE42-NEXT:    pextrd $3, %xmm3, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [4.503599627370496E+15,4.503599627370496E+15]
+; SSE42-NEXT:    por %xmm2, %xmm1
+; SSE42-NEXT:    subpd %xmm2, %xmm1
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE42-NEXT:    por %xmm2, %xmm0
+; SSE42-NEXT:    subpd %xmm2, %xmm0
+; SSE42-NEXT:    divpd %xmm1, %xmm0
+; SSE42-NEXT:    cvttpd2dq %xmm0, %xmm1
+; SSE42-NEXT:    movapd %xmm1, %xmm2
+; SSE42-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE42-NEXT:    psrad $31, %xmm2
+; SSE42-NEXT:    andpd %xmm2, %xmm0
+; SSE42-NEXT:    orpd %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: udiv_v2i32:

@@ -363,16 +363,47 @@ define i1 @n0_urem_of_maybe_not_power_of_two(i32 %x, i32 %y) {
 }
 
 define i1 @n1_urem_by_maybe_power_of_two(i32 %x, i32 %y) {
-; CHECK-LABEL: n1_urem_by_maybe_power_of_two:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $128, %eax
-; CHECK-NEXT:    orl $1, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE2-LABEL: n1_urem_by_maybe_power_of_two:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE2-NEXT:    andl $128, %edi
+; SSE2-NEXT:    orl $1, %esi
+; SSE2-NEXT:    cvtsi2sd %edi, %xmm0
+; SSE2-NEXT:    cvtsi2sd %rsi, %xmm1
+; SSE2-NEXT:    divsd %xmm1, %xmm0
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    imull %esi, %eax
+; SSE2-NEXT:    cmpl %eax, %edi
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: n1_urem_by_maybe_power_of_two:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    # kill: def $esi killed $esi def $rsi
+; SSE4-NEXT:    andl $128, %edi
+; SSE4-NEXT:    orl $1, %esi
+; SSE4-NEXT:    cvtsi2sd %edi, %xmm0
+; SSE4-NEXT:    cvtsi2sd %rsi, %xmm1
+; SSE4-NEXT:    divsd %xmm1, %xmm0
+; SSE4-NEXT:    cvttsd2si %xmm0, %rax
+; SSE4-NEXT:    imull %esi, %eax
+; SSE4-NEXT:    cmpl %eax, %edi
+; SSE4-NEXT:    sete %al
+; SSE4-NEXT:    retq
+;
+; AVX2-LABEL: n1_urem_by_maybe_power_of_two:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX2-NEXT:    andl $128, %edi
+; AVX2-NEXT:    orl $1, %esi
+; AVX2-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
+; AVX2-NEXT:    vcvtsi2sd %rsi, %xmm15, %xmm1
+; AVX2-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX2-NEXT:    imull %esi, %eax
+; AVX2-NEXT:    cmpl %eax, %edi
+; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    retq
   %t0 = and i32 %x, 128 ; clearly a power-of-two or zero
   %t1 = or i32 %y, 1 ; one low bit set, may be a power of two
   %t2 = urem i32 %t0, %t1

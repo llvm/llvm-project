@@ -15,9 +15,11 @@ define i32 @foo(i32 %p, i8 zeroext %x) nounwind {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
+; X64-NEXT:    cvtsi2ss %esi, %xmm0
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    divb %sil
-; X64-NEXT:    movzbl %al, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %q = trunc i32 %p to i8
@@ -39,11 +41,11 @@ define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ;
 ; X64-LABEL: bar:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divw %si
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
+; X64-NEXT:    cvtsi2ss %esi, %xmm0
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cvtsi2ss %eax, %xmm1
+; X64-NEXT:    divss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %q = trunc i32 %p to i16

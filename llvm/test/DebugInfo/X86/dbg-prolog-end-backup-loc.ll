@@ -21,12 +21,8 @@
 ;; }
 
 ; CHECK-LABEL: foo:
-;; Scope-line location:
-; CHECK:       .loc    0 2 0
-;; Entry block:
-; CHECK:        movl    %edi, %edx
-; CHECK-NEXT:   .loc    0 2 0 prologue_end
-; CHECK-NEXT:   addl    %esi, %edx
+; CHECK:        .loc    0 2 0 prologue_end
+; CHECK-NEXT:   addl    %esi, %edi
 ; CHECK-NEXT:   je      .LBB0_4
 ; CHECK-LABEL: # %bb.1:
 
