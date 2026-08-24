@@ -39,18 +39,26 @@ module {
 // and an alloca (as per the recipe) inside the region.
 // Then ensure that all uses are of the private alloca.
 // CHECK-LABEL: func.func @firstpriv
-// CHECK: acc.parallel
-// CHECK: %[[ALLOCA:.*]] = fir.alloca i32 {{.*}}acc.var_name = #acc.var_name<"t">
-// CHECK: %[[FIRSTPRIVLOAD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-// CHECK: fir.store %[[FIRSTPRIVLOAD]] to %[[ALLOCA]] : !fir.ref<i32>
-// CHECK: %[[ALLOCALOAD:.*]] = fir.load %[[ALLOCA]] : !fir.ref<i32>
-// CHECK: %[[ADDI:.*]] = arith.addi %[[ALLOCALOAD]], %c1{{.*}} : i32
-// CHECK: fir.store %[[ADDI]] to %[[ALLOCA]] : !fir.ref<i32>
+// CHECK:       [[DECL:%.*]] = fir.declare
+// CHECK:       [[MAP:%.*]] = acc.firstprivate_map varPtr([[DECL]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "t"}
+// CHECK:       acc.parallel {
+// CHECK:       [[FIRSTPRIV:%.*]] = fir.alloca i32 {{.*}}acc.var_name = #acc.var_name<"t">
+// CHECK:       [[FIRSTPRIVLOAD:%.*]] = fir.load [[MAP]] : !fir.ref<i32>
+// CHECK:       fir.store [[FIRSTPRIVLOAD]] to [[FIRSTPRIV]] : !fir.ref<i32>
+// CHECK:       [[FIRSTPRIVLOAD:%.*]] = fir.load [[FIRSTPRIV]] : !fir.ref<i32>
+// CHECK:       [[ADDI:%.*]] = arith.addi [[FIRSTPRIVLOAD]], %c1{{.*}} : i32
+// CHECK:       fir.store [[ADDI]] to [[FIRSTPRIV]] : !fir.ref<i32>
+// CHECK-NEXT:  [[VALUELOAD:%.*]] = fir.load
+// CHECK-NEXT:  acc.firstprivate_save [[VALUELOAD]] to [[MAP]] : i32 -> !fir.ref<i32>
 
+// With -acc-optimize-firstprivate-map, the map is retained because of the
+// firstprivate_save live-out.
 // CHECK-MAP-LABEL: func.func @firstpriv
-// CHECK-MAP: fir.load {{.*}} : !fir.ref<i32>
-// CHECK-MAP: acc.parallel {
-// CHECK-MAP-NOT: acc.firstprivate_map
-// CHECK-MAP: fir.alloca i32 {{.*}}acc.var_name = #acc.var_name<"t">
-// CHECK-MAP: fir.store {{.*}} to {{.*}} : !fir.ref<i32>
-// CHECK-MAP: arith.addi {{.*}} %c1
+// CHECK-MAP:       [[DECL:%.*]] = fir.declare
+// CHECK-MAP:       [[MAP:%.*]] = acc.firstprivate_map varPtr([[DECL]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "t"}
+// CHECK-MAP:       acc.parallel {
+// CHECK-MAP:       [[FIRSTPRIV:%.*]] = fir.alloca i32 {{.*}}acc.var_name = #acc.var_name<"t">
+// CHECK-MAP:       fir.load [[MAP]] : !fir.ref<i32>
+// CHECK-MAP:       fir.store {{.*}} to [[FIRSTPRIV]] : !fir.ref<i32>
+// CHECK-MAP:       arith.addi {{.*}} %c1
+// CHECK-MAP:       acc.firstprivate_save {{.*}} to [[MAP]] : i32 -> !fir.ref<i32>

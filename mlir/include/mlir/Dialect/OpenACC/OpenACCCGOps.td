@@ -324,6 +324,28 @@ def OpenACC_FirstprivateMapInitialOp
 }
 
 //===----------------------------------------------------------------------===//
+// acc.firstprivate_save
+//===----------------------------------------------------------------------===//
+
+def OpenACC_FirstprivateSaveOp : OpenACC_Op<"firstprivate_save", []> {
+ let summary = "\"Saves\" a value to a firstprivate variable";
+ let description = [{
+    The `acc.firstprivate_save` operation is intended to provide a temporary
+    link from the compute region's private variable and the firstprivate map
+    init op. This facilitates analysis in cases where the compiler may
+    determine that a firstprivate should be converted to a copy and can be
+    safely erased when that analysis is complete.
+  }];
+  let arguments = (ins AnyType:$value,
+                       Arg<OpenACC_PointerLikeType,
+                           "FirstprivateMapInitOp",
+                           [MemWrite]>:$memref);
+  let assemblyFormat = [{
+    $value `to` $memref `:` type($value) `->` type($memref) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // acc.privatize
 //===----------------------------------------------------------------------===//
 
