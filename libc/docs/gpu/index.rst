@@ -18,3 +18,4 @@ learn more about this project.
    rpc
    testing
    motivation
+   emissary

@@ -4626,6 +4626,15 @@ public:
                   llvm::CallBase **CallOrInvoke = nullptr,
                   CGFunctionInfo const **ResolvedFnInfo = nullptr);
 
+  /// EmitEmissaryExec generates IR to allocate an arg buffer, fill buffer with
+  /// args, then generate a call to __llvm_emissary_rpc(sz,buf) when a call-site
+  /// to _emissary_exec(...) is encountered.  _emissary_exec greatly simplifies
+  /// construction of device stub functions when creating an emissary API.
+  /// The LLVM RPC device utility __llvm_emissary_rpc triggers the rpc client
+  /// server exchange where the RPC host server executes the designated function
+  /// for each active lane in the GPU warp.
+  RValue EmitEmissaryExec(const CallExpr *E);
+
   // If a Call or Invoke instruction was emitted for this CallExpr, this method
   // writes the pointer to `CallOrInvoke` if it's not null.
   RValue EmitCallExpr(const CallExpr *E,
