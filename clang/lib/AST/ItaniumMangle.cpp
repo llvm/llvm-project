@@ -518,7 +518,7 @@ private:
   void mangleUnqualifiedBlock(const BlockDecl *Block);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
-  void mangleTypeConstraint(const TemplateDecl *Concept,
+  void mangleTypeConstraint(TemplateName Concept,
                             ArrayRef<TemplateArgument> Arguments);
   void mangleTypeConstraint(const TypeConstraint *Constraint);
   void mangleRequiresClause(const Expr *RequiresClause);
@@ -2095,14 +2095,15 @@ void CXXNameMangler::mangleTemplateParameterList(
 }
 
 void CXXNameMangler::mangleTypeConstraint(
-    const TemplateDecl *Concept, ArrayRef<TemplateArgument> Arguments) {
-  const DeclContext *DC = Context.getEffectiveDeclContext(Concept);
+    TemplateName Concept, ArrayRef<TemplateArgument> Arguments) {
+  const TemplateDecl *TD = Concept.getAsTemplateDecl();
+  const DeclContext *DC = Context.getEffectiveDeclContext(TD);
   if (!Arguments.empty())
-    mangleTemplateName(Concept, Arguments);
+    mangleTemplateName(TD, Arguments);
   else if (DC->isTranslationUnit() || isStdNamespace(DC))
-    mangleUnscopedName(Concept, DC);
+    mangleUnscopedName(TD, DC);
   else
-    mangleNestedName(Concept, DC);
+    mangleNestedName(TD, DC);
 }
 
 void CXXNameMangler::mangleTypeConstraint(const TypeConstraint *Constraint) {
@@ -3525,6 +3526,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 
@@ -3541,7 +3547,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_IntelOclBicc:
-  case CC_SpirFunction:
   case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -4581,7 +4586,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     BuiltinName = "__" #Trait;                                                 \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     }
     mangleVendorType(BuiltinName);
   }
@@ -4691,7 +4696,7 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Counter";
   if (Attrs.IsArray)
     Str += "_Array";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
@@ -5313,6 +5318,15 @@ recurse:
     break;
   }
 
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
+    break;
+  }
+
   case Expr::CXXUnresolvedConstructExprClass: {
     NotPrimaryExpr();
     const CXXUnresolvedConstructExpr *CE = cast<CXXUnresolvedConstructExpr>(E);
@@ -5697,7 +5711,7 @@ recurse:
       // entity, meaning that references to enclosing template arguments don't
       // work.
       Out << "L_Z";
-      mangleTemplateName(CSE->getNamedConcept(), CSE->getTemplateArguments());
+      mangleTemplateName(CSE->getConceptDecl(), CSE->getTemplateArguments());
       Out << 'E';
       break;
     }
@@ -7366,7 +7380,8 @@ static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
   const CXXRecordDecl *PtrauthClassRD =
       Context.baseForVTableAuthentication(ThisRD);
   unsigned TypedDiscriminator =
-      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD,
+                                                       /*IsVTTEntry=*/false);
   Mangler.mangleVendorQualifier("__vtptrauth");
   auto &ManglerStream = Mangler.getStream();
   ManglerStream << "I";

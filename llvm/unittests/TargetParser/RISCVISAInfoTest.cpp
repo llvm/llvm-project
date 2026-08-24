@@ -1415,6 +1415,7 @@ R"(All available -march extensions for RISC-V
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
+    zicfiss              1.0
     zicntr               2.0
     zicond               1.0
     zicsr                2.0
@@ -1638,7 +1639,6 @@ Experimental extensions
     y                    0.98
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
-    zicfiss              1.0
     zilx                 0.1
     zvabd                0.7
     zvbc32e              0.7
@@ -1660,9 +1660,15 @@ Experimental extensions
     zvvmtls              0.1
     zvvmttls             0.1
     zvzip                0.1
-    smcsps               0.19
+    smcsps               0.20
+    smehv                0.20
+    smijt                0.20
+    smip                 0.20
     smpmpmt              0.6
-    sscsps               0.19
+    sscsps               0.20
+    ssehv                0.20
+    ssijt                0.20
+    ssip                 0.20
     svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1

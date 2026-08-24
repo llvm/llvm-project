@@ -1989,6 +1989,31 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   if (!Cmp.isEquality())
     return nullptr;
 
+  // (X & -X) == 0 --> X == 0
+  // (X & -X) != 0 --> X != 0
+  // (X & -X) == 1 --> trunc X to i1
+  // (X & -X) != 1 --> !(trunc X to i1)
+  // Cmp is == or != by the check above.
+  Value *MatchedX;
+  // Match X & -X in either operand order.
+  if (C.getBitWidth() > 1 && (C.isZero() || C.isOne()) &&
+      match(And, m_c_And(m_Neg(m_Value(MatchedX)), m_Deferred(MatchedX)))) {
+    // Preserve the predicate: (X & -X) ==/!= 0 --> X ==/!= 0.
+    if (C.isZero())
+      return new ICmpInst(Pred, MatchedX, Cmp.getOperand(1));
+
+    // (X & -X) == 1 iff the low bit of X is set.
+    if (Pred == CmpInst::ICMP_EQ)
+      return new TruncInst(MatchedX, Cmp.getType());
+
+    // The remaining case needs a trunc and not. Require the original and
+    // to become dead to avoid increasing the instruction count.
+    if (And->hasOneUse()) {
+      Value *Trunc = Builder.CreateTrunc(MatchedX, Cmp.getType());
+      return BinaryOperator::CreateNot(Trunc);
+    }
+  }
+
   // X & -C == -C -> X >  u ~C
   // X & -C != -C -> X <= u ~C
   //   iff C is a power of 2
@@ -3024,6 +3049,18 @@ Instruction *InstCombinerImpl::foldICmpSubConstant(ICmpInst &Cmp,
   ICmpInst::Predicate Pred = Cmp.getPredicate();
   Type *Ty = Sub->getType();
 
+  // (X - (X urem D)) is D*(X/D), a multiple of D, so it is u> C exactly when
+  // X u>= D (for C u< D), and u< C exactly when X u< D (for 0 u< C u<= D):
+  //   icmp ugt (sub X, (urem X, D)), C --> icmp ugt X, D-1
+  //   icmp ult (sub X, (urem X, D)), C --> icmp ult X, D
+  const APInt *D;
+  if (match(Y, m_URem(m_Specific(X), m_APInt(D))) && !D->isZero()) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(*D))
+      return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, *D - 1));
+    if (Pred == ICmpInst::ICMP_ULT && !C.isZero() && C.ule(*D))
+      return new ICmpInst(ICmpInst::ICMP_ULT, X, ConstantInt::get(Ty, *D));
+  }
+
   // (SubC - Y) == C) --> Y == (SubC - C)
   // (SubC - Y) != C) --> Y != (SubC - C)
   Constant *SubC;
@@ -3626,6 +3663,51 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
     if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0)))
       if (Instruction *I = foldICmpIntrinsicWithConstant(Cmp, II, *C))
         return I;
+
+    {
+      // icmp slt/sgt (extractvalue (frexp X), 1), C -->
+      //                         fcmp olt/oge (fabs X), 2^ExpVal
+      // slt -> olt, ExpVal = C-1; sgt -> oge, ExpVal = C.
+      Value *X;
+      if (match(Cmp.getOperand(0),
+                m_OneUse(m_ExtractValue<1>(
+                    m_OneUse(m_Intrinsic<Intrinsic::frexp>(m_Value(X))))))) {
+        ICmpInst::Predicate Pred = Cmp.getPredicate();
+        APInt Exp;
+        FCmpInst::Predicate NewPred;
+        bool ValidPred = true;
+
+        switch (Pred) {
+        case ICmpInst::ICMP_SLT:
+          NewPred = FCmpInst::FCMP_OLT;
+          Exp = *C - 1;
+          break;
+        case ICmpInst::ICMP_SGT:
+          NewPred = FCmpInst::FCMP_OGE;
+          Exp = *C;
+          break;
+        default:
+          ValidPred = false;
+          break;
+        }
+
+        if (ValidPred) {
+          const fltSemantics &Sem =
+              X->getType()->getScalarType()->getFltSemantics();
+          int MaxExp = APFloat::semanticsMaxExponent(Sem);
+
+          if (!Exp.isNegative() && Exp.sle(MaxExp + 1) &&
+              isKnownNeverInfOrNaN(X, SQ.getWithInstruction(&Cmp))) {
+            int ExpVal = static_cast<int>(Exp.getSExtValue());
+            APFloat CmpConst = scalbn(APFloat::getOne(Sem), ExpVal,
+                                      APFloat::rmNearestTiesToEven);
+            Value *Fabs = Builder.CreateFAbs(X);
+            return new FCmpInst(NewPred, Fabs,
+                                ConstantFP::get(X->getType(), CmpConst));
+          }
+        }
+      }
+    }
 
     // (extractval ([s/u]subo X, Y), 0) == 0 --> X == Y
     // (extractval ([s/u]subo X, Y), 0) != 0 --> X != Y
@@ -7018,6 +7100,22 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
       return &I;
   }
 
+  // If an unsigned samesign comparison is not poison, both operands have the
+  // same sign bit. Propagate a known sign bit between the temporary KnownBits
+  // values so the existing range folds can use that constraint.
+  if (I.hasSameSign() && I.isUnsigned()) {
+    auto PropagateSignBit = [](const KnownBits &From, KnownBits &To) {
+      if (To.isNegative() || To.isNonNegative())
+        return;
+      if (From.isNegative())
+        To.makeNegative();
+      else if (From.isNonNegative())
+        To.makeNonNegative();
+    };
+    PropagateSignBit(Op0Known, Op1Known);
+    PropagateSignBit(Op1Known, Op0Known);
+  }
+
   if (!isa<Constant>(Op0) && Op0Known.isConstant())
     return new ICmpInst(
         Pred, ConstantExpr::getIntegerValue(Ty, Op0Known.getConstant()), Op1);
@@ -7292,7 +7390,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
 /// it into the appropriate icmp lt or icmp gt instruction. This transform
 /// allows them to be folded in visitICmpInst.
 static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
-  ICmpInst::Predicate Pred = I.getPredicate();
+  CmpPredicate Pred = I.getCmpPredicate();
   if (ICmpInst::isEquality(Pred) || !ICmpInst::isIntPredicate(Pred) ||
       InstCombiner::isCanonicalPredicate(Pred))
     return nullptr;
@@ -7307,7 +7405,10 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
   if (!FlippedStrictness)
     return nullptr;
 
-  return new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
+  auto *NewCmp =
+      new ICmpInst(FlippedStrictness->first, Op0, FlippedStrictness->second);
+  NewCmp->setSameSign(FlippedStrictness->first.hasSameSign());
+  return NewCmp;
 }
 
 /// If we have a comparison with a non-canonical predicate, if we can update

@@ -55,7 +55,7 @@ MCSymbol *NVPTXDwarfDebug::getOrCreateFuncNameSymbol(StringRef LinkageName) {
 bool NVPTXDwarfDebug::isEnhancedLineinfo(const MachineFunction &MF) const {
   const DISubprogram *SP = MF.getFunction().getSubprogram();
   const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
-  return LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
+  return LineInfoWithInlinedAt && (STI.hasFeature(NVPTX::PTX72)) && SP &&
          (SP->getUnit()->isDebugDirectivesOnly() ||
           SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
 }

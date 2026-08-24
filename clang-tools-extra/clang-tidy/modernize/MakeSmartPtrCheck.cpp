@@ -347,10 +347,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     //   std::make_smart_ptr<S>(std::initializer_list<int>({}), 1);
     //   std::make_smart_ptr<S2>(std::vector<int>({1}));
     //   std::make_smart_ptr<S3>(S2{1, 2}, 3);
-    if (const auto *CE = New->getConstructExpr()) {
-      if (HasListInitializedArgument(CE))
-        return false;
-    }
+    if (const auto *CE = New->getConstructExpr();
+        CE && HasListInitializedArgument(CE))
+      return false;
+
     if (ArraySizeExpr.empty()) {
       const SourceRange InitRange = New->getDirectInitRange();
       Diag << FixItHint::CreateRemoval(
@@ -406,14 +406,14 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // Pair. If we found any invisible or deleted copy/move constructor, we
       // stop generating fixes -- as the C++ rule is complicated and we are less
       // certain about the correct fixes.
-      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
-        if (llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
-              return Ctor->isCopyOrMoveConstructor() &&
-                     (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
-            })) {
-          return false;
-        }
+      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl();
+          RD && llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+            return Ctor->isCopyOrMoveConstructor() &&
+                   (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
+          })) {
+        return false;
       }
+
       InitRange = SourceRange(
           New->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
           New->getInitializer()->getSourceRange().getEnd());

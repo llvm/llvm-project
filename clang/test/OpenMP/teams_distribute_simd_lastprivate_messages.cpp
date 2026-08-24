@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp-version=45 -fopenmp %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50 -fopenmp %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-version=45 -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50 -fopenmp-simd %s -Wno-openmp-mapping -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -98,7 +98,7 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target
-#pragma omp teams distribute simd lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp teams distribute simd lastprivate(argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}} omp45-error 2 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp teams distribute simd'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target

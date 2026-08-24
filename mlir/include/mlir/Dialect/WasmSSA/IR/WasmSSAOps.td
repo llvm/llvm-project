@@ -1101,6 +1101,36 @@ def WasmSSA_TruncUIOp : WasmSSA_ConversionOp<"trunc_ui",
     [WasmSSA_FPType],
     [WasmSSA_IntegerType]>{}
 
+def WasmSSA_TruncSatSIOp : WasmSSA_ConversionOp<"trunc_sat_si",
+    [{Truncate floating point value to signed integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    NaN is mapped to 0, infinities are mapped to minimal and maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_si %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
+def WasmSSA_TruncSatUIOp : WasmSSA_ConversionOp<"trunc_sat_ui",
+    [{Truncate floating point value to unsigned integer, saturating.
+
+    Consume a floating point value and produces an unsigned integer holding the value truncated toward zero.
+    Negative infinity and NaN are mapped to 0, positive infinity is mapped to maximal representable values.
+    Normal values are clamped to the representable range and truncated.}],
+    [{Example:
+
+     ```mlir
+     %a = wasmssa.trunc_sat_ui %b : f32 to i32
+     ```
+    }],
+    [WasmSSA_FPType],
+    [WasmSSA_IntegerType]>{}
+
 def WasmSSA_DemoteOp : WasmSSA_ConversionOp<"demote",
     "Convert a f64 value to f32",
     [{Example:

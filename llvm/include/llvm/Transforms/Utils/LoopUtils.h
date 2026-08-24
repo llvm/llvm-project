@@ -239,8 +239,10 @@ LLVM_ABI SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 
 /// Find a combination of metadata ("llvm.loop.vectorize.width" and
 /// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
-/// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
-/// then std::nullopt is returned.
+/// ElementCount. If scalable.enable is present the count is scalable; if
+/// scalable.disable is present or the tag is absent, it is fixed-width. If the
+/// metadata "llvm.loop.vectorize.width" cannot be found then std::nullopt is
+/// returned.
 LLVM_ABI std::optional<ElementCount>
 getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 
@@ -665,9 +667,10 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
-LLVM_ABI Value *addDiffRuntimeChecks(
-    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC);
+LLVM_ABI Value *addDiffRuntimeChecks(Instruction *Loc,
+                                     ArrayRef<PointerDiffInfo> Checks,
+                                     SCEVExpander &Expander, ElementCount VF,
+                                     unsigned IC);
 
 /// Struct to hold information about a partially invariant condition.
 struct IVConditionInfo {

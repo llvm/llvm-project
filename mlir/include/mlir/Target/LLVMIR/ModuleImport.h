@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
@@ -378,6 +379,17 @@ private:
   /// the resulting dialect attributes to the converted operation `op`. Emits a
   /// warning if the conversion of a supported metadata kind fails.
   void setNonDebugMetadataAttrs(llvm::Instruction *inst, Operation *op);
+  /// Returns the symbol reference for a global value that has a corresponding
+  /// imported MLIR symbol, or a null attribute otherwise.
+  FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global);
+  /// Converts `md` to the matching LLVM dialect metadata attribute, or returns
+  /// a null attribute if the metadata cannot be represented.
+  Attribute convertMetadataToAttr(const llvm::Metadata *md);
+  /// Recursively converts `md` and tracks the current path and previously
+  /// converted nodes to reject cycles and preserve shared subgraphs.
+  Attribute convertMetadataToAttrImpl(
+      const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
+      DenseMap<const llvm::Metadata *, Attribute> &attrMap);
   /// Imports `inst` and populates valueMapping[inst] with the result of the
   /// imported operation or noResultOpMapping[inst] with the imported operation
   /// if it has no result.

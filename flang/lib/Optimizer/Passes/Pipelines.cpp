@@ -79,6 +79,8 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
     return mlir::LLVM::DIEmissionKind::Full;
   case llvm::codegenoptions::DebugInfoKind::DebugLineTablesOnly:
     return mlir::LLVM::DIEmissionKind::LineTablesOnly;
+  case llvm::codegenoptions::DebugInfoKind::DebugDirectivesOnly:
+    return mlir::LLVM::DIEmissionKind::DebugDirectivesOnly;
   default:
     return mlir::LLVM::DIEmissionKind::None;
   }
@@ -202,6 +204,12 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCSEPass());
 
+  // Unconditional and ahead of the array allocation placement below: under
+  // -gpu=mem:unified|managed the unified/managed allocators are required for
+  // correctness, so this must not depend on which placement pass is selected
+  // or on -disable-memory-allocation-opt.
+  pm.addPass(fir::createCudaHeapAllocPromotion());
+
   if (enableAllocationPlacement)
     fir::addAllocationPlacement(pm, pc.StackArrays);
   else if (pc.StackArrays)
@@ -263,6 +271,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
+
+  config.invokeHLFIROptEarlyEPCallbacks(pm, optLevel);
+
   if (optLevel != llvm::OptimizationLevel::O0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
@@ -310,6 +321,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
       {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
+
+  config.invokeHLFIROptLastEPCallbacks(pm, optLevel);
+
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
@@ -365,14 +379,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
-  pm.addPass(mlir::omp::createMarkDeclareTargetPass());
 
-  // Delete unreachable target operations before FunctionFilteringPass
-  // extracts them.
-  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
-  if (opts.isTargetDevice)
-    pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
 void createDebugPasses(mlir::PassManager &pm,
@@ -442,18 +450,30 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
         flangomp::createLowerNontemporalPass());
   }
 
+  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
+  if (runOMPNonSimdPasses) {
+    // Propagate implicit declare target information early in order to diagnose
+    // target device not-yet-implemented cases based on FIR.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+    pm.addPass(flangomp::createUnimplementedDeviceCheckPass());
+  }
+
   fir::addFIRToLLVMPass(pm, config);
   pm.addPass(fir::createEmitMIFGlobalCtors());
 
-  if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+  if (runOMPNonSimdPasses) {
     // Since some math operations may be converted to function calls by the
-    // ConvertMathToFuncs pass, we need to mark them with the omp.declare_target
-    // attribute if they're called from a target region.
+    // ConvertMathToFuncs pass, we need to run the implicit declare_target
+    // propagation and dependent passes late in the pipeline.
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
 
-    // Remove all non target-related operations from host functions still
-    // remaining at this point, if compiling for an OpenMP target device. This
-    // is required before translating 'omp' dialect operations to LLVM IR.
+    // First remove host-only functions from target device modules, and then
+    // clean up any remaining host functions holding target regions to only
+    // contain the bare minimum host operations needed for target device
+    // compilation. These passes must always run back to back to ensure no
+    // temporary poison values, introduced by the first pass, cause other passes
+    // to encounter UB before the second pass removes them.
+    pm.addPass(mlir::omp::createFunctionFilteringPass());
     pm.addPass(mlir::omp::createHostOpFilteringPass());
 
     // Convert applicable OpenMP stack allocations to shared memory allocations
