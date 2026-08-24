@@ -8713,12 +8713,48 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
 }
 
+/// Fuses a debugging-state query from \p Match into a single
+/// S_CBRANCH_CDBGSYS_OR_USER, which branches when debugging is enabled.
+/// Returns a null SDValue if the condition does not test such a query, or if
+/// something observable happens between the query and the branch.
+static SDValue lowerDebuggingEnabledBRCOND(const BRCONDMatch &Match,
+                                           SelectionDAG &DAG) {
+  if ((Match.ConditionWrapper && !Match.ConditionWrapper.hasOneUse()) ||
+      !Match.Condition.hasOneUse())
+    return SDValue();
+
+  SDValue Cond = Match.Condition;
+  if (Cond.getOpcode() != ISD::INTRINSIC_W_CHAIN ||
+      Cond.getConstantOperandVal(1) != Intrinsic::is_debugging_enabled)
+    return SDValue();
+
+  if (!Match.CondBr.getOperand(0).reachesChainWithoutSideEffects(
+          Cond.getValue(1)))
+    return SDValue();
+
+  assert(Cond->getNumValues() == 2 && "expected query value and chain");
+
+  Match.redirectFallthroughEdge(DAG, Match.ConditionFalseTarget);
+
+  DAG.ReplaceAllUsesOfValueWith(Cond.getValue(1), Cond.getOperand(0));
+
+  SDLoc DL(Match.CondBr);
+  MachineSDNode *CDBGBranch =
+      DAG.getMachineNode(AMDGPU::S_CBRANCH_CDBGSYS_OR_USER, DL, MVT::Other,
+                         Match.ConditionTrueTarget, Match.CondBr.getOperand(0));
+  DAG.addNoMergeSiteInfo(CDBGBranch, true);
+  return SDValue(CDBGBranch, 0);
+}
+
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   auto Match = matchBRCOND(BRCOND);
   if (!Match)
     return BRCOND;
+
+  if (SDValue V = lowerDebuggingEnabledBRCOND(*Match, DAG))
+    return V;
 
   SDLoc DL(Match->CondBr);
   SDNode *Intr = Match->Condition.getNode();
@@ -12454,6 +12490,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT VT = Op->getValueType(0);
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::is_debugging_enabled: {
+    SDValue GetReg = DAG.getNode(
+        ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(MVT::i32, MVT::Other),
+        Op.getOperand(0),
+        DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, DL, MVT::i32),
+        DAG.getTargetConstant(
+            AMDGPU::Hwreg::getDebuggingEnabledHwregImm(*Subtarget), DL,
+            MVT::i32));
+    DAG.addNoMergeSiteInfo(GetReg.getNode(), true);
+
+    SDValue Enabled =
+        DAG.getSetCC(DL, Op.getValueType(), GetReg,
+                     DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
+    return DAG.getMergeValues({Enabled, GetReg.getValue(1)}, DL);
   }
   case Intrinsic::amdgcn_av_load_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);

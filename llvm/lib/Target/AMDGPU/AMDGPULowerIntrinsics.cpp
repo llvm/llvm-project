@@ -37,6 +37,7 @@ public:
   bool run();
 
 private:
+  bool visitIsDebuggingEnabled(IntrinsicInst &I);
   bool visitBarrier(IntrinsicInst &I);
   bool visitPtrSBufferLoad(IntrinsicInst &I);
 };
@@ -63,6 +64,16 @@ template <class T> static void forEachCall(Function &Intrin, T Callback) {
 
 } // anonymous namespace
 
+bool AMDGPULowerIntrinsicsImpl::visitIsDebuggingEnabled(IntrinsicInst &I) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (ST.hasCDBGSysOrUserBranch())
+    return false;
+
+  I.replaceAllUsesWith(ConstantInt::getFalse(I.getContext()));
+  I.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULowerIntrinsicsImpl::run() {
   bool Changed = false;
 
@@ -70,6 +81,11 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     switch (F.getIntrinsicID()) {
     default:
       continue;
+    case Intrinsic::is_debugging_enabled:
+      forEachCall(F, [&](IntrinsicInst *II) {
+        Changed |= visitIsDebuggingEnabled(*II);
+      });
+      break;
     case Intrinsic::amdgcn_s_barrier:
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:

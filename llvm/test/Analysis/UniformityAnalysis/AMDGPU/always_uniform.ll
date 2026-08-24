@@ -256,8 +256,36 @@ define void @s_memrealtime(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 'is_debugging_enabled':
+; CHECK: ALL VALUES UNIFORM
+define i1 @is_debugging_enabled() {
+  %enabled = call i1 @llvm.is.debugging.enabled()
+  ret i1 %enabled
+}
+
+; CHECK-LABEL: for function 'is_debugging_enabled_in_divergent_control_flow':
+; CHECK: DIVERGENT:  %workitem = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK: DIVERGENT:  br i1 %lane.zero, label %query, label %exit
+; CHECK-NOT: DIVERGENT
+define amdgpu_kernel void @is_debugging_enabled_in_divergent_control_flow(
+    ptr addrspace(1) inreg %out) {
+entry:
+  %workitem = call i32 @llvm.amdgcn.workitem.id.x()
+  %lane.zero = icmp eq i32 %workitem, 0
+  br i1 %lane.zero, label %query, label %exit
+
+query:
+  %enabled = call i1 @llvm.is.debugging.enabled()
+  store i1 %enabled, ptr addrspace(1) %out
+  br label %exit
+
+exit:
+  ret void
+}
+
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i1 @llvm.is.debugging.enabled()
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
 declare i64 @llvm.amdgcn.fcmp.i32(float, float, i32) #1
