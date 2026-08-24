@@ -533,14 +533,14 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %c10 = llvm.mlir.constant(10 : i64) : i64
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
       omp.yield(%m : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
     omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
   }
 
   llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {
-    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) name("") -> !llvm.ptr
     omp.target_data map_entries(%map : !llvm.ptr) {}
     llvm.return
   }

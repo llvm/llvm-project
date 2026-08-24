@@ -18,10 +18,10 @@
 ! CHECK:         %[[FIELD:.*]] = fir.coordinate_of %[[V]]#0, a : (!fir.ref<[[TY]]>) -> !fir.ref<!fir.array<10xi32>>
 ! CHECK:         %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
 ! CHECK:           %[[COOR:.*]] = fir.array_coor %[[FIELD]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
-! CHECK:           %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+! CHECK:           %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:           omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
 ! CHECK:         } -> !omp.iterated<!fir.ref<i32>>
-! CHECK:         %[[PARENT:.*]] = omp.map.info var_ptr(%[[V]]#1 : !fir.ref<[[TY]]>, [[TY]]) map_clauses(storage) capture(ByRef) members( :  : ) -> !fir.ref<[[TY]]> {name = "v", partial_map = true}
+! CHECK:         %[[PARENT:.*]] = omp.map.info var_ptr(%[[V]]#1 : !fir.ref<[[TY]]>, [[TY]]) map_clauses(storage) capture(ByRef) members( :  : ) name("v") partial_map(true) -> !fir.ref<[[TY]]>
 ! CHECK:         omp.declare_mapper.info map_entries(%[[PARENT]] : !fir.ref<[[TY]]>) map_iterated(%[[IT]] : !omp.iterated<!fir.ref<i32>>)
 subroutine f(arg)
   type :: s
@@ -47,7 +47,7 @@ end
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{.*}} arg 1 {uniq_name = "_QFf00Ea"}
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = (%{{.*}} to %{{.*}} step %{{.*}}) {
 ! CHECK:   %[[COOR:.*]] = fir.array_coor %[[A_DECL]]#0(%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, i64) -> !fir.ref<i32>
-! CHECK:   %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+! CHECK:   %[[MAPINFO:.*]] = omp.map.info var_ptr(%[[COOR]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("a") -> !fir.ref<i32>
 ! CHECK:   omp.yield(%[[MAPINFO]] : !fir.ref<i32>)
 ! CHECK: } -> !omp.iterated<!fir.ref<i32>>
 ! CHECK: omp.target {{.*}}map_iterated(%[[IT]] : !omp.iterated<!fir.ref<i32>>)
