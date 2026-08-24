@@ -284,7 +284,6 @@ public:
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     MCPhysReg LinkReg = getCallLinkRegister(Inst);
-    unsigned Opcode;
     if (LinkReg == RISCV::X1)
       createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
     else
