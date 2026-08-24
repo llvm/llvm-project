@@ -188,6 +188,11 @@ void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
 }
 
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
+}
+
 void CompilerInstance::setASTContext(
     llvm::IntrusiveRefCntPtr<ASTContext> Value) {
   Context = std::move(Value);

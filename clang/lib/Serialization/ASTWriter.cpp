@@ -70,6 +70,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -104,6 +105,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -538,7 +540,7 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
   AddSourceLocation(CR->getTemplateKWLoc());
   AddDeclarationNameInfo(CR->getConceptNameInfo());
   AddDeclRef(CR->getFoundDecl());
-  AddDeclRef(CR->getNamedConcept());
+  AddTemplateName(CR->getNamedConcept());
   push_back(CR->getTemplateArgsAsWritten() != nullptr);
   if (CR->getTemplateArgsAsWritten())
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());

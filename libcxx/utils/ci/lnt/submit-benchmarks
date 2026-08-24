@@ -18,7 +18,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         prog='submit-benchmarks',
         description='Submit a LNT JSON report to a LNT server.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.')
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
     parser.add_argument('report', type=pathlib.Path,
         help='Path to the LNT JSON report to submit.')
     parser.add_argument('--lnt-url', type=str, required=True,
