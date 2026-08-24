@@ -157,6 +157,31 @@ const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
   return HexagonCSR_RegMask;
 }
 
+// Returns a conservative call-preserved register mask.
+// Produces a mask used for call sites where no registers are assumed preserved.
+// In this mask, all registers are considered clobbered except the stack pointer
+// (Hexagon::R29), which is marked as preserved to maintain stack integrity.
+// Returns Pointer to a static array of 32-bit words encoding the preserved
+// physical registers (bit = 1 means preserved; bit = 0 means clobbered).
+const uint32_t *HexagonRegisterInfo::getNoPreservedMask() const {
+  static std::vector<uint32_t> MaskWords;
+  static bool Inited = false;
+
+  if (!Inited) {
+    unsigned NumRegs = getNumRegs();
+    unsigned NumWords = (NumRegs + 31) / 32;
+    MaskWords.assign(NumWords, 0u); // All clobbered by default
+
+    // Preserve SP (Hexagon uses R29 as SP)
+    unsigned Reg = Hexagon::R29;
+    unsigned W = Reg / 32;
+    unsigned B = Reg % 32;
+    MaskWords[W] |= (1u << B);
+
+    Inited = true;
+  }
+  return MaskWords.data();
+}
 
 BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
       const {

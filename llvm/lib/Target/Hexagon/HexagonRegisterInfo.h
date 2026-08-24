@@ -30,6 +30,7 @@ class HexagonRegisterInfo : public HexagonGenRegisterInfo {
 public:
   HexagonRegisterInfo(unsigned HwMode);
 
+  const uint32_t *getNoPreservedMask() const override;
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF)
         const override;
