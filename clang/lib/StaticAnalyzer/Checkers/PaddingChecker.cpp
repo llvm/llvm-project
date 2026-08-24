@@ -76,6 +76,9 @@ public:
     if (!(RD = RD->getDefinition()))
       return;
 
+    if (RD->isInvalidDecl())
+      return;
+
     // This is the simplest correct case: a class with no fields and one base
     // class. Other cases are more complicated because of how the base classes
     // & fields might interact, so we don't bother dealing with them.

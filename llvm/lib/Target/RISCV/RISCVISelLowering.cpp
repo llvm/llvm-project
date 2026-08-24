@@ -10625,7 +10625,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      // Use SHL/ADDI (and possible XORI) to avoid having to materialize
+      // Use SLLI/ADDI (and possible XORI) to avoid having to materialize
       // a constant in register
       if ((TrueVal - FalseVal).isPowerOf2() && FalseVal.isSignedIntN(12)) {
         SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
@@ -10637,6 +10637,28 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         CondV = DAG.getLogicalNOT(DL, CondV, CondV.getValueType());
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
         return DAG.getNode(ISD::ADD, DL, VT, BitDiff, TrueV);
+      }
+
+      // If we can't use ADDI, it might still be profitable to use SLLI/ADD or
+      // SLLI/SUB. We need to materialize a large constant for the czero+add
+      // sequence below anyway. Using SLLI avoids materializing the delta.
+      // Don't do this if the condition is an equality comparison since czero
+      // allows us to fold part of the compare.
+      if ((TrueVal - FalseVal).isPowerOf2() &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+      }
+      if ((FalseVal - TrueVal).isPowerOf2() && !FalseVal.isSignedIntN(12) &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::SUB, DL, VT, FalseV, BitDiff);
       }
 
       auto getCost = [&](const APInt &Delta, const APInt &Addend) {
@@ -18937,6 +18959,67 @@ static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::BITCAST, DL, VT, Sra);
 }
 
+static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  bool N0IsSExt = N0.getOpcode() == ISD::SIGN_EXTEND;
+  bool N0IsZExt = N0.getOpcode() == ISD::ZERO_EXTEND;
+  bool N1IsSExt = N1.getOpcode() == ISD::SIGN_EXTEND;
+  bool N1IsZExt = N1.getOpcode() == ISD::ZERO_EXTEND;
+
+  if (!(N0IsSExt || N0IsZExt) || !(N1IsSExt || N1IsZExt) || !N0.hasOneUse() ||
+      !N1.hasOneUse())
+    return SDValue();
+
+  SDValue A = N0.getOperand(0);
+  SDValue B = N1.getOperand(0);
+  EVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  if (A.getValueType() != SrcVT || B.getValueType() != SrcVT)
+    return SDValue();
+
+  unsigned RV32Opc, RV64Opc;
+  bool IsSignedUnsigned = false;
+  if (N0IsSExt && N1IsSExt) {
+    RV32Opc = RISCVISD::PWMUL;
+    RV64Opc = RISCVISD::PMUL_HALVES_01;
+  } else if (N0IsZExt && N1IsZExt) {
+    RV32Opc = RISCVISD::PWMULU;
+    RV64Opc = RISCVISD::PMULU_HALVES_01;
+  } else {
+    IsSignedUnsigned = true;
+    RV32Opc = RISCVISD::PWMULSU;
+    RV64Opc = RISCVISD::PMULSU_HALVES_00;
+    if (N0IsZExt && N1IsSExt)
+      std::swap(A, B);
+  }
+
+  SDLoc DL(N);
+  if (!Subtarget.is64Bit())
+    return DAG.getNode(RV32Opc, DL, VT, A, B);
+
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  if (IsSignedUnsigned) {
+    SDValue Zero = DAG.getConstant(0, DL, LegalSrcVT);
+    A = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, Zero);
+    B = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, B, Zero);
+    return DAG.getNode(RV64Opc, DL, VT, A, B);
+  }
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  return DAG.getNode(RV64Opc, DL, VT, Zip, Zip);
+}
+
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -18978,6 +19061,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+
+  if (SDValue V = combinePExtWideningMul(N, DAG, Subtarget))
     return V;
 
   if (SDValue V = combineVectorMulToSraBitcast(N, DAG))
@@ -26319,8 +26405,10 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
-                            "have a frame pointer");
+      Func.getContext().diagnose(DiagnosticInfoUnsupported{
+          Func,
+          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
+          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

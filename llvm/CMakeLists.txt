@@ -839,9 +839,9 @@ if(LLVM_INDIVIDUAL_TEST_COVERAGE)
 endif()
 set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
-# On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+# On Win32 hosts, provide an option to specify the path to the Unix tools.
 if( WIN32 AND NOT CYGWIN )
-  set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+  set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to Unix tools for Windows")
 endif()
 set(LLVM_NATIVE_TOOL_DIR "" CACHE PATH "Path to a directory containing prebuilt matching native tools (such as llvm-tblgen)")
 
