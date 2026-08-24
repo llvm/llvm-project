@@ -16,8 +16,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
 namespace llvm {
+class BinaryStream;
 class BinaryStreamReader;
 namespace msf {
 class MappedBlockStream;
@@ -70,6 +72,7 @@ public:
 
 class GlobalsStream {
 public:
+  LLVM_ABI explicit GlobalsStream(std::unique_ptr<BinaryStream> Stream);
   LLVM_ABI explicit GlobalsStream(
       std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI ~GlobalsStream();
@@ -81,9 +84,9 @@ public:
 
 private:
   GSIHashTable GlobalsTable;
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

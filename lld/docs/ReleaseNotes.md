@@ -36,6 +36,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* Added `/pdbmsfz:<level>` to write PDB files using the MSFZ compressed
+  container format. The compression level is passed to Zstandard.
+
 ### MinGW Improvements
 
 ### MachO Improvements

@@ -1,4 +1,5 @@
 import("//third-party/unittest/unittest.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 
 unittest("DebugInfoMSFTests") {
   deps = [
@@ -10,4 +11,7 @@ unittest("DebugInfoMSFTests") {
     "MSFCommonTest.cpp",
     "MappedBlockStreamTest.cpp",
   ]
+  if (llvm_enable_zstd) {
+    sources += [ "MSFZTest.cpp" ]
+  }
 }

@@ -1,0 +1,17 @@
+# REQUIRES: zstd
+# RUN: yaml2obj %p/Inputs/empty.yaml -o %t.obj
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdb:%t.pdb /pdbmsfz:1
+# RUN: cp %t.pdb %t.first.pdb
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdb:%t.pdb /pdbmsfz:1
+# RUN: cmp %t.first.pdb %t.pdb
+# RUN: FileCheck --check-prefix=MSFZ %s < %t.pdb
+# RUN: llvm-pdbutil dump -summary %t.pdb | FileCheck --check-prefix=SUMMARY %s
+# RUN: lld-link /entry:main %t.obj /out:%t.fast.exe /debug /pdb:%t.fast.pdb /pdbmsfz:-1
+# RUN: FileCheck --check-prefix=MSFZ %s < %t.fast.pdb
+# RUN: not lld-link /entry:main %t.obj /out:%t.bad.exe /debug /pdb:%t.bad.pdb /pdbmsfz:none 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not lld-link /entry:main %t.obj /out:%t.bad.exe /debug /pdb:%t.bad.pdb /pdbmsfz:2147483647 2>&1 | FileCheck --check-prefix=RANGE %s
+#
+# MSFZ: Microsoft MSFZ Container
+# SUMMARY: Container: MSFZ
+# INVALID: compression level expected, but got none
+# RANGE: compression level must be between

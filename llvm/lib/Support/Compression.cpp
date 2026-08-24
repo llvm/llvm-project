@@ -26,6 +26,7 @@
 #if LLVM_ENABLE_ZSTD
 #include <zstd.h>
 #endif
+#include <limits>
 #if LLVM_ENABLE_LZMA
 #include <lzma.h>
 #endif
@@ -212,11 +213,106 @@ Error zlib::decompress(ArrayRef<uint8_t> Input,
 }
 #endif
 
+#if LLVM_ENABLE_ZLIB
+
+bool raw_deflate::isAvailable() { return true; }
+
+Error raw_deflate::decompress(ArrayRef<uint8_t> Input,
+                              SmallVectorImpl<uint8_t> &Output,
+                              size_t UncompressedSize) {
+  z_stream Stream = {};
+  int Res = inflateInit2(&Stream, -MAX_WBITS);
+  if (Res != Z_OK)
+    return createStringError(inconvertibleErrorCode(),
+                             "failed to initialize raw DEFLATE decompression");
+  scope_exit EndStream([&] { inflateEnd(&Stream); });
+
+  Output.resize_for_overwrite(UncompressedSize);
+  size_t InputLoaded = 0;
+  size_t InputConsumed = 0;
+  size_t OutputProduced = 0;
+  uint8_t OverflowByte;
+  while (true) {
+    if (Stream.avail_in == 0 && InputLoaded != Input.size()) {
+      Stream.avail_in =
+          static_cast<uInt>(std::min(Input.size() - InputLoaded,
+                                     size_t(std::numeric_limits<uInt>::max())));
+      Stream.next_in =
+          const_cast<Bytef *>(reinterpret_cast<const Bytef *>(Input.data())) +
+          InputLoaded;
+      InputLoaded += Stream.avail_in;
+    }
+
+    bool CheckingOverflow = OutputProduced == UncompressedSize;
+    if (Stream.avail_out == 0) {
+      if (CheckingOverflow) {
+        Stream.next_out = &OverflowByte;
+        Stream.avail_out = 1;
+      } else {
+        Stream.avail_out = static_cast<uInt>(
+            std::min(UncompressedSize - OutputProduced,
+                     size_t(std::numeric_limits<uInt>::max())));
+        Stream.next_out =
+            reinterpret_cast<Bytef *>(Output.data()) + OutputProduced;
+      }
+    }
+
+    uInt InputBefore = Stream.avail_in;
+    uInt OutputBefore = Stream.avail_out;
+    Res = inflate(&Stream, Z_NO_FLUSH);
+    size_t Consumed = InputBefore - Stream.avail_in;
+    size_t Produced = OutputBefore - Stream.avail_out;
+    InputConsumed += Consumed;
+    if (CheckingOverflow && Produced != 0)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "raw DEFLATE stream exceeds the declared uncompressed size");
+    OutputProduced += Produced;
+
+    if (Res == Z_STREAM_END) {
+      if (OutputProduced != UncompressedSize)
+        return createStringError(
+            inconvertibleErrorCode(),
+            "raw DEFLATE stream does not match the declared uncompressed size");
+      if (InputConsumed != Input.size())
+        return createStringError(inconvertibleErrorCode(),
+                                 "raw DEFLATE stream has trailing data");
+      __msan_unpoison(Output.data(), Output.size());
+      return Error::success();
+    }
+    if (Res != Z_OK)
+      return createStringError(inconvertibleErrorCode(),
+                               "invalid or truncated raw DEFLATE stream");
+    if (Consumed == 0 && Produced == 0)
+      return createStringError(inconvertibleErrorCode(),
+                               "raw DEFLATE decompression made no progress");
+  }
+}
+
+#else
+
+bool raw_deflate::isAvailable() { return false; }
+
+Error raw_deflate::decompress(ArrayRef<uint8_t> Input,
+                              SmallVectorImpl<uint8_t> &Output,
+                              size_t UncompressedSize) {
+  return createStringError(
+      inconvertibleErrorCode(),
+      "raw DEFLATE decompression is unavailable because LLVM was not built "
+      "with LLVM_ENABLE_ZLIB");
+}
+
+#endif
+
 #if LLVM_ENABLE_ZSTD
 
 bool zstd::isAvailable() { return true; }
 
 #include <zstd.h> // Ensure ZSTD library is included
+
+int zstd::getMinCompressionLevel() { return ZSTD_minCLevel(); }
+
+int zstd::getMaxCompressionLevel() { return ZSTD_maxCLevel(); }
 
 void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
@@ -280,6 +376,8 @@ Error zstd::decompress(ArrayRef<uint8_t> Input,
 
 #else
 bool zstd::isAvailable() { return false; }
+int zstd::getMinCompressionLevel() { llvm_unreachable("zstd is unavailable"); }
+int zstd::getMaxCompressionLevel() { llvm_unreachable("zstd is unavailable"); }
 void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level,
                     bool EnableLdm) {

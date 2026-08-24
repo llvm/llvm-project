@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Object/DXContainer.h"
@@ -26,7 +27,10 @@ class BinaryStream;
 
 namespace msf {
 class MappedBlockStream;
-}
+#if LLVM_ENABLE_ZSTD
+class MSFZFile;
+#endif
+} // namespace msf
 
 namespace pdb {
 class DbiStream;
@@ -84,6 +88,15 @@ public:
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
+  /// Returns a logical stream for either supported PDB container. Unlike the
+  /// MSF-specific APIs below, this does not imply a block layout.
+  Expected<std::unique_ptr<BinaryStream>>
+  safelyCreateStream(uint32_t StreamIndex) const;
+  Expected<std::unique_ptr<BinaryStream>>
+  safelyCreateLogicalNamedStream(StringRef Name);
+
+  /// These APIs expose classic MSF block layouts. They intentionally reject
+  /// MSFZ files rather than inventing a block mapping for a logical stream.
   std::unique_ptr<msf::MappedBlockStream>
   createIndexedStream(uint16_t SN) const;
   Expected<std::unique_ptr<msf::MappedBlockStream>>
@@ -93,6 +106,8 @@ public:
 
   msf::MSFStreamLayout getStreamLayout(uint32_t StreamIdx) const;
   msf::MSFStreamLayout getFpmStreamLayout() const;
+
+  bool isMSFZ() const;
 
   Error parseFileHeaders();
   Error parseStreamData();
@@ -127,6 +142,9 @@ private:
   BumpPtrAllocator &Allocator;
 
   std::unique_ptr<BinaryStream> Buffer;
+#if LLVM_ENABLE_ZSTD
+  std::unique_ptr<msf::MSFZFile> MSFZ;
+#endif
 
   msf::MSFLayout ContainerLayout;
 
@@ -139,11 +157,11 @@ private:
   std::unique_ptr<PublicsStream> Publics;
   std::unique_ptr<SymbolStream> Symbols;
   std::unique_ptr<msf::MappedBlockStream> DirectoryStream;
-  std::unique_ptr<msf::MappedBlockStream> StringTableStream;
+  std::unique_ptr<BinaryStream> StringTableStream;
   std::unique_ptr<InjectedSourceStream> InjectedSources;
   std::unique_ptr<PDBStringTable> Strings;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

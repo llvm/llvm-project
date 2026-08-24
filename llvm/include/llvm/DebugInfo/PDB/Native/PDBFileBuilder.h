@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
@@ -58,6 +59,12 @@ public:
   // If HashPDBContentsToGUID is true on the InfoStreamBuilder, Guid is filled
   // with the computed PDB GUID on return.
   LLVM_ABI Error commit(StringRef Filename, codeview::GUID *Guid);
+#if LLVM_ENABLE_ZSTD
+  // Write the same PDB streams using an MSFZ container.
+  LLVM_ABI Error commitMSFZ(StringRef Filename, codeview::GUID *Guid);
+  LLVM_ABI Error commitMSFZ(StringRef Filename, codeview::GUID *Guid,
+                            int CompressionLevel);
+#endif
 
   LLVM_ABI Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
   LLVM_ABI Error addNamedStream(StringRef Name, StringRef Data);
@@ -65,6 +72,13 @@ public:
                                   std::unique_ptr<MemoryBuffer> Buffer);
 
 private:
+  enum class ContainerType {
+    MSF,
+#if LLVM_ENABLE_ZSTD
+    MSFZ,
+#endif
+  };
+
   struct InjectedSourceDescriptor {
     // The full name of the stream that contains the contents of this injected
     // source.  This is built as a concatenation of the literal "/src/files"
@@ -82,12 +96,14 @@ private:
   };
 
   Error finalizeMsfLayout();
+  Error commitImpl(StringRef Filename, codeview::GUID *Guid,
+                   ContainerType Container, int CompressionLevel);
   Expected<uint32_t> allocateNamedStream(StringRef Name, uint32_t Size);
 
-  void commitInjectedSources(WritableBinaryStream &MsfBuffer,
+  Error commitInjectedSources(WritableBinaryStream &MsfBuffer,
+                              const msf::MSFLayout &Layout);
+  Error commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
                              const msf::MSFLayout &Layout);
-  void commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
-                            const msf::MSFLayout &Layout);
 
   BumpPtrAllocator &Allocator;
 

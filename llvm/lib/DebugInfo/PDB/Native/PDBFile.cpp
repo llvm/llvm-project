@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MSFZ.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
@@ -28,6 +29,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -51,50 +54,78 @@ StringRef PDBFile::getFileDirectory() const {
   return sys::path::parent_path(FilePath);
 }
 
-uint32_t PDBFile::getBlockSize() const { return ContainerLayout.SB->BlockSize; }
+uint32_t PDBFile::getBlockSize() const {
+  return ContainerLayout.SB ? ContainerLayout.SB->BlockSize : 0;
+}
 
 uint32_t PDBFile::getFreeBlockMapBlock() const {
-  return ContainerLayout.SB->FreeBlockMapBlock;
+  return ContainerLayout.SB ? ContainerLayout.SB->FreeBlockMapBlock : 0;
 }
 
 uint32_t PDBFile::getBlockCount() const {
-  return ContainerLayout.SB->NumBlocks;
+  return ContainerLayout.SB ? ContainerLayout.SB->NumBlocks : 0;
 }
 
 uint32_t PDBFile::getNumDirectoryBytes() const {
-  return ContainerLayout.SB->NumDirectoryBytes;
+  return ContainerLayout.SB ? ContainerLayout.SB->NumDirectoryBytes : 0;
 }
 
 uint32_t PDBFile::getBlockMapIndex() const {
-  return ContainerLayout.SB->BlockMapAddr;
+  return ContainerLayout.SB ? ContainerLayout.SB->BlockMapAddr : 0;
 }
 
-uint32_t PDBFile::getUnknown1() const { return ContainerLayout.SB->Unknown1; }
+uint32_t PDBFile::getUnknown1() const {
+  return ContainerLayout.SB ? ContainerLayout.SB->Unknown1 : 0;
+}
 
 uint32_t PDBFile::getNumDirectoryBlocks() const {
+  if (!ContainerLayout.SB)
+    return 0;
   return msf::bytesToBlocks(ContainerLayout.SB->NumDirectoryBytes,
                             ContainerLayout.SB->BlockSize);
 }
 
 uint64_t PDBFile::getBlockMapOffset() const {
+  if (!ContainerLayout.SB)
+    return 0;
   return (uint64_t)ContainerLayout.SB->BlockMapAddr *
          ContainerLayout.SB->BlockSize;
 }
 
 uint32_t PDBFile::getNumStreams() const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return MSFZ->getNumStreams();
+#endif
   return ContainerLayout.StreamSizes.size();
 }
 
 uint32_t PDBFile::getMaxStreamSize() const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ) {
+    uint32_t MaxSize = 0;
+    for (uint32_t I = 0; I != getNumStreams(); ++I)
+      MaxSize = std::max(MaxSize, getStreamByteSize(I));
+    return MaxSize;
+  }
+#endif
   return *llvm::max_element(ContainerLayout.StreamSizes);
 }
 
 uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return MSFZ->getStreamByteSize(StreamIndex);
+#endif
   return ContainerLayout.StreamSizes[StreamIndex];
 }
 
 ArrayRef<support::ulittle32_t>
 PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return {};
+#endif
   return ContainerLayout.StreamMap[StreamIndex];
 }
 
@@ -102,6 +133,11 @@ uint64_t PDBFile::getFileSize() const { return Buffer->getLength(); }
 
 Expected<ArrayRef<uint8_t>> PDBFile::getBlockData(uint32_t BlockIndex,
                                                   uint32_t NumBytes) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return make_error<RawError>(raw_error_code::feature_unsupported,
+                                "MSFZ files do not expose physical MSF blocks");
+#endif
   uint64_t StreamBlockOffset = msf::blockToOffset(BlockIndex, getBlockSize());
 
   ArrayRef<uint8_t> Result;
@@ -117,6 +153,24 @@ Error PDBFile::setBlockData(uint32_t BlockIndex, uint32_t Offset,
 }
 
 Error PDBFile::parseFileHeaders() {
+  if (Buffer->getLength() >= sizeof(msf::MSFZMagic)) {
+    ArrayRef<uint8_t> Magic;
+    if (Error E = Buffer->readBytes(0, sizeof(msf::MSFZMagic), Magic))
+      return E;
+    if (msf::isMSFZMagic(Magic)) {
+#if LLVM_ENABLE_ZSTD
+      auto MSFZOrErr = msf::MSFZFile::create(*Buffer, Allocator);
+      if (!MSFZOrErr)
+        return MSFZOrErr.takeError();
+      MSFZ = std::move(*MSFZOrErr);
+      return Error::success();
+#else
+      return make_error<RawError>(raw_error_code::feature_unsupported,
+                                  "MSFZ input requires LLVM_ENABLE_ZSTD");
+#endif
+    }
+  }
+
   BinaryStreamReader Reader(*Buffer);
 
   // Initialize SB.
@@ -177,6 +231,10 @@ Error PDBFile::parseFileHeaders() {
 }
 
 Error PDBFile::parseStreamData() {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return Error::success();
+#endif
   assert(ContainerLayout.SB);
   if (DirectoryStream)
     return Error::success();
@@ -235,6 +293,10 @@ ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
 
 std::unique_ptr<MappedBlockStream>
 PDBFile::createIndexedStream(uint16_t SN) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return nullptr;
+#endif
   if (SN == kInvalidStreamIndex)
     return nullptr;
   return MappedBlockStream::createIndexedStream(ContainerLayout, *Buffer, SN,
@@ -242,6 +304,10 @@ PDBFile::createIndexedStream(uint16_t SN) const {
 }
 
 MSFStreamLayout PDBFile::getStreamLayout(uint32_t StreamIdx) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return {};
+#endif
   MSFStreamLayout Result;
   auto Blocks = getStreamBlockList(StreamIdx);
   Result.Blocks.assign(Blocks.begin(), Blocks.end());
@@ -250,7 +316,32 @@ MSFStreamLayout PDBFile::getStreamLayout(uint32_t StreamIdx) const {
 }
 
 msf::MSFStreamLayout PDBFile::getFpmStreamLayout() const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return {};
+#endif
   return msf::getFpmStreamLayout(ContainerLayout);
+}
+
+bool PDBFile::isMSFZ() const {
+#if LLVM_ENABLE_ZSTD
+  return MSFZ != nullptr;
+#else
+  return false;
+#endif
+}
+
+Expected<std::unique_ptr<BinaryStream>>
+PDBFile::safelyCreateStream(uint32_t StreamIndex) const {
+  if (StreamIndex == kInvalidStreamIndex || StreamIndex >= getNumStreams() ||
+      getStreamByteSize(StreamIndex) == std::numeric_limits<uint32_t>::max())
+    return make_error<RawError>(raw_error_code::no_stream);
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return MSFZ->createStream(StreamIndex);
+#endif
+  return std::unique_ptr<BinaryStream>(MappedBlockStream::createIndexedStream(
+      ContainerLayout, *Buffer, StreamIndex, Allocator));
 }
 
 Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
@@ -259,8 +350,7 @@ Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
     if (!DbiS)
       return DbiS.takeError();
 
-    auto GlobalS =
-        safelyCreateIndexedStream(DbiS->getGlobalSymbolStreamIndex());
+    auto GlobalS = safelyCreateStream(DbiS->getGlobalSymbolStreamIndex());
     if (!GlobalS)
       return GlobalS.takeError();
     auto TempGlobals = std::make_unique<GlobalsStream>(std::move(*GlobalS));
@@ -273,7 +363,7 @@ Expected<GlobalsStream &> PDBFile::getPDBGlobalsStream() {
 
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {
   if (!Info) {
-    auto InfoS = safelyCreateIndexedStream(StreamPDB);
+    auto InfoS = safelyCreateStream(StreamPDB);
     if (!InfoS)
       return InfoS.takeError();
     auto TempInfo = std::make_unique<InfoStream>(std::move(*InfoS));
@@ -286,7 +376,7 @@ Expected<InfoStream &> PDBFile::getPDBInfoStream() {
 
 Expected<DbiStream &> PDBFile::getPDBDbiStream() {
   if (!Dbi) {
-    auto DbiS = safelyCreateIndexedStream(StreamDBI);
+    auto DbiS = safelyCreateStream(StreamDBI);
     if (!DbiS)
       return DbiS.takeError();
     auto TempDbi = std::make_unique<DbiStream>(std::move(*DbiS));
@@ -299,7 +389,7 @@ Expected<DbiStream &> PDBFile::getPDBDbiStream() {
 
 Expected<TpiStream &> PDBFile::getPDBTpiStream() {
   if (!Tpi) {
-    auto TpiS = safelyCreateIndexedStream(StreamTPI);
+    auto TpiS = safelyCreateStream(StreamTPI);
     if (!TpiS)
       return TpiS.takeError();
     auto TempTpi = std::make_unique<TpiStream>(*this, std::move(*TpiS));
@@ -315,7 +405,7 @@ Expected<TpiStream &> PDBFile::getPDBIpiStream() {
     if (!hasPDBIpiStream())
       return make_error<RawError>(raw_error_code::no_stream);
 
-    auto IpiS = safelyCreateIndexedStream(StreamIPI);
+    auto IpiS = safelyCreateStream(StreamIPI);
     if (!IpiS)
       return IpiS.takeError();
     auto TempIpi = std::make_unique<TpiStream>(*this, std::move(*IpiS));
@@ -332,8 +422,7 @@ Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
     if (!DbiS)
       return DbiS.takeError();
 
-    auto PublicS =
-        safelyCreateIndexedStream(DbiS->getPublicSymbolStreamIndex());
+    auto PublicS = safelyCreateStream(DbiS->getPublicSymbolStreamIndex());
     if (!PublicS)
       return PublicS.takeError();
     auto TempPublics = std::make_unique<PublicsStream>(std::move(*PublicS));
@@ -351,7 +440,7 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
       return DbiS.takeError();
 
     uint32_t SymbolStreamNum = DbiS->getSymRecordStreamIndex();
-    auto SymbolS = safelyCreateIndexedStream(SymbolStreamNum);
+    auto SymbolS = safelyCreateStream(SymbolStreamNum);
     if (!SymbolS)
       return SymbolS.takeError();
 
@@ -365,7 +454,7 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
 
 Expected<PDBStringTable &> PDBFile::getStringTable() {
   if (!Strings) {
-    auto NS = safelyCreateNamedStream("/names");
+    auto NS = safelyCreateLogicalNamedStream("/names");
     if (!NS)
       return NS.takeError();
 
@@ -382,7 +471,7 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
 
 Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
   if (!InjectedSources) {
-    auto IJS = safelyCreateNamedStream("/src/headerblock");
+    auto IJS = safelyCreateLogicalNamedStream("/src/headerblock");
     if (!IJS)
       return IJS.takeError();
 
@@ -400,12 +489,12 @@ Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
 
 llvm::Expected<object::DXContainer &> PDBFile::getDXContainerStream() {
   if (!Dxc) {
-    auto MBS = safelyCreateIndexedStream(StreamDXContainer);
-    if (!MBS)
-      return MBS.takeError();
+    auto Stream = safelyCreateStream(StreamDXContainer);
+    if (!Stream)
+      return Stream.takeError();
     auto StreamSize = getStreamByteSize(StreamDXContainer);
     ArrayRef<uint8_t> StreamData;
-    auto Error = MBS->get()->readBytes(0, StreamSize, StreamData);
+    auto Error = Stream->get()->readBytes(0, StreamSize, StreamData);
     if (Error)
       return Error;
 
@@ -509,6 +598,12 @@ bool PDBFile::hasPDBInjectedSourceStream() {
 /// value will contain the stream returned by createIndexedStream().
 Expected<std::unique_ptr<MappedBlockStream>>
 PDBFile::safelyCreateIndexedStream(uint32_t StreamIndex) const {
+#if LLVM_ENABLE_ZSTD
+  if (MSFZ)
+    return make_error<RawError>(
+        raw_error_code::feature_unsupported,
+        "MSFZ files do not have MSF block stream layouts");
+#endif
   if (StreamIndex >= getNumStreams())
     // This rejects kInvalidStreamIndex with an error as well.
     return make_error<RawError>(raw_error_code::no_stream);
@@ -527,4 +622,16 @@ PDBFile::safelyCreateNamedStream(StringRef Name) {
   uint32_t NameStreamIndex = *ExpectedNSI;
 
   return safelyCreateIndexedStream(NameStreamIndex);
+}
+
+Expected<std::unique_ptr<BinaryStream>>
+PDBFile::safelyCreateLogicalNamedStream(StringRef Name) {
+  auto IS = getPDBInfoStream();
+  if (!IS)
+    return IS.takeError();
+
+  Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex(Name);
+  if (!ExpectedNSI)
+    return ExpectedNSI.takeError();
+  return safelyCreateStream(*ExpectedNSI);
 }

@@ -17,6 +17,7 @@
 #include "TypeMerger.h"
 #include "Writer.h"
 #include "lld/Common/Timer.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
@@ -1707,7 +1708,15 @@ void PDBLinker::commit(codeview::GUID *guid) {
   // Print an error and continue if PDB writing fails. This is done mainly so
   // the user can see the output of /time and /summary, which is very helpful
   // when trying to figure out why a PDB file is too large.
-  if (Error e = builder.commit(ctx.config.pdbPath, guid)) {
+#if LLVM_ENABLE_ZSTD
+  Error e = ctx.config.pdbMSFZCompressionLevel
+                ? builder.commitMSFZ(ctx.config.pdbPath, guid,
+                                     *ctx.config.pdbMSFZCompressionLevel)
+                : builder.commit(ctx.config.pdbPath, guid);
+#else
+  Error e = builder.commit(ctx.config.pdbPath, guid);
+#endif
+  if (e) {
     e = handleErrors(std::move(e), [&](const llvm::msf::MSFError &me) {
       Err(ctx) << me.message();
       if (me.isPageOverflow())

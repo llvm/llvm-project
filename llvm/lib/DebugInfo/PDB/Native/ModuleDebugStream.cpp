@@ -26,10 +26,15 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
+ModuleDebugStreamRef::ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
+                                           std::unique_ptr<BinaryStream> Stream)
+    : Mod(Module), Stream(std::move(Stream)) {}
+
 ModuleDebugStreamRef::ModuleDebugStreamRef(
     const DbiModuleDescriptor &Module,
     std::unique_ptr<MappedBlockStream> Stream)
-    : Mod(Module), Stream(std::move(Stream)) {}
+    : ModuleDebugStreamRef(Module,
+                           std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 ModuleDebugStreamRef::~ModuleDebugStreamRef() = default;
 

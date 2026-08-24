@@ -54,6 +54,18 @@ LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
 
 } // End of namespace zlib
 
+namespace raw_deflate {
+
+LLVM_ABI bool isAvailable();
+
+/// Decompress an RFC 1951 raw DEFLATE stream. The input must not include a
+/// zlib or gzip wrapper and must produce exactly \p UncompressedSize bytes.
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
+
+} // End of namespace raw_deflate
+
 namespace zstd {
 
 constexpr int NoCompression = -5;
@@ -62,6 +74,9 @@ constexpr int DefaultCompression = 5;
 constexpr int BestSizeCompression = 12;
 
 LLVM_ABI bool isAvailable();
+
+LLVM_ABI int getMinCompressionLevel();
+LLVM_ABI int getMaxCompressionLevel();
 
 LLVM_ABI void compress(ArrayRef<uint8_t> Input,
                        SmallVectorImpl<uint8_t> &CompressedBuffer,

@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -34,11 +35,14 @@ struct FrameData;
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 class DbiModuleDescriptorBuilder;
+class PDBFileBuilder;
 
 class DbiStreamBuilder {
+  friend class PDBFileBuilder;
+
 public:
   LLVM_ABI DbiStreamBuilder(msf::MSFBuilder &Msf);
   LLVM_ABI ~DbiStreamBuilder();
@@ -88,6 +92,21 @@ public:
   LLVM_ABI void createSectionMap(ArrayRef<llvm::object::coff_section> SecHdrs);
 
 private:
+  enum class ModuleCommitStrategy {
+    Parallel,
+    Sequential,
+#if LLVM_ENABLE_ZSTD
+    Staged,
+#endif
+  };
+
+#if LLVM_ENABLE_ZSTD
+  Error commitMSFZ(const msf::MSFLayout &Layout,
+                   WritableBinaryStreamRef MsfBuffer);
+  Error commitMSFZModuleStreams(const msf::MSFLayout &Layout,
+                                WritableBinaryStreamRef MsfBuffer);
+#endif
+
   struct DebugStream {
     std::function<Error(BinaryStreamWriter &)> WriteFn;
     uint32_t Size = 0;
@@ -95,6 +114,9 @@ private:
   };
 
   Error finalize();
+  Error commitImpl(const msf::MSFLayout &Layout,
+                   WritableBinaryStreamRef MsfBuffer,
+                   ModuleCommitStrategy Strategy);
   uint32_t calculateModiSubstreamSize() const;
   uint32_t calculateNamesOffset() const;
   uint32_t calculateSectionContribsStreamSize() const;
@@ -136,6 +158,6 @@ private:
   std::array<std::optional<DebugStream>, (int)DbgHeaderType::Max> DbgStreams;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

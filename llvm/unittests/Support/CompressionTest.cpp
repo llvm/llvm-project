@@ -71,6 +71,64 @@ TEST(CompressionTest, Zlib) {
   testZlibCompression(BinaryDataStr, zlib::BestSpeedCompression);
   testZlibCompression(BinaryDataStr, zlib::DefaultCompression);
 }
+
+TEST(CompressionTest, RawDeflateDecompression) {
+  // Produced independently with Python's zlib.compressobj(wbits=-15).
+  const uint8_t Raw[] = {0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57, 0x28,
+                         0x4a, 0x2c, 0x57, 0x48, 0x49, 0x4d, 0xcb,
+                         0x49, 0x2c, 0x49, 0x05, 0x00};
+  constexpr StringLiteral Expected = "hello raw deflate";
+  SmallVector<uint8_t, 0> Output;
+  EXPECT_THAT_ERROR(raw_deflate::decompress(Raw, Output, Expected.size()),
+                    Succeeded());
+  EXPECT_EQ(toStringRef(Output), Expected);
+  const uint8_t Empty[] = {0x03, 0x00};
+  EXPECT_THAT_ERROR(raw_deflate::decompress(Empty, Output, 0), Succeeded());
+  EXPECT_TRUE(Output.empty());
+
+  const uint8_t ZlibWrapped[] = {0x78, 0x9c, 0xcb, 0x48, 0xcd, 0xc9, 0xc9,
+                                 0x57, 0x28, 0x4a, 0x2c, 0x57, 0x48, 0x49,
+                                 0x4d, 0xcb, 0x49, 0x2c, 0x49, 0x05, 0x00,
+                                 0x39, 0xbf, 0x06, 0x74};
+  const uint8_t GzipWrapped[] = {0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 0x00, 0x03, 0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57,
+                                 0x28, 0x4a, 0x2c, 0x57, 0x48, 0x49, 0x4d, 0xcb,
+                                 0x49, 0x2c, 0x49, 0x05, 0x00, 0x61, 0x63, 0x50,
+                                 0x05, 0x11, 0x00, 0x00, 0x00};
+  EXPECT_THAT_ERROR(
+      raw_deflate::decompress(ZlibWrapped, Output, Expected.size()), Failed());
+  EXPECT_THAT_ERROR(
+      raw_deflate::decompress(GzipWrapped, Output, Expected.size()), Failed());
+  EXPECT_THAT_ERROR(raw_deflate::decompress(ArrayRef(Raw).drop_back(), Output,
+                                            Expected.size()),
+                    Failed());
+
+  SmallVector<uint8_t, 0> Corrupt{ArrayRef(Raw)};
+  Corrupt[0] = 0x06;
+  EXPECT_THAT_ERROR(raw_deflate::decompress(Corrupt, Output, Expected.size()),
+                    Failed());
+
+  SmallVector<uint8_t, 0> WithTrailingBytes{ArrayRef(Raw)};
+  WithTrailingBytes.push_back(0);
+  EXPECT_THAT_ERROR(
+      raw_deflate::decompress(WithTrailingBytes, Output, Expected.size()),
+      FailedWithMessage("raw DEFLATE stream has trailing data"));
+  EXPECT_THAT_ERROR(raw_deflate::decompress(Raw, Output, Expected.size() - 1),
+                    Failed());
+  EXPECT_THAT_ERROR(raw_deflate::decompress(Raw, Output, Expected.size() + 1),
+                    Failed());
+}
+#endif
+
+#if !LLVM_ENABLE_ZLIB
+TEST(CompressionTest, RawDeflateUnavailable) {
+  SmallVector<uint8_t, 0> Output;
+  EXPECT_THAT_ERROR(
+      raw_deflate::decompress({}, Output, 0),
+      FailedWithMessage(
+          "raw DEFLATE decompression is unavailable because LLVM was not "
+          "built with LLVM_ENABLE_ZLIB"));
+}
 #endif
 
 #if LLVM_ENABLE_ZSTD

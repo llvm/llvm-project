@@ -1,0 +1,5 @@
+# UNSUPPORTED: zstd
+# RUN: yaml2obj %p/Inputs/empty.yaml -o %t.obj
+# RUN: not lld-link /entry:main %t.obj /out:%t.exe /debug /pdb:%t.pdb /pdbmsfz:1 2>&1 | FileCheck %s
+#
+# CHECK: error: /pdbmsfz requires lld to be built with zstd support
