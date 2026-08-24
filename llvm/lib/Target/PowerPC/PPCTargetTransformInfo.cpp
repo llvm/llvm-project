@@ -1162,10 +1162,10 @@ PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
 }
 
 InstructionCost PPCTTIImpl::getPartialReductionCost(
-      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
-      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
-      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
 
   if (Opcode != Instruction::Add)
@@ -1180,7 +1180,7 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
     return Invalid;
 
   Type *ATy = VectorType::get(InputTypeA, VF);
-  EVT AVT = TLI->getValueType(DL, ATy,  true);
+  EVT AVT = TLI->getValueType(DL, ATy, true);
   if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
     return Invalid;
 
