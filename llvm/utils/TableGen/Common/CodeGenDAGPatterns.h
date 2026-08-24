@@ -1242,7 +1242,6 @@ private:
   void ExpandHwModeBasedTypes();
   void InferInstructionFlags();
   void GenerateVariants();
-  void VerifyInstructionFlags();
 
   void ParseOnePattern(const Record *TheDef, TreePattern &Pattern,
                        TreePattern &Result,
