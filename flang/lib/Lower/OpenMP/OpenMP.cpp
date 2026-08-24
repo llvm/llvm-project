@@ -4452,6 +4452,9 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(loc, "TASK construct with IN_REDUCTION of an array element using a "
               "user-defined reduction");
 
+  if (hasPartialArrayReductionObject(inReductionObjects, semaCtx))
+    TODO(loc, "TASK construct with IN_REDUCTION of a partial array section");
+
   if (!enableDelayedPrivatization) {
     if (hasArrayElementReductionObject(inReductionObjects))
       TODO(loc, "TASK construct with IN_REDUCTION of an array element when "
@@ -4508,6 +4511,10 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     TODO(loc,
          "TASKGROUP construct with TASK_REDUCTION of an array element using a "
          "user-defined reduction");
+
+  if (hasPartialArrayReductionObject(taskReductionObjects, semaCtx))
+    TODO(loc,
+         "TASKGROUP construct with TASK_REDUCTION of a partial array section");
 
   ObjectEntryBlockArgs taskgroupArgs;
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
