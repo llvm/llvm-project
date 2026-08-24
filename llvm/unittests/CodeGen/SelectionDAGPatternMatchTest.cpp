@@ -379,111 +379,111 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   EXPECT_TRUE(sd_match(SMax, m_c_BinOp(ISD::SMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMax, m_SMax(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMax, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMaxLikeLT, m_SMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMaxLikeLE, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMax, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMaxLikeGT, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMaxLikeGE, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGT, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGE, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLT, m_SMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLE, m_SMaxLike(*DAG, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMin, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMinLikeLT, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(SMinLikeLE, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMinLikeGT, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMinLikeGE, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMinLikeLT, m_SMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCSMinLikeLE, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMin, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMinLikeLT, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(SMinLikeLE, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGT, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGE, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLT, m_SMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLE, m_SMinLike(*DAG, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMax, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMaxLikeULT, m_UMaxLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMaxLikeULE, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMax, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMaxLikeUGT, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMaxLikeUGE, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGT, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGE, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULT, m_UMaxLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULE, m_UMaxLike(*DAG, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMinLikeUGT, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMinLikeUGE, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(m_Value(), m_Value())));
-  EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMin, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGT, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGE, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(*DAG, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(*DAG, m_Value(), m_Value())));
 
-  EXPECT_TRUE(sd_match(UMaxNonNeg, DAG.get(),
-                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(UMaxNonNeg, DAG.get(),
-                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(UMinNonNeg, DAG.get(),
-                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(UMinNonNeg, DAG.get(),
-                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      UMaxNonNeg, m_UMaxLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      UMaxNonNeg, m_SMaxLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      UMinNonNeg, m_UMinLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      UMinNonNeg, m_SMinLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
 
-  EXPECT_TRUE(sd_match(SMaxNonNeg, DAG.get(),
-                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(SMaxNonNeg, DAG.get(),
-                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(SMinNonNeg, DAG.get(),
-                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(SMinNonNeg, DAG.get(),
-                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      SMaxNonNeg, m_SMaxLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      SMaxNonNeg, m_UMaxLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      SMinNonNeg, m_SMinLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(
+      SMinNonNeg, m_UMinLike(*DAG, m_Specific(NonNeg0), m_Specific(NonNeg1))));
 
-  EXPECT_TRUE(sd_match(UMaxNeg, DAG.get(),
-                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(UMaxNeg, DAG.get(),
-                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(UMinNeg, DAG.get(),
-                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(UMinNeg, DAG.get(),
-                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(UMaxNeg, m_UMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(UMaxNeg, m_SMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(UMinNeg, m_UMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(UMinNeg, m_SMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
 
-  EXPECT_TRUE(sd_match(SMaxNeg, DAG.get(),
-                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(SMaxNeg, DAG.get(),
-                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(SMinNeg, DAG.get(),
-                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(SMinNeg, DAG.get(),
-                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(SMaxNeg, m_SMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(SMaxNeg, m_UMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(SMinNeg, m_SMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(
+      sd_match(SMinNeg, m_UMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
 
-  EXPECT_TRUE(sd_match(UMaxLikeNN_UGT, DAG.get(),
-                       m_SMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(UMinLikeNN_ULT, DAG.get(),
-                       m_SMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(SMaxLikeNN_GT, DAG.get(),
-                       m_UMaxLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(SMinLikeNN_LT, DAG.get(),
-                       m_UMinLike(m_Specific(NonNeg0), m_Specific(NonNeg1))));
-  EXPECT_TRUE(sd_match(UMaxLikeN_UGT, DAG.get(),
-                       m_SMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(UMinLikeN_ULT, DAG.get(),
-                       m_SMinLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(SMaxLikeN_GT, DAG.get(),
-                       m_UMaxLike(m_Specific(Neg0), m_Specific(Neg1))));
-  EXPECT_TRUE(sd_match(SMinLikeN_LT, DAG.get(),
-                       m_UMinLike(m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMaxLikeNN_UGT, m_SMaxLike(*DAG, m_Specific(NonNeg0),
+                                                  m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMinLikeNN_ULT, m_SMinLike(*DAG, m_Specific(NonNeg0),
+                                                  m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMaxLikeNN_GT, m_UMaxLike(*DAG, m_Specific(NonNeg0),
+                                                 m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(SMinLikeNN_LT, m_UMinLike(*DAG, m_Specific(NonNeg0),
+                                                 m_Specific(NonNeg1))));
+  EXPECT_TRUE(sd_match(UMaxLikeN_UGT,
+                       m_SMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(UMinLikeN_ULT,
+                       m_SMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMaxLikeN_GT,
+                       m_UMaxLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
+  EXPECT_TRUE(sd_match(SMinLikeN_LT,
+                       m_UMinLike(*DAG, m_Specific(Neg0), m_Specific(Neg1))));
 
   EXPECT_FALSE(
-      sd_match(UMax, DAG.get(), m_SMaxLike(m_Specific(Op0), m_Specific(Op1))));
+      sd_match(UMax, m_SMaxLike(*DAG, m_Specific(Op0), m_Specific(Op1))));
   EXPECT_FALSE(
-      sd_match(UMin, DAG.get(), m_SMinLike(m_Specific(Op0), m_Specific(Op1))));
+      sd_match(UMin, m_SMinLike(*DAG, m_Specific(Op0), m_Specific(Op1))));
   EXPECT_FALSE(
-      sd_match(SMax, DAG.get(), m_UMaxLike(m_Specific(Op0), m_Specific(Op1))));
+      sd_match(SMax, m_UMaxLike(*DAG, m_Specific(Op0), m_Specific(Op1))));
   EXPECT_FALSE(
-      sd_match(SMin, DAG.get(), m_UMinLike(m_Specific(Op0), m_Specific(Op1))));
+      sd_match(SMin, m_UMinLike(*DAG, m_Specific(Op0), m_Specific(Op1))));
 
-  EXPECT_FALSE(sd_match(UMaxDiffSign, DAG.get(),
-                        m_SMaxLike(m_Specific(Neg0), m_Specific(NonNeg1))));
-  EXPECT_FALSE(sd_match(UMinDiffSign, DAG.get(),
-                        m_SMinLike(m_Specific(Neg0), m_Specific(NonNeg1))));
-  EXPECT_FALSE(sd_match(SMaxDiffSign, DAG.get(),
-                        m_UMaxLike(m_Specific(Neg0), m_Specific(NonNeg1))));
-  EXPECT_FALSE(sd_match(SMinDiffSign, DAG.get(),
-                        m_UMinLike(m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(
+      UMaxDiffSign, m_SMaxLike(*DAG, m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(
+      UMinDiffSign, m_SMinLike(*DAG, m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(
+      SMaxDiffSign, m_UMaxLike(*DAG, m_Specific(Neg0), m_Specific(NonNeg1))));
+  EXPECT_FALSE(sd_match(
+      SMinDiffSign, m_UMinLike(*DAG, m_Specific(Neg0), m_Specific(NonNeg1))));
 
   SDValue BindVal;
   // By default, it matches any of the results.
@@ -828,62 +828,48 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
 
   SDValue BindVal;
 
-  EXPECT_FALSE(sd_match(Abs, DAG.get(), m_Negative()));
+  EXPECT_FALSE(sd_match(Abs, m_Negative(*DAG)));
 
-  EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NonNegativeValue, m_Negative(*DAG, m_Value(BindVal))));
+  EXPECT_NE(BindVal, NonNegativeValue);
+  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonZero(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, NonNegativeValue);
   EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NonNegativeValue);
-  EXPECT_FALSE(sd_match(NonNegativeValue, DAG.get(),
-                        m_StrictlyPositive(m_Value(BindVal))));
+      sd_match(NonNegativeValue, m_StrictlyPositive(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, NonNegativeValue);
   EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+      sd_match(NonNegativeValue, m_NonPositive(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, NonNegativeValue);
 
   EXPECT_TRUE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+      sd_match(NonNegativeValue, m_NonNegative(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, NonNegativeValue);
 
-  EXPECT_FALSE(
-      sd_match(NegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(NegativeValue, m_NonNegative(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, NegativeValue);
   EXPECT_FALSE(
-      sd_match(NegativeValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
+      sd_match(NegativeValue, m_StrictlyPositive(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, NegativeValue);
 
-  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_TRUE(sd_match(NegativeValue, m_Negative(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, NegativeValue);
-  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_TRUE(sd_match(NegativeValue, m_NonZero(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, NegativeValue);
-  EXPECT_TRUE(
-      sd_match(NegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_TRUE(sd_match(NegativeValue, m_NonPositive(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, NegativeValue);
 
-  EXPECT_FALSE(
-      sd_match(PositiveValue, DAG.get(), m_Negative(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(PositiveValue, m_Negative(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, PositiveValue);
-  EXPECT_FALSE(
-      sd_match(PositiveValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
+  EXPECT_FALSE(sd_match(PositiveValue, m_NonPositive(*DAG, m_Value(BindVal))));
   EXPECT_NE(BindVal, PositiveValue);
 
-  EXPECT_TRUE(sd_match(PositiveValue, DAG.get(), m_NonZero(m_Value(BindVal))));
+  EXPECT_TRUE(sd_match(PositiveValue, m_NonZero(*DAG, m_Value(BindVal))));
+  EXPECT_EQ(BindVal, PositiveValue);
+  EXPECT_TRUE(sd_match(PositiveValue, m_NonNegative(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, PositiveValue);
   EXPECT_TRUE(
-      sd_match(PositiveValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
+      sd_match(PositiveValue, m_StrictlyPositive(*DAG, m_Value(BindVal))));
   EXPECT_EQ(BindVal, PositiveValue);
-  EXPECT_TRUE(
-      sd_match(PositiveValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, PositiveValue);
-
-  // If DAG is not provided all matches fail regardless of the value
-  EXPECT_FALSE(sd_match(NegativeValue, m_Negative(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NegativeValue, m_NonZero(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
 
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 
@@ -947,34 +933,27 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Const3, m_SpecificInt(ConstVal)));
   EXPECT_TRUE(sd_match(AllOnes, m_AllOnes()));
 
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
+  EXPECT_TRUE(sd_match(Zero, m_False(*DAG)));
+  EXPECT_TRUE(sd_match(One, m_True(*DAG)));
+  EXPECT_FALSE(sd_match(AllOnes, m_True(*DAG)));
 
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_Negative()));
-  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_NonNegative()));
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonZero()));
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonPositive()));
-  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_StrictlyPositive()));
+  EXPECT_TRUE(sd_match(MinusOne, m_Negative(*DAG)));
+  EXPECT_FALSE(sd_match(MinusOne, m_NonNegative(*DAG)));
+  EXPECT_TRUE(sd_match(MinusOne, m_NonZero(*DAG)));
+  EXPECT_TRUE(sd_match(MinusOne, m_NonPositive(*DAG)));
+  EXPECT_FALSE(sd_match(MinusOne, m_StrictlyPositive(*DAG)));
 
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_Negative()));
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonNegative()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_NonZero()));
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonPositive()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_StrictlyPositive()));
+  EXPECT_FALSE(sd_match(Zero, m_Negative(*DAG)));
+  EXPECT_TRUE(sd_match(Zero, m_NonNegative(*DAG)));
+  EXPECT_FALSE(sd_match(Zero, m_NonZero(*DAG)));
+  EXPECT_TRUE(sd_match(Zero, m_NonPositive(*DAG)));
+  EXPECT_FALSE(sd_match(Zero, m_StrictlyPositive(*DAG)));
 
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_Negative()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonNegative()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonZero()));
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_NonPositive()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_StrictlyPositive()));
-
-  // If DAG is not provided all matches would fail
-  EXPECT_FALSE(sd_match(MinusOne, m_Negative()));
-  EXPECT_FALSE(sd_match(Zero, m_NonNegative()));
-  EXPECT_FALSE(sd_match(One, m_NonZero()));
-  EXPECT_FALSE(sd_match(Zero, m_NonPositive()));
-  EXPECT_FALSE(sd_match(One, m_StrictlyPositive()));
+  EXPECT_FALSE(sd_match(One, m_Negative(*DAG)));
+  EXPECT_TRUE(sd_match(One, m_NonNegative(*DAG)));
+  EXPECT_TRUE(sd_match(One, m_NonZero(*DAG)));
+  EXPECT_FALSE(sd_match(One, m_NonPositive(*DAG)));
+  EXPECT_TRUE(sd_match(One, m_StrictlyPositive(*DAG)));
 
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(
@@ -1050,7 +1029,7 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(sd_match(Trunc, m_TruncOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op64);
 
-  EXPECT_TRUE(sd_match(ZExt, DAG.get(), m_NonNegative(m_Value())));
+  EXPECT_TRUE(sd_match(ZExt, m_NonNegative(*DAG, m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchNode) {
@@ -1164,10 +1143,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int64VT, Op0, Op0);
 
   using namespace SDPatternMatch;
-  EXPECT_TRUE(sd_match(Op0, DAG.get(), m_LegalType(m_Value())));
-  EXPECT_FALSE(sd_match(Op1, DAG.get(), m_LegalType(m_Value())));
-  EXPECT_TRUE(sd_match(Add, DAG.get(),
-                       m_LegalOp(m_IntegerVT(m_Add(m_Value(), m_Value())))));
+  EXPECT_TRUE(sd_match(Op0, m_LegalType(*DAG, m_Value())));
+  EXPECT_FALSE(sd_match(Op1, m_LegalType(*DAG, m_Value())));
+  EXPECT_TRUE(
+      sd_match(Add, m_LegalOp(*DAG, m_IntegerVT(m_Add(m_Value(), m_Value())))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
@@ -1341,22 +1320,22 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
 
   // Scalar constant 0
   SDValue Zero = DAG->getConstant(0, DL, VT);
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_Zero()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_One()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_AllOnes()));
+  EXPECT_TRUE(sd_match(Zero, m_Zero()));
+  EXPECT_FALSE(sd_match(Zero, m_One()));
+  EXPECT_FALSE(sd_match(Zero, m_AllOnes()));
 
   // Scalar constant 1
   SDValue One = DAG->getConstant(1, DL, VT);
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_Zero()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_One()));
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_AllOnes()));
+  EXPECT_FALSE(sd_match(One, m_Zero()));
+  EXPECT_TRUE(sd_match(One, m_One()));
+  EXPECT_FALSE(sd_match(One, m_AllOnes()));
 
   // Scalar constant -1
   SDValue AllOnes =
       DAG->getConstant(APInt::getAllOnes(VT.getSizeInBits()), DL, VT);
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_Zero()));
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_One()));
-  EXPECT_TRUE(sd_match(AllOnes, DAG.get(), m_AllOnes()));
+  EXPECT_FALSE(sd_match(AllOnes, m_Zero()));
+  EXPECT_FALSE(sd_match(AllOnes, m_One()));
+  EXPECT_TRUE(sd_match(AllOnes, m_AllOnes()));
 
   EVT VecF32 = EVT::getVectorVT(Context, MVT::f32, 4);
   EVT VecVT = EVT::getVectorVT(Context, MVT::i32, 4);
@@ -1366,13 +1345,13 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(0, DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero()));
+    EXPECT_TRUE(sd_match(Bitcasted, m_Zero()));
 
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_FALSE(sd_match(Bitcasted, m_Negative(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonNegative(*DAG)));
+    EXPECT_FALSE(sd_match(Bitcasted, m_NonZero(*DAG)));
+    EXPECT_FALSE(sd_match(Bitcasted, m_StrictlyPositive(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonPositive(*DAG)));
   }
 
   // m_One: splat vector of 1 → bitcast
@@ -1380,13 +1359,13 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(1, DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
+    EXPECT_FALSE(sd_match(Bitcasted, m_One()));
 
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_FALSE(sd_match(Bitcasted, m_Negative(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonNegative(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonZero(*DAG)));
+    EXPECT_FALSE(sd_match(Bitcasted, m_NonPositive(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_StrictlyPositive(*DAG)));
   }
 
   // m_AllOnes: splat vector of -1 → bitcast
@@ -1394,13 +1373,13 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(APInt::getAllOnes(32), DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
+    EXPECT_TRUE(sd_match(Bitcasted, m_AllOnes()));
 
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, m_Negative(*DAG)));
+    EXPECT_FALSE(sd_match(Bitcasted, m_NonNegative(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonZero(*DAG)));
+    EXPECT_TRUE(sd_match(Bitcasted, m_NonPositive(*DAG)));
+    EXPECT_FALSE(sd_match(Bitcasted, m_StrictlyPositive(*DAG)));
   }
 
   // splat vector with one undef → default should NOT match
@@ -1412,8 +1391,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, Zero);
     Ops[2] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_Zero()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_Zero(true)));
+    EXPECT_FALSE(sd_match(Vec, m_Zero()));
+    EXPECT_TRUE(sd_match(Vec, m_Zero(true)));
   }
 
   {
@@ -1422,8 +1401,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, One);
     Ops[1] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_One()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_One(true)));
+    EXPECT_FALSE(sd_match(Vec, m_One()));
+    EXPECT_TRUE(sd_match(Vec, m_One(true)));
   }
 
   {
@@ -1432,8 +1411,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, AllOnes);
     Ops[0] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_AllOnes()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_AllOnes(true)));
+    EXPECT_FALSE(sd_match(Vec, m_AllOnes()));
+    EXPECT_TRUE(sd_match(Vec, m_AllOnes(true)));
   }
 }
 

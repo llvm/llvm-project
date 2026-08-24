@@ -56286,7 +56286,7 @@ static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
   if (EltSizeInBits <= 16 &&
       (sd_match(N, m_UnaryOp(X86ISD::VTRUNCS, m_Value(Src))) ||
        sd_match(N, m_UnaryOp(X86ISD::VTRUNCUS,
-                             m_SMaxLike(m_Value(Src), m_Zero())))) &&
+                             m_SMaxLike(DAG, m_Value(Src), m_Zero())))) &&
       (EltSizeInBits * 2) == Src.getScalarValueSizeInBits() &&
       isFreeToSplitVector(Src, DAG)) {
     SDLoc DL(N);
@@ -61056,8 +61056,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           using namespace SDPatternMatch;
           SDValue N0 = Ops[0].getOperand(0), N1 = Ops[1].getOperand(0);
           if (Opcode == X86ISD::VTRUNCS ||
-              (sd_match(N0, m_SMaxLike(m_Value(N0), m_Zero())) &&
-               sd_match(N1, m_SMaxLike(m_Value(N1), m_Zero())))) {
+              (sd_match(N0, m_SMaxLike(DAG, m_Value(N0), m_Zero())) &&
+               sd_match(N1, m_SMaxLike(DAG, m_Value(N1), m_Zero())))) {
             N0 = DAG.getBitcast(MVT::v8i64, N0);
             N1 = DAG.getBitcast(MVT::v8i64, N1);
             SDValue LHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
