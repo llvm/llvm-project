@@ -290,16 +290,15 @@ public:
                llvm::APFloat::S_PPCDoubleDouble;
   }
 
-  /// Create a concrete floating-point value. The value must satisfy
-  /// \c isModeledFloatValue.
-  nonloc::ConcreteFloat makeFloatVal(const FloatingLiteral *F) {
-    assert(isModeledFloatValue(F->getValue()) &&
-           "ConcreteFloat must be normal and finite");
-    return nonloc::ConcreteFloat(BasicVals.getFloatValue(F->getValue()));
+  /// Create a concrete floating-point value. If the value \p F does not
+  /// satisfy \c isModeledFloatValue, then create \c std::nullopt.
+  std::optional<nonloc::ConcreteFloat> makeFloatVal(const FloatingLiteral *F) {
+    return makeFloatVal(F->getValue());
   }
 
-  nonloc::ConcreteFloat makeFloatVal(const llvm::APFloat &F) {
-    assert(isModeledFloatValue(F) && "ConcreteFloat must be normal and finite");
+  std::optional<nonloc::ConcreteFloat> makeFloatVal(const llvm::APFloat &F) {
+    if (!isModeledFloatValue(F))
+      return std::nullopt;
     return nonloc::ConcreteFloat(BasicVals.getFloatValue(F));
   }
 
