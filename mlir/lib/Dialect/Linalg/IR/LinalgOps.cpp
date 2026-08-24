@@ -5079,8 +5079,7 @@ static bool isElementwiseScalarBinaryFoldable(Operation *op) {
   if (!elementwiseOp)
     return false;
 
-  auto groupAndKind =
-      getArityGroupAndKind(elementwiseOp.getElementwiseKind());
+  auto groupAndKind = getArityGroupAndKind(elementwiseOp.getElementwiseKind());
   if (groupAndKind.arityGroup != ElementwiseArityGroup::Binary)
     return false;
 
