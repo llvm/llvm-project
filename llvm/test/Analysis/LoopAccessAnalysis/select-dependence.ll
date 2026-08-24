@@ -4,47 +4,15 @@
 define void @test(ptr noalias %x, ptr noalias %y, ptr noalias %z) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits, with a maximum safe store-load forward width of 2048 bits with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %load = load double, ptr %gep.sel, align 8 ->
+; CHECK-NEXT:            store double %load, ptr %gep.sel2, align 8
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %y High: (760 + %y))
-; CHECK-NEXT:            Member: {%y,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %z High: (760 + %z))
-; CHECK-NEXT:            Member: {%z,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %x High: (760 + %x))
-; CHECK-NEXT:            Member: {%x,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (-256 + %y) High: (504 + %y))
-; CHECK-NEXT:            Member: {(-256 + %y),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -76,47 +44,15 @@ exit:
 define void @test_phi(ptr noalias %x, ptr noalias %y, ptr noalias %z) {
 ; CHECK-LABEL: 'test_phi'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits, with a maximum safe store-load forward width of 2048 bits with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %load = load double, ptr %gep.sel, align 8 ->
+; CHECK-NEXT:            store double %load, ptr %gep.sel2, align 8
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
-; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
-; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %y High: (760 + %y))
-; CHECK-NEXT:            Member: {%y,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %z High: (760 + %z))
-; CHECK-NEXT:            Member: {%z,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
-; CHECK-NEXT:          (Low: %x High: (760 + %x))
-; CHECK-NEXT:            Member: {%x,+,8}<nw><%loop>
-; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (-256 + %y) High: (504 + %y))
-; CHECK-NEXT:            Member: {(-256 + %y),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

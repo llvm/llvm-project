@@ -2266,54 +2266,31 @@ MemoryDepChecker::getStrideFromSCEV(
 std::optional<MemoryDepChecker::Dependence::DepType>
 MemoryDepChecker::getForkedDepType(const MemAccessInfo &A, Instruction *AInst,
                                    const MemAccessInfo &B, Instruction *BInst) {
-  // Two reads are independent.
   const auto &[APtr, AIsWrite] = A;
   const auto &[BPtr, BIsWrite] = B;
   if (!AIsWrite && !BIsWrite)
     return Dependence::NoDep;
 
-  ScalarEvolution &SE = *PSE.getSE();
+  if (APtr->getType()->getPointerAddressSpace() !=
+      BPtr->getType()->getPointerAddressSpace())
+    return Dependence::Unknown;
 
-  // A pointer may be a fork of multiple strided pointers, e.g. produced by a
-  // select of two pointers. SCEV cannot form a single AddRec for such a
-  // pointer, so the regular analysis in getDependenceDistanceStrideAndSize
-  // would report an IndirectUnsafe dependence. The runtime pointer checking
-  // handles such pointers by analyzing each fork alternative separately
-  // (findForkedSCEVs); do the same here by checking each pair of alternatives
-  // and aggregating the results.
+  ScalarEvolution &SE = *PSE.getSE();
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> Srcs;
   SmallVector<PointerIntPair<const SCEV *, 1, bool>> Sinks;
   findForkedSCEVs(&SE, InnermostLoop, APtr, Srcs, MaxForkedSCEVDepth);
   findForkedSCEVs(&SE, InnermostLoop, BPtr, Sinks, MaxForkedSCEVDepth);
 
-  // If neither access pointer is a fork, fall back to the regular single-SCEV
-  // analysis in getDependenceDistanceStrideAndSize.
   if (Srcs.size() == 1 && Sinks.size() == 1)
     return std::nullopt;
 
-  // We can only analyze a fork if each alternative is loop-invariant or an
-  // affine AddRec; this is the same requirement as for generating runtime
-  // checks for forked pointers (see AccessAnalysis::createCheckForAccess).
-  auto IsLoopInvariantOrAR =
-      [&](const PointerIntPair<const SCEV *, 1, bool> &P) {
-        return SE.isLoopInvariant(P.getPointer(), InnermostLoop) ||
-               isa<SCEVAddRecExpr>(P.getPointer());
-      };
-  if (!all_of(Srcs, IsLoopInvariantOrAR) ||
-      !all_of(Sinks, IsLoopInvariantOrAR))
-    return Dependence::IndirectUnsafe;
-
-  // We cannot check pointers in different address spaces.
-  if (APtr->getType()->getPointerAddressSpace() !=
-      BPtr->getType()->getPointerAddressSpace())
-    return Dependence::Unknown;
+  if (Srcs.size() > 1 && Sinks.size() > 1)
+    return std::nullopt;
 
   Type *ATy = getLoadStoreType(AInst);
   Type *BTy = getLoadStoreType(BInst);
-
   SmallVector<const SCEVPredicate *> Predicates;
-  Dependence::DepType Result = Dependence::NoDep;
-  bool ResultNeedsRtCheck = false;
+
   for (const auto &[SrcArm, _] : Srcs) {
     for (const auto &[SinkArm, _] : Sinks) {
       std::optional<int64_t> StrideSrc =
@@ -2330,23 +2307,16 @@ MemoryDepChecker::getForkedDepType(const MemAccessInfo &A, Instruction *AInst,
               : classifyDependence(SrcArm, SinkArm, ATy, BTy,
                                    std::get<DepDistanceStrideAndSizeInfo>(ArmRes));
 
-      // Aggregate conservatively over all fork alternatives: if any pair of
-      // alternatives has an unsafe dependence then the fork as a whole is
-      // unsafe; otherwise, if any pair needs a runtime check to prove
-      // independence, classify the dependence as unknown so that we retry with
-      // runtime checks.
       if (Dependence::isSafeForVectorization(ArmType) ==
           VectorizationSafetyStatus::Unsafe)
         return ArmType;
       if (Dependence::isSafeForVectorization(ArmType) ==
           VectorizationSafetyStatus::PossiblySafeWithRtChecks)
-        ResultNeedsRtCheck = true;
-      else if (Result == Dependence::NoDep)
-        Result = ArmType;
+        return Dependence::Unknown;
     }
   }
   PSE.addPredicates(Predicates);
-  return ResultNeedsRtCheck ? Dependence::Unknown : Result;
+  return Dependence::NoDep;
 }
 
 MemoryDepChecker::Dependence::DepType
