@@ -580,17 +580,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}, {s64, s16}})
       .lower();
 
-  // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(ST.hasStdExtD(), {{s32, s64}})
-      .legalFor(ST.hasStdExtZfh(), {{s16, s32}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s16, s64}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s16, s32}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s16, s64}})
       .libcallFor({{s32, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}});
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(ST.hasStdExtD(), {{s64, s32}})
-      .legalFor(ST.hasStdExtZfh(), {{s32, s16}})
-      .legalFor(ST.hasStdExtZfh() && ST.hasStdExtD(), {{s64, s16}})
+      .legalFor(ST.hasStdExtZfhmin(), {{s32, s16}})
+      .legalFor(ST.hasStdExtZfhmin() && ST.hasStdExtD(), {{s64, s16}})
       .libcallFor({{s64, s32}})
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}});
 
