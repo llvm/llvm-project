@@ -1,6 +1,7 @@
 
 
 #include <__type_traits/is_unqualified.h>
+#include <__type_traits/underlying_type.h>
 
 #include "test_macros.h"
 #include <type_traits>
@@ -12,14 +13,15 @@ namespace support {
 
 // TODO: use _ prefix
 template <typename _Tp>
-concept EnabledForHash = requires(_Tp t) {
-  { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
-}
+concept EnabledForHash =
+    requires(_Tp t) {
+      { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
+    }
 
-// we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
-//  note: bit_cast from a pointer type is not allowed in a constant expression
-// read of member '__a' of union with active member '__t' is not allowed in a constant expression
-/*
+    // we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
+    //  note: bit_cast from a pointer type is not allowed in a constant expression
+    // read of member '__a' of union with active member '__t' is not allowed in a constant expression
+    /*
 
     union {
       _Tp __t;
@@ -29,11 +31,10 @@ concept EnabledForHash = requires(_Tp t) {
     __u.__t = __v;
     return __u.__a;
 */
-and not std::is_pointer_v<_Tp>;
-
+    and not std::is_pointer_v<_Tp>;
 
 template <typename _Tp>
-concept DisabledForHash = not EnabledForHash<_Tp> ;
+concept DisabledForHash = not EnabledForHash<_Tp>;
 
 // TODO: document the constraints of using this at runtime OR make it consteval only
 template <typename _Tp>
@@ -41,7 +42,7 @@ struct constexpr_hash;
 
 template <DisabledForHash _Tp>
 struct constexpr_hash<_Tp> {
-  constexpr_hash()                                   = delete;
+  constexpr_hash()                                 = delete;
   constexpr_hash(const constexpr_hash&)            = delete;
   constexpr_hash& operator=(const constexpr_hash&) = delete;
 };
@@ -61,31 +62,34 @@ struct constexpr_hash<_Tp> {
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
-    } else if constexpr (std::is_floating_point_v<_Tp> ) {
-    if (__v == 0.0f)
+    } else if constexpr (std::is_floating_point_v<_Tp>) {
+      if (__v == 0.0f)
 
-      return 0;
-    // return __scalar_hash<_Tp>::operator()(__v);
+        return 0;
+      // return __scalar_hash<_Tp>::operator()(__v);
 
-        constexpr size_t multiple = sizeof(_Tp) / sizeof(char);
-        std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(__v);
+      constexpr size_t multiple         = sizeof(_Tp) / sizeof(char);
+      std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(__v);
 
-        // TODO: pack indexing?
-        size_t res = 0;
-        for(size_t i = 0; i < multiple; ++i) {
-            res ^= region[i];
-        }
-        return res;
+      // TODO: pack indexing?
+      size_t res = 0;
+      for (size_t i = 0; i < multiple; ++i) {
+        res ^= region[i];
+      }
+      return res;
 
-        // TODO: 0, 1, 2, 3, 4
-        // return region[multiple - 1]; // TODO: hash-ing
-        // return 1234ULL;
+      // TODO: 0, 1, 2, 3, 4
+      // return region[multiple - 1]; // TODO: hash-ing
+      // return 1234ULL;
 
-    } 
+    } else if constexpr (std::is_enum_v<_Tp>) {
+      using type = std::__underlying_type_t<_Tp>;
+      return constexpr_hash<type>()(static_cast<type>(__v));
+    }
     __builtin_unreachable(); // todo: revisit
   }
 
-  constexpr_hash() noexcept                          = default;
+  constexpr_hash() noexcept                        = default;
   constexpr_hash& operator=(const constexpr_hash&) = default;
 };
 
