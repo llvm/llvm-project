@@ -94565,6 +94565,34 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBValue_CanSet(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBValue *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBError result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBValue, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBValue_CanSet" "', argument " "1"" of type '" "lldb::SBValue *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBValue * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->CanSet();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBError(result)), SWIGTYPE_p_lldb__SBError, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBValue_GetTypeFormat(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBValue *arg1 = 0 ;
@@ -106004,10 +106032,24 @@ static PyMethodDef SwigMethods[] = {
 		"    Returns whether this value can be modified through SetValueFromCString()\n"
 		"    or SetData().\n"
 		"\n"
+		"    Deprecated, use CanSet() instead, which reports why the value is not\n"
+		"    writable.\n"
+		"\n"
 		"    Returns False when the value is not writable. An example would be a\n"
 		"    variable value reconstructed from debug info via a computation or a constant.\n"
 		"    A True result does not guarantee a write will succeed; other\n"
 		"    runtime conditions may still prevent a successful write.\n"
+		""},
+	 { "SBValue_CanSet", _wrap_SBValue_CanSet, METH_O, "\n"
+		"SBValue_CanSet(SBValue self) -> SBError\n"
+		"\n"
+		"    Returns whether this value can be modified through SetValueFromCString()\n"
+		"    or SetData().\n"
+		"\n"
+		"    Returns an SBError describing why the value is not writable. An example\n"
+		"    would be a variable value reconstructed from debug info via a computation\n"
+		"    or a constant. A success result does not guarantee a write will succeed;\n"
+		"    other runtime conditions may still prevent a successful write.\n"
 		""},
 	 { "SBValue_GetTypeFormat", _wrap_SBValue_GetTypeFormat, METH_O, "SBValue_GetTypeFormat(SBValue self) -> SBTypeFormat"},
 	 { "SBValue_GetTypeSummary", _wrap_SBValue_GetTypeSummary, METH_O, "SBValue_GetTypeSummary(SBValue self) -> SBTypeSummary"},
