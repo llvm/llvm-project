@@ -2148,7 +2148,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // There shouldn't be any stale affected values in the assumption cache
     // that were previously in the old function, but that have now been moved
     // to the new function.
-    for (auto AffectedValVH : AC->allAssumptionsFor(I->getOperand(0))) {
+    for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
       auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
       if (!AffectedCI)
         continue;
