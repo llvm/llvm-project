@@ -4,6 +4,11 @@
 
 # LLVM: file format elf64-x86-64
 
+## Show that omitting --output-style is equivalent to passing --output-style=LLVM explicitly.
+# RUN: llvm-dwarfdump %t.o > %t.default.txt
+# RUN: llvm-dwarfdump --output-style=LLVM %t.o > %t.llvm.txt
+# RUN: cmp %t.default.txt %t.llvm.txt
+
 ## Show that --output-style=JSON emits a warning, since JSON output is not yet implemented.
 # RUN: llvm-dwarfdump --output-style=JSON %t.o 2>&1 | FileCheck %s --check-prefix=JSON
 
