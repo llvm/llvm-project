@@ -2908,6 +2908,121 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
+/// Matches an exit condition formed by comparing a value loaded from memory
+/// with a loop-invariant term. Binds the comparison for the condition.
+static auto m_Uncountable(VPValue *&Cond) {
+  return m_VPValue(
+      Cond,
+      m_c_Cmp(m_VPInstruction<Instruction::Load>(m_VPValue()), m_LiveIn()));
+}
+
+struct CountableConditionMatch {
+  VPValue *&Cmp;
+  PredicatedScalarEvolution &PSE;
+  Loop *L;
+
+  CountableConditionMatch(VPValue *&Cmp, PredicatedScalarEvolution &PSE,
+                          Loop *L)
+      : Cmp(Cmp), PSE(PSE), L(L) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Update;
+    if (!VPlanPatternMatch::match(
+            V, m_VPValue(Cmp, m_c_ICmp(m_VPValue(Update, m_Add(m_VPValue(),
+                                                               m_VPValue())),
+                                       m_LiveIn()))))
+      return false;
+
+    const SCEV *S = vputils::getSCEVExprForVPValue(Update, PSE, L);
+    return SCEVPatternMatch::match(
+        S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L)));
+  }
+};
+
+/// Matches an exit condition formed by comparing the current value of a
+/// affine add recurrence in the given loop with a stride of 1 against a
+/// loop-invariant term. Binds the comparison for the condition.
+static auto m_Countable(VPValue *&Cmp, PredicatedScalarEvolution &PSE,
+                        Loop *L) {
+  return CountableConditionMatch(Cmp, PSE, L);
+}
+
+bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
+                                         PredicatedScalarEvolution &PSE,
+                                         Loop *L) {
+  // Check for a single combined exit in the latch block.
+  // TODO: Generalize to other blocks besides the latch.
+  // If we don't find a combined condition in the latch, just return true
+  // to proceed with vectorization.
+  auto [_, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  VPValue *Uncountable = nullptr;
+  VPValue *Countable = nullptr;
+  // We're looking for a conditional branch...
+  auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
+  if (!Term || Term->getOpcode() != VPInstruction::BranchOnCond)
+    return true;
+
+  // ...where the condition is a combination of both a countable and an
+  // uncountable comparison.
+  VPValue *Cond = Term->getOperand(0);
+  if (!match(Cond, m_OneUse(m_CombineOr(
+                       m_c_LogicalOr(m_Uncountable(Uncountable),
+                                     m_Countable(Countable, PSE, L)),
+                       m_c_BinaryOr(m_Uncountable(Uncountable),
+                                    m_Countable(Countable, PSE, L))))))
+    return true;
+
+  // If the conditions are combined with a logical or (select), then we'll
+  // need to freeze the individual terms when splitting.
+  bool NeedsFreeze = match(Cond, m_LogicalOr(m_VPValue(), m_VPValue()));
+
+  // If we do have a combined exit condition, bail out if there's more than
+  // one exit block.
+  // TODO: Support additional exits.
+  ArrayRef<VPIRBasicBlock *> ExitBlocks = Plan.getExitBlocks();
+  if (ExitBlocks.size() != 1)
+    return false;
+
+  // If there are any live-outs, bail out. The exit block is an existing IR
+  // block, and if we split the exiting block then the incoming blocks and
+  // values won't be correct.
+  // TODO: Support live-outs with combined exits.
+  if (!ExitBlocks.front()->phis().empty())
+    return false;
+
+  // Split the latch block just before the terminator.
+  VPBasicBlock *NewLatch = LatchVPBB->splitAt(Term->getIterator());
+
+  // Create new terminator for uncountable condition.
+  VPBuilder EEBuilder(LatchVPBB);
+  if (NeedsFreeze)
+    Uncountable = EEBuilder.createScalarFreeze(
+        Uncountable, Uncountable->getScalarType(), DebugLoc());
+  EEBuilder.createNaryOp(VPInstruction::BranchOnCond, {Uncountable});
+
+  // We need to connect the uncountable exit to the sole exit block. The
+  // latch is expected to connect to the middle block instead.
+  // In canonical form, the backedge is the last successor for the latch. So
+  // the first successor (true path) should be the exit for both conditions.
+  LatchVPBB->clearSuccessors();
+  NewLatch->clearPredecessors();
+  VPBlockUtils::connectBlocks(LatchVPBB, ExitBlocks.front());
+  VPBlockUtils::connectBlocks(LatchVPBB, NewLatch);
+
+  // Set condition for latch block to countable condition.
+  if (NeedsFreeze) {
+    VPBuilder NewLatchBuilder(Term);
+    Countable = NewLatchBuilder.createScalarFreeze(
+        Countable, Countable->getScalarType(), DebugLoc());
+  }
+  Term->setOperand(0, Countable);
+
+  // Remove the combining or.
+  cast<VPInstruction>(Cond)->eraseFromParent();
+
+  return true;
+}
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
@@ -3004,8 +3119,9 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return std::nullopt;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
+    } else if (match(V, m_CombineOr(m_VPInstruction<VPInstruction::MaskedCond>(
+                                        m_VPValue(Op1)),
+                                    m_Freeze(m_VPValue(Op1))))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else

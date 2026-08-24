@@ -376,6 +376,12 @@ struct VPlanTransforms {
                                          DominatorTree &DT,
                                          AssumptionCache *AC);
 
+  /// If a single exit has multiple conditions combined together, split them
+  /// and create new exiting blocks. Currently limited to a single exit in the
+  /// latch block.
+  static bool splitCombinedExits(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                 Loop *TheLoop);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block

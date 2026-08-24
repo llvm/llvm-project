@@ -2721,8 +2721,24 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (Legal->hasUncountableEarlyExit() && TheLoop->getLoopLatch() != E)
       continue;
     auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
-    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-      AddToWorklistIfAllowed(Cmp);
+    if (!Cmp || !TheLoop->contains(Cmp) || !Cmp->hasOneUse())
+      continue;
+
+    // If we have an exit condition that is actually two conditions (one
+    // countable and the other uncountable) combined via an or, only add the
+    // countable comparison as a uniform value.
+    if (Legal->hasUncountableExitWithSideEffects() &&
+        TheLoop->getLoopLatch() == E) {
+      if (Instruction *Countable =
+              Legal->findCountableComparisonInCombinedCondition(Cmp)) {
+        if (Countable->hasOneUse())
+          AddToWorklistIfAllowed(Countable);
+        continue;
+      }
+    }
+
+    // Normal exit comparisons are uniform.
+    AddToWorklistIfAllowed(Cmp);
   }
 
   auto PrevVF = VF.divideCoefficientBy(2);
@@ -3408,11 +3424,12 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (hasUnsupportedHeaderPhiRecipe(MainPlan))
     return false;
 
-  // Epilogue vectorization code has not been auditted to ensure it handles
-  // non-latch exits properly.  It may be fine, but it needs auditted and
-  // tested.
+  // Epilogue vectorization code has not been audited to ensure it handles
+  // non-latch or uncountable exits properly.  It may be fine, but it needs
+  // to be audited and tested.
   // TODO: Add support for loops with an early exit.
-  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+  if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Legal->hasUncountableEarlyExit())
     return false;
 
   return true;
@@ -6578,6 +6595,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
+
+  if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
+                      OrigLoop))
+    return nullptr;
 
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
