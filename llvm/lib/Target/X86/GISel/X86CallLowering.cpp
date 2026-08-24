@@ -339,6 +339,13 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     int RegSaveIndex = MFI.CreateStackObject(
         /* GP Registers */ 6 * 8 + /* XMM Registers */ 8 * 16, Align(8), false);
 
+    for (Register PhysReg :
+         {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9, X86::XMM0,
+          X86::XMM1, X86::XMM2, X86::XMM3, X86::XMM4, X86::XMM5, X86::XMM6,
+          X86::XMM7}) {
+      MBB.addLiveIn(PhysReg);
+    }
+
     // Put the registers into their slots as seen in Figure 3.33.
     // %rdi - 0
     // %rsi - 8

@@ -1636,11 +1636,14 @@ bool X86InstructionSelector::selectVaStartSysVList(MachineInstr &I,
       .addImm(FPOffset);
 
   // Move the overflow area to offset of 8.
-  Register OverflowPtr = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
-  MachineInstr &OverflowLeaInst =
-      *addFrameReference(BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                 TII.get(X86::LEA64r), OverflowPtr),
-                         OverflowIndex);
+  Register OverflowPtr = MRI.createVirtualRegister(&X86::GR64RegClass);
+  MachineInstr &OverflowLeaInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                           TII.get(X86::LEA64r), OverflowPtr)
+                                       .addFrameIndex(OverflowIndex)
+                                       .addImm(1)
+                                       .addReg(0)
+                                       .addImm(0)
+                                       .addReg(0);
 
   constrainSelectedInstRegOperands(OverflowLeaInst, TII, TRI, RBI);
 
@@ -1653,11 +1656,14 @@ bool X86InstructionSelector::selectVaStartSysVList(MachineInstr &I,
   constrainSelectedInstRegOperands(OverflowMovInst, TII, TRI, RBI);
 
   // Move the register save area to the last 8 bytes.
-  Register RegSavePtr = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
-  MachineInstr &RegSaveLeaInst =
-      *addFrameReference(BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                 TII.get(X86::LEA64r), RegSavePtr),
-                         RegSaveFrameIndex);
+  Register RegSavePtr = MRI.createVirtualRegister(&X86::GR64RegClass);
+  MachineInstr &RegSaveLeaInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                          TII.get(X86::LEA64r), RegSavePtr)
+                                      .addFrameIndex(RegSaveFrameIndex)
+                                      .addImm(1)
+                                      .addReg(0)
+                                      .addImm(0)
+                                      .addReg(0);
 
   constrainSelectedInstRegOperands(RegSaveLeaInst, TII, TRI, RBI);
 
