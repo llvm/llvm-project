@@ -46,6 +46,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -194,6 +195,49 @@ static void attachAccDeclareAttribute(fir::FirOpBuilder &builder,
                                                 builder.getContext(), clause)));
 }
 
+/// Copy the `omp.declare_target` attribute onto an external global declaration
+/// created for a USE-associated module variable. The directive lives in the
+/// defining module, so the USE-ing unit must re-attach it here; otherwise the
+/// global is internalized on the device and loses its device-resident copy.
+static void
+attachDeclareTargetAttribute(fir::FirOpBuilder &builder, fir::GlobalOp global,
+                             const Fortran::semantics::Symbol &sym) {
+  using Flag = Fortran::semantics::Symbol::Flag;
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  if (!ultimate.test(Flag::OmpDeclareTarget))
+    return;
+  auto declareTargetOp =
+      llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(global.getOperation());
+  if (!declareTargetOp || declareTargetOp.isDeclareTarget())
+    return;
+
+  mlir::omp::DeclareTargetDeviceType deviceType =
+      mlir::omp::DeclareTargetDeviceType::any;
+  mlir::omp::DeclareTargetCaptureClause captureClause =
+      mlir::omp::DeclareTargetCaptureClause::to;
+  if (const auto *details =
+          ultimate.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+    if (const std::optional<Fortran::common::OmpDeviceType> &dt =
+            details->ompDeclTargetDeviceType()) {
+      switch (*dt) {
+      case Fortran::common::OmpDeviceType::Host:
+        deviceType = mlir::omp::DeclareTargetDeviceType::host;
+        break;
+      case Fortran::common::OmpDeviceType::Nohost:
+        deviceType = mlir::omp::DeclareTargetDeviceType::nohost;
+        break;
+      case Fortran::common::OmpDeviceType::Any:
+        deviceType = mlir::omp::DeclareTargetDeviceType::any;
+        break;
+      }
+    }
+    if (details->ompDeclTarget().test(llvm::omp::Clause::OMPC_link))
+      captureClause = mlir::omp::DeclareTargetCaptureClause::link;
+  }
+  declareTargetOp.setDeclareTarget(deviceType, captureClause,
+                                   /*automap=*/false, /*implicit=*/false);
+}
+
 /// Create the global op declaration without any initializer
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
@@ -225,6 +269,7 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       isConstant(ultimate), var.isTarget(), dataAttr,
       /*setDefaultAlignment=*/!isBindC);
   attachAccDeclareAttribute(builder, global, sym);
+  attachDeclareTargetAttribute(builder, global, sym);
   Fortran::lower::declareExternalAccModuleDeclareActionRecipes(converter,
                                                                builder, sym);
   return global;
