@@ -31,6 +31,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -70,8 +71,8 @@ constexpr unsigned NumMSBSlots = 4;
 constexpr unsigned MSBGroupSize = 256;
 constexpr unsigned NumMSBGroups = 4;
 // Skip the plan when a group's planned load exceeds this percent of its cap.
-// Mild overflow is realizable (RA spills a few, most hints honored); severe
-// overflow is not.
+// Greedy can split the live ranges that do not fit, so a mild overflow still
+// gets allocated; a severe one does not.
 constexpr unsigned OverflowPct = 125;
 
 // Live-range segments of one value group.
@@ -926,13 +927,12 @@ void AMDGPUVGPRMSBAffinity::processRegion(
                ClusterMSB);
   unsigned NumClusters = Roots.size();
 
-  // Skip a *severely* over-subscribed plan. Slightly over cap still helps: RA
-  // honors most hints and spills at most a few more than it would have. Past
-  // cap*OverflowPct/100 the hints are just dropped. Per group so a fractional
-  // last group is not over-packed.
+  // Skip a *severely* over-subscribed plan. A group a little over its cap is
+  // still fine: greedy splits the live ranges that do not fit. Past
+  // cap*OverflowPct/100 splitting no longer rescues it and the hints are
+  // dropped. Per group so a fractional last group is not over-packed.
   bool Infeasible = llvm::any_of(llvm::seq(0u, EffMSBGroups), [&](unsigned G) {
-    return static_cast<uint64_t>(MSBLoad[G]) * 100 >
-           static_cast<uint64_t>(groupCap(G, VGPRBudget)) * OverflowPct;
+    return MSBLoad[G] * 100 > groupCap(G, VGPRBudget) * OverflowPct;
   });
 
   // Self-benefit gate: on an already MSB-coherent schedule our partition can

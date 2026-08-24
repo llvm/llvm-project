@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUVGPRMSBAffinityPass
-    : public PassInfoMixin<AMDGPUVGPRMSBAffinityPass> {
+    : public RequiredPassInfoMixin<AMDGPUVGPRMSBAffinityPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
