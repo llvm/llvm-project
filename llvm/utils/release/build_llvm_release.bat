@@ -317,6 +317,8 @@ set cmake_flags=^
   -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
   -Dzstd_INCLUDE_DIR=%zstddir%/include ^
   -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
+  -DLLVM_ENABLE_PROJECTS="clang;lld" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" ^
   -DCLANG_DEFAULT_LINKER=lld
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
@@ -335,8 +337,6 @@ ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
   ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || exit /b 1
-ninja check-clangd || exit /b 1
 )
 cd..
 
