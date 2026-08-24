@@ -237,7 +237,9 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
     return failure();
 
   // The peeling bound (%lb + %step) is computed with affine.apply, which
-  // accepts only index operands.
+  // accepts only index operands. %ub does not feed into this bound, so only
+  // %lb and %step need to be constant to guarantee the affine.apply (see below)
+  // folds away before its (non-index) operand types matter.
   if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
     return failure();
 
