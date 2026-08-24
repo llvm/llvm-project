@@ -100,11 +100,12 @@ define void @build_vector_minus2_dec32_v4i64(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: build_vector_minus2_dec32_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI4_0
-; NONEON-NOSVE-NEXT:    adrp x9, .LCPI4_1
-; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
-; NONEON-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI4_1]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    mov x8, #-98 // =0xffffffffffffff9e
+; NONEON-NOSVE-NEXT:    mov x9, #-66 // =0xffffffffffffffbe
+; NONEON-NOSVE-NEXT:    mov x10, #-34 // =0xffffffffffffffde
+; NONEON-NOSVE-NEXT:    mov x11, #-2 // =0xfffffffffffffffe
+; NONEON-NOSVE-NEXT:    stp x9, x8, [x0, #16]
+; NONEON-NOSVE-NEXT:    stp x11, x10, [x0]
 ; NONEON-NOSVE-NEXT:    ret
   store <4 x i64> <i64 -2, i64 -34, i64 -66, i64 -98>, ptr %a, align 8
   ret void
@@ -121,11 +122,11 @@ define void @build_vector_no_stride_v4i64(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: build_vector_no_stride_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI5_0
-; NONEON-NOSVE-NEXT:    adrp x9, .LCPI5_1
-; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI5_0]
-; NONEON-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI5_1]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    mov w8, #8 // =0x8
+; NONEON-NOSVE-NEXT:    mov w9, #1 // =0x1
+; NONEON-NOSVE-NEXT:    mov w10, #4 // =0x4
+; NONEON-NOSVE-NEXT:    stp x9, x8, [x0, #16]
+; NONEON-NOSVE-NEXT:    stp xzr, x10, [x0]
 ; NONEON-NOSVE-NEXT:    ret
   store <4 x i64> <i64 0, i64 4, i64 1, i64 8>, ptr %a, align 8
   ret void
