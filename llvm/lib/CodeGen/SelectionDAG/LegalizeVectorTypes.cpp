@@ -3468,8 +3468,14 @@ void DAGTypeLegalizer::SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(N->getOpcode(), dl, DstVTHi, SrcHi, N->getOperand(1));
 }
 
-static SDValue buildSplitVectorBroadcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
-                                         SDValue SrcLo, SDValue SrcHi) {
+/// For two Lo/Hi source halves, perform a broadcast for each to VT and
+/// re-interleave the elements so that the result is equivalent to:
+///   Dst: DoubleWidthVT = VECTOR_BROADCAST(VECTOR_CONCAT(SrcLo, SrcHi))
+///   DstLo,DstHi: VT,VT = split(Dst)
+static std::pair<SDValue, SDValue> buildSplitVectorBroadcast(SelectionDAG &DAG,
+                                                             SDLoc DL, EVT VT,
+                                                             SDValue SrcLo,
+                                                             SDValue SrcHi) {
   EVT SrcVT = SrcLo.getValueType();
   SDValue Deinterleaved = DAG.getNode(
       ISD::VECTOR_DEINTERLEAVE, DL, DAG.getVTList(SrcVT, SrcVT), SrcLo, SrcHi);
@@ -3477,8 +3483,9 @@ static SDValue buildSplitVectorBroadcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
       DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(0));
   SDValue Odd =
       DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(1));
-  return DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(VT, VT), Even,
-                     Odd);
+  SDValue Interleaved =
+      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, DAG.getVTList(VT, VT), Even, Odd);
+  return std::make_pair(Interleaved.getValue(0), Interleaved.getValue(1));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
@@ -3508,11 +3515,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_BROADCAST(SDNode *N, SDValue &Lo,
   // reinterleaved in the original lane order for every value of vscale.
   assert(VT.isScalableVector() && SrcVT.isFixedLengthVector() &&
          "Expected a fixed source wider than the split scalable result");
-  SDValue SrcLo, SrcHi;
-  std::tie(SrcLo, SrcHi) = DAG.SplitVector(Src, DL);
-  SDValue Interleaved = buildSplitVectorBroadcast(DAG, DL, LoVT, SrcLo, SrcHi);
-  Lo = Interleaved.getValue(0);
-  Hi = Interleaved.getValue(1);
+  auto [SrcLo, SrcHi] = DAG.SplitVector(Src, DL);
+  std::tie(Lo, Hi) = buildSplitVectorBroadcast(DAG, DL, LoVT, SrcLo, SrcHi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo,
@@ -4016,7 +4020,12 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_BROADCAST(SDNode *N) {
   SDLoc DL(N);
   SDValue SrcLo, SrcHi;
   GetSplitVector(N->getOperand(0), SrcLo, SrcHi);
-  return buildSplitVectorBroadcast(DAG, DL, N->getValueType(0), SrcLo, SrcHi);
+
+  // We are only splitting SrcVT, not the destiniation type, which remains VT.
+  // buildSplitVectorBroadcast produces (VT,VT) so only Lo is needed.
+  EVT VT = N->getValueType(0);
+  auto [Lo, _] = buildSplitVectorBroadcast(DAG, DL, VT, SrcLo, SrcHi);
+  return Lo;
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
