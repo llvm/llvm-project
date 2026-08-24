@@ -775,10 +775,9 @@ void LongJmpPass::layout(const BinaryContext &BC,
   assignFunctionsToSections(BC, SortedFunctions);
 
   if (BC.HasRelocations) {
-    const CodeSectionOrder CompareSections(BC);
-
     // Mirror RewriteInstance::getCodeSections(). Sections not named explicitly
     // retain their first-emission order.
+    const CodeSectionOrder CompareSections(BC);
     llvm::stable_sort(
         Sections, [&](const SectionPlacement &A, const SectionPlacement &B) {
           return CompareSections(A.Name, B.Name);
