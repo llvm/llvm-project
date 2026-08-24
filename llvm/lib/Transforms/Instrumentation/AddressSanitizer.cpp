@@ -1698,6 +1698,14 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
   return true;
 }
 
+static Value *convertToIntptr(IRBuilder<> &IRB, Value *V, Type *IntptrTy) {
+  if (V->getType()->isPtrOrPtrVectorTy())
+    return IRB.CreatePointerCast(V, IntptrTy);
+  assert(V->getType()->isIntOrIntVectorTy() &&
+         "unexpected pointer-pair operand type");
+  return IRB.CreateZExtOrTrunc(V, IntptrTy);
+}
+
 bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
   IRBuilder<> IRB(I);
@@ -1715,11 +1723,11 @@ bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     for (unsigned Index = 0, NumElements = VTy->getNumElements();
          Index != NumElements; ++Index) {
       Value *ScalarParam[2] = {
-          IRB.CreatePointerCast(
-              IRB.CreateExtractElement(Param[0], IRB.getInt32(Index)),
+          convertToIntptr(
+              IRB, IRB.CreateExtractElement(Param[0], IRB.getInt32(Index)),
               IntptrTy),
-          IRB.CreatePointerCast(
-              IRB.CreateExtractElement(Param[1], IRB.getInt32(Index)),
+          convertToIntptr(
+              IRB, IRB.CreateExtractElement(Param[1], IRB.getInt32(Index)),
               IntptrTy)};
       RTCI.createRuntimeCall(IRB, F, ScalarParam);
     }
@@ -1727,7 +1735,7 @@ bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
   }
 
   for (Value *&P : Param)
-    P = IRB.CreatePointerCast(P, IntptrTy);
+    P = convertToIntptr(IRB, P, IntptrTy);
   RTCI.createRuntimeCall(IRB, F, Param);
   return true;
 }
