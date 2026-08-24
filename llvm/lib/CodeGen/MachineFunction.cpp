@@ -989,7 +989,9 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
-  if (!Target.Options.EmitCallSiteInfo && !Target.Options.EmitCallGraphSection)
+  if (!Target.Options.EmitCallSiteInfo &&
+      !Target.Options.EmitCodeGenCallSiteInfo &&
+      !Target.Options.EmitCallGraphSection)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
@@ -1067,6 +1069,26 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
     CalledGlobalsInfo.erase(CGIt);
     CalledGlobalsInfo[New] = std::move(CGInfo);
   }
+}
+
+void MachineFunction::mergeCallSiteInfo(const MachineInstr *Survivor,
+                                        const MachineInstr *Victim) {
+  assert(Survivor->shouldUpdateAdditionalCallInfo() &&
+         Victim->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
+         "candidates inside bundles");
+
+  CallSiteInfoMap::iterator SurvivorCSIt =
+      getCallSiteInfo(getCallInstr(Survivor));
+  if (SurvivorCSIt == CallSitesInfo.end())
+    return;
+
+  CallSiteInfoMap::iterator VictimCSIt = getCallSiteInfo(getCallInstr(Victim));
+  if (VictimCSIt == CallSitesInfo.end() ||
+      VictimCSIt->second.HasStackArguments !=
+          SurvivorCSIt->second.HasStackArguments)
+    SurvivorCSIt->second.HasStackArguments =
+        CallSiteInfo::StackArgumentsStatus::Unknown;
 }
 
 void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {

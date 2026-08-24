@@ -11112,12 +11112,6 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   // stack. Thus, if we outline, say, half the parameters for a function call
   // plus the call, then we'll break the callee's expectations for the layout
   // of the stack.
-  //
-  // FIXME: Allow calls to functions which construct a stack frame, as long
-  // as they don't access arguments on the stack.
-  // FIXME: Figure out some way to analyze functions defined in other modules.
-  // We should be able to compute the memory usage based on the IR calling
-  // convention, even if we can't see the definition.
   if (MI.isCall()) {
     // Get the function associated with the call. Look at each operand and find
     // the one that represents the callee and get its name.
@@ -11142,6 +11136,17 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     if (MI.getOpcode() == AArch64::BLR ||
         MI.getOpcode() == AArch64::BLRNoIP || MI.getOpcode() == AArch64::BL)
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
+
+    // If this call passes no stack arguments per call site info, it is safe to
+    // outline non-terminally.
+    if (UnknownCallOutlineType == outliner::InstrType::LegalTerminator) {
+      const MachineFunction &MF = *MI.getParent()->getParent();
+      auto CSInfo = MF.getCallSitesInfo().find(&MI);
+      if (CSInfo != MF.getCallSitesInfo().end() &&
+          CSInfo->second.HasStackArguments ==
+              MachineFunction::CallSiteInfo::StackArgumentsStatus::No)
+        return outliner::InstrType::Legal;
+    }
 
     if (!Callee)
       return UnknownCallOutlineType;
