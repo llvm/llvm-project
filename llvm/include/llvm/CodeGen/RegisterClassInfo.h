@@ -98,7 +98,7 @@ public:
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
 
-  /// Update cached register class information using \p ReservedInput, MRI's
+  /// Update cached register class information using ReservedInput, MRI's
   /// current reserved-register set. Cached orders are compacted when
   /// only registers are added and `-stress-regalloc` is disabled; otherwise,
   /// they are invalidated and recomputed on demand.

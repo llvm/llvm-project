@@ -48,7 +48,7 @@ private:
   LiveIntervals *LIS;
   LiveRegMatrix *Matrix;
   VirtRegMap *VRM;
-  RegisterClassInfo &RegClassInfo;
+  RegisterClassInfo &RCI;
 
   std::vector<unsigned> RegsToRewrite;
 #ifndef NDEBUG
@@ -60,7 +60,7 @@ private:
 public:
   SIPreAllocateWWMRegs(LiveIntervals *LIS, LiveRegMatrix *Matrix,
                        VirtRegMap *VRM, RegisterClassInfo &RCI)
-      : LIS(LIS), Matrix(Matrix), VRM(VRM), RegClassInfo(RCI) {}
+      : LIS(LIS), Matrix(Matrix), VRM(VRM), RCI(RCI) {}
   bool run(MachineFunction &MF);
 };
 
@@ -114,7 +114,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
 
   LiveInterval &LI = LIS->getInterval(Reg);
 
-  for (MCRegister PhysReg : RegClassInfo.getOrder(MRI->getRegClass(Reg))) {
+  for (MCRegister PhysReg : RCI.getOrder(MRI->getRegClass(Reg))) {
     if (!MRI->isPhysRegUsed(PhysReg, /*SkipRegMaskTest=*/true) &&
         Matrix->checkInterference(LI, PhysReg) == LiveRegMatrix::IK_Free) {
       Matrix->assign(LI, PhysReg);
@@ -175,7 +175,7 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
   // Update the set of reserved registers to include WWM ones
   // without unnecessarily invalidating RegClassInfo.
   MRI->freezeReservedRegs();
-  RegClassInfo.updateReservedRegs(MRI->getReservedRegs());
+  RCI.updateReservedRegs(MRI->getReservedRegs());
 }
 
 #ifndef NDEBUG
