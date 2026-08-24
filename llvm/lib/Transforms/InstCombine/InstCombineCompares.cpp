@@ -5487,9 +5487,12 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
     // icmp ule (A + 1), Op0 -> icmp ult A, Op1
     // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
+    // Do not strictness-fold icmp (add X, C), Y to icmp on X when the add has
+    // other users (e.g. a phi backedge on the latch increment).
     if (A && NoOp0WrapProblem &&
         ShareCommonDivisor(A, Op1, B,
-                           ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred)))
+                           ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred)) &&
+        (!BO0 || BO0->hasOneUse()))
       return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
                           Op1);
 
@@ -5501,7 +5504,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     // icmp ult Op0, (C + 1) -> icmp ule Op0, C
     if (C && NoOp1WrapProblem &&
         ShareCommonDivisor(Op0, C, D,
-                           ICmpInst::isGT(Pred) || ICmpInst::isLE(Pred)))
+                           ICmpInst::isGT(Pred) || ICmpInst::isLE(Pred)) &&
+        (!BO1 || BO1->hasOneUse()))
       return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), Op0,
                           C);
   }
