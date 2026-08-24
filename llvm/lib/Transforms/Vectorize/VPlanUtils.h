@@ -224,9 +224,11 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 /// Insert phis to reconstruct SSA for a single value starting from \p VPBB. \p
 /// Defs is a map of definitions at specific blocks. Returns the
 /// reconstructed value at VPBB. Use if the CFG has been modified such that a
-/// def no longer dominates all its uses. VPBB must be reachable from the entry.
+/// def no longer dominates all its uses. Every block leading to VPBB must be
+/// reachable from the entry and the plan must be plain-CFG (not contain any
+/// regions).
 LLVM_ABI_FOR_TEST VPValue *
-reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> Defs);
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
 
 namespace detail {
 
