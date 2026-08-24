@@ -31,9 +31,11 @@ template <class T>
 struct std::type_order<T, int>; // expected-error {{cannot be specialized}}
 
 template <>
-constexpr std::strong_ordering std::type_order_v<int, int> = false; // expected-error {{cannot be specialized}}
+constexpr std::strong_ordering std::type_order_v<int, int> =
+    std::strong_ordering::less; // expected-error {{cannot be specialized}}
 
 template <class T>
-constexpr std::strong_ordering std::type_order_v<T, int> = false; // expected-error {{cannot be specialized}}
+constexpr std::strong_ordering std::type_order_v<T, int> =
+    std::strong_ordering::less; // expected-error {{cannot be specialized}}
 #  endif
 #endif
