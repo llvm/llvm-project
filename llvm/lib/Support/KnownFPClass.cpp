@@ -282,6 +282,57 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   return Known;
 }
 
+static KnownFPClass itofp_impl(const KnownBits &KnownSrc,
+                               const fltSemantics &FltSem, bool IsSigned) {
+  KnownFPClass Known;
+
+  Known.knownNot(fcNan);
+  Known.knownNot(fcSubnormal);
+  Known.knownNot(fcNegZero);
+
+  if (!IsSigned)
+    Known.signBitMustBeZero();
+
+  if (KnownSrc.isNonZero())
+    Known.knownNot(fcZero);
+
+  if (IsSigned) {
+    // If the signed integer is known non-negative, the result is
+    // non-negative. If the signed integer is known negative, the result is
+    // negative.
+    if (KnownSrc.isNonNegative())
+      Known.signBitMustBeZero();
+    else if (KnownSrc.isNegative())
+      Known.signBitMustBeOne();
+  }
+
+  // Get width of largest magnitude integer known.
+  // This still works for a signed minimum value because the largest FP
+  // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
+  int IntSize = KnownSrc.getBitWidth();
+  if (!IsSigned)
+    IntSize -= KnownSrc.countMinLeadingZeros();
+  else
+    IntSize -= KnownSrc.countMinSignBits();
+
+  // If the exponent of the largest finite FP value can hold the largest
+  // integer, the result of the cast must be finite.
+  if (APFloat::semanticsMaxExponent(FltSem) >= IntSize)
+    Known.knownNot(fcInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::sitofp(const KnownBits &KnownSrc,
+                                  const fltSemantics &FltSem) {
+  return itofp_impl(KnownSrc, FltSem, /*IsSigned=*/true);
+}
+
+KnownFPClass KnownFPClass::uitofp(const KnownBits &KnownSrc,
+                                  const fltSemantics &FltSem) {
+  return itofp_impl(KnownSrc, FltSem, /*IsSigned=*/false);
+}
+
 // Handle known sign bit and nan cases for fadd.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, DenormalMode Mode) {
