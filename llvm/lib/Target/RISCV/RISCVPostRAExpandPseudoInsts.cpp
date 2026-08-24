@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that expands the pseudo instruction pseudolisimm32
-// into target instructions. This pass should be run during the post-regalloc
-// passes, before post RA scheduling.
+// This file contains one of the several passes that expand pseudo instructions
+// into target instructions. This pass is run after register allocation and
+// before post RA scheduling.
 //
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "RISCVExpandPseudoBase.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
@@ -24,20 +26,21 @@ using namespace llvm;
 
 namespace {
 
-class RISCVPostRAExpandPseudoImpl {
-public:
-  const RISCVInstrInfo *TII;
-  bool run(MachineFunction &MF);
-
-private:
-  bool expandMBB(MachineBasicBlock &MBB);
+class RISCVPostRAExpandPseudoImpl final : public RISCVExpandPseudoImplBase {
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool expandMERGE(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+                MachineBasicBlock::iterator &NextMBBI) const override;
+
+  bool expandMovImm(MachineBasicBlock &MBB,
+                    MachineBasicBlock::iterator MBBI) const;
+
+  bool expandMovAddr(MachineBasicBlock &MBB,
+                     MachineBasicBlock::iterator MBBI) const;
+
+  bool expandMERGE(MachineBasicBlock &MBB,
+                   MachineBasicBlock::iterator MBBI) const;
+
   bool expandAddUpperImm(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI);
+                         MachineBasicBlock::iterator MBBI) const;
 };
 
 class RISCVPostRAExpandPseudoLegacy : public MachineFunctionPass {
@@ -60,32 +63,11 @@ public:
   }
 };
 
-char RISCVPostRAExpandPseudoLegacy::ID = 0;
-
-bool RISCVPostRAExpandPseudoImpl::run(MachineFunction &MF) {
-  TII = static_cast<const RISCVInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  bool Modified = false;
-  for (auto &MBB : MF)
-    Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool RISCVPostRAExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
+} // anonymous namespace
 
 bool RISCVPostRAExpandPseudoImpl::expandMI(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
+    MachineBasicBlock::iterator &NextMBBI) const {
   switch (MBBI->getOpcode()) {
   case RISCV::PseudoMovImm:
     return expandMovImm(MBB, MBBI);
@@ -95,13 +77,13 @@ bool RISCVPostRAExpandPseudoImpl::expandMI(
     return expandAddUpperImm(MBB, MBBI);
   case RISCV::PseudoMERGE:
     return expandMERGE(MBB, MBBI);
-  default:
-    return false;
   }
+
+  return false;
 }
 
 bool RISCVPostRAExpandPseudoImpl::expandMovImm(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
   int64_t Val = MBBI->getOperand(1).getImm();
@@ -118,7 +100,7 @@ bool RISCVPostRAExpandPseudoImpl::expandMovImm(
 }
 
 bool RISCVPostRAExpandPseudoImpl::expandMovAddr(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
   Register DstReg = MBBI->getOperand(0).getReg();
@@ -138,7 +120,7 @@ bool RISCVPostRAExpandPseudoImpl::expandMovAddr(
 }
 
 bool RISCVPostRAExpandPseudoImpl::expandAddUpperImm(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   DebugLoc DL = MBBI->getDebugLoc();
 
   Register DstReg = MBBI->getOperand(0).getReg();
@@ -163,7 +145,7 @@ bool RISCVPostRAExpandPseudoImpl::expandAddUpperImm(
 
 /// Transfer implicit operands on the pseudo instruction to the
 /// instructions created from the expansion.
-static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &MI) {
+static void transferImpOps(const MachineInstr &OldMI, MachineInstrBuilder &MI) {
   const MCInstrDesc &Desc = OldMI.getDesc();
   for (const MachineOperand &MO :
        llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
@@ -174,7 +156,7 @@ static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &MI) {
 
 // Expand PseudoMERGE to MERGE, MVM, or MVMN.
 bool RISCVPostRAExpandPseudoImpl::expandMERGE(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
@@ -228,13 +210,12 @@ bool RISCVPostRAExpandPseudoImpl::expandMERGE(
   return true;
 }
 
-} // end of anonymous namespace
+char RISCVPostRAExpandPseudoLegacy::ID = 0;
 
 INITIALIZE_PASS(RISCVPostRAExpandPseudoLegacy, "riscv-post-ra-expand-pseudo",
                 RISCV_POST_RA_EXPAND_PSEUDO_NAME, false, false)
-namespace llvm {
 
-FunctionPass *createRISCVPostRAExpandPseudoLegacyPass() {
+FunctionPass *llvm::createRISCVPostRAExpandPseudoLegacyPass() {
   return new RISCVPostRAExpandPseudoLegacy();
 }
 
@@ -249,5 +230,3 @@ RISCVPostRAExpandPseudoPass::run(MachineFunction &MF,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-} // end of namespace llvm
