@@ -856,6 +856,10 @@ class LoopVectorizationPlanner {
   /// The profitability analysis.
   LoopVectorizationCostModel &CM;
 
+  /// The profitability analysis for epilogue tail-folding.
+  /// Cleared after making cost based decisions.
+  std::unique_ptr<LoopVectorizationCostModel> EpilogueTfCM;
+
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
 
@@ -897,11 +901,16 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+      LoopVectorizationCostModel &CM,
+      std::unique_ptr<LoopVectorizationCostModel> EpilogueTfCM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
+      OptimizationRemarkEmitter *ORE);
+
+  ~LoopVectorizationPlanner();
+
+  /// Destroy the cost model.
+  void clearEpilogueTfCM();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -910,7 +919,7 @@ public:
 
   /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
   /// should be avoided up-front, no tail-folded plans are generated.
-  bool planForEpilogueTF(LoopVectorizationCostModel &EpilogueCM);
+  bool planForEpilogueTF();
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
