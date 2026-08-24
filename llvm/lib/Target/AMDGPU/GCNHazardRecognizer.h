@@ -242,6 +242,11 @@ private:
   int checkMAIHazards(MachineInstr *MI) const;
   int checkMAIHazards908(MachineInstr *MI) const;
   int checkMAIHazards90A(MachineInstr *MI) const;
+  /// Wait states needed when \p MI reads as src2/C a register that the earlier
+  /// MFMA \p MI1 wrote, taken from the wait state tables for overlapping
+  /// register tuples.
+  int getMFMAOverlappedSrcCWaitStates(const MachineInstr *MI,
+                                      const MachineInstr *MI1) const;
   /// Pad the latency between neighboring MFMA instructions with s_nops. The
   /// percentage of wait states to fill with s_nops is specified by the command
   /// line option '-amdgpu-mfma-padding-ratio'.
