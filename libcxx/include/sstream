@@ -320,7 +320,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__fwd/sstream.h>
-#    include <__locale>
+#    include <__locale_dir/locale.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/is_convertible.h>
 #    include <__utility/swap.h>

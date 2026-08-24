@@ -726,12 +726,11 @@ void SuspiciousCallArgumentCheck::setArgNamesAndTypes(
         ArgNames.push_back(Var->getName());
         continue;
       }
-      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
-        if (FCall->getNameInfo().getName().isIdentifier()) {
-          ArgTypes.push_back(FCall->getType());
-          ArgNames.push_back(FCall->getName());
-          continue;
-        }
+      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl());
+          FCall && FCall->getNameInfo().getName().isIdentifier()) {
+        ArgTypes.push_back(FCall->getType());
+        ArgNames.push_back(FCall->getName());
+        continue;
       }
     }
 

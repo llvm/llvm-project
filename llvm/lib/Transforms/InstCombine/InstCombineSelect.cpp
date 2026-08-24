@@ -4511,6 +4511,48 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
   return nullptr;
 }
 
+/// Fold select (A & Shift == 0 | B & Shift == 0), 0, Shift -> Shift & A & B
+/// where Shift is known to be a power of two.
+static Instruction *foldSelectAndOrPowerOfTwo(SelectInst &SI,
+                                              InstCombiner::BuilderTy &Builder,
+                                              const SimplifyQuery &SQ) {
+  Value *Cond = SI.getCondition();
+
+  if (!Cond->hasOneUse())
+    return nullptr;
+
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  Value *A, *B, *Shift;
+
+  bool Case1 =
+      match(TrueVal, m_Zero()) && match(FalseVal, m_Value(Shift)) &&
+      match(Cond, m_Or(m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(A)),
+                                      m_Zero()),
+                       m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                      m_c_And(m_Specific(Shift), m_Value(B)),
+                                      m_Zero())));
+
+  bool Case2 =
+      match(FalseVal, m_Zero()) && match(TrueVal, m_Value(Shift)) &&
+      match(Cond, m_And(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(A)),
+                                       m_Zero()),
+                        m_SpecificICmp(ICmpInst::ICMP_NE,
+                                       m_c_And(m_Specific(Shift), m_Value(B)),
+                                       m_Zero())));
+
+  if ((Case1 || Case2) && isKnownToBeAPowerOfTwo(Shift, /*OrZero=*/true,
+                                                 SQ.getWithInstruction(&SI))) {
+    Value *And1 = Builder.CreateAnd(Shift, A);
+    return BinaryOperator::CreateAnd(And1, B);
+  }
+
+  return nullptr;
+}
+
 // Return true if no use can observe the sign of zero of the select result,
 // looking through phis, selects and the loop back edge to the select itself.
 static bool isSelectZeroSignInsignificant(SelectInst &SI) {
@@ -4527,13 +4569,14 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
       auto *User = cast<Instruction>(U.getUser());
       if (User == &SI)
         continue;
+      if (canIgnoreSignBitOfZero(U))
+        continue;
       if (isa<PHINode, SelectInst>(User)) {
         if (Visited.insert(User).second)
           Worklist.push_back(User);
         continue;
       }
-      if (!canIgnoreSignBitOfZero(U))
-        return false;
+      return false;
     }
   }
   return true;
@@ -4628,6 +4671,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   if (Instruction *I = foldSelectNegNot(SI, Builder))
+    return I;
+
+  if (Instruction *I = foldSelectAndOrPowerOfTwo(SI, Builder, SQ))
     return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
@@ -5333,11 +5379,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
                                            m_Specific(CondVal), m_Value())))) {
     auto *LoadInst = cast<IntrinsicInst>(TrueVal);
-    Instruction *In = Builder.CreateMaskedLoad(
-        TrueVal->getType(), MaskedLoadPtr,
-        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
-    In->setAAMetadata(LoadInst->getAAMetadata());
-    return replaceInstUsesWith(SI, In);
+    // Keep the load at its original position to avoid crossing writes. The new
+    // passthrough must therefore be available there.
+    if (DT.dominates(FalseVal, LoadInst)) {
+      Builder.SetInsertPoint(LoadInst);
+      Instruction *In = Builder.CreateMaskedLoad(
+          TrueVal->getType(), MaskedLoadPtr,
+          LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+      In->setAAMetadata(LoadInst->getAAMetadata());
+      return replaceInstUsesWith(SI, In);
+    }
   }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,

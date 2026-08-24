@@ -519,7 +519,7 @@ public:
   }
 
   void add(const ConceptReference *CR, RelSet Flags) {
-    add(CR->getNamedConcept(), Flags);
+    add(CR->getNamedConcept().getAsTemplateDecl(), Flags);
   }
 };
 
@@ -1081,7 +1081,7 @@ private:
       return {ReferenceLoc{CR->getNestedNameSpecifierLoc(),
                            CR->getConceptNameLoc(),
                            /*IsDecl=*/false,
-                           {CR->getNamedConcept()}}};
+                           {CR->getNamedConcept().getAsTemplateDecl()}}};
     if (const OffsetOfNode *OON = N.get<OffsetOfNode>()) {
       if (OON->getKind() == OffsetOfNode::Field)
         return {ReferenceLoc{NestedNameSpecifierLoc(),

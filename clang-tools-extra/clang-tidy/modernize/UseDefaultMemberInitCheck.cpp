@@ -27,21 +27,21 @@ static bool isExprAllowedInMemberInit(const Expr *E) {
       .Case<IntegerLiteral, FloatingLiteral, CXXBoolLiteralExpr,
             CXXNullPtrLiteralExpr, CharacterLiteral, StringLiteral>(
           [](const auto *) { return true; })
-      .Case<ImplicitValueInitExpr>([](const auto *) { return true; })
-      .Case<ParenExpr>([](const ParenExpr *PE) {
+      .Case([](const ImplicitValueInitExpr *) { return true; })
+      .Case([](const ParenExpr *PE) {
         return isExprAllowedInMemberInit(PE->getSubExpr());
       })
-      .Case<UnaryOperator>([](const UnaryOperator *UO) {
+      .Case([](const UnaryOperator *UO) {
         return isExprAllowedInMemberInit(UO->getSubExpr());
       })
-      .Case<BinaryOperator>([](const BinaryOperator *BO) {
+      .Case([](const BinaryOperator *BO) {
         return isExprAllowedInMemberInit(BO->getLHS()) &&
                isExprAllowedInMemberInit(BO->getRHS());
       })
-      .Case<CastExpr>([](const CastExpr *CE) {
+      .Case([](const CastExpr *CE) {
         return isExprAllowedInMemberInit(CE->getSubExpr());
       })
-      .Case<DeclRefExpr>([](const DeclRefExpr *DRE) {
+      .Case([](const DeclRefExpr *DRE) {
         if (const ValueDecl *D = DRE->getDecl()) {
           if (isa<EnumConstantDecl>(D))
             return true;
@@ -78,11 +78,11 @@ static const DeclRefExpr *findFirstNonVisibleDeclRef(const Stmt *S,
   if (!S)
     return nullptr;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-    if (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
-        !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM))
-      return DRE;
-  }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+      DRE &&
+      (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
+       !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM)))
+    return DRE;
 
   for (const Stmt *Child : S->children())
     if (const auto *DRE = findFirstNonVisibleDeclRef(Child, Field, SM))

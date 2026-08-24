@@ -164,7 +164,8 @@ void removeParDim(SmallVector<GPUParallelDimAttr> &parDims,
 }
 
 #define ACC_OP_WITH_PAR_DIMS_LIST                                              \
-  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp
+  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp,              \
+      ReductionCombineOp
 
 GPUParallelDimsAttr getParDimsAttr(Operation *op) {
   return llvm::TypeSwitch<Operation *, GPUParallelDimsAttr>(op)
@@ -222,6 +223,22 @@ void copyParDimsAttr(Operation *from, Operation *to) {
   assert(hasParDimsAttr(from) &&
          "expected parallel dimensions attribute to already be set");
   setParDimsAttr(to, getParDimsAttr(from));
+}
+
+ActiveParDimsAttr getActiveParDimsAttr(Operation *op) {
+  return op->getAttrOfType<ActiveParDimsAttr>(ActiveParDimsAttr::name);
+}
+
+bool hasActiveParDimsAttr(Operation *op) {
+  return getActiveParDimsAttr(op) != nullptr;
+}
+
+void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr) {
+  op->setAttr(ActiveParDimsAttr::name, attr);
+}
+
+void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims) {
+  setActiveParDimsAttr(op, ActiveParDimsAttr::get(op->getContext(), dims));
 }
 
 int64_t SharedMemoryBudget::alignOffset(int64_t offset, int64_t alignment) {

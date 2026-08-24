@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPUtils.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -144,6 +144,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
 
+  theModule->setAttr(
+      cir::CIRDialect::getDefaultTlsModelAttrName(),
+      cir::TLSModelAttr::get(&mlirContext, getDefaultCIRTLSModel()));
+
   if (langOpts.OpenMP) {
     mlir::omp::OffloadModuleOpts ompOpts(
         langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
@@ -176,7 +180,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Set CUDA GPU binary handle.
   if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
     if (!cudaBinaryName.empty()) {
       theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
                          cir::CUDABinaryHandleAttr::get(
@@ -308,6 +312,12 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
+    theTargetCIRGenInfo = createAArch64TargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
     theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
@@ -432,6 +442,27 @@ void CIRGenModule::emitDeferred() {
   curDeclsToEmit.swap(deferredDeclsToEmit);
 
   for (const GlobalDecl &d : curDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation, a
+    // SYCL kernel caller offload entry point function is generated and emitted
+    // in place of each of these functions.
+    if (const auto *fd = d.getDecl()->getAsFunction()) {
+      if (langOpts.SYCLIsDevice && fd->hasAttr<SYCLKernelEntryPointAttr>() &&
+          fd->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          emitSYCLKernelCaller(fd, getASTContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          emitDeferred();
+        }
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     emitGlobalDecl(d);
 
     // If we found out that we need to emit more decls, do that recursively.
@@ -868,11 +899,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -882,7 +913,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -904,9 +936,17 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
@@ -1081,8 +1121,7 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
     mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
     auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
-    return cgm.getBuilder().getConstRecordOrZeroAttr(
-        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+    return cgm.getBuilder().getConstRecordOrZeroAttr(newMembers, recordTy);
   }
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
@@ -1839,7 +1878,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  gv = createGlobalOp(loc, name, ty);
+  gv = createGlobalOp(loc, name, ty, /*isConstant=*/true);
 
   // Set up extra information and add to the module
   gv.setLinkageAttr(
@@ -2763,6 +2802,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
     }
   }
 
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
+  }
+
   // Keep the first result in the case of a mangling collision.
   const auto *nd = cast<NamedDecl>(gd.getDecl());
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
@@ -3053,16 +3102,24 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
-cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+static cir::TLSModel getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLSModel>(S)
+      .Case("global-dynamic", cir::TLSModel::GeneralDynamic)
+      .Case("local-dynamic", cir::TLSModel::LocalDynamic)
+      .Case("initial-exec", cir::TLSModel::InitialExec)
+      .Case("local-exec", cir::TLSModel::LocalExec);
+}
+
+cir::TLSModel CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
-    return cir::TLS_Model::GeneralDynamic;
+    return cir::TLSModel::GeneralDynamic;
   case CodeGenOptions::LocalDynamicTLSModel:
-    return cir::TLS_Model::LocalDynamic;
+    return cir::TLSModel::LocalDynamic;
   case CodeGenOptions::InitialExecTLSModel:
-    return cir::TLS_Model::InitialExec;
+    return cir::TLSModel::InitialExec;
   case CodeGenOptions::LocalExecTLSModel:
-    return cir::TLS_Model::LocalExec;
+    return cir::TLSModel::LocalExec;
   }
   llvm_unreachable("Invalid TLS model!");
 }
@@ -3071,18 +3128,18 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
                               bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
-  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+  cir::TLSModel tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
-  if (d.getAttr<TLSModelAttr>())
-    errorNYI(d.getSourceRange(), "TLS model attribute");
+  if (const auto *attr = d.getAttr<TLSModelAttr>())
+    tlm = getCIRTLSModel(attr->getModel());
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
 
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
-  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+  if (d.isStaticLocal())
     return;
 
   // If this function was called to set the TLS mode for a temporary whose
@@ -3270,6 +3327,119 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
+// Maps an AST address space to the OpenCL logical address space kind recorded
+// in kernel argument metadata. This mapping is independent of the target
+// address space map, allowing consumers to distinguish OpenCL logical address
+// spaces even when the target maps them to the same address space.
+static cir::LangAddressSpace
+getOpenCLKernelArgAddressSpace(LangAS addressSpace) {
+  switch (addressSpace) {
+  case LangAS::opencl_global:
+    return cir::LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+    return cir::LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_local:
+    return cir::LangAddressSpace::OffloadLocal;
+  case LangAS::opencl_generic:
+    return cir::LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+    return cir::LangAddressSpace::OffloadGlobalDevice;
+  case LangAS::opencl_global_host:
+    return cir::LangAddressSpace::OffloadGlobalHost;
+  default:
+    // All other AST address spaces, including target-specific ones, use the
+    // OpenCL metadata default, which lowers to SPIR address space ID 0.
+    return cir::LangAddressSpace::Default;
+  }
+}
+
+void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                               const clang::FunctionDecl *fd) {
+  assert(fd && "expected a kernel function declaration");
+  const PrintingPolicy &policy = getASTContext().getPrintingPolicy();
+
+  // Create arrays that represent the kernel argument metadata. Each array has
+  // one value per kernel argument, in source order.
+  SmallVector<mlir::Attribute> addressQuals;
+  SmallVector<mlir::Attribute> accessQuals;
+  SmallVector<mlir::Attribute> argTypeNames;
+  SmallVector<mlir::Attribute> argBaseTypeNames;
+  SmallVector<mlir::Attribute> argTypeQuals;
+  SmallVector<mlir::Attribute> argNames;
+
+  for (const ParmVarDecl *param : fd->parameters()) {
+    argNames.push_back(builder.getStringAttr(param->getName()));
+
+    QualType type = param->getType();
+    std::string typeQuals;
+
+    if (type->isImageType() || type->isPipeType()) {
+      errorNYI(param->getSourceRange(),
+               "OpenCL kernel argument metadata for image and pipe types");
+      return;
+    }
+
+    accessQuals.push_back(builder.getStringAttr("none"));
+
+    auto getTypeSpelling = [&](QualType paramType) {
+      std::string typeName = paramType.getUnqualifiedType().getAsString(policy);
+
+      if (paramType.isCanonical()) {
+        StringRef typeNameRef = typeName;
+        if (typeNameRef.consume_front("unsigned "))
+          return std::string("u") + typeNameRef.str();
+        if (typeNameRef.consume_front("signed "))
+          return typeNameRef.str();
+      }
+
+      return typeName;
+    };
+
+    // Type metadata preserves source spelling, while base type metadata uses
+    // canonical spelling without typedefs.
+    if (type->isPointerType()) {
+      QualType pointeeType = type->getPointeeType();
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(),
+          getOpenCLKernelArgAddressSpace(pointeeType.getAddressSpace())));
+
+      argTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(pointeeType) + "*"));
+      argBaseTypeNames.push_back(builder.getStringAttr(
+          getTypeSpelling(pointeeType.getCanonicalType()) + "*"));
+
+      if (type.isRestrictQualified())
+        typeQuals = "restrict";
+      if (pointeeType.isConstQualified() ||
+          pointeeType.getAddressSpace() == LangAS::opencl_constant)
+        typeQuals += typeQuals.empty() ? "const" : " const";
+      if (pointeeType.isVolatileQualified())
+        typeQuals += typeQuals.empty() ? "volatile" : " volatile";
+    } else {
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(), cir::LangAddressSpace::Default));
+
+      argTypeNames.push_back(builder.getStringAttr(getTypeSpelling(type)));
+      argBaseTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(type.getCanonicalType())));
+    }
+
+    argTypeQuals.push_back(builder.getStringAttr(typeQuals));
+  }
+
+  mlir::ArrayAttr names;
+  if (getCodeGenOpts().EmitOpenCLArgMetadata)
+    names = builder.getArrayAttr(argNames);
+
+  mlir::Attribute metadata = cir::OpenCLKernelArgMetadataAttr::get(
+      func.getContext(), builder.getArrayAttr(addressQuals),
+      builder.getArrayAttr(accessQuals), builder.getArrayAttr(argTypeNames),
+      builder.getArrayAttr(argBaseTypeNames),
+      builder.getArrayAttr(argTypeQuals), names);
+  func->setAttr(cir::CIRDialect::getOpenCLKernelArgMetadataAttrName(),
+                metadata);
+}
+
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
@@ -3447,13 +3617,10 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { x.method() }
-    //
-    // Be sure to insert a new function before a current one.
-    CIRGenFunction *cgf = this->curCGF;
-    if (cgf)
-      builder.setInsertionPoint(cgf->curFn);
+    // Functions always belong at module scope, but the ambient insertion
+    // point may be inside another op's region, e.g. a thunk body or a
+    // global's ctor region, so it cannot be used here.
+    builder.setInsertionPointToEnd(theModule.getBody());
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
 
@@ -3478,9 +3645,6 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Record the func_info tag, a C++ special member form or a known standard
     // library entity.
     setFuncInfoAttr(func, funcDecl);
-
-    if (!cgf)
-      theModule.push_back(func);
 
     if (this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are
