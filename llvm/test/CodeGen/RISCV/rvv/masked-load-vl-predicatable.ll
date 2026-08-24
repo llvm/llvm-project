@@ -94,7 +94,7 @@ define <16 x float> @masked_load_signed_cmp(ptr %p, i32 signext %n, i32 signext 
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    srliw a2, a2, 3
 ; CHECK-NEXT:    min a2, a1, a2
-; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    subw a1, a1, a2
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    min a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
@@ -118,7 +118,7 @@ define <16 x float> @masked_load_sgt(ptr %p, i32 signext %n, i32 signext %iv) no
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    srliw a2, a2, 3
 ; CHECK-NEXT:    min a2, a1, a2
-; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    subw a1, a1, a2
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    min a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
