@@ -44,18 +44,31 @@ define void @trip3_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-LABEL: @trip3_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <2 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[DST1:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[TMP0]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <2 x i8> [[TMP1]], ptr [[DST1]], align 1
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 2, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP15]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DST1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DST1]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP16]]
 ; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 3
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -83,18 +96,31 @@ define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-LABEL: @trip5_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[DST1:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[TMP0]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[DST1]], align 1
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 4, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP15]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DST1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DST1]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP16]]
 ; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -360,7 +386,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK-NEXT:    [[MUL]] = mul i8 [[TMP5]], [[RDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[MUL_LCSSA:%.*]] = phi i8 [ [[MUL]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i8 [[MUL_LCSSA]]
