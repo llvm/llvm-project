@@ -78,12 +78,19 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
     return loc->emitError("name of ") << label << " is empty";
 
   bool allowUnderscore = false;
+  auto prev = '\0';
   for (auto &elem : in) {
     if (elem == '_') {
       if (!allowUnderscore)
         return loc->emitError("name of ")
                << label << " should not contain leading or double underscores";
     } else {
+      if (elem == '.') {
+        if (prev == '.')
+          return loc->emitError("empty namespace not allowed");
+      }
+      else
+      {
       if (!isalnum(elem))
         return loc->emitError("name of ")
                << label
@@ -93,9 +100,11 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
       if (llvm::isUpper(elem))
         return loc->emitError("name of ")
                << label << " should not contain uppercase letters";
+      }
     }
 
     allowUnderscore = elem != '_';
+    prev = elem;
   }
 
   return success();
