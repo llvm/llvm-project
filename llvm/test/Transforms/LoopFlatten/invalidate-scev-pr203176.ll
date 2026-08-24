@@ -19,7 +19,7 @@ define i64 @f(i64 %n) {
 ; CHECK-NEXT:    %k = phi i32 [ %k.next, %mid.latch ], [ 0, %mid.loop.preheader ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%mid.loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %mid.loop: Computable, %outer.loop: Uniform, %inner.loop: Invariant }
 ; CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %inner.loop ], [ 0, %mid.loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner.loop> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 {-1,+,1}<%outer.loop> to i64) LoopDispositions: { %inner.loop: Computable, %mid.loop: Uniform, %outer.loop: Uniform }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner.loop> U: [0,4294967295) S: [0,4294967295) Exits: (-1 + (zext i32 {0,+,1}<%outer.loop> to i64))<nsw> LoopDispositions: { %inner.loop: Computable, %mid.loop: Uniform, %outer.loop: Uniform }
 ; CHECK-NEXT:    %2 = mul i64 %indvar1, %1
 ; CHECK-NEXT:    --> {0,+,(sext i32 {0,+,1}<%outer.loop> to i64)}<nsw><%mid.loop> U: [0,1) S: [0,1) Exits: {0,+,(sext i32 {0,+,1}<%outer.loop> to i64)}<nuw><nsw><%mid.loop> LoopDispositions: { %inner.loop: Invariant, %mid.loop: Computable, %outer.loop: Variant }
 ; CHECK-NEXT:    %mul = mul i32 %k, %tc
@@ -33,7 +33,7 @@ define i64 @f(i64 %n) {
 ; CHECK-NEXT:    %arrayidx = getelementptr i32, ptr %gep, i32 %4
 ; CHECK-NEXT:    --> ((4 * (sext i32 {0,+,1}<nuw><%inner.loop> to i64))<nsw> + {null,+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nuw><nsw><%mid.loop>) U: [0,-3) S: [-8589934592,8589934589) Exits: {((4 * (sext i32 {-1,+,1}<%outer.loop> to i64))<nsw> + null),+,(4 * (sext i32 {0,+,1}<%outer.loop> to i64))<nsw>}<nw><%mid.loop> LoopDispositions: { %inner.loop: Computable, %mid.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner.loop> U: [1,4294967296) S: [1,4294967296) Exits: (1 + (zext i32 {-1,+,1}<%outer.loop> to i64))<nuw><nsw> LoopDispositions: { %inner.loop: Computable, %mid.loop: Uniform, %outer.loop: Uniform }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner.loop> U: [1,4294967296) S: [1,4294967296) Exits: (zext i32 {0,+,1}<%outer.loop> to i64) LoopDispositions: { %inner.loop: Computable, %mid.loop: Uniform, %outer.loop: Uniform }
 ; CHECK-NEXT:    %indvar.next2 = add i64 %indvar1, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%mid.loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %mid.loop: Computable, %outer.loop: Uniform, %inner.loop: Invariant }
 ; CHECK-NEXT:    %k.next = add i32 %k, 1
@@ -41,9 +41,9 @@ define i64 @f(i64 %n) {
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nw><%outer.loop> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %outer.loop: Computable, %mid.loop: Invariant, %inner.loop: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
-; CHECK-NEXT:  Loop %inner.loop: backedge-taken count is {-1,+,1}<%outer.loop>
-; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is {-1,+,1}<%outer.loop>
+; CHECK-NEXT:  Loop %inner.loop: backedge-taken count is (-1 + (zext i32 {0,+,1}<%outer.loop> to i64))<nsw>
+; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i64 4294967294
+; CHECK-NEXT:  Loop %inner.loop: symbolic max backedge-taken count is (-1 + (zext i32 {0,+,1}<%outer.loop> to i64))<nsw>
 ; CHECK-NEXT:  Loop %inner.loop: Trip multiple is 1
 ; CHECK-NEXT:  Loop %mid.loop: backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %mid.loop: constant max backedge-taken count is i1 false
