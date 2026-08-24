@@ -314,3 +314,11 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.timer_delete
 )
 
+add_entrypoint_object(
+  clock_getcpuclockid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_getcpuclockid
+)
+
+
