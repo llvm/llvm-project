@@ -23,10 +23,6 @@ static bool operator==(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
                      lhs.NumPlatforms * sizeof(ol_platform_backend_t)) == 0;
 }
 
-static bool operator!=(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
-  return !(lhs == rhs);
-}
-
 template <typename T> void assignAs(void *PropValue, T NewValue) {
   *(static_cast<T *>(PropValue)) = NewValue;
 }
