@@ -33922,16 +33922,11 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
     return SDValue();
 
   EVT MaskVT = Store->getMask().getValueType();
-  EVT MaskExtVT = getPromotedVTForPredicate(MaskVT);
-  EVT MaskReduceVT = MaskExtVT.getScalarType();
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-
-  SDValue MaskExt =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Store->getMask());
-  SDValue CntActive =
-      DAG.getNode(ISD::VECREDUCE_ADD, DL, MaskReduceVT, MaskExt);
-  if (MaskReduceVT != MVT::i64)
-    CntActive = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CntActive);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
 
   SDValue CompressedValue =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
