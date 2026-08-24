@@ -46,6 +46,8 @@
 # NONSTREAMING-NEXT:  1      2     0.50                        fadd	z0.s, p0/m, z0.s, z1.s
 # NONSTREAMING-NEXT:  1      3     0.50                        fmul	z0.s, p0/m, z0.s, z1.s
 # NONSTREAMING-NEXT:  1      2     0.50                        fmin	z0.s, p0/m, z0.s, z1.s
+# NONSTREAMING-NEXT:  1      2     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  1      2     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  1      2     0.50                        fmov	z0.s, p0/m, #1.00000000
 # NONSTREAMING-NEXT:  1      4     0.50                        bfdot	z0.s, z1.h, z2.h
 # NONSTREAMING-NEXT:  1      6     0.25    *                   ld1w	{ z0.s }, p0/z, [x0]
@@ -116,6 +118,8 @@
 # STREAMING-NEXT:     1      4     0.50                        fadd	z0.s, p0/m, z0.s, z1.s
 # STREAMING-NEXT:     1      4     0.50                        fmul	z0.s, p0/m, z0.s, z1.s
 # STREAMING-NEXT:     1      4     0.50                        fmin	z0.s, p0/m, z0.s, z1.s
+# STREAMING-NEXT:     1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     1      1     0.50                        fmov	z0.s, p0/m, #1.00000000
 # STREAMING-NEXT:     1      4     0.50                        bfdot	z0.s, z1.h, z2.h
 # STREAMING-NEXT:     1      2     1.00    *                   ld1w	{ z0.s }, p0/z, [x0]
@@ -248,11 +252,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     1.50   1.50   3.50   3.50   17.13  5.13   0.13   0.13   0.13   0.13   0.13   0.13   48.50  33.50
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     1.50   1.50   3.50   3.50   17.13  5.13   0.13   0.13   0.13   0.13   0.13   0.13   50.50  33.50
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]
-# STREAMING-NEXT:     -      -      -      -     4.00   11.00   -      -     24.50  11.50   -      -      -      -     3.00   25.00  1.00   1.50   21.00  1.00   1.50    -      -      -      -      -      -     1.25   1.25   3.75   3.75   8.63   5.63   0.13   0.13   0.13   0.13   0.13   0.13   14.00  8.00
+# STREAMING-NEXT:     -      -      -      -     4.00   11.00   -      -     24.50  11.50   -      -      -      -     3.00   27.00  1.00   1.50   21.00  1.00   1.50    -      -      -      -      -      -     1.25   1.25   3.75   3.75   8.63   5.63   0.13   0.13   0.13   0.13   0.13   0.13   14.00  8.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   Instructions:
@@ -281,6 +285,8 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fadd	z0.s, p0/m, z0.s, z1.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmul	z0.s, p0/m, z0.s, z1.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmin	z0.s, p0/m, z0.s, z1.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     facge	p0.s, p0/z, z1.s, z0.s
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     facgt	p0.s, p0/z, z1.s, z0.s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	z0.s, p0/m, #1.00000000
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   bfdot	z0.s, z1.h, z2.h
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
@@ -352,6 +358,8 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fadd	z0.s, p0/m, z0.s, z1.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmul	z0.s, p0/m, z0.s, z1.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmin	z0.s, p0/m, z0.s, z1.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	z0.s, p0/m, #1.00000000
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfdot	z0.s, z1.h, z2.h
 # STREAMING-NEXT:     -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
