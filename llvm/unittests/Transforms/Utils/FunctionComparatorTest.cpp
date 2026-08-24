@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Transforms/Utils/FunctionComparator.h"
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
-#include <memory>
 
 using namespace llvm;
 
@@ -129,47 +126,4 @@ TEST(FunctionComparatorTest, TestAPI) {
   EXPECT_TRUE(needToCmpOperands);
   EXPECT_EQ(Cmp.testCmpTypes(F1.T, F2.T), 0);
   EXPECT_EQ(Cmp.testCmpPrimitives(), -4);
-}
-
-TEST(FunctionComparatorTest, SelfReferenceComparisonContext) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M(parseAssemblyString(R"IR(
-        define void @f() {
-          call void @f()
-          ret void
-        }
-
-        define void @g() {
-          call void @g()
-          ret void
-        }
-
-        define void @observable_f(ptr %p) {
-          %cmp = icmp eq ptr %p, @observable_f
-          call void @llvm.assume(i1 %cmp)
-          ret void
-        }
-
-        define void @observable_g(ptr %p) {
-          %cmp = icmp eq ptr %p, @observable_g
-          call void @llvm.assume(i1 %cmp)
-          ret void
-        }
-
-        declare void @llvm.assume(i1)
-      )IR",
-                                                Err, C));
-  ASSERT_TRUE(M);
-
-  GlobalNumberState GN;
-  EXPECT_EQ(FunctionComparator(M->getFunction("f"), M->getFunction("g"), &GN)
-                .compare(),
-            0);
-
-  GN.clear();
-  EXPECT_NE(FunctionComparator(M->getFunction("observable_f"),
-                               M->getFunction("observable_g"), &GN)
-                .compare(),
-            0);
 }

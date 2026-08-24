@@ -478,8 +478,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::BlockAddressVal: {
     const BlockAddress *LBA = cast<BlockAddress>(L);
     const BlockAddress *RBA = cast<BlockAddress>(R);
-    if (int Res = cmpValues(LBA->getFunction(), RBA->getFunction(),
-                            ValueComparisonKind::BlockAddress))
+    if (int Res =
+            cmpValuesAllowingSelfRef(LBA->getFunction(), RBA->getFunction()))
       return Res;
     if (LBA->getFunction() == RBA->getFunction()) {
       // They are BBs in the same function. Order by which comes first in the
@@ -892,27 +892,23 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
   return 0;
 }
 
+int FunctionComparator::cmpValuesAllowingSelfRef(const Value *L,
+                                                 const Value *R) const {
+  if (L == FnL) {
+    if (R == FnR)
+      return 0;
+    return -1;
+  }
+  if (R == FnR)
+    return 1;
+  return cmpValues(L, R);
+}
+
 /// Compare two values used by the two functions under pair-wise comparison. If
 /// this is the first time the values are seen, they're added to the mapping so
 /// that we will detect mismatches on next use.
 /// See comments in declaration for more details.
-int FunctionComparator::cmpValues(const Value *L, const Value *R,
-                                  ValueComparisonKind Kind) const {
-  // A self-reference is equivalent only in structural contexts where the
-  // reference remains valid after forwarding-thunk merging. Otherwise,
-  // merging the functions can change the observable function pointer value.
-  if (Kind != ValueComparisonKind::Normal) {
-    const Value *StrippedL = L->stripPointerCasts();
-    const Value *StrippedR = R->stripPointerCasts();
-    if (StrippedL == FnL) {
-      if (StrippedR == FnR)
-        return 0;
-      return -1;
-    }
-    if (StrippedR == FnR)
-      return 1;
-  }
-
+int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   const Constant *ConstL = dyn_cast<Constant>(L);
   const Constant *ConstR = dyn_cast<Constant>(R);
   if (ConstL && ConstR) {
@@ -969,17 +965,19 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
       return Res;
     if (needToCmpOperands) {
       assert(InstL->getNumOperands() == InstR->getNumOperands());
-      const auto *CBL = dyn_cast<CallBase>(InstL);
-      const auto *CBR = dyn_cast<CallBase>(InstR);
+      const auto *CBL = dyn_cast<CallBase>(&*InstL);
 
       for (unsigned i = 0, e = InstL->getNumOperands(); i != e; ++i) {
         Value *OpL = InstL->getOperand(i);
         Value *OpR = InstR->getOperand(i);
-        ValueComparisonKind Kind = ValueComparisonKind::Normal;
-        if (CBL && CBR && CBL->isCallee(&InstL->getOperandUse(i)) &&
-            CBR->isCallee(&InstR->getOperandUse(i)))
-          Kind = ValueComparisonKind::CallTarget;
-        if (int Res = cmpValues(OpL, OpR, Kind))
+        int Res;
+        if (CBL && CBL->isCallee(&InstL->getOperandUse(i))) {
+          assert(cast<CallBase>(&*InstR)->isCallee(&InstR->getOperandUse(i)));
+          Res = cmpValuesAllowingSelfRef(OpL, OpR);
+        } else {
+          Res = cmpValues(OpL, OpR);
+        }
+        if (Res)
           return Res;
         // cmpValues should ensure this is true.
         assert(cmpTypes(OpL->getType(), OpR->getType()) == 0);
