@@ -49,6 +49,12 @@ static llvm::cl::opt<std::string>
                  llvm::cl::init("AArch64MIR_TargetOp"),
                  llvm::cl::cat(targetOpCat));
 
+static llvm::cl::opt<bool> emitLowering(
+    "mir-emit-lowering",
+    llvm::cl::desc("Emit a C++ opcode-record-name -> op-mnemonic lowering "
+                   "table (as `{\"OPC\", \"mnem\"},` lines) instead of ODS"),
+    llvm::cl::init(false), llvm::cl::cat(targetOpCat));
+
 /// Value of a boolean record field, treating unset/missing as false.
 static bool getBitOrFalse(const Record &record, llvm::StringRef field) {
   const llvm::RecordVal *rv = record.getValue(field);
@@ -127,11 +133,13 @@ static unsigned numDagArgs(const Record &record, llvm::StringRef field) {
 }
 
 static bool emitTargetOps(const RecordKeeper &records, llvm::raw_ostream &os) {
-  llvm::emitSourceFileHeader(
-      (llvm::Twine(targetNamespace) + " MIR target operations").str(), os,
-      records);
-  os << "include \"mlir/Dialect/MIR/IR/MIRTypes.td\"\n";
-  os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
+  if (!emitLowering) {
+    llvm::emitSourceFileHeader(
+        (llvm::Twine(targetNamespace) + " MIR target operations").str(), os,
+        records);
+    os << "include \"mlir/Dialect/MIR/IR/MIRTypes.td\"\n";
+    os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
+  }
 
   // Cluster instructions by mnemonic, preserving first-seen order.
   llvm::StringMap<unsigned> clusterIndex;
@@ -169,6 +177,16 @@ static bool emitTargetOps(const RecordKeeper &records, llvm::raw_ostream &os) {
     const Cluster &c = kv.second;
 
     std::string opName = sanitizeMnemonic(mnemonic);
+
+    // Lowering-table mode: emit `{"OPCODE", "mnem"},` for each concrete opcode
+    // this op subsumes, and skip ODS emission.
+    if (emitLowering) {
+      for (llvm::StringRef opc : c.opcodes)
+        os << "{\"" << opc << "\", \"" << opName << "\"},\n";
+      ++emitted;
+      continue;
+    }
+
     std::string ident = sanitizeIdent(opName);
     std::string base = ident;
     unsigned suffix = 0;

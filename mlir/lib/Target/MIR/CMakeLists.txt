@@ -17,6 +17,7 @@ add_mlir_translation_library(MLIRTargetMIRImport
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRAArch64MIRDialect
   MLIRMIRDialect
   MLIRTranslateLib
   )

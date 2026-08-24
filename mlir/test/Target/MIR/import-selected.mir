@@ -1,0 +1,28 @@
+# RUN: mlir-translate --import-mir %s | FileCheck %s
+
+# Import selected (post-instruction-select) AArch64 MachineIR. Concrete target
+# opcodes are mapped to their collapsed aarch64_mir op via the generated
+# lowering table, carrying a `variant` attribute that names the concrete
+# opcode. Register-class virtual registers are typed by their class size.
+
+--- |
+  define void @sel(i64 %a, i64 %b) { ret void }
+...
+---
+name:            sel
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:gpr64 = ADDXrs %0, %1, 0
+    %3:gpr64 = SUBXrs %2, %0, 0
+    $x0 = COPY %3
+...
+
+# CHECK-LABEL: mir.func @sel
+# CHECK: %[[A:.*]] = mir.copy_from_phys #mir.physreg<"X0"> -> !mir.scalar<64>
+# CHECK: %[[B:.*]] = mir.copy_from_phys #mir.physreg<"X1"> -> !mir.scalar<64>
+# CHECK: %[[S:.*]] = aarch64_mir.add %[[A]], %[[B]] {variant = "ADDXrs"} : (!mir.scalar<64>, !mir.scalar<64>) -> !mir.scalar<64>
+# CHECK: %[[D:.*]] = aarch64_mir.sub %[[S]], %[[A]] {variant = "SUBXrs"} : (!mir.scalar<64>, !mir.scalar<64>) -> !mir.scalar<64>
+# CHECK: mir.copy_to_phys %[[D]] : !mir.scalar<64> to #mir.physreg<"X0">
