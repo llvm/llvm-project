@@ -32,7 +32,7 @@ libmod.%.dylib: mod.%.swift \
 # harmless as long as it has no prerequisite newer than that target.
 main.a main.b: $(call tool_prereq,$(SWIFTC_PATH)) $(call tool_prereq,$(SWIFT_FRONTEND_PATH))
 
-main.%: main.swift
+main.%: main.swift libmod.%.dylib
 	$(call RM_RF,main.$*.dSYM main main.dSYM)
 	$(call LN_SF,libmod.$*.dylib,libmod.dylib)
 	$(call LN_SF,libmod.$*.dylib.dSYM,libmod.dylib.dSYM)
