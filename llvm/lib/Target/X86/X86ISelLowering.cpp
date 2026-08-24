@@ -462,11 +462,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, VT, Expand);
     setOperationAction(ISD::FP_TO_BF16, VT, Custom);
   }
-  // The vector-based lowering below needs SSE2 registers.
-  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
-    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
-    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
-  }
 
   setOperationAction(ISD::PARITY, MVT::i8, Custom);
   setOperationAction(ISD::PARITY, MVT::i16, Custom);
@@ -702,6 +697,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
 
     setOperationAction(ISD::STRICT_FADD, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FSUB, MVT::f16, Promote);
