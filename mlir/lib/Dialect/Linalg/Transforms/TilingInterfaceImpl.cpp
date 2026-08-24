@@ -552,11 +552,12 @@ static bool isSubtractingAccumulation(Operation *combinerOp,
 /// accumulation performed by `combinerOp`, preserving its fast-math flags,
 /// rounding mode and integer overflow flags.
 ///
-/// Note that the overflow flags assert that the original accumulation does not
-/// wrap, which may not hold for partial results since they are subtractions
-/// from zero. The flags are propagated nonetheless, for consistency with the
-/// other combiners, which are cloned with their flags. This behaviour should
-/// be revisited.
+/// TODO: see issue https://github.com/llvm/llvm-project/issues/218538
+/// The overflow flags assert that the original accumulation does not wrap,
+/// which may not hold for partial results since they are subtractions from
+/// zero. The flags are propagated nonetheless, for consistency with the other
+/// combiners, which are cloned with their flags. This behaviour should be
+/// revisited.
 static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
                                                 Operation *combinerOp,
                                                 Value lhs, Value rhs) {

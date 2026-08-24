@@ -1125,7 +1125,7 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1) -> (d0)>
 
 module {
-  func.func @fail_for_rhs_accumulator(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
+  func.func @negative_reduction_tile_rhs_accumulator_f32(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
     // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
     ^bb0(%in: f32, %acc: f32):
@@ -1133,6 +1133,31 @@ module {
       linalg.yield %sub : f32
     } -> tensor<?xf32>
     return %0 : tensor<?xf32>
+  }
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{failed to tile using partial reduction}}
+      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op = transform.structured.tile_reduction_using_for %0 by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1) -> (d0)>
+
+module {
+  func.func @negative_reduction_tile_rhs_accumulator_i32(%arg0: tensor<?x?xi32>, %arg1: tensor<?xi32>) -> tensor<?xi32> {
+    // expected-error @below {{'linalg.generic' op failed to determine how to split the reduction operation}}
+    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xi32>) outs(%arg1 : tensor<?xi32>) {
+    ^bb0(%in: i32, %acc: i32):
+      %sub = arith.subi %in, %acc : i32
+      linalg.yield %sub : i32
+    } -> tensor<?xi32>
+    return %0 : tensor<?xi32>
   }
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
