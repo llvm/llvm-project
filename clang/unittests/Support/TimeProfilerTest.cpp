@@ -397,7 +397,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc",
                                 /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
   std::string Json = teardownProfiler();
-#ifdef _WIN32
+#ifndef _WIN32
   ASSERT_EQ(R"(
 ExecuteCompiler
 | Frontend (test.cc)
