@@ -335,7 +335,8 @@ void M68kInstrInfo::AddZExt(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator I, DebugLoc DL,
                             unsigned Reg, MVT From, MVT To) const {
 
-  // On 68000, SWAP -> CLR -> SWAP is faster than AND with mask.
+  // On pre-020 (16-bit bus) CPUs, SWAP -> CLR -> SWAP is faster than AND with
+  // mask.
   if (!Subtarget.atLeastM68020() && From == MVT::i16 && To == MVT::i32 &&
       M68k::DR32RegClass.contains(Reg)) {
     unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
