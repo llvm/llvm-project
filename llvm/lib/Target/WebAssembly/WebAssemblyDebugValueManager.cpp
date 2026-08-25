@@ -45,8 +45,10 @@ WebAssemblyDebugValueManager::WebAssemblyDebugValueManager(MachineInstr *Def)
   if (RemainingUses == 0)
     return;
 
-  // To preserve the order of DBG_VALUEs and correctly handle non-SSA cases,
-  // we scan the BB as far as needed to find all candidates.
+  // Scan forward to collect DBG_VALUEs in block order.
+  // Scan backward at the same pace to account for earlier uses and stop once
+  // all possible matches have been found.
+  // Only the forward scan collects DBG_VALUEs.
   MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
                               DownEnd = MBB->end(), Up = Def->getIterator(),
                               UpBegin = MBB->begin();
