@@ -1361,7 +1361,11 @@ void SymbolPatterns::clear() {
 
 void SymbolPatterns::insert(StringRef symbolName) {
   Expected<GlobPattern> pattern = GlobPattern::create(symbolName);
-  checkError(pattern.takeError());
+  if (!pattern) {
+    error("invalid symbol-name pattern: " + symbolName + ": " +
+          toString(pattern.takeError()));
+    return;
+  }
   // A pattern that denotes a single string is kept as a literal: literals are
   // matched by hash lookup, and only literals seed the force-load of lazy
   // archive members below.
