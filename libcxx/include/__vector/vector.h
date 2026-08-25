@@ -36,6 +36,7 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
+#include <__memory/construct_at.h>
 #include <__memory/noexcept_move_assign_container.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
@@ -1142,13 +1143,41 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (size() != capacity()) {
-    pointer __end = __layout_.__end_ptr();
-    if (__p == __end) {
-      __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-    } else {
-      __temp_value<value_type, _Allocator> __tmp(this->__layout_.__alloc(), std::forward<_Args>(__args)...);
-      __move_range(__p, __end, __p + 1);
-      *__p = std::move(__tmp.get());
+#ifndef _LIBCPP_CXX03_LANG
+    if constexpr (__allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                  __allocator_has_trivial_destroy_v<allocator_type, value_type> &&
+                  (__is_nothrow_relocatable_v<value_type> || !is_nothrow_move_assignable<value_type>::value)) {
+      union _Union {
+        constexpr _Union() {}
+        _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_Union() {}
+
+        value_type __tmp_;
+      } __tmp;
+
+      std::__construct_at(std::addressof(__tmp.__tmp_), std::forward<_Args>(__args)...);
+      auto __raw_pos = std::__to_address(__p);
+
+      auto __tail_guard = std::__make_exception_guard([&] { __layout_.__set_bound_using_pointer(__p); });
+      std::__uninitialized_relocate_backward(__raw_pos, std::__to_address(__layout_.__end_ptr()), __raw_pos + 1);
+      __tail_guard.__complete();
+
+      auto __elem_guard = std::__make_exception_guard([&] {
+        std::__destroy(__raw_pos + 1, std::__to_address(__layout_.__end_ptr() + 1));
+      });
+      std::__uninitialized_relocate_backward(std::addressof(__tmp.__tmp_), std::addressof(__tmp.__tmp_) + 1, __raw_pos);
+      __elem_guard.__complete();
+      __layout_.__set_bound_using_pointer(__layout_.__end_ptr() + 1);
+    } else
+#endif
+    {
+      pointer __end = __layout_.__end_ptr();
+      if (__p == __end) {
+        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+      } else {
+        __temp_value<value_type, _Allocator> __tmp(this->__layout_.__alloc(), std::forward<_Args>(__args)...);
+        __move_range(__p, __end, __p + 1);
+        *__p = std::move(__tmp.get());
+      }
     }
   } else {
     _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
