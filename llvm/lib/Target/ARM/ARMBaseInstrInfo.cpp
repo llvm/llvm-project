@@ -923,6 +923,22 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
 }
 
+const MachineOperand &
+ARMBaseInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  assert(MI.isCall());
+
+  switch (MI.getOpcode()) {
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+    return MI.getOperand(2);
+  default:
+    return TargetInstrInfo::getCalleeOperand(MI);
+  }
+}
+
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
                                                      unsigned Reg,
                                                      unsigned SubIdx,
