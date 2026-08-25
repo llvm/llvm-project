@@ -1960,7 +1960,6 @@ let TargetPrefix = "riscv" in {
 // Zvabd - Vector Absolute Difference
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in {
-  defm vabs    : RISCVUnaryAA;
   defm vabd    : RISCVBinaryAAX;
   defm vabdu   : RISCVBinaryAAX;
   defm vwabda  : RISCVTernaryWideVS2First;

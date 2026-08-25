@@ -131,21 +131,6 @@ defm : VPatTernaryW_VX_VS2First<"int_riscv_vwabdau", "PseudoVWABDAU",
 
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (!cast<Intrinsic>("int_riscv_vabs")
-                           (vti.Vector vti.RegClass:$passthru),
-                           (vti.Vector vti.RegClass:$rs2), VLOpFrag)),
-              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
-                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
-                  GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(vti.Vector (!cast<Intrinsic>("int_riscv_vabs_mask")
-                           (vti.Vector vti.RegClass:$passthru),
-                           (vti.Vector vti.RegClass:$rs2),
-                           (vti.Mask VMV0:$vm), VLOpFrag,
-                           (XLenVT timm:$policy))),
-              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX#"_MASK")
-                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
-                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
-                  (XLenVT timm:$policy))>;
     def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
               (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,

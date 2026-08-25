@@ -308,7 +308,8 @@ multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
   }
 }
 
-multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
+multiclass RVVPseudoUnaryBuiltin<string IR, string type_range,
+                                 string suffix = "v", string prototype = "vv"> {
   let Name = NAME,
       IRName = IR,
       MaskedIRName = IR # "_mask",
@@ -317,7 +318,7 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
         return emitRVVPseudoUnaryBuiltin(this, E, ReturnValue, ResultType, ID,
                                          Ops, PolicyAttrs, IsMasked);
       }] in {
-        def : RVVBuiltin<"v", "vv", type_range>;
+        def : RVVBuiltin<suffix, prototype, type_range>;
   }
 }
 
@@ -2057,7 +2058,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
 
   // zvabd
   let RequiredFeatures = ["zvabd"] in {
-    defm vabs : RVVOutBuiltinSet<"vabs", "csil", [["v", "Uv", "Uvv"]]>;
+    defm vabs_v : RVVPseudoUnaryBuiltin<"vabd", "csil", "Uv", "Uvv">;
     defm vabd : RVVOutOp1BuiltinSet<"vabd", "csil",
                                      [["vv", "Uv", "Uvvv"],
                                       ["vx", "Uv", "Uvve"]]>;
