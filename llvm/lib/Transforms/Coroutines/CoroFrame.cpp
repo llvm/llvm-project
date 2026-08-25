@@ -51,92 +51,6 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 #define DEBUG_TYPE "coro-frame"
 
-namespace {
-class FrameTypeBuilder;
-// Mapping from the to-be-spilled value to all the users that need reload.
-struct FrameDataInfo {
-  // All the values (that are not allocas) that needs to be spilled to the
-  // frame.
-  coro::SpillInfo &Spills;
-  // Allocas contains all values defined as allocas that need to live in the
-  // frame.
-  SmallVectorImpl<coro::AllocaInfo> &Allocas;
-
-  FrameDataInfo(coro::SpillInfo &Spills,
-                SmallVectorImpl<coro::AllocaInfo> &Allocas)
-      : Spills(Spills), Allocas(Allocas) {}
-
-  SmallVector<Value *, 8> getAllDefs() const {
-    SmallVector<Value *, 8> Defs;
-    for (const auto &P : Spills)
-      Defs.push_back(P.first);
-    for (const auto &A : Allocas)
-      Defs.push_back(A.Alloca);
-    return Defs;
-  }
-
-  uint32_t getFieldIndex(Value *V) const {
-    auto Itr = FieldIndexMap.find(V);
-    assert(Itr != FieldIndexMap.end() &&
-           "Value does not have a frame field index");
-    return Itr->second;
-  }
-
-  void setFieldIndex(Value *V, uint32_t Index) {
-    assert(FieldIndexMap.count(V) == 0 &&
-           "Cannot set the index for the same field twice.");
-    FieldIndexMap[V] = Index;
-  }
-
-  Align getAlign(Value *V) const {
-    auto Iter = FieldAlignMap.find(V);
-    assert(Iter != FieldAlignMap.end());
-    return Iter->second;
-  }
-
-  void setAlign(Value *V, Align AL) {
-    assert(FieldAlignMap.count(V) == 0);
-    FieldAlignMap.insert({V, AL});
-  }
-
-  uint64_t getDynamicAlign(Value *V) const {
-    auto Iter = FieldDynamicAlignMap.find(V);
-    assert(Iter != FieldDynamicAlignMap.end());
-    return Iter->second;
-  }
-
-  void setDynamicAlign(Value *V, uint64_t Align) {
-    assert(FieldDynamicAlignMap.count(V) == 0);
-    FieldDynamicAlignMap.insert({V, Align});
-  }
-
-  uint64_t getOffset(Value *V) const {
-    auto Iter = FieldOffsetMap.find(V);
-    assert(Iter != FieldOffsetMap.end());
-    return Iter->second;
-  }
-
-  void setOffset(Value *V, uint64_t Offset) {
-    assert(FieldOffsetMap.count(V) == 0);
-    FieldOffsetMap.insert({V, Offset});
-  }
-
-  // Update field offset and alignment information from FrameTypeBuilder.
-  void updateLayoutInfo(FrameTypeBuilder &B);
-
-private:
-  // Map from values to their slot indexes on the frame (insertion order).
-  DenseMap<Value *, uint32_t> FieldIndexMap;
-  // Map from values to their alignment on the frame. They would be set after
-  // the frame is built.
-  DenseMap<Value *, Align> FieldAlignMap;
-  DenseMap<Value *, uint64_t> FieldDynamicAlignMap;
-  // Map from values to their offset on the frame. They would be set after
-  // the frame is built.
-  DenseMap<Value *, uint64_t> FieldOffsetMap;
-};
-} // namespace
-
 #ifndef NDEBUG
 static void dumpSpills(StringRef Title, const coro::SpillInfo &Spills) {
   dbgs() << "------------- " << Title << " --------------\n";
@@ -223,7 +137,7 @@ public:
   ///
   /// Side Effects: Because We sort the allocas, the order of allocas in the
   /// frame may be different with the order in the source code.
-  void addFieldForAllocas(const Function &F, FrameDataInfo &FrameData,
+  void addFieldForAllocas(const Function &F, coro::FrameDataInfo &FrameData,
                           coro::Shape &Shape, bool OptimizeFrame);
 
   /// Add a field to this structure for a spill.
@@ -283,6 +197,9 @@ public:
   /// Finish the layout and compute final size and alignment.
   void finish();
 
+  // Update field offset and alignment information from FrameTypeBuilder.
+  void updateLayoutInfo(coro::FrameDataInfo &Info);
+
   uint64_t getStructSize() const {
     assert(IsFinished && "not yet finished!");
     return StructSize;
@@ -300,26 +217,26 @@ public:
 };
 } // namespace
 
-void FrameDataInfo::updateLayoutInfo(FrameTypeBuilder &B) {
+void FrameTypeBuilder::updateLayoutInfo(coro::FrameDataInfo &Info) {
   auto Updater = [&](Value *I) {
-    uint32_t FieldIndex = getFieldIndex(I);
-    auto Field = B.getLayoutField(FieldIndex);
-    setAlign(I, Field.Alignment);
-    uint64_t dynamicAlign =
+    uint32_t FieldIndex = Info.getFieldIndex(I);
+    auto Field = getLayoutField(FieldIndex);
+    Info.setAlign(I, Field.Alignment);
+    uint64_t DynamicAlign =
         Field.DynamicAlignBuffer
             ? Field.DynamicAlignBuffer + Field.Alignment.value()
             : 0;
-    setDynamicAlign(I, dynamicAlign);
-    setOffset(I, Field.Offset);
+    Info.setDynamicAlign(I, DynamicAlign);
+    Info.setOffset(I, Field.Offset);
   };
-  for (auto &S : Spills)
+  for (auto &S : Info.Spills)
     Updater(S.first);
-  for (const auto &A : Allocas)
+  for (const auto &A : Info.Allocas)
     Updater(A.Alloca);
 }
 
 void FrameTypeBuilder::addFieldForAllocas(const Function &F,
-                                          FrameDataInfo &FrameData,
+                                          coro::FrameDataInfo &FrameData,
                                           coro::Shape &Shape,
                                           bool OptimizeFrame) {
   using AllocaSetType = SmallVector<AllocaInst *, 4>;
@@ -477,7 +394,7 @@ void FrameTypeBuilder::finish() {
   IsFinished = true;
 }
 
-static void cacheDIVar(FrameDataInfo &FrameData,
+static void cacheDIVar(coro::FrameDataInfo &FrameData,
                        DenseMap<Value *, DILocalVariable *> &DIVarCache) {
   for (auto *V : FrameData.getAllDefs()) {
     if (DIVarCache.contains(V))
@@ -623,7 +540,7 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
 ///    build the DIType by Type. We did this in solveDIType. We only handle
 ///    integer, float, double, integer type and struct type for now.
 static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
-                                FrameDataInfo &FrameData) {
+                                coro::FrameDataInfo &FrameData) {
   DISubprogram *DIS = F.getSubprogram();
   // If there is no DISubprogram for F, it implies the function is compiled
   // without debug info. So we also don't generate debug info for the frame.
@@ -803,7 +720,7 @@ static bool hasAccessingPromiseBeforeCB(const DominatorTree &DT,
 //   - Suspend/Resume index
 //   - Spilled values and allocas
 static void buildFrameLayout(Function &F, const DominatorTree &DT,
-                             coro::Shape &Shape, FrameDataInfo &FrameData,
+                             coro::Shape &Shape, coro::FrameDataInfo &FrameData,
                              bool OptimizeFrame) {
   const DataLayout &DL = F.getDataLayout();
 
@@ -874,7 +791,7 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
 
   B.finish();
 
-  FrameData.updateLayoutInfo(B);
+  B.updateLayoutInfo(FrameData);
   Shape.FrameAlign = B.getStructAlign();
   Shape.FrameSize = B.getStructSize();
 
@@ -939,7 +856,7 @@ static Type *extractByvalIfArgument(Value *MaybeArgument) {
 /// Store Def into the coroutine frame.
 static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
                                  Type *ByValTy, const coro::Shape &Shape,
-                                 const FrameDataInfo &FrameData) {
+                                 const coro::FrameDataInfo &FrameData) {
   LLVMContext &Ctx = Shape.CoroBegin->getContext();
   uint64_t Offset = FrameData.getOffset(Def);
 
@@ -964,7 +881,7 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 
 /// Returns a pointer into the coroutine frame at the offset where Orig is
 /// located.
-static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
+static Value *createGEPToFramePointer(const coro::FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
                                       Value *Orig) {
   LLVMContext &Ctx = Shape.CoroBegin->getContext();
@@ -1028,7 +945,7 @@ findDbgRecordsThroughLoads(Function &F, Value *Def) {
 // Helper function to handle allocas that may be accessed before CoroBegin.
 // This creates a memcpy from the original alloca to the coroutine frame after
 // CoroBegin, ensuring the frame has the correct initial values.
-static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
+static void handleAccessBeforeCoroBegin(const coro::FrameDataInfo &FrameData,
                                         coro::Shape &Shape,
                                         IRBuilder<> &Builder,
                                         AllocaInst *Alloca) {
@@ -1059,7 +976,7 @@ static void handleAccessBeforeCoroBegin(const FrameDataInfo &FrameData,
 //    whatever
 //
 //
-static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
+static void insertSpills(const coro::FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
   IRBuilder<> Builder(C);
@@ -2026,28 +1943,31 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
       Shape.ABI != coro::ABI::RetconOnce)
     sinkLifetimeStartMarkers(F, Shape, Checker, DT);
 
-  // All values (that are not allocas) that needs to be spilled to the frame.
-  coro::SpillInfo Spills;
-  // All values defined as allocas that need to live in the frame.
-  SmallVector<coro::AllocaInfo, 8> Allocas;
-
-  // Collect the spills for arguments and other not-materializable values.
-  coro::collectSpillsFromArgs(Spills, F, Checker);
   SmallVector<Instruction *, 4> DeadInstructions;
   SmallVector<CoroAllocaAllocInst *, 4> LocalAllocas;
-  coro::collectSpillsAndAllocasFromInsts(Spills, Allocas, DeadInstructions,
-                                         LocalAllocas, F, Checker, DT, Shape);
-  coro::collectSpillsFromDbgInfo(Spills, F, Checker);
+  auto FrameData = [&]() {
+    // All values (that are not allocas) that needs to be spilled to the frame.
+    coro::SpillInfo Spills;
+    // All values defined as allocas that need to live in the frame.
+    SmallVector<coro::AllocaInfo, 8> Allocas;
 
-  LLVM_DEBUG(dumpAllocas(Allocas));
-  LLVM_DEBUG(dumpSpills("Spills", Spills));
+    // Collect the spills for arguments and other not-materializable values.
+    coro::collectSpillsFromArgs(Spills, F, Checker);
 
-  if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
-      Shape.ABI == coro::ABI::Async)
-    sinkSpillUsesAfterCoroBegin(DT, Shape.CoroBegin, Spills, Allocas);
+    coro::collectSpillsAndAllocasFromInsts(Spills, Allocas, DeadInstructions,
+                                          LocalAllocas, F, Checker, DT, Shape);
+    coro::collectSpillsFromDbgInfo(Spills, F, Checker);
+
+    LLVM_DEBUG(dumpAllocas(Allocas));
+    LLVM_DEBUG(dumpSpills("Spills", Spills));
+
+    if (Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce ||
+        Shape.ABI == coro::ABI::Async)
+      sinkSpillUsesAfterCoroBegin(DT, Shape.CoroBegin, Spills, Allocas);
+    return coro::FrameDataInfo(std::move(Spills), std::move(Allocas));
+  }();
 
   // Build frame layout
-  FrameDataInfo FrameData(Spills, Allocas);
   buildFrameLayout(F, DT, Shape, FrameData, OptimizeFrame);
   Shape.FramePtr = Shape.CoroBegin;
   // For now, this works for C++ programs only.

@@ -19,13 +19,93 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
-#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
 
 namespace llvm {
 
 class Function;
 
 namespace coro {
+
+// Mapping from the to-be-spilled value to all the users that need reload.
+struct FrameDataInfo {
+  // All the values (that are not allocas) that needs to be spilled to the
+  // frame.
+  coro::SpillInfo Spills;
+  // Allocas contains all values defined as allocas that need to live in the
+  // frame.
+  SmallVector<coro::AllocaInfo, 8> Allocas;
+
+  FrameDataInfo(coro::SpillInfo Spills,
+                SmallVector<coro::AllocaInfo, 8> Allocas)
+      : Spills(std::move(Spills)), Allocas(std::move(Allocas)) {}
+
+  SmallVector<Value *, 8> getAllDefs() const {
+    SmallVector<Value *, 8> Defs;
+    for (const auto &P : Spills)
+      Defs.push_back(P.first);
+    for (const auto &A : Allocas)
+      Defs.push_back(A.Alloca);
+    return Defs;
+  }
+
+  uint32_t getFieldIndex(Value *V) const {
+    auto Itr = FieldIndexMap.find(V);
+    assert(Itr != FieldIndexMap.end() &&
+           "Value does not have a frame field index");
+    return Itr->second;
+  }
+
+  void setFieldIndex(Value *V, uint32_t Index) {
+    assert(FieldIndexMap.count(V) == 0 &&
+           "Cannot set the index for the same field twice.");
+    FieldIndexMap[V] = Index;
+  }
+
+  Align getAlign(Value *V) const {
+    auto Iter = FieldAlignMap.find(V);
+    assert(Iter != FieldAlignMap.end());
+    return Iter->second;
+  }
+
+  void setAlign(Value *V, Align AL) {
+    assert(FieldAlignMap.count(V) == 0);
+    FieldAlignMap.insert({V, AL});
+  }
+
+  uint64_t getDynamicAlign(Value *V) const {
+    auto Iter = FieldDynamicAlignMap.find(V);
+    assert(Iter != FieldDynamicAlignMap.end());
+    return Iter->second;
+  }
+
+  void setDynamicAlign(Value *V, uint64_t Align) {
+    assert(FieldDynamicAlignMap.count(V) == 0);
+    FieldDynamicAlignMap.insert({V, Align});
+  }
+
+  uint64_t getOffset(Value *V) const {
+    auto Iter = FieldOffsetMap.find(V);
+    assert(Iter != FieldOffsetMap.end());
+    return Iter->second;
+  }
+
+  void setOffset(Value *V, uint64_t Offset) {
+    assert(FieldOffsetMap.count(V) == 0);
+    FieldOffsetMap.insert({V, Offset});
+  }
+
+private:
+  // Map from values to their slot indexes on the frame (insertion order).
+  DenseMap<Value *, uint32_t> FieldIndexMap;
+  // Map from values to their alignment on the frame. They would be set after
+  // the frame is built.
+  DenseMap<Value *, Align> FieldAlignMap;
+  DenseMap<Value *, uint64_t> FieldDynamicAlignMap;
+  // Map from values to their offset on the frame. They would be set after
+  // the frame is built.
+  DenseMap<Value *, uint64_t> FieldOffsetMap;
+};
 
 // This interface/API is to provide an object oriented way to implement ABI
 // functionality. This is intended to replace use of the ABI enum to perform
