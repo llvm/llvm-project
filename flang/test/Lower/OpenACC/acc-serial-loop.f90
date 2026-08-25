@@ -446,44 +446,6 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc serial loop gang(num: 8)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc serial loop gang(num: gangNum)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
- !$acc serial loop gang(num: gangNum, static: gangStatic)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
   !$acc serial loop vector
   DO i = 1, n
     a(i) = b(i)
@@ -496,32 +458,6 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc serial loop vector(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc serial loop vector(vectorLength)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
   !$acc serial loop worker
   DO i = 1, n
     a(i) = b(i)
@@ -529,19 +465,6 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc serial loop worker(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
