@@ -19,31 +19,57 @@ body: |
     ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
-    $vgpr2 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
-    $vgpr3 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
-    $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    renamable $vgpr2 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
+    renamable $vgpr3 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
+    $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr2_vgpr3, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
-# load2's destination overlaps load1's address (a loop-carried WAR). The pass
-# relocates load2's destination (and the consumer that reads it) to a free
-# register block so the address and data registers become disjoint.
+# load2's destination overlaps load1's address (a loop-carried WAR), so the pass
+# wants to relocate load2's destination.  But the only consumer of the loaded
+# data is a V_ADD_U32_e32, whose source operands are non-renamable (carry VALU
+# ops set hasExtraSrcRegAllocReq).  Relocating the dest would require rewriting
+# that non-renamable use, so the isRenamable guard makes the pass bail: no
+# change.  (Correctness test for the renamable guard.)
 ---
-name: addr_dest_conflict
+name: addr_dest_conflict_nonrenamable_use_bails
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr32_vgpr33, $vgpr40_vgpr41
-    ; GCN-LABEL: name: addr_dest_conflict
+    ; GCN-LABEL: name: addr_dest_conflict_nonrenamable_use_bails
+    ; GCN: liveins: $vgpr32_vgpr33, $vgpr40_vgpr41
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr32_vgpr33_vgpr34_vgpr35 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr50 = V_ADD_U32_e32 $vgpr32, $vgpr33, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
+    renamable $vgpr32_vgpr33_vgpr34_vgpr35 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
+    $vgpr50 = V_ADD_U32_e32 renamable $vgpr32, renamable $vgpr33, implicit $exec
+    S_ENDPGM 0
+...
+
+# Same loop-carried WAR (load2's destination overlaps load1's address), but here
+# the consumer of the loaded data is a COPY whose use is renamable.  The pass
+# relocates load2's destination (and rewrites the consumer's use) to a free
+# register block so the address and data register sets become disjoint.
+---
+name: addr_dest_relocated
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr32_vgpr33, $vgpr40_vgpr41
+    ; GCN-LABEL: name: addr_dest_relocated
     ; GCN: liveins: $vgpr32_vgpr33, $vgpr40_vgpr41
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr50 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    ; GCN-NEXT: $vgpr48_vgpr49_vgpr50_vgpr51 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
-    $vgpr32_vgpr33_vgpr34_vgpr35 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
-    $vgpr50 = V_ADD_U32_e32 $vgpr32, $vgpr33, implicit $exec
+    renamable $vgpr32_vgpr33_vgpr34_vgpr35 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
+    $vgpr48_vgpr49_vgpr50_vgpr51 = COPY renamable $vgpr32_vgpr33_vgpr34_vgpr35
     S_ENDPGM 0
 ...
 
@@ -63,11 +89,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr4 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_ADDC_U32_e32 $vgpr23, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr4_vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr4_vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
-    $vgpr1 = V_ADDC_U32_e32 $vgpr23, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, renamable $vgpr0, implicit-def $vcc, implicit $exec
+    renamable $vgpr1 = V_ADDC_U32_e32 $vgpr23, renamable $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -83,13 +109,13 @@ body: |
     ; GCN-LABEL: name: tied_operand_abort
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_FMAC_F32_e32 $vgpr4, $vgpr5, $vgpr1, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    renamable $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, renamable $vgpr0, implicit-def $vcc, implicit $exec
     $vgpr1 = V_FMAC_F32_e32 $vgpr4, $vgpr5, $vgpr1, implicit $mode, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -148,5 +174,58 @@ body: |
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX4_IMM $sgpr4_sgpr5, 0, 0
     $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# An interior instruction reads a lane that an earlier def in the window renamed
+# (not an in-place RMW source), and that use IS renamable (a COPY).  The pass
+# must rewrite it to the renamed register along with the rest of the chain.
+---
+name: interior_use_renamable_renamed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21
+    ; GCN-LABEL: name: interior_use_renamable_renamed
+    ; GCN: liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr20, implicit $exec
+    ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr21, implicit $exec
+    ; GCN-NEXT: $vgpr50 = COPY $vgpr0
+    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    renamable $vgpr2 = V_MOV_B32_e32 $vgpr20, implicit $exec
+    renamable $vgpr3 = V_MOV_B32_e32 $vgpr21, implicit $exec
+    $vgpr50 = COPY renamable $vgpr2
+    $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr2_vgpr3, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Same shape, but the interior instruction that reads the renamed lane is a
+# V_ADD_CO_U32_e32, whose source is non-renamable.  Rewriting it is illegal, so
+# the guard makes the pass bail: no change.  (This is the case a defs-only guard
+# would have miscompiled.)
+---
+name: interior_use_nonrenamable_bails
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21, $vgpr40
+    ; GCN-LABEL: name: interior_use_nonrenamable_bails
+    ; GCN: liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21, $vgpr40
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr2 = V_MOV_B32_e32 $vgpr20, implicit $exec
+    ; GCN-NEXT: renamable $vgpr3 = V_MOV_B32_e32 $vgpr21, implicit $exec
+    ; GCN-NEXT: $vgpr50 = V_ADD_CO_U32_e32 $vgpr2, $vgpr40, implicit-def $vcc, implicit $exec
+    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr2_vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0
+    $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
+    renamable $vgpr2 = V_MOV_B32_e32 $vgpr20, implicit $exec
+    renamable $vgpr3 = V_MOV_B32_e32 $vgpr21, implicit $exec
+    $vgpr50 = V_ADD_CO_U32_e32 $vgpr2, $vgpr40, implicit-def $vcc, implicit $exec
+    $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr2_vgpr3, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
