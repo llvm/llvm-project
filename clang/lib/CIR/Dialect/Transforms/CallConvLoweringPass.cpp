@@ -70,19 +70,18 @@ namespace {
 //===----------------------------------------------------------------------===//
 // x86_64 System V classifier bridge
 //
-// Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's
-// SysV x86_64 classifier, and converts the result back into the
-// dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
-// consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / vtable
-// pointer / bool / floating-point scalars are handled, as are struct / union
-// / array aggregates, `_Complex`, and a fixed-width vector whose width is a
-// power of two.  Other vectors, a padded record reached through a named
-// bit-field access unit, a record holding an empty-for-ABI member that
-// occupies bytes or a zero-sized one off its own alignment, a union no
-// member of which spans its declared size, and a union whose only spanning
-// member is a bit-field access unit are reported NYI by
-// classifyX86_64Function so an unsupported signature fails the pass instead
-// of being misclassified.
+// Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's SysV
+// x86_64 classifier, and converts the result back into the dialect-agnostic
+// mlir::abi::FunctionClassification that CIRABIRewriteContext consumes.
+// Integer (including `_BitInt` up to 128 bits) / pointer / vtable pointer /
+// bool / floating-point scalars are handled, as are struct / union / array
+// aggregates, `_Complex`, and a fixed-width vector whose width is a power
+// of two.  Other vectors, a padded record reached through a named bit-field
+// access unit, a record holding an empty-for-ABI member that occupies
+// bytes or a zero-sized one off its own alignment, a union no member of
+// which spans its declared size, and a union whose only spanning member is
+// a bit-field access unit are reported NYI by classifyX86_64Function so an
+// unsupported signature fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
