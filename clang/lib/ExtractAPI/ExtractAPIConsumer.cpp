@@ -455,6 +455,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  // Public API can never be inside function bodies, so skip parsing them.
+  CI.getFrontendOpts().SkipFunctionBodies = true;
+
   auto &Inputs = CI.getFrontendOpts().Inputs;
   if (Inputs.empty())
     return true;
