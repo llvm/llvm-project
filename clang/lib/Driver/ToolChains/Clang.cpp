@@ -1749,6 +1749,8 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         options::OPT_fno_ptrauth_function_pointer_type_discrimination);
     Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_indirect_gotos,
                       options::OPT_fno_ptrauth_indirect_gotos);
+    Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_128bit_type_discrimination,
+                      options::OPT_fno_ptrauth_128bit_type_discrimination);
   }
   if (Triple.isOSLinux() &&
       Triple.getEnvironment() == llvm::Triple::PAuthTest) {
