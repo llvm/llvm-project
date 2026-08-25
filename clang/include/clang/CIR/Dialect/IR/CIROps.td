@@ -3388,6 +3388,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
