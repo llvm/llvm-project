@@ -1927,6 +1927,12 @@ def : Pat<(store (i8 (trunc_su (srl_su GR16:$src, (i8 8)))), addr:$dst),
 // we need to be more careful. We're using a NOREX instruction here in case
 // register allocation fails to keep the two registers together. So we need to
 // make sure we can't accidentally mix R8-R15 with an h-register.
+// We additionally require the (non-flags) result of the xor to be unused: the
+// GR8_NOREX result may end up in a high-byte register (AH/BH/CH/DH), and any
+// user that widens or otherwise consumes it (e.g. by zero/sign-extending it
+// into an R8-R15 register) could require a REX prefix, which cannot encode a
+// high-byte register. The encoder would then fail. So restrict the trick to the
+// case where the value result has no uses at all (see xor_flag_dead_result).
 def : Pat<(xor_flag_dead_result (i8 (trunc GR32:$src)),
                                 (i8 (trunc (srl_su GR32:$src, (i8 8))))),
           (XOR8rr_NOREX (EXTRACT_SUBREG GR32:$src, sub_8bit),
