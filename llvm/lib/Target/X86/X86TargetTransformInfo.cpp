@@ -5698,8 +5698,8 @@ InstructionCost X86TTIImpl::getPointersChainCost(
     if (const auto *BaseGEP = dyn_cast<GetElementPtrInst>(Base)) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       return getGEPCost(BaseGEP->getSourceElementType(),
-                        BaseGEP->getPointerOperand(), Indices, nullptr,
-                        CostKind);
+                        BaseGEP->getPointerOperand(), Indices, CostKind,
+                        nullptr);
     }
     return TTI::TCC_Free;
   }
