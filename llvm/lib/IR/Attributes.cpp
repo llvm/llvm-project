@@ -2520,7 +2520,9 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
           .addAttribute(Attribute::DeadOnUnwind)
           .addAttribute(Attribute::Initializes)
           .addAttribute(Attribute::Captures)
-          .addAttribute(Attribute::DeadOnReturn);
+          .addAttribute(Attribute::DeadOnReturn)
+          .addAttribute(Attribute::NoFree)
+          .addAttribute(Attribute::NoFreeObj);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

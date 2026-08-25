@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -2606,18 +2605,21 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.operands());
+  const Triple &TT = TM.getTargetTriple();
   Args.push_back(B.getInt32(static_cast<uint32_t>(
-      getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()))));
+      getMemScope(TT, I.getContext(), I.getSyncScopeID()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())),
+      ScSem)));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())),
+      ScSem)));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
@@ -3665,6 +3667,13 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   // Data structure for dead instructions that were simplified and replaced.
   SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      Type *ElTy = SI->getValueOperand()->getType();
+      if (ElTy->isAggregateType() || ElTy->isVectorTy())
+        AggrStores.insert(&I);
+      continue;
+    }
+
     auto *GEP = dyn_cast<GetElementPtrInst>(&I);
     auto *SGEP = dyn_cast<StructuredGEPInst>(&I);
 
@@ -3690,18 +3699,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   for (auto *I : DeadInsts) {
     assert(I->use_empty() && "Dead instruction should not have any uses left");
     I->eraseFromParent();
-  }
-
-  // StoreInst's operand type can be changed during the next
-  // transformations, so we need to store it in the set. Also store already
-  // transformed types.
-  for (auto &I : instructions(Func)) {
-    StoreInst *SI = dyn_cast<StoreInst>(&I);
-    if (!SI)
-      continue;
-    Type *ElTy = SI->getValueOperand()->getType();
-    if (ElTy->isAggregateType() || ElTy->isVectorTy())
-      AggrStores.insert(&I);
   }
 
   B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());

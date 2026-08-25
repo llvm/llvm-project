@@ -3650,12 +3650,12 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // Directly invoke the MC-layer routine for real (i.e., non-pseudo)
   // instructions (fast case).
   if (!X86II::isPseudo(Desc.TSFlags)) {
-    int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemRefIdx = X86II::getMemoryOperandIdx(Desc);
     if (MemRefIdx >= 0)
-      return MemRefIdx + X86II::getOperandBias(Desc);
+      return MemRefIdx;
 #ifdef EXPENSIVE_CHECKS
     assert(none_of(Desc.operands(), IsMemOp) &&
-           "Got false negative from X86II::getMemoryOperandNo()!");
+           "Got false negative from X86II::getMemoryOperandIdx()!");
 #endif
     return -1;
   }
@@ -3977,10 +3977,8 @@ bool X86InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 static int getJumpTableIndexFromAddr(const MachineInstr &MI) {
-  const MCInstrDesc &Desc = MI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
-  assert(MemRefBegin >= 0 && "instr should have memory operand");
-  MemRefBegin += X86II::getOperandBias(Desc);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MI.getDesc());
+  assert(MemRefBegin >= 0 && "Expected a memory operand");
 
   const MachineOperand &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
   if (!MO.isJTI())
@@ -4577,12 +4575,9 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
 std::optional<ExtAddrMode>
 X86InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
                                       const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MemI.getDesc());
   if (MemRefBegin < 0)
     return std::nullopt;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   auto &BaseOp = MemI.getOperand(MemRefBegin + X86::AddrBaseReg);
   if (!BaseOp.isReg()) // Can be an MO_FrameIndex
@@ -4701,12 +4696,9 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemOp.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MemOp.getDesc());
   if (MemRefBegin < 0)
     return false;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   const MachineOperand *BaseOp =
       &MemOp.getOperand(MemRefBegin + X86::AddrBaseReg);
@@ -5484,7 +5476,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2.isPhysical())
     return false;
   MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
-  assert(SrcRegDef && "Must have a definition (SSA)");
+  if (!SrcRegDef)
+    return false;
 
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
@@ -8695,7 +8688,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true,
-                               CopyMI);
+                               CopyMI, VRM);
 }
 
 MachineInstr *

@@ -21,7 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -1199,6 +1199,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
       .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1}}})
       .Any({{DivS16, P1}, {{Vgpr16}, {VgprP1}}}, usesTrue16)
+      .Any({{{UniS16, P1}, isUL}, {{Sgpr32Trunc}, {SgprP1}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{{UniS16, P1}, !isUL}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{UniS16, P1}, {{UniInVgprS16}, {SgprP1}}}, usesTrue16 && !hasSMRDSmall)
       .Any({{{UniS32, P1}, isAlign4 && isUL}, {{Sgpr32}, {SgprP1}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P1}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP1}}}, hasSMRDSmall)
       .Any({{{UniS32, P1}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP1}}}, !hasSMRDSmall)
@@ -1206,10 +1209,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
       .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3}}})
       .Any({{DivS16, P3}, {{Vgpr16}, {VgprP3}}}, usesTrue16)
+      .Any({{UniS16, P3}, {{UniInVgprS16}, {SgprP3}}}, usesTrue16)
       .Any({{UniS32, P3}, {{UniInVgprS32}, {VgprP3}}})
 
       .Any({{DivS32, P4}, {{Vgpr32}, {VgprP4}}})
       .Any({{DivS16, P4}, {{Vgpr16}, {VgprP4}}}, usesTrue16)
+      .Any({{{UniS16, P4}, isUL}, {{Sgpr32Trunc}, {SgprP4}}}, usesTrue16 && hasSMRDSmall)
+      .Any({{UniS16, P4}, {{UniInVgprS16}, {SgprP4}}}, usesTrue16 && !hasSMRDSmall)
       .Any({{{UniS32, P4}, isAlign4 && isUL}, {{Sgpr32}, {SgprP4}, WidenMMOToS32}}, !hasSMRDSmall)
       .Any({{{UniS32, P4}, isNaturalAligned && isUL}, {{Sgpr32}, {SgprP4}}}, hasSMRDSmall)
       .Any({{{UniS32, P4}, !isAlign4 || !isUL}, {{UniInVgprS32}, {SgprP4}}}, !hasSMRDSmall)
@@ -1587,10 +1593,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64}}});
 
   bool hasPST = ST->hasPseudoScalarTrans();
-  addRulesForGOpcs({G_FSQRT}, Standard)
-      .Div(S16, {{Vgpr16}, {Vgpr16}})
-      .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
-      .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
+  // Only 16-bit G_FSQRT operations are legal. F32/F64 is handled with a custom
+  // legalization in the legalizer.
+  addRulesForGOpcs({G_FSQRT})
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16}}})
+      .Any({{UniBF16}, {{UniInVgprS16}, {Vgpr16}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16}}}, hasPST)
+      .Any({{UniS16}, {{UniInVgprS16}, {Vgpr16}}}, !hasPST);
 
   addRulesForGOpcs({G_FPTOUI, G_FPTOSI, G_FPTOUI_SAT, G_FPTOSI_SAT})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})

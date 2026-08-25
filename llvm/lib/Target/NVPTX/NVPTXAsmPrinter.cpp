@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTXAsmPrinter.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
@@ -43,6 +44,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -839,16 +841,17 @@ void NVPTXAsmPrinter::emitJumpTable(const MachineJumpTableEntry &MJT,
 // llvm.loop.unroll.disable or llvm.loop.unroll.count=1.
 bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
     const MachineBasicBlock &MBB) const {
-  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  const MachineLoopInfo *LI = GetMLI(*MF);
+  assert(LI && "NVPTXAsmPrinter requires MachineLoopInfo");
   // We insert .pragma "nounroll" only to the loop header.
-  if (!LI.isLoopHeader(&MBB))
+  if (!LI->isLoopHeader(&MBB))
     return false;
 
   // llvm.loop.unroll.disable is marked on the back edges of a loop. Therefore,
   // we iterate through each back edge of the loop with header MBB, and check
   // whether its metadata contains llvm.loop.unroll.disable.
   for (const MachineBasicBlock *PMBB : MBB.predecessors()) {
-    if (LI.getLoopFor(PMBB) != LI.getLoopFor(&MBB)) {
+    if (LI->getLoopFor(PMBB) != LI->getLoopFor(&MBB)) {
       // Edges from other loops to MBB are not back edges.
       continue;
     }
@@ -1018,7 +1021,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires reqntid and cluster_dim attributes",
             F.getSubprogram()));
-      else if (STI->getPTXVersion() < 90)
+      else if (!STI->hasFeature(NVPTX::PTX90))
         Ctx.diagnose(DiagnosticInfoUnsupported(
             F, "blocksareclusters requires PTX version >= 9.0",
             F.getSubprogram()));
@@ -1233,7 +1236,7 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
   if (M.alias_size() &&
-      (STI.getPTXVersion() < 63 || !STI.hasFeature(NVPTX::SM30)))
+      (!STI.hasFeature(NVPTX::PTX63) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
   // We need to call the parent's one explicitly.
@@ -1417,7 +1420,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
       O << ".visible ";
     else
       O << ".extern ";
-  } else if (STI.getPTXVersion() >= 50 && GVar->hasCommonLinkage() &&
+  } else if (STI.hasFeature(NVPTX::PTX50) && GVar->hasCommonLinkage() &&
              GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) {
     O << ".common ";
   } else if (GVar->hasLinkOnceLinkage() || GVar->hasWeakLinkage() ||
@@ -1541,7 +1544,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
     O << " .attribute(.managed)";
@@ -1840,7 +1843,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   O << ".";
   emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
   if (isManaged(*GVar)) {
-    if (STI.getPTXVersion() < 40 || !STI.hasFeature(NVPTX::SM30))
+    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
       report_fatal_error(
           ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
 
@@ -2759,4 +2762,32 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeNVPTXAsmPrinter() {
   RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
   RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
+}
+
+PreservedAnalyses NVPTXAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+NVPTXAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  AsmPrinter &Printer =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter();
+  setupMachineFunctionAsmPrinter(MFAM, MF, Printer);
+  Printer.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses NVPTXAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  AsmPrinter &Printer = MAM.getResult<AsmPrinterAnalysis>(M).getPrinter();
+  setupModuleAsmPrinter(M, MAM, Printer);
+  Printer.doFinalization(M);
+  return PreservedAnalyses::all();
 }

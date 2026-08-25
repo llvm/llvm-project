@@ -72,6 +72,19 @@ def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
 def int_aarch64_hlt : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
+// The first operand is the 16-bit instruction immediate.  The remaining four
+// operands are the values passed in X0-X3 following the Microsoft __hvc calling
+// convention (this is a Microsoft software convention, not an architectural
+// requirement); an unused argument is passed as poison.  The result is the
+// value left in X0.
+def int_aarch64_hvc : Intrinsic<[llvm_i64_ty],
+    [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
+def int_aarch64_svc : Intrinsic<[llvm_i64_ty],
+    [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 def int_aarch64_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,
@@ -3268,8 +3281,8 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                              [llvm_nxv16i1_ty,
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>,
                                llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 

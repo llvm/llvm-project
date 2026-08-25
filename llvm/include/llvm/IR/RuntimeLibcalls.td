@@ -59,6 +59,9 @@ def IsAAPCS_ABI : LibcallPredicate<[{isAAPCS_ABI(TT, ABIName)}]>;
 def IsEABI4 : LibcallPredicate<[{EABIVersion == EABI::EABI4}]>;
 def IsEABI5 : LibcallPredicate<[{EABIVersion == EABI::EABI5}]>;
 
+def IsLongDoubleF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::IEEEquad}]>;
+def IsLongDoubleX87 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::X87DoubleExtended}]>;
+
 def IsAMDGPU : LibcallPredicate<[{TT.isAMDGPU()}]>;
 def IsARM : LibcallPredicate<[{TT.isARM()}]>;
 def IsThumb : LibcallPredicate<[{TT.isThumb()}]>;
@@ -108,6 +111,25 @@ def IsArchXtensa : LibcallPredicate<[{TT.getArch() == Triple::xtensa}]>;
 def isOSDarwin : RuntimeLibcallAvailability<(all_of IsOSDarwin)>;
 def isOSOpenBSD : RuntimeLibcallAvailability<(all_of IsOSOpenBSD)>;
 def isNotOSOpenBSD : RuntimeLibcallAvailability<(not IsOSOpenBSD)>;
+
+// True when the C `long double` type is IEEE fp128.
+def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
+
+// True when the C `long double` type is the x87 80-bit extended format.
+def isLongDoubleX87 : RuntimeLibcallAvailability<(all_of IsLongDoubleX87)>;
+
+// x87 long double variants of sincosl/exp10l, which additionally depend on
+// the libc providing the sincos/exp10 extensions.
+def isLongDoubleX87AndHasSinCos : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleX87, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
+def isLongDoubleX87AndHasExp10 : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleX87, (not IsOSDarwin))>;
+
+// fp128 long double sincosl, which additionally depends on the libc
+// providing the sincos extension.
+def isLongDoubleF128AndHasSinCos : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of IsGNUEnv, IsOSFuchsia, IsAndroid))>;
+
 def isOSWindows : RuntimeLibcallAvailability<(all_of IsOSWindows)>;
 def isNotOSWindows : RuntimeLibcallAvailability<(not IsOSWindows)>;
 def isNotOSLinux : RuntimeLibcallAvailability<(not IsOSLinux)>;
@@ -303,6 +325,65 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def SCALBN_#FPTy : RuntimeLibcall;
   def TGAMMA_#FPTy : RuntimeLibcall;
 }
+
+// Floating-point libcall families. Each generates the backend selector
+// RTLIB::get<base>(EVT) and, for families with an intrinsic, the IR-level
+// getLibcallForIntrinsic() mapping. See RuntimeLibcallFamily.
+defvar Vec4F32_2F64 = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"];
+
+class StrictFP<string base> {
+  list<string> ret = [base, "experimental_constrained_"#base];
+}
+
+def : RuntimeLibcallFamily<"POWI", StrictFP<"powi">.ret>;
+def : RuntimeLibcallFamily<"POW", StrictFP<"pow">.ret, Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"CBRT", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LDEXP", StrictFP<"ldexp">.ret>;
+def : RuntimeLibcallFamily<"FREXP", ["frexp"]>;
+def : RuntimeLibcallFamily<"SIN", StrictFP<"sin">.ret>;
+def : RuntimeLibcallFamily<"COS", StrictFP<"cos">.ret>;
+def : RuntimeLibcallFamily<"SINCOS", ["sincos"],
+    ["V4F32", "V8F32", "V16F32", "V2F64", "V4F64", "V8F64", "NXV4F32",
+     "NXV2F64"]>;
+def : RuntimeLibcallFamily<"SINCOSPI", ["sincospi"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"SINCOS_STRET">;
+def : RuntimeLibcallFamily<"MODF", ["modf"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"REM", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LROUND", StrictFP<"lround">.ret>;
+def : RuntimeLibcallFamily<"LLROUND", StrictFP<"llround">.ret>;
+def : RuntimeLibcallFamily<"LRINT", StrictFP<"lrint">.ret>;
+def : RuntimeLibcallFamily<"LLRINT", StrictFP<"llrint">.ret>;
+
+def : RuntimeLibcallFamily<"SQRT", StrictFP<"sqrt">.ret>;
+def : RuntimeLibcallFamily<"FMA", StrictFP<"fma">.ret>;
+def : RuntimeLibcallFamily<"TAN", StrictFP<"tan">.ret>;
+def : RuntimeLibcallFamily<"ASIN", StrictFP<"asin">.ret>;
+def : RuntimeLibcallFamily<"ACOS", StrictFP<"acos">.ret>;
+def : RuntimeLibcallFamily<"ATAN", StrictFP<"atan">.ret>;
+def : RuntimeLibcallFamily<"ATAN2", StrictFP<"atan2">.ret>;
+def : RuntimeLibcallFamily<"SINH", StrictFP<"sinh">.ret>;
+def : RuntimeLibcallFamily<"COSH", StrictFP<"cosh">.ret>;
+def : RuntimeLibcallFamily<"TANH", StrictFP<"tanh">.ret>;
+def : RuntimeLibcallFamily<"LOG", StrictFP<"log">.ret>;
+def : RuntimeLibcallFamily<"LOG2", StrictFP<"log2">.ret>;
+def : RuntimeLibcallFamily<"LOG10", StrictFP<"log10">.ret>;
+def : RuntimeLibcallFamily<"EXP", StrictFP<"exp">.ret>;
+def : RuntimeLibcallFamily<"EXP2", StrictFP<"exp2">.ret>;
+def : RuntimeLibcallFamily<"EXP10", ["exp10"]>;
+def : RuntimeLibcallFamily<"TRUNC", StrictFP<"trunc">.ret>;
+def : RuntimeLibcallFamily<"FLOOR", StrictFP<"floor">.ret>;
+def : RuntimeLibcallFamily<"CEIL", StrictFP<"ceil">.ret>;
+def : RuntimeLibcallFamily<"RINT", StrictFP<"rint">.ret>;
+def : RuntimeLibcallFamily<"NEARBYINT", StrictFP<"nearbyint">.ret>;
+def : RuntimeLibcallFamily<"ROUND", StrictFP<"round">.ret>;
+def : RuntimeLibcallFamily<"ROUNDEVEN", StrictFP<"roundeven">.ret>;
+def : RuntimeLibcallFamily<"FMIN", StrictFP<"minnum">.ret>;
+def : RuntimeLibcallFamily<"FMAX", StrictFP<"maxnum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM", StrictFP<"minimum">.ret>;
+def : RuntimeLibcallFamily<"FMAXIMUM", StrictFP<"maximum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM_NUM", ["minimumnum"]>;
+def : RuntimeLibcallFamily<"FMAXIMUM_NUM", ["maximumnum"]>;
+def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
@@ -1921,6 +2002,17 @@ defvar DefaultRuntimeLibcallImpls_f80 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "F80"));
 
+// The l-suffixed libm math functions, only correct when long double is x87.
+defvar DefaultRuntimeLibcallImpls_longdouble_f80 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry), "l_f80"));
+
+// The compiler-rt helpers, keyed to the x86_fp80 IR type and available on all
+// x86 regardless of the long double format.
+defvar DefaultRuntimeLibcallImpls_f80_helpers =
+    !listremove(DefaultRuntimeLibcallImpls_f80,
+                DefaultRuntimeLibcallImpls_longdouble_f80);
+
 defvar DefaultRuntimeLibcallImpls_ppcf128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "PPCF128"));
@@ -1929,17 +2021,28 @@ defvar DefaultRuntimeLibcallImpls_f128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "_F128"));
 
+// The l-suffixed libm functions are fp128 only when long double is fp128.
+defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry), "l_f128"));
+
 // FIXME: Ideally we would just use dags everywhere, but for the
 // arm64ec case we need iterable lists so we can add the # prefix
+//
+// The fp128 long double libcalls are added on a per-target basis.
 defvar DefaultRuntimeLibcallImplsBaseList =
 !listremove(
   !listremove(
-    !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                DefaultRuntimeLibcallImpls_f80),
-                DefaultRuntimeLibcallImpls_ppcf128);
+    !listremove(
+      !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                  DefaultRuntimeLibcallImpls_f80),
+                  DefaultRuntimeLibcallImpls_ppcf128),
+                  DefaultRuntimeLibcallImpls_longdouble_f128);
 
 defvar DefaultRuntimeLibcallImpls =
   (add DefaultRuntimeLibcallImplsBaseList,
+       LibcallImpls<(add DefaultRuntimeLibcallImpls_longdouble_f128),
+                    isLongDoubleF128>,
        ExceptionModelCalls);
 
 /// Default set of libcall impls for 32-bit architectures.
@@ -1970,13 +2073,11 @@ defvar SecurityCheckCookieIfWinMSVC =
 
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
-defvar LibmHasSinCosF80 = LibcallImpls<(add sincosl_f80), hasSinCos>;
 defvar LibmHasSinCosF128 = LibcallImpls<(add sincosl_f128), hasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincosl_ppcf128), hasSinCos>;
 
 defvar LibmHasExp10F32 = LibcallImpls<(add exp10f), hasExp10>;
 defvar LibmHasExp10F64 = LibcallImpls<(add exp10), hasExp10>;
-defvar LibmHasExp10F80 = LibcallImpls<(add exp10l_f80), hasExp10>;
 defvar LibmHasExp10F128 = LibcallImpls<(add exp10l_f128), hasExp10>;
 defvar LibmHasExp10PPCF128 = LibcallImpls<(add exp10l_ppcf128), hasExp10>;
 
@@ -2004,9 +2105,6 @@ defvar WinDefaultLibcallImpls = (add WinDefaultLibcallImplsBaseList,
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
-
-defvar LibmHasFrexpF80 = LibcallImpls<(add frexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
-defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
@@ -2120,20 +2218,35 @@ def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
 def isAArch64_ILP64
     : RuntimeLibcallAvailability<(all_of IsAArch64_ILP64)>;
 
+// frexpl/ldexpl/exp10l are added separately based on the Target Triple.
+defvar AArch64LongDoubleF128Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
+// fp128 long double, excluding the Windows math runtime (which lacks frexpl/
+// ldexpl) and Darwin (which lacks exp10l).
+def isLongDoubleF128NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of (not IsOSWindows), IsOSCygMing))>;
+def isLongDoubleF128NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (not IsOSDarwin))>;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
   (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF128, LibmHasLdexpF128,
+       // The l-suffixed libm functions are fp128 only when long double is.
+       LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128NotWinMath>,
+       LibcallImpls<(add AArch64LongDoubleF128Body), isLongDoubleF128>,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        MacOSUnlockedIO,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultLibmExp10,
+       LibmHasExp10F32, LibmHasExp10F64,
+       // exp10l is fp128 only when long double is.
+       LibcallImpls<(add exp10l_f128), isLongDoubleF128NotDarwin>,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
        LibcallImpls<(add __chkstk), isOSWindows>,
@@ -2635,15 +2748,18 @@ def ARMSystemLibrary
                                         AEABIOverrides),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
-           LibmHasFrexpF128, LibmHasLdexpF128,
+           // The l-suffixed libm functions are fp128 only when long double is.
+           LibcallImpls<(add frexpl_f128, ldexpl_f128, sincosl_f128,
+                             exp10l_f128),
+                        isLongDoubleF128>,
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
            LibcallImpls<(add __chkstk), isOSWindows>,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-           DefaultLibmExp10,
+           LibmHasSinCosF32, LibmHasSinCosF64,
+           LibmHasExp10F32, LibmHasExp10F64,
            LibcSafestackPointerAddress,
 
            AEABICalls,
@@ -2766,12 +2882,13 @@ def hexagon_memcpy_forward_vp4cp4n2 : RuntimeLibcallImpl<HEXAGON_VOLATILE_MEMCPY
 
 def isHexagon : RuntimeLibcallAvailability<(all_of IsHexagon)>;
 
+// The generic arithmetic/division helpers (__adddf3, __divsi3, ...) exist in
+// Hexagon's compiler-rt alongside the preferred __hexagon_* variants, so both
+// are available. Selection of the __hexagon_* variants is handled in
+// HexagonSubtarget::initLibcallLoweringInfo.
 def HexagonSystemLibrary
     : SystemRuntimeLibrary<isHexagon,
-    (add (sub DefaultLibcallImpls32,
-    __adddf3, __divsf3, __udivsi3, __udivdi3,
-    __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3,
-    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
+    (add DefaultLibcallImpls32, HexagonLibcalls,
     LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
     exp10f, exp10, exp10l_f128, __stack_chk_fail, __stack_chk_guard,
     DefaultSafeStackGlobals)>;
@@ -3185,6 +3302,7 @@ def RISCVSystemLibrary
     : SystemRuntimeLibrary<isRISCV,
       (add DefaultRuntimeLibcallImpls,
            exp10f, exp10, exp10l_f128,
+           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
            DefaultStackProtector,
@@ -3314,9 +3432,11 @@ def isWin64NotCygMing : RuntimeLibcallAvailability<
 def darwinHas__bzero : RuntimeLibcallAvailability<
   (all_of IsMacOSX, MacOSXVersionAtLeast<10, 6>)>;
 
-// FIXME: This is has ldexpl/frexpl plus use f128 for long double.
-def hasExpFrexplLdexplF128 : RuntimeLibcallAvailability<
-  (all_of (any_of (not IsOSWindows), IsOSCygMing), (not IsGNUEnv))>;
+// frexpl_f80/ldexpl_f80/exp10l_f80 are added separately with their own
+// libc-availability guards, so drop them from the bulk x87 body.
+defvar X86LongDoubleF80Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f80,
+                [frexpl_f80, ldexpl_f80, exp10l_f80]);
 
 // Use the f128 variants of math functions on x86
 defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
@@ -3325,23 +3445,30 @@ defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_
 
 defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
+// frexpl/ldexpl/exp10l are added separately below with their own guards.
+defvar X86LongDoubleF128Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
        DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
        X86_F128_Libcalls,
-       LibmHasSinCosF80, // FIXME: Depends on long double
+       LibcallImpls<(add sincosl_f80), isLongDoubleX87AndHasSinCos>,
        SinCosF32F64Libcalls,
        LibcallImpls<(add __bzero), darwinHas__bzero>,
        LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF80, LibmHasLdexpF80,
-       LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
-       DefaultRuntimeLibcallImpls_f80,
-       LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
-       LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
+       LibcallImpls<(add frexpl_f80, ldexpl_f80), isLongDoubleX87>,
+       LibcallImpls<(add X86LongDoubleF80Body), isLongDoubleX87>,
+       // The x86_fp80 compiler-rt helpers are format-independent.
+       DefaultRuntimeLibcallImpls_f80_helpers,
+       LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), isLongDoubleF128>,
+       LibcallImpls<(add X86LongDoubleF128Body), isLongDoubleF128>,
+       LibmHasExp10F32, LibmHasExp10F64,
+       LibcallImpls<(add exp10l_f80), isLongDoubleX87AndHasExp10>,
+       // MSVCRT does not provide the powi helpers.
+       LibcallImpls<(add __powisf2, __powidf2, __powitf2_f128), isNotOSMSVCRT>,
        SecurityCheckCookieIfWinMSVC,
-       // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
-       // hack for one test relying on it.
-       __powitf2_f128,
        DefaultStackProtector,
        DefaultSafeStackGlobals,
        LibcallImpls<(add MemChkLibcalls), isNotPS>,
@@ -3526,7 +3653,9 @@ def isArch64Bit : RuntimeLibcallAvailability<(all_of IsArch64Bit)>;
 def LegacyDefaultSystemLibrary
     : SystemRuntimeLibrary<isDefaultLibcallArch,
       (add DefaultRuntimeLibcallImpls,
-         LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+         LibmHasSinCosF32, LibmHasSinCosF64,
+         // sincosl is fp128 only when long double is fp128.
+         LibcallImpls<(add sincosl_f128), isLongDoubleF128AndHasSinCos>,
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
