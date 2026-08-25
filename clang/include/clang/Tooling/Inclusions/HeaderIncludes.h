@@ -9,9 +9,10 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 
-#include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Regex.h"
 #include <list>
@@ -53,7 +54,8 @@ enum class IncludeDirective { Include, Import };
 /// file.
 class HeaderIncludes {
 public:
-  HeaderIncludes(StringRef FileName, StringRef Code, const IncludeStyle &Style);
+  HeaderIncludes(llvm::StringRef FileName, llvm::StringRef Code,
+                 const IncludeStyle &Style);
 
   /// Inserts an #include or #import directive of \p Header into the code.
   /// If \p IsAngled is true, \p Header will be quoted with <> in the directive;
@@ -65,7 +67,7 @@ public:
   /// default. These code sections include:
   ///   - raw string literals (containing #include).
   ///   - #if blocks.
-  ///   - Special #include's among declarations (e.g. functions).
+  ///   - Special #includes among declarations (e.g. functions).
   ///
   /// Returns a replacement that inserts the new header into a suitable #include
   /// block of the same category. This respects the order of the existing
@@ -74,7 +76,8 @@ public:
   /// same category in the code that should be sorted after \p IncludeName. If
   /// \p IncludeName already exists (with exactly the same spelling), this
   /// returns std::nullopt.
-  std::optional<tooling::Replacement> insert(StringRef Header, bool IsAngled,
+  std::optional<tooling::Replacement> insert(llvm::StringRef Header,
+                                             bool IsAngled,
                                              IncludeDirective Directive) const;
 
   /// Represents a single header directive to be inserted in a batch operation.
@@ -89,35 +92,38 @@ public:
   ///   - HeaderToInsert("foo.h", IncludeDirective::Include, /*IsAngled=*/false)
   ///     -> explicit IsAngled
   struct HeaderToInsert {
+    enum class QuoteStyle { AUTO, ANGLED, QUOTED };
+
     // The header name, with any surrounding quotes or brackets removed.
     std::string Header;
     // Whether to insert #include or #import.
     IncludeDirective Directive;
-    // Whether to use <> or "" for the header. If not set, the default is
-    // determined by the header name.
+    // Whether to use <> or "" for the header. This can be set explicitly with
+    // QuoteStyle::ANGLED or QuoteStyle::QUOTED, or auto-detected based on
+    // `RawOrSpelledHeader` with QuoteStyle::AUTO.
     bool IsAngled;
 
-    HeaderToInsert(StringRef RawOrSpelledHeader,
+    HeaderToInsert(llvm::StringRef RawOrSpelledHeader,
                    IncludeDirective Directive = IncludeDirective::Include,
-                   std::optional<bool> IsAngled = std::nullopt);
+                   QuoteStyle QuoteStyle = QuoteStyle::AUTO);
   };
 
   /// Inserts a batch of headers into the code, sorting and grouping them
   /// according to IncludeStyle and returning the replacements.
-  tooling::Replacements insert(ArrayRef<HeaderToInsert> Headers) const;
+  tooling::Replacements insert(llvm::ArrayRef<HeaderToInsert> Headers) const;
 
   /// Removes all existing #includes and #imports of \p Header quoted with <> if
   /// \p IsAngled is true or "" if \p IsAngled is false.
   /// This doesn't resolve the header file path; it only deletes #includes and
   /// #imports with exactly the same spelling.
-  tooling::Replacements remove(StringRef Header, bool IsAngled) const;
+  tooling::Replacements remove(llvm::StringRef Header, bool IsAngled) const;
 
   // Matches a whole #include directive.
   static const llvm::Regex IncludeRegex;
 
 private:
   struct Include {
-    Include(StringRef Name, tooling::Range R, IncludeDirective D)
+    Include(llvm::StringRef Name, tooling::Range R, IncludeDirective D)
         : Name(Name), R(R), Directive(D) {}
 
     // An include header quoted with either <> or "".
@@ -146,7 +152,8 @@ private:
   /// in the order they appear in the source file.
   /// See comment for "FormatStyle::IncludeCategories" for details about include
   /// priorities.
-  std::unordered_map<int, SmallVector<const Include *, 8>> IncludesByPriority;
+  std::unordered_map<int, llvm::SmallVector<const Include *, 8>>
+      IncludesByPriority;
 
   int FirstIncludeOffset;
   // All new headers should be inserted after this offset (e.g. after header

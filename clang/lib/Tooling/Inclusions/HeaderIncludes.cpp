@@ -516,19 +516,16 @@ HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
   return tooling::Replacement(FileName, InsertOffset, 0, NewInclude);
 }
 
-HeaderIncludes::HeaderToInsert::HeaderToInsert(StringRef RawOrSpelledHeader,
-                                               IncludeDirective Directive,
-                                               std::optional<bool> IsAngled)
+HeaderIncludes::HeaderToInsert::HeaderToInsert(
+    llvm::StringRef RawOrSpelledHeader, IncludeDirective Directive,
+    QuoteStyle QuoteStyle)
     : Directive(Directive) {
   if (RawOrSpelledHeader.starts_with("<")) {
     Header = RawOrSpelledHeader.trim("<>").str();
-    this->IsAngled = IsAngled.value_or(true);
+    this->IsAngled = QuoteStyle != QuoteStyle::QUOTED;
   } else if (RawOrSpelledHeader.starts_with("\"")) {
     Header = RawOrSpelledHeader.trim("\"").str();
-    this->IsAngled = IsAngled.value_or(false);
-  } else {
-    Header = RawOrSpelledHeader.str();
-    this->IsAngled = IsAngled.value_or(false);
+    this->IsAngled = QuoteStyle == QuoteStyle::ANGLED;
   }
 }
 

@@ -488,19 +488,6 @@ R"cpp(#include "d.h"
 #include "a.h")cpp");
 }
 
-TEST(FixIncludes, MultipleInsertionsSameOffset) {
-  AnalysisResults Results;
-  Results.Missing.emplace_back("\"a.h\"", Header(""));
-  Results.Missing.emplace_back("\"b.h\"", Header(""));
-
-  // Empty code guarantees HeaderIncludes chooses offset 0 for both.
-  llvm::StringRef Code = "";
-
-  // Should concatenate them without conflict errors in Replacements::add
-  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-            "#include \"a.h\"\n#include \"b.h\"\n");
-}
-
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
   auto [ExpanedFileID, ExpandedOffset] = SM->getDecomposedExpansionLoc(arg);
   return ExpanedFileID == FileID && ExpandedOffset == Offset;
@@ -742,8 +729,8 @@ TEST(FixIncludes, MainHeaderGrouping) {
   AnalysisResults Results;
   Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
   Results.Missing.push_back({"\"foo.h\"", Header("\"foo.h\"")});
-  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
   Results.Missing.push_back({"<vector>", Header("<vector>")});
+  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
 
   format::FormatStyle Style = format::getLLVMStyle();
   Style.Language = format::FormatStyle::LK_Cpp;
@@ -781,6 +768,19 @@ void test();
 
 void test();
 )cpp");
+}
+
+TEST(FixIncludes, MultipleInsertionsSameOffset) {
+  AnalysisResults Results;
+  Results.Missing.emplace_back("\"a.h\"", Header(""));
+  Results.Missing.emplace_back("\"b.h\"", Header(""));
+
+  // Empty code guarantees HeaderIncludes chooses offset 0 for both.
+  llvm::StringRef Code = "";
+
+  // Should concatenate them without conflict errors in Replacements::add
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+            "#include \"a.h\"\n#include \"b.h\"\n");
 }
 
 } // namespace
