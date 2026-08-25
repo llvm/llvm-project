@@ -164,7 +164,7 @@ define float @ret_fptrunc_posonly_zero_nan(double nofpclass(ninf nnorm nsub nan)
 }
 
 define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_fptrunc_posonly_nan
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_fptrunc_posonly_nan
 ; CHECK-SAME: (double nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]

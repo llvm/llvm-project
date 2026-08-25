@@ -92,6 +92,20 @@ void KnownFPClass::propagateDenormal(const KnownFPClass &Src,
   }
 }
 
+void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
+                                              DenormalMode Mode) {
+  propagateDenormal(Src, Mode);
+  propagateNonNaN(Src);
+
+  // Copy the sign of the source.
+  if (Src.isKnownNeverNaN() && Src.SignBit) {
+    if (*Src.SignBit)
+      signBitMustBeOne();
+    else
+      signBitMustBeZero();
+  }
+}
+
 KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
                                       const KnownFPClass &RHS_, MinMaxKind Kind,
                                       DenormalMode Mode) {
@@ -568,12 +582,6 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
-                                              DenormalMode Mode) {
-  propagateDenormal(Src, Mode);
-  propagateNonNaN(Src, /*PreserveSign=*/true);
-}
-
 KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
                                DenormalMode Mode) {
   KnownFPClass Known;
@@ -771,7 +779,13 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
   if (KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
-  Known.propagateNonNaN(KnownSrc, true);
+  Known.propagateNonNaN(KnownSrc);
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.SignBit) {
+    if (*KnownSrc.SignBit)
+      Known.signBitMustBeOne();
+    else
+      Known.signBitMustBeZero();
+  }
 
   // Infinity needs a range check.
   return Known;
@@ -785,7 +799,15 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
   // Integer results cannot be subnormal.
   Known.knownNot(fcSubnormal);
 
-  Known.propagateNonNaN(KnownSrc, true);
+  Known.propagateNonNaN(KnownSrc);
+
+  // Copy the sign of the source.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.SignBit) {
+    if (*KnownSrc.SignBit)
+      Known.signBitMustBeOne();
+    else
+      Known.signBitMustBeZero();
+  }
 
   // Pass through infinities, except PPC_FP128 is a special case for
   // intrinsics other than trunc.
@@ -837,7 +859,15 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                                  const APInt &ConstantRangeExpMax,
                                  const fltSemantics &Flt, DenormalMode Mode) {
   KnownFPClass Known;
-  Known.propagateNonNaN(KnownSrc, /*PreserveSign=*/true);
+  Known.propagateNonNaN(KnownSrc);
+
+  // Copy the sign of the source.
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.SignBit) {
+    if (*KnownSrc.SignBit)
+      Known.signBitMustBeOne();
+    else
+      Known.signBitMustBeZero();
+  }
 
   // Sign is preserved, but underflows may produce zeroes.
   if (KnownSrc.isKnownNever(fcNegative))

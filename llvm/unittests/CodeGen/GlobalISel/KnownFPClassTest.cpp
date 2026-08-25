@@ -164,7 +164,7 @@ TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
   EXPECT_EQ(false, Known.SignBit);
 }
 
@@ -190,7 +190,7 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.KnownFPClasses);
+  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
   EXPECT_EQ(false, Known.SignBit);
 }
 
