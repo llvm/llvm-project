@@ -1,0 +1,209 @@
+// RUN: cir-opt --cir-lib-opt -split-input-file %s -o - | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 64 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_2(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find">>
+
+  cir.func @transforms(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: cir.func @transforms
+// CHECK-SAME: (%[[FIRST:.*]]: !cir.ptr<!u8i>, %[[LAST:.*]]: !cir.ptr<!u8i>, %[[VALUE:.*]]: !cir.ptr<!u8i>)
+// CHECK-NOT: cir.std.find
+// CHECK-NOT: cir.load
+// CHECK-NOT: cir.ptr_diff
+// CHECK-NOT: cir.libc.memchr
+// CHECK: %[[EMPTY:.*]] = cir.cmp eq %[[FIRST]], %[[LAST]] : !cir.ptr<!u8i>
+// CHECK: %[[RESULT:.*]] = cir.ternary(%[[EMPTY]], true {
+// CHECK-NEXT: cir.yield %[[LAST]] : !cir.ptr<!u8i>
+// CHECK-NEXT: }, false {
+// CHECK: %[[SRC:.*]] = cir.cast bitcast %[[FIRST]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK: %[[BYTE:.*]] = cir.load %[[VALUE]] : !cir.ptr<!u8i>, !u8i
+// CHECK: %[[PATTERN:.*]] = cir.cast integral %[[BYTE]] : !u8i -> !s32i
+// CHECK: %[[LEN:.*]] = cir.ptr_diff %[[LAST]], %[[FIRST]] : !cir.ptr<!u8i> -> !u64i
+// CHECK: %[[PTR:.*]] = cir.libc.memchr(%[[SRC]], %[[PATTERN]], %[[LEN]])
+// CHECK: %[[RES:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!u8i>
+// CHECK: %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!u8i>
+// CHECK: %[[MISS:.*]] = cir.cmp eq %[[RES]], %[[NULL]] : !cir.ptr<!u8i>
+// CHECK: %[[SELECT:.*]] = cir.select if %[[MISS]] then %[[LAST]] else %[[RES]]
+// CHECK-NEXT: cir.yield %[[SELECT]] : !cir.ptr<!u8i>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CHECK: cir.return %[[RESULT]] : !cir.ptr<!u8i>
+
+  cir.func @keeps_without_narrow(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_2) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_without_narrow
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
+  cir.func @keeps_no_builtin(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i> {nobuiltins = ["memchr"]}
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_no_builtin
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
+  cir.func @keeps_no_builtin_marked_call(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i> {nobuiltin}
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_no_builtin_marked_call
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
+  cir.func @keeps_enclosing_no_builtin(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> attributes {nobuiltins = ["memchr"]} {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_enclosing_no_builtin
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
+  cir.func builtin @keeps_builtin_marked_function(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> attributes {nobuiltins = ["memchr"]} {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_builtin_marked_function
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+
+  cir.func @transforms_in_no_builtin_marked_function(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> attributes {nobuiltin} {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @transforms_in_no_builtin_marked_function
+// CHECK-NOT: cir.std.find
+// CHECK: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.size_type_width = 64 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+
+  cir.func @keeps_without_triple(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_without_triple
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+
+  cir.func @keeps_without_size_width(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_without_size_width
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 32 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+
+  cir.func @keeps_on_32_bit_width(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_on_32_bit_width
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 64 : si32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+
+  cir.func @keeps_on_signed_width(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_on_signed_width
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+!voidptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 64 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+  cir.func private @memchr(!voidptr, !s32i, !u64i) -> !voidptr
+
+  cir.func @keeps_with_memchr_function(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_with_memchr_function
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 64 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+  cir.global external @memchr = #cir.int<0> : !s32i
+
+  cir.func @keeps_with_memchr_global(%arg0: !cir.ptr<!u8i>, %arg1: !cir.ptr<!u8i>, %arg2: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.std.find(%arg0 : !cir.ptr<!u8i>, %arg1 : !cir.ptr<!u8i>, %arg2 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+// CHECK-LABEL: @keeps_with_memchr_global
+// CHECK: cir.std.find
+// CHECK-NOT: cir.libc.memchr
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.size_type_width = 64 : i32} {
+  cir.func private @_ZSt4findIPhhET_S1_S1_RKT0_(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>) -> !cir.ptr<!u8i> func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+  cir.global external @buf = #cir.zero : !cir.array<!u8i x 8>
+  cir.global external @val = #cir.int<99> : !u8i
+
+  cir.global external @g = ctor : !cir.ptr<!u8i> {
+    %0 = cir.get_global @buf : !cir.ptr<!cir.array<!u8i x 8>>
+    %1 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!u8i x 8>> -> !cir.ptr<!u8i>
+    %2 = cir.const #cir.int<8> : !cir.int<s, 64>
+    %3 = cir.ptr_stride %1, %2 : (!cir.ptr<!u8i>, !cir.int<s, 64>) -> !cir.ptr<!u8i>
+    %4 = cir.get_global @val : !cir.ptr<!u8i>
+    %5 = cir.std.find(%1 : !cir.ptr<!u8i>, %3 : !cir.ptr<!u8i>, %4 : !cir.ptr<!u8i>, @_ZSt4findIPhhET_S1_S1_RKT0_) -> !cir.ptr<!u8i>
+    %6 = cir.get_global @g : !cir.ptr<!cir.ptr<!u8i>>
+    cir.store %5, %6 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+  }
+// CHECK-LABEL: cir.global external @g = ctor
+// CHECK-NOT: cir.std.find
+// CHECK: cir.libc.memchr
+}

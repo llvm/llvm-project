@@ -1512,8 +1512,13 @@ def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
     function named `find` in the `std` namespace, so a member function, a
     static member, or an operator can never carry the tag. Inline
     namespaces, such as the versioning namespace of libc++, count as part
-    of `std`. The tag never encodes signatures, and a function that
-    matches no known entity carries no attribute.
+    of `std`. The `kind` parameter identifies the known standard library
+    entity and never encodes signatures. A function that matches no known
+    entity carries no attribute.
+
+    The `narrow_char_params` parameter is a separate precondition for the
+    byte rewrites and not part of the identity, true when every parameter
+    points to one narrow non volatile character type, `char8_t` excluded.
 
     Example:
     ```
@@ -1522,11 +1527,12 @@ def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
   }];
 
   let parameters = (ins
-    EnumParameter<CIR_KnownFuncKind>:$kind
+    EnumParameter<CIR_KnownFuncKind>:$kind,
+    DefaultValuedParameter<"bool", "false">:$narrow_char_params
   );
 
   let assemblyFormat = [{
-    `<` $kind `>`
+    `<` $kind (`,` struct($narrow_char_params)^)? `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

@@ -137,6 +137,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(sizeTypeSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -3743,7 +3745,24 @@ void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
   if (!kind)
     return;
 
-  funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(&getMLIRContext(), *kind));
+  clang::QualType firstPointee;
+  bool narrowCharParams =
+      !funcDecl->parameters().empty() &&
+      llvm::all_of(funcDecl->parameters(), [&](const ParmVarDecl *param) {
+        clang::QualType pointee = param->getType()->getPointeeType();
+        if (pointee.isNull() || !pointee->isCharType() ||
+            pointee.isVolatileQualified()) {
+          return false;
+        }
+        clang::QualType canonical =
+            pointee.getCanonicalType().getUnqualifiedType();
+        if (firstPointee.isNull())
+          firstPointee = canonical;
+        return canonical == firstPointee;
+      });
+
+  funcOp.setFuncInfoAttr(
+      cir::FuncIdentityAttr::get(&getMLIRContext(), *kind, narrowCharParams));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,

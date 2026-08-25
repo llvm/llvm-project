@@ -5,4 +5,7 @@ module {
 cir.func private @_ZSt4findv() func_info<#cir.func_identity<"std::find">>
 // CHECK: cir.func private @_ZSt4findv() func_info<#cir.func_identity<"std::find">>
 
+cir.func private @_ZSt4findc() func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+// CHECK: cir.func private @_ZSt4findc() func_info<#cir.func_identity<"std::find", narrow_char_params = true>>
+
 }

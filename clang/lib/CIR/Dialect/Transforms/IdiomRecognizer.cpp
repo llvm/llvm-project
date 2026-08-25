@@ -30,24 +30,6 @@ namespace mlir {
 
 namespace {
 
-// True when the call's no builtin state forbids treating it as `name`. A
-// builtin mark wins over a nobuiltin mark or a nobuiltins list.
-bool isNoBuiltin(CallOp call, llvm::StringRef name) {
-  if (call->hasAttr(cir::CIRDialect::getBuiltinAttrName()))
-    return false;
-  if (call->hasAttr(cir::CIRDialect::getNoBuiltinAttrName()))
-    return true;
-  auto noBuiltins = call->getAttrOfType<mlir::ArrayAttr>(
-      cir::CIRDialect::getNoBuiltinsAttrName());
-  if (!noBuiltins)
-    return false;
-  return noBuiltins.empty() ||
-         llvm::any_of(noBuiltins, [name](mlir::Attribute entry) {
-           auto builtinName = mlir::dyn_cast<mlir::StringAttr>(entry);
-           return builtinName && builtinName.getValue() == name;
-         });
-}
-
 // Raises a direct cir.call to the first candidate in `TargetOps` that matches.
 template <typename... TargetOps> class StdRecognizer {
   template <typename TargetOp, size_t... Indices>
