@@ -42,6 +42,7 @@ class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
 def FeatureAddressableLocalMemorySize32768 : SubtargetFeatureAddressableLocalMemorySize<32768>;
 def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMemorySize<65536>;
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
+def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
 // Whether each wavefront size mode is available on the hardware,

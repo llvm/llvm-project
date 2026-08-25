@@ -425,6 +425,9 @@ public:
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
                        Register TrueReg, Register FalseReg, int &CondCycles,
@@ -1054,11 +1057,11 @@ public:
   }
 
   static bool usesTENSOR_CNT(const MachineInstr &MI) {
-    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(MI);
   }
 
   bool usesTENSOR_CNT(uint32_t Opcode) const {
-    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
+    return SIInstrFlags::usesTENSOR_CNT(get(Opcode));
   }
 
   // Most sopk treat the immediate as a signed 16-bit, however some
@@ -1774,6 +1777,10 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, AMDGPU::OpName OpName) const;
+
+  /// Get the repeat rate for a VALU instruction from the scheduling model.
+  /// Returns 1 for regular VALU, >1 for long-latency VALU (packed, F64, etc.)
+  unsigned getRepeatRate(const MachineInstr &MI) const;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

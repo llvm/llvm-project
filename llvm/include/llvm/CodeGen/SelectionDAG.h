@@ -510,6 +510,8 @@ public:
   const Pass *getPass() const { return SDAGISelPass; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
+  bool hasSwiftErrorArg() const;
+
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
@@ -1090,11 +1092,6 @@ public:
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
-  /// Return the expression required to zero extend the Op
-  /// value assuming it was the smaller SrcTy value.
-  LLVM_ABI SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
-                                        const SDLoc &DL, EVT VT);
-
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
   /// appropriate extension for the pointer's semantics.
@@ -1119,26 +1116,6 @@ public:
 
   /// Create a logical NOT operation as (XOR Val, BooleanOne).
   LLVM_ABI SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
-
-  /// Create a vector-predicated logical NOT operation as (VP_XOR Val,
-  /// BooleanOne, Mask, EVL).
-  LLVM_ABI SDValue getVPLogicalNOT(const SDLoc &DL, SDValue Val, SDValue Mask,
-                                   SDValue EVL, EVT VT);
-
-  /// Convert a vector-predicated Op, which must be an integer vector, to the
-  /// vector-type VT, by performing either vector-predicated zext or truncating
-  /// it. The Op will be returned as-is if Op and VT are vectors containing
-  /// integer with same width.
-  LLVM_ABI SDValue getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                    SDValue Mask, SDValue EVL);
-
-  /// Convert a vector-predicated Op, which must be of integer type, to the
-  /// vector-type integer type VT, by either truncating it or performing either
-  /// vector-predicated zero or sign extension as appropriate extension for the
-  /// pointer's semantics. This function just redirects to getVPZExtOrTrunc
-  /// right now.
-  LLVM_ABI SDValue getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                      SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
@@ -1393,18 +1370,6 @@ public:
     return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
-  /// Helper function to make it easier to build VP_SETCCs if you just have an
-  /// ISD::CondCode instead of an SDValue.
-  SDValue getSetCCVP(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
-                     ISD::CondCode Cond, SDValue Mask, SDValue EVL) {
-    assert(LHS.getValueType().isVector() && RHS.getValueType().isVector() &&
-           "Cannot compare scalars");
-    assert(Cond != ISD::SETCC_INVALID &&
-           "Cannot create a setCC of an invalid node.");
-    return getNode(ISD::VP_SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Mask,
-                   EVL);
-  }
-
   /// Helper function to make it easier to build Select's if you just have
   /// operands and don't want to check for vector.
   SDValue getSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
@@ -1529,11 +1494,11 @@ public:
   ///
   /// This function will set the MOLoad flag on MMOFlags, but you can set it if
   /// you want.  The MOStore flag must not be set.
-  LLVM_ABI SDValue getLoad(
-      EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
-      MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
+  LLVM_ABI SDValue
+  getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
+          MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
                            MachineMemOperand *MMO);
   LLVM_ABI SDValue
@@ -1541,29 +1506,29 @@ public:
              SDValue Ptr, MachinePointerInfo PtrInfo, EVT MemVT,
              MaybeAlign Alignment = MaybeAlign(),
              MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-             const AAMDNodes &AAInfo = AAMDNodes());
+             const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT,
                               SDValue Chain, SDValue Ptr, EVT MemVT,
                               MachineMemOperand *MMO);
   LLVM_ABI SDValue getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                   SDValue Base, SDValue Offset,
                                   ISD::MemIndexedMode AM);
-  LLVM_ABI SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, Align Alignment,
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
-  inline SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr) {
+  LLVM_ABI SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT, Align Alignment,
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
+  inline SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT,
+          MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata()) {
     // Ensures that codegen never sees a None Alignment.
     return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, PtrInfo, MemVT,
-                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, AAInfo,
-                   Ranges);
+                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
                            EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
@@ -1578,15 +1543,15 @@ public:
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, Align Alignment,
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes());
+           const MMOMetadata &Metadata = MMOMetadata());
   inline SDValue
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes()) {
+           const MMOMetadata &Metadata = MMOMetadata()) {
     return getStore(Chain, dl, Val, Ptr, PtrInfo,
                     Alignment.value_or(getEVTAlign(Val.getValueType())),
-                    MMOFlags, AAInfo);
+                    MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
@@ -1597,12 +1562,12 @@ public:
       SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
       MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
       MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes());
+      const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes());
+                const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                  SDValue Ptr, SDValue Offset, EVT SVT,
                                  MachineMemOperand *MMO);
@@ -1612,10 +1577,10 @@ public:
                 MachinePointerInfo PtrInfo, EVT SVT,
                 MaybeAlign Alignment = MaybeAlign(),
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes()) {
+                const MMOMetadata &Metadata = MMOMetadata()) {
     return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
                          Alignment.value_or(getEVTAlign(SVT)), MMOFlags,
-                         AAInfo);
+                         Metadata);
   }
   LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                  SDValue Ptr, EVT SVT, MachineMemOperand *MMO);

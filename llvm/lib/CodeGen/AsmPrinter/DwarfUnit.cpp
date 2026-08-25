@@ -1542,13 +1542,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->isLocalToUnit())
     addFlag(SPDie, dwarf::DW_AT_external);
 
-  if (DD->useAppleExtensionAttributes()) {
-    if (SP->isOptimized())
-      addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
+  if (SP->isOptimized())
+    addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
 
+  if (DD->useAppleExtensionAttributes())
     if (unsigned isa = Asm->getISAEncoding())
       addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
-  }
 
   if (SP->isLValueReference())
     addFlag(SPDie, dwarf::DW_AT_reference);
@@ -2129,7 +2128,9 @@ void DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
 
 void DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                                 const MCSymbol *Label, const MCSymbol *Sec) {
-  if (Asm->doesDwarfUseRelocationsAcrossSections())
+  // If we are in an object file and not a DWO, emit a label. Otherwise we are
+  // in a DWO and we cannot emit relocations, so emit a section delta.
+  if (Asm->doesDwarfUseRelocationsAcrossSections() && !isDwoUnit())
     addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   else
     addSectionDelta(Die, Attribute, Label, Sec);

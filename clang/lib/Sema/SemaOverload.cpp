@@ -12,6 +12,7 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -366,9 +367,12 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
 ///        type of the expression prior to the narrowing conversion.
 /// \param IgnoreFloatToIntegralConversion If true type-narrowing conversions
 ///        from floating point types to integral types should be ignored.
+/// \param AllowRelaxedEval If true constant expression evaluation is relaxed
+///        to conform MSVC compiler behavior.
 NarrowingKind StandardConversionSequence::getNarrowingKind(
     ASTContext &Ctx, const Expr *Converted, APValue &ConstantValue,
-    QualType &ConstantType, bool IgnoreFloatToIntegralConversion) const {
+    QualType &ConstantType, bool IgnoreFloatToIntegralConversion,
+    bool AllowRelaxedEval) const {
   assert((Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) &&
          "narrowing check outside C++");
 
@@ -457,7 +461,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       Expr::EvalResult R;
       if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)))) {
+            Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue,
+                                             AllowRelaxedEval)))) {
         // Constant!
         if (Ctx.getLangOpts().C23)
           ConstantValue = R.Val;
@@ -547,7 +552,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       return NK_Dependent_Narrowing;
 
     std::optional<llvm::APSInt> OptInitializerValue =
-        Initializer->getIntegerConstantExpr(Ctx);
+        Initializer->getIntegerConstantExpr(Ctx, AllowRelaxedEval);
     if (!OptInitializerValue) {
       // If the bit-field width was dependent, it might end up being small
       // enough to fit in the target type (unless the target type is unsigned
@@ -6597,11 +6602,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   if (Result.isInvalid())
     return Result;
 
+  bool AllowRelaxedEval = S.getASTContext().getLangOpts().MSVCCompat;
+
   // Check for a narrowing implicit conversion.
   bool ReturnPreNarrowingValue = false;
   QualType PreNarrowingType;
-  switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,
-                                PreNarrowingType)) {
+  switch (SCS->getNarrowingKind(
+      S.Context, Result.get(), PreNarrowingValue, PreNarrowingType,
+      /*IgnoreFloatToIntegralConversion*/ false, AllowRelaxedEval)) {
   case NK_Variable_Narrowing:
     // Implicit conversion to a narrower type, and the value is not a constant
     // expression. We'll diagnose this in a moment.
@@ -6706,8 +6714,10 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   ExprResult Result = E;
   // Check the expression is a constant expression.
   SmallVector<PartialDiagnosticAt, 8> Notes;
+  SmallVector<PartialDiagnosticAt> MSWarning;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
+  Eval.ExtendedDiag = &MSWarning;
 
   assert(CCE != CCEKind::TempArgStrict && "unnexpected CCE Kind");
 
@@ -6726,8 +6736,12 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
     Result = ExprError();
   } else {
     Value = Eval.Val;
-
-    if (Notes.empty()) {
+    // For -fms-compatibility mode we relax some requirements
+    // for constant folding in non-SFINAE contexts
+    bool CantFold = isSFINAEContext() && !MSWarning.empty();
+    if (Notes.empty() && !CantFold) {
+      for (auto &Info : MSWarning)
+        Diag(Info.first, Info.second);
       // It's a constant expression.
       Expr *E = Result.get();
       if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
@@ -12406,8 +12420,9 @@ static TemplateDecl *getDescribedTemplate(Decl *Templated) {
 /// Diagnose a failed template-argument deduction.
 static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  DeductionFailureInfo &DeductionFailure,
-                                 unsigned NumArgs,
-                                 bool TakingCandidateAddress) {
+                                 unsigned NumArgs, bool TakingCandidateAddress,
+                                 TemplateSpecCandidateSetKind CandidateSetKind =
+                                     TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
   NamedDecl *ParamD;
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
@@ -12654,7 +12669,10 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           //    name for types, not decls.
           // Ideally, this should folded into the diagnostic printer.
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_non_deduced_mismatch_qualified)
+                 CandidateSetKind ==
+                         TemplateSpecCandidateSetKind::FriendTemplate
+                     ? diag::note_friend_template_non_deduced_mismatch_qualified
+                     : diag::note_ovl_candidate_non_deduced_mismatch_qualified)
               << FirstTN.getAsTemplateDecl() << SecondTN.getAsTemplateDecl();
           return;
         }
@@ -12670,7 +12688,9 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     // diagnostic that mentions 'auto' and lambda in addition to
     // (or instead of?) the canonical template type parameters.
     S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_non_deduced_mismatch)
+           CandidateSetKind == TemplateSpecCandidateSetKind::FriendTemplate
+               ? diag::note_friend_template_non_deduced_mismatch
+               : diag::note_ovl_candidate_non_deduced_mismatch)
         << FirstTA << SecondTA;
     return;
   }
@@ -13621,10 +13641,12 @@ struct CompareTemplateSpecCandidatesForDisplay {
 /// Diagnose a template argument deduction failure.
 /// We are treating these failures as overload failures due to bad
 /// deductions.
-void TemplateSpecCandidate::NoteDeductionFailure(Sema &S,
-                                                 bool ForTakingAddress) {
+void TemplateSpecCandidate::NoteDeductionFailure(
+    Sema &S, bool ForTakingAddress,
+    TemplateSpecCandidateSetKind CandidateSetKind) {
   DiagnoseBadDeduction(S, FoundDecl, Specialization, // pattern
-                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress);
+                       DeductionFailure, /*NumArgs=*/0, ForTakingAddress,
+                       CandidateSetKind);
 }
 
 void TemplateSpecCandidateSet::destroyCandidates() {
@@ -13676,7 +13698,7 @@ void TemplateSpecCandidateSet::NoteCandidates(Sema &S, SourceLocation Loc) {
 
     assert(Cand->Specialization &&
            "Non-matching built-in candidates are not added to Cands.");
-    Cand->NoteDeductionFailure(S, ForTakingAddress);
+    Cand->NoteDeductionFailure(S, ForTakingAddress, CandidateSetKind);
   }
 
   if (I != E)
@@ -15938,7 +15960,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     case OR_Deleted: {
       if (isImplicitlyDeleted(Best->Function)) {
         FunctionDecl *DeletedFD = Best->Function;
-        DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
+        FunctionDecl::DefaultedFunctionKind DFK =
+            DeletedFD->getDefaultedFunctionKind();
         if (DFK.isSpecialMember()) {
           Diag(OpLoc, diag::err_ovl_deleted_special_oper)
               << Args[0]->getType() << DFK.asSpecialMember();

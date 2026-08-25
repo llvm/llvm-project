@@ -39,4 +39,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### WebAssembly Improvements
 
+* Added support for resolving and merging common data symbols (allocating them
+  into .bss.common in executable/shared module links, or merging them with max
+  size/alignment in relocatable -r links). See
+  https://github.com/WebAssembly/tool-conventions/pull/267
+
 #### Fixes

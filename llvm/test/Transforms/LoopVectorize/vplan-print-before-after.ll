@@ -6,6 +6,12 @@
 ; RUN:   -vplan-print-after=simplify -vplan-print-after=printFinalVPlan \
 ; RUN:   2>&1 | FileCheck %s -DBEFORE_OR_AFTER=after --check-prefix=CHECK \
 ; RUN:           --implicit-check-not "VPlan after"
+
+; These two just to exercise the pass numbering skipping. Can't really check if
+; it's done as we don't print anything, but at least make sure we don't crash.
+; RUN: opt -passes=loop-vectorize -disable-output -force-vector-width=4 -vplan-print-before="" < %s 2>&1 | count 0
+; RUN: opt -passes=loop-vectorize -disable-output -force-vector-width=4 -vplan-print-after=""  < %s 2>&1 | count 0
+
 ; REQUIRES: asserts
 
 ; CHECK:      VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes

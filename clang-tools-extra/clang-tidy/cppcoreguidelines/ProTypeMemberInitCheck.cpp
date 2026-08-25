@@ -79,7 +79,7 @@ removeFieldInitialized(const FieldDecl *M,
 static void
 removeFieldsInitializedInBody(const Stmt &Stmt, ASTContext &Context,
                               SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
-  auto Matches =
+  const auto Matches =
       match(findAll(binaryOperator(
                 hasOperatorName("="),
                 hasLHS(memberExpr(member(fieldDecl().bind("fieldDecl")))))),
@@ -321,7 +321,7 @@ void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
           .bind("record"),
       this);
 
-  auto HasDefaultConstructor = hasInitializer(
+  const auto HasDefaultConstructor = hasInitializer(
       cxxConstructExpr(unless(requiresZeroInitialization()),
                        hasDeclaration(cxxConstructorDecl(
                            isDefaultConstructor(), unless(isUserProvided())))));

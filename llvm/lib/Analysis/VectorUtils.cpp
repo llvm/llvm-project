@@ -150,13 +150,9 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
 
   switch (ID) {
   case Intrinsic::abs:
-  case Intrinsic::vp_abs:
   case Intrinsic::ctlz:
-  case Intrinsic::vp_ctlz:
   case Intrinsic::cttz:
-  case Intrinsic::vp_cttz:
   case Intrinsic::is_fpclass:
-  case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::vector_extract:
     return (ScalarOpdIdx == 1);
@@ -171,6 +167,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   case Intrinsic::experimental_vp_strided_load:
     return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_store:
+    return ScalarOpdIdx == 1 || ScalarOpdIdx == 2;
   case Intrinsic::loop_dependence_war_mask:
     return true;
   default:
@@ -185,9 +183,6 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
 
-  if (VPCastIntrinsic::isVPCast(ID))
-    return OpdIdx == -1 || OpdIdx == 0;
-
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
@@ -195,8 +190,6 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::llround:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
-  case Intrinsic::vp_lrint:
-  case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
@@ -206,13 +199,14 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::sincos:
   case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
-  case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
   case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
   case Intrinsic::experimental_vp_strided_load:
     return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_store:
+    return OpdIdx == 0 || OpdIdx == 1 || OpdIdx == 2;
   default:
     return OpdIdx == -1;
   }

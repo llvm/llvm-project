@@ -96,13 +96,30 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 6;
-  constexpr unsigned LDInstAddrSpaceOpIdx = 2;
-  for (auto *LI : LoadInsts) {
-    (LI->uses().begin() + LDInstBasePtrOpIdx)
-        ->ChangeToES(ParamSymbol->getSymbolName());
-    (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+  for (MachineInstr *LI : LoadInsts) {
+    unsigned Opc = LI->getOpcode();
+    int Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addr);
+    assert(Idx != -1 && "no addr operand");
+    LI->getOperand(Idx).ChangeToES(ParamSymbol->getSymbolName());
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addsp);
+    assert(Idx != -1 && "no addsp operand");
+    LI->getOperand(Idx).ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+    // PTX cache hints and policy are not allowed on ld.param
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::evictionAndPrefetchHint);
+    assert(Idx != -1 && "no evictionAndPrefetchHint operand");
+    LI->getOperand(Idx).ChangeToImmediate(0);
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::policy);
+    assert(Idx != -1 && "no policy operand");
+    MachineOperand &Policy = LI->getOperand(Idx);
+    Register PolicyReg = Policy.getReg();
+    MachineInstr *PolicyDef =
+        PolicyReg.isValid() ? MRI.getVRegDef(PolicyReg) : nullptr;
+    Policy.ChangeToRegister(NVPTX::NoRegister, false);
+    // Remove the policy register's definition if it is now dead.
+    if (PolicyDef && PolicyDef->isDead(MRI))
+      RemoveList.push_back(PolicyDef);
   }
   return true;
 }
@@ -128,11 +145,13 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 /// ----------------------------------------------------------------------------
 
 namespace {
-struct NVPTXForwardParamsPass : public MachineFunctionPass {
+struct NVPTXForwardParamsLegacyPass : public MachineFunctionPass {
   static char ID;
-  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
+  NVPTXForwardParamsLegacyPass() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return forwardDeviceParams(MF);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -140,15 +159,19 @@ struct NVPTXForwardParamsPass : public MachineFunctionPass {
 };
 } // namespace
 
-char NVPTXForwardParamsPass::ID = 0;
+char NVPTXForwardParamsLegacyPass::ID = 0;
 
-INITIALIZE_PASS(NVPTXForwardParamsPass, "nvptx-forward-params",
+INITIALIZE_PASS(NVPTXForwardParamsLegacyPass, "nvptx-forward-params",
                 "NVPTX Forward Params", false, false)
 
-bool NVPTXForwardParamsPass::runOnMachineFunction(MachineFunction &MF) {
-  return forwardDeviceParams(MF);
+MachineFunctionPass *llvm::createNVPTXForwardParamsLegacyPass() {
+  return new NVPTXForwardParamsLegacyPass();
 }
 
-MachineFunctionPass *llvm::createNVPTXForwardParamsPass() {
-  return new NVPTXForwardParamsPass();
+PreservedAnalyses
+NVPTXForwardParamsPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  if (!forwardDeviceParams(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

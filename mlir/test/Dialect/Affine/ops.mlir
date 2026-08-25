@@ -508,3 +508,37 @@ func.func @parallel_minnumf_reduce() {
   return
 }
 
+
+// -----
+
+// CHECK-LABEL: func.func @affine_load_store_alignment
+func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
+  %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
+  // CHECK: affine.store {{.*}} {alignment = 16 : i64}
+  affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @affine_vector_load_store_alignment
+func.func @affine_vector_load_store_alignment(%memref: memref<16xi32>) {
+  // CHECK: affine.vector_load {{.*}} {alignment = 8 : i64}
+  %val = affine.vector_load %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  // CHECK: affine.vector_store {{.*}} {alignment = 8 : i64}
+  affine.vector_store %val, %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @symbol_multi_result_reuse
+func.func @symbol_multi_result_reuse(%mem: memref<?x?xf32>) {
+  %res:2 = "test.op"() : () -> (index, index)
+  // CHECK: %{{.*}} = affine.load %{{.*}}[symbol(%{{.*}}#0), symbol(%{{.*}}#0)] : memref<?x?xf32>
+  %v1 = affine.load %mem[symbol(%res#0), symbol(%res#0)] : memref<?x?xf32>
+  // CHECK: %{{.*}} = affine.load %{{.*}}[symbol(%{{.*}}#0), symbol(%{{.*}}#1)] : memref<?x?xf32>
+  %v2 = affine.load %mem[symbol(%res#0), symbol(%res#1)] : memref<?x?xf32>
+  return
+}

@@ -12,6 +12,7 @@
 // RUN:   -fno-ptrauth-auth-traps -fptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fno-ptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-vtt-vtable-pointer-discrimination -fptrauth-vtt-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fptrauth-type-info-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-indirect-gotos -fptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fptrauth-init-fini \
@@ -26,6 +27,7 @@
 // RUN:   -fno-ptrauth-auth-traps -fptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-address-discrimination \
 // RUN:   -fno-ptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-vtt-vtable-pointer-discrimination -fptrauth-vtt-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fptrauth-type-info-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-indirect-gotos -fptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fptrauth-init-fini \
@@ -33,7 +35,7 @@
 // RUN:   -fno-ptrauth-elf-got -fptrauth-elf-got \
 // RUN:   -fno-aarch64-jump-table-hardening -faarch64-jump-table-hardening \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL-LINUX-PAUTHABI
-// ALL-LINUX-PAUTHABI: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-fptrauth-elf-got"{{.*}} "-faarch64-jump-table-hardening"
+// ALL-LINUX-PAUTHABI: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-vtt-vtable-pointer-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-fptrauth-elf-got"{{.*}} "-faarch64-jump-table-hardening"
 
 // RUN: %clang -### -c --target=aarch64-linux \
 // RUN:   -fno-aarch64-jump-table-hardening -faarch64-jump-table-hardening \
@@ -59,12 +61,13 @@
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=PAUTHABI1 --implicit-check-not='"-fptrauth-function-pointer-type-discrimination"'
 // PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
-// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-fptrauth-elf-got" "-faarch64-jump-table-hardening"
+// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-vtt-vtable-pointer-discrimination" "-fptrauth-type-info-vtable-pointer-discrimination" "-fptrauth-indirect-gotos" "-fptrauth-init-fini" "-fptrauth-init-fini-address-discrimination" "-fptrauth-elf-got" "-faarch64-jump-table-hardening"
 // PAUTHABI1-SAME: "-target-abi" "pauthtest"
 
 // RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-vtt-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
 // RUN:   -fno-ptrauth-elf-got -fno-aarch64-jump-table-hardening %s 2>&1 | \
@@ -72,6 +75,7 @@
 // RUN: %clang -### -c --target=aarch64-linux-pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-vtt-vtable-pointer-discrimination \
 // RUN:   -fno-ptrauth-type-info-vtable-pointer-discrimination -fno-ptrauth-indirect-gotos \
 // RUN:   -fno-ptrauth-init-fini -fno-ptrauth-init-fini-address-discrimination \
 // RUN:   -fno-ptrauth-elf-got -fno-aarch64-jump-table-hardening %s 2>&1 | \
@@ -94,14 +98,16 @@
 //// Non-pauthtest ABI.
 // RUN: not %clang -### -c --target=aarch64-linux -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-type-info-vtable-pointer-discrimination -fptrauth-indirect-gotos -fptrauth-init-fini \
-// RUN:   -fptrauth-init-fini-address-discrimination -fptrauth-elf-got %s 2>&1 | FileCheck %s --check-prefix=ERR1
+// RUN:   -fptrauth-vtt-vtable-pointer-discrimination -fptrauth-type-info-vtable-pointer-discrimination \
+// RUN:   -fptrauth-indirect-gotos -fptrauth-init-fini -fptrauth-init-fini-address-discrimination \
+// RUN:   -fptrauth-elf-got %s 2>&1 | FileCheck %s --check-prefix=ERR1
 // ERR1:      error: unsupported option '-fptrauth-intrinsics' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-calls' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-returns' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-auth-traps' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-vtable-pointer-address-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-vtable-pointer-type-discrimination' for target '{{.*}}'
+// ERR1-NEXT: error: unsupported option '-fptrauth-vtt-vtable-pointer-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-type-info-vtable-pointer-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-indirect-gotos' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'

@@ -10,11 +10,11 @@
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 9 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.number_of_entries %[[VAL_1]] : tensor<8x8xf32, #{{.*}}>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf32, #{{.*}}>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<8x8xf32, #{{.*}}>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] level = 1 : tensor<8x8xf32, #{{.*}}>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 1 : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xf32, #{{.*}}>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] {level = 1 : index} : tensor<8x8xf32, #{{.*}}>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<8x8xf32, #{{.*}}>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_1]] level = 1 : tensor<8x8xf32, #{{.*}}>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] level = 1 : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_14:.*]] = gpu.wait async
 // CHECK:           %[[VAL_15:.*]] = memref.dim %[[VAL_8]], %[[VAL_3]] : memref<?xindex>

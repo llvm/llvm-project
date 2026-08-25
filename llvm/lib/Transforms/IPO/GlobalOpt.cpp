@@ -1719,6 +1719,9 @@ static bool hasChangeableCCImpl(Function *F) {
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
     return false;
 
+  if (!F->canChangeSignature())
+    return false;
+
   if (F->isVarArg())
     return false;
 
@@ -2372,8 +2375,7 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (TLI->getLibFunc(*Fn) != Func)
     return nullptr;
 
   return Fn;

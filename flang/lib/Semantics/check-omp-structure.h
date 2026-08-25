@@ -241,6 +241,7 @@ public:
   void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
+  void Enter(const parser::OmpClause::UsesAllocators &x);
   void Enter(const parser::OmpClause::When &x);
 
 private:
@@ -303,6 +304,7 @@ private:
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
+  void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
@@ -346,6 +348,8 @@ private:
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
+  void CheckDirectiveInPureProcedure(
+      parser::CharBlock source, llvm::omp::Directive id);
   void CheckClauses(parser::OmpDirectiveName dirName,
       llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
@@ -389,7 +393,8 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   void CheckDependList(const parser::DataRef &);
-  void CheckDoacross(const parser::OmpDoacross &doa);
+  void CheckDoacross(
+      const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(const parser::CharBlock &source,
@@ -424,13 +429,17 @@ private:
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
 
+  void CheckUsesAllocatorsSpec(
+      const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
+  void CheckUsesAllocatorsTraits(
+      const parser::OmpTraitsArray &traits, parser::CharBlock source);
+
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
 
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);
-  void CheckDependenceType(const parser::OmpDependenceType::Value &x);
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   std::optional<llvm::omp::Directive> GetCancelType(
       llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,

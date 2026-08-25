@@ -71,7 +71,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -89,7 +93,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -107,7 +115,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else

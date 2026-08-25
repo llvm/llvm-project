@@ -37,7 +37,7 @@
 
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
-#define LLVM_WINDOWS_PREFER_FORWARD_SLASH 0
+/* LLVM_WINDOWS_PREFER_FORWARD_SLASH defined in Bazel */
 
 /* Define to 1 if you have the `backtrace' function. */
 /* HAVE_BACKTRACE defined in Bazel */
@@ -56,11 +56,11 @@
 
 /* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
    don't. */
-#define HAVE_DECL_FE_ALL_EXCEPT 1
+/* HAVE_DECL_FE_ALL_EXCEPT defined in Bazel */
 
 /* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
    don't. */
-#define HAVE_DECL_FE_INEXACT 1
+/* HAVE_DECL_FE_INEXACT defined in Bazel */
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */

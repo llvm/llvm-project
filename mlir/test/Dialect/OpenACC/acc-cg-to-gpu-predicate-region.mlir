@@ -7,9 +7,9 @@
 
 func.func @predicate_region_reduction(%arg0: memref<i32>) {
   %c1 = arith.constant 1 : index
-  %0 = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
-  %1 = acc.par_width %c1 {par_dim = #acc.par_dim<thread_y>}
-  %2 = acc.par_width %c1 {par_dim = #acc.par_dim<thread_x>}
+  %0 = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %1 = acc.par_width %c1 par_dim(#acc.par_dim<thread_y>)
+  %2 = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     acc.compute_region launch(%arg1 = %0, %arg2 = %1, %arg3 = %2) ins(%arg10 = %arg0) : (memref<i32>) {
       %c0_i32 = arith.constant 0 : i32

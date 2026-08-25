@@ -226,11 +226,11 @@ clang::CodeGen::LoopInfo::createLoopVectorizeMetadata(
     IsVectorPredicateEnabled =
         (Attrs.VectorizePredicateEnable == LoopAttributes::Enable);
 
-    Metadata *Vals[] = {
-        MDString::get(Ctx, "llvm.loop.vectorize.predicate.enable"),
-        ConstantAsMetadata::get(ConstantInt::get(llvm::Type::getInt1Ty(Ctx),
-                                                 IsVectorPredicateEnabled))};
-    Args.push_back(MDNode::get(Ctx, Vals));
+    Args.push_back(MDNode::get(
+        Ctx,
+        {MDString::get(Ctx, IsVectorPredicateEnabled
+                                ? "llvm.loop.vectorize.predicate.enable"
+                                : "llvm.loop.vectorize.predicate.disable")}));
   }
 
   // Setting vectorize.width
@@ -245,11 +245,10 @@ clang::CodeGen::LoopInfo::createLoopVectorizeMetadata(
 
   if (Attrs.VectorizeScalable != LoopAttributes::Unspecified) {
     bool IsScalable = Attrs.VectorizeScalable == LoopAttributes::Enable;
-    Metadata *Vals[] = {
-        MDString::get(Ctx, "llvm.loop.vectorize.scalable.enable"),
-        ConstantAsMetadata::get(
-            ConstantInt::get(llvm::Type::getInt1Ty(Ctx), IsScalable))};
-    Args.push_back(MDNode::get(Ctx, Vals));
+    Args.push_back(MDNode::get(
+        Ctx, {MDString::get(
+                 Ctx, IsScalable ? "llvm.loop.vectorize.scalable.enable"
+                                 : "llvm.loop.vectorize.scalable.disable")}));
   }
 
   // Setting interleave.count

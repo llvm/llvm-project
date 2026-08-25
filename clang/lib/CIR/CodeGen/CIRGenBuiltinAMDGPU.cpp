@@ -76,8 +76,10 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Type srcTy = src0.getType();
   mlir::Type int32Ty = builder.getSInt32Ty();
 
-  cir::RecordType frExpResTy =
-      builder.getAnonRecordTy({srcTy, int32Ty}, false, false);
+  mlir::Type frExpResMembers[] = {srcTy, int32Ty};
+  cir::RecordType frExpResTy = builder.getAnonRecordTy(
+      frExpResMembers, /*packed=*/false,
+      cir::RecordType::getAllDataKinds(frExpResMembers));
 
   mlir::Value frExpResult = builder.emitIntrinsicCallOp(
       loc, "frexp", frExpResTy, mlir::ValueRange{src0});
@@ -174,8 +176,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     mlir::Value z = emitScalarExpr(expr->getArg(2));
 
     auto i1Ty = builder.getUIntNTy(1);
-    cir::RecordType resTy = builder.getAnonRecordTy(
-        {x.getType(), i1Ty}, /*packed=*/false, /*padded=*/false);
+    mlir::Type resMembers[] = {x.getType(), i1Ty};
+    cir::RecordType resTy =
+        builder.getAnonRecordTy(resMembers, /*packed=*/false,
+                                cir::RecordType::getAllDataKinds(resMembers));
 
     mlir::Value structResult =
         cir::LLVMIntrinsicCallOp::create(builder, getLoc(expr->getExprLoc()),
@@ -211,13 +215,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_permlane16:
-  case AMDGPU::BI__builtin_amdgcn_permlanex16:
-  case AMDGPU::BI__builtin_amdgcn_permlane64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+  case AMDGPU::BI__builtin_amdgcn_permlanex16: {
+    llvm::StringRef intrinsicName =
+        builtinId == AMDGPU::BI__builtin_amdgcn_permlane16
+            ? "amdgcn.permlane16"
+            : "amdgcn.permlanex16";
+    return emitBuiltinWithOneOverloadedType<6>(expr, intrinsicName).getValue();
   }
+  case AMDGPU::BI__builtin_amdgcn_permlane64:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.permlane64")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
         .getValue();
@@ -730,6 +737,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitAMDGCNImageOverloadedReturnType(
         *this, expr, "amdgcn.image.sample.d.2darray", false);
   case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32:
     return emitAMDGCNImageOverloadedReturnType(
         *this, expr, "amdgcn.image.gather4.lz.2d", false);
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:

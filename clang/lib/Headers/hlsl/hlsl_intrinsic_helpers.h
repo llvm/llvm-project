@@ -116,6 +116,14 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 #endif
 }
 
+template <typename T> constexpr T step_impl(T Y, T X) {
+  return select(X < Y, (T)0, (T)1);
+}
+
+template <typename T> constexpr T lerp_impl(T X, T Y, T S) {
+  return X + S * (Y - X);
+}
+
 template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   bool DiffuseCond = NDotL < 0;
   T Diffuse = select<T>(DiffuseCond, 0, NDotL);
@@ -170,6 +178,14 @@ template <typename T> constexpr T fwidth_impl(T input) {
   derivCoarseY = abs(derivCoarseY);
   return derivCoarseX + derivCoarseY;
 #endif
+}
+
+template <typename T> constexpr T degrees_impl(T Val) {
+  return Val * (T)(180.L / Pi);
+}
+
+template <typename T> constexpr T radians_impl(T Val) {
+  return Val * (T)(Pi / 180.L);
 }
 
 } // namespace __detail

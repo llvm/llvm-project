@@ -391,8 +391,12 @@ bool Filler::needsUnimp(MachineBasicBlock::iterator I, unsigned &StructSize)
   const MachineOperand &MO = I->getOperand(structSizeOpNum);
   if (!MO.isImm())
     return false;
+
+  // A zero-sized return value has nothing for the callee to copy, so GCC emits
+  // no unimp for it and returns to the instruction right after the delay slot.
+  // We replicate this behavior here.
   StructSize = MO.getImm();
-  return true;
+  return StructSize != 0;
 }
 
 static bool combineRestoreADD(MachineBasicBlock &MBB,

@@ -100,6 +100,8 @@ public:
 
   ArchSpec GetArchitecture() override;
 
+  lldb::TargetSP GetTargetSP() override { return GetTarget(); }
+
   lldb::ModuleSP GetJITModule();
 
   lldb::addr_t FindSymbol(ConstString name, bool &missing_weak);

@@ -11,6 +11,7 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -19,7 +20,10 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
@@ -253,6 +257,25 @@ unsigned SPIRVNonSemanticDebugHandler::toNSDISrcLang(unsigned DwarfSrcLang) {
   }
 }
 
+// Collect distinct DILocations from LLVM IR. DebugLine pre-emission and MIR
+// lookups assume every machine-instruction debug location already appeared
+// here; a codegen-only location would not be collected and emission will be
+// skipped.
+static void collectUniqueDebugLocations(const Module &M,
+                                        SetVector<const DILocation *> &Out) {
+  for (const Function &F : M) {
+    if (!F.getSubprogram())
+      continue;
+    for (const Instruction &I : instructions(F)) {
+      if (const DILocation *DL = I.getDebugLoc().get())
+        Out.insert(DL);
+      for (DbgRecord &DR : I.getDbgRecordRange())
+        if (const DILocation *DL = DR.getDebugLoc().get())
+          Out.insert(DL);
+    }
+  }
+}
+
 void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   // The base class sets Asm = nullptr when the module has no compile units,
   // and initializes lexical scope tracking otherwise.
@@ -271,6 +294,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   TypedefTypes.clear();
   SubprogramDeclarations.clear();
   SubprogramDefinitions.clear();
+  UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
   DebugFunctionRegs.clear();
@@ -355,6 +379,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
     GlobalVariableDebugInfoMap.try_emplace(
         GV, GlobalVariableDebugInfo{Expr, DIGVToLLVMGV.lookup(GV)});
   }
+
+  collectUniqueDebugLocations(*M, UniqueDebugLocations);
 }
 
 void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
@@ -1074,6 +1100,9 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     emitAndCacheScopePathOpStringReg(GV->getFile(), MAI);
   }
 
+  for (const DILocation *DL : UniqueDebugLocations)
+    emitAndCacheScopePathOpStringReg(DL->getScope(), MAI);
+
   CachedEmptyStringReg = emitOpStringIfNew("", MAI);
 
 #ifndef NDEBUG
@@ -1096,6 +1125,7 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   CurrentMF = nullptr;
   LastFunctionOpVariable = nullptr;
   DebugFunctionDefinitionEmitted = false;
+  LastLineMI = nullptr;
 }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
@@ -1157,6 +1187,125 @@ void SPIRVNonSemanticDebugHandler::endFunctionImpl(const MachineFunction *MF) {
 void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
   assert(CurMI == nullptr && "CurMI must be null");
   CurMI = MI;
+
+  if (!DebugFunctionDefinitionEmitted)
+    return;
+  emitDebugLineForInstruction(MI);
+}
+
+static bool isMergeInstruction(unsigned Opcode) {
+  return Opcode == SPIRV::OpSelectionMerge || Opcode == SPIRV::OpLoopMerge ||
+         Opcode == SPIRV::OpLoopControlINTEL;
+}
+
+static bool isDebugLineTarget(const MachineInstr *MI,
+                              SPIRV::ModuleAnalysisInfo &MAI) {
+  if (MAI.getSkipEmission(MI))
+    return false;
+  switch (MI->getOpcode()) {
+  case SPIRV::OpFunction:
+  case SPIRV::OpFunctionParameter:
+  case SPIRV::OpFunctionEnd:
+  case SPIRV::OpLabel:
+  case SPIRV::OpPhi:
+    return false;
+  default:
+    return true;
+  }
+}
+
+static const MachineInstr *
+findAdjacentEmittedInstruction(const MachineInstr *MI,
+                               SPIRV::ModuleAnalysisInfo &MAI, bool Forward) {
+  for (const MachineInstr *Adj = Forward ? MI->getNextNode()
+                                         : MI->getPrevNode();
+       Adj; Adj = Forward ? Adj->getNextNode() : Adj->getPrevNode()) {
+    if (MAI.getSkipEmission(Adj))
+      continue;
+    return Adj;
+  }
+  return nullptr;
+}
+
+void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
+    const MachineInstr *MI) {
+  assert(DebugFunctionDefinitionEmitted &&
+         "DebugFunctionDefinition must be emitted");
+  assert(CurrentMAI && "CurrentMAI must be set");
+
+  SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
+
+  // Structural opcodes don't require a DebugLine, other opcodes might have
+  // already been emitted in the module scope.
+  if (!isDebugLineTarget(MI, MAI))
+    return;
+
+  // DebugLine can be emitted before a merge instruction, but not after it
+  // (nothing may sit between the merge and its terminator). We can use either
+  // the merge's or the terminator's debug info; we emit the terminator's one.
+  const MachineInstr *Prev = findAdjacentEmittedInstruction(MI, MAI, false);
+  if (Prev && isMergeInstruction(Prev->getOpcode()))
+    return;
+
+  if (isMergeInstruction(MI->getOpcode())) {
+    // Use the terminator's debug info; when we reach it later, the check
+    // above skips it.
+    MI = findAdjacentEmittedInstruction(MI, MAI, true);
+    assert(MI && "Merge instruction must be followed by a terminator");
+  }
+
+  // The range of DebugLine must be reset at each basic block boundary.
+  if (LastLineMI && MI->getParent() != LastLineMI->getParent())
+    LastLineMI = nullptr;
+
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+
+  const DILocation *DL = MI->getDebugLoc().get();
+  if (!DL) {
+    // No location for the current instruction
+    if (LastLineMI) {
+      // Close the current DebugLine region.
+      emitExtInst(SPIRV::NonSemanticExtInst::DebugNoLine, VoidTypeReg,
+                  ExtInstSetReg, {}, MAI);
+      LastLineMI = nullptr;
+    }
+    // No DebugLine region to close.
+    return;
+  }
+
+  // At this point, there is a location for the current instruction.
+  // If it matches the last emitted DebugLine, no new DebugLine region is
+  // needed. Otherwise, emit a new DebugLine region and update LastLineMI.
+
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(
+      DL->getScope(), /*UseEmptyPathIfNullScope=*/true);
+  unsigned Line = DL->getLine();
+  unsigned Col = DL->getColumn();
+
+  MCRegister SrcReg = DebugSourceRegByFileStr.lookup(FileStrReg.id());
+  MCRegister LineReg = I32ConstantCache.lookup(Line);
+  MCRegister ColStartReg = I32ConstantCache.lookup(Col);
+  MCRegister ColEndReg = I32ConstantCache.lookup(Col + 1);
+
+  // The elements of each collected DILocation (DebugSource, line/column
+  // constants) are pre-emitted from LLVM-IR instruction !dbg attachments and
+  // debug-program records; MIR is expected to reuse those same locations (or
+  // carry none). A lookup miss means codegen attached a source position whose
+  // elements were never pre-emitted, and debug-line emission is skipped.
+  if (!SrcReg.isValid() || !LineReg.isValid() || !ColStartReg.isValid() ||
+      !ColEndReg.isValid())
+    return;
+
+  // Current location matches the last emitted DebugLine region.
+  if (LastLineMI && MI->getDebugLoc() == LastLineMI->getDebugLoc())
+    return;
+
+  // A new DebugLine region is needed. Emit it and update LastLineMI.
+  emitExtInst(SPIRV::NonSemanticExtInst::DebugLine, VoidTypeReg, ExtInstSetReg,
+              {SrcReg, LineReg, LineReg, ColStartReg, ColEndReg}, MAI);
+
+  LastLineMI = MI;
 }
 
 void SPIRVNonSemanticDebugHandler::endInstruction() {
@@ -1383,6 +1532,17 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
     emitDebugGlobalVariable(GV, Info, VoidTypeReg, I32TypeReg, ExtInstSetReg,
                             MAI);
+
+  for (const DILocation *DL : UniqueDebugLocations) {
+    emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);
+    emitOpConstantI32(DL->getColumn(), I32TypeReg, MAI);
+    emitOpConstantI32(DL->getColumn() + 1, I32TypeReg, MAI);
+    MCRegister FileStrReg =
+        getCachedScopePathOpStringReg(DL->getScope(),
+                                      /*UseEmptyPathIfNullScope=*/true);
+    getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg, ExtInstSetReg,
+                                      MAI);
+  }
 
   GlobalNSDIEnabled = true;
 }

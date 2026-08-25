@@ -36,7 +36,7 @@ func.func @load_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) 
 // -----
 
 func.func @load_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] nontemporal = true : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -51,7 +51,7 @@ func.func @load_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : inde
 // -----
 
 func.func @load_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<[8]xf32> {
-  %0 = vector.load %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<[8]xf32>
+  %0 = vector.load %memref[%i, %j] nontemporal = true : memref<200x100xf32>, vector<[8]xf32>
   return %0 : vector<[8]xf32>
 }
 
@@ -109,7 +109,7 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 // -----
 
 func.func @load_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] { alignment = 8 } : memref<200x100xf32>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] alignment = 8 : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -156,7 +156,7 @@ func.func @store_scalable(%memref : memref<200x100xf32>, %i : index, %j : index)
 
 func.func @store_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : index) {
   %val = arith.constant dense<11.0> : vector<4xf32>
-  vector.store %val, %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<4xf32>
+  vector.store %val, %memref[%i, %j] nontemporal = true : memref<200x100xf32>, vector<4xf32>
   return
 }
 
@@ -172,7 +172,7 @@ func.func @store_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : ind
 
 func.func @store_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) {
   %val = arith.constant dense<11.0> : vector<[4]xf32>
-  vector.store %val, %memref[%i, %j] {nontemporal = true} : memref<200x100xf32>, vector<[4]xf32>
+  vector.store %val, %memref[%i, %j] nontemporal = true : memref<200x100xf32>, vector<[4]xf32>
   return
 }
 
@@ -230,7 +230,7 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // -----
 
 func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index, %val : vector<4xf32>) {
-  vector.store %val, %memref[%i, %j] {alignment = 8} : memref<200x100xf32>, vector<4xf32>
+  vector.store %val, %memref[%i, %j] alignment = 8 : memref<200x100xf32>, vector<4xf32>
   return
 }
 

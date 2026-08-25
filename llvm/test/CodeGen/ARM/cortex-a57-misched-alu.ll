@@ -4,7 +4,7 @@
 
 ; Check the latency for ALU shifted operand variants.
 ;
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:      foo:%bb.0 entry
 
 ; ALU, basic - 1 cyc I0/I1

@@ -18,10 +18,10 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %9 = llvm.addrspacecast %8 : !llvm.ptr<5> to !llvm.ptr
     %10 = llvm.mlir.addressof @_QFEint_array : !llvm.ptr
     %11 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%0 : i64) extent(%3 : i64) stride(%2 : i64) start_idx(%2 : i64)
-    %12 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
+    %12 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) name("int_array") -> !llvm.ptr
     omp.target_data map_entries(%12 : !llvm.ptr) {
-      %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
-      %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "index_"}
+      %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) name("int_array") -> !llvm.ptr
+      %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("index_") -> !llvm.ptr
       %15 = llvm.mlir.constant(100 : i32) : i32
       %16 = llvm.mlir.constant(1 : i32) : i32
       omp.target kernel_type(spmd) host_eval(%15 -> %arg0, %16 -> %arg1 : i32, i32) map_entries(%13 -> %arg2, %14 -> %arg3 : !llvm.ptr, !llvm.ptr) {

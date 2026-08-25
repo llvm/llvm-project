@@ -79,7 +79,7 @@ if config.enable_profcheck:
     )
     # Not aimed at being used for peak-optimized binaries. These will be
     # addressed later. PhaseOrdering has a couple of merge function tests.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -583,6 +583,9 @@ if config.link_llvm_dylib:
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
 
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")

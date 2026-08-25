@@ -50,6 +50,8 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(13, 0),
     CUDA_ENTRY(13, 1),
     CUDA_ENTRY(13, 2),
+    CUDA_ENTRY(13, 3),
+    CUDA_ENTRY(13, 4),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -83,7 +85,7 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::UNKNOWN;
 
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::CUDA_70;
 
   switch (A.nvptxKind()) {
@@ -98,7 +100,7 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
 
 CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::NEW;
 
   if (!A.isNVPTX())

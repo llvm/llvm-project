@@ -684,6 +684,13 @@ public:
   /// Do not optimize this function (-O0).
   bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
 
+  /// Determine whether interprocedural transforms may rewrite this function's
+  /// signature.
+  bool canChangeSignature() const {
+    return !hasFnAttribute(Attribute::Naked) &&
+           !hasFnAttribute(Attribute::NoIPA) && !hasOptNone();
+  }
+
   /// Optimize this function for minimum size (-Oz).
   bool hasMinSize() const { return hasFnAttribute(Attribute::MinSize); }
 

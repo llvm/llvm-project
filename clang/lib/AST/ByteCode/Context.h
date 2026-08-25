@@ -131,7 +131,8 @@ public:
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())
@@ -141,8 +142,8 @@ public:
         T->isVectorType())
       return false;
 
-    if (const auto *D = T->getAsEnumDecl())
-      return D->isComplete();
+    if (T->isEnumeralType())
+      return true;
 
     return classify(T) != std::nullopt;
   }

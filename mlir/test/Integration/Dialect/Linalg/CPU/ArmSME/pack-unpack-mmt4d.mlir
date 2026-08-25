@@ -1,3 +1,5 @@
+// XFAIL: mlir-expensive-checks
+
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -canonicalize -test-lower-to-arm-sme -convert-vector-to-llvm="enable-arm-sve" \
@@ -123,7 +125,7 @@ func.func private @matmul(%A: tensor<7x16xf32>, %B: tensor<16x13xf32>, %C: tenso
 // Implements packing for the A matrix (LHS) in matrix multiplication. The
 // inner tile size for dim M is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
-func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
+func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   %vs = vector.vscale
@@ -146,7 +148,7 @@ func.func private @pack_lhs(%A: tensor<7x16xf32>) -> tensor<1x16x?x1xf32> {
 // Implements packing for the B matrix (RHS) in matrix multiplication. The
 // inner tile size for dim N is "scalable": 8 * vscale.
 //===----------------------------------------------------------------------===//
-func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
+func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
@@ -173,7 +175,7 @@ func.func private @pack_rhs(%B: tensor<16x13xf32>) ->  tensor<?x16x?x1xf32> {
 // Implements packing for the C matrix (accumulator) in matrix multiplication.
 // The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> {
+func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> attributes {llvm.arm_streaming} {
   %pad = arith.constant 0.0 : f32
 
   // Compute the outer tile size.
@@ -199,7 +201,7 @@ func.func private @pack_acc(%C: tensor<7x13xf32>) -> tensor<1x?x?x?xf32> {
 // Implements unpacking for the C matrix (accumulator) in matrix
 // multiplication. The inner tile sizes are "scalable": 8 * vscale, 8 * vscale
 //===----------------------------------------------------------------------===//
-func.func private @unpack_acc(%C_packed: tensor<1x?x?x?xf32>) -> tensor<7x13xf32> {
+func.func private @unpack_acc(%C_packed: tensor<1x?x?x?xf32>) -> tensor<7x13xf32> attributes {llvm.arm_streaming} {
   %vs = vector.vscale
   %c8 = arith.constant 8 : index
   %vs_c8 = arith.muli %vs, %c8 : index

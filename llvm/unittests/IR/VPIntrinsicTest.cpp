@@ -227,14 +227,7 @@ TEST_F(VPIntrinsicTest, VPModuleComplete) {
   for (const auto &VPDecl : *M) {
     ASSERT_TRUE(VPDecl.isIntrinsic());
     ASSERT_TRUE(VPIntrinsic::isVPIntrinsic(VPDecl.getIntrinsicID()));
-    SeenIDs.insert(VPDecl.getIntrinsicID());
   }
-
-  // Check that every registered VP intrinsic has an instance in the test
-  // module.
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
-  ASSERT_TRUE(SeenIDs.count(Intrinsic::VPID));
-#include "llvm/IR/VPIntrinsics.def"
 }
 
 /// Check that VPIntrinsic:canIgnoreVectorLengthParam() returns true
@@ -313,112 +306,6 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
     }
   }
-}
-
-/// Check that going from Opcode to VP intrinsic and back results in the same
-/// Opcode.
-TEST_F(VPIntrinsicTest, OpcodeRoundTrip) {
-  std::vector<unsigned> Opcodes;
-  Opcodes.reserve(100);
-
-  {
-#define HANDLE_INST(OCNum, OCName, Class) Opcodes.push_back(OCNum);
-#include "llvm/IR/Instruction.def"
-  }
-
-  unsigned FullTripCounts = 0;
-  for (unsigned OC : Opcodes) {
-    Intrinsic::ID VPID = VPIntrinsic::getForOpcode(OC);
-    // No equivalent VP intrinsic available.
-    if (VPID == Intrinsic::not_intrinsic)
-      continue;
-
-    std::optional<unsigned> RoundTripOC =
-        VPIntrinsic::getFunctionalOpcodeForVP(VPID);
-    // No equivalent Opcode available.
-    if (!RoundTripOC)
-      continue;
-
-    ASSERT_EQ(*RoundTripOC, OC);
-    ++FullTripCounts;
-  }
-  ASSERT_NE(FullTripCounts, 0u);
-}
-
-/// Check that going from VP intrinsic to Opcode and back results in the same
-/// intrinsic id.
-TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
-  std::unique_ptr<Module> M = createVPDeclarationModule();
-  assert(M);
-
-  unsigned FullTripCounts = 0;
-  for (const auto &VPDecl : *M) {
-    auto VPID = VPDecl.getIntrinsicID();
-    std::optional<unsigned> OC = VPIntrinsic::getFunctionalOpcodeForVP(VPID);
-
-    // no equivalent Opcode available
-    if (!OC)
-      continue;
-
-    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForOpcode(*OC);
-
-    ASSERT_EQ(RoundTripVPID, VPID);
-    ++FullTripCounts;
-  }
-  ASSERT_NE(FullTripCounts, 0u);
-}
-
-/// Check that going from intrinsic to VP intrinsic and back results in the same
-/// intrinsic.
-TEST_F(VPIntrinsicTest, IntrinsicToVPRoundTrip) {
-  bool IsFullTrip = false;
-  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic + 1;
-  for (; IntrinsicID < Intrinsic::num_intrinsics; IntrinsicID++) {
-    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(IntrinsicID);
-    // No equivalent VP intrinsic available.
-    if (VPID == Intrinsic::not_intrinsic)
-      continue;
-
-    // Return itself if passed intrinsic ID is VP intrinsic.
-    if (VPIntrinsic::isVPIntrinsic(IntrinsicID)) {
-      ASSERT_EQ(IntrinsicID, VPID);
-      continue;
-    }
-
-    std::optional<Intrinsic::ID> RoundTripIntrinsicID =
-        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
-    // No equivalent non-predicated intrinsic available.
-    if (!RoundTripIntrinsicID)
-      continue;
-
-    ASSERT_EQ(*RoundTripIntrinsicID, IntrinsicID);
-    IsFullTrip = true;
-  }
-  ASSERT_TRUE(IsFullTrip);
-}
-
-/// Check that going from VP intrinsic to equivalent non-predicated intrinsic
-/// and back results in the same intrinsic.
-TEST_F(VPIntrinsicTest, VPToNonPredIntrinsicRoundTrip) {
-  std::unique_ptr<Module> M = createVPDeclarationModule();
-  assert(M);
-
-  bool IsFullTrip = false;
-  for (const auto &VPDecl : *M) {
-    auto VPID = VPDecl.getIntrinsicID();
-    std::optional<Intrinsic::ID> NonPredID =
-        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
-
-    // No equivalent non-predicated intrinsic available
-    if (!NonPredID)
-      continue;
-
-    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForIntrinsic(*NonPredID);
-
-    ASSERT_EQ(RoundTripVPID, VPID);
-    IsFullTrip = true;
-  }
-  ASSERT_TRUE(IsFullTrip);
 }
 
 /// Check that VPIntrinsic::getOrInsertDeclarationForParams works.

@@ -107,3 +107,41 @@ define void @complex_copy(ptr %a, ptr %b) {
   store {[2 x ptr addrspace(7)], i32, ptr addrspace(7)} %x, ptr %b
   ret void
 }
+
+;; The conversion of %p for the store in %then must not be reused by the
+;; store in %else, since neither block dominates the other.
+define void @two_stores_same_value(i1 %cond, ptr addrspace(7) %p, ptr %a, ptr %b) {
+; CHECK-LABEL: define void @two_stores_same_value
+; CHECK-SAME: (i1 [[COND:%.*]], { ptr addrspace(8), i32 } [[P:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
+; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[P_RSRC]] to i160
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i160 [[P_INT_RSRC]], 32
+; CHECK-NEXT:    [[P_INT_OFF:%.*]] = zext i32 [[P_OFF]] to i160
+; CHECK-NEXT:    [[P_INT:%.*]] = or i160 [[TMP0]], [[P_INT_OFF]]
+; CHECK-NEXT:    store i160 [[P_INT]], ptr [[A]], align 32
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[P_INT1_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[P_RSRC]] to i160
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[P_INT1_RSRC]], 32
+; CHECK-NEXT:    [[P_INT1_OFF:%.*]] = zext i32 [[P_OFF]] to i160
+; CHECK-NEXT:    [[P_INT1:%.*]] = or i160 [[TMP1]], [[P_INT1_OFF]]
+; CHECK-NEXT:    store i160 [[P_INT1]], ptr [[B]], align 32
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond, label %then, label %else
+then:
+  store ptr addrspace(7) %p, ptr %a
+  br label %exit
+else:
+  store ptr addrspace(7) %p, ptr %b
+  br label %exit
+exit:
+  ret void
+}

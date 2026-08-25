@@ -30,6 +30,11 @@ float4 test_amdgcn_image_gather4_lz_2d_v4f32_f32_a(float4 v4f32, float f32, int 
   return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(1, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_gather4_lz_2d_v4f32_f32_a' needs target feature extended-image-insts}}
 }
 
+half4 test_amdgcn_image_gather4_lz_2d_v4f16_f32_r(half4 v4f16, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
+
+  return __builtin_amdgcn_image_gather4_lz_2d_v4f16_f32(1, f32, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_gather4_lz_2d_v4f16_f32_r' needs target feature extended-image-insts}}
+}
+
 float4 test_amdgcn_image_sample_lz_1d_v4f32_f32(float4 v4f32, float f32, int i32, __amdgpu_texture_t tex, int4 vec4i32) {
 
   return __builtin_amdgcn_image_sample_lz_1d_v4f32_f32(15, f32, tex, vec4i32, 0, 101, 121); //GFX94-error{{'test_amdgcn_image_sample_lz_1d_v4f32_f32' needs target feature extended-image-insts}}

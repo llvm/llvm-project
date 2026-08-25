@@ -22,7 +22,7 @@ func.func @test_permlane16_i32_optional_attr(%arg0 : i32) -> i32 {
 // CHECK:  %[[CMP:.*]] = llvm.icmp "eq" %[[E0]], %[[ARG0]] : i32
 // CHECK:  %[[SEL:.*]] = llvm.select %[[CMP]], %[[E1]], %[[E0]] : i1, i32
 // CHECK:  return %[[SEL]] : i32
-  %0 = amdgpu.permlane_swap %arg0 16 { fetch_inactive = true, bound_ctrl = true }  : i32
+  %0 = amdgpu.permlane_swap %arg0 16 fetch_inactive(true) bound_ctrl(true) : i32
   return %0 : i32
 }
 

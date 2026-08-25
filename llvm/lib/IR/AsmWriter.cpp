@@ -2646,9 +2646,9 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       assert(!OpStr.empty() && "Expected valid opcode");
 
       Out << FS << OpStr;
-      if (Op.getOp() == dwarf::DW_OP_LLVM_convert) {
-        Out << FS << Op.getArg(0);
-        Out << FS << dwarf::AttributeEncodingString(Op.getArg(1));
+      if (auto Convert = dyn_cast<DIExpression::ConvertOp>(Op)) {
+        Out << FS << Convert.getBitSize();
+        Out << FS << dwarf::AttributeEncodingString(Convert.getEncoding());
       } else {
         for (unsigned A = 0, AE = Op.getNumArgs(); A != AE; ++A)
           Out << FS << Op.getArg(A);
@@ -4480,7 +4480,9 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
       (isa<AtomicRMWInst>(I) && cast<AtomicRMWInst>(I).isVolatile()))
     Out << " volatile";
 
-  if (isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise())
+  // Print the elementwise marker for atomic loads and stores.
+  if ((isa<LoadInst>(I) && cast<LoadInst>(I).isElementwise()) ||
+      (isa<StoreInst>(I) && cast<StoreInst>(I).isElementwise()))
     Out << " elementwise";
 
   // Print out optimization information.

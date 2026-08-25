@@ -216,6 +216,7 @@ public:
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
+  void dumpBareConcept(TemplateName TN);
   void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
@@ -277,6 +278,7 @@ public:
   void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
   void VisitDeclRefExpr(const DeclRefExpr *Node);
   void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *Node);
+  void VisitDependentTemplateIdExpr(const DependentTemplateIdExpr *Node);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *Node);
   void VisitPredefinedExpr(const PredefinedExpr *Node);
   void VisitCharacterLiteral(const CharacterLiteral *Node);
@@ -399,6 +401,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
   void VisitAccessSpecDecl(const AccessSpecDecl *D);
   void VisitFriendDecl(const FriendDecl *D);
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D);
   void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);

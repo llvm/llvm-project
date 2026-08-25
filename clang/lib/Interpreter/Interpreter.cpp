@@ -206,6 +206,15 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   return std::move(Clang);
 }
 
+static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
+                                            IncrementalAction &Act) {
+  if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "Failed to execute incremental action");
+  }
+  return llvm::Error::success();
+}
+
 } // anonymous namespace
 
 namespace clang {
@@ -349,7 +358,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   if (ErrOut)
     return;
 
-  CI->ExecuteAction(*Act);
+  if (llvm::Error E = ExecuteIncrementalAction(*CI, *Act)) {
+    ErrOut = joinErrors(std::move(ErrOut), std::move(E));
+    return;
+  }
 
   IncrParser =
       std::make_unique<IncrementalParser>(*CI, Act.get(), ErrOut, PTUs);
@@ -490,7 +502,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceAct = std::move(DeviceAct);
 
-  DCI->ExecuteAction(*Interp->DeviceAct);
+  if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
+    return std::move(E);
 
   Interp->DeviceCI = std::move(DCI);
 

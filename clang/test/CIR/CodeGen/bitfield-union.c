@@ -11,7 +11,7 @@ typedef union {
   int z : 8;
 } demo;
 
-// CIR:  !rec_demo = !cir.union<"demo" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_demo = !cir.union<"demo" {data !s32i, bitfield !u8i, bitfield !u8i}>
 // LLVM: %union.demo = type { i32 }
 // OGCG: %union.demo = type { i32 }
 
@@ -22,7 +22,7 @@ typedef union {
   int z : 2;
 } zero_bit;
 
-// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {data !s32i, bitfield !u8i, bitfield !u8i}>
 // LLVM: %union.zero_bit = type { i32 }
 // OGCG: %union.zero_bit = type { i32 }
 
@@ -53,7 +53,7 @@ void f() {
 // CIR:    cir.return
 
 // LLVM: define dso_local void @f
-// LLVM:   [[ALLOC:%.*]] = alloca %union.demo, i64 1, align 4
+// LLVM:   [[ALLOC:%.*]] = alloca %union.demo, align 4
 // LLVM:   store i32 1, ptr [[ALLOC]], align 4
 // LLVM:   [[BFLOAD:%.*]] = load i8, ptr [[ALLOC]], align 4
 // LLVM:   [[CLEAR:%.*]] = and i8 [[BFLOAD]], -16

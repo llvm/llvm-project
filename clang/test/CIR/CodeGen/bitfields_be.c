@@ -11,7 +11,7 @@ typedef struct {
     int c : 17;
 } S;
 
-// CIR:  !rec_S = !cir.struct<"S" {!u32i}>
+// CIR:  !rec_S = !cir.struct<"S" {bitfield !u32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 void def() {
@@ -28,8 +28,8 @@ int init(S* s) {
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u32i>) -> !s32i
 
 //LLVM: define dso_local i32 @init
-//LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
-//LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
+//LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
+//LLVM:   [[TMP1:%.*]] = alloca i32, align 4
 //LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 //LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 //LLVM:   [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4

@@ -173,13 +173,12 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (AddressableLocalMemorySize == 0)
-    AddressableLocalMemorySize = 32768;
-
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  AddressableLocalMemorySize =
+      AMDGPU::IsaInfo::getAddressableLocalMemorySize(*this);
   // LDS Allocation Granularity calculated in bytes from dwords
   LDSAllocationGranularity =
       AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
@@ -516,11 +515,6 @@ std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
@@ -630,12 +624,7 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
   return getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),

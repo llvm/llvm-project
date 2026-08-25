@@ -64,8 +64,8 @@ public:
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -121,8 +121,6 @@ public:
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
-
-  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// Return the cost of LMUL for linear operations.
   InstructionCost getLMULCost(MVT VT) const;
@@ -273,12 +271,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;

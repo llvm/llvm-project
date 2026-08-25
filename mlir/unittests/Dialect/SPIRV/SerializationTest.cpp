@@ -531,7 +531,7 @@ TEST_F(SerializationTest, LongCompositeDoesNotDuplicateDeclaredCapability) {
   // Pre-declare LongCompositesINTEL / SPV_INTEL_long_composites in the VCE
   // triple. The serializer must not emit a second OpCapability/OpExtension
   // when a long composite triggers `addLongCompositesCapability()`.
-  module->getOperation()->setAttr(
+  module->getOperation()->setDiscardableAttr(
       spirv::ModuleOp::getVCETripleAttrName(),
       spirv::VerCapExtAttr::get(
           spirv::Version::V_1_0, {spirv::Capability::LongCompositesINTEL},

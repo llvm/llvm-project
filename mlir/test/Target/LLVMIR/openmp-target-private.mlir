@@ -8,7 +8,7 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
   %3 = llvm.alloca %0 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
   %4 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %4, %3 : i32, !llvm.ptr
-  %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
+  %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("a") -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%5 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1 : !llvm.ptr) {
     %6 = llvm.mlir.constant(10 : i32) : i32
     %7 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -28,7 +28,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
   %5 = llvm.alloca %0 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
   %6 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %6, %5 : i32, !llvm.ptr
-  %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
+  %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("a") -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%7 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1, @n.privatizer %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     %8 = llvm.mlir.constant(1.100000e+01 : f32) : f32
     %9 = llvm.mlir.constant(10 : i32) : i32
@@ -98,7 +98,7 @@ llvm.func @target_boxchar_(%arg0: !llvm.ptr {fir.bindc_name = "l"}) attributes {
   %10 = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
   %11 = llvm.insertvalue %9, %10[0] : !llvm.struct<(ptr, i64)>
   %12 = llvm.insertvalue %7, %11[1] : !llvm.struct<(ptr, i64)>
-  %13 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "mapped_var"}
+  %13 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("mapped_var") -> !llvm.ptr
   llvm.store %12, %3 : !llvm.struct<(ptr, i64)>, !llvm.ptr
   %14 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%13 -> %arg1, %14 -> %arg2 : !llvm.ptr, !llvm.ptr) private(@_QFtarget_boxcharEchar_var_private_boxchar_c8xU %12 -> %arg3 [map_idx=1] : !llvm.struct<(ptr, i64)>) {

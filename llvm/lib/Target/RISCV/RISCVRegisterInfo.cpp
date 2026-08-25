@@ -573,6 +573,29 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   II->eraseFromParent();
 }
 
+static unsigned getXqciloWideOpcode(unsigned Opc) {
+  switch (Opc) {
+  case RISCV::LW:
+    return RISCV::QC_E_LW;
+  case RISCV::SW:
+    return RISCV::QC_E_SW;
+  case RISCV::LB:
+    return RISCV::QC_E_LB;
+  case RISCV::LBU:
+    return RISCV::QC_E_LBU;
+  case RISCV::LH:
+    return RISCV::QC_E_LH;
+  case RISCV::LHU:
+    return RISCV::QC_E_LHU;
+  case RISCV::SB:
+    return RISCV::QC_E_SB;
+  case RISCV::SH:
+    return RISCV::QC_E_SH;
+  default:
+    return 0;
+  }
+}
+
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
@@ -581,7 +604,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool Is64Bit = MF.getSubtarget<RISCVSubtarget>().is64Bit();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = ST.getInstrInfo();
+  bool Is64Bit = ST.is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -627,6 +652,17 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (unsigned WideOpc = getXqciloWideOpcode(Opc);
+               !isInt<12>(Val) && ST.hasVendorXqcilo() && WideOpc) {
+      // The resolved frame offset exceeds simm12 but the instruction is a
+      // standard load/store (LW/SW/etc). Promote to the wide Xqcilo equivalent
+      // so the full 26-bit offset folds directly, avoiding a separate
+      // base-adjust instruction. This runs post-RA and does not affect
+      // register allocation decisions.
+      MI.setDesc(TII->get(WideOpc));
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
                RISCVInstrInfo::isBaseQCStore(MI)) {
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);

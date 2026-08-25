@@ -35,6 +35,11 @@ static cl::opt<bool>
     EnablePreallocateSGPRSpillVGPRs("amdgpu-prealloc-sgpr-spill-vgprs",
                                     cl::init(false), cl::Hidden);
 
+bool llvm::isPreallocateSGPRSpillVGPRsEnabled(const MachineFunction &MF) {
+  return EnablePreallocateSGPRSpillVGPRs ||
+         MF.getFunction().hasFnAttribute("amdgpu-prealloc-sgpr-spill-vgprs");
+}
+
 namespace {
 
 class SIPreAllocateWWMRegs {
@@ -221,9 +226,7 @@ bool SIPreAllocateWWMRegs::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  bool PreallocateSGPRSpillVGPRs =
-      EnablePreallocateSGPRSpillVGPRs ||
-      MF.getFunction().hasFnAttribute("amdgpu-prealloc-sgpr-spill-vgprs");
+  bool PreallocateSGPRSpillVGPRs = isPreallocateSGPRSpillVGPRsEnabled(MF);
 
   bool RegsAssigned = false;
 

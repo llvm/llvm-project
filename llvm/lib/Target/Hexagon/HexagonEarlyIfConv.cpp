@@ -62,6 +62,7 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -433,6 +434,19 @@ bool HexagonEarlyIfConversion::isValid(const FlowPattern &FP) const {
       Register DefR = MI.getOperand(0).getReg();
       if (isPredicate(DefR))
         return false;
+      // The conversion assumes that each of the split, true and false blocks
+      // contributes at most one value to a PHI in the join block. A PHI can
+      // legitimately have several operands for the same incoming block, in
+      // which case a single MUX cannot represent it. Do not convert such
+      // patterns.
+      SmallPtrSet<const MachineBasicBlock *, 4> SeenB;
+      for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+        const MachineBasicBlock *BB = MI.getOperand(i + 1).getMBB();
+        if (BB != FP.SplitB && BB != FP.TrueB && BB != FP.FalseB)
+          continue;
+        if (!SeenB.insert(BB).second)
+          return false;
+      }
     }
   }
   return true;

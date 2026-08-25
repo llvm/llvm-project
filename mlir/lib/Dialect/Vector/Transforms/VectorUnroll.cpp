@@ -383,17 +383,23 @@ struct UnrollMultiReductionPattern
     Location loc = reductionOp.getLoc();
     auto resultType = reductionOp->getResult(0).getType();
 
+    // A target shape with fewer dimensions than the source vector applies to
+    // its trailing dimensions. Add leading unit dimensions so that it can be
+    // used to slice the source and to index its dimensions.
+    SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     // Handle scalar result case: all dimensions are reduced.
     // Each source tile is reduced to a scalar, and partial results are
     // chained through the accumulator operand.
     if (resultType.isIntOrFloat()) {
       Value accumulator = reductionOp.getAcc();
       for (SmallVector<int64_t> offsets :
-           StaticTileOffsetRange(originalSize, *targetShape)) {
+           StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
         SmallVector<int64_t> operandStrides(offsets.size(), 1);
         Value slicedOperand =
             rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-                loc, reductionOp.getSource(), offsets, *targetShape,
+                loc, reductionOp.getSource(), offsets, adjustedTargetShape,
                 operandStrides);
         Operation *newOp = cloneOpWithOperandsAndTypes(
             rewriter, loc, reductionOp, {slicedOperand, accumulator},
@@ -413,20 +419,20 @@ struct UnrollMultiReductionPattern
     // Stride of the ratios, this gives us the offsets of sliceCount in a basis
     // of multiples of the targetShape.
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalSize, *targetShape)) {
+         StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
       SmallVector<Value> operands;
       SmallVector<int64_t> operandStrides(offsets.size(), 1);
       Value slicedOperand =
           rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-              loc, reductionOp.getSource(), offsets, *targetShape,
+              loc, reductionOp.getSource(), offsets, adjustedTargetShape,
               operandStrides);
       operands.push_back(slicedOperand);
       SmallVector<int64_t> dstShape;
       SmallVector<int64_t> destOffset;
-      for (size_t i : llvm::seq(size_t(0), targetShape->size())) {
+      for (size_t i : llvm::seq(size_t(0), adjustedTargetShape.size())) {
         if (!reductionOp.isReducedDim(i)) {
           destOffset.push_back(offsets[i]);
-          dstShape.push_back((*targetShape)[i]);
+          dstShape.push_back(adjustedTargetShape[i]);
         }
       }
       Value acc;

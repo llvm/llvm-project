@@ -276,9 +276,11 @@ llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
 
   if (Width) {
-    std::optional<int> IsScalable = getOptionalIntLoopAttribute(
-        TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width, IsScalable.value_or(false));
+    // Presence of the scalable.enable unit node means a scalable ElementCount;
+    // disable or absence both mean fixed-width.
+    bool IsScalable =
+        getBooleanLoopAttribute(TheLoop, "llvm.loop.vectorize.scalable.enable");
+    return ElementCount::get(*Width, IsScalable);
   }
 
   return std::nullopt;
@@ -954,20 +956,12 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // indicates that, each time execution reaches the peeled iterations,
   // execution is estimated to exit them without reaching the remaining loop's
   // header.
-  //
-  // Even if the probability of reaching a loop's header is low, if it is
-  // reached, it is the start of an iteration.  Consequently, some passes
-  // historically assume that llvm::getLoopEstimatedTripCount always returns a
-  // positive count or std::nullopt.  Thus, return std::nullopt when
-  // llvm.loop.estimated_trip_count is 0.
   if (std::optional<unsigned> TC =
           getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC
-                      << (*TC == 0 ? " (returning std::nullopt)" : "")
-                      << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : TC;
+                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
+    return TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1616,15 +1610,50 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
+static Intrinsic::ID getVPReductionIntrinsicID(Intrinsic::ID Id) {
+  switch (Id) {
+  default:
+    llvm_unreachable("Unexpected reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+    return Intrinsic::vp_reduce_add;
+  case Intrinsic::vector_reduce_mul:
+    return Intrinsic::vp_reduce_mul;
+  case Intrinsic::vector_reduce_and:
+    return Intrinsic::vp_reduce_and;
+  case Intrinsic::vector_reduce_or:
+    return Intrinsic::vp_reduce_or;
+  case Intrinsic::vector_reduce_xor:
+    return Intrinsic::vp_reduce_xor;
+  case Intrinsic::vector_reduce_smax:
+    return Intrinsic::vp_reduce_smax;
+  case Intrinsic::vector_reduce_smin:
+    return Intrinsic::vp_reduce_smin;
+  case Intrinsic::vector_reduce_umax:
+    return Intrinsic::vp_reduce_umax;
+  case Intrinsic::vector_reduce_umin:
+    return Intrinsic::vp_reduce_umin;
+  case Intrinsic::vector_reduce_fmax:
+    return Intrinsic::vp_reduce_fmax;
+  case Intrinsic::vector_reduce_fmin:
+    return Intrinsic::vp_reduce_fmin;
+  case Intrinsic::vector_reduce_fmaximum:
+    return Intrinsic::vp_reduce_fmaximum;
+  case Intrinsic::vector_reduce_fminimum:
+    return Intrinsic::vp_reduce_fminimum;
+  case Intrinsic::vector_reduce_fadd:
+    return Intrinsic::vp_reduce_fadd;
+  case Intrinsic::vector_reduce_fmul:
+    return Intrinsic::vp_reduce_fmul;
+  }
+}
+
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
@@ -1650,9 +1679,7 @@ Value *llvm::createOrderedReduction(IRBuilderBase &Builder, RecurKind Kind,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
-  auto VPID = VPIntrinsic::getForIntrinsic(Id);
-  assert(VPReductionIntrinsic::isVPReduction(VPID) &&
-         "No VPIntrinsic for this reduction");
+  Intrinsic::ID VPID = getVPReductionIntrinsicID(Id);
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
   Value *Ops[] = {Start, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
@@ -2278,9 +2305,10 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-Value *llvm::addDiffRuntimeChecks(
-    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
+Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
+                                  ArrayRef<PointerDiffInfo> Checks,
+                                  SCEVExpander &Expander, ElementCount VF,
+                                  unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
@@ -2292,6 +2320,7 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+<<<<<<< HEAD
   // Cache of (VF*IC*Stride-(Stride-AccessSize)) - 1, shared across checks with
   // matching type/IC/Stride to avoid emitting duplicate runtime computations.
   DenseMap<
@@ -2301,9 +2330,18 @@ Value *llvm::addDiffRuntimeChecks(
       ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
                     NeedsFreeze] : Checks) {
+||||||| 25d130fc7eff
+  // Cache of (VF * IC * AccessSize) - 1, shared across checks with matching
+  // type and IC*AccessSize to avoid emitting duplicate runtime computations.
+  DenseMap<std::pair<Type *, unsigned>, Value *> ThresholdCache;
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+=======
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+>>>>>>> origin/main
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
+<<<<<<< HEAD
 
     // Compute the distance between first/last bytes of the accessed memory
     // during one vector loop iteration. This is equal to
@@ -2329,6 +2367,25 @@ Value *llvm::addDiffRuntimeChecks(
     Value *Diff = Expander.expandCodeFor(
         SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty), Ty,
         Loc);
+||||||| 25d130fc7eff
+    unsigned ICTimesAccessSize = IC * AccessSize;
+    Value *One = ConstantInt::get(Ty, 1);
+    Value *&ThresholdMinusOne = ThresholdCache[{Ty, ICTimesAccessSize}];
+    if (!ThresholdMinusOne) {
+      Value *VFTimesICTimesSize =
+          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                               ConstantInt::get(Ty, ICTimesAccessSize));
+      ThresholdMinusOne = ChkBuilder.CreateSub(VFTimesICTimesSize, One);
+    }
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+=======
+    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * IC * AccessSize);
+    Value *ThresholdMinusOne = Expander.expandCodeFor(
+        SE.getMinusSCEV(TotalAccessSize, SE.getConstant(Ty, 1)), Ty, Loc);
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+>>>>>>> origin/main
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
@@ -2336,12 +2393,25 @@ Value *llvm::addDiffRuntimeChecks(
     if (IsConflict)
       continue;
 
+<<<<<<< HEAD
     // Use (Diff - 1) <u (VectorIterAccessSpanMinusOne - 1), equivalent to
     // 0 < Diff <u VectorIterAccessSpanMinusOne, to exclude Diff == 0 (equal
     // pointers are safe).
     Value *One = ConstantInt::get(Ty, 1);
     IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
                                           ThresholdMinusOne, "diff.check");
+||||||| 25d130fc7eff
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
+                                          ThresholdMinusOne, "diff.check");
+=======
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are safe).
+    IsConflict = ChkBuilder.CreateICmpULT(
+        ChkBuilder.CreateSub(Diff, ConstantInt::get(Ty, 1)), ThresholdMinusOne,
+        "diff.check");
+>>>>>>> origin/main
     SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =

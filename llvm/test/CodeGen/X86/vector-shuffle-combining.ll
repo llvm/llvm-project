@@ -2034,6 +2034,7 @@ define <16 x i8> @combine_and_or_shuffle(<16 x i8> %x, <16 x i8> %y) {
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3],xmm0[4],xmm3[4],xmm0[5],xmm3[5],xmm0[6],xmm3[6],xmm0[7],xmm3[7]
 ; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: combine_and_or_shuffle:
@@ -3798,4 +3799,34 @@ CF242:                                            ; preds = %CF242, %CF259
   %Shuff153 = shufflevector <2 x i1> %Shuff33, <2 x i1> poison, <2 x i32> <i32 3, i32 1>
   %Shuff161 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp83, <2 x i32> <i32 1, i32 3>
   br label %CF242
+}
+
+define <8 x i32> @PR215111(i256 %a0) {
+; SSE-LABEL: PR215111:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rsi, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR215111:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %esi, %xmm0
+; AVX1-NEXT:    shrq $32, %rsi
+; AVX1-NEXT:    vpinsrd $2, %esi, %xmm0, %xmm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR215111:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %esi, %xmm0
+; AVX2-NEXT:    shrq $32, %rsi
+; AVX2-NEXT:    vmovd %esi, %xmm1
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX2-NEXT:    vpslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    retq
+  %bc = bitcast i256 %a0 to <8 x i32>
+  %shuf = shufflevector <8 x i32> %bc, <8 x i32> zeroinitializer, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 poison>
+  ret <8 x i32> %shuf
 }

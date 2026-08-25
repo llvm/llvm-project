@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports padded, packed, and over-aligned record shapes.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -34,15 +36,8 @@ struct NonTrivial {
 };
 
 // --- Case 17: PR42961 lambda returning Small via __invoke ---
-// CIR emits lambda internals before user functions, so this CIR check
-// must come first to match CIR emission order.
 
 Small (*fp)() = []() -> Small { return Small(); };
-
-// CIR-LABEL: cir.func {{.*}} @{{.*}}__invokeEv
-// CIR:   cir.call @{{.*}}clEv
-// LLVM-LABEL: define {{.*}} @{{.*}}__invokeEv
-// LLVM:   call {{.*}} @{{.*}}clEv
 
 // --- Case 1: D0::m0 thunk returning trivial_abi Small ---
 
@@ -311,6 +306,10 @@ void g(S* s) { new(s) S(f()); }
 // OGCG-LABEL: define {{.*}} void @_ZN7GH930401gEPNS_1SE(
 // OGCG:   call void @_ZN7GH930401fEv(ptr {{.*}}sret(
 
-// Lambda __invoke comes last in OGCG (internal linkage).
+// Lambda __invoke comes last (internal linkage).
+// CIR-LABEL: cir.func {{.*}} @{{.*}}__invokeEv
+// CIR:   cir.call @{{.*}}clEv
+// LLVM-LABEL: define {{.*}} @{{.*}}__invokeEv
+// LLVM:   call {{.*}} @{{.*}}clEv
 // OGCG-LABEL: define {{.*}} @{{.*}}__invokeEv
 // OGCG:   call {{.*}} @{{.*}}clEv

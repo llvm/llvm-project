@@ -138,6 +138,27 @@ const uint8_t *MemoryCache::FindL1CacheEntry(lldb::addr_t addr,
   return pos->second->GetBytes() + (addr - chunk_range.GetRangeBase());
 }
 
+const uint8_t *MemoryCache::FindL2CacheEntry(lldb::addr_t addr,
+                                             size_t len) const {
+  if (m_L2_cache.empty())
+    return nullptr;
+  const lldb::addr_t line_offset = addr % m_L2_cache_line_byte_size;
+  BlockMap::const_iterator pos = m_L2_cache.find(addr - line_offset);
+  if (pos == m_L2_cache.end())
+    return nullptr;
+  if (line_offset + len > pos->second->GetByteSize())
+    return nullptr;
+  return pos->second->GetBytes() + line_offset;
+}
+
+const uint8_t *MemoryCache::FindCacheEntry(lldb::addr_t addr,
+                                           size_t len) const {
+  const uint8_t *cached = FindL1CacheEntry(addr, len);
+  if (!cached)
+    cached = FindL2CacheEntry(addr, len);
+  return cached;
+}
+
 lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
                                                Status &error) {
   // This function assumes that the address given is aligned correctly.
@@ -280,7 +301,7 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   results.reserve(ranges.size());
   llvm::SmallVector<Range<lldb::addr_t, size_t>> missed_ranges;
 
-  // Iterate once serving requests from L1.
+  // Iterate once serving requests from the caches.
   for (auto range : ranges) {
     const lldb::addr_t addr = range.GetRangeBase();
     const size_t len = range.GetByteSize();
@@ -290,10 +311,11 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
       continue;
     }
 
-    if (const uint8_t *l1_data = FindL1CacheEntry(addr, len)) {
+    const uint8_t *cached = FindCacheEntry(addr, len);
+    if (cached) {
       results.push_back(buffer.take_front(len));
       buffer = buffer.drop_front(len);
-      memcpy(results.back().data(), l1_data, len);
+      memcpy(results.back().data(), cached, len);
       continue;
     }
 

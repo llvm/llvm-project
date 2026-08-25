@@ -104,17 +104,28 @@ static bool hasDot12Insts(const Chipset &chipset) {
   return chipset.majorVersion == 12 && chipset.minorVersion == 0;
 }
 
+static bool has45BitNumRecordsBufferResource(const Chipset &chipset) {
+  return chipset.majorVersion > 12 ||
+         (chipset.majorVersion == 12 && chipset.minorVersion >= 5);
+}
+
+/// Zero-extend or truncate the unsigned number `val` to `width` bits.
+static Value convertUnsignedToInt(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val, unsigned width) {
+  IntegerType destTy = rewriter.getIntegerType(width);
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (destTy == valTy)
+    return val;
+  return valTy.getWidth() > width
+             ? Value(LLVM::TruncOp::create(rewriter, loc, destTy, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, destTy, val));
+}
+
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i32 = rewriter.getI32Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i32 == valTy)
-    return val;
-  return valTy.getWidth() > 32
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i32, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i32, val));
+  return convertUnsignedToInt(rewriter, loc, val, 32);
 }
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
@@ -125,14 +136,7 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
 /// Convert an unsigned number `val` to i64.
 static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i64 = rewriter.getI64Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i64 == valTy)
-    return val;
-  return valTy.getWidth() > 64
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+  return convertUnsignedToInt(rewriter, loc, val, 64);
 }
 
 static Value createI64Constant(ConversionPatternRewriter &rewriter,
@@ -169,7 +173,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides, int64_t elementByteWidth,
                            amdgpu::Chipset chipset, bool boundsCheck) {
-  if (chipset >= kGfx1250 && !boundsCheck) {
+  if (has45BitNumRecordsBufferResource(chipset) && !boundsCheck) {
     constexpr int64_t first45bits = (1ll << 45) - 1;
     return createI64Constant(rewriter, loc, first45bits);
   }
@@ -252,6 +256,9 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
     }
   }
   Value flagsConst = createI32Constant(rewriter, loc, flags);
+  numRecords =
+      convertUnsignedToInt(rewriter, loc, numRecords,
+                           has45BitNumRecordsBufferResource(chipset) ? 45 : 32);
   Type rsrcType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
   Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
@@ -3038,6 +3045,9 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtPkFp8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
                                           existing, op.getWordIndex());
+  else
+    return op.emitOpError(
+        "no truncation to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -3072,6 +3082,9 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtSrFp8F32Op::create(rewriter, loc, i32, source, stoch,
                                           existing, op.getStoreIndex());
+  else
+    return op.emitOpError(
+        "no stochastic rounding to result type available on given chipset");
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);

@@ -463,7 +463,16 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
   const LiveInterval &LI = LIS.getInterval(Reg);
 
   const MachineInstr *OneUseInst = OneUse.getParent();
-  VNInfo *OneUseVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*OneUseInst));
+  SlotIndex OneUseIdx = LIS.getInstructionIndex(*OneUseInst);
+  VNInfo *OneUseVNI = LI.getVNInfoBefore(OneUseIdx);
+
+  auto OneUseDominates = [&](const MachineInstr *UseI) {
+    if (OneUseInst->getParent() != UseI->getParent())
+      return MDT.dominates(OneUseInst->getParent(), UseI->getParent());
+    if (OneUseInst == UseI)
+      return true;
+    return SlotIndex::isEarlierInstr(OneUseIdx, LIS.getInstructionIndex(*UseI));
+  };
 
   for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
     if (&Use == &OneUse)
@@ -482,7 +491,7 @@ static bool oneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         return false;
     } else {
       // Test that the use is dominated by the one selected use.
-      while (!MDT.dominates(OneUseInst, UseInst)) {
+      while (!OneUseDominates(UseInst)) {
         // Actually, dominating is over-conservative. Test that the use would
         // happen after the one selected use in the stack evaluation order.
         //

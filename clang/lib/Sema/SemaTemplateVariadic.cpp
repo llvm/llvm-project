@@ -143,7 +143,8 @@ class CollectUnexpandedParameterPacksVisitor
     }
 
     /// Record occurrences of template template parameter packs.
-    bool TraverseTemplateName(TemplateName Template) override {
+    bool TraverseTemplateName(TemplateName Template,
+                              bool TraverseQualifier = true) override {
       if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
               Template.getAsTemplateDecl())) {
         if (TTP->isParameterPack())
@@ -155,7 +156,8 @@ class CollectUnexpandedParameterPacksVisitor
           (bool)Template.getAsSubstTemplateTemplateParmPack();
 #endif
 
-      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+      return DynamicRecursiveASTVisitor::TraverseTemplateName(
+          Template, TraverseQualifier);
     }
 
     bool
@@ -1145,7 +1147,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_typeof_unqualType:
   case TST_typeofType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case TST_atomic: {
     QualType T = DS.getRepAsType().get();
     if (!T.isNull() && T->containsUnexpandedParameterPack())

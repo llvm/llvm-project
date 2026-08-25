@@ -2,7 +2,7 @@ add_custom_target(libc_fcntl_unittests)
 
 add_subdirectory(testdata)
 
-add_libc_unittest(
+add_libc_test(
   creat_test
   SUITE
     libc_fcntl_unittests
@@ -19,7 +19,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   fcntl_test
   SUITE
     libc_fcntl_unittests
@@ -40,7 +40,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   openat_test
   SUITE
     libc_fcntl_unittests

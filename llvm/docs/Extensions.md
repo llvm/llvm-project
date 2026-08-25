@@ -688,7 +688,7 @@ with the optimized ELF object in which it is embedded. The linker combines
 embedded dynamic debugging ELF objects into a single embedded dynamic debugging
 ELF object in the linker output. The unoptimized code within the embedded
 dynamic debugging object can be used by a debugger to replace the optimized
-equivalent during debugging. See "Dynamic Debugging" documentation for further
+equivalent during debugging. See {doc}`DynamicDebugging` for further
 details.
 
 ### CodeView-Dependent

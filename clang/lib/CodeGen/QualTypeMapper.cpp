@@ -267,6 +267,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+    llvm::reportFatalInternalError(
+        "SPIR-V types not yet supported in ABI lowering library");
 
     // Placeholder types should never reach ABI lowering.
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -393,16 +397,19 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   }
 
   for (const auto &Base : RD->bases()) {
-    if (Base.isVirtual())
-      continue;
-
     const RecordType *BaseRT = Base.getType()->castAs<RecordType>();
+    const CXXRecordDecl *BaseDecl = BaseRT->getAsCXXRecordDecl();
     const llvm::abi::Type *BaseType = convertType(Base.getType());
+    // Virtual and non-virtual base offsets live in separate maps in the AST
+    // record layout.
     uint64_t BaseOffset =
-        Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
+        (Base.isVirtual() ? Layout.getVBaseClassOffset(BaseDecl)
+                          : Layout.getBaseClassOffset(BaseDecl))
+            .getQuantity() *
         8;
-
-    BaseClasses.emplace_back(BaseType, BaseOffset);
+    BaseClasses.emplace_back(BaseType, BaseOffset, /*IsBitField=*/false,
+                             /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
+                             /*IsVirtualBase=*/Base.isVirtual());
   }
 
   for (const auto &VBase : RD->vbases()) {
@@ -413,7 +420,11 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
             .getQuantity() *
         8;
 
-    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
+    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset,
+                                    /*IsBitField=*/false,
+                                    /*BitFieldWidth=*/0,
+                                    /*IsUnnamedBitField=*/false,
+                                    /*IsVirtualBase=*/true);
   }
 
   computeFieldInfo(RD, Fields, Layout);

@@ -254,10 +254,6 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
 
-LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
-    const Instruction *I, const KnownFPClass &KnownLHS,
-    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
-
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
@@ -864,6 +860,8 @@ LLVM_ABI bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 /// form with the strictness flipped predicate. Return the new predicate and
 /// corresponding constant RHS if possible. Otherwise return std::nullopt.
 /// E.g., (icmp sgt X, 0) -> (icmp sle X, 1).
+/// For a samesign predicate, fail if adjusting the constant would change its
+/// sign bit, because that would change the comparison's poison domain.
 LLVM_ABI std::optional<std::pair<CmpPredicate, Constant *>>
 getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C);
 

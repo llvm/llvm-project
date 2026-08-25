@@ -17,7 +17,7 @@ define i16 @last_active_lane_live_out(i32 %x) {
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>, ir<1>
+; CHECK-NEXT:    EMIT vp<%active.lane.mask> = active lane mask ir<0>, ir<2>
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:

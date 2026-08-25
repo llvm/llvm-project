@@ -653,7 +653,7 @@ class Source:
     checksums: Optional[List[Checksum]] = None
 
     def __post_init__(self):
-        if not self.name and not self.path and not self.sourceReference:
+        if not self.name and not self.path and self.sourceReference is None:
             raise ValueError(
                 f"Source requires either name, path, or source_reference. {self}"
             )

@@ -1024,7 +1024,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   // Refine accesses to errno memory.
   if ((ErrnoMR | Result) != Result) {
-    if (AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+    if (AAQI.AAR.aliasErrno(Loc, Call) != AliasResult::NoAlias) {
       // Exclusion conditions do not hold, this memory location may alias errno.
       Result |= ErrnoMR;
     }
@@ -1032,20 +1032,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
   if (!isModAndRefSet(Result))
     return Result;
-
-  // If the call is malloc/calloc like, we can assume that it doesn't
-  // modify any IR visible value.  This is only valid because we assume these
-  // routines do not read values visible in the IR.  TODO: Consider special
-  // casing realloc and strdup routines which access only their arguments as
-  // well.  Or alternatively, replace all of this with inaccessiblememonly once
-  // that's implemented fully.
-  if (isMallocOrCallocLikeFn(Call, &TLI)) {
-    // Be conservative if the accessed pointer may alias the allocation -
-    // fallback to the generic handling below.
-    if (AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(Call), Loc, AAQI) ==
-        AliasResult::NoAlias)
-      return ModRefInfo::NoModRef;
-  }
 
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never
@@ -1905,7 +1891,14 @@ AliasResult BasicAAResult::aliasCheckRecursive(
 }
 
 AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
-                                      const Module *M) {
+                                      const Instruction *CtxI) {
+  // Do not make any assumptions when targeting freestanding environments (e.g.,
+  // in the context of baremetal LTO, errno may have been internalized or
+  // otherwise promoted to a local variable).
+  bool IsFreestanding = CtxI->getFunction()->hasFnAttribute("no-builtins");
+  if (IsFreestanding)
+    return AliasResult::MayAlias;
+
   // There cannot be any alias with errno if the given memory location is an
   // identified function-local object, or the size of the memory access is
   // larger than the integer size.
@@ -1913,8 +1906,21 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
       Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
     return AliasResult::NoAlias;
 
-  if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))
+  const Value *Object = getUnderlyingObject(Loc.Ptr);
+  if (isIdentifiedFunctionLocal(Object))
     return AliasResult::NoAlias;
+
+  if (auto *GV = dyn_cast<GlobalVariable>(Object)) {
+    // Errno cannot alias internal/private globals.
+    if (GV->hasLocalLinkage())
+      return AliasResult::NoAlias;
+
+    // Neither can errno alias globals where environments define it as a
+    // function call.
+    if (TLI.isErrnoFunctionCall())
+      return AliasResult::NoAlias;
+  }
+
   return AliasResult::MayAlias;
 }
 

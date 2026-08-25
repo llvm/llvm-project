@@ -225,7 +225,8 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
+  in =
+      lldb::SBFile(std::fopen(DEV_NULL, "r"), "r", /*transfer_ownership=*/true);
 
   if (auto error = out.RedirectTo(
           m_loop, overrideOut,
@@ -942,11 +943,6 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect") {
-    std::lock_guard<std::mutex> guard(m_queue_mutex);
-    m_disconnecting = true;
-  }
-
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
   if (cancel_args) {
@@ -1064,8 +1060,15 @@ llvm::Error DAP::Loop() {
   // Don't wait to join the mainloop thread if our callback wasn't added
   // successfully, or we'll wait forever.
   if (m_loop.AddPendingCallback(
-          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+          [](MainLoopBase &loop) { loop.RequestTermination(); })) {
     thread.join();
+  } else {
+    DAP_LOG(log,
+            "failed to terminate stop the main loop in {}. Detaching the "
+            "Transport Handler thread.",
+            GetClientName());
+    thread.detach();
+  }
 
   if (m_error_occurred)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

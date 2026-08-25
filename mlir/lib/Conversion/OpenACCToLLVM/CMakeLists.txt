@@ -1,4 +1,5 @@
 add_mlir_conversion_library(MLIROpenACCToLLVM
+  ACCAtomicPatterns.cpp
   ACCExecutableDirectivePatterns.cpp
   ACCToLLVMUtils.cpp
   ACCToLLVM.cpp
@@ -11,11 +12,15 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
 
   LINK_LIBS PUBLIC
   MLIRArithToLLVM
+  MLIRComplexDialect
   MLIRControlFlowToLLVM
   MLIRFuncToLLVM
   MLIRIR
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMemRefDialect
+  MLIRMemRefToLLVM
+  MLIROpenACCAnalysis
   MLIROpenACCDialect
   MLIROpenACCUtils
   MLIRTransforms

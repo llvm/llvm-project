@@ -42,6 +42,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
@@ -2313,6 +2314,10 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           !Var->isStaticLocal())
         return false;
 
+      // Address of a managed variable is never a constant expression.
+      if (Info.getLangOpts().CUDA && Var->hasAttr<HIPManagedAttr>())
+        return false;
+
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
       if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
@@ -2320,8 +2325,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
-             !Var->getType()->isCUDADeviceBuiltinTextureType()) ||
-            Var->hasAttr<HIPManagedAttr>())
+             !Var->getType()->isCUDADeviceBuiltinTextureType()))
           return false;
       }
     }
@@ -2703,9 +2707,12 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   return RM;
 }
 
-/// Check if the given evaluation result is allowed for constant evaluation.
-static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
-                                     APFloat::opStatus St) {
+/// Check if the given floating-point evaluation result is allowed for
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
+static bool checkFloatingPointResultForConstantFolding(EvalInfo &Info,
+                                                       const Expr *E,
+                                                       APFloat::opStatus St) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (Info.InConstantContext)
@@ -2757,7 +2764,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
   APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
@@ -2780,7 +2787,7 @@ static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
   Result = APFloat(Info.Ctx.getFloatTypeSemantics(DestType), 1);
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St = Result.convertFromAPInt(Value, Value.isSigned(), RM);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
@@ -2978,16 +2985,20 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
     break;
   }
 
+  // FIXME: The standard quote below is deleted by P3899R3.
   // [expr.pre]p4:
   //   If during the evaluation of an expression, the result is not
   //   mathematically defined [...], the behavior is undefined.
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  // FIXME: The NaN check should not be applied outside of "constant contexts"
+  // because it prevents NaN propagation and the "invalid" status is the
+  // responsibility of checkFloatingPointResultForConstantFolding.
   if (LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
     return Info.noteUndefinedBehavior();
   }
 
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForConstantFolding(Info, E, St);
 }
 
 static bool handleLogicalOpForVector(const APInt &LHSValue,
@@ -5295,7 +5306,7 @@ struct IncDecSubobjectHandler {
       St = Value.add(One, RM);
     else
       St = Value.subtract(One, RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointResultForConstantFolding(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))
@@ -7606,6 +7617,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   if (RD->isUnion())
     return true;
 
+  if (!ASTContext::hasLayout(RD))
+    return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
   // We don't have a good way to iterate fields in reverse, so collect all the
@@ -8000,6 +8013,8 @@ class APValueToBufferConverter {
 
   bool visitRecord(const APValue &Val, QualType Ty, CharUnits Offset) {
     const RecordDecl *RD = Ty->getAsRecordDecl();
+    if (!ASTContext::hasLayout(RD))
+      return false;
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     // Visit the base classes.
@@ -8735,8 +8750,9 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::Reinterpret;
+    if (E->getCastKind() != CK_PointerToIntegral)
+      CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
@@ -11350,6 +11366,7 @@ namespace {
     bool VisitCXXConstructExpr(const CXXConstructExpr *E, QualType T);
     bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
     bool VisitBinCmp(const BinaryOperator *E);
+    bool VisitTypeTraitExpr(const TypeTraitExpr *E);
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
@@ -15259,6 +15276,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return EvalVectorDotProduct(true);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq:
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256: {
+    APValue SrcVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec) || !SrcVec.isVector())
+      return false;
+
+    const auto *VT = E->getType()->castAs<VectorType>();
+    QualType EltTy = VT->getElementType();
+    bool isUnsigned = EltTy->isUnsignedIntegerType();
+    unsigned BitWidth = Info.Ctx.getIntWidth(EltTy);
+
+    unsigned NumSrcElems = SrcVec.getVectorLength();
+    unsigned NumDstElems = VT->getNumElements();
+
+    SmallVector<APValue, 8> ResultElts;
+    for (unsigned i = 0; i != NumDstElems; ++i) {
+      if (i < NumSrcElems) {
+        llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
+        llvm::APSInt IntResult(BitWidth, isUnsigned);
+        bool IsExact = false;
+        // We only allow exact conversions so rounding mode does not matter for
+        // cvt* and cvtt* builtins
+        FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                                   &IsExact);
+        if (!IsExact)
+          return false;
+        ResultElts.push_back(APValue(IntResult));
+      } else
+        // Pad remaining lanes with zero
+        ResultElts.push_back(APValue(llvm::APSInt(BitWidth, isUnsigned)));
+    }
+    return Success(ResultElts, E);
+  }
   }
 }
 
@@ -16323,6 +16379,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -16778,11 +16836,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
   return true;
 }
 
-/// Tries to evaluate the __builtin_object_size for @p E. If successful,
-/// returns true and stores the result in @p Size.
-///
-/// If @p WasError is non-null, this will report whether the failure to evaluate
-/// is to be treated as an Error in IntExprEvaluator.
+/// Tries to evaluate the __builtin_object_size for @p E.
 ///
 /// If @p IsDynamic is true (i.e. we're evaluating
 /// __builtin_dynamic_object_size) and the operand designates a flexible array
@@ -18683,6 +18737,34 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     return Success(APValue(RetMask), E);
   }
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64: {
+    APValue ArgVal;
+    if (!EvaluateAsRValue(Info, E->getArg(0), ArgVal))
+      return false;
+
+    assert(ArgVal.isVector() && "Expected a vector argument");
+    llvm::APFloat FloatElem = ArgVal.getVectorElt(0).getFloat();
+    unsigned BitWidth = Info.Ctx.getIntWidth(E->getType());
+    bool isUnsigned = E->getType()->isUnsignedIntegerType();
+
+    llvm::APSInt IntResult(BitWidth, isUnsigned);
+    bool IsExact = false;
+    // We only allow exact conversions so rounding mode does not matter for cvt*
+    // and cvtt* builtins
+    FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                               &IsExact);
+    if (!IsExact)
+      return false;
+
+    return Success(IntResult, E);
+  }
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask: {
@@ -19438,6 +19520,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
   return DoAfter();
 }
 
+static bool EvaluateComparisonResult(EvalInfo &Info, const Expr *E,
+                                     ComparisonCategoryResult CCR,
+                                     APValue &Result) {
+  const ComparisonCategoryInfo &CmpInfo =
+      Info.Ctx.CompCategories.getInfoForType(E->getType());
+  const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
+
+  // Check and evaluate the result as a constant expression.
+  LValue LV;
+  LV.set(VD);
+  if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
+    return false;
+  return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                 ConstantExprKind::Normal);
+}
+
 bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
   if (!CheckLiteralType(Info, E))
     return false;
@@ -19460,22 +19558,23 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
       CCR = ComparisonCategoryResult::Unordered;
       break;
     }
-    // Evaluation succeeded. Lookup the information for the comparison category
-    // type and fetch the VarDecl for the result.
-    const ComparisonCategoryInfo &CmpInfo =
-        Info.Ctx.CompCategories.getInfoForType(E->getType());
-    const VarDecl *VD = CmpInfo.getValueInfo(CmpInfo.makeWeakResult(CCR))->VD;
-    // Check and evaluate the result as a constant expression.
-    LValue LV;
-    LV.set(VD);
-    if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
-      return false;
-    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                   ConstantExprKind::Normal);
+    return EvaluateComparisonResult(Info, E, CCR, Result);
   };
   return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {
     return ExprEvaluatorBaseTy::VisitBinCmp(E);
   });
+}
+
+bool RecordExprEvaluator::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  if (!CheckLiteralType(Info, E))
+    return false;
+
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
+
+  ComparisonCategoryResult CCR = static_cast<ComparisonCategoryResult>(
+      E->getAPValue().getInt().getZExtValue());
+  return EvaluateComparisonResult(Info, E, CCR, Result);
 }
 
 bool RecordExprEvaluator::VisitCXXParenListInitExpr(
@@ -20048,7 +20147,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToIntegral: {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
+    CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
@@ -20057,6 +20156,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     if (LV.getLValueBase()) {
+      CCEDiag(E, diag::note_constexpr_has_lvalue) << E->getSourceRange();
       // Only allow based lvalue casts if they are lossless.
       // FIXME: Allow a larger integer size than the pointer size, and allow
       // narrowing back down to pointer width in subsequent integral casts.
@@ -22039,7 +22139,6 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     // destruction.
     return false;
   }
-
   return true;
 }
 
@@ -22334,6 +22433,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::UnresolvedLookupExprClass:
   case Expr::RecoveryExprClass:
   case Expr::DependentScopeDeclRefExprClass:
+  case Expr::DependentTemplateIdExprClass:
   case Expr::CXXConstructExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXStdInitializerListExprClass:
@@ -22722,14 +22822,15 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 }
 
 /// Evaluate an expression as a C++11 integral constant expression.
-static bool EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx,
-                                                    const Expr *E,
-                                                    llvm::APSInt *Value) {
+static bool
+EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
+                                        llvm::APSInt *Value,
+                                        bool AllowRelaxedEval = false) {
   if (!E->getType()->isIntegralOrUnscopedEnumerationType())
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result))
+  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22755,7 +22856,8 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx) const {
 }
 
 std::optional<llvm::APSInt>
-Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
+Expr::getIntegerConstantExpr(const ASTContext &Ctx,
+                             bool AllowRelaxedEval) const {
   if (isValueDependent()) {
     // Expression evaluator can't succeed on a dependent expression.
     return std::nullopt;
@@ -22763,7 +22865,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
 
   if (Ctx.getLangOpts().CPlusPlus11) {
     APSInt Value;
-    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value))
+    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value,
+                                                AllowRelaxedEval))
       return Value;
     return std::nullopt;
   }
@@ -22793,7 +22896,8 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+                               bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -22812,6 +22916,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   // Build evaluation settings.
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  SmallVector<PartialDiagnosticAt> MSRelaxedDiag;
+  Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
 
   bool IsConstExpr =
       ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&

@@ -1607,8 +1607,8 @@ using detect_has_any_fold_trait =
 /// Returns the result of folding a trait that implements a `foldTrait` function
 /// that is specialized for operations that have a single result.
 template <typename Trait>
-static std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
-                        LogicalResult>
+std::enable_if_t<detect_has_single_result_fold_trait<Trait>::value,
+                 LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   assert(op->hasTrait<OpTrait::OneResult>() &&
@@ -1629,7 +1629,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
 /// Returns the result of folding a trait that implements a generalized
 /// `foldTrait` function that is supports any operation type.
 template <typename Trait>
-static std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
+std::enable_if_t<detect_has_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *op, ArrayRef<Attribute> operands,
           SmallVectorImpl<OpFoldResult> &results) {
   // If a previous trait has already been folded and replaced this operation, we
@@ -1637,8 +1637,7 @@ foldTrait(Operation *op, ArrayRef<Attribute> operands,
   return results.empty() ? Trait::foldTrait(op, operands, results) : failure();
 }
 template <typename Trait>
-static inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value,
-                               LogicalResult>
+inline std::enable_if_t<!detect_has_any_fold_trait<Trait>::value, LogicalResult>
 foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
   return failure();
 }
@@ -1646,8 +1645,8 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 /// Given a tuple type containing a set of traits, return the result of folding
 /// the given operation.
 template <typename... Ts>
-static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
-                                SmallVectorImpl<OpFoldResult> &results) {
+LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) {
   return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
 

@@ -994,6 +994,7 @@ template<class Pointer = void, class Smart, class... Args>
 #  if _LIBCPP_STD_VER >= 17
 #    include <__memory/construct_at.h>
 #    include <__memory/destroy.h>
+#    include <__memory/pstl.h>
 #  endif
 
 #  if _LIBCPP_STD_VER >= 20

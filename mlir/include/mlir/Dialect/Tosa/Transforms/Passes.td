@@ -39,8 +39,7 @@ def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
 
   let dependentDialects = [
     "func::FuncDialect",
-    "tensor::TensorDialect",
-    "tosa::TosaDialect",
+    "tensor::TensorDialect"
   ];
 
   let options = [
@@ -90,7 +89,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">
+             "sections of the specifciation">,
+      Option<"validateFunctionSignature", "validate-function-signature", "bool",
+             /*default=*/"true",
+             "Verify if the function signature is valid for TOSA dialect, i.e. all "
+             "function arguments and return types are tosa-conformant tensor types">,
    ];
 }
 
@@ -214,8 +217,7 @@ def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 
@@ -239,8 +241,7 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
   ];
 
   let dependentDialects = [
-    "func::FuncDialect",
-    "tosa::TosaDialect",
+    "func::FuncDialect"
   ];
 }
 

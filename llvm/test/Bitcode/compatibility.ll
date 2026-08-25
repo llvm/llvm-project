@@ -1044,6 +1044,12 @@ define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) 
 ; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
   %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
 
+; CHECK: store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+  store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+
+; CHECK: store atomic volatile elementwise <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, ptr %word monotonic, align 4
+  store atomic volatile elementwise <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, ptr %word monotonic, align 4
+
   ret void
 }
 

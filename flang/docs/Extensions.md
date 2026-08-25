@@ -176,7 +176,9 @@ end
 ```
   Note that internally the main program symbol name is all uppercase, unlike
   the names of all other symbols, which are usually all lowercase. This
-  may make a difference in testing/debugging.
+  may make a difference in testing. It is not visible in the debug
+  information, which spells the main program name in lowercase like every
+  other name.
 * A `PROCEDURE()` with no interface name or type may be called as an
   subroutine with an implicit interface, F'2023 15.4.3.6 paragraph 4 and
   C1525 notwithstanding.
@@ -294,6 +296,7 @@ end
   not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
   `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
   the type resolution of such BOZ literals usages is highly non portable).
+  A warning is emitted when the BOZ literal is too large for the target.
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * `TRANSFER(boz, MOLD=integer or real scalar)` is accepted as an alternate

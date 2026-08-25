@@ -60,6 +60,10 @@ public:
   /// \returns A BuildNamespace with CompilationUnit kind.
   static BuildNamespace makeCompilationUnit(llvm::StringRef CompilationId);
 
+  /// Returns a copy of this namespace with its kind replaced by \p Kind,
+  /// preserving the name.
+  BuildNamespace withKind(BuildNamespaceKind Kind) const;
+
   bool operator==(const BuildNamespace &Other) const;
   bool operator!=(const BuildNamespace &Other) const;
   bool operator<(const BuildNamespace &Other) const;

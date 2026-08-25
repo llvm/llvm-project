@@ -12,11 +12,8 @@
 // basic_string& append(const value_type* s);
 // basic_string& append(const value_type* s, size_type pos, size_type n);
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode={{none|fast}}
+// REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <string>
 

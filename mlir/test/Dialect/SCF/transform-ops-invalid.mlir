@@ -41,6 +41,27 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @loop_unroll_full_unsupported_dynamic_trip_count(%upper_bound: index) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  scf.for %i = %c0 to %upper_bound step %c2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to fully unroll}}
+    transform.loop.unroll_full %1 : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @loop_unroll_and_jam_unsupported_trip_count_not_multiple_of_factor() {
   %c0 = arith.constant 0 : index
   %c40 = arith.constant 40 : index

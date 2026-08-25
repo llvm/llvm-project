@@ -390,9 +390,6 @@ TEST(HashingTest, HashWithHashBuilder) {
 struct StructWithHashBuilderAndHashValueSupport {
   char C;
   int I;
-  template <typename HasherT, llvm::endianness Endianness>
-  friend void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
-                      const StructWithHashBuilderAndHashValueSupport &Value) {}
   friend hash_code
   hash_value(const StructWithHashBuilderAndHashValueSupport &Value) {
     return 0xbeef;

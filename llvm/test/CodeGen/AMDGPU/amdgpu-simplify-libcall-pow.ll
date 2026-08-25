@@ -6109,6 +6109,14 @@ define <2 x float> @test_pow_v2f32_known_integral_constant_vector_poison_elt(<2 
   ret <2 x float> %pow
 }
 
+define float @test_pow_f32_known_args_with_fpclass() {
+; CHECK-LABEL: define float @test_pow_f32_known_args_with_fpclass() {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %pow = call fast nofpclass(nan inf) float @_Z3powff(float noundef nofpclass(nan inf) 0.0, float noundef nofpclass(nan inf) 0.0)
+  ret float %pow
+}
+
 attributes #0 = { minsize }
 attributes #1 = { noinline }
 attributes #2 = { strictfp }

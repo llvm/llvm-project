@@ -322,6 +322,14 @@ else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()
 
+# Include the Fortran OpenMP module implementation (omp_lib.o) in
+# libflang_rt.runtime when the OpenMP runtime is also being built.
+# Skip for GPU-default targets: omp_lib is a host-side Fortran module.
+if (TARGET libomp-mod AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx"
+    AND NOT FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  list(APPEND sources "$<TARGET_OBJECTS:libomp-mod>")
+endif ()
+
 
 if (NOT WIN32)
   add_flangrt_library(flang_rt.runtime STATIC SHARED
@@ -332,6 +340,11 @@ if (NOT WIN32)
   )
 
   enable_cuda_compilation(flang_rt.runtime "${sources}")
+
+  if (TARGET libomp-mod AND TARGET flang_rt.runtime.shared AND TARGET omp)
+    # Resolve bind(c) references from omp_lib when building the shared runtime.
+    target_link_libraries(flang_rt.runtime.shared PUBLIC omp)
+  endif ()
 
   # Select a default runtime, which is used for unit and regression tests.
   if (TARGET flang_rt.runtime.default)

@@ -17,6 +17,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <optional>
 
@@ -921,23 +922,18 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     const SourceManager &SM = Loc.getManager();
 
     for (const auto &R : Ranges) {
-      // Ignore invalid ranges.
-      if (!R.isValid())
+      std::optional<CharSourceRange> FileRange =
+          getExpansionRangeInFile(R, CaretFileID, SM);
+      if (!FileRange)
         continue;
 
-      SourceLocation B = SM.getExpansionLoc(R.getBegin());
-      CharSourceRange ERange = SM.getExpansionRange(R.getEnd());
-      SourceLocation E = ERange.getEnd();
-
-      // If the start or end of the range is in another file, just
-      // discard it.
-      if (SM.getFileID(B) != CaretFileID || SM.getFileID(E) != CaretFileID)
-        continue;
+      SourceLocation B = FileRange->getBegin();
+      SourceLocation E = FileRange->getEnd();
 
       // Add in the length of the token, so that we cover multi-char
       // tokens.
       unsigned TokSize = 0;
-      if (ERange.isTokenRange())
+      if (FileRange->isTokenRange())
         TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
       FullSourceLoc BF(B, SM), EF(E, SM);

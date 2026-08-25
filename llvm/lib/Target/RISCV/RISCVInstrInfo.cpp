@@ -1631,7 +1631,12 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
     Imm = 0;
     return true;
   }
-  return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+
+  if (!Reg.isVirtual())
+    return false;
+
+  const MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  return DefMI && isLoadImm(DefMI, Imm);
 }
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
@@ -3034,6 +3039,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)

@@ -161,12 +161,13 @@ static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
   const int *EHSlot = XFI->getEHSpillSlot();
+  ExceptionHandling EH = TL->getTargetMachine().getExceptionModel();
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[0]),
-                    TL->getExceptionPointerRegister(PersonalityFn)));
+                    TL->getExceptionPointerRegister(EH, PersonalityFn)));
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
-                    TL->getExceptionSelectorRegister(PersonalityFn)));
+                    TL->getExceptionSelectorRegister(EH, PersonalityFn)));
   llvm::sort(SpillList, CompareSSIOffset);
 }
 

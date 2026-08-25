@@ -9,7 +9,7 @@ define void @test_scalarize_call(i32 %start, ptr %dst) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[START]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -157,7 +157,7 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -387,7 +387,7 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 2, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[INDEX:%.*]] = sub i64 [[TMP3]], [[TMP5]]

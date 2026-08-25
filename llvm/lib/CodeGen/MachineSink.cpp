@@ -391,7 +391,7 @@ bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
-  if (DefMI->isCopyLike())
+  if (!DefMI || DefMI->isCopyLike())
     return false;
   LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
   LLVM_DEBUG(dbgs() << "*** to: " << MI);
@@ -1102,8 +1102,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
       // claim it's likely we can sink these together.
       // If definition resides elsewhere, we aren't
       // blocking it from being sunk so don't break the edge.
-      MachineInstr *DefMI = MRI->getVRegDef(Reg);
-      if (DefMI->getParent() == MI.getParent())
+      if (MRI->getDefBlock(Reg) == MI.getParent())
         return true;
     }
   }

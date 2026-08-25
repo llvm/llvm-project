@@ -160,11 +160,14 @@ void CodeMetrics::analyzeBasicBlock(
 
         if (IsLoweredToCall)
           ++NumCalls;
-      } else {
+      } else if (!Call->isInlineAsm()) {
         // We don't want inline asm to count as a call - that would prevent loop
         // unrolling. The argument setup cost is still real, though.
-        if (!Call->isInlineAsm())
-          ++NumCalls;
+        ++NumCalls;
+        // When preparing for LTO, consider indirect calls as potential inline
+        // candidates since they may be resolved during post-link LTO
+        if (PrepareForLTO && !Call->isNoInline())
+          ++NumInlineCandidates;
       }
     }
 

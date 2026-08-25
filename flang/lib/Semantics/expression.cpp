@@ -3852,6 +3852,16 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
               Warn(common::UsageWarning::IgnoredNoReallocateLHS,
                   "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
             }
+            const Expr<SomeType> &rhs{analyzer.GetExpr(1)};
+            if (auto rhsType{rhs.GetType()}) {
+              if (const auto *rhsDerived{GetDerivedTypeSpec(*rhsType)}) {
+                if (rhsDerived->IsVectorType()) {
+                  Say(rhsExpr.source,
+                      "Vector type '%s' may not be used as the right-hand side of a polymorphic intrinsic assignment"_err_en_US,
+                      rhsType->AsFortran());
+                }
+              }
+            }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
             if (auto iter{FindAllocatableUltimateComponent(*derived)}) {
@@ -5581,7 +5591,40 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   bool isAmbiguous{false};
   if (std::optional<ProcedureRef> procRef{
           GetDefinedAssignmentProc(isAmbiguous)}) {
-    if (context_.inWhereBody() && !procRef->proc().IsElemental()) { // C1032
+    bool hasCUDADeviceRhs{false};
+    for (const semantics::Symbol &symbol : CollectCudaSymbols(rhs)) {
+      if (semantics::IsCUDADevice(symbol)) {
+        hasCUDADeviceRhs = true;
+        break;
+      }
+    }
+    const semantics::Symbol *rhsSymbol{UnwrapWholeSymbolDataRef(rhs)};
+    bool hasCUDADeviceAssociateRhs{false};
+    if (rhsSymbol) {
+      if (const auto *associate{
+              rhsSymbol->detailsIf<semantics::AssocEntityDetails>()}) {
+        if (const auto &selector{associate->expr()}) {
+          for (const semantics::Symbol &symbol :
+              CollectCudaSymbols(*selector)) {
+            if (semantics::IsCUDADevice(symbol)) {
+              hasCUDADeviceAssociateRhs = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (hasCUDADeviceRhs && context_.inWhereBody()) {
+      context_.Say(
+          "Defined assignment in WHERE with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceRhs && procRef->proc().IsElemental()) {
+      context_.Say(
+          "Elemental defined assignment with a CUDA DEVICE right-hand side is not yet implemented"_todo_en_US);
+    } else if (hasCUDADeviceAssociateRhs) {
+      context_.Say(
+          "Defined assignment from an ASSOCIATE name with a CUDA DEVICE target is not yet implemented"_todo_en_US);
+    } else if (context_.inWhereBody() &&
+        !procRef->proc().IsElemental()) { // C1032
       context_.Say(
           "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
           DEREF(procRef->proc().GetSymbol()).name());
@@ -5673,17 +5716,32 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
   }
   ActualArguments actualsCopy{actuals_};
   // Ensure that the RHS argument is not passed as a variable unless
-  // the dummy argument has the VALUE attribute.
-  if (evaluate::IsVariable(actualsCopy.at(1).value().UnwrapExpr())) {
+  // the dummy argument has the VALUE attribute, or the actual's own attributes
+  // already require reference semantics that must be preserved.
+  if (const auto *rhsExpr{actualsCopy.at(1).value().UnwrapExpr()};
+      evaluate::IsVariable(rhsExpr)) {
     auto chars{evaluate::characteristics::Procedure::Characterize(
         *proc, context_.GetFoldingContext())};
     const auto *rhsDummy{chars && chars->dummyArguments.size() == 2
             ? std::get_if<evaluate::characteristics::DummyDataObject>(
                   &chars->dummyArguments.at(1).u)
             : nullptr};
-    if (!rhsDummy ||
-        !rhsDummy->attrs.test(
-            evaluate::characteristics::DummyDataObject::Attr::Value)) {
+    std::optional<common::CUDADataAttr> rhsDataAttr;
+    for (const Symbol &symbol : evaluate::GetSymbolVector(*rhsExpr)) {
+      if (auto cudaAttr{GetCUDADataAttr(&symbol)}) {
+        rhsDataAttr = *cudaAttr;
+      }
+    }
+    const Symbol *rhsFirstSymbol{evaluate::GetFirstSymbol(*rhsExpr)};
+    // TODO: This DEVICE exception may need to be limited to device-to-host
+    // transfers or to RHS references that appear in unambiguous host code.
+    const bool preserveActualReference{
+        (rhsDataAttr && *rhsDataAttr == common::CUDADataAttr::Device) ||
+        (rhsFirstSymbol && IsValue(*rhsFirstSymbol))};
+    if (!preserveActualReference &&
+        (!rhsDummy ||
+            !rhsDummy->attrs.test(
+                evaluate::characteristics::DummyDataObject::Attr::Value))) {
       actualsCopy.at(1).value().Parenthesize();
     }
   }
@@ -5875,6 +5933,17 @@ void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
       lhsType.category() == TypeCategory::Unsigned ||
       lhsType.category() == TypeCategory::Real) {
     Expr<SomeType> rhs{MoveExpr(1)};
+    if (lhsType.category() == TypeCategory::Integer ||
+        lhsType.category() == TypeCategory::Unsigned) {
+      if (const auto *boz{std::get_if<BOZLiteralConstant>(&rhs.u)};
+          boz && boz->bits - boz->LEADZ() > lhsType.kind() * 8) {
+        context_.Warn(common::UsageWarning::BOZLiteralTruncation,
+            "BOZ literal constant is too large for %s(KIND=%d) assignment target; truncated"_warn_en_US,
+            lhsType.category() == TypeCategory::Unsigned ? "UNSIGNED"
+                                                         : "INTEGER",
+            lhsType.kind());
+      }
+    }
     if (MaybeExpr converted{ConvertToType(lhsType, std::move(rhs))}) {
       actuals_[1] = std::move(*converted);
     }

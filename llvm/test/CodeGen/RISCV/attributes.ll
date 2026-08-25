@@ -131,6 +131,12 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smcsps %s -o - | FileCheck --check-prefix=RV32SMCSPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-sscsps %s -o - | FileCheck --check-prefix=RV32SSCSPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smijt %s -o - | FileCheck --check-prefix=RV32SMIJT %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV32SSIJT %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV32SMEHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV32SSEHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV32SMIP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV32SSIP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV32SMPMPMT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV32SMRNMI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
@@ -300,6 +306,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smcsps %s -o - | FileCheck --check-prefix=RV64SMCSPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-sscsps %s -o - | FileCheck --check-prefix=RV64SSCSPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smijt %s -o - | FileCheck --check-prefix=RV64SMIJT %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV64SSIJT %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV64SMEHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV64SSEHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV64SMIP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV64SSIP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV64SMPMPMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV64SMRNMI %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
@@ -476,9 +488,15 @@
 ; RV32SSQOSID: .attribute 5, "rv32i2p1_ssqosid1p0"
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMCNTRPMF: .attribute 5, "rv32i2p1_smcntrpmf1p0"
-; RV32SMCSPS: .attribute 5, "rv32i2p1_smcsps0p19"
-; RV32SSCSPS: .attribute 5, "rv32i2p1_smcsps0p19_sscsps0p19"
+; RV32SMCSPS: .attribute 5, "rv32i2p1_smcsps0p20"
+; RV32SSCSPS: .attribute 5, "rv32i2p1_smcsps0p20_sscsps0p20"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
+; RV32SMIJT: .attribute 5, "rv32i2p1_smijt0p20"
+; RV32SSIJT: .attribute 5, "rv32i2p1_ssijt0p20"
+; RV32SMEHV: .attribute 5, "rv32i2p1_smehv0p20_smijt0p20"
+; RV32SSEHV: .attribute 5, "rv32i2p1_ssehv0p20_ssijt0p20"
+; RV32SMIP: .attribute 5, "rv32i2p1_smip0p20"
+; RV32SSIP: .attribute 5, "rv32i2p1_ssip0p20"
 ; RV32SMPMPMT: .attribute 5, "rv32i2p1_smpmpmt0p6"
 ; RV32SMRNMI: .attribute 5, "rv32i2p1_smrnmi1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
@@ -642,9 +660,15 @@
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMCNTRPMF: .attribute 5, "rv64i2p1_smcntrpmf1p0"
-; RV64SMCSPS: .attribute 5, "rv64i2p1_smcsps0p19"
-; RV64SSCSPS: .attribute 5, "rv64i2p1_smcsps0p19_sscsps0p19"
+; RV64SMCSPS: .attribute 5, "rv64i2p1_smcsps0p20"
+; RV64SSCSPS: .attribute 5, "rv64i2p1_smcsps0p20_sscsps0p20"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
+; RV64SMIJT: .attribute 5, "rv64i2p1_smijt0p20"
+; RV64SSIJT: .attribute 5, "rv64i2p1_ssijt0p20"
+; RV64SMEHV: .attribute 5, "rv64i2p1_smehv0p20_smijt0p20"
+; RV64SSEHV: .attribute 5, "rv64i2p1_ssehv0p20_ssijt0p20"
+; RV64SMIP: .attribute 5, "rv64i2p1_smip0p20"
+; RV64SSIP: .attribute 5, "rv64i2p1_ssip0p20"
 ; RV64SMPMPMT: .attribute 5, "rv64i2p1_smpmpmt0p6"
 ; RV64SMRNMI: .attribute 5, "rv64i2p1_smrnmi1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"

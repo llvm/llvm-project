@@ -8652,8 +8652,8 @@ AST_MATCHER_P(CXXNewExpr, hasAnyPlacementArg, internal::Matcher<Expr>,
 /// cxxNewExpr(hasArraySize(integerLiteral(equals(10))))
 ///   matches the expression 'new MyClass[10]'.
 AST_MATCHER_P(CXXNewExpr, hasArraySize, internal::Matcher<Expr>, InnerMatcher) {
-  return Node.isArray() && *Node.getArraySize() &&
-         InnerMatcher.matches(**Node.getArraySize(), Finder, Builder);
+  const std::optional<const Expr *> ArraySize = Node.getArraySize();
+  return ArraySize && InnerMatcher.matches(**ArraySize, Finder, Builder);
 }
 
 /// Matches a class declaration that is defined.

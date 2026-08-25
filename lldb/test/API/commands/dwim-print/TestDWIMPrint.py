@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestCase(TestBase):
     def _run_cmd(self, cmd: str) -> str:
         """Run the given lldb command and return its output."""

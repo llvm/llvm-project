@@ -194,7 +194,7 @@ struct FormatBindingID
         RC(RTI.getResourceClass()) {}
 
   void format(llvm::raw_ostream &OS, StringRef Style) {
-    OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
+    OS << getRCPrefix(RC).upper() << Item.getBinding().BindingID;
   }
 };
 
@@ -243,6 +243,8 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
 
   // TODO: Do we want to sort these by binding or something like that?
   for (const dxil::ResourceInfo &RI : DRM) {
+    if (!RI.hasBinding())
+      continue;
     const dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
     dxil::ResourceClass RC = RTI.getResourceClass();

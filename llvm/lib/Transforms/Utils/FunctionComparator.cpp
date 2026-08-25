@@ -478,7 +478,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::BlockAddressVal: {
     const BlockAddress *LBA = cast<BlockAddress>(L);
     const BlockAddress *RBA = cast<BlockAddress>(R);
-    if (int Res = cmpValues(LBA->getFunction(), RBA->getFunction()))
+    if (int Res =
+            cmpValuesAllowingSelfRef(LBA->getFunction(), RBA->getFunction()))
       return Res;
     if (LBA->getFunction() == RBA->getFunction()) {
       // They are BBs in the same function. Order by which comes first in the
@@ -716,6 +717,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     if (int Res =
             cmpNumbers(SI->isVolatile(), cast<StoreInst>(R)->isVolatile()))
       return Res;
+    if (int Res = cmpNumbers(SI->isElementwise(),
+                             cast<StoreInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpAligns(SI->getAlign(), cast<StoreInst>(R)->getAlign()))
       return Res;
     if (int Res =
@@ -888,23 +892,23 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
   return 0;
 }
 
-/// Compare two values used by the two functions under pair-wise comparison. If
-/// this is the first time the values are seen, they're added to the mapping so
-/// that we will detect mismatches on next use.
-/// See comments in declaration for more details.
-int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
-  // Catch self-reference case.
+int FunctionComparator::cmpValuesAllowingSelfRef(const Value *L,
+                                                 const Value *R) const {
   if (L == FnL) {
     if (R == FnR)
       return 0;
     return -1;
   }
-  if (R == FnR) {
-    if (L == FnL)
-      return 0;
+  if (R == FnR)
     return 1;
-  }
+  return cmpValues(L, R);
+}
 
+/// Compare two values used by the two functions under pair-wise comparison. If
+/// this is the first time the values are seen, they're added to the mapping so
+/// that we will detect mismatches on next use.
+/// See comments in declaration for more details.
+int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   const Constant *ConstL = dyn_cast<Constant>(L);
   const Constant *ConstR = dyn_cast<Constant>(R);
   if (ConstL && ConstR) {
@@ -961,11 +965,19 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
       return Res;
     if (needToCmpOperands) {
       assert(InstL->getNumOperands() == InstR->getNumOperands());
+      const auto *CBL = dyn_cast<CallBase>(&*InstL);
 
       for (unsigned i = 0, e = InstL->getNumOperands(); i != e; ++i) {
         Value *OpL = InstL->getOperand(i);
         Value *OpR = InstR->getOperand(i);
-        if (int Res = cmpValues(OpL, OpR))
+        int Res;
+        if (CBL && CBL->isCallee(&InstL->getOperandUse(i))) {
+          assert(cast<CallBase>(&*InstR)->isCallee(&InstR->getOperandUse(i)));
+          Res = cmpValuesAllowingSelfRef(OpL, OpR);
+        } else {
+          Res = cmpValues(OpL, OpR);
+        }
+        if (Res)
           return Res;
         // cmpValues should ensure this is true.
         assert(cmpTypes(OpL->getType(), OpR->getType()) == 0);

@@ -20,7 +20,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[SRV0:[0-9]+]]:
   ; CHECK:   Name: Zero
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 0
+  ; CHECK:     Binding ID: 0
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 8
   ; CHECK:     Size: 1
@@ -34,7 +34,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[SRV1:[0-9]+]]:
   ; CHECK:   Name: One
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 1
+  ; CHECK:     Binding ID: 1
   ; CHECK:     Space: 4
   ; CHECK:     Lower Bound: 2
   ; CHECK:     Size: 1
@@ -49,7 +49,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[SRV2:[0-9]+]]:
   ; CHECK:   Name: Two
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 2
+  ; CHECK:     Binding ID: 2
   ; CHECK:     Space: 5
   ; CHECK:     Lower Bound: 3
   ; CHECK:     Size: 24
@@ -64,7 +64,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[UAV0:[0-9]+]]:
   ; CHECK:   Name: Three
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 0
+  ; CHECK:     Binding ID: 0
   ; CHECK:     Space: 2
   ; CHECK:     Lower Bound: 7
   ; CHECK:     Size: 1
@@ -83,7 +83,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[UAV1:[0-9]+]]:
   ; CHECK:   Name: Four
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 1
+  ; CHECK:     Binding ID: 1
   ; CHECK:     Space: 3
   ; CHECK:     Lower Bound: 5
   ; CHECK:     Size: 1
@@ -106,7 +106,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[UAV2:[0-9]+]]:
   ; CHECK:   Name: Array
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 2
+  ; CHECK:     Binding ID: 2
   ; CHECK:     Space: 4
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 10
@@ -126,7 +126,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[UAV3:[0-9]+]]:
   ; CHECK:   Name: Five
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 3
+  ; CHECK:     Binding ID: 3
   ; CHECK:     Space: 5
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 1
@@ -143,7 +143,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[UAV4:[0-9]+]]:
   ; CHECK:   Name: Six
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 4
+  ; CHECK:     Binding ID: 4
   ; CHECK:     Space: 5
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 1
@@ -160,7 +160,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[CB0:[0-9]+]]:
   ; CHECK:   Name: CB
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 0
+  ; CHECK:     Binding ID: 0
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 1
@@ -173,7 +173,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[CB1:[0-9]+]]:
   ; CHECK:   Name: Constants
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 1
+  ; CHECK:     Binding ID: 1
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 8
   ; CHECK:     Size: 1

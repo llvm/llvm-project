@@ -111,10 +111,6 @@ BasicBlock::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertBefore(InsertPos->getIterator());
-}
-
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
 void Instruction::insertBefore(BasicBlock::iterator InsertPos) {
@@ -182,16 +178,8 @@ void Instruction::insertBefore(BasicBlock &BB,
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
-void Instruction::moveBefore(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
-}
-
 void Instruction::moveBefore(BasicBlock::iterator MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos, false);
-}
-
-void Instruction::moveBeforePreserving(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
@@ -931,6 +919,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
+           SI->isElementwise() == cast<StoreInst>(I2)->isElementwise() &&
            (SI->getAlign() == cast<StoreInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&

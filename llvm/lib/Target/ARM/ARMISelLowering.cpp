@@ -1690,7 +1690,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
                                            bool isVarArg) const {
   switch (CC) {
   default:
-    report_fatal_error("Unsupported calling convention");
+    // Unknown CCs are rejected when calling convention lowering is required.
   case CallingConv::ARM_AAPCS:
   case CallingConv::ARM_APCS:
   case CallingConv::GHC:
@@ -1706,16 +1706,15 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return isVarArg ? CallingConv::ARM_AAPCS : CallingConv::ARM_AAPCS_VFP;
   case CallingConv::C:
   case CallingConv::Tail:
-    if (!getTM().isAAPCS_ABI())
+    if (!Subtarget->isAAPCS_ABI())
       return CallingConv::ARM_APCS;
-    else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-             Subtarget->isTargetHardFloat() && !isVarArg)
+    else if (Subtarget->isTargetHardFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
-    if (!getTM().isAAPCS_ABI()) {
+    if (!Subtarget->isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
@@ -21496,12 +21495,15 @@ bool ARMTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool ARMTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+ARMTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
-  return (Index == 0 || Index == ResVT.getVectorNumElements());
+  if (Index == 0 || Index == ResVT.getVectorNumElements())
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
@@ -22296,19 +22298,17 @@ bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
 }
 
 Register ARMTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  ExceptionHandling EM = getTargetMachine().getExceptionModel();
-  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
+  return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

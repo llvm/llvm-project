@@ -287,6 +287,14 @@ static bool printCompactDWARFExpr(
     return false;
   };
 
+  // Keep the diagnostic in the compact printer so every register form reports
+  // failure only after resolveRegName has tried to get a target name and decode
+  // an ASCII-packed name.
+  auto UnknownRegister = [](raw_ostream &OS, uint64_t DwarfRegNum) -> bool {
+    OS << "<unknown register " << DwarfRegNum << ">";
+    return false;
+  };
+
   while (I != E) {
     const DWARFExpression::Operation &Op = *I;
     uint8_t Opcode = Op.getCode();
@@ -298,7 +306,7 @@ static bool printCompactDWARFExpr(
       std::string RegName =
           resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
-        return false;
+        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
       S << RegName;
       break;
@@ -309,7 +317,7 @@ static bool printCompactDWARFExpr(
       std::string RegName =
           resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
       if (RegName.empty())
-        return false;
+        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back().String);
       S << RegName;
       if (Offset)
@@ -323,10 +331,19 @@ static bool printCompactDWARFExpr(
       uint64_t SubExprLength = Op.getRawOperand(0);
       DWARFExpression::iterator SubExprEnd = I.skipBytes(SubExprLength);
       ++I;
+
+      SmallString<16> SubExpr;
+      raw_svector_ostream SubExprOS(SubExpr);
+      // Keep the subexpression separate so we can copy its diagnostic on
+      // failure without leaving a partial entry(...) in the output.
+      if (!printCompactDWARFExpr(SubExprOS, I, SubExprEnd,
+                                 GetNameForDWARFReg)) {
+        OS << SubExprOS.str();
+        return false;
+      }
+
       raw_svector_ostream S(Stack.emplace_back().String);
-      S << "entry(";
-      printCompactDWARFExpr(S, I, SubExprEnd, GetNameForDWARFReg);
-      S << ")";
+      S << "entry(" << SubExprOS.str() << ")";
       I = SubExprEnd;
       continue;
     }
@@ -351,18 +368,20 @@ static bool printCompactDWARFExpr(
         // DW_OP_reg<N>: A register, with the register num implied by the
         // opcode. Printed as the plain register name.
         uint64_t DwarfRegNum = Opcode - dwarf::DW_OP_reg0;
-        auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+        std::string RegName =
+            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
         if (RegName.empty())
-          return false;
+          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
         S << RegName;
       } else if (Opcode >= dwarf::DW_OP_breg0 &&
                  Opcode <= dwarf::DW_OP_breg31) {
         int DwarfRegNum = Opcode - dwarf::DW_OP_breg0;
         int64_t Offset = Op.getRawOperand(0);
-        auto RegName = GetNameForDWARFReg(DwarfRegNum, false);
+        std::string RegName =
+            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
         if (RegName.empty())
-          return false;
+          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back().String);
         S << RegName;
         if (Offset)

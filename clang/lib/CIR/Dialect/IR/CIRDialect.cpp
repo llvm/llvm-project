@@ -258,6 +258,7 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
     p << " " << stringifyInlineKind(inlineKindAttr.getValue());
   }
 }
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
@@ -616,10 +617,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
-                cir::ConstVectorAttr, cir::ConstComplexAttr,
-                cir::ConstRecordAttr, cir::GlobalViewAttr, cir::PoisonAttr,
-                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
+  if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
+                cir::ConstArrayAttr, cir::ConstVectorAttr,
+                cir::ConstComplexAttr, cir::ConstRecordAttr,
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
+                cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -975,6 +977,10 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return cir::PoisonAttr::get(getContext(), getType());
   }
 
+  // Propagate Undef value
+  if (mlir::isa_and_present<cir::UndefAttr>(adaptor.getSrc()))
+    return cir::UndefAttr::get(getType());
+
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
@@ -1013,10 +1019,14 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
       auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
       auto dstIntTy = mlir::cast<cir::IntType>(getType());
-      APInt newVal =
-          srcIntTy.isSigned()
-              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
-              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      auto constIntAttr = srcConst.getValueAttr<cir::IntAttr>();
+      if (!constIntAttr)
+        return {};
+
+      APInt srcValue = constIntAttr.getValue();
+      APInt newVal = srcIntTy.isSigned()
+                         ? srcValue.sextOrTrunc(dstIntTy.getWidth())
+                         : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
     default:
@@ -2076,6 +2086,11 @@ static void printConstant(OpAsmPrinter &p, Attribute value) {
 }
 
 mlir::LogicalResult cir::GlobalOp::verify() {
+  // A function is not an object, so it cannot be the type of a global.  A
+  // global that holds a function's address carries a pointer type instead.
+  if (mlir::isa<cir::FuncType>(getSymType()))
+    return emitOpError("global type cannot be a function type");
+
   // Verify that the initial value, if present, is either a unit attribute or
   // an attribute CIR supports.
   if (getInitialValue().has_value()) {
@@ -2090,12 +2105,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  if (getDynTlsRefs()) {
+  if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
-      return emitOpError(
-          "cannot have both static local and dynamic tls references");
-    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
-      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+      return emitOpError("cannot have both static local and tls references");
+    if (!getTlsModel())
+      return emitOpError("'tls_refs' only valid for tls");
   }
 
   if (getAliasee().has_value()) {
@@ -2519,7 +2533,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       (resultTypes.empty() ? cir::VoidType::get(builder.getContext())
                            : resultTypes.front());
 
-  cir::FuncType fnType = cir::FuncType::get(argTypes, returnType, isVariadic);
+  cir::FuncType fnType =
+      cir::FuncType::getChecked([&]() { return parser.emitError(loc); },
+                                argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
 

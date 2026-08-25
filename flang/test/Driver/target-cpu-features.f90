@@ -76,7 +76,7 @@
 ! CHECK-RV64: "-fc1" "-triple" "riscv64-unknown-linux-gnu"
 ! CHECK-RV64-SAME: "-target-cpu" "generic-rv64" "-target-feature" "+i" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+c"
 
-! CHECK-AMDGPU: "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! CHECK-AMDGPU: "-fc1" "-triple" "amdgpu9.08-amd-amdhsa"
 ! CHECK-AMDGPU-SAME: "-target-cpu" "gfx908"
 
 ! CHECK-AMDGPU-R600: "-fc1" "-triple" "r600-unknown-unknown"

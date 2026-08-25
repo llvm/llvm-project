@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -clangir-enable-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s

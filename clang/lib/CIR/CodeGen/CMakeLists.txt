@@ -52,9 +52,11 @@ add_clang_library(clangCIR
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
   CIRGenStmtOpenMP.cpp
+  CIRGenSYCL.cpp
   CIRGenTypes.cpp
   CIRGenVTables.cpp
   TargetInfo.cpp
+  Targets/AArch64.cpp
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp

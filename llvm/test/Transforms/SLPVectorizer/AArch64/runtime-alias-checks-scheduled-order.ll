@@ -92,6 +92,224 @@ entry:
   ret void
 }
 
+define void @versioned_block_check_reuses_no_body_scalars(ptr %arg, ptr nofree readonly captures(none) %arg2) {
+; CHECK-LABEL: define void @versioned_block_check_reuses_no_body_scalars(
+; CHECK-SAME: ptr [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG]] to i64
+; CHECK-NEXT:    [[ARG21:%.*]] = ptrtoaddr ptr [[ARG2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[ARG21]], 36
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ARG3]], 36
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[ARG3]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[ARG21]], [[TMP1]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK:       [[ENTRY_RTVEC]]:
+; CHECK-NEXT:    [[GEP4_1:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> poison, ptr [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, <2 x ptr> [[TMP3]], <2 x i64> <i64 8, i64 12>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x ptr> [[TMP3]], <2 x ptr> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[GEP4_1]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x ptr> [[TMP4]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP6]], <4 x ptr> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint <4 x ptr> [[TMP8]] to <4 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr [[ARG2]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i32> [[TMP10]] to <4 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i64> [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i64> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <4 x i1> [[TMP13]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP14]], ptr [[ARG]], align 4
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr i8, ptr [[ARG2]], i64 16
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x ptr> poison, ptr [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x ptr> [[TMP15]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, <4 x ptr> [[TMP16]], <4 x i64> <i64 16, i64 20, i64 24, i64 28>
+; CHECK-NEXT:    [[GEP4_4:%.*]] = getelementptr i8, ptr [[ARG]], i64 16
+; CHECK-NEXT:    [[TMP18:%.*]] = ptrtoint <4 x ptr> [[TMP17]] to <4 x i64>
+; CHECK-NEXT:    [[TMP19:%.*]] = load <4 x i32>, ptr [[GEP_4]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = zext <4 x i32> [[TMP19]] to <4 x i64>
+; CHECK-NEXT:    [[TMP21:%.*]] = or <4 x i64> [[TMP18]], [[TMP20]]
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <4 x i64> [[TMP21]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = zext <4 x i1> [[TMP22]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP23]], ptr [[GEP4_4]], align 4
+; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr i8, ptr [[ARG2]], i64 32
+; CHECK-NEXT:    [[GEP4_8:%.*]] = getelementptr i8, ptr [[ARG]], i64 32
+; CHECK-NEXT:    [[PTRTOINT_8:%.*]] = ptrtoint ptr [[GEP4_8]] to i64
+; CHECK-NEXT:    [[LOAD_8:%.*]] = load i32, ptr [[GEP_8]], align 4
+; CHECK-NEXT:    [[ZEXT_8:%.*]] = zext i32 [[LOAD_8]] to i64
+; CHECK-NEXT:    [[OR_8:%.*]] = or i64 [[PTRTOINT_8]], [[ZEXT_8]]
+; CHECK-NEXT:    [[CMP_8:%.*]] = icmp eq i64 [[OR_8]], 0
+; CHECK-NEXT:    [[SEL_8:%.*]] = zext i1 [[CMP_8]] to i32
+; CHECK-NEXT:    store i32 [[SEL_8]], ptr [[GEP4_8]], align 4
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT:.*]]
+; CHECK:       [[ENTRY_RTSCALAR]]:
+; CHECK-NEXT:    [[PTRTOINT_SCALAR:%.*]] = ptrtoint ptr [[ARG]] to i64
+; CHECK-NEXT:    [[LOAD_SCALAR:%.*]] = load i32, ptr [[ARG2]], align 4
+; CHECK-NEXT:    [[ZEXT_SCALAR:%.*]] = zext i32 [[LOAD_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_SCALAR:%.*]] = or i64 [[PTRTOINT_SCALAR]], [[ZEXT_SCALAR]]
+; CHECK-NEXT:    [[CMP_SCALAR:%.*]] = icmp eq i64 [[OR_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_SCALAR:%.*]] = zext i1 [[CMP_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_SCALAR]], ptr [[ARG]], align 4
+; CHECK-NEXT:    [[GEP_1_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 4
+; CHECK-NEXT:    [[GEP4_1_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 4
+; CHECK-NEXT:    [[PTRTOINT_1_SCALAR:%.*]] = ptrtoint ptr [[GEP4_1_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_1_SCALAR:%.*]] = load i32, ptr [[GEP_1_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_1_SCALAR:%.*]] = zext i32 [[LOAD_1_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_1_SCALAR:%.*]] = or i64 [[PTRTOINT_1_SCALAR]], [[ZEXT_1_SCALAR]]
+; CHECK-NEXT:    [[CMP_1_SCALAR:%.*]] = icmp eq i64 [[OR_1_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_1_SCALAR:%.*]] = zext i1 [[CMP_1_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_1_SCALAR]], ptr [[GEP4_1_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_2_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 8
+; CHECK-NEXT:    [[GEP4_2_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 8
+; CHECK-NEXT:    [[PTRTOINT_2_SCALAR:%.*]] = ptrtoint ptr [[GEP4_2_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_2_SCALAR:%.*]] = load i32, ptr [[GEP_2_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_2_SCALAR:%.*]] = zext i32 [[LOAD_2_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_2_SCALAR:%.*]] = or i64 [[PTRTOINT_2_SCALAR]], [[ZEXT_2_SCALAR]]
+; CHECK-NEXT:    [[CMP_2_SCALAR:%.*]] = icmp eq i64 [[OR_2_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_2_SCALAR:%.*]] = zext i1 [[CMP_2_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_2_SCALAR]], ptr [[GEP4_2_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_3_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 12
+; CHECK-NEXT:    [[GEP4_3_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 12
+; CHECK-NEXT:    [[PTRTOINT_3_SCALAR:%.*]] = ptrtoint ptr [[GEP4_3_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_3_SCALAR:%.*]] = load i32, ptr [[GEP_3_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_3_SCALAR:%.*]] = zext i32 [[LOAD_3_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_3_SCALAR:%.*]] = or i64 [[PTRTOINT_3_SCALAR]], [[ZEXT_3_SCALAR]]
+; CHECK-NEXT:    [[CMP_3_SCALAR:%.*]] = icmp eq i64 [[OR_3_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_3_SCALAR:%.*]] = zext i1 [[CMP_3_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_3_SCALAR]], ptr [[GEP4_3_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_4_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 16
+; CHECK-NEXT:    [[GEP4_4_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 16
+; CHECK-NEXT:    [[PTRTOINT_4_SCALAR:%.*]] = ptrtoint ptr [[GEP4_4_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_4_SCALAR:%.*]] = load i32, ptr [[GEP_4_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_4_SCALAR:%.*]] = zext i32 [[LOAD_4_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_4_SCALAR:%.*]] = or i64 [[PTRTOINT_4_SCALAR]], [[ZEXT_4_SCALAR]]
+; CHECK-NEXT:    [[CMP_4_SCALAR:%.*]] = icmp eq i64 [[OR_4_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_4_SCALAR:%.*]] = zext i1 [[CMP_4_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_4_SCALAR]], ptr [[GEP4_4_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_5_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 20
+; CHECK-NEXT:    [[GEP4_5_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 20
+; CHECK-NEXT:    [[PTRTOINT_5_SCALAR:%.*]] = ptrtoint ptr [[GEP4_5_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_5_SCALAR:%.*]] = load i32, ptr [[GEP_5_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_5_SCALAR:%.*]] = zext i32 [[LOAD_5_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_5_SCALAR:%.*]] = or i64 [[PTRTOINT_5_SCALAR]], [[ZEXT_5_SCALAR]]
+; CHECK-NEXT:    [[CMP_5_SCALAR:%.*]] = icmp eq i64 [[OR_5_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_5_SCALAR:%.*]] = zext i1 [[CMP_5_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_5_SCALAR]], ptr [[GEP4_5_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_6_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 24
+; CHECK-NEXT:    [[GEP4_6_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 24
+; CHECK-NEXT:    [[PTRTOINT_6_SCALAR:%.*]] = ptrtoint ptr [[GEP4_6_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_6_SCALAR:%.*]] = load i32, ptr [[GEP_6_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_6_SCALAR:%.*]] = zext i32 [[LOAD_6_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_6_SCALAR:%.*]] = or i64 [[PTRTOINT_6_SCALAR]], [[ZEXT_6_SCALAR]]
+; CHECK-NEXT:    [[CMP_6_SCALAR:%.*]] = icmp eq i64 [[OR_6_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_6_SCALAR:%.*]] = zext i1 [[CMP_6_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_6_SCALAR]], ptr [[GEP4_6_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_7_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 28
+; CHECK-NEXT:    [[GEP4_7_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 28
+; CHECK-NEXT:    [[PTRTOINT_7_SCALAR:%.*]] = ptrtoint ptr [[GEP4_7_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_7_SCALAR:%.*]] = load i32, ptr [[GEP_7_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_7_SCALAR:%.*]] = zext i32 [[LOAD_7_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_7_SCALAR:%.*]] = or i64 [[PTRTOINT_7_SCALAR]], [[ZEXT_7_SCALAR]]
+; CHECK-NEXT:    [[CMP_7_SCALAR:%.*]] = icmp eq i64 [[OR_7_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_7_SCALAR:%.*]] = zext i1 [[CMP_7_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_7_SCALAR]], ptr [[GEP4_7_SCALAR]], align 4
+; CHECK-NEXT:    [[GEP_8_SCALAR:%.*]] = getelementptr i8, ptr [[ARG2]], i64 32
+; CHECK-NEXT:    [[GEP4_8_SCALAR:%.*]] = getelementptr i8, ptr [[ARG]], i64 32
+; CHECK-NEXT:    [[PTRTOINT_8_SCALAR:%.*]] = ptrtoint ptr [[GEP4_8_SCALAR]] to i64
+; CHECK-NEXT:    [[LOAD_8_SCALAR:%.*]] = load i32, ptr [[GEP_8_SCALAR]], align 4
+; CHECK-NEXT:    [[ZEXT_8_SCALAR:%.*]] = zext i32 [[LOAD_8_SCALAR]] to i64
+; CHECK-NEXT:    [[OR_8_SCALAR:%.*]] = or i64 [[PTRTOINT_8_SCALAR]], [[ZEXT_8_SCALAR]]
+; CHECK-NEXT:    [[CMP_8_SCALAR:%.*]] = icmp eq i64 [[OR_8_SCALAR]], 0
+; CHECK-NEXT:    [[SEL_8_SCALAR:%.*]] = zext i1 [[CMP_8_SCALAR]] to i32
+; CHECK-NEXT:    store i32 [[SEL_8_SCALAR]], ptr [[GEP4_8_SCALAR]], align 4
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT]]
+; CHECK:       [[ENTRY_RTCONT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ptrtoint = ptrtoint ptr %arg to i64
+  %load = load i32, ptr %arg2, align 4
+  %zext = zext i32 %load to i64
+  %or = or i64 %ptrtoint, %zext
+  %cmp = icmp eq i64 %or, 0
+  %sel = zext i1 %cmp to i32
+  store i32 %sel, ptr %arg, align 4
+  %gep.1 = getelementptr i8, ptr %arg2, i64 4
+  %gep4.1 = getelementptr i8, ptr %arg, i64 4
+  %ptrtoint.1 = ptrtoint ptr %gep4.1 to i64
+  %load.1 = load i32, ptr %gep.1, align 4
+  %zext.1 = zext i32 %load.1 to i64
+  %or.1 = or i64 %ptrtoint.1, %zext.1
+  %cmp.1 = icmp eq i64 %or.1, 0
+  %sel.1 = zext i1 %cmp.1 to i32
+  store i32 %sel.1, ptr %gep4.1, align 4
+  %gep.2 = getelementptr i8, ptr %arg2, i64 8
+  %gep4.2 = getelementptr i8, ptr %arg, i64 8
+  %ptrtoint.2 = ptrtoint ptr %gep4.2 to i64
+  %load.2 = load i32, ptr %gep.2, align 4
+  %zext.2 = zext i32 %load.2 to i64
+  %or.2 = or i64 %ptrtoint.2, %zext.2
+  %cmp.2 = icmp eq i64 %or.2, 0
+  %sel.2 = zext i1 %cmp.2 to i32
+  store i32 %sel.2, ptr %gep4.2, align 4
+  %gep.3 = getelementptr i8, ptr %arg2, i64 12
+  %gep4.3 = getelementptr i8, ptr %arg, i64 12
+  %ptrtoint.3 = ptrtoint ptr %gep4.3 to i64
+  %load.3 = load i32, ptr %gep.3, align 4
+  %zext.3 = zext i32 %load.3 to i64
+  %or.3 = or i64 %ptrtoint.3, %zext.3
+  %cmp.3 = icmp eq i64 %or.3, 0
+  %sel.3 = zext i1 %cmp.3 to i32
+  store i32 %sel.3, ptr %gep4.3, align 4
+  %gep.4 = getelementptr i8, ptr %arg2, i64 16
+  %gep4.4 = getelementptr i8, ptr %arg, i64 16
+  %ptrtoint.4 = ptrtoint ptr %gep4.4 to i64
+  %load.4 = load i32, ptr %gep.4, align 4
+  %zext.4 = zext i32 %load.4 to i64
+  %or.4 = or i64 %ptrtoint.4, %zext.4
+  %cmp.4 = icmp eq i64 %or.4, 0
+  %sel.4 = zext i1 %cmp.4 to i32
+  store i32 %sel.4, ptr %gep4.4, align 4
+  %gep.5 = getelementptr i8, ptr %arg2, i64 20
+  %gep4.5 = getelementptr i8, ptr %arg, i64 20
+  %ptrtoint.5 = ptrtoint ptr %gep4.5 to i64
+  %load.5 = load i32, ptr %gep.5, align 4
+  %zext.5 = zext i32 %load.5 to i64
+  %or.5 = or i64 %ptrtoint.5, %zext.5
+  %cmp.5 = icmp eq i64 %or.5, 0
+  %sel.5 = zext i1 %cmp.5 to i32
+  store i32 %sel.5, ptr %gep4.5, align 4
+  %gep.6 = getelementptr i8, ptr %arg2, i64 24
+  %gep4.6 = getelementptr i8, ptr %arg, i64 24
+  %ptrtoint.6 = ptrtoint ptr %gep4.6 to i64
+  %load.6 = load i32, ptr %gep.6, align 4
+  %zext.6 = zext i32 %load.6 to i64
+  %or.6 = or i64 %ptrtoint.6, %zext.6
+  %cmp.6 = icmp eq i64 %or.6, 0
+  %sel.6 = zext i1 %cmp.6 to i32
+  store i32 %sel.6, ptr %gep4.6, align 4
+  %gep.7 = getelementptr i8, ptr %arg2, i64 28
+  %gep4.7 = getelementptr i8, ptr %arg, i64 28
+  %ptrtoint.7 = ptrtoint ptr %gep4.7 to i64
+  %load.7 = load i32, ptr %gep.7, align 4
+  %zext.7 = zext i32 %load.7 to i64
+  %or.7 = or i64 %ptrtoint.7, %zext.7
+  %cmp.7 = icmp eq i64 %or.7, 0
+  %sel.7 = zext i1 %cmp.7 to i32
+  store i32 %sel.7, ptr %gep4.7, align 4
+  %gep.8 = getelementptr i8, ptr %arg2, i64 32
+  %gep4.8 = getelementptr i8, ptr %arg, i64 32
+  %ptrtoint.8 = ptrtoint ptr %gep4.8 to i64
+  %load.8 = load i32, ptr %gep.8, align 4
+  %zext.8 = zext i32 %load.8 to i64
+  %or.8 = or i64 %ptrtoint.8, %zext.8
+  %cmp.8 = icmp eq i64 %or.8, 0
+  %sel.8 = zext i1 %cmp.8 to i32
+  store i32 %sel.8, ptr %gep4.8, align 4
+  ret void
+}
+
 ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
 declare i16 @llvm.sadd.sat.i16(i16, i16) #0
 

@@ -18,7 +18,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::abseil {
 
 void DurationConversionCastCheck::registerMatchers(MatchFinder *Finder) {
-  auto CallMatcher = ignoringImpCasts(callExpr(
+  const auto CallMatcher = ignoringImpCasts(callExpr(
       callee(functionDecl(durationConversionFunction()).bind("func_decl")),
       hasArgument(0, expr().bind("arg"))));
 

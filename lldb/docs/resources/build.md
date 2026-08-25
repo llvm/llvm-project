@@ -263,6 +263,12 @@ $ cmake -G Ninja \
     <path to root of llvm source tree>
 ```
 
+:::{note}
+`LLDB_TEST_COMPILER` points to a single compiler. It is expected that this is
+the C compiler and that the C++ compiler's name can be inferred from the name
+of the C compiler.
+:::
+
 It is strongly recommend to use a release build for the compiler to speed up
 test execution.
 

@@ -28,9 +28,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -866,9 +868,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
   // Look through all global variables in the given `body` block and check if
   // there is a spirv.GlobalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
-            spirv::SPIRVDialect::getAttributeName(
-                spirv::Decoration::BuiltIn))) {
+    if (StringAttr builtinAttr = varOp.getBuiltInAttr()) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
       if (varBuiltIn == builtin) {
         return varOp;
@@ -1021,11 +1021,19 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
 
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    cast<SymbolOpInterface>(newFuncOp.getOperation())
+        .setVisibility(
+            cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
     // Copy over all attributes other than the function name and type.
-    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+        newFuncOp->setDiscardableAttr(namedAttr.getName(),
+                                      namedAttr.getValue());
     }
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -1283,6 +1291,87 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
   }
 };
 
+static void addNoWrapDecorations(Operation *op,
+                                 spirv::LinearizedIndexNoWrapFlags flags,
+                                 OpBuilder &builder) {
+  if (flags.noSignedWrap)
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
+        builder.getUnitAttr());
+  if (flags.noUnsignedWrap)
+    op->setDiscardableAttr(
+        spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
+        builder.getUnitAttr());
+}
+
+static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
+                                                     ArrayRef<int64_t> strides,
+                                                     int64_t offset) {
+  if (shape.size() != strides.size() || offset < 0)
+    return std::nullopt;
+
+  uint64_t maxLinearIndex = offset;
+  for (auto [dimension, stride] : llvm::zip(shape, strides)) {
+    if (dimension <= 0 || stride < 0)
+      return std::nullopt;
+    std::optional<uint64_t> nextMaxLinearIndex = llvm::checkedMulAddUnsigned(
+        static_cast<uint64_t>(dimension - 1), static_cast<uint64_t>(stride),
+        maxLinearIndex);
+    if (!nextMaxLinearIndex)
+      return std::nullopt;
+    maxLinearIndex = *nextMaxLinearIndex;
+  }
+  return maxLinearIndex;
+}
+
+static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+  auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
+  if (!pointerType ||
+      pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
+    return std::nullopt;
+
+  Type pointeeType = pointerType.getPointeeType();
+  if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
+    if (structType.getNumElements() != 1)
+      return std::nullopt;
+    pointeeType = structType.getElementType(0);
+  }
+  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
+  if (!arrayType)
+    return std::nullopt;
+  return arrayType.getNumElements();
+}
+
+static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
+                                          ArrayRef<int64_t> strides,
+                                          int64_t offset,
+                                          uint64_t accessElementCount) {
+  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
+  // than the source element. Keep a plain access chain so later bitwidth
+  // emulation can adjust the final index in storage-element units.
+  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
+    if (integerType.getWidth() < 16)
+      return false;
+
+  std::optional<uint64_t> maxSourceElementIndex =
+      getMaxLinearizedIndex(baseType.getShape(), strides, offset);
+  std::optional<uint64_t> storageElementCount =
+      getStorageBufferElementCount(basePtr);
+  if (!maxSourceElementIndex || !storageElementCount)
+    return false;
+
+  if (accessElementCount == 0 || accessElementCount > *storageElementCount)
+    return false;
+
+  // `InBoundsAccessChain` requires the computed pointer to stay within the
+  // SPIR-V base object. Dynamic index validity is assumed from the source
+  // operation/caller contract; for vector accesses, `accessElementCount` only
+  // rejects widths that cannot fit in the fixed StorageBuffer object at all.
+  // The static proof here is that the memref layout's linear index space maps
+  // into that same object.
+  return *maxSourceElementIndex < *storageElementCount;
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1336,9 +1425,36 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
 // Public functions for index calculation
 //===----------------------------------------------------------------------===//
 
+mlir::spirv::LinearizedIndexNoWrapFlags
+mlir::spirv::getLinearizedIndexNoWrapFlags(const TargetEnv &targetEnv,
+                                           ArrayRef<int64_t> shape,
+                                           ArrayRef<int64_t> strides,
+                                           int64_t offset, Type integerType) {
+  LinearizedIndexNoWrapFlags flags;
+  if (!targetEnv.allows(Extension::SPV_KHR_no_integer_wrap_decoration))
+    return flags;
+
+  auto integer = dyn_cast<IntegerType>(integerType);
+  if (!integer)
+    return flags;
+
+  std::optional<uint64_t> maxLinearIndex =
+      getMaxLinearizedIndex(shape, strides, offset);
+  if (!maxLinearIndex)
+    return flags;
+
+  flags.noSignedWrap =
+      *maxLinearIndex <=
+      APInt::getSignedMaxValue(integer.getWidth()).getZExtValue();
+  flags.noUnsignedWrap =
+      *maxLinearIndex <= APInt::getMaxValue(integer.getWidth()).getZExtValue();
+  return flags;
+}
+
 Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
                                   int64_t offset, Type integerType,
-                                  Location loc, OpBuilder &builder) {
+                                  Location loc, OpBuilder &builder,
+                                  LinearizedIndexNoWrapFlags noWrapFlags) {
   assert(indices.size() == strides.size() &&
          "must provide indices for all dimensions");
 
@@ -1355,8 +1471,15 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
         IntegerAttr::get(integerType, strides[index.index()]));
     Value update =
         builder.createOrFold<spirv::IMulOp>(loc, index.value(), strideVal);
+    if (noWrapFlags.noSignedWrap || noWrapFlags.noUnsignedWrap)
+      if (auto mul = update.getDefiningOp<spirv::IMulOp>())
+        addNoWrapDecorations(mul, noWrapFlags, builder);
+
     linearizedIndex =
         builder.createOrFold<spirv::IAddOp>(loc, update, linearizedIndex);
+    if (noWrapFlags.noSignedWrap || noWrapFlags.noUnsignedWrap)
+      if (auto add = linearizedIndex.getDefiningOp<spirv::IAddOp>())
+        addNoWrapDecorations(add, noWrapFlags, builder);
   }
   return linearizedIndex;
 }
@@ -1364,7 +1487,8 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
-                                       OpBuilder &builder) {
+                                       OpBuilder &builder,
+                                       uint64_t accessElementCount) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -1376,20 +1500,38 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
 
-  // Add a '0' at the start to index into the struct.
-  linearizedIndices.push_back(zero);
-
   if (baseType.getRank() == 0) {
     linearizedIndices.push_back(zero);
   } else {
-    linearizedIndices.push_back(
-        linearizeIndex(indices, strides, offset, indexType, loc, builder));
+    linearizedIndices.push_back(linearizeIndex(
+        indices, strides, offset, indexType, loc, builder, noWrapFlags));
   }
+
+  const Type pointeeType =
+      cast<spirv::PointerType>(basePtr.getType()).getPointeeType();
+  // Interface memrefs are wrapped in a struct: index to its first elem.
+  if (isa<spirv::StructType>(pointeeType))
+    linearizedIndices.insert(linearizedIndices.begin(), zero);
+  if (shouldEmitInBoundsAccessChain(baseType, basePtr, strides, offset,
+                                    accessElementCount))
+    return spirv::InBoundsAccessChainOp::create(builder, loc, basePtr,
+                                                linearizedIndices);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
+}
+
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
+  return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                             builder, /*accessElementCount=*/1);
 }
 
 Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1407,14 +1549,17 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   Value linearIndex;
   if (baseType.getRank() == 0) {
     linearIndex = spirv::ConstantOp::getZero(indexType, loc, builder);
   } else {
-    linearIndex =
-        linearizeIndex(indices, strides, offset, indexType, loc, builder);
+    linearIndex = linearizeIndex(indices, strides, offset, indexType, loc,
+                                 builder, noWrapFlags);
   }
   Type pointeeType =
       cast<spirv::PointerType>(basePtr.getType()).getPointeeType();
@@ -1430,7 +1575,8 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
-                                 OpBuilder &builder) {
+                                 OpBuilder &builder,
+                                 uint64_t accessElementCount) {
 
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     return getOpenCLElementPtr(typeConverter, baseType, basePtr, indices, loc,
@@ -1438,7 +1584,15 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
-                             builder);
+                             builder, accessElementCount);
+}
+
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
+                                 MemRefType baseType, Value basePtr,
+                                 ValueRange indices, Location loc,
+                                 OpBuilder &builder) {
+  return getElementPtr(typeConverter, baseType, basePtr, indices, loc, builder,
+                       /*accessElementCount=*/1);
 }
 
 //===----------------------------------------------------------------------===//

@@ -97,7 +97,7 @@ func.func @foo(%arg0: tensor<3x8xf16>) -> tensor<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP-LABEL:   func.func @call_extract_slice(
 // CHECK-NO-LAYOUT-MAP-SAME:                                  %[[VAL_0:.*]]: memref<4x8xf16>) -> memref<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_1:.*]] = memref.subview %[[VAL_0]][1, 0] [3, 8] [1, 1] : memref<4x8xf16> to memref<3x8xf16, strided<[8, 1], offset: 8>>
-// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() alignment = 64 : memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           memref.copy %[[VAL_1]], %[[VAL_2]] : memref<3x8xf16, strided<[8, 1], offset: 8>> to memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_3:.*]] = call @foo(%[[VAL_2]]) : (memref<3x8xf16>) -> memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           return %[[VAL_3]] : memref<3x8xf16>
@@ -488,9 +488,9 @@ func.func @main() {
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
 
-  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() {alignment = 64 : i64} : memref<f32>
+  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() alignment = 64 : memref<f32>
   //  CHECK-DAG:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, strided<[], offset: ?>>
@@ -751,7 +751,7 @@ func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
   // We are conservative around recursive functions. The analysis cannot handle
   // them, so we have to assume the op operand of the call op bufferizes to a
   // memory read and write. This causes a copy in this test case.
-  // CHECK: %[[copy:.*]] = memref.alloc() {alignment = 64 : i64} : memref<5xf32>
+  // CHECK: %[[copy:.*]] = memref.alloc() alignment = 64 : memref<5xf32>
   // CHECK: memref.copy %[[arg0]], %[[copy]]
   // CHECK: %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
   // CHECK: %[[call:.*]] = call @foo(%[[cast]])
@@ -797,7 +797,7 @@ func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
 
 // CHECK-LABEL: func @result_type_mismatch({{.*}}) -> memref<5xf32, strided<[?], offset: ?>>
 func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
-  // CHECK: %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc() alignment = 64 : memref<10xf32>
   %t = tensor.empty() : tensor<10xf32>
   cf.cond_br %c, ^bb1, ^bb2
 ^bb1:

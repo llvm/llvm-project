@@ -45,6 +45,9 @@ static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   if (Obj.isELF())
     return elf2yaml(OS, Obj);
 
+  if (Obj.isGOFF())
+    return goff2yaml(OS, cast<GOFFObjectFile>(Obj));
+
   if (Obj.isWasm())
     return errorCodeToError(wasm2yaml(OS, cast<WasmObjectFile>(Obj)));
 

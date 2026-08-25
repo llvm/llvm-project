@@ -22,6 +22,7 @@
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "Variables.h"
+#include "Watchpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -63,6 +64,7 @@ typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, Watchpoint> WatchpointMap;
 
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
@@ -107,6 +109,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
+  WatchpointMap data_breakpoints;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;

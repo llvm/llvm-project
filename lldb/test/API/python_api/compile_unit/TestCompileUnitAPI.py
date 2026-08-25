@@ -33,6 +33,18 @@ class CompileUnitAPITestCase(TestBase):
         main_cu = sc_list.compile_units[0]
         self.assertTrue(main_cu.IsValid(), "Main executable CU is not valid")
 
+        a_mod: lldb.SBModule = target.FindModule(lldb.SBFileSpec("a.out"))
+        main_cu_by_index = a_mod.compile_unit[0]
+        self.assertTrue(main_cu_by_index.IsValid(), "Main executable CU is not valid")
+
+        main_cu_by_name = a_mod.compile_unit["main.c"]
+        self.assertTrue(main_cu_by_name.IsValid(), "Main executable CU is not valid")
+
+        main_cu_by_regex_list = a_mod.compile_unit[re.compile(r".*main.*")]
+        self.assertEqual(len(main_cu_by_regex_list), 1)
+        [main_cu_by_regex] = main_cu_by_regex_list
+        self.assertTrue(main_cu_by_regex.IsValid(), "Main executable CU is not valid")
+
         self.assertEqual(
             main_cu.FindLineEntryIndex(line_entry, True),
             main_cu.FindLineEntryIndex(

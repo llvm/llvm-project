@@ -10,6 +10,16 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+add_header_library(
+  exhaustive_test_static_rounding
+  HDRS
+    exhaustive_test_static_rounding.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+)
+
 add_fp_unittest(
   sqrtf_test
   NO_RUN_POSTBUILD
@@ -210,6 +220,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.expf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  expf_static_rounding_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    .exhaustive_test_static_rounding
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

@@ -16,6 +16,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.features
     libc.include.fenv
     libc.include.float
+    libc.include.grp
     libc.include.inttypes
     libc.include.langinfo
     libc.include.libgen
@@ -34,6 +35,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.pwd
     libc.include.sched
     libc.include.search
+    libc.include.semaphore
     libc.include.setjmp
     libc.include.signal
     libc.include.spawn
@@ -64,7 +66,9 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_stat
     libc.include.sys_statfs
     libc.include.sys_statvfs
+    libc.include.sys_sysinfo
     libc.include.sys_syscall
+    libc.include.sys_sysmacros
     libc.include.sys_time
     libc.include.sys_types
     libc.include.sys_uio
@@ -74,6 +78,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_wait
     libc.include.syscall
     libc.include.sysexits
+    libc.include.syslog
     libc.include.termios
     libc.include.threads
     libc.include.time

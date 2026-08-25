@@ -118,6 +118,7 @@ if(CLANG_ENABLE_CIR)
     cir-translate
     mlir-translate
     )
+  add_subdirectory(CIR/lib)
 endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)

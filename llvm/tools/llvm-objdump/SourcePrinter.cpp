@@ -188,12 +188,11 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DataExtractor Data(LocExpr.Expr, Unit->getContext().isLittleEndian());
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
-  auto GetRegName = [&MRI, &OS](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+  auto GetRegName = [&MRI](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (std::optional<MCRegister> LLVMRegNum =
             MRI.getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MRI.getName(*LLVMRegNum))
         return StringRef(RegName);
-    OS << "<unknown register " << DwarfRegNum << ">";
     return {};
   };
 

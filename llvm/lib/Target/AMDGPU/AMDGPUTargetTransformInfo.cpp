@@ -1322,9 +1322,10 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   case Intrinsic::amdgcn_make_buffer_rsrc: {
     Type *SrcTy = NewV->getType();
     Type *DstTy = II->getType();
+    Type *NumRecordsTy = II->getArgOperand(2)->getType();
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        M, II->getIntrinsicID(), {DstTy, SrcTy});
+        M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1336,13 +1337,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(SrcTy))
-    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
@@ -1471,7 +1472,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                SubTp);
 }
 

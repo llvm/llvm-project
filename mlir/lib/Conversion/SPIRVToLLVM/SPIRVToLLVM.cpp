@@ -303,6 +303,15 @@ static Type convertStructType(spirv::StructType type,
 
 namespace {
 
+template <typename OpTy>
+static NamedAttrList collectAttrsForConversion(OpTy op) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary());
+  if (auto properties =
+          dyn_cast_or_null<DictionaryAttr>(op->getPropertiesAsAttribute()))
+    attrs.append(properties.getValue());
+  return attrs;
+}
+
 class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
 public:
   using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
@@ -434,7 +443,8 @@ public:
       return success();
     }
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
-        constOp, dstType, adaptor.getOperands(), constOp->getAttrs());
+        constOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(constOp));
     return success();
   }
 };
@@ -644,7 +654,7 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     rewriter.template replaceOpWithNewOp<LLVMOp>(
-        op, dstType, adaptor.getOperands(), op->getAttrs());
+        op, dstType, adaptor.getOperands(), collectAttrsForConversion(op));
     return success();
   }
 };
@@ -828,7 +838,7 @@ public:
 
     // Attach location attribute if applicable
     if (locationAttr)
-      newGlobalOp->setAttr(locationAttrName, locationAttr);
+      newGlobalOp->setDiscardableAttr(locationAttrName, locationAttr);
 
     return success();
   }
@@ -879,7 +889,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
+          callOp, TypeRange(), adaptor.getOperands(),
+          collectAttrsForConversion(callOp));
       newOp.getProperties().operandSegmentSizes = {
           static_cast<int32_t>(adaptor.getOperands().size()), 0};
       newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -891,7 +902,8 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(callOp, "type conversion failed");
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        callOp, dstType, adaptor.getOperands(), callOp->getAttrs());
+        callOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(callOp));
     newOp.getProperties().operandSegmentSizes = {
         static_cast<int32_t>(adaptor.getOperands().size()), 0};
     newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -1940,7 +1952,8 @@ public:
     }
 
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        bitcastOp, dstType, adaptor.getOperands(), bitcastOp->getAttrs());
+        bitcastOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(bitcastOp));
     return success();
   }
 };
@@ -1986,7 +1999,8 @@ public:
 
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
-    newFuncOp->setAttr("passthrough", ArrayAttr::get(context, {llvmAttr}));    \
+    newFuncOp->setDiscardableAttr("passthrough",                               \
+                                  ArrayAttr::get(context, {llvmAttr}));        \
     break;
 
       DISPATCH(spirv::FunctionControl::Pure,
@@ -2382,15 +2396,12 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 //===----------------------------------------------------------------------===//
 
 /// Hook for descriptor set and binding number encoding.
-static constexpr StringRef kBinding = "binding";
-static constexpr StringRef kDescriptorSet = "descriptor_set";
 void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
-      IntegerAttr descriptorSet =
-          op->getAttrOfType<IntegerAttr>(kDescriptorSet);
-      IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
+      IntegerAttr descriptorSet = op.getDescriptorSetAttr();
+      IntegerAttr binding = op.getBindingAttr();
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {
@@ -2411,8 +2422,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         if (failed(SymbolTable::replaceAllSymbolUses(op, nameAttr, spvModule)))
           op.emitError("unable to replace all symbol uses for ") << name;
         SymbolTable::setSymbolName(op, nameAttr);
-        op->removeAttr(kDescriptorSet);
-        op->removeAttr(kBinding);
+        op.removeDescriptorSetAttr();
+        op.removeBindingAttr();
       }
     });
   }

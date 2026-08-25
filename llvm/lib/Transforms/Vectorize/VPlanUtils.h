@@ -252,6 +252,10 @@ class VPSCEVExpander {
   ScalarEvolution &SE;
   DebugLoc DL;
 
+  /// When true, nested SCEVUDivExprs are expanded so that they cannot divide by
+  /// zero, matching SCEVExpander's SafeUDivMode.
+  bool SafeUDivMode = false;
+
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.

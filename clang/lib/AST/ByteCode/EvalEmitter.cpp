@@ -63,7 +63,6 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   QualType T = VD->getType();
   this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                 !T->isObjCObjectPointerType();
-  EvalResult.setSource(VD);
 
   if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();
@@ -152,8 +151,10 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
+  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
+                                         Block::InlineDescMD);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                                     /*IsStatic=*/false);
   B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
@@ -244,7 +245,6 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
 }
 
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
-  // llvm::errs()<< __PRETTY_FUNCTION__ << "Ret\n";
   if (!isActive())
     return true;
 
@@ -253,7 +253,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(S, CodePtr(), Ptr);
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -267,9 +267,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (Ptr.isPastEnd())
-      return false;
-
-    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
       return false;
 
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
@@ -323,7 +320,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;

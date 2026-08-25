@@ -271,11 +271,13 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
   uptr MinRegionIndex = NumRegions, MaxRegionIndex = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     SizeClassInfo *Sci = getSizeClassInfo(I);
-    ScopedLock L(Sci->Mutex);
-    if (Sci->MinRegionIndex < MinRegionIndex)
-      MinRegionIndex = Sci->MinRegionIndex;
-    if (Sci->MaxRegionIndex > MaxRegionIndex)
-      MaxRegionIndex = Sci->MaxRegionIndex;
+    {
+      ScopedLock L(Sci->Mutex);
+      if (Sci->MinRegionIndex < MinRegionIndex)
+        MinRegionIndex = Sci->MinRegionIndex;
+      if (Sci->MaxRegionIndex > MaxRegionIndex)
+        MaxRegionIndex = Sci->MaxRegionIndex;
+    }
     *Sci = {};
   }
 

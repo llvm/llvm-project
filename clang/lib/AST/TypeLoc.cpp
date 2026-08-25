@@ -421,6 +421,8 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::BuiltinFn:
   case BuiltinType::IncompleteMatrixIdx:
   case BuiltinType::ArraySection:
@@ -765,9 +767,9 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
 static ConceptReference *createTrivialConceptReference(ASTContext &Context,
                                                        SourceLocation Loc,
                                                        const AutoType *AT) {
-  DeclarationNameInfo DNI =
-      DeclarationNameInfo(AT->getTypeConstraintConcept()->getDeclName(), Loc,
-                          AT->getTypeConstraintConcept()->getDeclName());
+  DeclarationName ConceptName =
+      AT->getTypeConstraintConcept().getAsTemplateDecl()->getDeclName();
+  DeclarationNameInfo DNI = DeclarationNameInfo(ConceptName, Loc, ConceptName);
   unsigned size = AT->getTypeConstraintArguments().size();
   llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
   TemplateSpecializationTypeLoc::initializeArgLocs(

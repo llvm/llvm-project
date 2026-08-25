@@ -1,0 +1,107 @@
+# RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MACHO
+# RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -aarch64-outliner-compact-unwind-frame=false -verify-machineinstrs %s -o - | \
+# RUN:     FileCheck %s --check-prefix=NOFRAME
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ELF
+
+# A non-leaf outlined function must save LR. On MachO, save it as a full frame
+# record (stp x29,x30 ; mov x29,sp) so the compact-unwind encoder can use the
+# small FRAME encoding instead of falling back to a DWARF FDE. Everywhere else
+# keep the cheaper LR-alone save (str x30), which is all DWARF unwind needs.
+
+--- |
+  define void @baz() #0 { ret void }
+  define void @bar(i32 %a) #0 { ret void }
+  attributes #0 = { noredzone uwtable }
+...
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    $sp = frame-setup SUBXri $sp, 32, 0
+    $fp = frame-setup ADDXri $sp, 16, 0
+
+  bb.1:
+    ; Calls interleaved with single defs so the only repeated sequence is the
+    ; call-containing one, forcing a MachineOutlinerDefault (LR-save) frame.
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 6
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 5
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 3
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 2
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+
+  bb.2:
+    $fp, $lr = LDPXi $sp, 2
+    RET undef $lr
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+
+# MachO: full frame record + canonical CFI -> compact unwind FRAME encoding.
+# MACHO: name:            OUTLINED_FUNCTION_0
+# MACHO: early-clobber $sp = STPXpre $fp, $lr, $sp, -2
+# MACHO-NEXT: $fp = ADDXri $sp, 0, 0
+# MACHO-NEXT: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+# MACHO-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
+# MACHO-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# MACHO-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# MACHO: early-clobber $sp, $fp, $lr = LDPXpost $sp, 2
+# MACHO-NEXT: RET $lr
+
+# With the frame-record optimization disabled, MachO keeps the LR-alone save.
+# NOFRAME: name:            OUTLINED_FUNCTION_0
+# NOFRAME-NOT: STPXpre
+# NOFRAME: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# NOFRAME-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
+# NOFRAME-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
+# NOFRAME-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# NOFRAME: early-clobber $sp, $lr = LDRXpost $sp, 16
+# NOFRAME-NEXT: RET $lr
+
+# On ELF the LR-alone save is unchanged.
+# ELF: name:            OUTLINED_FUNCTION_0
+# ELF: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# ELF-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
+# ELF-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
+# ELF-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# ELF: early-clobber $sp, $lr = LDRXpost $sp, 16
+# ELF-NEXT: RET $lr

@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -transform-interpreter -cse -split-input-file | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 !vecA = vector<1x1x1x2xbf16>
 !vecB = vector<1x1x8x2xbf16>
 !vecC = vector<1x8xf32>

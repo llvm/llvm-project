@@ -969,4 +969,24 @@ def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
   let defaultValue = interfaceType # "::none";
 }
 
+//===----------------------------------------------------------------------===//
+// TLSModel
+//===----------------------------------------------------------------------===//
+
+def LLVM_TLSMode
+    : LLVM_EnumAttr<
+          "ThreadLocalMode", "::llvm::GlobalValue::ThreadLocalMode", "TLS Mode",
+          [
+            LLVM_EnumAttrCase<"NotThreadLocal", "", "NotThreadLocal", 0>,
+            LLVM_EnumAttrCase<"GeneralDynamic", "generaldynamic",
+                              "GeneralDynamicTLSModel", 1>,
+            LLVM_EnumAttrCase<"LocalDynamic", "localdynamic",
+                              "LocalDynamicTLSModel", 2>,
+            LLVM_EnumAttrCase<"InitialExec", "initialexec",
+                              "InitialExecTLSModel", 3>,
+            LLVM_EnumAttrCase<"LocalExec", "localexec", "LocalExecTLSModel", 4>,
+          ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 #endif // LLVMIR_ENUMS

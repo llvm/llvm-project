@@ -24,7 +24,7 @@ end program
 ! CHECK-DAG: [[VAR_C:![0-9]+]] = distinct !DIGlobalVariable(name: "var_c", linkageName: "_QMtestmodEvar_c"
 ! CHECK-DAG: [[VAR_Y:![0-9]+]] = distinct !DIGlobalVariable(name: "var_y", linkageName: "_QMtestmod2Evar_y"
 
-! CHECK-DAG: [[SP:![0-9]+]] = distinct !DISubprogram(name: "TEST_USE", linkageName: "_QQmain"{{.*}}retainedNodes:
+! CHECK-DAG: [[SP:![0-9]+]] = distinct !DISubprogram(name: "test_use", linkageName: "_QQmain"{{.*}}retainedNodes:
 
 ! Check that the full testmod module is not imported
 ! CHECK-NOT: !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[SP]], entity: [[TESTMOD]]

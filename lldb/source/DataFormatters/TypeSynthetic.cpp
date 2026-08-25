@@ -356,7 +356,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
 
   if (data.size() == 0) {
     char message[] = "@get_num_children returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 
@@ -419,7 +419,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
 
   if (data.size() == 0) {
     char message[] = "@get_child_index returned empty data stack";
-    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
     return llvm::createStringError(message);
   }
 

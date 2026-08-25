@@ -42,7 +42,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 
     ParentDecl->getCaptureFields(LC, LTC);
 
-    for (auto Cap : LC) {
+    for (const auto &Cap : LC) {
       unsigned Offset = R->getField(Cap.second)->Offset;
       this->LambdaCaptures[Cap.first] = {
           Offset, Cap.second->getType()->isReferenceType()};
@@ -92,7 +92,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
-  NextLocalOffset += align(D->getAllocSize());
+  NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
   return {Location, D};
 }
 
@@ -213,9 +213,9 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (LocOverride)
-    SrcMap.emplace_back(Code.size(), *LocOverride);
+    SrcMap.push(Code.size(), *LocOverride);
   else if (SI)
-    SrcMap.emplace_back(Code.size(), SI);
+    SrcMap.push(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));
   return Success;

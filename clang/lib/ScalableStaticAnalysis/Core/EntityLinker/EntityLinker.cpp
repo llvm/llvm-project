@@ -8,11 +8,15 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntitySummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysis/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysis/Core/Support/FormatProviders.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include <cassert>
 
 using namespace clang::ssaf;
@@ -43,6 +47,16 @@ static constexpr const char *FailedToInsertEntityIntoOutputSummary =
 
 static constexpr const char *DuplicateTUNamespace =
     "failed to link TU summary: duplicate {0}";
+
+static constexpr const char *LinkingStaticLibraryMember =
+    "failed to link member {0} of static library {1}";
+
+static constexpr const char *MismatchedTargetTriple =
+    "target triple '{0}' of {1} does not match link unit target triple '{2}'";
+
+static constexpr const char *NoMemberForTargetTriple =
+    "multi-arch static library {0} has no member for target triple '{1}' "
+    "(available: {2})";
 
 } // namespace ErrorMessages
 
@@ -180,7 +194,25 @@ EntityLinker::patch(const std::vector<EntitySummaryEncoding *> &PatchTargets,
   return llvm::Error::success();
 }
 
+llvm::Error
+EntityLinker::checkTargetTriple(const llvm::Triple &TargetTriple,
+                                const BuildNamespace &InputNamespace) const {
+  if (TargetTriple != Output.TargetTriple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::MismatchedTargetTriple,
+                                TargetTriple, InputNamespace,
+                                Output.TargetTriple)
+        .build();
+  }
+  return llvm::Error::success();
+}
+
 llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
+  if (auto Err =
+          checkTargetTriple(Summary->TargetTriple, Summary->TUNamespace)) {
+    return Err;
+  }
+
   auto [_, Inserted] = ProcessedTUNamespaces.insert(Summary->TUNamespace);
   if (!Inserted) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -194,4 +226,50 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
   auto EntityResolutionTable = resolve(SummaryRef);
   auto PatchTargets = merge(SummaryRef, EntityResolutionTable);
   return patch(PatchTargets, EntityResolutionTable);
+}
+
+llvm::Error EntityLinker::link(std::unique_ptr<StaticLibrary> Library) {
+  if (auto Err = checkTargetTriple(Library->TargetTriple, Library->Namespace)) {
+    return Err;
+  }
+
+  while (!Library->Members.empty()) {
+    auto Node = Library->Members.extract(Library->Members.begin());
+    const BuildNamespace MemberNamespace = Node.value()->TUNamespace;
+
+    if (auto Err = link(std::move(Node.value()))) {
+      return ErrorBuilder::wrap(std::move(Err))
+          .context(ErrorMessages::LinkingStaticLibraryMember, MemberNamespace,
+                   Library->Namespace)
+          .build();
+    }
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Error
+EntityLinker::link(std::unique_ptr<MultiArchStaticLibrary> Library) {
+  auto MatchingMember = llvm::find_if(
+      Library->Members, [this](const std::unique_ptr<StaticLibrary> &Member) {
+        return Member->TargetTriple == Output.TargetTriple;
+      });
+
+  if (MatchingMember == Library->Members.end()) {
+    auto TargetTriples = llvm::map_range(
+        Library->Members, [](const std::unique_ptr<StaticLibrary> &Member) {
+          return llvm::Triple::normalize(Member->TargetTriple.str());
+        });
+    std::string Available = Library->Members.empty()
+                                ? std::string("none")
+                                : llvm::join(TargetTriples, ", ");
+
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::NoMemberForTargetTriple,
+                                Library->Namespace, Output.TargetTriple,
+                                Available)
+        .build();
+  }
+
+  return link(std::move(Library->Members.extract(MatchingMember).value()));
 }

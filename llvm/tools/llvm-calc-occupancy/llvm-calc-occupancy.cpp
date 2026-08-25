@@ -193,12 +193,6 @@ int main(int argc, char **argv) {
 
   const MCSubtargetInfo &STI = ST;
 
-  // Mirror GCNSubtarget::computeOccupancy: when the block size is not given
-  // explicitly, fall back to the subtarget's default if dynamic VGPRs are on.
-  unsigned DynVGPRBlockSizeEff = DynVGPRBlockSize;
-  if (DynVGPRBlockSizeEff == 0 && ST.isDynamicVGPREnabled())
-    DynVGPRBlockSizeEff = ST.getDynamicVGPRBlockSize();
-
   // Parse inputs.
   unsigned WGMin = 1, WGMax = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
   bool WGSpecified = !WGSizeStr.empty();
@@ -225,7 +219,7 @@ int main(int argc, char **argv) {
   unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
   unsigned AddrVGPRs =
-      AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSizeEff);
+      AMDGPU::IsaInfo::getAddressableNumVGPRs(STI, DynVGPRBlockSize);
   unsigned AddrSGPRs = ST.getAddressableNumSGPRs();
   unsigned MaxWGSize = AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
 
@@ -300,7 +294,7 @@ int main(int argc, char **argv) {
   auto [WGMinOcc, WGMaxOcc] = ST.getOccupancyWithWorkGroupSizes(
       static_cast<uint32_t>(LDSBytes), {WGMin, WGMax});
   unsigned VGPROcc =
-      VGPRSpecified ? ST.getOccupancyWithNumVGPRs(NumVGPRs, DynVGPRBlockSizeEff)
+      VGPRSpecified ? ST.getOccupancyWithNumVGPRs(NumVGPRs, DynVGPRBlockSize)
                     : MaxWaves;
   unsigned SGPROcc =
       SGPRSpecified ? ST.getOccupancyWithNumSGPRs(NumSGPRs) : MaxWaves;
@@ -351,7 +345,7 @@ int main(int argc, char **argv) {
 
     if (VGPRSpecified && VGPROcc == MaxOcc) {
       unsigned MaxV =
-          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, TargetOcc, DynVGPRBlockSizeEff);
+          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, TargetOcc, DynVGPRBlockSize);
       outs() << format("      VGPRs <= %u (currently %d)\n", MaxV,
                        static_cast<int>(NumVGPRs));
     }
@@ -411,7 +405,7 @@ int main(int argc, char **argv) {
                      "Max SGPRs");
     for (unsigned Occ = MaxWaves; Occ >= 1; --Occ) {
       unsigned MaxV =
-          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, Occ, DynVGPRBlockSizeEff);
+          AMDGPU::IsaInfo::getMaxNumVGPRs(STI, Occ, DynVGPRBlockSize);
       unsigned MaxS =
           AMDGPU::IsaInfo::getMaxNumSGPRs(STI, Occ, /*Addressable=*/true);
       outs() << format("  %-14u %-14u %-14u\n", Occ, MaxV, MaxS);

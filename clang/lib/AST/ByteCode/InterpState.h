@@ -40,7 +40,7 @@ enum class EvaluationKind : uint8_t {
 };
 
 /// Interpreter context.
-class InterpState final : public State, public SourceMapper {
+class InterpState final : public State {
 public:
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
@@ -68,13 +68,12 @@ public:
   void deallocate(Block *B);
 
   /// Delegates source mapping to the mapper.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    if (M)
-      return M->getSource(F, PC);
-
-    assert(F && "Function cannot be null");
-    return F->getSource(PC);
+  SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
+  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
+  SourceLocation getLocation(CodePtr PC) const {
+    return getSource(PC).getLoc();
   }
+  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   Context &getContext() const { return Ctx; }
 
@@ -158,11 +157,13 @@ public:
   /// Return if we're checking if a global variable has a constant destructor
   /// and the given pointer is pointing to the variable we're checking that for.
   bool checkingConstantDestruction(const Pointer &Ptr) const {
-    return checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl());
+    return checkingConstantDestruction(Ptr.getRootVarDecl());
   }
   bool checkingConstantDestruction(const VarDecl *VD) const {
     return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
   }
+
+  unsigned newStringID() { return StringID++; }
 
 private:
   friend class EvaluationResult;
@@ -199,6 +200,8 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+
+  unsigned StringID = 0;
 
   EvaluationKind EvalKind = EvaluationKind::None;
 

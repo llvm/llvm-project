@@ -1476,8 +1476,15 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
       Opts.CXXTypeInfoVTablePointer =
           PointerAuthSchema(Key::ASDA, false, Discrimination::None);
 
-    Opts.CXXVTTVTablePointers =
-        PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+    if (LangOpts.PointerAuthVTTVTPtrDiscrimination)
+      Opts.CXXVTTVTablePointers = PointerAuthSchema(
+          Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
+          LangOpts.PointerAuthVTPtrTypeDiscrimination ? Discrimination::Type
+                                                      : Discrimination::None);
+    else
+      Opts.CXXVTTVTablePointers =
+          PointerAuthSchema(Key::ASDA, false, Discrimination::None);
+
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
     Opts.CXXMemberFunctionPointers =
@@ -1671,6 +1678,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   if (Opts.SaveTempsFilePrefix == OutputFile)
     GenerateArg(Consumer, OPT_save_temps_EQ, "obj");
+
+  if (!Opts.SaveDynDbgTempsFilePrefix.empty())
+    GenerateArg(Consumer, OPT_save_dynamic_debugging_temps);
 
   StringRef MemProfileBasename("memprof.profraw");
   if (!Opts.MemoryProfileOutput.empty()) {
@@ -2005,6 +2015,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<std::string>(A->getValue())
             .Case("obj", OutputFile)
             .Default(llvm::sys::path::filename(OutputFile).str());
+
+  if (Args.getLastArg(OPT_save_dynamic_debugging_temps))
+    Opts.SaveDynDbgTempsFilePrefix = OutputFile;
 
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
@@ -2719,7 +2732,8 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
     if (A->getOption().matches(options::OPT_O0))
       return 0;
 
-    if (A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_Ofast) ||
+        A->getOption().matches(options::OPT_O4))
       return 3;
 
     assert(A->getOption().matches(options::OPT_O));
@@ -3172,7 +3186,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR
@@ -3338,6 +3352,9 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   for (const auto &Macro : Opts.ModulesIgnoreMacros)
     GenerateArg(Consumer, OPT_fmodules_ignore_macro, Macro.val());
 
+  for (const auto &Path : Opts.ModulesIgnoreSearchPaths)
+    GenerateArg(Consumer, OPT_fmodules_ignore_search_path, Path.val());
+
   auto Matches = [](const HeaderSearchOptions::Entry &Entry,
                     llvm::ArrayRef<frontend::IncludeDirGroup> Groups,
                     std::optional<bool> IsFramework,
@@ -3461,6 +3478,9 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.ModulesIgnoreMacros.insert(
         llvm::CachedHashString(MacroDef.split('=').first));
   }
+
+  for (const auto *A : Args.filtered(OPT_fmodules_ignore_search_path))
+    Opts.ModulesIgnoreSearchPaths.insert(llvm::CachedHashString(A->getValue()));
 
   // Add -I... and -F... options in order.
   bool IsSysrootSpecified =
@@ -3588,6 +3608,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_address_discrimination);
   if (Opts.PointerAuthVTPtrTypeDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
+  if (Opts.PointerAuthVTTVTPtrDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_vtt_vtable_pointer_discrimination);
   if (Opts.PointerAuthTypeInfoVTPtrDiscrimination)
     GenerateArg(Consumer, OPT_fptrauth_type_info_vtable_pointer_discrimination);
   if (Opts.PointerAuthFunctionTypeDiscrimination)
@@ -3621,6 +3643,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthVTTVTPtrDiscrimination =
+      Args.hasArg(OPT_fptrauth_vtt_vtable_pointer_discrimination);
   Opts.PointerAuthTypeInfoVTPtrDiscrimination =
       Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
   Opts.PointerAuthFunctionTypeDiscrimination =
@@ -5306,7 +5330,20 @@ std::string CompilerInvocation::computeContextHash() const {
 
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
-    HBuilder.addRange(hsOpts.UserEntries);
+
+    for (const auto &UserEntry : hsOpts.UserEntries) {
+      // If we're supposed to ignore this search path for the purposes of
+      // modules, don't put it into the hash.
+      if (!hsOpts.ModulesIgnoreSearchPaths.empty()) {
+        // Check whether we're ignoring this search path.
+        StringRef Path = UserEntry.Path;
+        if (hsOpts.ModulesIgnoreSearchPaths.count(llvm::CachedHashString(Path)))
+          continue;
+      }
+
+      HBuilder.add(UserEntry);
+    }
+
     HBuilder.addRange(hsOpts.VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();

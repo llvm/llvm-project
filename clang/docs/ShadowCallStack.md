@@ -7,7 +7,7 @@
 ## Introduction
 
 ShadowCallStack is an instrumentation pass, currently only implemented for
-aarch64 and RISC-V, that protects programs against return address overwrites
+aarch64, RISC-V and Hexagon, that protects programs against return address overwrites
 (e.g. stack buffer overflows.) It works by saving a function's return address
 to a separately allocated 'shadow call stack' in the function prolog in
 non-leaf functions and loading the return address from the shadow call stack
@@ -70,6 +70,16 @@ no inherent reason why ShadowCallStack needs to use a specific register; in
 principle, a platform could choose to reserve and use another register for
 ShadowCallStack, but this would be incompatible with the ABI standards
 published in AAPCS64 and the RISC-V psABI.
+
+On Hexagon, `SCSReg` defaults to `r18` and is not fixed by the ABI, because
+the Hexagon ABI does not designate a platform register. Any of the
+callee-saved registers `r16`-`r27` may be used instead, selected with
+`-mscs-reg=<reg>`; caller-saved registers cannot hold the pointer across a
+call. The selected register must always be reserved with the matching
+`-ffixed-<reg>`, and clang errors out if it is not. This flexibility exists
+because different Hexagon environments have already claimed different
+registers -- for example the Hexagon Linux kernel reserves `r19` for its
+thread-info pointer, which is why `r18` rather than `r19` is the default.
 
 Special unwind information is required on functions that are compiled
 with ShadowCallStack and that may be unwound, i.e. functions compiled with
@@ -140,6 +150,10 @@ stack uses a dedicated register, `ssp`.
 However, it is important to disable GP relaxation in the linker when using the
 software based shadow call stack on RISC-V. This can be done with the
 `--no-relax-gp` flag in GNU ld, and is off by default in LLD.
+
+On Hexagon you also need to reserve the shadow call stack pointer register,
+i.e. `-ffixed-r18` for the default, or `-mscs-reg=<reg> -ffixed-<reg>` to use
+a different one.
 
 ### Low-level API
 

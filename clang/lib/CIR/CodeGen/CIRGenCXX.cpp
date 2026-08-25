@@ -247,6 +247,11 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   assert(curCGF && "Special var init only available inside of a function");
   CIRGenFunction &cgf = *curCGF;
 
+  // A temporary whose lifetime this initializer extends is destroyed alongside
+  // the variable itself, so pushTemporaryCleanup needs to know where that is.
+  llvm::SaveAndRestore<mlir::Region *> savedDtorRegion(
+      cgf.curStaticVarDtorRegion, &dtorRegion);
+
   // TODO: handle address space
   // The address space of a static local variable (addr) may be different
   // from the address space of the "this" argument of the constructor. In that
@@ -351,6 +356,21 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
 
   CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
                                             getLoc(varDecl->getLocation())};
+
+  // Set up the constrained FP environment for the dynamic initializer.
+  llvm::RoundingMode rm = getLangOpts().getDefaultRoundingMode();
+  LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
+  builder.setDefaultConstrainedRounding(rm);
+  builder.setDefaultConstrainedExcept(eb);
+  builder.setIsFPConstrained(false);
+  if (eb != LangOptions::FPE_Ignore ||
+      rm != llvm::RoundingMode::NearestTiesToEven) {
+    builder.setIsFPConstrained(true);
+    addr.setStrictfp(true);
+  }
+
+  if (const auto *ipa = varDecl->getAttr<InitPriorityAttr>())
+    addr.setInitPriority(ipa->getPriority());
 
   emitCXXSpecialVarDeclInit(varDecl, addr, performInit, addr.getCtorRegion(),
                             addr.getDtorRegion());

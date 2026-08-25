@@ -7,25 +7,18 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw <vscale x 2 x i32> [[VEC_IND]], splat (i32 3)
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[P]], <vscale x 2 x i32> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i32(ptr align 8 [[TMP6]], i32 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], splat (i64 1)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[TMP3]], <vscale x 2 x ptr> align 8 [[WIDE_GEP]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i32(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP6]], i32 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP1]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

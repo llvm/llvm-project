@@ -592,8 +592,8 @@ public:
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
             [&](const ExplicitShapeBoundsSpec &y) {
-              llvm_unreachable(
-                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+              Walk(std::get<std::optional<IntExpr>>(y.t), ":");
+              Walk(std::get<IntExpr>(y.t));
             },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const AssumedShapeBoundsSpec &y) {
@@ -2177,8 +2177,8 @@ public:
   }
   void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAdjustArgsClause &x) {
-    Walk(std::get<OmpAdjustArgsClause::OmpAdjustOp>(x.t).v);
-    Put(":");
+    using Modifier = OmpAdjustArgsClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<parser::OmpObjectList>(x.t));
   }
   void Unparse(const OmpAffinityClause &x) {
@@ -2285,6 +2285,14 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDoacross &x) {
+    using Modifier = OmpDoacross::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t));
+    if (auto &&vector{std::get<std::optional<OmpIterationVector>>(x.t)}) {
+      Put(": ");
+      Walk(vector->v, ", ");
+    }
+  }
   void Unparse(const OmpDependClause::TaskDep &x) {
     using Modifier = OmpDependClause::TaskDep::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2337,11 +2345,6 @@ public:
       unparseClauses();
     }
   }
-  void Unparse(const OmpDoacross::Sink &x) {
-    Word("SINK: ");
-    Walk(x.v.v);
-  }
-  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2636,6 +2639,37 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
+  void Unparse(const OmpMemSpace &x) {
+    Word("MEMSPACE(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpTraitsArray &x) {
+    Word("TRAITS(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpUsesAllocatorsClause &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpUsesAllocatorsClause::AllocatorSpec &x) {
+    using Modifier = OmpUsesAllocatorsClause::AllocatorSpec::Modifier;
+    const auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
+    if (std::get<bool>(x.t)) {
+      // Unparse using the deprecated pre-5.2 syntax.
+      Walk(std::get<ScalarIntExpr>(x.t));
+      if (modifiers) {
+        for (const Modifier &m : *modifiers) {
+          if (auto *traits{std::get_if<OmpTraitsArray>(&m.u)}) {
+            Put("(");
+            Walk(traits->v);
+            Put(")");
+          }
+        }
+      }
+    } else {
+      Walk(modifiers, ": ");
+      Walk(std::get<ScalarIntExpr>(x.t));
+    }
+  }
   void Unparse(const OmpTraitPropertyExtension::Complex &x) {
     using PropList = std::list<common::Indirection<OmpTraitPropertyExtension>>;
     Walk(std::get<OmpTraitPropertyName>(x.t));
@@ -2890,13 +2924,14 @@ public:
   WALK_NESTED_ENUM(InquireSpec::LogVar, Kind)
   WALK_NESTED_ENUM(ProcedureStmt, Kind) // R1506
   WALK_NESTED_ENUM(UseStmt, ModuleNature) // R1410
-  WALK_NESTED_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value) // OMP adjustop
+  WALK_NESTED_ENUM(OmpAdjustOp, Value) // OMP adjustop
   WALK_NESTED_ENUM(OmpAtClause, ActionTime) // OMP at
   WALK_NESTED_ENUM(OmpAutomapModifier, Value) // OMP automap-modifier
   WALK_NESTED_ENUM(OmpBindClause, Binding) // OMP bind
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP defaultmap
+  WALK_NESTED_ENUM(OmpDependenceType, Value)
   WALK_NESTED_ENUM(OmpVariableCategory, Value) // OMP variable-category
   WALK_NESTED_ENUM(OmpLastprivateModifier, Value) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier

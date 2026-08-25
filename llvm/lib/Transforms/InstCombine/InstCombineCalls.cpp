@@ -247,10 +247,10 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     return MI;
   }
 
-  // Extract the length and alignment and fill if they are constant.
+  // Extract the length and validate the fill type.
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
-  ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
-  if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
+  Value *Fill = MI->getValue();
+  if (!LenC || !Fill->getType()->isIntegerTy(8))
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
@@ -267,14 +267,22 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
     Value *Dest = MI->getDest();
 
-    // Extract the fill value and store.
-    Constant *FillVal = ConstantInt::get(
-        MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
+    // Extract the fill value and store.  A one-byte memset does not need
+    // replication so a nonconstant i8 fill can be stored directly.
+    Value *FillVal;
+    if (auto *FillC = dyn_cast<ConstantInt>(Fill))
+      FillVal = ConstantInt::get(MI->getContext(),
+                                 APInt::getSplat(Len * 8, FillC->getValue()));
+    else if (Len == 1)
+      FillVal = Fill;
+    else
+      return nullptr;
+
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
-      if (llvm::is_contained(DbgAssign->location_ops(), FillC))
-        DbgAssign->replaceVariableLocationOp(FillC, FillVal);
+      if (llvm::is_contained(DbgAssign->location_ops(), Fill))
+        DbgAssign->replaceVariableLocationOp(Fill, FillVal);
     }
 
     S->setAlignment(Alignment);
@@ -520,6 +528,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
     // cttz(-x & x) -> cttz(x)
     if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
+
+    // cttz(mul(X, OddC)) -> cttz(X)
+    if (match(Op0, m_Mul(m_Value(X),
+                         m_CheckedInt([](const APInt &C) { return C[0]; }))))
       return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(sext(x)) -> cttz(zext(x))
@@ -1848,25 +1861,19 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
       return nullptr;
   }
 
-  BinaryOperator *NewBinop;
   if (A == C &&
       leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
-  } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
-                                                TopLevelOpcode)) {
-    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
-    NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
-  } else {
-    return nullptr;
+    return Builder.CreateNoWrapBinOp(InnerOpcode, A, NewIntrinsic, HasNUW,
+                                     HasNSW);
   }
-
-  NewBinop->setHasNoUnsignedWrap(HasNUW);
-  NewBinop->setHasNoSignedWrap(HasNSW);
-
-  return NewBinop;
+  if (B == D &&
+      rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    return Builder.CreateNoWrapBinOp(InnerOpcode, NewIntrinsic, B, HasNUW,
+                                     HasNSW);
+  }
+  return nullptr;
 }
 
 static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
@@ -2477,6 +2484,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::scmp: {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+
+    // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
+    if (match(I1, m_Zero())) {
+      ConstantRange Range = computeConstantRange(I0, /*ForSigned=*/true,
+                                                 SQ.getWithInstruction(II));
+      if (Range.getSignedMin().sge(-1) && Range.getSignedMax().sle(1))
+        return replaceInstUsesWith(
+            CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
+    }
     Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(

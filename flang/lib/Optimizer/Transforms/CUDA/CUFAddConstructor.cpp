@@ -90,6 +90,14 @@ static bool isDeviceExternReference(fir::GlobalOp hostGlobal,
   return !gpuGlobal.isInitialized();
 }
 
+/// Return true if \p globalOp defines the variable rather than just declaring
+/// it. A variable USEd from another translation unit has no body here; its
+/// device symbol belongs to the defining unit's device module, so registering
+/// the declaration would bind the host address to the wrong module.
+static bool definesGlobal(fir::GlobalOp globalOp) {
+  return globalOp.isInitialized();
+}
+
 /// Return true if \p hostGlobal is a host module-scope global that has been
 /// mirrored in the GPU module as an external (no-body) declaration by the
 /// CUFDeviceGlobal pass under -gpu=mem:unified.
@@ -214,9 +222,13 @@ static bool hasRegisteredGlobals(mlir::ModuleOp mod,
     }
     if (!gpuSymTable.lookup(globalOp.getSymName()))
       continue;
+    // Non-allocatable managed globals register a companion pointer local to
+    // this translation unit, so they register even when defined elsewhere.
     if (attr.getValue() == cuf::DataAttribute::Managed &&
         !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
       return true;
+    if (!definesGlobal(globalOp))
+      continue;
     switch (attr.getValue()) {
     case cuf::DataAttribute::Device:
     case cuf::DataAttribute::Constant:
@@ -364,6 +376,12 @@ struct CUFAddConstructor
           bool isNonAllocManagedGlobal =
               attr.getValue() == cuf::DataAttribute::Managed &&
               !mlir::isa<fir::BaseBoxType>(globalOp.getType());
+
+          // Non-allocatable managed globals register a companion pointer local
+          // to this translation unit, so they register even when defined
+          // elsewhere.
+          if (!definesGlobal(globalOp) && !isNonAllocManagedGlobal)
+            continue;
 
           switch (attr.getValue()) {
           case cuf::DataAttribute::Device:

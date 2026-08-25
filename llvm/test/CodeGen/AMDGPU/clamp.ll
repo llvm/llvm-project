@@ -2925,7 +2925,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(ptr addrspace
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
-; GFX6-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GFX6-NEXT:    v_mov_b32_e32 v2, 0x7fc00001
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; GFX6-NEXT:    s_endpgm
@@ -2934,7 +2934,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(ptr addrspace
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7fc00001
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -2946,7 +2946,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(ptr addrspace
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7fc00001
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -2956,7 +2956,7 @@ define amdgpu_kernel void @v_clamp_constant_snan_f32_no_dx10_clamp(ptr addrspace
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7fc00000 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0x7fc00001 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm

@@ -10,7 +10,54 @@
 
 #include "lldb/Utility/DataExtractor.h"
 
+#include <cstdint>
+#include <cstring>
+
 using namespace lldb_private;
+
+namespace {
+/// Destination for the multi-value GetU16/GetU32/GetU64 overloads. The usable
+/// region starts one byte into an 8-byte aligned object, so its address is
+/// misaligned for every type extracted into it below.
+struct alignas(8) UnalignedDest {
+  uint8_t pad;
+  uint8_t data[24];
+};
+
+/// Byte written over an UnalignedDest before each extraction, so that a write
+/// past the values that were asked for is visible afterwards.
+constexpr uint8_t g_fill = 0xAA;
+
+/// Read element \a i of type \c T out of \a dest without forming a misaligned
+/// pointer to \c T.
+template <typename T> T GetElement(const UnalignedDest &dest, size_t i) {
+  T value;
+  memcpy(&value, dest.data + i * sizeof(T), sizeof(T));
+  return value;
+}
+
+/// Offset of the first byte of \a dest at or after \a from that no longer holds
+/// g_fill, or sizeof(UnalignedDest::data) if the fill is still intact. Lets a
+/// test assert that an extraction wrote no further than it was asked to.
+size_t FirstWrittenByte(const UnalignedDest &dest, size_t from) {
+  for (size_t i = from; i < sizeof(dest.data); ++i)
+    if (dest.data[i] != g_fill)
+      return i;
+  return sizeof(dest.data);
+}
+
+/// Source for the GetU16/GetU32/GetU64 array tests. Reads start at offset 1, so
+/// they are misaligned for every type extracted, as is the UnalignedDest they
+/// are copied into.
+///
+/// The expected values do not depend on the host byte order. A DataExtractor
+/// converts from the data's byte order to the host's, so the little- and
+/// big-endian cases together always exercise both the straight-copy and the
+/// byte-swapping path, whichever way round the host is.
+alignas(8) constexpr uint8_t g_buffer[] = {0x00, 0x01, 0x23, 0x45, 0x67, 0x89,
+                                           0xab, 0xcd, 0xef, 0x11, 0x22, 0x33,
+                                           0x44, 0x55, 0x66, 0x77, 0x88};
+} // namespace
 
 TEST(DataExtractorTest, GetBitfield) {
   uint8_t buffer[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
@@ -400,4 +447,124 @@ TEST(DataExtractorTest, GetDoubleUnaligned) {
     EXPECT_DOUBLE_EQ(expected, BE.GetDouble(&offset));
     EXPECT_EQ(9U, offset);
   }
+}
+
+TEST(DataExtractorTest, GetU16Array) {
+  DataExtractor LE(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                   sizeof(void *));
+  DataExtractor BE(g_buffer, sizeof(g_buffer), lldb::eByteOrderBig,
+                   sizeof(void *));
+  UnalignedDest dest;
+  lldb::offset_t offset;
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), LE.GetU16(&offset, dest.data, 4));
+  EXPECT_EQ(9U, offset);
+  EXPECT_EQ(0x2301U, GetElement<uint16_t>(dest, 0));
+  EXPECT_EQ(0x6745U, GetElement<uint16_t>(dest, 1));
+  EXPECT_EQ(0xab89U, GetElement<uint16_t>(dest, 2));
+  EXPECT_EQ(0xefcdU, GetElement<uint16_t>(dest, 3));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 4 * sizeof(uint16_t)));
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), BE.GetU16(&offset, dest.data, 4));
+  EXPECT_EQ(9U, offset);
+  EXPECT_EQ(0x0123U, GetElement<uint16_t>(dest, 0));
+  EXPECT_EQ(0x4567U, GetElement<uint16_t>(dest, 1));
+  EXPECT_EQ(0x89abU, GetElement<uint16_t>(dest, 2));
+  EXPECT_EQ(0xcdefU, GetElement<uint16_t>(dest, 3));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 4 * sizeof(uint16_t)));
+}
+
+TEST(DataExtractorTest, GetU32Array) {
+  DataExtractor LE(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                   sizeof(void *));
+  DataExtractor BE(g_buffer, sizeof(g_buffer), lldb::eByteOrderBig,
+                   sizeof(void *));
+  UnalignedDest dest;
+  lldb::offset_t offset;
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), LE.GetU32(&offset, dest.data, 2));
+  EXPECT_EQ(9U, offset);
+  EXPECT_EQ(0x67452301U, GetElement<uint32_t>(dest, 0));
+  EXPECT_EQ(0xefcdab89U, GetElement<uint32_t>(dest, 1));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 2 * sizeof(uint32_t)));
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), BE.GetU32(&offset, dest.data, 2));
+  EXPECT_EQ(9U, offset);
+  EXPECT_EQ(0x01234567U, GetElement<uint32_t>(dest, 0));
+  EXPECT_EQ(0x89abcdefU, GetElement<uint32_t>(dest, 1));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 2 * sizeof(uint32_t)));
+}
+
+TEST(DataExtractorTest, GetU64Array) {
+  DataExtractor LE(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                   sizeof(void *));
+  DataExtractor BE(g_buffer, sizeof(g_buffer), lldb::eByteOrderBig,
+                   sizeof(void *));
+  UnalignedDest dest;
+  lldb::offset_t offset;
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), LE.GetU64(&offset, dest.data, 2));
+  EXPECT_EQ(17U, offset);
+  EXPECT_EQ(0xefcdab8967452301ULL, GetElement<uint64_t>(dest, 0));
+  EXPECT_EQ(0x8877665544332211ULL, GetElement<uint64_t>(dest, 1));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 2 * sizeof(uint64_t)));
+
+  memset(&dest, g_fill, sizeof(dest));
+  offset = 1;
+  ASSERT_EQ(static_cast<void *>(dest.data), BE.GetU64(&offset, dest.data, 2));
+  EXPECT_EQ(17U, offset);
+  EXPECT_EQ(0x0123456789abcdefULL, GetElement<uint64_t>(dest, 0));
+  EXPECT_EQ(0x1122334455667788ULL, GetElement<uint64_t>(dest, 1));
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 2 * sizeof(uint64_t)));
+}
+
+// The three tests below ask for one value more than the buffer holds. That has
+// to fail, leave the offset unmodified and write nothing at all. The byte order
+// does not matter: the bounds check rejects the read before any swapping
+// happens.
+
+TEST(DataExtractorTest, GetU16ArrayOutOfBounds) {
+  DataExtractor data(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+  UnalignedDest dest;
+  memset(&dest, g_fill, sizeof(dest));
+
+  lldb::offset_t offset = 1;
+  EXPECT_EQ(nullptr, data.GetU16(&offset, dest.data, 9));
+  EXPECT_EQ(1U, offset);
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 0));
+}
+
+TEST(DataExtractorTest, GetU32ArrayOutOfBounds) {
+  DataExtractor data(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+  UnalignedDest dest;
+  memset(&dest, g_fill, sizeof(dest));
+
+  lldb::offset_t offset = 1;
+  EXPECT_EQ(nullptr, data.GetU32(&offset, dest.data, 5));
+  EXPECT_EQ(1U, offset);
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 0));
+}
+
+TEST(DataExtractorTest, GetU64ArrayOutOfBounds) {
+  DataExtractor data(g_buffer, sizeof(g_buffer), lldb::eByteOrderLittle,
+                     sizeof(void *));
+  UnalignedDest dest;
+  memset(&dest, g_fill, sizeof(dest));
+
+  lldb::offset_t offset = 1;
+  EXPECT_EQ(nullptr, data.GetU64(&offset, dest.data, 3));
+  EXPECT_EQ(1U, offset);
+  EXPECT_EQ(sizeof(dest.data), FirstWrittenByte(dest, 0));
 }

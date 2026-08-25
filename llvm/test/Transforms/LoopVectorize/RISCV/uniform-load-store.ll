@@ -581,18 +581,23 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; FIXEDLEN-NEXT:  [[ENTRY:.*:]]
 ; FIXEDLEN-NEXT:    br label %[[VECTOR_PH:.*]]
 ; FIXEDLEN:       [[VECTOR_PH]]:
-; FIXEDLEN-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[V]], i64 0
-; FIXEDLEN-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[B]], i64 0
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[V]], i64 0
+; FIXEDLEN-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; FIXEDLEN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FIXEDLEN:       [[VECTOR_BODY]]:
 ; FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; FIXEDLEN-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 7
-; FIXEDLEN-NEXT:    store i64 [[TMP4]], ptr [[B]], align 8
+; FIXEDLEN-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FIXEDLEN-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
+; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> [[VEC_IND]], <2 x ptr> align 8 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true))
+; FIXEDLEN-NEXT:    call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> [[STEP_ADD]], <2 x ptr> align 8 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true))
 ; FIXEDLEN-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
-; FIXEDLEN-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 4
-; FIXEDLEN-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 8
-; FIXEDLEN-NEXT:    store <4 x i64> [[BROADCAST_SPLAT]], ptr [[TMP7]], align 8
-; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; FIXEDLEN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 2
+; FIXEDLEN-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP5]], align 8
+; FIXEDLEN-NEXT:    store <2 x i64> [[BROADCAST_SPLAT2]], ptr [[TMP1]], align 8
+; FIXEDLEN-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; FIXEDLEN-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; FIXEDLEN-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXEDLEN:       [[MIDDLE_BLOCK]]:

@@ -11,6 +11,12 @@ library. More details are provided in
 [external document](https://github.com/intel/llvm/blob/sycl/sycl/doc/design/CompilerAndRuntimeDesign.md),
 which are going to be added to clang documentation in the future.
 
+## Predefined Macros
+
+| Macro | Description |
+| --- | --- |
+| `__CLANG_RDC__` | Defined when Clang is compiling code in Relocatable Device Code (RDC) mode. RDC is necessary for linking device code across translation units. It is enabled by default for SYCL and can be disabled with the `-fno-gpu-rdc` compiler option. |
+
 ## Address space handling
 
 The SYCL specification represents pointers to disjoint memory regions using C++
