@@ -237,6 +237,7 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            [{::llvm::cl::values(
             clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
             clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::DebugDirectivesOnly, "DebugDirectivesOnly", "Emit line info directives only"),
             clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
           )}]
            >,
@@ -780,7 +781,9 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
             clEnumValN(::fir::LICMNestedHoistingMode::None,
                        "none", "Do not hoist from nested regions"),
             clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
-                       "cheap", "Only hoist cheap ops like fir.convert"),
+                       "cheap", "Only hoist cheap ops like fir.convert, "
+                                "fir.address_of, and scalar or descriptor "
+                                "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
            )}]>];

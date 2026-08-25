@@ -16,6 +16,7 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
+#include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -295,17 +296,17 @@ public:
 /// linked list.  The last node in the list points back to the bucket to
 /// facilitate node removal.
 ///
-class FoldingSetBase {
+class FoldingSetBase : public DebugEpochBase {
 protected:
   /// Array of bucket chains.
-  void **Buckets;
+  void **Buckets = nullptr;
 
   /// Length of the Buckets array.  Always a power of 2.
-  unsigned NumBuckets;
+  unsigned NumBuckets = 0;
 
   /// Number of nodes in the folding set. Growth occurs when NumNodes
   /// is greater than twice the number of buckets.
-  unsigned NumNodes;
+  unsigned NumNodes = 0;
 
   LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
@@ -496,13 +497,15 @@ public:
 public:
   using iterator = FoldingSetIterator<T>;
 
-  iterator begin() { return iterator(Buckets); }
-  iterator end() { return iterator(Buckets + NumBuckets); }
+  iterator begin() { return iterator(this, Buckets); }
+  iterator end() { return iterator(this, Buckets + NumBuckets); }
 
   using const_iterator = FoldingSetIterator<const T>;
 
-  const_iterator begin() const { return const_iterator(Buckets); }
-  const_iterator end() const { return const_iterator(Buckets + NumBuckets); }
+  const_iterator begin() const { return const_iterator(this, Buckets); }
+  const_iterator end() const {
+    return const_iterator(this, Buckets + NumBuckets);
+  }
 
   /// Grow the number of buckets so that we can hold at least \p EltCount
   /// nodes before rebucketing. May allocate more space than requested.
@@ -636,30 +639,37 @@ public:
 //===----------------------------------------------------------------------===//
 /// This is the common iterator support shared by all folding sets, which knows
 /// how to walk the folding set hash table.
-class FoldingSetIteratorImpl {
+class FoldingSetIteratorImpl : DebugEpochBase::HandleBase {
 protected:
   FoldingSetNode *NodePtr;
 
-  LLVM_ABI FoldingSetIteratorImpl(void **Bucket);
+  LLVM_ABI FoldingSetIteratorImpl(const DebugEpochBase *Epoch, void **Bucket);
 
   LLVM_ABI void advance();
 
+  FoldingSetNode *getNode() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    return NodePtr;
+  }
+
 public:
   bool operator==(const FoldingSetIteratorImpl &RHS) const {
+    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
     return NodePtr == RHS.NodePtr;
   }
   bool operator!=(const FoldingSetIteratorImpl &RHS) const {
-    return NodePtr != RHS.NodePtr;
+    return !(*this == RHS);
   }
 };
 
 template <class T> class FoldingSetIterator : public FoldingSetIteratorImpl {
 public:
-  explicit FoldingSetIterator(void **Bucket) : FoldingSetIteratorImpl(Bucket) {}
+  explicit FoldingSetIterator(const DebugEpochBase *Epoch, void **Bucket)
+      : FoldingSetIteratorImpl(Epoch, Bucket) {}
 
-  T &operator*() const { return *static_cast<T *>(NodePtr); }
+  T &operator*() const { return *static_cast<T *>(getNode()); }
 
-  T *operator->() const { return static_cast<T *>(NodePtr); }
+  T *operator->() const { return static_cast<T *>(getNode()); }
 
   inline FoldingSetIterator &operator++() { // Preincrement
     advance();

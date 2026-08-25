@@ -169,6 +169,10 @@
 #define SYS_clock_getres __NR_clock_getres
 #endif
 
+#ifdef __NR_clock_getres_time64
+#define SYS_clock_getres_time64 __NR_clock_getres_time64
+#endif
+
 #ifdef __NR_clock_gettime
 #define SYS_clock_gettime __NR_clock_gettime
 #endif

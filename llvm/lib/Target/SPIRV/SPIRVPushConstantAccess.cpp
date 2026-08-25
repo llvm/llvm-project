@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPushConstantAccess.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -65,8 +64,8 @@ static bool replacePushConstantAccesses(Module &M, SPIRVGlobalRegistry *GR) {
   return Changed;
 }
 
-PreservedAnalyses SPIRVPushConstantAccess::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPushConstantAccessPass::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
   const SPIRVSubtarget *ST = TM.getSubtargetImpl();
   SPIRVGlobalRegistry *GR = ST->getSPIRVGlobalRegistry();
   return replacePushConstantAccesses(M, GR) ? PreservedAnalyses::none()

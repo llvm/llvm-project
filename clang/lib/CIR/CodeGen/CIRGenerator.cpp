@@ -18,6 +18,7 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/InitAllDialects.h"
