@@ -8765,18 +8765,37 @@ defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", AArch64fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", AArch64fminnmv>;
 defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", AArch64fminv>;
 
-def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))), (i64 0))),
-          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (SADDLVv8i8v V64:$op), hsub)), ssub)>;
-def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))), (i64 0))),
-          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (UADDLVv8i8v V64:$op), hsub)), ssub)>;
-def : Pat<(v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))),
-          (v8i16 (SUBREG_TO_REG (SADDLVv8i8v V64:$op), hsub))>;
-def : Pat<(v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))),
-          (v8i16 (SUBREG_TO_REG (UADDLVv8i8v V64:$op), hsub))>;
-def : Pat<(v4i32 (AArch64uaddv (v4i32 (sext (v4i16 V64:$op))))),
-          (v4i32 (SUBREG_TO_REG (SADDLVv4i16v V64:$op), ssub))>;
-def : Pat<(v4i32 (AArch64uaddv (v4i32 (zext (v4i16 V64:$op))))),
-          (v4i32 (SUBREG_TO_REG (UADDLVv4i16v V64:$op), ssub))>;
+multiclass SIMDAcrossLaneLongReductionExt<string Opc, SDPatternOperator ext> {
+  def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$op))))), (i64 0))),
+            (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$op), hsub)), ssub)>;
+
+  def : Pat<(v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$op))))),
+          (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$op), hsub))>;
+  def : Pat<(v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$op), ssub))>;
+
+  // ADDLV reduction unused lanes are set to zero. Inserting into a zero vector is redundant
+  def : Pat<(v4i16 (vector_insert (v4i16 immAllZerosV),
+            (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v4i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
+  def : Pat<(v8i16 (vector_insert (v8i16 immAllZerosV),
+            (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
+  def : Pat<(v2i32 (vector_insert (v2i32 immAllZerosV),
+            (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v2i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
+  def : Pat<(v4i32 (vector_insert (v4i32 immAllZerosV),
+            (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
+}
+
+defm : SIMDAcrossLaneLongReductionExt<"UADDLV", zext>;
+defm : SIMDAcrossLaneLongReductionExt<"UADDLV", anyext>;
+defm : SIMDAcrossLaneLongReductionExt<"SADDLV", sext>;
 
 multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> {
   // Patterns for addv(addlp(x)) ==> addlv
@@ -8790,6 +8809,28 @@ multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> 
               (!cast<Instruction>(Opc#"v16i8v") V128:$op), hsub), ssub)>;
   def : Pat<(v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$op))))),
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v8i16v") V128:$op), ssub)>;
+
+  // ADDLV reduction's unused lanes are set to zero. Inserting into a zero vector is redundant
+  def : Pat<(v4i16 (vector_insert (v4i16 immAllZerosV),
+              (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (addlp (v16i8 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v4i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
+  def : Pat<(v8i16 (vector_insert (v8i16 immAllZerosV),
+              (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (addlp (v16i8 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
+  def : Pat<(v2i32 (vector_insert (v2i32 immAllZerosV),
+              (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v2i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+  def : Pat<(v4i32 (vector_insert (v4i32 immAllZerosV),
+              (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+  def : Pat<(v2i64 (concat_vectors
+              (v1i64 (extract_subvector (v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$Rn))))), (i64 0))),
+              (v1i64 immAllZerosV))),
+            (v2i64 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i32v") V128:$Rn), dsub))>;
 
   // Patterns for addp(addlp(x)) ==> addlv
   def : Pat<(v2i32 (AArch64uaddv (v2i32 (addlp (v4i16 V64:$op))))),
