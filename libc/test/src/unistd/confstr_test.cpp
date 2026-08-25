@@ -13,22 +13,18 @@
 
 #include "src/unistd/confstr.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcConfStrTest, Basic) {
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+
+TEST(LlvmLibcConfStrTest, InvalidName) {
   char buf[64] = "initial";
-  size_t ret = LIBC_NAMESPACE::confstr(0, buf, sizeof(buf));
-  EXPECT_EQ(ret, size_t(0));
-}
-
-TEST(LlvmLibcConfStrTest, NullBufZeroLen) {
-  size_t ret = LIBC_NAMESPACE::confstr(0, nullptr, 0);
-  EXPECT_EQ(ret, size_t(0));
-}
-
-TEST(LlvmLibcConfStrTest, NonExistentConfig) {
-  char buf[64];
-  size_t ret = LIBC_NAMESPACE::confstr(-1, buf, sizeof(buf));
-  EXPECT_EQ(ret, size_t(0));
+  EXPECT_THAT(LIBC_NAMESPACE::confstr(0, buf, sizeof(buf)),
+              Fails(EINVAL, size_t(0)));
+  EXPECT_THAT(LIBC_NAMESPACE::confstr(0, nullptr, 0), Fails(EINVAL, size_t(0)));
+  EXPECT_THAT(LIBC_NAMESPACE::confstr(-1, buf, sizeof(buf)),
+              Fails(EINVAL, size_t(0)));
 }

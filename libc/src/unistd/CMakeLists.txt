@@ -54,9 +54,11 @@ add_entrypoint_object(
   HDRS
     confstr.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.hdr.unistd_macros
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.config
 )
 

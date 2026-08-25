@@ -228,6 +228,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -661,11 +662,6 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
 )
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
-    # unistd.h entrypoints
-    libc.src.unistd.confstr
-  )
-
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints

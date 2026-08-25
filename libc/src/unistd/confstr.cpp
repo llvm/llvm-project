@@ -13,12 +13,17 @@
 
 #include "src/unistd/confstr.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(size_t, confstr, (int, char *, size_t)) { return 0; }
+LLVM_LIBC_FUNCTION(size_t, confstr, (int, char *, size_t)) {
+  libc_errno = EINVAL;
+  return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL

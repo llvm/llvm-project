@@ -648,8 +648,10 @@ add_libc_test(
   SRCS
     confstr_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.src.unistd.confstr
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
