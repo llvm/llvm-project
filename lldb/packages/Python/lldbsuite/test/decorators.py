@@ -1234,6 +1234,13 @@ def requirePOSIX(func):
     return requireNotPlatform(["windows"], reason="uses the posix API.")(func)
 
 
+def requireMacOS(func):
+    """Mark the item as inherently macOS-only, as opposed to other Darwin
+    platforms (iOS, tvOS, watchOS, ...).
+    """
+    return requirePlatform(["macosx"])(func)
+
+
 def requireSignals(func):
     """Mark the item as requiring POSIX signal support on the target."""
     return requireNotPlatform(["windows", "wasip1", "wasi"])(func)

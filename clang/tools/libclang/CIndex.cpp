@@ -1312,6 +1312,14 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
+      return true;
+
+  return VisitFriendDecl(D);
+}
+
 bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
   for (auto *B : D->bindings()) {
     if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
@@ -1336,9 +1344,8 @@ bool CursorVisitor::VisitTypeConstraint(const TypeConstraint &TC) {
     if (VisitNestedNameSpecifierLoc(TC.getNestedNameSpecifierLoc()))
       return true;
   }
-  if (TC.getNamedConcept()) {
-    if (Visit(MakeCursorTemplateRef(TC.getNamedConcept(),
-                                    TC.getConceptNameLoc(), TU)))
+  if (TemplateDecl *TD = TC.getNamedConcept().getAsTemplateDecl()) {
+    if (Visit(MakeCursorTemplateRef(TD, TC.getConceptNameLoc(), TU)))
       return true;
   }
   if (auto Args = TC.getTemplateArgsAsWritten()) {
@@ -1797,9 +1804,8 @@ bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
   if (TL.isConstrained()) {
     if (auto *CR = TL.getConceptReference()) {
-      if (CR->getNamedConcept()) {
-        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
-                                           CR->getConceptNameLoc(), TU));
+      if (TemplateDecl *TD = CR->getNamedConcept().getAsTemplateDecl()) {
+        return Visit(MakeCursorTemplateRef(TD, CR->getConceptNameLoc(), TU));
       }
     }
   }
@@ -3985,8 +3991,8 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
           return true;
       }
 
-      if (E->getNamedConcept() &&
-          Visit(MakeCursorTemplateRef(E->getNamedConcept(),
+      if (E->getNamedConcept().getAsTemplateDecl() &&
+          Visit(MakeCursorTemplateRef(E->getConceptDecl(),
                                       E->getConceptNameLoc(), TU)))
         return true;
 

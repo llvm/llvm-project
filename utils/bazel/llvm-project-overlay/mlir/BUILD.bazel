@@ -51,17 +51,33 @@ config_setting(
     flag_values = {":enable_cuda": "True"},
 )
 
+bool_flag(
+    name = "enable_expensive_pattern_api_checks",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "enable_expensive_pattern_api_checks_config",
+    flag_values = {":enable_expensive_pattern_api_checks": "True"},
+)
+
 expand_template(
     name = "mlir_config_h_gen",
     out = "include/mlir/Config/mlir-config.h",
     substitutions = {
         "#cmakedefine01 MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE": "#define MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE 0",
-        "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
         "#cmakedefine01 LLVM_HAS_AMDGPU_TARGET": "#define LLVM_HAS_AMDGPU_TARGET 0",
-    },
+    } | select({
+        ":enable_expensive_pattern_api_checks_config": {
+            "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS": "#define MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS 0",
+        },
+    }),
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
 
@@ -79,33 +95,24 @@ filegroup(
 
 exports_files(glob(["include/**/*.td"]))
 
-gentbl_cc_library(
-    name = "RegionKindInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/IR/RegionKindInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/IR/RegionKindInterface.cpp.inc": ["-gen-op-interface-defs"],
-        "include/mlir/IR/RegionKindInterfaceAttrInterface.h.inc": ["-gen-attr-interface-decls"],
-        "include/mlir/IR/RegionKindInterfaceAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/IR/RegionKindInterface.td",
-    deps = [":OpBaseTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "SymbolInterfacesIncGen",
-    tbl_outs = {
-        "include/mlir/IR/SymbolInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/IR/SymbolInterfaces.cpp.inc": ["-gen-op-interface-defs"],
-        "include/mlir/IR/SymbolInterfacesAttrInterface.h.inc": ["-gen-attr-interface-decls"],
-        "include/mlir/IR/SymbolInterfacesAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
-        "include/mlir/IR/SymbolInterfacesTypeInterface.h.inc": ["-gen-type-interface-decls"],
-        "include/mlir/IR/SymbolInterfacesTypeInterface.cpp.inc": ["-gen-type-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/IR/SymbolInterfaces.td",
-    deps = [":OpBaseTdFiles"],
-)
+[
+    gentbl_cc_library(
+        name = name + "IncGen",
+        tbl_outs = {
+            "include/mlir/IR/" + name + ".h.inc": ["-gen-op-interface-decls"],
+            "include/mlir/IR/" + name + ".cpp.inc": ["-gen-op-interface-defs"],
+            "include/mlir/IR/" + name + "AttrInterface.h.inc": ["-gen-attr-interface-decls"],
+            "include/mlir/IR/" + name + "AttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        },
+        tblgen = ":mlir-tblgen",
+        td_file = "include/mlir/IR/" + name + ".td",
+        deps = [":OpBaseTdFiles"],
+    )
+    for name in [
+        "RegionKindInterface",
+        "SymbolInterfaces",
+    ]
+]
 
 gentbl_cc_library(
     name = "OpAsmInterfaceIncGen",
@@ -597,6 +604,7 @@ mlir_c_api_cc_library(
     deps = [
         ":IR",
         ":InferTypeOpInterface",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
 )
@@ -8201,6 +8209,7 @@ cc_library(
     hdrs = [
         "include/mlir/Transforms/BubbleDownMemorySpaceCasts.h",
         "include/mlir/Transforms/CSE.h",
+        "include/mlir/Transforms/CompositePass.h",
         "include/mlir/Transforms/EndomorphismSimplification.h",
         "include/mlir/Transforms/HomomorphismSimplification.h",
         "include/mlir/Transforms/LocationSnapshot.h",
@@ -10746,6 +10755,7 @@ cc_library(
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":NVVMDialect",
@@ -10980,6 +10990,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithToLLVM",
+        ":ComplexDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":FuncDialect",
@@ -10987,6 +10998,9 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
+        ":MemRefToLLVM",
+        ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",

@@ -38,13 +38,13 @@ struct B {
 };
 
 // LLVM-DAG: [[STRUCT_C:%.*]] = type <{ [[STRUCT_B]], [[STRUCT_A]], i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed padded {data ![[STRUCT_B]], data ![[STRUCT_A]], data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed {data ![[STRUCT_B]], data ![[STRUCT_A]], data !s32i, pad !cir.array<!u8i x 4>}>
 struct C : public B, public A {
   int c;
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], data !u8i, data ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, data ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -60,7 +60,7 @@ struct E {
   ~E() {};
 };
 
-// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" padded {pad !u8i}>
+// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" {pad !u8i}>
 struct F {
   F (int i = 1);
   F (const F &f) = delete;
@@ -69,7 +69,7 @@ struct F {
 
 // LLVMCIR-DAG: [[STRUCT_G:%.*]] = type <{ i32, %struct.F, [3 x i8] }>
 // OGCG-DAG:    [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {data !s32i, data !rec_F, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed {data !s32i, data !rec_F, pad !cir.array<!u8i x 3>}>
 struct G {
   int a;
   F f;
@@ -77,7 +77,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {data !u8i, data ![[STRUCT_A]], data !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !u8i, data ![[STRUCT_A]], data !s8i}>
 union U {
   unsigned : 1;
   A a;
@@ -87,7 +87,7 @@ union U {
 
 namespace gh61145 {
   // LLVM-DAG: [[STRUCT_VEC:%.*Vec.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" padded {pad !u8i}>
+  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" {pad !u8i}>
   struct Vec {
     Vec();
     Vec(Vec&&);
@@ -902,9 +902,6 @@ struct Derived : Base {
 void base_cleanup() {
   Derived x{{1}, 2};
 }
-// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
-
 // CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
@@ -913,18 +910,20 @@ void base_cleanup() {
 // CIR:   cir.yield
 // CIR: }
 
-// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
 // OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // OGCG-NOT: define
 // OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // OGCG: }
 
-// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
-
 // LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // LLVMCIR-NOT: define
 // LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // LLVMCIR: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
 
 }

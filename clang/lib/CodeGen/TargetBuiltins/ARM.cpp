@@ -4086,24 +4086,11 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svpsel_lane_c16:
   case SVE::BI__builtin_sve_svpsel_lane_c32:
   case SVE::BI__builtin_sve_svpsel_lane_c64: {
-    bool IsSVCount = isa<TargetExtType>(Ops[0]->getType());
-    assert(((!IsSVCount || cast<TargetExtType>(Ops[0]->getType())->getName() ==
-                               "aarch64.svcount")) &&
-           "Unexpected TargetExtType");
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
-    Function *CastFromSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
-    Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
-
     auto OverloadedTy = getSVEType(SVETypeFlags(Builtin->TypeModifier));
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel, OverloadedTy);
-    llvm::Value *Ops0 =
-        IsSVCount ? Builder.CreateCall(CastFromSVCountF, Ops[0]) : Ops[0];
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel,
+                                   {Ops[0]->getType(), OverloadedTy});
     llvm::Value *Ops1 = EmitSVEPredicateCast(Ops[1], OverloadedTy);
-    llvm::Value *PSel = Builder.CreateCall(F, {Ops0, Ops1, Ops[2]});
-    return IsSVCount ? Builder.CreateCall(CastToSVCountF, PSel) : PSel;
+    return Builder.CreateCall(F, {Ops[0], Ops1, Ops[2]});
   }
   case SVE::BI__builtin_sve_svmov_b_z: {
     // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
@@ -4226,12 +4213,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
 
-  case SVE::BI__builtin_sve_svpfalse_c: {
-    auto SVBoolTy = ScalableVectorType::get(Builder.getInt1Ty(), 16);
-    Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, Ty);
-    return Builder.CreateCall(CastToSVCountF, ConstantInt::getFalse(SVBoolTy));
-  }
+  case SVE::BI__builtin_sve_svpfalse_c:
+    return Constant::getNullValue(Ty);
 
   case SVE::BI__builtin_sve_svlen_bf16:
   case SVE::BI__builtin_sve_svlen_f16:
@@ -6403,12 +6386,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvta");
   }
   case NEON::BI__builtin_neon_vcvtm_s16_f16:
-  case NEON::BI__builtin_neon_vcvtm_s32_v:
   case NEON::BI__builtin_neon_vcvtmq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtmq_s32_v:
   case NEON::BI__builtin_neon_vcvtm_u16_f16:
-  case NEON::BI__builtin_neon_vcvtm_u32_v:
   case NEON::BI__builtin_neon_vcvtmq_u16_f16:
+  case NEON::BI__builtin_neon_vcvtm_s32_v:
+  case NEON::BI__builtin_neon_vcvtmq_s32_v:
+  case NEON::BI__builtin_neon_vcvtm_u32_v:
   case NEON::BI__builtin_neon_vcvtmq_u32_v:
   case NEON::BI__builtin_neon_vcvtm_s64_v:
   case NEON::BI__builtin_neon_vcvtmq_s64_v:
@@ -6419,12 +6402,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvtm");
   }
   case NEON::BI__builtin_neon_vcvtn_s16_f16:
-  case NEON::BI__builtin_neon_vcvtn_s32_v:
   case NEON::BI__builtin_neon_vcvtnq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtnq_s32_v:
   case NEON::BI__builtin_neon_vcvtn_u16_f16:
-  case NEON::BI__builtin_neon_vcvtn_u32_v:
   case NEON::BI__builtin_neon_vcvtnq_u16_f16:
+  case NEON::BI__builtin_neon_vcvtn_s32_v:
+  case NEON::BI__builtin_neon_vcvtnq_s32_v:
+  case NEON::BI__builtin_neon_vcvtn_u32_v:
   case NEON::BI__builtin_neon_vcvtnq_u32_v:
   case NEON::BI__builtin_neon_vcvtn_s64_v:
   case NEON::BI__builtin_neon_vcvtnq_s64_v:
@@ -6435,12 +6418,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvtn");
   }
   case NEON::BI__builtin_neon_vcvtp_s16_f16:
-  case NEON::BI__builtin_neon_vcvtp_s32_v:
   case NEON::BI__builtin_neon_vcvtpq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtpq_s32_v:
   case NEON::BI__builtin_neon_vcvtp_u16_f16:
-  case NEON::BI__builtin_neon_vcvtp_u32_v:
   case NEON::BI__builtin_neon_vcvtpq_u16_f16:
+  case NEON::BI__builtin_neon_vcvtp_s32_v:
+  case NEON::BI__builtin_neon_vcvtpq_s32_v:
+  case NEON::BI__builtin_neon_vcvtp_u32_v:
   case NEON::BI__builtin_neon_vcvtpq_u32_v:
   case NEON::BI__builtin_neon_vcvtp_s64_v:
   case NEON::BI__builtin_neon_vcvtpq_s64_v:

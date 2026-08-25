@@ -7,13 +7,7 @@ import uuid
 from pathlib import Path
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import (
-    expectedFailureWindows,
-    expectedFailureWindowsAndNoLLDBServer,
-    requireNotWasm,
-    skipIf,
-    skipIfWindowsAndLLDBServer,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
     AttachArgs,

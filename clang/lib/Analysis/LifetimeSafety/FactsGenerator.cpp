@@ -233,9 +233,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  auto [FD, Args] = getFunctionCallInfo(CCE);
-  handleFunctionCall(CCE, FD, Args,
-                     /*IsGslConstruction=*/false);
+  handleFunctionCall(CCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
@@ -256,13 +254,10 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    auto [FD, Args] = getFunctionCallInfo(MCE);
-    handleFunctionCall(MCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(MCE, /*IsGslConstruction=*/true);
     return;
   }
-  auto [FD, Args] = getFunctionCallInfo(MCE);
-  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
+  handleFunctionCall(MCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -282,8 +277,7 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  auto [FD, Args] = getFunctionCallInfo(CE);
-  handleFunctionCall(CE, FD, Args);
+  handleFunctionCall(CE);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -630,8 +624,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  auto [FD, Args] = getFunctionCallInfo(OCE);
-  handleFunctionCall(OCE, FD, Args);
+  handleFunctionCall(OCE);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -904,9 +897,7 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    auto [FD, Args] = getFunctionCallInfo(CCE);
-    handleFunctionCall(CCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(CCE, /*IsGslConstruction=*/true);
   }
 }
 
@@ -1033,26 +1024,34 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
   bool IsInstance =
       Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getArgCaptureBy = [FD,
-                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
-    const ParmVarDecl *PVD = nullptr;
+  auto getParamDeclAt = [FD, IsInstance](unsigned I) -> const ParmVarDecl * {
     if (IsInstance) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
-        PVD = FD->getParamDecl(I - 1);
+        return FD->getParamDecl(I - 1);
     } else {
       if (I < FD->getNumParams())
-        PVD = FD->getParamDecl(I);
+        return FD->getParamDecl(I);
     }
-    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
+    return nullptr;
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    const ParmVarDecl *PVD = getParamDeclAt(I);
+    if (!PVD)
+      continue;
+    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
     if (!CapturedOriginList)
       continue;
+    // For references to pointer-like types, peel the outer origin (the pointer
+    // object itself) so that we capture the underlying data (the inner origin).
+    if (QualType ParamType = PVD->getType();
+        (ParamType->isReferenceType() &&
+         isPointerLikeType(ParamType->getPointeeType())) &&
+        CapturedOriginList->getLength() > 1)
+      CapturedOriginList = CapturedOriginList->peelOuterOrigin();
     for (int CapturingArgIdx : Attr->params()) {
       // FIXME: Add support for capturing to Global/unknown.
       if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
@@ -1082,9 +1081,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 }
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,
-                                        const FunctionDecl *FD,
-                                        ArrayRef<const Expr *> Args,
                                         bool IsGslConstruction) {
+  FunctionCallInfo CallInfo(Call);
+  if (!CallInfo.FD)
+    return;
+  const FunctionDecl *FD = CallInfo.FD;
+  llvm::ArrayRef<const Expr *> Args = CallInfo.Args;
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);

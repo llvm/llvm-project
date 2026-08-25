@@ -592,15 +592,18 @@ template <typename DomTreeT> struct SemiNCAInfo {
   }
 
   // For each non-root node in a subtree, attach it to the immediate dominator.
+  // Link nodes in reverse: addChild prepends, so this leaves the children of
+  // each node in DFS order.
   void attachNewSubtree(DomTreeT &DT) {
-    for (unsigned Num = 1, E = NumToNode.size(); Num != E; ++Num) {
+    const unsigned E = NumToNode.size();
+    for (unsigned Num = 1; Num != E; ++Num) {
       NodePtr W = NumToNode[Num];
       assert(!DT.getNode(W) && "node was already attached");
-
-      // Add a new tree node for this BasicBlock, and link it as a child of
-      // IDomNode.
-      auto IDomNode = DT.getNode(NumToNode[getNodeInfo(W).IDom]);
-      DT.createNode(W, IDomNode);
+      DT.createNodeUnlinked(W, DT.getNode(NumToNode[getNodeInfo(W).IDom]));
+    }
+    for (unsigned Num = E; --Num;) {
+      const TreeNodePtr TN = DT.getNode(NumToNode[Num]);
+      TN->getIDom()->addChild(TN);
     }
   }
 

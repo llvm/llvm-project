@@ -144,12 +144,6 @@ LLVM_ABI bool
 SimplifyInstructionsInBlock(BasicBlock *BB,
                             const TargetLibraryInfo *TLI = nullptr);
 
-/// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
-/// undef. This is useful for signaling that a variable, e.g. has been
-/// found dead and hence it's unavailable at a given program point.
-/// Returns true if the dbg values have been changed.
-LLVM_ABI bool replaceDbgUsesWithUndef(Instruction *I);
-
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
 //
@@ -323,7 +317,7 @@ LLVM_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// replaces any remaining debug-record uses with poison.
 LLVM_ABI void salvageDebugInfo(Instruction &I);
 
-/// Salvage only the records in \p DPInsns instead of finding every debug
+/// Salvage only the records in \p DbgRecords instead of finding every debug
 /// user of \p I. Every record must be a debug user of the instruction.
 ///
 /// Process records in order. For a dbg.assign, salvage a matching address
@@ -334,7 +328,7 @@ LLVM_ABI void salvageDebugInfo(Instruction &I);
 /// supplied record.
 LLVM_ABI void
 salvageDebugInfoForDbgValues(Instruction &I,
-                             ArrayRef<DbgVariableRecord *> DPInsns);
+                             ArrayRef<DbgVariableRecord *> DbgRecords);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
