@@ -232,3 +232,102 @@ define <2 x i1> @n3_vec_nonsplat(<2 x i8> %x) {
   %tmp2 = icmp ne <2 x i8> %tmp1, %x
   ret <2 x i1> %tmp2
 }
+
+; ============================================================================ ;
+; Same pattern spelled as sext (trunc %x)
+; ============================================================================ ;
+
+declare void @use3(i3)
+declare void @use64(i64)
+declare void @use_v2i3(<2 x i3>)
+
+define i1 @p_sext_trunc(i8 %x) {
+; CHECK-LABEL: @p_sext_trunc(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0) ; the trunc may have other uses
+  %tmp1 = sext i3 %tmp0 to i8
+  %tmp2 = icmp ne i8 %tmp1, %x
+  ret i1 %tmp2
+}
+
+define i1 @p_sext_trunc_i128(i128 %x) {
+; CHECK-LABEL: @p_sext_trunc_i128(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[X:%.*]] to i64
+; CHECK-NEXT:    call void @use64(i64 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i64 [[TMP0]] to i128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i128 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i128 %x to i64
+  call void @use64(i64 %tmp0)
+  %tmp1 = sext i64 %tmp0 to i128
+  %tmp2 = icmp ne i128 %tmp1, %x
+  ret i1 %tmp2
+}
+
+define <2 x i1> @p_sext_trunc_vec(<2 x i8> %x) {
+; CHECK-LABEL: @p_sext_trunc_vec(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i3>
+; CHECK-NEXT:    call void @use_v2i3(<2 x i3> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i3> [[TMP0]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i8> [[X]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %tmp0 = trunc <2 x i8> %x to <2 x i3>
+  call void @use_v2i3(<2 x i3> %tmp0)
+  %tmp1 = sext <2 x i3> %tmp0 to <2 x i8>
+  %tmp2 = icmp ne <2 x i8> %tmp1, %x
+  ret <2 x i1> %tmp2
+}
+
+define i1 @n_sext_trunc_oneuse(i8 %x) {
+; CHECK-LABEL: @n_sext_trunc_oneuse(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0)
+  %tmp1 = sext i3 %tmp0 to i8
+  call void @use8(i8 %tmp1) ; the sext must be one-use
+  %tmp2 = icmp ne i8 %tmp1, %x
+  ret i1 %tmp2
+}
+
+define i1 @n_sext_trunc_other_value(i8 %x, i8 %y) {
+; CHECK-LABEL: @n_sext_trunc_other_value(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0)
+  %tmp1 = sext i3 %tmp0 to i8
+  %tmp2 = icmp ne i8 %tmp1, %y ; not %x
+  ret i1 %tmp2
+}
+
+define i1 @n_zext_trunc(i8 %x) {
+; CHECK-LABEL: @n_zext_trunc(
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
+; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8 [[X]], 7
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %tmp0 = trunc i8 %x to i3
+  call void @use3(i3 %tmp0)
+  %tmp1 = zext i3 %tmp0 to i8 ; not a sign extension
+  %tmp2 = icmp ne i8 %tmp1, %x
+  ret i1 %tmp2
+}
