@@ -7323,7 +7323,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
       [IsOffloadEntry](CodeGenFunction &CGF,
                        const OMPLoopDirective &D) -> llvm::Value * {
     if (IsOffloadEntry) {
-      OMPLoopScope(CGF, D);
+      OMPLoopScope PreInitScope(CGF, D);
       // Emit calculation of the iterations count.
       llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
       NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,

@@ -259,7 +259,8 @@ public:
   /// appropriate method.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseTemplateName(TemplateName Template);
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true);
 
   /// Recursively visit a template argument and dispatch to the
   /// appropriate method for the argument type.
@@ -871,12 +872,14 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
+bool RecursiveASTVisitor<Derived>::TraverseTemplateName(
+    TemplateName Template, bool TraverseQualifier) {
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
-    TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
+    if (TraverseQualifier)
+      TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
   } else if (QualifiedTemplateName *QTN =
                  Template.getAsQualifiedTemplateName()) {
-    if (QTN->getQualifier()) {
+    if (TraverseQualifier && QTN->getQualifier()) {
       TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
     }
   }
@@ -1209,24 +1212,12 @@ DEF_TRAVERSE_TYPE(DependentNameType, {
 })
 
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
 DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseType(T->getDeducedType()));
 })
 
@@ -1565,10 +1556,8 @@ DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
   if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(TraverseTemplateName(
-      TemplateName(TL.getTypePtr()->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(TL.getTypePtr()->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
     TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
@@ -1580,10 +1569,8 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
   const auto *T = TL.getTypePtr();
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(
-      TraverseTemplateName(TemplateName(T->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(T->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   TRY_TO(TraverseType(T->getDeducedType()));
 })
@@ -2644,6 +2631,12 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
     TRY_TO(TraverseTemplateArgumentLocsHelper(S->getTemplateArgs(),
                                               S->getNumTemplateArgs()));
   }
+})
+
+DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
+  TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+  TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
+                                            S->getNumTemplateArgs()));
 })
 
 DEF_TRAVERSE_STMT(DeclRefExpr, {

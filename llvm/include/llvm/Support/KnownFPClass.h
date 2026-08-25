@@ -241,6 +241,9 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass bitcast(const fltSemantics &FltSemantics,
                                        const KnownBits &Bits);
 
+  /// Report known bits for a float with provided semantics.
+  LLVM_ABI KnownBits toKnownBits(const fltSemantics &FltSemantics) const;
+
   /// Report known values for fadd
   LLVM_ABI static KnownFPClass
   fadd(const KnownFPClass &LHS, const KnownFPClass &RHS,
@@ -268,7 +271,7 @@ struct KnownFPClass {
 
     // X * X is always non-negative or a NaN.
     Known.knownNot(fcNegative);
-    Known.propagateNaN(Src);
+    Known.propagateNonNaN(Src);
     return Known;
   }
 
@@ -380,16 +383,34 @@ struct KnownFPClass {
     return Known;
   }
 
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &Src) {
+    if (Src.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
+  // Propagate knowledge that an operation cannot introduce a signaling NaN.
+  void propagateNonSNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    if (LHS.isKnownNever(fcSNan) && RHS.isKnownNever(fcSNan))
+      knownNot(fcSNan);
+  }
+
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
-  void propagateNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+  void propagateNonNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+    propagateNonSNaN(Src);
     if (Src.isKnownNever(fcNan)) {
       knownNot(fcNan);
       if (PreserveSign)
         SignBit = Src.SignBit;
-    } else if (Src.isKnownNever(fcSNan))
-      knownNot(fcSNan);
+    }
+  }
+
+  void propagateNonNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    propagateNonSNaN(LHS, RHS);
+    if (LHS.isKnownNeverNaN() && RHS.isKnownNeverNaN())
+      knownNot(fcNan);
   }
 
   // Propagate knowledge for operations whose result sign is the xor of the

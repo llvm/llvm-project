@@ -1023,15 +1023,15 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region. This scope is constructed after the
-    // init-statement so its cleanups are not captured.
+    // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1156,14 +1156,14 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
