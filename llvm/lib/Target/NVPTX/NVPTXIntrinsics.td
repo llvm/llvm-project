@@ -2482,7 +2482,7 @@ foreach rnd = ["rn", "rz"] in {
       defvar PZO = !if(pzo, -1, 0);
       defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
       defvar PZOPreds =
-          !if(pzo, [SM107f]<Predicate>, []<Predicate>);
+          !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>);
 
       defvar FF2BF16X2 = !cast<Intrinsic>("int_nvvm_ff2bf16x2_" # rnd # relu);
       defvar FF2F16X2 = !cast<Intrinsic>("int_nvvm_ff2f16x2_" # rnd # relu);
@@ -2506,7 +2506,8 @@ foreach rnd = ["rn", "rz"] in {
           !cast<Intrinsic>("int_nvvm_f2bf16_" # rnd # relu # "_satfinite");
       defvar F2F16_SF =
           !cast<Intrinsic>("int_nvvm_f2f16_" # rnd # relu # "_satfinite");
-      defvar SFPreds = !listconcat([hasPTX<81>, SM80], PZOPreds);
+      defvar SFPreds = !if(pzo, [hasConvertWithPZOSupport]<Predicate>,
+                                [PTX81, SM80]<Predicate>);
 
       def : Pat<(FF2BF16X2_SF f32:$a, f32:$b, PZO),
                 (CVT_bf16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
@@ -2528,8 +2529,8 @@ foreach relu = ["", "_relu"] in {
     defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
     defvar Preds =
       !listconcat(
-        [callSubtarget<"hasConvertWithStochasticRounding">]<Predicate>,
-        !if(pzo, [SM107f]<Predicate>, []<Predicate>));
+        [hasConvertWithStochasticRounding]<Predicate>, 
+        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
 
     defvar BF16X2 = !cast<Intrinsic>("int_nvvm_ff2bf16x2_rs" # relu);
     defvar BF16X2_SF =
