@@ -1505,7 +1505,7 @@ define <16 x i8> @test_int_x86_avx10_vcvtbf42hf8_s2v_128(ptr %ptr_a) {
 ; X86-NEXT:    vcvtbf42hf8 (%eax), %xmm0 # encoding: [0x62,0xf5,0x7c,0x08,0x37,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %l = load i64, ptr %ptr_a, align 8
-  %v = insertelement <2 x i64> undef, i64 %l, i64 0
+  %v = insertelement <2 x i64> poison, i64 %l, i64 0
   %a = bitcast <2 x i64> %v to <16 x i8>
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtbf42hf8.128(<16 x i8> %a)
   ret <16 x i8> %ret
