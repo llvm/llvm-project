@@ -324,7 +324,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
 
     Out << ' ' << SU.asElementName();
 
-    if (*ExtentN > 1)
+    if (*ExtentN != 1)
       Out << "s";
   }
 
