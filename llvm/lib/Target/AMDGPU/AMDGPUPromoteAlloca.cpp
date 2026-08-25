@@ -243,6 +243,28 @@ private:
   bool NoOpt;
 };
 
+// Whether \p I becomes a call the object would have to survive.
+//
+// Nearly every intrinsic lowers to instructions rather than a call, and
+// counting those would refuse promotion almost everywhere. Only the two that
+// really do become one count - see the switch in
+// AMDGPUCallLowering::lowerCall and the matching SelectionDAGBuilder cases.
+static bool isCallForLiveness(const Instruction &I) {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    return false;
+  if (const auto *II = dyn_cast<IntrinsicInst>(CB)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_call_whole_wave:
+    case Intrinsic::amdgcn_cs_chain:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
                             const Function &F) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
@@ -424,16 +446,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
   // in analyzePromoteToVGPR. Collected once here because the answer is a
   // property of the function, not of the object.
   //
-  // Intrinsics do not count: on this target they lower to instructions rather
-  // than to calls. Were one ever to lower to a call, the result would be the
-  // backend's diagnostic rather than a wrong answer.
   CallBlocks.clear();
   if (PromoteToVGPR) {
-    for (const Instruction &I : instructions(F)) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (CB && !isa<IntrinsicInst>(CB))
+    for (const Instruction &I : instructions(F))
+      if (isCallForLiveness(I))
         CallBlocks.insert(I.getParent());
-    }
   }
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -1412,18 +1429,16 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
 
 // Whether a call can execute while \p AI is live.
 //
-// An object in the VGPR ("as memory") address space occupies fixed registers
-// for the whole of its live range. Those registers are caller-saved and the
-// object cannot be spilled, so one that is live across a call has nowhere to
-// be, and AMDGPUPrivateObjectVGPRs diagnoses it. Declining to promote in that
-// case keeps this from turning a working program into an error.
+// An object in the VGPR address space occupies caller-saved registers and
+// cannot be spilled, so one live across a call has nowhere to be and
+// AMDGPUPrivateObjectVGPRs diagnoses it. This predicts that refusal, so
+// promotion does not turn a working program into a failed compile.
 //
-// The live range is the one that pass will use, not the one the uses imply: an
-// object is live from its lifetime start - or from the alloca, if it has none,
-// since allocateVgprs then inserts a start there - until its lifetime end, or
-// the end of the function. An object with no use after a call is still live
-// across it if nothing ended it, which is why this cannot be answered by
-// looking at uses.
+// The live range is the one that pass will use, not the one the uses imply:
+// from the lifetime start - or the alloca, if there is none, since
+// allocateVgprs inserts a start there - until the lifetime end or the end of
+// the function. An object with no use after a call is still live across it if
+// nothing ended it, so this cannot be answered by looking at uses.
 bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
   if (CallBlocks.empty())
     return false;
@@ -1441,14 +1456,11 @@ bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
     }
   }
 
-  // Live-in state per block, to a fixed point over the CFG. Walking a block
-  // from its live-in state gives its live-out, and a call seen while live is
-  // the answer.
+  // Live-in state per block, to a fixed point over the CFG.
   DenseMap<const BasicBlock *, bool> LiveIn;
   SmallVector<const BasicBlock *> Worklist;
 
-  // Walk a block, returning whether the object is live on exit, and reporting
-  // whether a call is reached while it is live.
+  // Returns liveness on exit, reporting whether a call is reached while live.
   const auto scan = [&](const BasicBlock &BB, bool Live, bool *SawCall) {
     for (const Instruction &I : BB) {
       if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -1459,11 +1471,10 @@ bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
           Live = ID == Intrinsic::lifetime_start;
           continue;
         }
-        continue;
       }
       if (!HaveStart && &I == static_cast<const Instruction *>(AI))
         Live = true;
-      if (Live && SawCall && isa<CallBase>(&I))
+      if (Live && SawCall && isCallForLiveness(I))
         *SawCall = true;
     }
     return Live;
@@ -1499,8 +1510,7 @@ bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
 }
 
 // Decide whether an alloca can be moved into the VGPR ("as memory") address
-// space, where it lives in registers rather than in scratch and is reached with
-// an indexed register access instead of a load or store.
+// space, where it lives in registers rather than scratch.
 void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
   if (!IsAMDGCN)
     return;
@@ -1536,10 +1546,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
       if (!AMDGPU::isVGPRLoadStoreSupported(Bits, Bits, Alignment))
         return Reject(Inst, "unsupported access size or alignment");
 
-      // Be stricter than the lowering about alignment. It derives the dword
-      // index as pointer >> 2, so an access that is not naturally aligned reads
-      // or writes the dword containing it rather than straddling two. Whole
-      // dword accesses are tolerated there without complaint; an object should
+      // Stricter than the lowering, which tolerates an under-aligned
+      // whole-dword access by reading the containing dword. An object should
       // not be moved into a place where that starts happening to it.
       if (Alignment.value() < std::min<uint64_t>(Bits / 8, 4))
         return Reject(Inst, "insufficiently aligned access");
@@ -1589,11 +1597,10 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVGPR(AllocaAnalysis &AA) const {
   AA.VGPR.Enable = true;
 }
 
-// Move the alloca into the VGPR ("as memory") address space. Pointers into it
-// are the same size in both address spaces, so the pointers derived from it
-// only need their type changed, and allocateVgprs then gives the object its
-// place in that address space. This mirrors what the LDS promotion below does
-// to the same kind of closed set of derived pointers.
+// Move the alloca into the VGPR ("as memory") address space. Pointers are the
+// same size in both, so derived pointers only need their type changed;
+// allocateVgprs then gives the object its place. Mirrors the LDS promotion
+// below, over the same kind of closed set of derived pointers.
 void AMDGPUPromoteAllocaImpl::promoteAllocaToVGPR(AllocaAnalysis &AA) {
   LLVM_DEBUG(dbgs() << "Promoting alloca to VGPRs: " << *AA.Alloca << '\n');
 
