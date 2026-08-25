@@ -65,7 +65,7 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one VECTOR clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
-  !ERROR: 'Vector(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector vector(128)
   do i = 1, N
     a(i) = 3.14d0
@@ -80,7 +80,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Vector(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -88,7 +88,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Vector(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(vector_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -96,7 +96,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Vector(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'VECTOR(value)' not allowed in PARALLEL LOOP directive
   !$acc loop vector(length: vector_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -105,7 +105,7 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one WORKER clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
-  !ERROR: 'Worker(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker worker(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -120,7 +120,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Worker(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker(10)
   do i = 1, N
     a(i) = 3.14d0
@@ -128,7 +128,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Worker(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker(worker_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -136,7 +136,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Worker(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'WORKER(value)' not allowed in PARALLEL LOOP directive
   !$acc loop worker(num : worker_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -145,34 +145,34 @@ program openacc_loop_validity
 
   !$acc parallel
   !ERROR: At most one GANG clause can appear on the LOOP directive or in group separated by the DEVICE_TYPE clause
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
   !$acc end parallel
 
-  !ERROR: 'Gang(value)' not allowed in LOOP directive
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang device_type(default) gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
   !ERROR: At most one GANG clause can appear on the PARALLEL LOOP directive or in group separated by the DEVICE_TYPE clause
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc parallel loop gang gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc parallel loop gang device_type(default) gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
   end do
 
   !$acc parallel
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -180,7 +180,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -188,7 +188,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(gang_size, static:*)
   do i = 1, N
     a(i) = 3.14d0
@@ -196,7 +196,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size, static:*)
   do i = 1, N
     a(i) = 3.14d0
@@ -204,7 +204,7 @@ program openacc_loop_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: 'Gang(value)' not allowed in PARALLEL LOOP directive
+  !ERROR: 'GANG(value)' not allowed in PARALLEL LOOP directive
   !$acc loop gang(num: gang_size, static: gang_size)
   do i = 1, N
     a(i) = 3.14d0
@@ -385,7 +385,7 @@ program openacc_loop_validity
   end do
 
   !ERROR: The num argument is not allowed when dim is specified
-  !ERROR: 'Gang(value)' not allowed in LOOP directive
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang(1, dim: 2)
   do i = 1, N
   end do
@@ -410,17 +410,17 @@ program openacc_loop_validity
   end do
   !$acc end parallel
 
-  !ERROR: 'Gang(value)' not allowed in LOOP directive
+  !ERROR: 'GANG(value)' not allowed in LOOP directive
   !$acc loop gang device_type(nvidia) gang(num: 8)
   DO i = 1, n
   END DO
 
-  !ERROR: 'Vector(value)' not allowed in LOOP directive
+  !ERROR: 'VECTOR(value)' not allowed in LOOP directive
   !$acc loop vector device_type(default) vector(16)
   DO i = 1, n
   END DO
 
-  !ERROR: 'Worker(value)' not allowed in LOOP directive
+  !ERROR: 'WORKER(value)' not allowed in LOOP directive
   !$acc loop worker device_type(*) worker(8)
   DO i = 1, n
   END DO

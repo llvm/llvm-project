@@ -362,12 +362,15 @@ void AccStructureChecker::CheckLoopLevelClauseKernelsConflicts() {
     return false;
   }};
 
-  const char *dirName{GetContext().directive == llvm::acc::ACCD_kernels_loop
-          ? "KERNELS LOOP"
-          : "KERNELS"};
+  llvm::acc::Directive kernelsDir{
+      GetContext().directive == llvm::acc::ACCD_kernels_loop
+          ? llvm::acc::ACCD_kernels_loop
+          : llvm::acc::ACCD_kernels};
+  std::string dirName{
+      parser::ToUpperCaseLetters(getDirectiveName(kernelsDir).str())};
 
-  auto emitConflicts{[&](llvm::acc::Clause loopClause, const char *clauseName,
-                         llvm::acc::Clause sizeClause, const char *sizeName,
+  auto emitConflicts{[&](llvm::acc::Clause loopClause,
+                         llvm::acc::Clause sizeClause,
                          bool (*isValued)(const parser::AccClause &)) {
     if (!hasKernelsSizeClause(sizeClause))
       return;
@@ -376,19 +379,19 @@ void AccStructureChecker::CheckLoopLevelClauseKernelsConflicts() {
       if (clause && isValued(*clause)) {
         context_.Say(clause->source,
             "'%s(value)' not allowed in %s region that has a %s clause"_err_en_US,
-            clauseName, dirName, sizeName);
+            parser::ToUpperCaseLetters(getClauseName(loopClause).str()),
+            dirName,
+            parser::ToUpperCaseLetters(getClauseName(sizeClause).str()));
       }
     }
   }};
 
-  emitConflicts(llvm::acc::Clause::ACCC_vector, "Vector",
-      llvm::acc::Clause::ACCC_vector_length, "VECTOR_LENGTH",
-      AccClauseHasVectorValue);
-  emitConflicts(llvm::acc::Clause::ACCC_worker, "Worker",
-      llvm::acc::Clause::ACCC_num_workers, "NUM_WORKERS",
-      AccClauseHasWorkerValue);
-  emitConflicts(llvm::acc::Clause::ACCC_gang, "Gang",
-      llvm::acc::Clause::ACCC_num_gangs, "NUM_GANGS", AccClauseHasGangNum);
+  emitConflicts(llvm::acc::Clause::ACCC_vector,
+      llvm::acc::Clause::ACCC_vector_length, AccClauseHasVectorValue);
+  emitConflicts(llvm::acc::Clause::ACCC_worker,
+      llvm::acc::Clause::ACCC_num_workers, AccClauseHasWorkerValue);
+  emitConflicts(llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_num_gangs,
+      AccClauseHasGangNum);
 }
 
 void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
@@ -1129,7 +1132,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Vector &g) {
     CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
   }
   if (g.v) {
-    CheckLoopLevelClauseValue("Vector");
+    CheckLoopLevelClauseValue(
+        parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
   }
 }
 
@@ -1144,7 +1148,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Worker &g) {
     CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
   }
   if (g.v) {
-    CheckLoopLevelClauseValue("Worker");
+    CheckLoopLevelClauseValue(
+        parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
   }
 }
 
@@ -1200,7 +1205,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
     // above as only dim being allowed.
     if (hasNum &&
         GetContext().directive != llvm::acc::Directive::ACCD_routine) {
-      CheckLoopLevelClauseValue("Gang");
+      CheckLoopLevelClauseValue(
+          parser::ToUpperCaseLetters(getClauseName(crtClause).str()));
     }
   }
 }
