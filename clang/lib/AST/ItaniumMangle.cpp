@@ -682,7 +682,7 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
 
   const DeclContext *DC = D->getDeclContext();
   if (isa<CapturedDecl>(DC) || isa<OMPDeclareReductionDecl>(DC) ||
-      isa<OMPDeclareMapperDecl>(DC)) {
+      isa<OMPDeclareMapperDecl>(DC) || isa<TopLevelStmtDecl>(DC)) {
     return getEffectiveDeclContext(cast<Decl>(DC));
   }
 
