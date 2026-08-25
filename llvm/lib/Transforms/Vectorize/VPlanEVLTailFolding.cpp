@@ -255,7 +255,7 @@ optimizeExpressionRecipeToEVL(VPValue *HeaderMask, VPRecipeBase &CurRecipe,
   // Decompose first and construct with EVL recipes later.
   SmallVector<VPSingleDefRecipe *> ExpressionRecipes(Expr->decompose());
   SmallSetVector<VPSingleDefRecipe *, 4> UniqueExpressionRecipes(
-      ExpressionRecipes.begin(), ExpressionRecipes.end());
+      from_range, ExpressionRecipes);
 
   // Convert recipes to EVL recipes.
   for (auto *R : UniqueExpressionRecipes)
