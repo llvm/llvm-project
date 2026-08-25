@@ -15,8 +15,7 @@ define void @alloca_offset_8() {
 ; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x0, x8, #8
+; CHECK-NEXT:    add x0, sp, #8
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #80
@@ -35,8 +34,7 @@ define void @alloca_offset_4095() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8208
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x0, x8, #4095
+; CHECK-NEXT:    add x0, sp, #4095
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    add sp, sp, #2, lsl #12 // =8192
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -73,16 +71,14 @@ define void @alloca_two_interior_ptrs() {
 ; CHECK-LABEL: alloca_two_interior_ptrs:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x19, sp
-; CHECK-NEXT:    add x0, x19, #8
+; CHECK-NEXT:    add x0, sp, #8
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    add x0, x19, #16
+; CHECK-NEXT:    add x0, sp, #16
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   %a = alloca [64 x i8], align 8
@@ -98,16 +94,14 @@ define void @alloca_base_and_interior() {
 ; CHECK-LABEL: alloca_base_and_interior:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov x0, sp
-; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    add x0, x19, #8
+; CHECK-NEXT:    add x0, sp, #8
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   %a = alloca [64 x i8], align 8
