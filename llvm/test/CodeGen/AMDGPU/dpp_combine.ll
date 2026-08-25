@@ -231,10 +231,8 @@ define amdgpu_kernel void @dpp_src1_sgpr(ptr addrspace(1) %out, i16 %in) {
 ; clamp forces VOP3 encoding so src1 takes an inline constant, but folding
 ; 1.0 there needs a commute that would move row_shl:1 onto %x instead.
 ; GCN-LABEL: {{^}}dpp_src1_imm_no_commute:
-; GFX9GFX10: v_mov_b32_dpp {{v[0-9]+}}, {{v[0-9]+}} row_shl:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX9GFX10: v_add_f32_e64 v0, {{v[0-9]+}}, v0 clamp
-; GFX11-TRUE16: v_add_f32_e64_dpp v0, {{v[0-9]+}}, v0 clamp row_shl:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX11-FAKE16: v_add_f32_e64_dpp v0, {{v[0-9]+}}, v0 clamp row_shl:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX9GFX10: v_mov_b32_dpp [[V:v[0-9]+]], {{v[0-9]+}} row_shl:1 row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX9GFX10: v_add_f32_e64 [[V0:v[0-9]+]], [[V]], [[V0]] clamp
 define float @dpp_src1_imm_no_commute(float %x) {
 entry:
   %dpp = tail call float @llvm.amdgcn.update.dpp.f32(float 0.0, float 1.0, i32 257, i32 15, i32 15, i1 true)
