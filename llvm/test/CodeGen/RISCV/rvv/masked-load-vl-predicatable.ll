@@ -92,14 +92,16 @@ define <16 x float> @masked_load_signed_cmp(ptr %p, i32 signext %n, i32 signext 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    srliw a2, a2, 3
 ; CHECK-NEXT:    min a2, a1, a2
-; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    subw a1, a1, a2
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    min a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %11 = insertelement <16 x i32> poison, i32 %iv, i32 0
+  %base = lshr i32 %iv, 3
+  %11 = insertelement <16 x i32> poison, i32 %base, i32 0
   %12 = shufflevector <16 x i32> %11, <16 x i32> poison, <16 x i32> zeroinitializer
   %13 = or disjoint <16 x i32> %12, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %14 = insertelement <16 x i32> poison, i32 %n, i32 0
@@ -114,14 +116,16 @@ define <16 x float> @masked_load_sgt(ptr %p, i32 signext %n, i32 signext %iv) no
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    srliw a2, a2, 3
 ; CHECK-NEXT:    min a2, a1, a2
-; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    subw a1, a1, a2
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    min a1, a1, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %11 = insertelement <16 x i32> poison, i32 %iv, i32 0
+  %base = lshr i32 %iv, 3
+  %11 = insertelement <16 x i32> poison, i32 %base, i32 0
   %12 = shufflevector <16 x i32> %11, <16 x i32> poison, <16 x i32> zeroinitializer
   %13 = or disjoint <16 x i32> %12, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %14 = insertelement <16 x i32> poison, i32 %n, i32 0
@@ -250,6 +254,27 @@ define <16 x float> @negative_masked_load_wrong_step_vector(ptr %p, i32 signext 
   %14 = insertelement <16 x i32> poison, i32 %n, i32 0
   %15 = shufflevector <16 x i32> %14, <16 x i32> poison, <16 x i32> zeroinitializer
   %16 = icmp ult <16 x i32> %13, %15
+  %19 = tail call <16 x float> @llvm.masked.load(ptr %p, <16 x i1> %16, <16 x float> zeroinitializer)
+  ret <16 x float> %19
+}
+
+; We can't to do this transformation if we cannot gaurantee %base + %offset to always be non-negative.
+define <16 x float> @negative_masked_load_signed_cmp(ptr %p, i32 signext %n, i32 signext %base) nounwind {
+; CHECK-LABEL: negative_masked_load_signed_cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vor.vx v8, v8, a2
+; CHECK-NEXT:    vmslt.vx v0, v8, a1
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %11 = insertelement <16 x i32> poison, i32 %base, i32 0
+  %12 = shufflevector <16 x i32> %11, <16 x i32> poison, <16 x i32> zeroinitializer
+  %13 = or disjoint <16 x i32> %12, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %14 = insertelement <16 x i32> poison, i32 %n, i32 0
+  %15 = shufflevector <16 x i32> %14, <16 x i32> poison, <16 x i32> zeroinitializer
+  %16 = icmp slt <16 x i32> %13, %15
   %19 = tail call <16 x float> @llvm.masked.load(ptr %p, <16 x i1> %16, <16 x float> zeroinitializer)
   ret <16 x float> %19
 }
