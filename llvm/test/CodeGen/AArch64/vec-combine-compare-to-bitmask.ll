@@ -4,6 +4,8 @@
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for bitmask_v32i8_split
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for example.safeAdd
 
 ; Basic tests from input vector to bitmask
 ; IR generated from clang for:
@@ -1223,4 +1225,58 @@ define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    ret
   %r = icmp eq <32 x i8> %a, %b
   ret <32 x i1> %r
+}
+
+declare void @overflow()
+define void @example.safeAdd(ptr %0, ptr %1, ptr %2) {
+; CHECK-LABEL: example.safeAdd:
+; CHECK:       ; %bb.0: ; %Entry
+; CHECK-NEXT:    ldp q2, q3, [x1]
+; CHECK-NEXT:    adrp x8, lCPI22_0@PAGE
+; CHECK-NEXT:    ldp q1, q0, [x2]
+; CHECK-NEXT:    ldr q4, [x8, lCPI22_0@PAGEOFF]
+; CHECK-NEXT:    add.16b v0, v3, v0
+; CHECK-NEXT:    add.16b v1, v2, v1
+; CHECK-NEXT:    cmhi.16b v3, v3, v0
+; CHECK-NEXT:    cmhi.16b v2, v2, v1
+; CHECK-NEXT:    and.16b v3, v3, v4
+; CHECK-NEXT:    and.16b v2, v2, v4
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    addp.16b v3, v3, v3
+; CHECK-NEXT:    addp.16b v2, v2, v2
+; CHECK-NEXT:    umov.h w8, v3[0]
+; CHECK-NEXT:    umov.h w9, v2[0]
+; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    tst w8, #0xffff
+; CHECK-NEXT:    b.ne LBB22_2
+; CHECK-NEXT:  ; %bb.1: ; %Else
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB22_2: ; %Then
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    bl _overflow
+; CHECK-NEXT:    brk #0x1
+Entry:
+  %3 = load <32 x i8>, ptr %1, align 16
+  %4 = load <32 x i8>, ptr %2, align 16
+  %5 = tail call { <32 x i8>, <32 x i1> } @llvm.uadd.with.overflow.v32i8(<32 x i8> %3, <32 x i8> %4)
+  %6 = extractvalue { <32 x i8>, <32 x i1> } %5, 1
+  %7 = bitcast <32 x i1> %6 to i32
+  %.not = icmp eq i32 %7, 0
+  br i1 %.not, label %Else, label %Then
+
+Then:
+  tail call void @overflow() #3
+  unreachable
+
+Else:
+  %8 = extractvalue { <32 x i8>, <32 x i1> } %5, 0
+  store <32 x i8> %8, ptr %0, align 16
+  ret void
 }
