@@ -358,4 +358,69 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   EXPECT_THAT(Set, SizeIs(0));
 }
 
+TEST(FoldingSetTest, SelfMoveAssignment) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(10, 100);
+  Set.InsertNode(&T1);
+
+  // Route through a helper lambda to test self-move aliasing without triggering
+  // -Wself-move.
+  auto MoveAssign = [](FoldingSet<TrivialPair> &Dest,
+                       FoldingSet<TrivialPair> &&Src) {
+    Dest = std::move(Src);
+  };
+  MoveAssign(Set, std::move(Set));
+
+  EXPECT_EQ(1u, Set.size());
+  EXPECT_FALSE(Set.empty());
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(FoldingSetTest, InsertInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.InsertNode(&T2);
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, RemoveInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), T2(2, 2);
+  Set.InsertNode(&T1);
+  Set.InsertNode(&T2);
+  auto It = Set.begin();
+  Set.RemoveNode(&T2);
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, RemoveOfAbsentNodeKeepsIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1), Absent(2, 2);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  EXPECT_FALSE(Set.RemoveNode(&Absent));
+  EXPECT_EQ(&T1, &*It);
+}
+
+TEST(FoldingSetTest, ClearInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  Set.clear();
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+
+TEST(FoldingSetTest, MoveInvalidatesIterators) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(1, 1);
+  Set.InsertNode(&T1);
+  auto It = Set.begin();
+  FoldingSet<TrivialPair> Other(std::move(Set));
+  EXPECT_DEATH((void)It->Value, "invalid iterator access");
+}
+#endif
+
 } // namespace

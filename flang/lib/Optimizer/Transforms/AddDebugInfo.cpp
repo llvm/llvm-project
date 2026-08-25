@@ -745,8 +745,10 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     });
   };
 
-  // Don't process variables if user asked for line tables only.
-  if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
+  // Don't process variables if user asked for line tables or debug directives
+  // only.
+  if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly ||
+      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
         line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
@@ -1035,11 +1037,19 @@ void AddDebugInfoPass::runOnOperation() {
   if (!dwarfDebugFlags.empty())
     producerString += " " + dwarfDebugFlags;
   mlir::StringAttr producer = mlir::StringAttr::get(context, producerString);
+  // A unit that only emits line directives has no .debug_info, so the header
+  // of its compile unit, and with it the label the DWARF 5 accelerator table
+  // points at, is never written. Asking for a name table would have that table
+  // reference a label that does not exist. Clang leaves the name table off for
+  // the same reason.
+  mlir::LLVM::DINameTableKind nameTableKind =
+      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly
+          ? mlir::LLVM::DINameTableKind::None
+          : mlir::LLVM::DINameTableKind::Default;
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel, debugInfoForProfiling,
-      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      isOptimized, debugLevel, debugInfoForProfiling, nameTableKind,
       splitDwarfFile.empty() ? mlir::StringAttr()
                              : mlir::StringAttr::get(context, splitDwarfFile));
 
