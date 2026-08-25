@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "mcplus"
 
@@ -38,6 +39,17 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs(RegInfo->getNumRegs(), false);
+    for (MCPhysReg Reg :
+         {RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14,
+          RISCV::X15, RISCV::X16, RISCV::X17, RISCV::F10_D, RISCV::F11_D,
+          RISCV::F12_D, RISCV::F13_D, RISCV::F14_D, RISCV::F15_D, RISCV::F16_D,
+          RISCV::F17_D})
+      Regs |= getAliases(Reg);
+    return Regs;
+  }
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
@@ -64,6 +76,460 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
+  }
+
+  MCPhysReg getStackPointer() const override { return RISCV::X2; }
+
+  int64_t getInitialStackPointerOffset() const override { return 0; }
+
+  MCPhysReg getFramePointer() const override { return RISCV::X8; }
+
+  MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X10);
+    Regs |= getAliases(RISCV::X11);
+    Regs |= getAliases(RISCV::F10_D);
+    Regs |= getAliases(RISCV::F11_D);
+  }
+
+  bool isPush(const MCInst &Inst) const override { return false; }
+
+  int getPushSize(const MCInst &Inst) const override { return 0; }
+
+  int getPopSize(const MCInst &Inst) const override { return 0; }
+
+  bool isSUB(const MCInst &Inst) const override {
+    return Inst.getOpcode() == RISCV::SUB;
+  }
+
+  bool requiresAlignedAddress(const MCInst &Inst) const override {
+    return false;
+  }
+
+  bool isPacked(const MCInst &Inst) const override { return false; }
+
+  bool isCleanRegXOR(const MCInst &Inst) const override { return false; }
+
+  bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
+                      MCPhysReg &To) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDI:
+      if (!Inst.getOperand(2).isImm() || Inst.getOperand(2).getImm() != 0)
+        return false;
+      To = Inst.getOperand(0).getReg();
+      From = Inst.getOperand(1).getReg();
+      return true;
+    case RISCV::C_MV:
+      To = Inst.getOperand(0).getReg();
+      From = Inst.getOperand(1).getReg();
+      return true;
+    }
+  }
+
+  bool isRedundantMove(const MCInst &Inst) const override {
+    MCPhysReg From, To;
+    return isRegToRegMove(Inst, From, To) && From == To;
+  }
+
+  bool replaceMemOperandWithReg(MCInst &Inst, MCPhysReg RegNum) const override {
+    if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isReg())
+      return false;
+    const MCPhysReg DestReg = Inst.getOperand(0).getReg();
+    if (getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(DestReg) &&
+        getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(RegNum)) {
+      Inst =
+          MCInstBuilder(RISCV::ADDI).addReg(DestReg).addReg(RegNum).addImm(0);
+      return true;
+    }
+
+    unsigned Opcode;
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::FLW:
+    case RISCV::C_FLW:
+    case RISCV::C_FLWSP:
+      Opcode = RISCV::FSGNJ_S;
+      break;
+    case RISCV::FLD:
+    case RISCV::C_FLD:
+    case RISCV::C_FLDSP:
+      Opcode = RISCV::FSGNJ_D;
+      break;
+    }
+    Inst = MCInstBuilder(Opcode).addReg(DestReg).addReg(RegNum).addReg(RegNum);
+    return true;
+  }
+
+  bool replaceMemOperandWithImm(MCInst &Inst, StringRef ConstantData,
+                                uint64_t Offset) const override {
+    return false;
+  }
+
+  bool isStackAdjustment(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDI:
+    case RISCV::C_ADDI:
+    case RISCV::C_ADDI16SP:
+      return Inst.getNumOperands() >= 3 && Inst.getOperand(0).isReg() &&
+             Inst.getOperand(0).getReg() == RISCV::X2 &&
+             Inst.getOperand(1).isReg() &&
+             Inst.getOperand(1).getReg() == RISCV::X2 &&
+             Inst.getOperand(2).isImm();
+    }
+  }
+
+  bool
+  evaluateStackOffsetExpr(const MCInst &Inst, int64_t &Output,
+                          std::pair<MCPhysReg, int64_t> Input1,
+                          std::pair<MCPhysReg, int64_t> Input2) const override {
+    auto getInput = [&](MCPhysReg Reg) -> std::optional<int64_t> {
+      if (Reg == Input1.first)
+        return Input1.second;
+      if (Reg == Input2.first)
+        return Input2.second;
+      return std::nullopt;
+    };
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDI:
+    case RISCV::C_ADDI:
+    case RISCV::C_ADDI16SP: {
+      if (Inst.getNumOperands() < 3 || !Inst.getOperand(1).isReg() ||
+          !Inst.getOperand(2).isImm())
+        return false;
+      std::optional<int64_t> Input = getInput(Inst.getOperand(1).getReg());
+      if (!Input)
+        return false;
+      Output = *Input + Inst.getOperand(2).getImm();
+      return true;
+    }
+    case RISCV::C_ADDI4SPN: {
+      if (Inst.getNumOperands() < 3 || !Inst.getOperand(1).isReg() ||
+          !Inst.getOperand(2).isImm())
+        return false;
+      std::optional<int64_t> Input = getInput(Inst.getOperand(1).getReg());
+      if (!Input)
+        return false;
+      Output = *Input + Inst.getOperand(2).getImm();
+      return true;
+    }
+    case RISCV::C_MV: {
+      if (Inst.getNumOperands() < 2 || !Inst.getOperand(1).isReg())
+        return false;
+      std::optional<int64_t> Input = getInput(Inst.getOperand(1).getReg());
+      if (!Input)
+        return false;
+      Output = *Input;
+      return true;
+    }
+    }
+  }
+
+  bool isStackAccess(const MCInst &Inst, bool &IsLoad, bool &IsStore,
+                     bool &IsStoreFromReg, MCPhysReg &Reg, int32_t &SrcImm,
+                     uint16_t &StackPtrReg, int64_t &StackOffset, uint8_t &Size,
+                     bool &IsSimple, bool &IsIndexed) const override {
+    IsLoad = false;
+    IsStore = false;
+    IsStoreFromReg = false;
+    Reg = 0;
+    SrcImm = 0;
+    StackPtrReg = 0;
+    StackOffset = 0;
+    Size = 0;
+    IsSimple = false;
+    IsIndexed = false;
+
+    struct StackAccessInfo {
+      uint8_t Size;
+      bool IsLoad;
+    };
+    std::optional<StackAccessInfo> Access;
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::LB:
+    case RISCV::LBU:
+      Access = StackAccessInfo{1, true};
+      break;
+    case RISCV::LH:
+    case RISCV::LHU:
+      Access = StackAccessInfo{2, true};
+      break;
+    case RISCV::LW:
+    case RISCV::LWU:
+    case RISCV::FLW:
+    case RISCV::C_LW:
+    case RISCV::C_FLW:
+    case RISCV::C_LWSP:
+    case RISCV::C_FLWSP:
+      Access = StackAccessInfo{4, true};
+      break;
+    case RISCV::LD:
+    case RISCV::FLD:
+    case RISCV::C_LD:
+    case RISCV::C_FLD:
+    case RISCV::C_LDSP:
+    case RISCV::C_FLDSP:
+      Access = StackAccessInfo{8, true};
+      break;
+    case RISCV::SB:
+      Access = StackAccessInfo{1, false};
+      break;
+    case RISCV::SH:
+      Access = StackAccessInfo{2, false};
+      break;
+    case RISCV::SW:
+    case RISCV::FSW:
+    case RISCV::C_SW:
+    case RISCV::C_FSW:
+    case RISCV::C_SWSP:
+    case RISCV::C_FSWSP:
+      Access = StackAccessInfo{4, false};
+      break;
+    case RISCV::SD:
+    case RISCV::FSD:
+    case RISCV::C_SD:
+    case RISCV::C_FSD:
+    case RISCV::C_SDSP:
+    case RISCV::C_FSDSP:
+      Access = StackAccessInfo{8, false};
+      break;
+    }
+
+    if (Inst.getNumOperands() < 3 || !Inst.getOperand(0).isReg() ||
+        !Inst.getOperand(1).isReg() || !Inst.getOperand(2).isImm())
+      return false;
+
+    MCPhysReg Base = Inst.getOperand(1).getReg();
+    if (Base != getStackPointer() && Base != getFramePointer())
+      return false;
+
+    IsLoad = Access->IsLoad;
+    IsStore = !Access->IsLoad;
+    IsStoreFromReg = IsStore;
+    Reg = Inst.getOperand(0).getReg();
+    StackPtrReg = Base;
+    StackOffset = Inst.getOperand(2).getImm();
+    Size = Access->Size;
+    IsSimple = true;
+    return true;
+  }
+
+  bool escapesVariable(const MCInst &Inst,
+                       bool HasFramePointer) const override {
+    bool IsLoad, IsStore, IsStoreFromReg, IsSimple, IsIndexed;
+    MCPhysReg Reg;
+    int32_t SrcImm;
+    uint16_t StackPtrReg;
+    int64_t StackOffset;
+    uint8_t Size;
+    if (isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg, SrcImm,
+                      StackPtrReg, StackOffset, Size, IsSimple, IsIndexed))
+      return false;
+
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+    const unsigned NumDefs = Desc.getNumDefs();
+    bool UsesFrameAddress = false;
+    for (unsigned I = NumDefs, E = MCPlus::getNumPrimeOperands(Inst); I != E;
+         ++I) {
+      const MCOperand &Operand = Inst.getOperand(I);
+      if (!Operand.isReg())
+        continue;
+      const MCPhysReg UsedReg = Operand.getReg();
+      if (UsedReg == getStackPointer() ||
+          (HasFramePointer && UsedReg == getFramePointer())) {
+        UsesFrameAddress = true;
+        break;
+      }
+    }
+    if (!UsesFrameAddress)
+      return false;
+
+    return !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
+      if (!Operand.isReg())
+        return false;
+      const MCPhysReg DefReg = Operand.getReg();
+      return DefReg == getStackPointer() ||
+             (HasFramePointer && DefReg == getFramePointer());
+    });
+  }
+
+  static bool isValidCompressedOffset(unsigned Opcode, int64_t Offset) {
+    auto isShiftedUInt = [&](unsigned Bits, unsigned Alignment) {
+      return Offset >= 0 && isUIntN(Bits, Offset) && Offset % Alignment == 0;
+    };
+
+    switch (Opcode) {
+    default:
+      return false;
+    case RISCV::C_LW:
+    case RISCV::C_FLW:
+    case RISCV::C_SW:
+    case RISCV::C_FSW:
+      return isShiftedUInt(7, 4);
+    case RISCV::C_LD:
+    case RISCV::C_FLD:
+    case RISCV::C_SD:
+    case RISCV::C_FSD:
+      return isShiftedUInt(8, 8);
+    case RISCV::C_LWSP:
+    case RISCV::C_FLWSP:
+    case RISCV::C_SWSP:
+    case RISCV::C_FSWSP:
+      return isShiftedUInt(8, 4);
+    case RISCV::C_LDSP:
+    case RISCV::C_FLDSP:
+    case RISCV::C_SDSP:
+    case RISCV::C_FSDSP:
+      return isShiftedUInt(9, 8);
+    }
+  }
+
+  bool addToImm(MCInst &Inst, int64_t &Amt, MCContext *Ctx) const override {
+    if (Inst.getNumOperands() < 3 || !Inst.getOperand(2).isImm())
+      return false;
+
+    const int64_t NewImm = Inst.getOperand(2).getImm() + Amt;
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::ADDI:
+    case RISCV::LB:
+    case RISCV::LBU:
+    case RISCV::LH:
+    case RISCV::LHU:
+    case RISCV::LW:
+    case RISCV::LWU:
+    case RISCV::LD:
+    case RISCV::FLW:
+    case RISCV::FLD:
+    case RISCV::SB:
+    case RISCV::SH:
+    case RISCV::SW:
+    case RISCV::SD:
+    case RISCV::FSW:
+    case RISCV::FSD:
+      if (!isInt<12>(NewImm))
+        return false;
+      break;
+    case RISCV::C_ADDI:
+      if (!isInt<6>(NewImm))
+        return false;
+      break;
+    case RISCV::C_ADDI16SP:
+      if (!isInt<10>(NewImm) || NewImm == 0 || NewImm % 16 != 0)
+        return false;
+      break;
+    case RISCV::C_ADDI4SPN:
+      if (NewImm <= 0 || !isUInt<10>(NewImm) || NewImm % 4 != 0)
+        return false;
+      break;
+    case RISCV::C_LW:
+    case RISCV::C_FLW:
+    case RISCV::C_SW:
+    case RISCV::C_FSW:
+    case RISCV::C_LD:
+    case RISCV::C_FLD:
+    case RISCV::C_SD:
+    case RISCV::C_FSD:
+    case RISCV::C_LWSP:
+    case RISCV::C_FLWSP:
+    case RISCV::C_SWSP:
+    case RISCV::C_FSWSP:
+    case RISCV::C_LDSP:
+    case RISCV::C_FLDSP:
+    case RISCV::C_SDSP:
+    case RISCV::C_FSDSP:
+      if (!isValidCompressedOffset(Inst.getOpcode(), NewImm))
+        return false;
+      break;
+    }
+
+    Amt = NewImm;
+    Inst.getOperand(2).setImm(NewImm);
+    return true;
+  }
+
+  void createSaveToStack(MCInst &Inst, const MCPhysReg &StackReg, int Offset,
+                         const MCPhysReg &SrcReg, int Size) const override {
+    unsigned Opcode;
+    const bool IsGPR =
+        getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(SrcReg);
+    if (IsGPR) {
+      switch (Size) {
+      default:
+        llvm_unreachable("Invalid GPR spill size");
+      case 1:
+        Opcode = RISCV::SB;
+        break;
+      case 2:
+        Opcode = RISCV::SH;
+        break;
+      case 4:
+        Opcode = RISCV::SW;
+        break;
+      case 8:
+        Opcode = RISCV::SD;
+        break;
+      }
+    } else {
+      if (!getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(SrcReg))
+        llvm_unreachable("Unsupported spill register class");
+      if (Size == 4)
+        Opcode = RISCV::FSW;
+      else if (Size == 8)
+        Opcode = RISCV::FSD;
+      else
+        llvm_unreachable("Invalid FPR spill size");
+    }
+    assert(isInt<12>(Offset) && "Stack spill offset is out of range");
+    Inst = MCInstBuilder(Opcode).addReg(SrcReg).addReg(StackReg).addImm(Offset);
+  }
+
+  void createRestoreFromStack(MCInst &Inst, const MCPhysReg &StackReg,
+                              int Offset, const MCPhysReg &DstReg,
+                              int Size) const override {
+    unsigned Opcode;
+    const bool IsGPR =
+        getRISCVMCRegisterClass(RISCV::GPRRegClassID).contains(DstReg);
+    if (IsGPR) {
+      switch (Size) {
+      default:
+        llvm_unreachable("Invalid GPR reload size");
+      case 1:
+        Opcode = RISCV::LB;
+        break;
+      case 2:
+        Opcode = RISCV::LH;
+        break;
+      case 4:
+        Opcode = RISCV::LW;
+        break;
+      case 8:
+        Opcode = RISCV::LD;
+        break;
+      }
+    } else {
+      if (!getRISCVMCRegisterClass(RISCV::FPR64RegClassID).contains(DstReg))
+        llvm_unreachable("Unsupported reload register class");
+      if (Size == 4)
+        Opcode = RISCV::FLW;
+      else if (Size == 8)
+        Opcode = RISCV::FLD;
+      else
+        llvm_unreachable("Invalid FPR reload size");
+    }
+    assert(isInt<12>(Offset) && "Stack reload offset is out of range");
+    Inst = MCInstBuilder(Opcode).addReg(DstReg).addReg(StackReg).addImm(Offset);
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {

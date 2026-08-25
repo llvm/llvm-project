@@ -100,8 +100,8 @@ class FrameAccessAnalysis {
   // is used in this function
   int SPOffset{0};
   int FPOffset{0};
-  int64_t CfaOffset{-8};
-  uint16_t CfaReg{7};
+  int64_t CfaOffset;
+  uint16_t CfaReg;
   std::stack<std::pair<int64_t, uint16_t>> CFIStack;
   /// Our pointer to access SPT info
   const MCInst *Prev{nullptr};
@@ -163,7 +163,10 @@ class FrameAccessAnalysis {
 
 public:
   FrameAccessAnalysis(BinaryFunction &BF, StackPointerTracking &SPT)
-      : SPT(SPT), BC(BF.getBinaryContext()), BF(BF) {}
+      : SPT(SPT), BC(BF.getBinaryContext()), BF(BF),
+        CfaOffset(BC.MIB->getInitialStackPointerOffset()),
+        CfaReg(BC.MRI->getDwarfRegNum(BC.MIB->getStackPointer(),
+                                      /*isEH=*/false)) {}
 
   void enterNewBB() { Prev = nullptr; }
   const FrameIndexEntry &getFIE() const { return FIE; }

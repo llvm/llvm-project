@@ -1287,6 +1287,9 @@ public:
     return 0;
   }
 
+  /// Return the stack pointer offset from CFA at function entry.
+  virtual int64_t getInitialStackPointerOffset() const { return -8; }
+
   virtual MCPhysReg getFramePointer() const {
     llvm_unreachable("not implemented");
     return 0;
