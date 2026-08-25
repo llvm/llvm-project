@@ -159,6 +159,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed Itanium mangling for lambdas in default member initializers of local
   classes to use `<local-name>` encoding, preventing mangling collisions between
   distinct local classes.
+- For `x86_64-windows-msvc` targets, Clang now aligns global variables using the MSVC size‑based alignment scheme instead of the x86‑64 psABI "large array" promotion rule.
+  This makes alignment behavior fully compatible with MSVC and fixes incorrect over‑alignment / under‑alignment of globals.
+  `-fclang-abi-compat=22` restores the previous behavior. (#GH196071), (#GH171855)
 
 ### AST Dumping Potentially Breaking Changes
 
