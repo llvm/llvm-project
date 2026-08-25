@@ -35,8 +35,6 @@ struct GOFFRelEntry {
   uint32_t PEsdId;
   uint64_t POffset;
   uint64_t RelType;
-
-  DataRefImpl RefSymb; // Symbol referred to.
 };
 
 // GOFFRelEntry::RelType is computed based on RLD fields at offset 1, 2, 4,
@@ -192,8 +190,6 @@ public:
   const GOFFObjectFile *getObject() const {
     return cast<GOFFObjectFile>(BasicSymbolRef::getObject());
   }
-
-  uint32_t getSymbolGOFFEsdId() const { return getRawDataRefImpl().d.a; }
 
   Expected<uint32_t> getSymbolGOFFFlags() const {
     return getObject()->getSymbolFlags(getRawDataRefImpl());

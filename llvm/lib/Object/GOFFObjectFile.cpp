@@ -766,6 +766,12 @@ basic_symbol_iterator GOFFObjectFile::symbol_end() const {
   return basic_symbol_iterator(SymbolRef(Symb, this));
 }
 
+inline constexpr uint8_t SAME_R_ID = 0x80;
+inline constexpr uint8_t SAME_P_ID = 0x40;
+inline constexpr uint8_t SAME_OFFSET = 0x20;
+inline constexpr uint8_t EXT_ATTR_PRESENT = 0x04;
+inline constexpr uint8_t BYTE_OFFSET_8 = 0x02;
+
 // Populate the relocation entries.
 void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
   SmallVector<uint8_t, 8> RelocationData;
@@ -784,40 +790,37 @@ void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
 
   uint8_t *RldI = reinterpret_cast<uint8_t *>(RelocationData.data());
   uint8_t *RldE = RldI + RelocationData.size();
+  uint32_t CurREsdId = 0;
+  uint32_t CurPEsdId = 0;
+  uint64_t CurPOffset = 0;
   for (uint8_t *Rld = RldI + DataIndex; Rld < RldE;) {
     GOFFRelEntry RelEntry;
     uint8_t Flags = Rld[0];
-
-#define SAME_R_ID 0x80
-#define SAME_P_ID 0x40
-#define SAME_OFFSET 0x20
-#define EXT_ATTR_PRESENT 0x04
-#define BYTE_OFFSET_8 0x02
-
     int32_t Length = 8;
     if (!(Flags & SAME_R_ID)) {
-      RelEntry.REsdId = support::endian::read32be(&Rld[Length]);
+      CurREsdId = support::endian::read32be(&Rld[Length]);
       Length += 4;
     }
     if (!(Flags & SAME_P_ID)) {
-      RelEntry.PEsdId = support::endian::read32be(&Rld[Length]);
+      CurPEsdId = support::endian::read32be(&Rld[Length]);
       Length += 4;
     }
     if (!(Flags & SAME_OFFSET)) {
       if (Flags & BYTE_OFFSET_8) {
-        RelEntry.POffset = support::endian::read64be(&Rld[Length]);
+        CurPOffset = support::endian::read64be(&Rld[Length]);
         Length += 8;
       } else {
-        RelEntry.POffset = support::endian::read32be(&Rld[Length]);
+        CurPOffset = support::endian::read32be(&Rld[Length]);
         Length += 4;
       }
     }
     if (Flags & EXT_ATTR_PRESENT)
       Length += 8;
 
+    RelEntry.PEsdId = CurPEsdId;
+    RelEntry.REsdId = CurREsdId;
+    RelEntry.POffset = CurPOffset;
     RelEntry.RelType = getRldType(Rld);
-    RelEntry.RefSymb.d.a = RelEntry.REsdId;
-
     RelEntries.emplace_back(RelEntry);
 
     Rld += Length;
@@ -848,7 +851,9 @@ symbol_iterator GOFFObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
   assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
          "Rel Index out of boundary");
   const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
-  return basic_symbol_iterator(SymbolRef(RelEntry.RefSymb, this));
+  DataRefImpl RefSym;
+  RefSym.d.a = RelEntry.REsdId;
+  return basic_symbol_iterator(SymbolRef(RefSym, this));
 }
 
 uint64_t GOFFObjectFile::getRelocationType(DataRefImpl Rel) const {
