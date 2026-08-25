@@ -168,7 +168,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
     // block.
     auto [Iter, Inserted] = GlobalIndices.try_emplace(Redecl);
     if (Inserted) {
-      GlobalIndices[Redecl] = *Idx;
+      Iter->second = *Idx;
       continue;
     }
 

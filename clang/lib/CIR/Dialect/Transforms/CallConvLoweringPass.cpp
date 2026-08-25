@@ -73,16 +73,16 @@ namespace {
 // Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's
 // SysV x86_64 classifier, and converts the result back into the
 // dialect-agnostic mlir::abi::FunctionClassification that CIRABIRewriteContext
-// consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
-// floating-point scalars are handled, as are struct / union / array aggregates,
-// `_Complex`, and a fixed-width vector whose width is a power of two.  Other
-// vectors, a padded record reached through a named bit-field access unit, a
-// record holding an empty-for-ABI member that occupies bytes or a zero-sized
-// one off its own alignment, a union no member of which spans its declared
-// size, and a union whose only spanning member is a bit-field access unit
-// are reported NYI by
-// classifyX86_64Function so an unsupported signature fails the pass instead of
-// being misclassified.
+// consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / vtable
+// pointer / bool / floating-point scalars are handled, as are struct / union
+// / array aggregates, `_Complex`, and a fixed-width vector whose width is a
+// power of two.  Other vectors, a padded record reached through a named
+// bit-field access unit, a record holding an empty-for-ABI member that
+// occupies bytes or a zero-sized one off its own alignment, a union no
+// member of which spans its declared size, and a union whose only spanning
+// member is a bit-field access unit are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead
+// of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -138,12 +138,12 @@ static bool reachesNamedBitFieldUnit(mlir::Type ty) {
 }
 
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
-/// bits (including `_BitInt` and `__int128`), pointer, bool, void, or any
-/// floating-point type.  Aggregates: a complete struct or union whose members
-/// are all themselves supported, or an array of a supported element type.
-/// Also a `_Complex`, or a fixed-width vector, of a supported element type.
-/// Everything else is reported NYI at the reject() choke point in
-/// classifyX86_64Function.
+/// bits (including `_BitInt` and `__int128`), pointer, vtable pointer, bool,
+/// void, or any floating-point type.  Aggregates: a complete struct or union
+/// whose members are all themselves supported, or an array of a supported
+/// element type.  Also a `_Complex`, or a fixed-width vector, of a supported
+/// element type.  Everything else is reported NYI at the reject() choke point
+/// in classifyX86_64Function.
 static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   // A pointer is only handled in the default address space (null) or an
   // already-lowered target address space.  A LangAddressSpaceAttr must be
@@ -151,6 +151,13 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto ptrTy = dyn_cast<cir::PointerType>(ty))
     return !ptrTy.getAddrSpace() ||
            mlir::isa<cir::TargetAddressSpaceAttr>(ptrTy.getAddrSpace());
+  // cir::VPtrType carries no address-space parameter yet, so its target
+  // address space cannot be checked here even though it is not always the
+  // default one.
+  if (isa<cir::VPtrType>(ty)) {
+    assert(!cir::MissingFeatures::addressSpace());
+    return true;
+  }
   if (isa<cir::VoidType, cir::BoolType>(ty))
     return true;
   // Every CIR floating-point type carries the semantics the classifier
@@ -333,6 +340,13 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         return tb.getPointerType(dl.getTypeSizeInBits(type),
                                  llvm::Align(dl.getTypeABIAlignment(type)),
                                  addrSpace);
+      })
+      .Case([&](cir::VPtrType) {
+        // cir::VPtrType carries no address-space parameter yet, so this
+        // always maps into the default one until that gap closes.
+        assert(!cir::MissingFeatures::addressSpace());
+        return tb.getPointerType(dl.getTypeSizeInBits(type),
+                                 llvm::Align(dl.getTypeABIAlignment(type)));
       })
       .Case([&](cir::BoolType) {
         return tb.getIntegerType(dl.getTypeSizeInBits(type),

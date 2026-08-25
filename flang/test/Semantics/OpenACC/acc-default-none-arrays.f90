@@ -1,5 +1,4 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict
-! RUN: not %flang_fc1 -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict %s 2>&1 | FileCheck %s --check-prefix=CHECK-LOC
 
 ! Verify that array sections explicitly listed in OpenACC data clauses are
 ! correctly registered as having a DSA, so DEFAULT(NONE) uses path containment
@@ -201,25 +200,22 @@ subroutine test_unresolved_clause_objects()
   !$acc end parallel
 end subroutine
 
-! 9. Same array section in conflicting private and copy clauses.
+! 9. The same array section may appear in a data-action clause and a
+! data-sharing clause.
 subroutine test_cross_kind_sections(n)
   implicit none
   integer, intent(in) :: n
   real :: a(n)
   integer :: i
-  !ERROR: 'a(1:n)' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop default(none) copy(a(1:n)) private(a(1:n))
-  ! CHECK-LOC: error: 'a(1:n)' appears in more than one data-sharing clause on the same OpenACC directive
-  ! CHECK-LOC: previous data-sharing object appears here
   do i = 1, n
     a(i) = 0.0
   end do
   !$acc end parallel loop
 end subroutine
 
-! 10. Different sections of the same array in conflicting copy and private clauses.
-! TODO: cross-kind detection for array sections is not implemented; no error
-!       produced for 'a' appearing in both copy and private.
+! 10. Different sections may likewise appear in data-action and data-sharing
+! clauses.
 subroutine test_cross_kind_sections2(n)
   implicit none
   integer, intent(in) :: n

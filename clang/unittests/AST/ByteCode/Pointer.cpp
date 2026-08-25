@@ -315,7 +315,7 @@ TEST(Pointer, Strings) {
   Pointee = GlobalPtr.load<Pointer>();
   ASSERT_TRUE(Pointee.isStringPointer());
   ASSERT_EQ(Pointee.getNumElems(), 7u);
-  ASSERT_EQ(Pointee.elemSize(), __WCHAR_WIDTH__ / 8u);
+  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
 
   D = match(varDecl(hasGlobalStorage(), hasName("c")).bind("c"), ASTCtx)[0]
           .getNodeAs<VarDecl>("c");
@@ -327,12 +327,13 @@ TEST(Pointer, Strings) {
   Pointee = GlobalPtr.load<Pointer>();
   ASSERT_TRUE(Pointee.isStringPointer());
   ASSERT_EQ(Pointee.getNumElems(), 7u);
-  ASSERT_EQ(Pointee.elemSize(), __WCHAR_WIDTH__ / 8u);
+  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
   ASSERT_EQ(Pointee.getIndex(), 5u);
   APValue APV = Pointee.toAPValue(ASTCtx);
   ASSERT_TRUE(APV.isLValue());
   ASSERT_FALSE(APV.isLValueOnePastTheEnd());
-  ASSERT_EQ(APV.getLValueOffset().getQuantity(), 5u * (__WCHAR_WIDTH__ / 8u));
+  ASSERT_EQ(static_cast<size_t>(APV.getLValueOffset().getQuantity()),
+            5 * sizeof(wchar_t));
   ASSERT_TRUE(APV.hasLValuePath());
   const auto &Path = APV.getLValuePath();
   ASSERT_EQ(Path.size(), 1u);

@@ -19,26 +19,20 @@
 struct TestFloat {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
-    using lim                    = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max   = lim::max();
-    TEST_CONSTEXPR_CXX23 T min   = lim::min();
-    TEST_CONSTEXPR_CXX23 T d_min = lim::denorm_min();
-    TEST_CONSTEXPR_CXX23 T inf   = lim::infinity();
-    TEST_CONSTEXPR_CXX23 T nan   = lim::quiet_NaN();
-    TEST_CONSTEXPR_CXX23 T s_nan = lim::signaling_NaN();
+    using lim = std::numeric_limits<T>;
 
-    assert(std::fpclassify(nan) == FP_NAN);
-    assert(std::fpclassify(s_nan) == FP_NAN);
+    assert(std::fpclassify(lim::quiet_NaN()) == FP_NAN);
+    assert(std::fpclassify(lim::signaling_NaN()) == FP_NAN);
 
-    assert(std::fpclassify(inf) == FP_INFINITE);
-    assert(std::fpclassify(-inf) == FP_INFINITE);
+    assert(std::fpclassify(lim::infinity()) == FP_INFINITE);
+    assert(std::fpclassify(-lim::infinity()) == FP_INFINITE);
 
     assert(std::fpclassify(T(1)) == FP_NORMAL);
     assert(std::fpclassify(T(-1)) == FP_NORMAL);
-    assert(std::fpclassify(max) == FP_NORMAL);
-    assert(std::fpclassify(min) == FP_NORMAL);
+    assert(std::fpclassify(lim::max()) == FP_NORMAL);
+    assert(std::fpclassify(lim::min()) == FP_NORMAL);
 
-    assert(std::fpclassify(d_min) == FP_SUBNORMAL);
+    assert(std::fpclassify(lim::denorm_min()) == FP_SUBNORMAL);
 
     assert(std::fpclassify(T(0)) == FP_ZERO);
     assert(std::fpclassify(T(-0.0)) == FP_ZERO);
@@ -48,16 +42,14 @@ struct TestFloat {
 struct TestInt {
   template <class T>
   TEST_CONSTEXPR_CXX23 void operator()() const {
-    using lim                  = std::numeric_limits<T>;
-    TEST_CONSTEXPR_CXX23 T max = lim::max();
-    TEST_CONSTEXPR_CXX23 T low = lim::lowest();
+    using lim = std::numeric_limits<T>;
 
     assert(std::fpclassify(T(0)) == FP_ZERO);
     assert(std::fpclassify(T(1)) == FP_NORMAL);
-    assert(std::fpclassify(max) == FP_NORMAL);
+    assert(std::fpclassify(lim::max()) == FP_NORMAL);
 
     if (std::is_signed<T>::value) {
-      assert(std::fpclassify(low) == FP_NORMAL);
+      assert(std::fpclassify(lim::lowest()) == FP_NORMAL);
       assert(std::fpclassify(T(-1)) == FP_NORMAL);
     }
   }

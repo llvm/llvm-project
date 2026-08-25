@@ -10,7 +10,6 @@
 !rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
-!rec_Poly = !cir.struct<"Poly" packed {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
 !rec_BFPad = !cir.struct<"BFPad" packed {bitfield !u8i, data !s32i, pad !cir.array<!u8i x 3>}>
 !rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
 !rec_NamedPlusZeroWidth =
@@ -83,15 +82,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UEmptyLarge"
-
-  // CIR marks a polymorphic class packed as a layout fallback, so accepting
-  // packed records does not make this one classifiable: the vptr member has no
-  // mapping to an ABI type.
-  cir.func @take_poly(%arg0: !rec_Poly) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"Poly" packed
 
   // The unit-width rule keys on the padding rather than the packing, so a
   // packed record still hits it once a pad member gives classic a gap to read
