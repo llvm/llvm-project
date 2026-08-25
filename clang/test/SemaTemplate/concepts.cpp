@@ -1824,6 +1824,7 @@ namespace instantiation_dependent {
   template <class V> requires C<X<V&>> struct Y {};
   Y<void> y;
   // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because 'X<V &>' (aka 'int') does not satisfy 'C'}} \
   // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
 } // namespace instantiation_dependent
 
@@ -2069,6 +2070,9 @@ struct quantity {};
 
 auto x = quantity<reference<int>{}, int>{};
 // expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+// expected-note@-5 {{because 'representation_of<type-parameter-0-1, get_spec(V)>' evaluated to false}}
+// expected-note@-7 {{because 'decltype(V)' does not satisfy 'repr_impl'}}
+// expected-note@-7 {{because substituted constraint expression is ill-formed: non-type template argument is not a constant expression}}
 
 } // namespace CannotResolve1
 

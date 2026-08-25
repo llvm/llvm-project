@@ -235,6 +235,7 @@ template <class T> requires(T{})
 constexpr bool e_v = true;
 
 static_assert(e_v<bool>);
+// expected-error@-1 {{constraints not satisfied for variable template 'e_v'}}
 
 } // namespace GH73885
 

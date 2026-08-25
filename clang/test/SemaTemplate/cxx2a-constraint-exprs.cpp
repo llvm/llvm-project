@@ -29,6 +29,7 @@ namespace constant_evaluated {
   // expected-note@-1{{in instantiation of}} expected-note@-1{{while substituting}}
   using s = S<int>;
   // expected-note@-1 {{while checking}}
+  // expected-error@-2 {{constraints not satisfied}}
   template<typename T> void foo() requires f<int[1]> { };
   // expected-note@-1{{in instantiation}} expected-note@-1{{while substituting}} \
      expected-note@-1{{candidate template ignored}}
