@@ -2448,8 +2448,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // Escape pointers passed into the list, unless it's an ObjC boxed
       // expression which is not a boxable C structure.
       if (!(isa<ObjCBoxedExpr>(Ex) &&
-            !cast<ObjCBoxedExpr>(Ex)->getSubExpr()
-                                    ->getType()->isRecordType()))
+            !cast<ObjCBoxedExpr>(Ex)->getSubExpr()->getType()->isRecordType()))
         for (auto Child : Ex->children()) {
           assert(Child);
           const auto *ChildExpr = dyn_cast<Expr>(Child);
@@ -3704,8 +3703,8 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
       // pointers as soon as they are used.
       if (!M->isGLValue()) {
         assert(M->getType()->isArrayType());
-        const auto *PE =
-          dyn_cast<ImplicitCastExpr>(Pred->getParentMap().getParentIgnoreParens(M));
+        const auto *PE = dyn_cast<ImplicitCastExpr>(
+            Pred->getParentMap().getParentIgnoreParens(M));
         if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
           llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
         }
@@ -3718,8 +3717,8 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
           L = UnknownVal();
       }
 
-      Dst.insert(Engine.makeNodeWithBinding(
-          Pred, M, L, state, ProgramPoint::PostLValueKind));
+      Dst.insert(Engine.makeNodeWithBinding(Pred, M, L, state,
+                                            ProgramPoint::PostLValueKind));
     } else {
       evalLoad(Dst, M, M, Pred, state, L);
     }
