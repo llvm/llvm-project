@@ -9,6 +9,36 @@
 # RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32 | FileCheck %s
 # RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64 | FileCheck %s
 
+
+# RUN: sed 's/\.sdata/\.data/g' a.s > a2.s && sed 's/\.sdata/\.data/g' lds > lds2
+# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=+relax a2.s -o rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=+relax a2.s -o rv64.o
+
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv32.o lds2 -o rv32
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv64.o lds2 -o rv64
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32 | FileCheck %s
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64 | FileCheck %s
+
+
+# RUN: sed 's/\.sdata/\.sbss/g' a.s > a3.s && sed 's/\.sdata/\.sbss/g' lds > lds3
+# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=+relax a3.s -o rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=+relax a3.s -o rv64.o
+
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv32.o lds3 -o rv32
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv64.o lds3 -o rv64
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32 | FileCheck %s
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64 | FileCheck %s
+
+
+# RUN: sed 's/\.sdata/\.bss/g' a.s > a4.s && sed 's/\.sdata/\.bss/g' lds > lds4
+# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=+relax a4.s -o rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=+relax a4.s -o rv64.o
+
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv32.o lds4 -o rv32
+# RUN: ld.lld --relax-gp --undefined=__global_pointer$ --defsym baz=420 rv64.o lds4 -o rv64
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv32 | FileCheck %s
+# RUN: llvm-objdump -td -M no-aliases --no-show-raw-insn rv64 | FileCheck %s
+
 # CHECK: 00000040 l       .text {{0*}}0 a
 
 # CHECK-NOT:  lui

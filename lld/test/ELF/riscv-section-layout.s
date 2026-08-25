@@ -25,14 +25,12 @@
 # NOSDATA-NEXT: .data    PROGBITS [[#%x,DATA:]]
 # NOSDATA-NEXT: .bss     NOBITS   [[#%x,BSS:]]
 
-## If there is an undefined reference to __global_pointer$ but .sdata doesn't
-## exist, define __global_pointer$ and set its st_shndx arbitrarily to 1.
-## The symbol value should not be used by the program.
+## If .sdata doesn't exist but .data exists, define __global_pointer$ at DATA_BEGIN+0x800
 
 # NOSDATA-DAG:  [[#]]: {{.*}}                 0 NOTYPE  GLOBAL DEFAULT [[#]] (.text) _etext
 # NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] (.data) _edata
 # NOSDATA-DAG:  [[#]]: {{0*}}[[#BSS]]         0 NOTYPE  GLOBAL DEFAULT [[#]] (.bss) __bss_start
-# NOSDATA-DAG:  [[#]]: {{0*}}800              0 NOTYPE  GLOBAL DEFAULT  1 (.dynsym) __global_pointer$
+# NOSDATA-DAG:  [[#]]: {{0*}}[[#DATA+0x800]]  0 NOTYPE  GLOBAL DEFAULT [[#]] (.data) __global_pointer$
 
 # CHECK:      .rodata    PROGBITS
 # CHECK-NEXT: .srodata   PROGBITS
