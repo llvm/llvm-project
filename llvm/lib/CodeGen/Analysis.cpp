@@ -529,6 +529,21 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
   return true;
 }
 
+bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV) {
+  // A thread-local's address is not known until it is resolved against a
+  // thread's storage, which a plain symbol reference cannot express.
+  if (GV->isThreadLocal())
+    return false;
+  // Computing the address of a dllimport'd entity requires a load from the
+  // import address table, which a static symbol reference cannot express.
+  if (GV->hasDLLImportStorageClass())
+    return false;
+  // An ifunc resolves to whatever its resolver returns at load time, so the
+  // symbol's own address is not the value of the pointer.
+  if (isa<GlobalIFunc>(GV))
+    return false;
+  return true;
+}
 
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with

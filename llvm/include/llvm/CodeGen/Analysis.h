@@ -116,6 +116,12 @@ LLVM_ABI ISD::CondCode getICmpCondCode(ICmpInst::Predicate Pred);
 /// corresponding to the given ISD integer condition code.
 LLVM_ABI ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 
+/// Test if the address of \p GV can be described in debug info as a plain
+/// reference to its symbol, so that a variable holding that address can be
+/// described for the whole of its scope rather than only from wherever the
+/// address happens to be materialized.
+LLVM_ABI bool canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV);
+
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
 /// a return and there's nothing that needs to be scheduled

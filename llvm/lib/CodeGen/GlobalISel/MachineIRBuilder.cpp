@@ -9,6 +9,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -108,6 +109,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     return &C;
   }();
 
+  bool IsIndirect = true;
   if (auto *CI = dyn_cast<ConstantInt>(NumericConstant)) {
     if (CI->getBitWidth() > 64)
       MIB.addCImm(CI);
@@ -119,12 +121,25 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addFPImm(CFP);
   } else if (isa<ConstantPointerNull>(NumericConstant)) {
     MIB.addImm(0);
+  } else if (auto *GV = dyn_cast<GlobalValue>(NumericConstant);
+             GV && canDescribeGlobalAddressInDebugInfo(GV)) {
+    // The address of a global is a direct link-time constant.
+    MIB.addGlobalAddress(GV);
+    IsIndirect = false;
   } else {
     // Insert $noreg if we didn't find a usable constant and had to drop it.
     MIB.addReg(Register());
   }
 
-  MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  // DBG_VALUE spells an indirect location with a zero immediate offset operand
+  // and a direct one with $noreg. isIndirectDebugValue() ignores the offset for
+  // a non-register location operand, but isDebugOffsetImm() does not, and
+  // several consumers ask that instead.
+  if (IsIndirect)
+    MIB.addImm(0);
+  else
+    MIB.addReg(Register());
+  MIB.addMetadata(Variable).addMetadata(Expr);
   return insertInstr(MIB);
 }
 

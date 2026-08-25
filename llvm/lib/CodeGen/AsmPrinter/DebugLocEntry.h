@@ -19,6 +19,7 @@
 
 namespace llvm {
 class AsmPrinter;
+class GlobalValue;
 
 /// This struct describes target specific location.
 struct TargetIndexLocation {
@@ -45,7 +46,8 @@ class DbgValueLocEntry {
     E_Integer,
     E_ConstantFP,
     E_ConstantInt,
-    E_TargetIndexLocation
+    E_TargetIndexLocation,
+    E_GlobalAddress
   };
   enum EntryType EntryKind;
 
@@ -54,6 +56,7 @@ class DbgValueLocEntry {
     int64_t Int;
     const ConstantFP *CFP;
     const ConstantInt *CIP;
+    const GlobalValue *GV;
   } Constant;
 
   union {
@@ -74,6 +77,9 @@ public:
   DbgValueLocEntry(MachineLocation Loc) : EntryKind(E_Location), Loc(Loc) {}
   DbgValueLocEntry(TargetIndexLocation Loc)
       : EntryKind(E_TargetIndexLocation), TIL(Loc) {}
+  DbgValueLocEntry(const GlobalValue *GV) : EntryKind(E_GlobalAddress) {
+    Constant.GV = GV;
+  }
 
   bool isLocation() const { return EntryKind == E_Location; }
   bool isIndirectLocation() const {
@@ -85,9 +91,11 @@ public:
   bool isInt() const { return EntryKind == E_Integer; }
   bool isConstantFP() const { return EntryKind == E_ConstantFP; }
   bool isConstantInt() const { return EntryKind == E_ConstantInt; }
+  bool isGlobalAddress() const { return EntryKind == E_GlobalAddress; }
   int64_t getInt() const { return Constant.Int; }
   const ConstantFP *getConstantFP() const { return Constant.CFP; }
   const ConstantInt *getConstantInt() const { return Constant.CIP; }
+  const GlobalValue *getGlobalAddress() const { return Constant.GV; }
   MachineLocation getLoc() const { return Loc; }
   TargetIndexLocation getTargetIndexLocation() const { return TIL; }
   friend bool operator==(const DbgValueLocEntry &, const DbgValueLocEntry &);
@@ -266,6 +274,8 @@ inline bool operator==(const DbgValueLocEntry &A, const DbgValueLocEntry &B) {
     return A.Constant.CFP == B.Constant.CFP;
   case DbgValueLocEntry::E_ConstantInt:
     return A.Constant.CIP == B.Constant.CIP;
+  case DbgValueLocEntry::E_GlobalAddress:
+    return A.Constant.GV == B.Constant.GV;
   }
   llvm_unreachable("unhandled EntryKind");
 }

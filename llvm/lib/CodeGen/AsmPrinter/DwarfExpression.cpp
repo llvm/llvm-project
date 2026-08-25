@@ -862,6 +862,32 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
+bool DwarfExpression::addGlobalAddress(const GlobalValue *GV) {
+  DwarfDebug &DD = CU.getDwarfDebug();
+
+  // Prefer the address pool, whose index is plain data and so can be emitted
+  // into either output form. Before DWARF 5 the pool is only available under
+  // split DWARF, leaving a relocated DW_OP_addr as the only spelling -- which
+  // only a DIE can carry.
+  bool UsePool = DwarfVersion >= 5 || DD.useSplitDwarf();
+  if (!UsePool && !supportsRelocatedAddress())
+    return false;
+
+  assert(isImplicitLocation() || isUnknownLocation());
+  LocationKind = Implicit;
+
+  const MCSymbol *Sym = CU.getAsmPrinter()->getSymbol(GV);
+  if (UsePool) {
+    emitOp(DwarfVersion >= 5 ? dwarf::DW_OP_addrx
+                             : dwarf::DW_OP_GNU_addr_index);
+    emitUnsigned(DD.getAddressPool().getIndex(Sym));
+  } else {
+    emitOp(dwarf::DW_OP_addr);
+    emitRelocatedAddress(Sym);
+  }
+  return true;
+}
+
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);

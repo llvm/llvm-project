@@ -341,7 +341,8 @@ private:
       RegisterKind,
       SpillLocKind,
       ImmediateKind,
-      WasmLocKind
+      WasmLocKind,
+      GlobalAddrKind
     };
 
     enum class EntryValueLocKind {
@@ -361,6 +362,7 @@ private:
       const ConstantFP *FPImm;
       const ConstantInt *CImm;
       WasmLoc WasmLocation;
+      const GlobalValue *GV;
       MachineLocValue() : Hash(0) {}
     };
 
@@ -381,6 +383,7 @@ private:
           return Value.WasmLocation == Other.Value.WasmLocation;
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
+        case MachineLocKind::GlobalAddrKind:
           return Value.Hash == Other.Value.Hash;
         default:
           llvm_unreachable("Invalid kind");
@@ -404,6 +407,7 @@ private:
                                  Other.Value.WasmLocation.Offset);
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
+        case MachineLocKind::GlobalAddrKind:
           return std::tie(Kind, Value.Hash) <
                  std::tie(Other.Kind, Other.Value.Hash);
         default:
@@ -468,6 +472,9 @@ private:
       } else if (Op.isTargetIndex()) {
         Kind = MachineLocKind::WasmLocKind;
         Loc.WasmLocation = {Op.getIndex(), Op.getOffset()};
+      } else if (Op.isGlobal()) {
+        Kind = MachineLocKind::GlobalAddrKind;
+        Loc.GV = Op.getGlobal();
       } else
         llvm_unreachable("Invalid Op kind for MachineLoc.");
       return {Kind, Loc};
@@ -601,7 +608,8 @@ private:
           MOs.push_back(Orig);
           break;
         }
-        case MachineLocKind::WasmLocKind: {
+        case MachineLocKind::WasmLocKind:
+        case MachineLocKind::GlobalAddrKind: {
           MOs.push_back(Orig);
           break;
         }
@@ -614,7 +622,8 @@ private:
 
     /// Is the Loc field a constant or constant object?
     bool isConstant(MachineLocKind Kind) const {
-      return Kind == MachineLocKind::ImmediateKind;
+      return Kind == MachineLocKind::ImmediateKind ||
+             Kind == MachineLocKind::GlobalAddrKind;
     }
 
     /// Check if the Loc field is an entry backup location.
@@ -732,6 +741,9 @@ private:
           break;
         case MachineLocKind::ImmediateKind:
           Out << MLoc.Value.Immediate;
+          break;
+        case MachineLocKind::GlobalAddrKind:
+          Out << MLoc.Value.GV->getName();
           break;
         case MachineLocKind::WasmLocKind: {
           if (TII) {
@@ -1432,7 +1444,7 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
 
   if (all_of(MI.debug_operands(), [](const MachineOperand &MO) {
         return (MO.isReg() && MO.getReg()) || MO.isImm() || MO.isFPImm() ||
-               MO.isCImm() || MO.isTargetIndex();
+               MO.isCImm() || MO.isTargetIndex() || MO.isGlobal();
       })) {
     // Use normal VarLoc constructor for registers and immediates.
     VarLoc VL(MI);
