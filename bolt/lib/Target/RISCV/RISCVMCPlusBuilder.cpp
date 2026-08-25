@@ -12,6 +12,7 @@
 
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCVMCSymbolizer.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -38,6 +39,12 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<RISCVMCSymbolizer>(Function, CreateNewSymbols);
+  }
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
