@@ -106,7 +106,7 @@ macos_defines = posix_defines + fenv_defines + [
 ]
 
 arc4random_defines = select({
-    "@platforms//os:macos": [],
+    "@platforms//os:macos": ["HAVE_DECL_ARC4RANDOM=1"],
     "//conditions:default": ["HAVE_DECL_ARC4RANDOM=0"],
 })
 
