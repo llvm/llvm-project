@@ -4155,32 +4155,28 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         }
       }
+
+      // TODO: Add constant folding for the _sat variants.
+      if (IntrinsicID == Intrinsic::nvvm_fadd ||
+          IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
+        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+        APFloat A =
+            IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
+        APFloat B =
+            IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
+
+        APFloat Res = A;
+        APFloat::opStatus Status =
+            Res.add(B, nvvm::GetRoundingModeFromImmArg(Operands[2]));
+
+        if (!Res.isNaN() &&
+            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+          return ConstantFP::get(Ty, Res);
+        }
+        return nullptr;
+      }
     }
-  }
-
-  if (IntrinsicID == Intrinsic::nvvm_fadd ||
-      IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
-    const auto *Op1 = dyn_cast<ConstantFP>(Operands[0]);
-    const auto *Op2 = dyn_cast<ConstantFP>(Operands[1]);
-    if (!Op1 || !Op2)
-      return nullptr;
-
-    bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
-    APFloat A =
-        IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
-    APFloat B =
-        IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
-
-    APFloat Res = A;
-    APFloat::opStatus Status =
-        Res.add(B, nvvm::GetFAddRoundingMode(Operands[2]));
-
-    if (!Res.isNaN() &&
-        (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-      Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-      return ConstantFP::get(Ty, Res);
-    }
-    return nullptr;
   }
 
   if (IntrinsicID == Intrinsic::smul_fix ||
