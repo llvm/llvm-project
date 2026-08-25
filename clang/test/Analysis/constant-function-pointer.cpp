@@ -67,8 +67,8 @@ void testExternalReference() {
   clang_analyzer_eval(ExternalReference == Before); // expected-warning{{TRUE}}
 }
 
-// Verify that a function pointer converted to ool is modeled as `true`,
-// not as FunctionCodeRegion.
+// Verify that a function pointer converted to bool
+// is modeled as `true`, not as FunctionCodeRegion.
 void testBoolInitializer() {
   clang_analyzer_dump(Truthy); // expected-warning{{1 U1b}}
 }
