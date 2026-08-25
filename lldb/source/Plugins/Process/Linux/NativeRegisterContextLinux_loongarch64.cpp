@@ -26,6 +26,14 @@
 // struct iovec definition
 #include <sys/uio.h>
 
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
+
 // LoongArch SIMD eXtension registers
 #ifndef NT_LOONGARCH_LSX
 #define NT_LOONGARCH_LSX 0xa02
