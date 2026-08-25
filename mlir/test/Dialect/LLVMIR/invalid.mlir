@@ -1857,6 +1857,26 @@ llvm.mlir.alias external @y5 : i32 {
 
 // -----
 
+// expected-error@+1{{attribute 'function_metadata' failed to satisfy constraint: array of #llvm.func_metadata attributes}}
+llvm.func @function_metadata_value() attributes {function_metadata = [#llvm.md_string<"int">]}
+
+// -----
+
+// expected-error@+1{{function_metadata entry name must not be empty}}
+llvm.func @empty_function_metadata_name() attributes {function_metadata = [#llvm.func_metadata<"", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'dbg' is not supported by the generic carrier}}
+llvm.func @reserved_dbg_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"dbg", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'prof' is not supported by the generic carrier}}
+llvm.func @reserved_prof_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>]}
+
+// -----
+
 // expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
 llvm.named_metadata "not_node" [#llvm.md_string<"int">]
 
@@ -2080,6 +2100,67 @@ llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
 llvm.func @invalid_xevm_extf_2(%arg0: i8) {
   // expected-error@+1 {{op both src and dst should be vector types or both}}
   %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (i8) -> vector<8xf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_1(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<8xi16>
+  llvm.return
+}
+
+// -----
+
+// Only a pack and an unpack are supported, a vector to vector repack is not.
+llvm.func @invalid_xevm_bitcast_shuffle_repack(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<4xi32>
+  llvm.return
+}
+
+// -----
+
+// Neither is a plain scalar to scalar bitcast.
+llvm.func @invalid_xevm_bitcast_shuffle_scalar(%arg0: i32) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (i32) -> i32
+  llvm.return
+}
+
+// -----
+
+// The op is bit-preserving and only accepts integer types; a producer holding
+// floating point data bitcasts it to a same-width integer beforehand.
+llvm.func @invalid_xevm_bitcast_shuffle_float_res(%arg0: vector<2xi16>) {
+  // expected-error@+1 {{op result #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<2xi16>) -> f32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_float_elem(%arg0: vector<4xbf16>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<4xbf16>) -> i64
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_2(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op src and res types must have the same total bit width}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> i64
+  llvm.return
+}
+
+// -----
+
+// The shuffle operates at byte granularity, sub-byte element types are invalid.
+llvm.func @invalid_xevm_bitcast_shuffle_3(%arg0: vector<8xi4>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi4>) -> vector<4xi8>
   llvm.return
 }
 

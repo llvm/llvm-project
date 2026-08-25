@@ -1,7 +1,15 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies argument types in
 // the same way that Clang does without the library.
@@ -37,7 +45,8 @@ void arg_uint(unsigned int ui) {}
 // CHECK: define{{.*}} void @arg_uint(i32 noundef %{{.*}})
 
 void arg_long(long int li) {}
-// CHECK: define{{.*}} void @arg_long(i64 noundef %{{.*}})
+// LONG64: define{{.*}} void @arg_long(i64 noundef %{{.*}})
+// LONG32: define{{.*}} void @arg_long(i32 noundef %{{.*}})
 
 void arg_float16(_Float16 f16) {}
 // CHECK: define{{.*}} void @arg_float16(half noundef %{{.*}})
@@ -61,3 +70,43 @@ void arg_void_ptr(void* pv) {}
 typedef float fx2x2_t __attribute__((matrix_type(2, 2)));
 void arg_matrix(fx2x2_t m) {}
 // CHECK: define{{.*}} void @arg_matrix(<4 x float> noundef %{{.*}})
+
+// Transparent unions are passed as their first field.
+typedef union {
+  int i;
+  float f;
+} tu_int_t __attribute__((transparent_union));
+void arg_transparent_union_int(tu_int_t tu) {}
+// CHECK: define{{.*}} void @arg_transparent_union_int(i32 %{{.*}})
+
+typedef union {
+  char c;
+  signed char sc;
+} tu_char_t __attribute__((transparent_union));
+void arg_transparent_union_char(tu_char_t tu) {}
+// AAPCS: define{{.*}} void @arg_transparent_union_char(i8 %{{.*}})
+// DARWIN: define{{.*}} void @arg_transparent_union_char(i8 noundef signext %{{.*}})
+
+typedef union {
+  void *p;
+  int *ip;
+} tu_ptr_t __attribute__((transparent_union));
+void arg_transparent_union_ptr(tu_ptr_t tu) {}
+// CHECK: define{{.*}} void @arg_transparent_union_ptr(ptr %{{.*}})
+
+void arg_bitint7(_BitInt(7) x) {}
+// AAPCS: define{{.*}} void @arg_bitint7(i7 noundef %{{.*}})
+// DARWIN: define{{.*}} void @arg_bitint7(i7 noundef signext %{{.*}})
+
+void arg_ubitint7(unsigned _BitInt(7) x) {}
+// AAPCS: define{{.*}} void @arg_ubitint7(i7 noundef %{{.*}})
+// DARWIN: define{{.*}} void @arg_ubitint7(i7 noundef zeroext %{{.*}})
+
+void arg_bitint65(_BitInt(65) x) {}
+// CHECK: define{{.*}} void @arg_bitint65(i65 noundef %{{.*}})
+
+void arg_bitint128(_BitInt(128) x) {}
+// CHECK: define{{.*}} void @arg_bitint128(i128 noundef %{{.*}})
+
+void arg_bitint129(_BitInt(129) x) {}
+// CHECK: define{{.*}} void @arg_bitint129(ptr nofree noundef align 16 dead_on_return dereferenceable(32) %{{.*}})

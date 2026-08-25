@@ -163,6 +163,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execle
+  SRCS
+    execle.cpp
+  HDRS
+    ../execle.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.execve
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   execv
   SRCS
     execv.cpp
@@ -606,6 +618,7 @@ add_entrypoint_object(
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_resource_macros
     libc.hdr.types.struct_rlimit
+    libc.hdr.types.struct_sysinfo
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.sysinfo

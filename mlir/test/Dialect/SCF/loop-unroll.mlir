@@ -700,3 +700,63 @@ func.func @static_loop_unroll_by_3_no_promote_epilogue(%arg0 : memref<?xf32>) {
 //  PROMOTE-BY-3: memref.store
 
 
+
+// -----
+
+// `scf.for` has a statically known trip count whenever the lower and the upper
+// bound are the same value, even when that value is not a constant. Unrolling
+// must not read the bounds as constants in that case.
+func.func @unroll_static_trip_count_dynamic_equal_bounds(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  scf.for %i0 = %arg0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_equal_bounds
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for the single-iteration case recognised from a zero lower bound and an
+// upper bound equal to the step. Here the lower bound is a constant but the
+// other two are not.
+func.func @unroll_static_trip_count_dynamic_ub_eq_step(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c0 = arith.constant 0 : index
+  scf.for %i0 = %c0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_ub_eq_step
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for an upper bound that is a constant offset from a non-constant lower
+// bound. The trip count is known, the lower and upper bound are not constants.
+func.func @unroll_static_trip_count_ub_offset_from_lb(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %ub = arith.addi %arg0, %c16 overflow<nsw> : index
+  scf.for %i0 = %arg0 to %ub step %c4 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_ub_offset_from_lb
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
