@@ -18,8 +18,8 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Type *RetTy = CI->getType();
   auto *StructRetTy = dyn_cast<StructType>(RetTy);
   unsigned NumResults = StructRetTy ? StructRetTy->getNumElements() : 1;
-  auto *VecTy = cast<VectorType>(StructRetTy ? StructRetTy->getElementType(0)
-                                             : RetTy);
+  auto *VecTy =
+      cast<VectorType>(StructRetTy ? StructRetTy->getElementType(0) : RetTy);
 
   BasicBlock *PreLoopBB = CI->getParent();
   BasicBlock *PostLoopBB = nullptr;
