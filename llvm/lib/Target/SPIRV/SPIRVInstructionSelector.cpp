@@ -6743,10 +6743,10 @@ bool SPIRVInstructionSelector::extractSubvector(
   [[maybe_unused]] uint64_t InputSize =
       GR.getScalarOrVectorComponentCount(InputType);
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
-  bool IsLongVector =
+  bool IsLongVectorEXT =
       STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
-  assert((InputSize > 1 || IsLongVector) && "The input must be a vector.");
-  assert((ResultSize > 1 || IsLongVector) && "The result must be a vector.");
+  assert((InputSize > 1 || IsLongVectorEXT) && "The input must be a vector.");
+  assert((ResultSize > 1 || IsLongVectorEXT) && "The result must be a vector.");
   assert(ResultSize < InputSize &&
          "Cannot extract more element than there are in the input.");
   SmallVector<Register> ComponentRegisters;
