@@ -363,6 +363,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -527,6 +528,7 @@ add_fp_unittest(
   HDRS
     IsCanonicalTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.iscanonicalf128
 )
 
@@ -552,6 +554,7 @@ add_fp_unittest(
   HDRS
     IsNanTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.isnanf128
 )
 
@@ -1186,6 +1189,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.rintf128
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1281,6 +1285,7 @@ add_fp_unittest(
     libc.src.math.lrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1378,6 +1383,7 @@ add_fp_unittest(
     libc.src.math.llrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1419,6 +1425,19 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.expf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  expf_static_rounding_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2170,6 +2189,7 @@ add_fp_unittest(
   HDRS
     IsSignalingTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.issignalingf128
 )
 

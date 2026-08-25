@@ -679,8 +679,11 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
                          OldSM =
                              cast<CXXMethodDecl>(Old)->getSpecialMemberKind();
     if (NewSM != OldSM) {
-      ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
-      assert(NewParam->hasDefaultArg());
+      auto It = llvm::find_if(New->parameters(), [](const ParmVarDecl *P) {
+        return P->hasDefaultArg();
+      });
+      assert(It != New->param_end());
+      ParmVarDecl *NewParam = *It;
       Diag(NewParam->getLocation(), diag::err_default_arg_makes_ctor_special)
           << NewParam->getDefaultArgRange() << NewSM;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -4158,8 +4161,13 @@ namespace {
     }
 
     llvm::SmallPtrSet<QualType, 4> UninitializedBaseClasses;
-    for (const auto &I : RD->bases())
+    for (const auto &I : RD->bases()) {
+      // Virtual bases are initialized from the most derived class, so an
+      // abstract base class constructor can assume it to be initialized.
+      if (I.isVirtual() && RD->isAbstract())
+        continue;
       UninitializedBaseClasses.insert(I.getType().getCanonicalType());
+    }
 
     if (UninitializedFields.empty() && UninitializedBaseClasses.empty())
       return;

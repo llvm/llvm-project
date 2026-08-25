@@ -1392,7 +1392,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                        options::OPT_mbranch_protection_EQ)
                      : Args.getLastArg(options::OPT_mbranch_protection_EQ);
   if (!A) {
-    if (Triple.isOSOpenBSD() && isAArch64) {
+    if ((Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
       CmdArgs.push_back("-msign-return-address=non-leaf");
       CmdArgs.push_back("-msign-return-address-key=a_key");
       CmdArgs.push_back("-mbranch-target-enforce");
@@ -1414,7 +1414,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Scope;
     Key = "a_key";
-    IndirectBranches = Triple.isOSOpenBSD() && isAArch64;
+    IndirectBranches =
+        (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
     BranchProtectionPAuthLR = false;
     GuardedControlStack = false;
   } else {
@@ -4214,8 +4215,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   if (HaveClangModules)
     Args.AddLastArg(CmdArgs, options::OPT_fmodules_user_build_path);
 
-  // Pass through all -fmodules-ignore-macro arguments.
   Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_macro);
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodules_ignore_search_path);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_interval);
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_prune_after);
 

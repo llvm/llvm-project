@@ -58,6 +58,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
+#include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
@@ -504,9 +505,14 @@ public:
     this->__destruct_at_end(__layout_.__end_ptr() - 1);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, const_reference __x);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, const_reference __x) {
+    return emplace(__position, __x);
+  }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, value_type&& __x);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, value_type&& __x) {
+    return emplace(__position, std::move(__x));
+  }
+
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator emplace(const_iterator __position, _Args&&... __args);
 
@@ -556,9 +562,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
-    size_type __old_size = size();
-    __base_destruct_at_end(this->__layout_.__begin_ptr());
-    __annotate_shrink(__old_size);
+    __destruct_at_end(__layout_.__begin_ptr());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
@@ -711,9 +715,11 @@ private:
       _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
       _NOEXCEPT_(__alloc_traits::is_always_equal::value);
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
     size_type __old_size = size();
-    __base_destruct_at_end(__new_last);
+    std::__allocator_destroy(__layout_.__alloc(), __new_last, __layout_.__end_ptr());
+    __layout_.__set_bound_using_pointer(__new_last);
     __annotate_shrink(__old_size);
   }
 
@@ -769,13 +775,6 @@ private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
-    pointer __soon_to_be_end = __layout_.__end_ptr();
-    while (__new_last != __soon_to_be_end)
-      __alloc_traits::destroy(this->__layout_.__alloc(), std::__to_address(--__soon_to_be_end));
-    __layout_.__set_bound_using_pointer(__new_last);
-  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
     __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
@@ -1126,49 +1125,6 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
     }
   }
   std::move_backward(__from_s, __from_s + __n, __old_last);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (size() != capacity()) {
-    pointer __end = __layout_.__end_ptr();
-    if (__p == __end) {
-      __emplace_back_assume_capacity(__x);
-    } else {
-      __move_range(__p, __end, __p + 1);
-      const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
-        ++__xr;
-      *__p = *__xr;
-    }
-  } else {
-    _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-    __v.emplace_back(__x);
-    __p = __layout_.__relocate_with_pivot(__v, __p);
-  }
-  return __make_iter(__p);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
-  pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (size() != capacity()) {
-    pointer __end = __layout_.__end_ptr();
-    if (__p == __end) {
-      __emplace_back_assume_capacity(std::move(__x));
-    } else {
-      __move_range(__p, __end, __p + 1);
-      *__p = std::move(__x);
-    }
-  } else {
-    _SplitBuffer __v(__recommend(size() + 1), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-    __v.emplace_back(std::move(__x));
-    __p = __layout_.__relocate_with_pivot(__v, __p);
-  }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>

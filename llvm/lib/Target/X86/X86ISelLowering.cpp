@@ -9890,17 +9890,16 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
-        // If the freeze(undef) has multiple uses then we must fold to zero.
-        if (SubVec.hasOneUse()) {
-          ++NumFreezeUndef;
-        } else {
-          ++NumZero;
-          Undefs.insert(SubVec);
-        }
-    }
-    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+      // If the freeze(undef) has multiple uses then we must fold to zero.
+      if (SubVec.hasOneUse()) {
+        ++NumFreezeUndef;
+      } else {
+        ++NumZero;
+        Undefs.insert(SubVec);
+      }
+    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
       ++NumZero;
-    else {
+    } else {
       assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
       NonZeros |= 1 << i;
       ++NumNonZero;
@@ -9912,9 +9911,9 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
     ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(0, NumOperands/2));
+                             Ops.slice(0, NumOperands / 2));
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(NumOperands/2));
+                             Ops.slice(NumOperands / 2));
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
@@ -30217,6 +30216,13 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                            DAG.getVectorIdxConstant(0, DL));
     else
       MinMax = Result;
+
+    // The signed-zero fixup may corrupt the numeric NewY result with the sign
+    // bit of a NaN NewX. Restore NewY in that case.
+    if (IsNum && !IgnoreNaN && !IsXNeverNaN) {
+      SDValue IsXNaN = DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+      MinMax = DAG.getSelect(DL, VT, IsXNaN, NewY, MinMax);
+    }
   }
 
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
@@ -43814,74 +43820,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
     }
 
-    // Attempt to merge insertps Op1 with an inner target shuffle node.
-    SmallVector<int, 8> TargetMask1;
-    SmallVector<SDValue, 2> Ops1;
-    APInt KnownUndef1, KnownZero1;
-    if (getTargetShuffleAndZeroables(Op1, TargetMask1, Ops1, KnownUndef1,
-                                     KnownZero1)) {
-      if (KnownUndef1[SrcIdx] || KnownZero1[SrcIdx]) {
-        // Zero/UNDEF insertion - zero out element and remove dependency.
-        InsertPSMask |= (1u << DstIdx);
-        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
-                           DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-      }
-      // Update insertps mask srcidx and reference the source input directly.
-      int M = TargetMask1[SrcIdx];
-      assert(0 <= M && M < 8 && "Shuffle index out of range");
-      InsertPSMask = (InsertPSMask & 0x3f) | ((M & 0x3) << 6);
-      Op1 = Ops1[M < 4 ? 0 : 1];
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
-                         DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-    }
-
-    // Attempt to merge insertps Op0 with an inner target shuffle node.
-    SmallVector<int, 8> TargetMask0;
-    SmallVector<SDValue, 2> Ops0;
-    APInt KnownUndef0, KnownZero0;
-    if (getTargetShuffleAndZeroables(Op0, TargetMask0, Ops0, KnownUndef0,
-                                     KnownZero0)) {
-      bool Updated = false;
-      bool UseInput00 = false;
-      bool UseInput01 = false;
-      for (int i = 0; i != 4; ++i) {
-        if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
-          // No change if element is already zero or the inserted element.
-          continue;
-        }
-
-        if (KnownUndef0[i] || KnownZero0[i]) {
-          // If the target mask is undef/zero then we must zero the element.
-          InsertPSMask |= (1u << i);
-          Updated = true;
-          continue;
-        }
-
-        // The input vector element must be inline.
-        int M = TargetMask0[i];
-        if (M != i && M != (i + 4))
-          return SDValue();
-
-        // Determine which inputs of the target shuffle we're using.
-        UseInput00 |= (0 <= M && M < 4);
-        UseInput01 |= (4 <= M);
-      }
-
-      // If we're not using both inputs of the target shuffle then use the
-      // referenced input directly.
-      if (UseInput00 && !UseInput01) {
-        Updated = true;
-        Op0 = Ops0[0];
-      } else if (!UseInput00 && UseInput01) {
-        Updated = true;
-        Op0 = Ops0[1];
-      }
-
-      if (Updated)
-        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
-                           DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-    }
-
     // If we're inserting an element from a vbroadcast load, fold the
     // load into the X86insertps instruction. We need to convert the scalar
     // load to a vector and clear the source lane of the INSERTPS control.
@@ -50784,9 +50722,21 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       Attribute::StrictFP);
   if (IsStrict) {
     // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
-    // requires 512-bit types to be legal and a power of 2 lane count.
-    if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
+    // requires 512-bit types to be legal.
+    if (!Subtarget.useAVX512Regs())
       return SDValue();
+    // Widen a non-power-of-two lane count to get a machine type, but only
+    // while it still fits one divide. Two chains lose to a chain plus a scalar.
+    unsigned NumElts = VT.getVectorNumElements();
+    if (!isPowerOf2_32(NumElts)) {
+      if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
+        return SDValue();
+      SDValue WideDividend = DAG.WidenVector(Dividend, DL);
+      EVT WideVT = WideDividend.getValueType();
+      SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
+      SDValue Wide = DAG.getNode(Opc, DL, WideVT, WideDividend, WideDivisor);
+      return DAG.getExtractSubvector(DL, VT, Wide, 0);
+    }
   } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
              !Subtarget.hasAVX2()) {
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
