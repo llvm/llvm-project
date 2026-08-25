@@ -223,14 +223,20 @@ rprfm #0, x0, [x0]
 // SME load instructions.
 ld1q {za0h.q[w12, 0]}, p0/z, [x0, x0, lsl #4]
 ld1w {za0v.s[w12, 0]}, p0/z, [x0]
+ld1w {z0.s - z3.s}, pn8/z, [x0, x0, lsl #2]
 ld1w {z0.s, z4.s, z8.s, z12.s}, pn8/z, [x0, x0, lsl #2]
+ldnt1w {z0.s, z4.s, z8.s, z12.s}, pn8/z, [x0]
 ldr zt0, [x0]
 ldr za[w12, #0], [x0]
 
 // SME store instructions.
 st1q {za0h.q[w12, 0]}, p0, [x0, x0, lsl #4]
 st1w {za0h.s[w12, 0]}, p0, [x0]
+st1w {z0.s - z3.s}, pn8, [x0, x0, lsl #2]
+st1w {z0.s, z4.s, z8.s, z12.s}, pn8, [x0]
 st1w {z0.s, z4.s, z8.s, z12.s}, pn8, [x0, x0, lsl #2]
+stnt1w {z0.s - z3.s}, pn8, [x0, x0, lsl #2]
+stnt1w {z0.s, z4.s, z8.s, z12.s}, pn8, [x0]
 str zt0, [x0]
 str za[w12, #0], [x0]
 

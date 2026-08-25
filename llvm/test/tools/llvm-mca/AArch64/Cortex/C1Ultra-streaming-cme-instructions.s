@@ -26,6 +26,7 @@
 # NONSTREAMING-NEXT:  1      2     0.25                        frintz	s0, s1
 # NONSTREAMING-NEXT:  1      3     1.00                        scvtf	s0, w0
 # NONSTREAMING-NEXT:  1      3     1.00                        fmov	d0, x0
+# NONSTREAMING-NEXT:  1      2     0.50                        fmov	x0, d0
 # NONSTREAMING-NEXT:  1      4     0.17                        fnmadd	s0, s1, s2, s3
 # NONSTREAMING-NEXT:  1      6     0.25    *                   ldr	s0, [x0]
 # NONSTREAMING-NEXT:  1      7     0.25    *                   ldr	q0, [x0, x1, lsl #4]
@@ -52,9 +53,13 @@
 # NONSTREAMING-NEXT:  1      4     0.17                        bfdot	z0.s, z1.h, z2.h
 # NONSTREAMING-NEXT:  1      6     0.25    *                   ld1w	{ z0.s }, p0/z, [x0]
 # NONSTREAMING-NEXT:  1      8     0.50    *                   ld2w	{ z0.s, z1.s }, p0/z, [x0]
+# NONSTREAMING-NEXT:  1      8     0.75    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# NONSTREAMING-NEXT:  1      10    1.33    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0]
 # NONSTREAMING-NEXT:  1      9     0.50    *                   ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw]
 # NONSTREAMING-NEXT:  1      2     0.50           *            st1w	{ z0.s }, p0, [x0]
 # NONSTREAMING-NEXT:  1      4     1.00           *            st2w	{ z0.s, z1.s }, p0, [x0]
+# NONSTREAMING-NEXT:  1      5     1.50           *            st3b	{ z0.b - z2.b }, p0, [x0]
+# NONSTREAMING-NEXT:  1      7     2.00           *            st4b	{ z0.b - z3.b }, p0, [x0]
 # NONSTREAMING-NEXT:  1      2     0.50           *            st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
 # NONSTREAMING-NEXT:  1      2     0.17                        eor3	z0.d, z0.d, z1.d, z2.d
 # NONSTREAMING-NEXT:  1      4     0.17                        sabalb	z0.s, z1.h, z2.h
@@ -91,6 +96,7 @@
 # NONSTREAMING-NEXT:  1      2     0.17                        tbx	v0.8b, { v1.16b }, v1.8b
 # NONSTREAMING-NEXT:  1      2     0.17                        trn1	v0.4s, v1.4s, v2.4s
 # NONSTREAMING-NEXT:  1      2     0.17                        sunpkhi	z0.h, z1.b
+# NONSTREAMING-NEXT:  1      3     0.17                        fnmul	s0, s1, s2
 
 # STREAMING:         [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # STREAMING-NEXT:     1      4     0.50                        fadd	s0, s1, s2
@@ -98,6 +104,7 @@
 # STREAMING-NEXT:     1      4     0.50                        frintz	s0, s1
 # STREAMING-NEXT:     1      4     1.00                        scvtf	s0, w0
 # STREAMING-NEXT:     1      4     1.00                        fmov	d0, x0
+# STREAMING-NEXT:     1      4     0.50                        fmov	x0, d0
 # STREAMING-NEXT:     1      4     0.50                        fnmadd	s0, s1, s2, s3
 # STREAMING-NEXT:     1      2     1.00    *                   ldr	s0, [x0]
 # STREAMING-NEXT:     1      2     1.00    *                   ldr	q0, [x0, x1, lsl #4]
@@ -124,9 +131,13 @@
 # STREAMING-NEXT:     1      4     0.50                        bfdot	z0.s, z1.h, z2.h
 # STREAMING-NEXT:     1      2     1.00    *                   ld1w	{ z0.s }, p0/z, [x0]
 # STREAMING-NEXT:     1      2     1.00    *                   ld2w	{ z0.s, z1.s }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     1.00    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     1.00    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0]
 # STREAMING-NEXT:     1      9     0.50    *                   ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw]
 # STREAMING-NEXT:     1      2     1.00           *            st1w	{ z0.s }, p0, [x0]
 # STREAMING-NEXT:     1      2     1.00           *            st2w	{ z0.s, z1.s }, p0, [x0]
+# STREAMING-NEXT:     1      2     1.50           *            st3b	{ z0.b - z2.b }, p0, [x0]
+# STREAMING-NEXT:     1      2     2.00           *            st4b	{ z0.b - z3.b }, p0, [x0]
 # STREAMING-NEXT:     1      2     0.50           *            st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
 # STREAMING-NEXT:     1      2     0.17                        eor3	z0.d, z0.d, z1.d, z2.d
 # STREAMING-NEXT:     1      8     1.00                        sabalb	z0.s, z1.h, z2.h
@@ -163,6 +174,7 @@
 # STREAMING-NEXT:     1      2     0.17                        tbx	v0.8b, { v1.16b }, v1.8b
 # STREAMING-NEXT:     1      2     0.17                        trn1	v0.4s, v1.4s, v2.4s
 # STREAMING-NEXT:     1      4     0.50                        sunpkhi	z0.h, z1.b
+# STREAMING-NEXT:     1      3     0.17                        fnmul	s0, s1, s2
 
 # NONSTREAMING:      Resources:
 # NONSTREAMING-NEXT: [0.0] - C1UUnitB
@@ -258,11 +270,11 @@
 
 # NONSTREAMING:      Resource pressure per iteration:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# NONSTREAMING-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     1.50   1.50   4.00   4.00   11.13  0.13   0.13   0.13   0.13   0.13   0.13   0.13   31.67  19.67  5.67   8.17   8.17   5.67
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     3.25   3.25   9.25   9.25   11.13  0.13   0.13   0.13   0.13   0.13   0.13   0.13   37.67  25.67  7.67   10.17  10.17  7.67
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# STREAMING-NEXT:     -      -      -     4.00   12.00   -      -     28.00  10.00   -      -      -      -     3.00   36.50  1.00   2.00   20.50  1.00   2.00    -      -      -      -      -      -     1.25   1.25   3.75   3.75   3.63   0.63   0.13   0.13   0.13   0.13   0.13   0.13   4.00   4.00   0.50   0.50   0.50   0.50
+# STREAMING-NEXT:     -      -      -     6.00   12.00   -      -     28.00  10.00   -      -      -      -     5.00   37.00  1.00   2.00   21.00  1.00   2.00    -      -      -      -      -      -     1.75   1.75   7.75   7.75   3.63   0.63   0.13   0.13   0.13   0.13   0.13   0.13   8.67   8.67   0.67   0.67   0.67   0.67
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
@@ -271,6 +283,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frintz	s0, s1
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     scvtf	s0, w0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	d0, x0
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     fmov	x0, d0
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fnmadd	s0, s1, s2, s3
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldr	s0, [x0]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldr	q0, [x0, x1, lsl #4]
@@ -297,9 +310,13 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   bfdot	z0.s, z1.h, z2.h
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33   ld2w	{ z0.s, z1.s }, p0/z, [x0]
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.75   0.75   0.75   0.75    -      -      -      -      -      -      -      -     0.50   0.50   0.50   0.50   0.50   0.50   ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -     1.33   1.33   1.33   1.33   1.33   1.33   ld4b	{ z0.b - z3.b }, p0/z, [x0]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     st1w	{ z0.s }, p0, [x0]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     st2w	{ z0.s, z1.s }, p0, [x0]
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -     st3b	{ z0.b - z2.b }, p0, [x0]
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -     st4b	{ z0.b - z3.b }, p0, [x0]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   eor3	z0.d, z0.d, z1.d, z2.d
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sabalb	z0.s, z1.h, z2.h
@@ -336,6 +353,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   tbx	v0.8b, { v1.16b }, v1.8b
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   trn1	v0.4s, v1.4s, v2.4s
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sunpkhi	z0.h, z1.b
+# NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fnmul	s0, s1, s2
 
 # STREAMING:         Resource pressure by instruction:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
@@ -344,6 +362,7 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     frintz	s0, s1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     scvtf	s0, w0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	d0, x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	x0, d0
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fnmadd	s0, s1, s2, s3
 # STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ldr	s0, [x0]
 # STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   0.13   0.13   0.13   0.13   0.13   0.13   0.13   0.13    -      -      -      -      -      -     ldr	q0, [x0, x1, lsl #4]
@@ -370,9 +389,13 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     bfdot	z0.s, z1.h, z2.h
 # STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ld1w	{ z0.s }, p0/z, [x0]
 # STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ld2w	{ z0.s, z1.s }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ld4b	{ z0.b - z3.b }, p0/z, [x0]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     ld1d	{ z0.d }, p0/z, [x0, z0.d, uxtw]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     st1w	{ z0.s }, p0, [x0]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     st2w	{ z0.s, z1.s }, p0, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -     st3b	{ z0.b - z2.b }, p0, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -     st4b	{ z0.b - z3.b }, p0, [x0]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     st1w	{ z0.s }, p0, [x0, z0.s, uxtw]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   eor3	z0.d, z0.d, z1.d, z2.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sabalb	z0.s, z1.h, z2.h
@@ -409,3 +432,4 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   tbx	v0.8b, { v1.16b }, v1.8b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   trn1	v0.4s, v1.4s, v2.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sunpkhi	z0.h, z1.b
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fnmul	s0, s1, s2
