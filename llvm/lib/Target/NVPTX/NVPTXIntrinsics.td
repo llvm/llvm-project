@@ -2804,7 +2804,7 @@ defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add", "u32", 
 defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add", "u64", atomic_load_add>;
 
 defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz", "f16", atomic_load_fadd, [SM70, PTX63]>;
-defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90, SM90]>;
+defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90]>;
 defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add", "f32", atomic_load_fadd>;
 defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add", "f64", atomic_load_fadd, [hasAtomAddF64]>;
 
