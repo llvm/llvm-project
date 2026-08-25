@@ -8,7 +8,7 @@
 
 #include "src/setjmp/sigsetjmp_epilogue.h"
 #include "src/__support/common.h"
-#include "src/signal/sigprocmask.h"
+#include "src/signal/darwin/sigprocmask_impl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 [[gnu::returns_twice]] int sigsetjmp_epilogue(sigjmp_buf buffer, int retval) {

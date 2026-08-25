@@ -1,9 +1,9 @@
-add_entrypoint_object(
-  sigprocmask
+add_object_library(
+  sigprocmask_impl
   SRCS
-    sigprocmask.cpp
+    sigprocmask_impl.cpp
   HDRS
-    ../sigprocmask.h
+    sigprocmask_impl.h
   DEPENDS
     libc.hdr.types.sigset_t
     libc.src.__support.OSUtil.osutil
@@ -11,6 +11,19 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigprocmask
+  SRCS
+    sigprocmask.cpp
+  HDRS
+    ../sigprocmask.h
+  DEPENDS
+    .sigprocmask_impl
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
