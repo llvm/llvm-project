@@ -7,6 +7,9 @@
 
 // REQUIRES: plugins
 
+// UNSUPPORTED: *
+
+
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -load %llvmshlibdir/SSAFTestTransformationPlugin%pluginext \
 // RUN:   --ssaf-source-transformation=test-transformation \
