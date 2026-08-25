@@ -609,25 +609,6 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   return Result;
 }
 
-// Check if a scalar access of AccessTy spans several elements of a
-// promoted alloca whose element type is VecEltTy, and so has to be split
-// the same way a vector access is. This happens when an object is written
-// one element at a time but read back in wider pieces, e.g. i32 stores into
-// an alloca that is later loaded as i64.
-static bool isMultiElementScalarAccess(Type *VecEltTy, Type *AccessTy,
-                                       const DataLayout &DL) {
-  if (!AccessTy->isIntegerTy() && !AccessTy->isFloatingPointTy())
-    return false;
-
-  TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
-  // Padding would leave the split pieces at the wrong offsets.
-  if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
-    return false;
-
-  TypeSize EltTS = DL.getTypeStoreSize(VecEltTy);
-  return AccTS > EltTS && AccTS.isKnownMultipleOf(EltTS);
-}
-
 /// Promotes a single user of the alloca to a vector form.
 ///
 /// \param Inst           Instruction to be promoted.
@@ -672,10 +653,11 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     }
 
     // Loading a subvector, or a scalar that spans several elements.
-    if (isa<FixedVectorType>(AccessTy) ||
-        isMultiElementScalarAccess(VecEltTy, AccessTy, DL)) {
-      assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
-      const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
+    TypeSize EltSize = DL.getTypeStoreSize(VecEltTy);
+    assert(AccessSize.isKnownMultipleOf(EltSize) &&
+           "promotable access must cover a whole number of elements");
+    const unsigned NumLoadedElts = AccessSize / EltSize;
+    if (NumLoadedElts > 1) {
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
@@ -749,11 +731,11 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
         return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector, or a scalar that spans several elements.
-    if (isa<FixedVectorType>(AccessTy) ||
-        isMultiElementScalarAccess(VecEltTy, AccessTy, DL)) {
-      assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
-      const unsigned NumWrittenElts =
-          AccessSize / DL.getTypeStoreSize(VecEltTy);
+    TypeSize EltSize = DL.getTypeStoreSize(VecEltTy);
+    assert(AccessSize.isKnownMultipleOf(EltSize) &&
+           "promotable access must cover a whole number of elements");
+    const unsigned NumWrittenElts = AccessSize / EltSize;
+    if (NumWrittenElts > 1) {
       const unsigned NumVecElts = AA.Vector.Ty->getNumElements();
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
@@ -839,31 +821,34 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
 
 static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
                                   const DataLayout &DL) {
-  // Access as a vector type can work if the size of the access vector is a
-  // multiple of the size of the alloca's vector element type.
+  // An access that covers several elements can work if its size is a multiple
+  // of the size of the alloca's vector element type, since it can be split
+  // across consecutive elements. This covers accesses by a vector type, as well
+  // as scalar accesses that are wider than one element, which happens when an
+  // object is written one element at a time but read back in wider pieces.
   //
   // Examples:
   //    - VecTy = <8 x float>, AccessTy = <4 x float> -> OK
   //    - VecTy = <4 x double>, AccessTy = <2 x float> -> OK
   //    - VecTy = <4 x double>, AccessTy = <3 x float> -> NOT OK
   //        - 3*32 is not a multiple of 64
+  //    - VecTy = <8 x i32>, AccessTy = i64 -> OK
   //
   // We could handle more complicated cases, but it'd make things a lot more
   // complicated.
-  if (isa<FixedVectorType>(AccessTy)) {
+  if (isa<FixedVectorType>(AccessTy) || AccessTy->isIntegerTy() ||
+      AccessTy->isFloatingPointTy()) {
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+    TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     // If the type size and the store size don't match, we would need to do more
     // than just bitcast to translate between an extracted/insertable subvectors
     // and the accessed value.
-    if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
-      return false;
-    TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
-    return AccTS.isKnownMultipleOf(VecTS);
+    if (AccTS * 8 == DL.getTypeSizeInBits(AccessTy) && AccTS > VecTS &&
+        AccTS.isKnownMultipleOf(VecTS))
+      return true;
   }
 
-  if (isMultiElementScalarAccess(VecTy->getElementType(), AccessTy, DL))
-    return true;
-
+  // An access that covers exactly one element only needs a cast.
   return CastInst::isBitOrNoopPointerCastable(VecTy->getElementType(), AccessTy,
                                               DL);
 }

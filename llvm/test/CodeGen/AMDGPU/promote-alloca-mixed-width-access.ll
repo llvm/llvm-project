@@ -157,3 +157,53 @@ define amdgpu_kernel void @padded_access_not_promoted(ptr addrspace(1) %out, i32
   store i33 %l, ptr addrspace(1) %out, align 8
   ret void
 }
+
+; The elements do not have to be integers: an i64 spans two 32-bit pointers,
+; and the pieces are recovered with a ptrtoint rather than a plain bitcast.
+define amdgpu_kernel void @store_ptr_load_i64(ptr addrspace(1) %out, i32 %i, ptr addrspace(5) %v) {
+; CHECK-LABEL: define amdgpu_kernel void @store_ptr_load_i64(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], ptr addrspace(5) [[V:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = freeze <8 x ptr addrspace(5)> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr addrspace(5)> [[A]], ptr addrspace(5) [[V]], i32 [[I]]
+; CHECK-NEXT:    [[J:%.*]] = shl i32 [[I]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <8 x ptr addrspace(5)> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[J]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 [[TMP4]]
+; CHECK-NEXT:    store i64 [[TMP5]], ptr addrspace(1) [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [8 x ptr addrspace(5)], align 16, addrspace(5)
+  %p = getelementptr [8 x ptr addrspace(5)], ptr addrspace(5) %a, i32 0, i32 %i
+  store ptr addrspace(5) %v, ptr addrspace(5) %p, align 4
+  %j = shl i32 %i, 1
+  %q = getelementptr [8 x ptr addrspace(5)], ptr addrspace(5) %a, i32 0, i32 %j
+  %l = load i64, ptr addrspace(5) %q, align 8
+  store i64 %l, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+; Negative: a double is the same size as a 64-bit pointer, so it covers exactly
+; one element and is not split. There is no cast between the two types, so the
+; access is still rejected.
+define amdgpu_kernel void @same_size_element_not_castable(ptr addrspace(1) %out, i32 %i, ptr %v) {
+; CHECK-LABEL: define amdgpu_kernel void @same_size_element_not_castable(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], ptr [[V:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x ptr], align 16, addrspace(5)
+; CHECK-NEXT:    [[P:%.*]] = getelementptr [8 x ptr], ptr addrspace(5) [[A]], i32 0, i32 [[I]]
+; CHECK-NEXT:    store ptr [[V]], ptr addrspace(5) [[P]], align 8
+; CHECK-NEXT:    [[J:%.*]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [8 x ptr], ptr addrspace(5) [[A]], i32 0, i32 [[J]]
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr addrspace(5) [[Q]], align 8
+; CHECK-NEXT:    store double [[L]], ptr addrspace(1) [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [8 x ptr], align 16, addrspace(5)
+  %p = getelementptr [8 x ptr], ptr addrspace(5) %a, i32 0, i32 %i
+  store ptr %v, ptr addrspace(5) %p, align 8
+  %j = add i32 %i, 1
+  %q = getelementptr [8 x ptr], ptr addrspace(5) %a, i32 0, i32 %j
+  %l = load double, ptr addrspace(5) %q, align 8
+  store double %l, ptr addrspace(1) %out, align 8
+  ret void
+}
