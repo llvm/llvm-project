@@ -35,7 +35,10 @@ struct FrameDataInfo {
   // Allocas contains all values defined as allocas that need to live in the
   // frame.
   SmallVector<coro::AllocaInfo, 8> Allocas;
+  // Map SSA values to corresponding GEPs (possibly with casts) to frame
+  SmallMapVector<Value *, SmallVector<Instruction *, 2>, 8> SpillGepMap;
 
+  FrameDataInfo() = default;
   FrameDataInfo(coro::SpillInfo Spills,
                 SmallVector<coro::AllocaInfo, 8> Allocas)
       : Spills(std::move(Spills)), Allocas(std::move(Allocas)) {}
@@ -138,10 +141,14 @@ public:
 
   Function &F;
   coro::Shape &Shape;
+  FrameDataInfo FrameData;
 
   // Callback used by coro::BaseABI::buildCoroutineFrame for rematerialization.
   // It is provided to coro::doMaterializations(..).
   std::function<bool(Instruction &I)> IsMaterializable;
+
+protected:
+  void remapReloadToSSA();
 };
 
 class LLVM_ABI SwitchABI : public BaseABI {

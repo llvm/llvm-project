@@ -881,7 +881,7 @@ static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
 
 /// Returns a pointer into the coroutine frame at the offset where Orig is
 /// located.
-static Value *createGEPToFramePointer(const coro::FrameDataInfo &FrameData,
+static Value *createGEPToFramePointer(coro::FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
                                       Value *Orig) {
   LLVMContext &Ctx = Shape.CoroBegin->getContext();
@@ -908,6 +908,9 @@ static Value *createGEPToFramePointer(const coro::FrameDataInfo &FrameData,
       Ptr = Builder.CreateAddrSpaceCast(Ptr, Orig->getType(),
                                         Orig->getName() + Twine(".cast"));
   }
+
+  if (!isa<AllocaInst>(Orig))
+    FrameData.SpillGepMap[Orig].push_back(cast<Instruction>(Ptr));
   return Ptr;
 }
 
@@ -945,7 +948,7 @@ findDbgRecordsThroughLoads(Function &F, Value *Def) {
 // Helper function to handle allocas that may be accessed before CoroBegin.
 // This creates a memcpy from the original alloca to the coroutine frame after
 // CoroBegin, ensuring the frame has the correct initial values.
-static void handleAccessBeforeCoroBegin(const coro::FrameDataInfo &FrameData,
+static void handleAccessBeforeCoroBegin(coro::FrameDataInfo &FrameData,
                                         coro::Shape &Shape,
                                         IRBuilder<> &Builder,
                                         AllocaInst *Alloca) {
@@ -976,7 +979,7 @@ static void handleAccessBeforeCoroBegin(const coro::FrameDataInfo &FrameData,
 //    whatever
 //
 //
-static void insertSpills(const coro::FrameDataInfo &FrameData, coro::Shape &Shape) {
+static void insertSpills(coro::FrameDataInfo &FrameData, coro::Shape &Shape) {
   LLVMContext &C = Shape.CoroBegin->getContext();
   Function *F = Shape.CoroBegin->getFunction();
   IRBuilder<> Builder(C);
@@ -1484,9 +1487,9 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
       if (isa<CoroAllocaGetInst>(U)) {
         U->replaceAllUsesWith(Alloca);
 
-      // Replace frees with stackrestores.  This is safe because
-      // alloca.alloc is required to obey a stack discipline, although we
-      // don't enforce that structurally.
+        // Replace frees with stackrestores.  This is safe because
+        // alloca.alloc is required to obey a stack discipline, although we
+        // don't enforce that structurally.
       } else {
         auto FI = cast<CoroAllocaFreeInst>(U);
         if (StackSave) {
@@ -1945,7 +1948,7 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
 
   SmallVector<Instruction *, 4> DeadInstructions;
   SmallVector<CoroAllocaAllocInst *, 4> LocalAllocas;
-  auto FrameData = [&]() {
+  FrameData = [&]() {
     // All values (that are not allocas) that needs to be spilled to the frame.
     coro::SpillInfo Spills;
     // All values defined as allocas that need to live in the frame.
@@ -1955,7 +1958,7 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
     coro::collectSpillsFromArgs(Spills, F, Checker);
 
     coro::collectSpillsAndAllocasFromInsts(Spills, Allocas, DeadInstructions,
-                                          LocalAllocas, F, Checker, DT, Shape);
+                                           LocalAllocas, F, Checker, DT, Shape);
     coro::collectSpillsFromDbgInfo(Spills, F, Checker);
 
     LLVM_DEBUG(dumpAllocas(Allocas));
@@ -1978,4 +1981,16 @@ void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
 
   for (auto *I : DeadInstructions)
     I->eraseFromParent();
+}
+// No need to reload if the original SSA value is available
+void coro::BaseABI::remapReloadToSSA() {
+  for (auto &[Def, GEPs] : FrameData.SpillGepMap) {
+    for (auto *GEP : GEPs)
+      if (auto *LI =
+              dyn_cast_if_present<LoadInst>(GEP->getUniqueUndroppableUser())) {
+        LI->replaceAllUsesWith(Def);
+        LI->eraseFromParent();
+        GEP->eraseFromParent();
+      }
+  }
 }
