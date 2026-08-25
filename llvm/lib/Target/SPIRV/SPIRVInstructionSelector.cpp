@@ -3354,10 +3354,11 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
   [[maybe_unused]] SPIRVTypeInst VecType =
       GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
 
-  assert((VecType->getOpcode() == SPIRV::OpTypeVector &&
-          GR.getScalarOrVectorComponentCount(VecType) > 1) ||
-         VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-             "dot product requires a vector of at least 2 components");
+  assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
+           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
+          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
+              "dot product requires either a vector of at least 2 components or"
+              " the SPV_EXT_long vector extension.");
 
   [[maybe_unused]] SPIRVTypeInst EltType =
       GR.getScalarOrVectorComponentType(VecType);
@@ -3415,10 +3416,11 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
       .addUse(Vec1)
       .constrainAllUses(TII, TRI, RBI);
 
-  assert((VecType->getOpcode() == SPIRV::OpTypeVector &&
-          GR.getScalarOrVectorComponentCount(VecType) > 1) ||
-         VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
-             "dot product requires a vector of at least 2 components");
+  assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
+           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
+          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
+              "dot product requires either a vector of at least 2 components "
+              "or the SPV_EXT_long_vector extension.");
 
   Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
