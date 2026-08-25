@@ -15,7 +15,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "fx_rep.h"
@@ -201,7 +200,6 @@ sqrt_core(typename Config::Type x_frac) {
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, T> sqrt(T x) {
   if constexpr (FXRep<T>::SIGN_LEN > 0) {
-    LIBC_CRASH_ON_VALUE(x < FXRep<T>::ZERO(), true);
     return static_cast<T>(
         sqrt(static_cast<typename internal::FXUnsigned<T>::Type>(x)));
   } else {

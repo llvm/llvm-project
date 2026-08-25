@@ -22,8 +22,8 @@ class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   static constexpr ReturnType zero = OutRep::ZERO();
   static constexpr ReturnType max = OutRep::MAX();
-  static constexpr ReturnType half = static_cast<ReturnType>(0.5);
-  static constexpr ReturnType quarter = static_cast<ReturnType>(0.25);
+  static constexpr ReturnType half = OutRep::ONE_HALF();
+  static constexpr ReturnType quarter = OutRep::ONE_FOURTH();
   static constexpr ReturnType one =
       (OutRep::INTEGRAL_LEN > 0) ? static_cast<ReturnType>(1) : OutRep::MAX();
   static constexpr ReturnType eps = OutRep::EPS();
@@ -34,12 +34,12 @@ public:
   typedef ReturnType (*SqrtFunc)(FXType);
 
   void testSpecialNumbers(SqrtFunc func) {
-    EXPECT_EQ(zero, func(static_cast<FXType>(zero)));
-    EXPECT_EQ(half, func(static_cast<FXType>(quarter)));
+    EXPECT_EQ(zero, func(zero));
+    EXPECT_EQ(half, func(quarter));
 
     if constexpr (OutRep::INTEGRAL_LEN > 0) {
-      EXPECT_EQ(one, func(static_cast<FXType>(one)));
-      EXPECT_EQ(static_cast<ReturnType>(2.0), func(static_cast<FXType>(4.0)));
+      EXPECT_EQ(one, func(one));
+      EXPECT_EQ(static_cast<ReturnType>(2), func(4));
     }
 
     constexpr double ERR = 3.0 * static_cast<double>(eps);
