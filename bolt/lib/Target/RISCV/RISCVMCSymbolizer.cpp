@@ -37,9 +37,8 @@ RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
              Rel->Value < Function.getAddress() + Function.getSize() &&
              "RISC-V instruction reference outside of function");
       const uint64_t ReferencedOffset = Rel->Value - Function.getAddress();
-      InstructionReferences.try_emplace(ReferencedOffset, Rel);
-      if (CreateNewSymbols)
-        InstructionLabels.try_emplace(ReferencedOffset, nullptr);
+      InstructionReferences.try_emplace(ReferencedOffset,
+                                        InstructionReferenceInfo{Rel, nullptr});
     }
 
     SearchOffset = Rel->Offset + 1;
@@ -48,12 +47,11 @@ RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
 
 RISCVMCSymbolizer::~RISCVMCSymbolizer() {}
 
-MCSymbol *RISCVMCSymbolizer::getOrCreateInstructionLabel(uint64_t Offset) {
-  auto [It, Inserted] = InstructionLabels.try_emplace(Offset, nullptr);
-  (void)Inserted;
-  if (!It->second)
-    It->second = Ctx.createNamedTempSymbol();
-  return It->second;
+MCSymbol *RISCVMCSymbolizer::getOrCreateInstructionLabel(
+    InstructionReferenceInfo &ReferenceInfo) {
+  if (!ReferenceInfo.Label)
+    ReferenceInfo.Label = Ctx.createNamedTempSymbol();
+  return ReferenceInfo.Label;
 }
 
 uint64_t RISCVMCSymbolizer::getGOTValue(const Relocation &Rel) const {
@@ -64,8 +62,8 @@ uint64_t RISCVMCSymbolizer::getGOTValue(const Relocation &Rel) const {
   // relocation by its reference back to this AUIPC instead of assuming that
   // the low instruction is adjacent.
   auto It = InstructionReferences.find(Rel.Offset);
-  if (It != InstructionReferences.end()) {
-    const Relocation *LoRel = It->second;
+  if (It != InstructionReferences.end() && It->second.LowRelocation) {
+    const Relocation *LoRel = It->second.LowRelocation;
     ErrorOr<uint64_t> HiContents = BC.getUnsignedValueAtAddress(HiAddress, 4);
     ErrorOr<uint64_t> LoContents =
         BC.getUnsignedValueAtAddress(Function.getAddress() + LoRel->Offset,
@@ -109,7 +107,9 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   if (Relocation::isInstructionReference(Rel->Type)) {
     if (!CreateNewSymbols)
       return false;
-    Symbol = getOrCreateInstructionLabel(Rel->Value - Function.getAddress());
+    auto [It, _] =
+        InstructionReferences.try_emplace(Rel->Value - Function.getAddress());
+    Symbol = getOrCreateInstructionLabel(It->second);
     // The input addend reflects the original AUIPC location. The label now
     // follows the instruction, so the assembler must derive the low bits from
     // its new location.
@@ -136,8 +136,11 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
 
   // MC annotations must follow every real operand. Attach the instruction
   // label only after the symbolized immediate has been appended.
-  if (InstructionLabels.find(InstOffset) != InstructionLabels.end())
-    BC.MIB->setInstLabel(Inst, getOrCreateInstructionLabel(InstOffset));
+  if (CreateNewSymbols) {
+    auto It = InstructionReferences.find(InstOffset);
+    if (It != InstructionReferences.end())
+      BC.MIB->setInstLabel(Inst, getOrCreateInstructionLabel(It->second));
+  }
 
   return true;
 }

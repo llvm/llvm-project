@@ -10,8 +10,8 @@
 #define BOLT_TARGET_RISCV_RISCVMCSYMBOLIZER_H
 
 #include "bolt/Core/BinaryFunction.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
-#include <map>
 
 namespace llvm {
 namespace bolt {
@@ -21,14 +21,18 @@ protected:
   BinaryFunction &Function;
   bool CreateNewSymbols{true};
 
-  /// Map function offsets referenced by %pcrel_lo relocations to labels that
-  /// must remain attached to the corresponding %pcrel_hi instructions.
-  std::map<uint64_t, MCSymbol *> InstructionLabels;
+  struct InstructionReferenceInfo {
+    const Relocation *LowRelocation{nullptr};
+    MCSymbol *Label{nullptr};
+  };
 
-  /// Map referenced instruction offsets to their %pcrel_lo relocations.
-  std::map<uint64_t, const Relocation *> InstructionReferences;
+  /// Map function offsets referenced by %pcrel_lo relocations to the
+  /// relocation and label associated with the corresponding %pcrel_hi
+  /// instruction.
+  SmallDenseMap<uint64_t, InstructionReferenceInfo, 4> InstructionReferences;
 
-  MCSymbol *getOrCreateInstructionLabel(uint64_t Offset);
+  MCSymbol *
+  getOrCreateInstructionLabel(InstructionReferenceInfo &ReferenceInfo);
 
   /// Return the complete PC-relative value for a GOT relocation. The value
   /// recorded when relocations are read assumes that the low instruction
