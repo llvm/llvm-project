@@ -43,6 +43,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -117,6 +118,8 @@ int llvm::compileModuleWithNewPM(
   Opt.RegAlloc = RegAlloc;
 
   MachineModuleInfo MMI(Target.get());
+
+  Target->getObjFileLowering()->Initialize(MMI.getContext(), *Target);
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
