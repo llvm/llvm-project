@@ -2489,26 +2489,32 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // For CUDA, the Lexer will greedily merge all three <<< in operator<<<
       // which, in fact, can be a valid template specialization of operator<<,
       // and will never be a valid kernel launch expression, so split.
-      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
-      // If there was a cache, we should update it when doing token split.
-      // The code below never does.
-      assert(!CachingTokens && "No cache expected");
 
       SourceLocation TokLoc = Tok.getLocation();
       unsigned LessLessLength = Lexer::getTokenPrefixLength(
           TokLoc, /*CharNo=*/2, PP.getSourceManager(), getLangOpts());
 
-      SourceLocation LessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      SourceLocation LessLessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      Token LessLess = Tok;
+      LessLess.setLocation(LessLessLoc);
+      LessLess.setKind(tok::lessless);
+      LessLess.setLength(LessLessLength);
+
       unsigned OldLength = Tok.getLength();
 
       Tok.setKind(tok::less);
       Tok.setLength(OldLength - LessLessLength);
-      Tok.setLocation(LessLoc);
+      Tok.setLocation(TokLoc.getLocWithOffset(LessLessLength));
 
-      SymbolLocations[SymbolIdx++] = TokLoc;
+      // Update the cache if there is any.
+      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
+      if (CachingTokens)
+        PP.ReplacePreviousCachedToken({LessLess});
+
+      SymbolLocations[SymbolIdx++] = LessLessLoc;
       Op = OO_LessLess;
       break;
-     }
+    }
 
     default:
       break;
