@@ -2102,6 +2102,12 @@ void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPXNameClause(OMPXNameClause *Node) {
+  OS << "ompx_name(";
+  Node->getName()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
 void OMPClausePrinter::VisitOMPCollapseClause(OMPCollapseClause *Node) {
   OS << "collapse(";
   Node->getNumForLoops()->printPretty(OS, nullptr, Policy, 0);

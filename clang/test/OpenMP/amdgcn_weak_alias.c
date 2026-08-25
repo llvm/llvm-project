@@ -10,9 +10,9 @@
 // HOST: @__Two_var = global i32 2, align 4
 // HOST: @__Three_var = global i32 3, align 4
 // HOST: @.offloading.entry_name = internal unnamed_addr constant [10 x i8] c"__Two_var\00", section ".llvm.rodata.offloading", align 1
-// HOST: @.offloading.entry.__Two_var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @__Two_var, ptr @.offloading.entry_name, i64 4, i64 0, ptr null }, section "llvm_offload_entries", align 8
+// HOST: @.offloading.entry.__Two_var = constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @__Two_var, ptr @.offloading.entry_name, i64 4, i64 0, ptr null }, section "llvm_offload_entries", align 8
 // HOST: @.offloading.entry_name.1 = internal unnamed_addr constant [12 x i8] c"__Three_var\00", section ".llvm.rodata.offloading", align 1
-// HOST: @.offloading.entry.__Three_var = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @__Three_var, ptr @.offloading.entry_name.1, i64 4, i64 0, ptr null }, section "llvm_offload_entries", align 8
+// HOST: @.offloading.entry.__Three_var = constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @__Three_var, ptr @.offloading.entry_name.1, i64 4, i64 0, ptr null }, section "llvm_offload_entries", align 8
 // HOST: @One = weak alias i32 (), ptr @__One
 // HOST: @One_ = alias i32 (), ptr @__One
 // HOST: @One_var = weak alias i32, ptr @__One_var

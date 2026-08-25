@@ -284,6 +284,7 @@ using NumTeams = tomp::clause::NumTeamsT<TypeTy, IdTy, ExprTy>;
 using NumThreads = tomp::clause::NumThreadsT<TypeTy, IdTy, ExprTy>;
 using OmpxAttribute = tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy>;
 using OmpxBare = tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy>;
+using OmpxName = tomp::clause::OmpxNameT<TypeTy, IdTy, ExprTy>;
 using OmpxDynCgroupMem = tomp::clause::OmpxDynCgroupMemT<TypeTy, IdTy, ExprTy>;
 using Order = tomp::clause::OrderT<TypeTy, IdTy, ExprTy>;
 using Ordered = tomp::clause::OrderedT<TypeTy, IdTy, ExprTy>;
