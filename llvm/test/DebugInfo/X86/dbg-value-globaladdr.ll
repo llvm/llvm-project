@@ -10,8 +10,8 @@
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4 -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF4
 
-@g = external global i64, align 8
-@tls = external thread_local global i64, align 8
+@g = global i64 0, align 8
+@tls = thread_local global i64 0, align 8
 
 ;; Nothing in the function materializes the address, so before this was
 ;; described the variable was dropped entirely.

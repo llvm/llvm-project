@@ -530,6 +530,9 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
 }
 
 bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV) {
+  // Only a definitions have an address a symbol reference can name.
+  if (GV->isDeclarationForLinker())
+    return false;
   // A thread-local's address is not known until it is resolved against a
   // thread's storage, which a plain symbol reference cannot express.
   if (GV->isThreadLocal())

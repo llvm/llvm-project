@@ -9,8 +9,8 @@
 ; RUN: llc -O2 -mtriple=aarch64-apple-macosx -global-isel -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
-@g = external global i64, align 8
-@tls = external thread_local global i64, align 8
+@g = global i64 0, align 8
+@tls = thread_local global i64 0, align 8
 
 ;; Nothing in the function materializes the address. GlobalISel has no dangling
 ;; debug info recovery at all, so before this the variable was dropped outright.
