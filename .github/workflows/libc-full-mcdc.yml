@@ -1,0 +1,149 @@
+name: Libc Full Codebase MC/DC Coverage
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+on:
+  # Daily overnight run at 02:30 UTC (staggered by 30 mins from baseline sweep)
+  schedule:
+    - cron: '30 2 * * *'
+
+  # Allow manual on-demand execution from GitHub Actions UI ("Run workflow" button)
+  workflow_dispatch:
+
+  # Trigger on pushes to main / libc-mcdc-coverage / post-commit-bot
+  push:
+    branches:
+      - main
+      - libc-mcdc-coverage
+      - post-commit-bot
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-full-mcdc.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-mcdc-coverage:
+    timeout-minutes: 60
+    name: libc-full-mcdc-coverage
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Compiler Cache (sccache)
+        uses: hendrikmuhs/ccache-action@v1.2.23
+        with:
+          max-size: 1G
+          key: libc_mcdc_coverage_unified_x86_64
+          variant: sccache
+
+      - name: Configure CMake with MC/DC
+        run: |
+          echo "=== [STAGE 1/4] Starting CMake Configuration (MC/DC) at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+          START_TIME=$(date +%s)
+
+          export CMAKE_FLAGS="
+            -G Ninja
+            -S runtimes
+            -B build-cov
+            -DCMAKE_C_COMPILER=clang-23
+            -DCMAKE_CXX_COMPILER=clang++-23
+            -DCMAKE_BUILD_TYPE=Debug
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+            -DLLVM_USE_LINKER=lld-23
+            -DLLVM_ENABLE_RUNTIMES=libc
+            -DLLVM_LIBC_FULL_BUILD=ON
+            -DLLVM_LIBC_ENABLE_COVERAGE=ON
+            -DLIBC_ENABLE_MCDC=ON
+            -DLIBC_TEST_UNIT_TEST_ONLY=ON
+            -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+            -DLIBC_TEST_SKIP_SHARED_TESTS=ON
+          "
+          cmake $CMAKE_FLAGS
+
+          END_TIME=$(date +%s)
+          echo "=== [STAGE 1/4] CMake Configuration Completed in $((END_TIME - START_TIME))s ==="
+
+      - name: Run Full Codebase Unit Tests
+        run: |
+          echo "=== [STAGE 2/4] Running Full Unit Test Suite at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+          START_TIME=$(date +%s)
+
+          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          ninja -k 0 -C build-cov libc-unit-tests || true
+
+          END_TIME=$(date +%s)
+          echo "=== [STAGE 2/4] libc-unit-tests Completed in $((END_TIME - START_TIME))s ==="
+
+      - name: Merge Profiles
+        run: |
+          echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+          find build-cov -name "libc_cov_*.profraw" > profraw_list.txt
+          NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
+          echo "[LOG] Discovered $NUM_PROFS raw profile data files."
+          llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
+          echo "[LOG] Merged full codebase profile into libc_full.profdata."
+
+      - name: Generate Reports and Summary
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH_REF: ${{ github.ref_name }}
+        run: |
+          echo "=== [STAGE 4/4] Generating Full Codebase MC/DC Coverage Reports at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+          EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
+          OBJECTS=("${EXECUTABLES[@]:1}")
+          OBJECTS=("${OBJECTS[@]/#/-object=}")
+
+          echo "[LOG] Exporting coverage data across ${#EXECUTABLES[@]} test binaries."
+
+          # 1. Generate JSON export for Full Coverage Analyzer (contains mcdc_records)
+          llvm-cov-23 export -format=text -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" > coverage.json
+
+          # 2. Generate HTML Coverage Report with directory hierarchy, branch tracking, and MC/DC truth tables
+          llvm-cov-23 show -format=html \
+            -output-dir=coverage_mcdc_html \
+            -instr-profile=libc_full.profdata \
+            "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
+            --show-directory-coverage \
+            --show-branches=count \
+            --show-mcdc \
+            --show-mcdc-summary \
+            --compilation-dir=. \
+            --path-equivalence="$GITHUB_WORKSPACE,." \
+            -ignore-filename-regex=".*(test|utils).*"
+          touch coverage_mcdc_html/.nojekyll
+
+          # 3. Run Full Coverage Analyzer
+          python3 libc/utils/coverage/full_report.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
+          echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
+
+      - name: Deploy MC/DC Coverage Report to GitHub Pages
+        if: github.repository != 'llvm/llvm-project'
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./coverage_mcdc_html
+          destination_dir: mcdc
+          keep_files: true
+          enable_jekyll: false
+          force_orphan: false
+
+

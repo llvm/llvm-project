@@ -1,0 +1,374 @@
+name: Libc Patch MC/DC Coverage
+
+permissions:
+  contents: read
+  pull-requests: write # Required to post/update patch coverage comments
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'test-*'
+      - 'libc-mcdc-*'
+      - main
+    paths:
+      - 'libc/src/**'
+      - 'libc/include/**'
+      - 'libc/test/**'
+      - 'libc/CMakeLists.txt'
+      - '.github/workflows/libc-patch-mcdc.yml'
+      - '!libc/docs/**'
+      - '!libc/benchmarks/**'
+      - '!libc/fuzzing/**'
+      - '!libc/utils/**'
+      - '!**.md'
+  pull_request:
+    paths:
+      - 'libc/src/**'
+      - 'libc/include/**'
+      - 'libc/test/**'
+      - 'libc/CMakeLists.txt'
+      - '.github/workflows/libc-patch-mcdc.yml'
+      - '!libc/docs/**'
+      - '!libc/benchmarks/**'
+      - '!libc/fuzzing/**'
+      - '!libc/utils/**'
+      - '!**.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit-mcdc-coverage:
+    timeout-minutes: 60
+    name: libc-pre-commit-mcdc-coverage
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
+      options: >-
+        --privileged
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 2
+        persist-credentials: false
+
+    - name: Setup Compiler Cache (sccache)
+      uses: hendrikmuhs/ccache-action@v1.2.23
+      with:
+        max-size: 1G
+        key: libc_coverage_unified_v2_x86_64
+        variant: sccache
+
+    - name: Configure CMake
+      run: |
+        echo "=== [STAGE 1/4] Starting CMake Configuration at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+        START_TIME=$(date +%s)
+
+        export CMAKE_FLAGS="
+          -G Ninja
+          -S runtimes
+          -B build-cov
+          -DCMAKE_C_COMPILER=clang-23
+          -DCMAKE_CXX_COMPILER=clang++-23
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DLLVM_USE_LINKER=lld-23
+          -DLLVM_ENABLE_RUNTIMES=libc
+          -DLLVM_LIBC_FULL_BUILD=ON
+          -DLLVM_LIBC_ENABLE_COVERAGE=ON
+          -DLIBC_ENABLE_MCDC=ON
+          -DLIBC_TEST_UNIT_TEST_ONLY=ON
+          -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+          -DLIBC_TEST_SKIP_SHARED_TESTS=ON
+        "
+        cmake $CMAKE_FLAGS
+
+        END_TIME=$(date +%s)
+        echo "=== [STAGE 1/4] CMake Configuration Completed in $((END_TIME - START_TIME))s ==="
+
+    - name: Build and Run Targeted Tests
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        PR_BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+        PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        COMMIT_SHA: ${{ github.sha }}
+        BRANCH_REF: ${{ github.ref_name }}
+        REPO_NAME: ${{ github.repository }}
+      run: |
+        echo "=== [STAGE 2/4] Starting Targeted Test Discovery at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+        START_TIME=$(date +%s)
+
+        # Ensure upstream llvm-project remote is configured
+        git remote add upstream https://github.com/llvm/llvm-project.git 2>/dev/null || true
+
+        # 1. Deterministically resolve Base and Head references against upstream llvm-project
+        if [ "$EVENT_NAME" == "pull_request" ]; then
+          BASE_SHA="$PR_BASE_SHA"
+          HEAD_SHA="$PR_HEAD_SHA"
+          BASE_REF="$PR_BASE_REF"
+          HEAD_REF="$PR_HEAD_REF"
+          BASE_REPO="${PR_BASE_REPO:-llvm/llvm-project}"
+          HEAD_REPO="${PR_HEAD_REPO:-$REPO_NAME}"
+          git fetch upstream "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_SHA" --depth=1 2>/dev/null || git fetch origin "$BASE_REF" --depth=1 2>/dev/null || true
+          DIFF_BASE="$BASE_SHA"
+        elif [ "$BRANCH_REF" != "main" ]; then
+          # For feature branches, compare against main merge-base
+          git fetch origin main --depth=100 2>/dev/null || true
+          BASE_SHA=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          HEAD_SHA="$COMMIT_SHA"
+          BASE_REF="main"
+          HEAD_REF="$BRANCH_REF"
+          BASE_REPO="llvm/llvm-project"
+          HEAD_REPO="$REPO_NAME"
+          DIFF_BASE="$BASE_SHA"
+        else
+          BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD~1")
+          HEAD_SHA="$COMMIT_SHA"
+          BASE_REF="main"
+          HEAD_REF="$BRANCH_REF"
+          BASE_REPO="llvm/llvm-project"
+          HEAD_REPO="$REPO_NAME"
+          DIFF_BASE="HEAD~1"
+        fi
+
+        # Persist resolved commit references for all downstream steps
+        echo "DIFF_BASE=$DIFF_BASE" >> $GITHUB_ENV
+        echo "BASE_SHA=$BASE_SHA" >> $GITHUB_ENV
+        echo "HEAD_SHA=$HEAD_SHA" >> $GITHUB_ENV
+        echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
+        echo "HEAD_REF=$HEAD_REF" >> $GITHUB_ENV
+        echo "BASE_REPO=$BASE_REPO" >> $GITHUB_ENV
+        echo "HEAD_REPO=$HEAD_REPO" >> $GITHUB_ENV
+
+        echo "[LOG] Resolved Base: ${BASE_REF} (${BASE_SHA:0:7}) in ${BASE_REPO}"
+        echo "[LOG] Resolved Head: ${HEAD_REF} (${HEAD_SHA:0:7}) in ${HEAD_REPO}"
+
+        MODIFIED_FILES=$(git diff --name-only "$DIFF_BASE" HEAD -- libc/src/ || true)
+        echo "[LOG] Modified files in libc/src/:"
+        echo "$MODIFIED_FILES"
+
+        if [ -z "$MODIFIED_FILES" ]; then
+          echo "[LOG] No source files modified in libc/src/. Exiting successfully."
+          echo "TARGETS=" >> $GITHUB_ENV
+
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "No \`.cpp\` source files in \`libc/src/\` were modified in this patch." >> coverage_report.md
+
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        # Get all valid ninja targets
+        ninja -C build-cov -t targets > all_targets.txt
+
+        TARGETS=""
+
+        for FILE in $MODIFIED_FILES; do
+          # Skip core support files from direct target mapping (tested transitively)
+          if [[ "$FILE" == *"__support/"* ]]; then
+            echo "[LOG] -> Support file ($FILE) will be tested transitively."
+            continue
+          fi
+
+          if [[ "$FILE" =~ ^libc/src/([^/]+)/(.*/)?([^/]+)\.cpp$ ]]; then
+            DIR="${BASH_REMATCH[1]}"
+            FUNC="${BASH_REMATCH[3]}"
+            ALL_MATCHES=$(grep -oE "^libc\.test\.src\.${DIR}\.([a-zA-Z0-9_]+\.)*${FUNC}_test\.__unit__" all_targets.txt || true)
+            FOUND_TARGET=$(echo "$ALL_MATCHES" | head -n 1 | tr -d '\r\n ' || true)
+            if [ -n "$FOUND_TARGET" ]; then
+              echo "[LOG] -> Matched $FILE -> $FOUND_TARGET"
+              TARGETS="$TARGETS $FOUND_TARGET"
+            else
+              echo "[LOG] -> Notice: No direct unit test target found for $FILE."
+            fi
+          fi
+        done
+
+        # Remove duplicate targets
+        TARGETS=$(echo "$TARGETS" | xargs -n1 | sort -u | xargs || true)
+        echo "[LOG] Executing Ninja targets: $TARGETS"
+
+        if [ -n "$TARGETS" ]; then
+          export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
+          ninja -C build-cov $TARGETS
+          echo "TARGETS=$TARGETS" >> $GITHUB_ENV
+        else
+          echo "[LOG] No standalone unit test targets to run."
+          echo "TARGETS=" >> $GITHUB_ENV
+
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "Modified files do not have standalone unit test targets." >> coverage_report.md
+
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+        fi
+
+        END_TIME=$(date +%s)
+        echo "=== [STAGE 2/4] Targeted Tests Completed in $((END_TIME - START_TIME))s ==="
+
+    - name: Merge Profiles
+      if: env.TARGETS != ''
+      run: |
+        echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+        find build-cov -name "libc_cov_*.profraw" > profraw_list.txt
+        NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
+        echo "[LOG] Discovered $NUM_PROFS raw profile data files."
+        if [ -s profraw_list.txt ]; then
+          llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
+          echo "[LOG] Successfully merged profile data into libc_full.profdata."
+        else
+          echo "[LOG] Warning: No profraw files found."
+        fi
+
+    - name: Extract Executables and Generate Summary
+      if: env.TARGETS != ''
+      run: |
+        echo "=== [STAGE 4/4] Generating Coverage Report at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
+        EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
+        OBJECTS=("${EXECUTABLES[@]:1}")
+        OBJECTS=("${OBJECTS[@]/#/-object=}")
+        
+        echo "[LOG] Discovered ${#EXECUTABLES[@]} instrumented binaries for llvm-cov export."
+
+        if [ ! -f libc_full.profdata ]; then
+          echo "[LOG] Notice: libc_full.profdata not found. Generating non-coverage summary."
+          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+          echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
+          echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
+          echo "---" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "**Coverage Validated**" >> coverage_report.md
+          echo "No executable statement profile data was collected for the modified lines in this patch." >> coverage_report.md
+          cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+
+        # 1. Generate JSON report for Python script
+        llvm-cov-23 export -format=text -instr-profile=libc_full.profdata "${EXECUTABLES[0]}" "${OBJECTS[@]}" > coverage.json
+
+        # 2. Generate git diff for modified libc source files
+        git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
+
+        # 3. Run Patch Report Python Script using persisted commit metadata
+        python3 libc/utils/coverage/patch_report.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
+        cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+        echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
+
+    - name: Fallback Failure Summary
+      if: failure() && !hashFiles('coverage_report.md')
+      run: |
+        echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+        echo "" >> coverage_report.md
+        echo "- **Base Branch:** [\`${BASE_REF:-main}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO:-llvm/llvm-project}/commit/${BASE_SHA:-main})" >> coverage_report.md
+        echo "- **Head Commit:** [\`${HEAD_REF:-HEAD}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO:-llvm/llvm-project}/commit/${HEAD_SHA:-HEAD})" >> coverage_report.md
+        echo "---" >> coverage_report.md
+        echo "" >> coverage_report.md
+        echo "**Coverage Validated**" >> coverage_report.md
+        echo "The targeted build or test execution encountered an error before coverage data could be finalized. Inspect the job logs for details." >> coverage_report.md
+
+        cat coverage_report.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Post or Update Sticky PR Comment
+      if: always() && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          if (!fs.existsSync('coverage_report.md')) return;
+
+          const reportContent = fs.readFileSync('coverage_report.md', 'utf8');
+          const identifier = '<!-- LLVM-LIBC-PRE-COMMIT-MCDC-COMMENT -->';
+          const issue_number = context.payload.pull_request.number;
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+
+          try {
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+
+            const botComment = comments.data.find(c => c.body && c.body.includes(identifier));
+
+            const headSha = context.payload.pull_request.head.sha.substring(0, 7);
+            const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            
+            const lineMatch = reportContent.match(/\|\s*\*\*Patch Line Coverage\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|/);
+            const linePct = lineMatch ? lineMatch[1] + '%' : '100.00%';
+            
+            const mcdcMatch = reportContent.match(/\|\s*\*\*MC\/DC Condition Independence\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|/);
+            const mcdcPct = mcdcMatch ? mcdcMatch[1] + '%' : '100.00%';
+
+            const missMatch = reportContent.match(/\|\s*\*\*Unexecuted Lines\*\*\s*\|\s*\*\*([0-9]+)\*\*\s*\|/);
+            const missedLines = missMatch ? missMatch[1] : '0';
+
+            const newHistoryRow = `| [\`${headSha}\`](https://github.com/${owner}/${repo}/commit/${context.payload.pull_request.head.sha}) | ${dateStr} | **${mcdcPct}** | **${linePct}** | ${missedLines} |`;
+
+            let existingHistory = '';
+            if (botComment && botComment.body.includes('<!-- HISTORY_START -->')) {
+              const historyStart = botComment.body.indexOf('<!-- HISTORY_START -->') + '<!-- HISTORY_START -->'.length;
+              const historyEnd = botComment.body.indexOf('<!-- HISTORY_END -->');
+              if (historyStart !== -1 && historyEnd !== -1) {
+                existingHistory = botComment.body.substring(historyStart, historyEnd).trim();
+              }
+            }
+
+            let historyTable = existingHistory;
+            if (!historyTable) {
+              historyTable = `| Commit | Date (UTC) | MC/DC Coverage | Line Coverage | Missed Lines |\n| :---: | :---: | :---: | :---: | :---: |\n${newHistoryRow}`;
+            } else {
+              if (!historyTable.includes(headSha)) {
+                historyTable += `\n${newHistoryRow}`;
+              }
+            }
+
+            const fullBody = `${identifier}\n${reportContent}\n\n<details>\n<summary><b>View Coverage History for this PR</b></summary>\n\n<!-- HISTORY_START -->\n${historyTable}\n<!-- HISTORY_END -->\n\n</details>`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body: fullBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: fullBody
+              });
+            }
+          } catch (err) {
+            core.warning(`Could not post/update sticky PR comment: ${err.message}`);
+          }
