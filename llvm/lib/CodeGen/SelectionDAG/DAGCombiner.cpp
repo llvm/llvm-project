@@ -5964,6 +5964,8 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
                                 ISD::matchUnaryPredicate(
                                     Y,
                                     [&](auto *C) {
+                                      if (!C)
+                                        return true;
                                       const APInt &YConst = C->getAsAPIntVal();
                                       return (Opcode == ISD::ABDS)
                                                  ? YConst.isSignedIntN(Bits)
