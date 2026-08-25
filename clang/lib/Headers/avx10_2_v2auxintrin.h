@@ -2104,7 +2104,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    The packed element size in bits, in the range [2, 7].
 /// \returns
 ///    Bits [4:2] of the immediate operand.
-#define _MM_UNPACKB_SIZE(n) (((n)&0x7) << 2)
+#define _MM_UNPACKB_SIZE(n) (((n) & 0x7) << 2)
 
 /// Compose the \c start field of the immediate operand of \c VUNPACKB, which
 ///    selects which block of packed elements is extracted from the source.
@@ -2116,7 +2116,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    the element size; only offsets that allow a full extraction are valid.
 /// \returns
 ///    Bits [1:0] of the immediate operand.
-#define _MM_UNPACKB_START(s) (((s)&0x3) << 0)
+#define _MM_UNPACKB_START(s) (((s) & 0x3) << 0)
 
 /// The \c sign \c ext field of the immediate operand of \c VUNPACKB,
 ///    requesting that unpacked elements be sign-extended to 8 bits instead of
