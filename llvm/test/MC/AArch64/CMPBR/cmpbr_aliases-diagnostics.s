@@ -21,5 +21,9 @@ L:
     cbls x5, #63, L
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-1, 62]
 
-   cbls x3, w5, L
+    cbls x3, w5, L
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-1, 62]
+
+    cbge w5, 1f, L
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: expected constant expression
+1:
