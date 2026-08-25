@@ -14,7 +14,7 @@
 !4 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !3, file: !1,
                     line: 8, baseType: !2, size: 32)
 
-; CHECK-NEXT: !6 = !DIProperty(name: "x", file: !1, line: 8, type: !2, getter: !5)
-!5 = !DIProperty(name: "x", file: !1, line: 8, type: !2, getter: !4)
+; CHECK-NEXT: !6 = !DIProperty(name: "x", file: !1, line: 8, type: !2, backing_storage: !5)
+!5 = !DIProperty(name: "x", file: !1, line: 8, type: !2, backing_storage: !4)
 
-!6 = !DIProperty(name: "x", file: !1, line: 8, type: !2, getter: !4)
+!6 = !DIProperty(name: "x", file: !1, line: 8, type: !2, backing_storage: !4)

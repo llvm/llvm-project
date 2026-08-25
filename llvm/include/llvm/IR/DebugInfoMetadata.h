@@ -4616,8 +4616,8 @@ public:
 /// accessed like a data member, but whose access is implemented by invoking a
 /// user-defined or compiler-generated accessor.
 ///
-/// Currently only the getter is modelled, and it must forward to a data
-/// member holding the property's backing storage.
+/// Currently only the backing storage is modelled, and it must be a data
+/// member holding the property's storage.
 class DIProperty : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -4628,32 +4628,33 @@ class DIProperty : public DINode {
              ArrayRef<Metadata *> Ops);
   ~DIProperty() = default;
 
-  static DIProperty *getImpl(LLVMContext &Context, StringRef Name, DIFile *File,
-                             unsigned Line, DIType *Type, DINode *Getter,
-                             StorageType Storage, bool ShouldCreate = true) {
+  static DIProperty *getImpl(LLVMContext &Context, StringRef Name,
+                             DIFile *File, unsigned Line, DIType *Type,
+                             DINode *BackingStorage, StorageType Storage,
+                             bool ShouldCreate = true) {
     return getImpl(Context, getCanonicalMDString(Context, Name), File, Line,
-                   Type, Getter, Storage, ShouldCreate);
+                   Type, BackingStorage, Storage, ShouldCreate);
   }
   LLVM_ABI static DIProperty *getImpl(LLVMContext &Context, MDString *Name,
                                       Metadata *File, unsigned Line,
-                                      Metadata *Type, Metadata *Getter,
+                                      Metadata *Type, Metadata *BackingStorage,
                                       StorageType Storage,
                                       bool ShouldCreate = true);
 
   TempDIProperty cloneImpl() const {
     return getTemporary(getContext(), getName(), getFile(), getLine(),
-                        getType(), getGetter());
+                        getType(), getBackingStorage());
   }
 
 public:
   DEFINE_MDNODE_GET(DIProperty,
                     (StringRef Name, DIFile *File, unsigned Line, DIType *Type,
-                     DINode *Getter),
-                    (Name, File, Line, Type, Getter))
+                     DINode *BackingStorage),
+                    (Name, File, Line, Type, BackingStorage))
   DEFINE_MDNODE_GET(DIProperty,
                     (MDString * Name, Metadata *File, unsigned Line,
-                     Metadata *Type, Metadata *Getter),
-                    (Name, File, Line, Type, Getter))
+                     Metadata *Type, Metadata *BackingStorage),
+                    (Name, File, Line, Type, BackingStorage))
 
   TempDIProperty clone() const { return cloneImpl(); }
 
@@ -4662,10 +4663,12 @@ public:
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
   DIType *getType() const { return cast_or_null<DIType>(getRawType()); }
 
-  /// The entity the getter forwards to, i.e. the target of
-  /// \c DW_AT_property_forward on this property's \c DW_TAG_property_getter
-  /// child. This is the data member holding the property's backing storage.
-  DINode *getGetter() const { return cast_or_null<DINode>(getRawGetter()); }
+  /// The data member holding the property's backing storage, i.e. the target
+  /// of \c DW_AT_property_forward on this property's
+  /// \c DW_TAG_property_getter child.
+  DINode *getBackingStorage() const {
+    return cast_or_null<DINode>(getRawBackingStorage());
+  }
 
   StringRef getFilename() const {
     if (auto *F = getFile())
@@ -4682,7 +4685,7 @@ public:
   MDString *getRawName() const { return getOperandAs<MDString>(0); }
   Metadata *getRawFile() const { return getOperand(1); }
   Metadata *getRawType() const { return getOperand(2); }
-  Metadata *getRawGetter() const { return getOperand(3); }
+  Metadata *getRawBackingStorage() const { return getOperand(3); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIPropertyKind;

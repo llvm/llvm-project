@@ -6702,19 +6702,19 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
 
 /// parseDIProperty:
 ///   ::= !DIProperty(name: "x", file: !1, line: 7, type: !2,
-///                   getter: !3)
+///                   backing_storage: !3)
 bool LLParser::parseDIProperty(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(file, MDField, );                                                   \
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(type, MDField, );                                                   \
-  OPTIONAL(getter, MDField, );
+  OPTIONAL(backing_storage, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIProperty, (Context, name.Val, file.Val, line.Val,
-                                        type.Val, getter.Val));
+                                        type.Val, backing_storage.Val));
   return false;
 }
 

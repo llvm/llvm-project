@@ -6,10 +6,9 @@
 
 ; VERIFY: No errors.
 
-; A property whose getter forwards to the data member holding its backing
-; storage. This models an Objective-C `@property`, where `x` is a synthesized
-; getter over the backing ivar `_x`, so a consumer can read the storage
-; directly instead of calling the getter.
+; A property that forwards to the data member holding its backing storage.
+; This models an Objective-C `@property` synthesized over the backing ivar
+; `_x`, so a consumer can read the storage directly.
 ;
 ; "Foo" lists the member before the property, "Bar" lists the property before
 ; the member. Emission must not depend on that order.
@@ -51,9 +50,9 @@
 !6 = !{!7, !9}
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !5, file: !3, line: 8, baseType: !8, size: 64)
 !8 = !DIBasicType(name: "Int", size: 64, encoding: DW_ATE_signed)
-!9 = !DIProperty(name: "x", file: !3, line: 8, type: !8, getter: !7)
+!9 = !DIProperty(name: "x", file: !3, line: 8, type: !8, backing_storage: !7)
 
 !10 = !DICompositeType(tag: DW_TAG_class_type, name: "Bar", scope: !3, file: !3, line: 12, size: 64, elements: !11)
 !11 = !{!13, !12}
 !12 = !DIDerivedType(tag: DW_TAG_member, name: "_y", scope: !10, file: !3, line: 13, baseType: !8, size: 64)
-!13 = !DIProperty(name: "y", file: !3, line: 13, type: !8, getter: !12)
+!13 = !DIProperty(name: "y", file: !3, line: 13, type: !8, backing_storage: !12)

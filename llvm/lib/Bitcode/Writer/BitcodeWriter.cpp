@@ -2520,7 +2520,7 @@ void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
-  Record.push_back(VE.getMetadataOrNullID(N->getGetter()));
+  Record.push_back(VE.getMetadataOrNullID(N->getBackingStorage()));
 
   Stream.EmitRecord(bitc::METADATA_PROPERTY, Record, Abbrev);
   Record.clear();

@@ -573,8 +573,8 @@ DIBuilder::createObjCProperty(StringRef Name, DIFile *File, unsigned LineNumber,
 
 DIProperty *DIBuilder::createProperty(StringRef Name, DIFile *File,
                                       unsigned LineNumber, DIType *Ty,
-                                      DIDerivedType *Getter) {
-  return DIProperty::get(VMContext, Name, File, LineNumber, Ty, Getter);
+                                      DIDerivedType *BackingStorage) {
+  return DIProperty::get(VMContext, Name, File, LineNumber, Ty, BackingStorage);
 }
 
 DITemplateTypeParameter *

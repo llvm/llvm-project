@@ -1401,23 +1401,24 @@ template <> struct MDNodeKeyImpl<DIProperty> {
   Metadata *File;
   unsigned Line;
   Metadata *Type;
-  Metadata *Getter;
+  Metadata *BackingStorage;
 
   MDNodeKeyImpl(MDString *Name, Metadata *File, unsigned Line, Metadata *Type,
-                Metadata *Getter)
-      : Name(Name), File(File), Line(Line), Type(Type), Getter(Getter) {}
+                Metadata *BackingStorage)
+      : Name(Name), File(File), Line(Line), Type(Type),
+        BackingStorage(BackingStorage) {}
   MDNodeKeyImpl(const DIProperty *N)
       : Name(N->getRawName()), File(N->getRawFile()), Line(N->getLine()),
-        Type(N->getRawType()), Getter(N->getRawGetter()) {}
+        Type(N->getRawType()), BackingStorage(N->getRawBackingStorage()) {}
 
   bool isKeyOf(const DIProperty *RHS) const {
     return Name == RHS->getRawName() && File == RHS->getRawFile() &&
            Line == RHS->getLine() && Type == RHS->getRawType() &&
-           Getter == RHS->getRawGetter();
+           BackingStorage == RHS->getRawBackingStorage();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Name, File, Line, Type, Getter);
+    return hash_combine(Name, File, Line, Type, BackingStorage);
   }
 };
 

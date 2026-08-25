@@ -2027,10 +2027,10 @@ void DwarfUnit::constructPropertyDIE(DIE &Buffer, const DIProperty *P) {
     addType(PropertyDie, Ty);
   addSourceLine(PropertyDie, P);
 
-  if (DINode *Getter = P->getGetter()) {
+  if (DINode *BackingStorage = P->getBackingStorage()) {
     DIE &GetterDie =
         createAndAddDIE(dwarf::DW_TAG_property_getter, PropertyDie);
-    PropertyForwardMap.insert(std::make_pair(&GetterDie, Getter));
+    PropertyForwardMap.insert(std::make_pair(&GetterDie, BackingStorage));
   }
 }
 

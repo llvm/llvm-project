@@ -1781,10 +1781,10 @@ void Verifier::visitDIProperty(const DIProperty &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
   // DWARF allows a property getter to forward to a subprogram, variable, or
   // constant too, but the backend only knows how to forward to a member.
-  if (DINode *G = N.getGetter()) {
-    auto *DT = dyn_cast<DIDerivedType>(G);
+  if (DINode *BackingStorage = N.getBackingStorage()) {
+    auto *DT = dyn_cast<DIDerivedType>(BackingStorage);
     CheckDI(DT && DT->getTag() == dwarf::DW_TAG_member,
-            "property getter must be a member", &N, G);
+            "property backing storage must be a member", &N, BackingStorage);
   }
 }
 

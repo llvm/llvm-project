@@ -5,14 +5,14 @@
 !0 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 !1 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
-; A getter must forward to the data member holding the backing storage.
-; CHECK: property getter must be a member
-!2 = !DIProperty(name: "x", file: !0, line: 8, type: !1, getter: !1)
+; The backing storage must be the data member holding the property's storage.
+; CHECK: property backing storage must be a member
+!2 = !DIProperty(name: "x", file: !0, line: 8, type: !1, backing_storage: !1)
 
-; CHECK: property getter must be a member
-!3 = !DIProperty(name: "x", file: !0, line: 8, type: !1, getter: !0)
+; CHECK: property backing storage must be a member
+!3 = !DIProperty(name: "x", file: !0, line: 8, type: !1, backing_storage: !0)
 
 ; A pointer is a DIDerivedType, but not a DW_TAG_member.
-; CHECK: property getter must be a member
-!4 = !DIProperty(name: "x", file: !0, line: 8, type: !1, getter: !5)
+; CHECK: property backing storage must be a member
+!4 = !DIProperty(name: "x", file: !0, line: 8, type: !1, backing_storage: !5)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !1, size: 64)

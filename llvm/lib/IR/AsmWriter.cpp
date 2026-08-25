@@ -2708,7 +2708,7 @@ static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
   Printer.printMetadata("type", N->getRawType());
-  Printer.printMetadata("getter", N->getRawGetter());
+  Printer.printMetadata("backing_storage", N->getRawBackingStorage());
   Out << ")";
 }
 
