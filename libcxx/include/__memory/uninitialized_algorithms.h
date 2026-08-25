@@ -27,10 +27,10 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -302,6 +302,40 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 }
 
 #endif // _LIBCPP_STD_VER >= 17
+
+// __uninitialized_relocate relocates the objects in [__first, __last) into __result element-by-element from __first to
+// __last. Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and
+// destroy, except that the move constructor and destructor may never be called if they are known to be equivalent to a
+// memcpy.
+//
+// Preconditions:  At __result there is no object and [__first, __last) contains objects
+// Postconditions: If no exceptions were thrown, __result contains the objects from [__first, __last), otherwise it
+//                 doesn't contain any objects.
+//                 [__first, __last) doesn't contain any objects.
+template <class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  // TODO: Accept non-trivially relocatable types
+  static_assert(__is_trivially_relocatable_v<_ValueType>);
+
+  if (__libcpp_is_constant_evaluated()) {
+    auto __iter = __first;
+    while (__iter != __last) {
+      std::__construct_at(std::__to_address(__result), std::move(*__iter));
+      std::__destroy_at(std::__to_address(__iter));
+      ++__iter;
+      ++__result;
+    }
+  } else {
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memmove(static_cast<void*>(std::__to_address(__result)),
+                      std::__to_address(__first),
+                      sizeof(_ValueType) * (__last - __first));
+  }
+}
 
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {

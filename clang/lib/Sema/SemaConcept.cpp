@@ -269,6 +269,12 @@ public:
     return Result;
   }
 
+  QualType TransformPackIndexingType(TypeLocBuilder &TLB,
+                                     PackIndexingTypeLoc TL) {
+    llvm::SaveAndRestore _1(RemoveNonPackExpansionPacks, false);
+    return inherited::TransformPackIndexingType(TLB, TL);
+  }
+
   bool AlreadyTransformed(QualType T) {
     if (T.isNull())
       return true;

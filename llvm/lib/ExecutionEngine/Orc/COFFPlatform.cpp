@@ -731,25 +731,21 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
 
 Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
                                       StringRef SymbolName) {
-  ExecutorAddr jit_function;
-  auto AfterCLookupErr = lookupAndRecordAddrs(
-      ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-      {{ES.intern(SymbolName), &jit_function}});
-  if (!AfterCLookupErr) {
-    CallInt32VoidProxy CallFn;
-    if (auto Err =
-            lookupAndApply(ES.getBootstrapJITDylib(),
-                           {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
-      return Err;
-    auto Res = CallFn(ES, jit_function);
-    if (!Res)
-      return Res.takeError();
-    return Error::success();
-  }
-  if (!AfterCLookupErr.isA<SymbolsNotFound>())
-    return AfterCLookupErr;
-  consumeError(std::move(AfterCLookupErr));
-  return Error::success();
+  ExecutorAddr TargetFn;
+  if (auto Err = lookupAndApply(
+          PlatformJD, {recordAddr(SymbolName, &TargetFn,
+                                  SymbolLookupFlags::WeaklyReferencedSymbol)}))
+    return Err;
+  if (!TargetFn)
+    return Error::success(); // No target function.
+
+  CallInt32VoidProxy CallFn;
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
+    return Err;
+
+  return CallFn(ES, TargetFn).takeError();
 }
 
 void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(
