@@ -86,19 +86,17 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_RET:
     LowerPATCHABLE_RET(*MI, Lower);
     return;
-  case SystemZ::CallBASR: {
+  case SystemZ::CallBASR:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
                                      .addReg(SystemZ::R14D)
                                      .addReg(MI->getOperand(0).getReg()));
     return;
-  }
-  case SystemZ::CallBRASL: {
+  case SystemZ::CallBRASL:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                      .addReg(SystemZ::R14D)
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
                                                             SystemZ::S_PLT)));
     return;
-  }
   case SystemZ::CallJG:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::JG)
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
@@ -111,15 +109,14 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                      .addExpr(Lower.getExpr(MI->getOperand(2),
                                                             SystemZ::S_PLT)));
     return;
-  case SystemZ::TLS_GDCALL: {
+  case SystemZ::TLS_GDCALL:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BRASL)
                                      .addReg(SystemZ::R14D)
                                      .addExpr(getTLSGetOffset(MF->getContext()))
                                      .addExpr(Lower.getExpr(MI->getOperand(0),
                                                             SystemZ::S_TLSGD)));
     return;
-  }
-  case SystemZ::TLS_LDCALL: {
+  case SystemZ::TLS_LDCALL:
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(SystemZ::BRASL)
@@ -127,7 +124,6 @@ void SystemZELFAsmPrinter::emitInstruction(const MachineInstr *MI) {
             .addExpr(getTLSGetOffset(MF->getContext()))
             .addExpr(Lower.getExpr(MI->getOperand(0), SystemZ::S_TLSLDM)));
     return;
-  }
   case SystemZ::GOT:
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(SystemZ::LARL)
