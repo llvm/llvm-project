@@ -2210,8 +2210,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // Widened loads are handled, as cse() guards their reuse with a memory
-    // epoch check. Any other memory access is rejected.
+    // Widened loads are handled, as cse() only reuses them within a block with
+    // no intervening memory write. Any other memory access is rejected.
     if (Def->mayWriteToMemory())
       return false;
     return !Def->mayReadFromMemory() || isa<VPWidenLoadRecipe>(Def);
@@ -2228,10 +2228,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return hash_combine(Result, RFlags->getPredicate());
     if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Def))
       return hash_combine(Result, SIVSteps->getInductionOpcode());
-    // Fold in the separately stored consecutive/masked flags. Alignment is left
-    // out of the key and checked by cse().
+    // Fold in the separately stored consecutive flag. Alignment is left out and
+    // handled by cse.
     if (auto *Load = dyn_cast<VPWidenLoadRecipe>(Def))
-      return hash_combine(Result, Load->isConsecutive(), Load->isMasked());
+      return hash_combine(Result, Load->isConsecutive());
     return Result;
   }
 
@@ -2256,14 +2256,11 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
-    // Compare the separately stored consecutive/masked flags. Alignment is left
-    // out and checked by cse().
-    if (auto *LL = dyn_cast<VPWidenLoadRecipe>(L)) {
-      auto *RL = cast<VPWidenLoadRecipe>(R);
-      if (LL->isConsecutive() != RL->isConsecutive() ||
-          LL->isMasked() != RL->isMasked())
+    // Compare the separately stored consecutive flag. Alignment is left out and
+    // handled by cse.
+    if (auto *LL = dyn_cast<VPWidenLoadRecipe>(L))
+      if (LL->isConsecutive() != cast<VPWidenLoadRecipe>(R)->isConsecutive())
         return false;
-    }
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
     if (isa<VPWidenPHIRecipe>(L) && L->getParent() != R->getParent())
@@ -2282,56 +2279,50 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 };
 } // end anonymous namespace
 
-/// Perform a common-subexpression-elimination of single-def recipes on the \p
+/// Perform a common-subexpression-elimination of VPSingleDefRecipes on the \p
 /// Plan.
 void VPlanTransforms::cse(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
-  // Maps a recipe to the equivalent recipe recorded earlier, together with the
-  // memory epoch it was recorded at.
-  DenseMap<VPSingleDefRecipe *, std::pair<VPSingleDefRecipe *, unsigned>,
-           VPCSEDenseMapInfo>
-      CSEMap;
-  // Incremented for every recipe that may write to memory.
-  unsigned MemEpoch = 0;
+  DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
+  // CSE map for widened loads.
+  DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo>
+      LoadCSEMap;
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    LoadCSEMap.clear();
     for (VPRecipeBase &R : *VPBB) {
       if (R.mayWriteToMemory())
-        ++MemEpoch;
+        LoadCSEMap.clear();
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
-      auto It = CSEMap.find(Def);
-      if (It != CSEMap.end()) {
-        auto [V, Epoch] = It->second;
-        // V must dominate Def for a valid replacement.
-        if (!VPDT.dominates(V->getParent(), VPBB))
-          continue;
-        if (auto *EarlierLoad = dyn_cast<VPWidenLoadRecipe>(V)) {
-          auto *Load = cast<VPWidenLoadRecipe>(Def);
-          // Reuse EarlierLoad only if it is at least as aligned as Load and in
-          // the same block, with an unchanged epoch meaning no write lies
-          // between the two loads.
-          bool CanReuse = EarlierLoad->getAlign() >= Load->getAlign() &&
-                          EarlierLoad->getParent() == VPBB && Epoch == MemEpoch;
-          if (!CanReuse) {
-            // Record Load as the candidate for subsequent loads, as it may be
-            // reusable where EarlierLoad is not.
-            CSEMap[Def] = {Def, MemEpoch};
-            continue;
-          }
-          // Keep only metadata common to both loads on the survivor.
-          EarlierLoad->intersect(*Load);
-        }
-        // Only keep flags present on both V and Def.
-        if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
-          RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
-        Def->replaceAllUsesWith(V);
+      bool IsLoad = isa<VPWidenLoadRecipe>(Def);
+      auto [It, Inserted] =
+          (IsLoad ? LoadCSEMap : CSEMap).try_emplace(Def, Def);
+      if (Inserted)
         continue;
+      VPSingleDefRecipe *V = It->second;
+      // V must dominate Def for a valid replacement.
+      if (!VPDT.dominates(V->getParent(), VPBB))
+        continue;
+      if (IsLoad) {
+        auto *EarlierLoad = cast<VPWidenLoadRecipe>(V);
+        auto *Load = cast<VPWidenLoadRecipe>(Def);
+        if (EarlierLoad->getAlign() < Load->getAlign()) {
+          // Record Load as the candidate for subsequent loads, as it may be
+          // reusable where EarlierLoad is not.
+          It->second = Load;
+          continue;
+        }
+        // Keep only metadata common to both loads on the survivor.
+        EarlierLoad->intersect(*Load);
       }
-      CSEMap[Def] = {Def, MemEpoch};
+      // Only keep flags present on both V and Def.
+      if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
+        RFlags->intersectFlags(*cast<VPRecipeWithIRFlags>(Def));
+      Def->replaceAllUsesWith(V);
     }
   }
 }
