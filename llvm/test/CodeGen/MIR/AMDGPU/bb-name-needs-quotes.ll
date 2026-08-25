@@ -1,12 +1,9 @@
-; Basic block names that are not plain identifiers must be quoted when printed,
-; otherwise the MIR that llc emits cannot be parsed back by llc. The names here
-; contain commas and spaces, which is the shape a Fortran front end emits.
-;
-; Check both that the name is quoted on the way out and that the result parses.
+; Block names that are not plain identifiers must be quoted, otherwise llc
+; cannot parse back the MIR it just wrote.
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -stop-before=greedy -o %t.mir %s
 ; RUN: FileCheck %s < %t.mir
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -x mir -start-before=greedy -o /dev/null %t.mir
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -x mir -start-before=greedy -filetype=null %t.mir
 
 ; CHECK: bb.0.entry:
 ; CHECK: bb.1.", bb71":
