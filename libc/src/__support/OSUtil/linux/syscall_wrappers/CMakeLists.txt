@@ -943,12 +943,10 @@ add_header_library(
 )
 
 add_header_library(
-<<<<<<< HEAD
   rt_sigaction
   HDRS
     rt_sigaction.h
   DEPENDS
-<<<<<<< HEAD
     libc.hdr.types.sigset_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
