@@ -7301,6 +7301,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_pmul:
     return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  case Intrinsic::aarch64_sve_psel: {
+    if (Op.getValueType() != MVT::aarch64svcount)
+      return Op;
+    // Lower predicate-as-counter variants to reuse normal predicate isel.
+    SmallVector<SDValue> Ops(Op->ops());
+    Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Ops[1]);
+    SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
+  }
   }
 }
 

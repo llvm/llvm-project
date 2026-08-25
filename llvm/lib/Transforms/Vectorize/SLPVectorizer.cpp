@@ -18378,7 +18378,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
           const bool HasState = TE->hasState();
           const unsigned Op = HasState ? TE->getOpcode() : 0u;
           if (IsGather && (!HasState || Op != Instruction::ExtractElement) &&
-              count_if(TE->Scalars, IsaPred<ExtractElementInst>) <= Limit)
+              static_cast<unsigned>(
+                  count_if(TE->Scalars, IsaPred<ExtractElementInst>)) <= Limit)
             return true;
           return HasState && Op == Instruction::PHI;
         }))
@@ -18393,7 +18394,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         const bool HasState = TE->hasState();
         const unsigned Op = HasState ? TE->getOpcode() : 0u;
         if (IsGather && (!HasState || Op != Instruction::ExtractElement) &&
-            count_if(TE->Scalars, IsaPred<ExtractElementInst>) <= Limit)
+            static_cast<unsigned>(
+                count_if(TE->Scalars, IsaPred<ExtractElementInst>)) <= Limit)
           return true;
         if (!HasState)
           return false;
