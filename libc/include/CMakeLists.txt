@@ -377,6 +377,8 @@ add_header_macro(
     .llvm-libc-types.tm_gmtoff_t
     .llvm-libc-types.locale_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sigevent
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(
@@ -956,6 +958,15 @@ add_header_macro(
     .llvm-libc-types.ulong
     .llvm-libc-types.useconds_t
     .llvm-libc-types.ushort
+)
+
+add_header_macro(
+  sys_sysinfo
+  ../libc/include/sys/sysinfo.yaml
+  sys/sysinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sysinfo
 )
 
 add_header_macro(

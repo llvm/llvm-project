@@ -11,34 +11,34 @@ func.func @atomic_fmax(%val: f32, %buffer: memref<?xf32>, %idx: i32) -> f32 {
 // CHECK: func @atomic_fmax
 // CHECK-SAME: ([[val:%.+]]: f32, [[buffer:%.+]]: memref<?xf32>, [[idx:%.+]]: i32)
 // CHECK: gpu.printf "Begin\0A"
-// GFX10: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
-// GFX11: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
-// GFX12: amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} [[val]] -> [[buffer]][[[idx]]]
-// GFX90A:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
+// GFX10: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) {foo} [[val]] -> [[buffer]][[[idx]]]
+// GFX11: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) {foo} [[val]] -> [[buffer]][[[idx]]]
+// GFX12: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) {foo} [[val]] -> [[buffer]][[[idx]]]
+// GFX90A: [[ld:%.+]] = amdgpu.raw_buffer_load boundsCheck(true) {foo} [[buffer]][[[idx]]]
 // GFX90A:  cf.br [[loop:\^.+]]([[ld]] : f32)
 // GFX90A:  [[loop]]([[arg:%.+]]: f32):
 // GFX90A:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
-// GFX90A:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
+// GFX90A: [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) {foo} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
 // GFX90A:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
 // GFX90A:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32
 // GFX90A:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
 // GFX90A:  cf.cond_br [[test]], [[post:\^.+]]([[arg]] : f32), [[loop]]([[atomicRes]] : f32)
 // GFX90A:  [[post]]([[old:%.+]]: f32):
-// GFX942:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
+// GFX942: [[ld:%.+]] = amdgpu.raw_buffer_load boundsCheck(true) {foo} [[buffer]][[[idx]]]
 // GFX942:  cf.br [[loop:\^.+]]([[ld]] : f32)
 // GFX942:  [[loop]]([[arg:%.+]]: f32):
 // GFX942:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
-// GFX942:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
+// GFX942: [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) {foo} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
 // GFX942:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
 // GFX942:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32
 // GFX942:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
 // GFX942:  cf.cond_br [[test]], [[post:\^.+]]([[arg]] : f32), [[loop]]([[atomicRes]] : f32)
 // GFX942:  [[post]]([[old:%.+]]: f32):
-// GFX950:  [[ld:%.+]] = amdgpu.raw_buffer_load {foo, indexOffset = 4 : i32} [[buffer]][[[idx]]]
+// GFX950: [[ld:%.+]] = amdgpu.raw_buffer_load boundsCheck(true) {foo} [[buffer]][[[idx]]]
 // GFX950:  cf.br [[loop:\^.+]]([[ld]] : f32)
 // GFX950:  [[loop]]([[arg:%.+]]: f32):
 // GFX950:  [[operated:%.+]] = arith.maximumf [[val]], [[arg]]
-// GFX950:  [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap {foo, indexOffset = 4 : i32} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
+// GFX950: [[atomicRes:%.+]] = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) {foo} [[operated]], [[arg]] -> [[buffer]][[[idx]]]
 // GFX950:  [[argCast:%.+]] = arith.bitcast [[arg]] : f32 to i32
 // GFX950:  [[resCast:%.+]] = arith.bitcast [[atomicRes]] : f32 to i32
 // GFX950:  [[test:%.+]] = arith.cmpi eq, [[resCast]], [[argCast]]
@@ -47,7 +47,7 @@ func.func @atomic_fmax(%val: f32, %buffer: memref<?xf32>, %idx: i32) -> f32 {
 // CHECK-NEXT: gpu.printf "End\0A"
 // CHECK-NEXT: return
   gpu.printf "Begin\n"
-  %old = amdgpu.raw_buffer_atomic_fmax {foo, indexOffset = 4 : i32} %val -> %buffer[%idx] : f32 -> memref<?xf32>, i32
+  %old = amdgpu.raw_buffer_atomic_fmax boundsCheck(true) {foo} %val -> %buffer[%idx] indexOffset(4) : f32 -> memref<?xf32>, i32
   gpu.printf "End\n"
   func.return %old : f32
 }
@@ -58,15 +58,15 @@ func.func @atomic_fmax_f64(%val: f64, %buffer: memref<?xf64>, %idx: i32) {
 // CHECK: func @atomic_fmax_f64
 // CHECK-SAME: ([[val:%.+]]: f64, [[buffer:%.+]]: memref<?xf64>, [[idx:%.+]]: i32)
 // CHECK: gpu.printf "Begin\0A"
-// GFX90A:  amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
-// GFX10: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
-// GFX11: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
-// GFX12: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
-// GFX942: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
-// GFX950: amdgpu.raw_buffer_atomic_fmax [[val]] -> [[buffer]][[[idx]]]
+// GFX90A:  amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// GFX10: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// GFX11: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// GFX12: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// GFX942: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
+// GFX950: amdgpu.raw_buffer_atomic_fmax boundsCheck(true) [[val]] -> [[buffer]][[[idx]]]
 // CHECK-NEXT: gpu.printf "End\0A"
   gpu.printf "Begin\n"
-  %old = amdgpu.raw_buffer_atomic_fmax %val -> %buffer[%idx] : f64 -> memref<?xf64>, i32
+  %old = amdgpu.raw_buffer_atomic_fmax boundsCheck(true) %val -> %buffer[%idx] : f64 -> memref<?xf64>, i32
   gpu.printf "End\n"
   func.return
 }
@@ -82,7 +82,7 @@ func.func @atomic_fadd(%val: f32, %buffer: memref<?xf32>, %idx: i32) {
 // GFX12: amdgpu.raw_buffer_atomic_fadd
 // GFX942: amdgpu.raw_buffer_atomic_fadd
 // GFX950: amdgpu.raw_buffer_atomic_fadd
-  %old = amdgpu.raw_buffer_atomic_fadd %val -> %buffer[%idx] : f32 -> memref<?xf32>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : f32 -> memref<?xf32>, i32
   func.return
 }
 
@@ -103,7 +103,7 @@ func.func @atomic_fadd_v2f16(%val: vector<2xf16>, %buffer: memref<?xf16>, %idx: 
 // GFX942: amdgpu.raw_buffer_atomic_fadd
 // GFX12:  amdgpu.raw_buffer_atomic_fadd
 // GFX950:  amdgpu.raw_buffer_atomic_fadd
-  %old = amdgpu.raw_buffer_atomic_fadd %val -> %buffer[%idx] : vector<2xf16> -> memref<?xf16>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : vector<2xf16> -> memref<?xf16>, i32
   func.return
 }
 
@@ -119,6 +119,6 @@ func.func @atomic_fadd_v2bf16(%val: vector<2xbf16>, %buffer: memref<?xbf16>, %id
 // GFX942: amdgpu.raw_buffer_atomic_cmpswap
 // GFX12:  amdgpu.raw_buffer_atomic_fadd
 // GFX950:  amdgpu.raw_buffer_atomic_fadd
-  %old = amdgpu.raw_buffer_atomic_fadd %val -> %buffer[%idx] : vector<2xbf16> -> memref<?xbf16>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %val -> %buffer[%idx] : vector<2xbf16> -> memref<?xbf16>, i32
   func.return
 }

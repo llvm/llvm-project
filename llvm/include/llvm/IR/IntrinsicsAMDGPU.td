@@ -2471,12 +2471,9 @@ def int_amdgcn_lerp :
   ClangBuiltin<"__builtin_amdgcn_lerp">,
   PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
+let TargetFeatures = "sad-insts" in {
 def int_amdgcn_sad_u8 :
   ClangBuiltin<"__builtin_amdgcn_sad_u8">,
-  PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
-
-def int_amdgcn_msad_u8 :
-  ClangBuiltin<"__builtin_amdgcn_msad_u8">,
   PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
 
 def int_amdgcn_sad_hi_u8 :
@@ -2486,15 +2483,24 @@ def int_amdgcn_sad_hi_u8 :
 def int_amdgcn_sad_u16 :
   ClangBuiltin<"__builtin_amdgcn_sad_u16">,
   PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+} // End TargetFeatures = "sad-insts"
 
+let TargetFeatures = "msad-insts" in
+def int_amdgcn_msad_u8 :
+  ClangBuiltin<"__builtin_amdgcn_msad_u8">,
+  PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
+
+let TargetFeatures = "qsad-insts" in
 def int_amdgcn_qsad_pk_u16_u8 :
   ClangBuiltin<"__builtin_amdgcn_qsad_pk_u16_u8">,
   PureIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty]>;
 
+let TargetFeatures = "mqsad-pk-insts" in
 def int_amdgcn_mqsad_pk_u16_u8 :
   ClangBuiltin<"__builtin_amdgcn_mqsad_pk_u16_u8">,
   PureIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty]>;
 
+let TargetFeatures = "mqsad-insts" in
 def int_amdgcn_mqsad_u32_u8 :
   ClangBuiltin<"__builtin_amdgcn_mqsad_u32_u8">,
   PureIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i32_ty, llvm_v4i32_ty]>;

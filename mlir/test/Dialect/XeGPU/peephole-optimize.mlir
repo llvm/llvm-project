@@ -504,3 +504,32 @@ gpu.module @xevm_test {
     gpu.return
   }
 }
+
+// -----
+// Transpose optimization on a >2D descriptor with unit leading dims.
+// CHECK-LABEL: gpu.func @transpose_4d(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<?x?x64x64xf16>) -> vector<1x1x16x16xf16> {
+// CHECK-DAG:     %[[C2048:.*]] = arith.constant 2048 : index
+// CHECK-DAG:     %[[C32:.*]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK:         %{{.+}}, %{{.+}}, %[[SIZES:.+]]:4, %[[STRIDES:.+]]:4 = memref.extract_strided_metadata %[[ARG0]]
+// CHECK:         %[[LSTRIDE:.*]] = arith.shrui %[[STRIDES]]#0, %[[C1]] : index
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %{{.+}} : memref<f16> -> index
+// CHECK:         %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
+// CHECK:         %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [%[[SIZES]]#0, %[[SIZES]]#1, 64, %[[C32]]], strides : [%[[LSTRIDE]], %[[C2048]], %[[C32]], 1] : i64
+// CHECK-SAME:      -> !xegpu.tensor_desc<1x1x16x8xi32, #xegpu.layout<lane_layout = [1, 1, 16, 1], lane_data = [1, 1, 1, 1], order = [2, 3, 1, 0]>>
+// CHECK:         %[[B:.*]] = xegpu.load_nd %[[BDESC]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]{{.*}} -> vector<1x1x16x8xi32>
+// CHECK:         %[[BITCAST:.*]] = vector.bitcast %[[B]] : vector<1x1x16x8xi32> to vector<1x1x16x16xf16>
+// CHECK:         vector.transpose %[[BITCAST]], [0, 1, 3, 2] : vector<1x1x16x16xf16> to vector<1x1x16x16xf16>
+#b4 = #xegpu.layout<lane_layout = [1, 1, 16, 1], lane_data = [1, 1, 1, 2], order = [2, 3, 1, 0]>
+#bt4 = #xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 2, 1]>
+gpu.module @xevm_module {
+gpu.func @transpose_4d(%arg0: memref<?x?x64x64xf16>) -> vector<1x1x16x16xf16> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<?x?x64x64xf16> -> !xegpu.tensor_desc<1x1x16x16xf16, #b4>
+  %1 = xegpu.load_nd %0[%c0, %c0, %c0, %c32] { result_layout = #b4 } : !xegpu.tensor_desc<1x1x16x16xf16, #b4> -> vector<1x1x16x16xf16>
+  %2 = vector.transpose %1, [0, 1, 3, 2] { layout_result_0 = #bt4 } : vector<1x1x16x16xf16> to vector<1x1x16x16xf16>
+  gpu.return %2 : vector<1x1x16x16xf16>
+}
+}

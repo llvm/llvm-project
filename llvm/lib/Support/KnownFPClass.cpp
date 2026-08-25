@@ -282,6 +282,39 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   return Known;
 }
 
+KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
+  KnownBits Known(FltSemantics.sizeInBits);
+  const FPClassTest FPClasses = KnownFPClasses;
+
+  // Return unknown if poison.
+  if (FPClasses == fcNone)
+    return Known;
+
+  if (isKnownNever(fcNormal | fcSubnormal | fcNan)) {
+    Known.setAllConflict();
+
+    if (FPClasses & fcInf)
+      Known = Known.intersectWith(KnownBits::makeConstant(
+          APFloat::getInf(FltSemantics).bitcastToAPInt()));
+
+    if (FPClasses & fcZero)
+      Known = Known.intersectWith(
+          KnownBits::makeConstant(APInt::getZero(FltSemantics.sizeInBits)));
+
+    Known.Zero.clearSignBit();
+    Known.One.clearSignBit();
+  }
+
+  if (SignBit) {
+    if (*SignBit)
+      Known.makeNegative();
+    else
+      Known.makeNonNegative();
+  }
+
+  return Known;
+}
+
 // Handle known sign bit and nan cases for fadd.
 static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
                               const KnownFPClass &KnownRHS, DenormalMode Mode) {
@@ -658,9 +691,9 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   Known.propagateNonSNaN(KnownSrc);
 
-  // asin is sign-preserving.
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+  // asin is sign-preserving for finite arguments.
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegFinite);
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].
