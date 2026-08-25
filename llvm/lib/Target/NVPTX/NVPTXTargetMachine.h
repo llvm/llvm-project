@@ -72,6 +72,8 @@ public:
                              const CGPassBuilderOption &Opt, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
+  bool shouldDefaultToNewPM() const override { return true; }
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   bool isMachineVerifierClean() const override { return false; }
