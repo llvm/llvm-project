@@ -1690,7 +1690,9 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   {
     IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
     DeclarationName Load(&II);
-    addRawBufferTypedLoadFunction(Load);
+    addHandleAccessFunction(Load, /*IsConstReturn=*/false, /*IsRef=*/false,
+                            AST.UnsignedIntTy, AST.DependentTy,
+                            /*TransposeResult=*/true);
     addLoadWithStatusFunction(Load, AST.DependentTy);
   }
 
@@ -1719,7 +1721,8 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   {
     IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
     DeclarationName Store(&II);
-    addRawBufferTypedStoreFunction(Store);
+    addStoreFunction(Store, /*IsConst=*/false, AST.DependentTy,
+                     /*TransposeArg=*/true);
   }
 
   return *this;
@@ -2465,57 +2468,9 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
   return MMB.finalize();
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addRawBufferTypedLoadFunction(DeclarationName &Name) {
-  assert(!Record->isCompleteDefinition() && "record is already complete");
-  ASTContext &AST = SemaRef.getASTContext();
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-
-  // The empty QualType is a placeholder. The actual return type is set below
-  // once the template parameter is created. This method is always const;
-  // it does not rebind the resource handle.
-  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), /*IsConst=*/true);
-  QualType ElemTy = MMB.addTemplateTypeParam("element_type");
-  MMB.ReturnTy = ElemTy;
-  QualType AddrSpaceElemTy =
-      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
-  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
-                   PH::Handle, PH::_0, ElemTy)
-      .dereference(PH::LastStmt)
-      .callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy,
-                   PH::LastStmt, getConstantIntExpr(1))
-      .finalize();
-}
-
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addRawBufferTypedStoreFunction(DeclarationName &Name) {
-  assert(!Record->isCompleteDefinition() && "record is already complete");
-  ASTContext &AST = SemaRef.getASTContext();
-  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
-
-  BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, /*IsConst=*/false);
-  QualType ElemTy = MMB.addTemplateTypeParam("element_type");
-  QualType AddrSpaceElemTy =
-      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
-  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Value", ElemTy)
-      .callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy, PH::_1,
-                   getConstantIntExpr(0))
-      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
-                   PH::Handle, PH::_0, ElemTy)
-      .dereference(PH::LastStmt)
-      .assign(PH::LastStmt, PH::LastStmt)
-      .finalize();
-}
-
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
-    QualType ElemTy) {
+  QualType ElemTy, bool TransposeResult) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2555,12 +2510,16 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     MMB.callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                     PH::_0);
 
-  return MMB.dereference(PH::LastStmt).finalize();
+  MMB.dereference(PH::LastStmt);
+  if (TransposeResult)
+    MMB.callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy,
+                    PH::LastStmt, getConstantIntExpr(1));
+  return MMB.finalize();
 }
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
-                                         QualType ValueTy) {
+                                         QualType ValueTy, bool TransposeArg) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2573,13 +2532,15 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
       AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
 
-  return MMB.addParam("Index", AST.UnsignedIntTy)
-      .addParam("Value", ValueTy)
-      .callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
-                   PH::Handle, PH::_0, ValueTy)
+  MMB.addParam("Index", AST.UnsignedIntTy).addParam("Value", ValueTy);
+  if (TransposeArg)
+    MMB.callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ValueTy, PH::_1,
+                    getConstantIntExpr(0));
+  MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
+                  PH::Handle, PH::_0, ValueTy)
       .dereference(PH::LastStmt)
-      .assign(PH::LastStmt, PH::_1)
-      .finalize();
+      .assign(PH::LastStmt, TransposeArg ? PH::LastStmt : PH::_1);
+  return MMB.finalize();
 }
 
 BuiltinTypeDeclBuilder &
