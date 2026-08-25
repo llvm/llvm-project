@@ -6,7 +6,7 @@
 
 define internal fastcc void @callee_uniform(ptr %p, i32 %i) {
 ; CHECK-LABEL: define internal fastcc void @callee_uniform(
-; CHECK-SAME: ptr inreg [[P:%.*]], i32 [[I:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr float, ptr [[P]], i32 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4
@@ -22,7 +22,7 @@ define amdgpu_kernel void @k_uniform(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_uniform(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    call fastcc void @callee_uniform(ptr inreg [[P]], i32 [[TID]])
+; CHECK-NEXT:    call fastcc void @callee_uniform(ptr [[P]], i32 [[TID]])
 ; CHECK-NEXT:    ret void
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -220,7 +220,7 @@ define amdgpu_kernel void @k_casts_private(ptr %p) {
 
 define internal fastcc void @callee_flat_load(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_flat_load(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[P]], align 4
 ; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -233,7 +233,7 @@ define internal fastcc void @callee_flat_load(ptr %p) {
 define amdgpu_kernel void @k_flat_load(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_flat_load(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @callee_flat_load(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @callee_flat_load(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @callee_flat_load(ptr %p)
@@ -244,7 +244,7 @@ define amdgpu_kernel void @k_flat_load(ptr %p) {
 
 define internal fastcc void @callee_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
 ; CHECK-LABEL: define internal fastcc void @callee_budget(
-; CHECK-SAME: ptr inreg [[P0:%.*]], ptr inreg [[P1:%.*]], ptr inreg [[P2:%.*]], ptr inreg [[P3:%.*]], ptr inreg [[P4:%.*]]) {
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]]) {
 ; CHECK-NEXT:    ret void
 ;
   ptr %p4) {
@@ -254,7 +254,7 @@ define internal fastcc void @callee_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
 define amdgpu_kernel void @k_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
 ; CHECK-LABEL: define amdgpu_kernel void @k_budget(
 ; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]]) {
-; CHECK-NEXT:    call fastcc void @callee_budget(ptr inreg [[P0]], ptr inreg [[P1]], ptr inreg [[P2]], ptr inreg [[P3]], ptr inreg [[P4]])
+; CHECK-NEXT:    call fastcc void @callee_budget(ptr [[P0]], ptr [[P1]], ptr [[P2]], ptr [[P3]], ptr [[P4]])
 ; CHECK-NEXT:    ret void
 ;
   ptr %p4) {
@@ -426,7 +426,7 @@ define amdgpu_kernel void @k_hidden(ptr %p) {
 
 define internal fastcc void @callee_scalar(i32 %n, ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_scalar(
-; CHECK-SAME: i32 [[N:%.*]], ptr inreg [[P:%.*]]) {
+; CHECK-SAME: i32 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store i32 [[N]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -437,7 +437,7 @@ define internal fastcc void @callee_scalar(i32 %n, ptr %p) {
 define amdgpu_kernel void @k_scalar(i32 %n, ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_scalar(
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @callee_scalar(i32 [[N]], ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @callee_scalar(i32 [[N]], ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
 ; The pointer is still promoted, the scalar is not.
@@ -489,7 +489,7 @@ define amdgpu_kernel void @k_mixed_divergent(ptr %base) {
 
 define internal fastcc void @chain_leaf(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @chain_leaf(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -499,8 +499,8 @@ define internal fastcc void @chain_leaf(ptr %p) {
 
 define internal fastcc void @chain_mid(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @chain_mid(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @chain_leaf(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @chain_leaf(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @chain_leaf(ptr %p)
@@ -509,8 +509,8 @@ define internal fastcc void @chain_mid(ptr %p) {
 
 define internal fastcc void @chain_top(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @chain_top(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @chain_mid(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @chain_mid(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @chain_mid(ptr %p)
@@ -520,7 +520,7 @@ define internal fastcc void @chain_top(ptr %p) {
 define amdgpu_kernel void @k_chain(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_chain(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @chain_top(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @chain_top(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @chain_top(ptr %p)
@@ -532,8 +532,8 @@ define amdgpu_kernel void @k_chain(ptr %p) {
 
 define internal fastcc void @scram_a(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @scram_a(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @scram_b(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @scram_b(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @scram_b(ptr %p)
@@ -542,7 +542,7 @@ define internal fastcc void @scram_a(ptr %p) {
 
 define internal fastcc void @scram_c(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @scram_c(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -552,8 +552,8 @@ define internal fastcc void @scram_c(ptr %p) {
 
 define internal fastcc void @scram_b(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @scram_b(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @scram_c(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @scram_c(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @scram_c(ptr %p)
@@ -563,7 +563,7 @@ define internal fastcc void @scram_b(ptr %p) {
 define amdgpu_kernel void @k_scram(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_scram(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @scram_a(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @scram_a(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @scram_a(ptr %p)
@@ -572,7 +572,7 @@ define amdgpu_kernel void @k_scram(ptr %p) {
 
 define internal fastcc void @diam_bot(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @diam_bot(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -582,8 +582,8 @@ define internal fastcc void @diam_bot(ptr %p) {
 
 define internal fastcc void @diam_l(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @diam_l(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @diam_bot(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @diam_bot(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @diam_bot(ptr %p)
@@ -592,8 +592,8 @@ define internal fastcc void @diam_l(ptr %p) {
 
 define internal fastcc void @diam_r(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @diam_r(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @diam_bot(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @diam_bot(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @diam_bot(ptr %p)
@@ -602,9 +602,9 @@ define internal fastcc void @diam_r(ptr %p) {
 
 define internal fastcc void @diam_top(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @diam_top(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @diam_l(ptr inreg [[P]])
-; CHECK-NEXT:    call fastcc void @diam_r(ptr inreg [[P]])
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @diam_l(ptr [[P]])
+; CHECK-NEXT:    call fastcc void @diam_r(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @diam_l(ptr %p)
@@ -615,7 +615,7 @@ define internal fastcc void @diam_top(ptr %p) {
 define amdgpu_kernel void @k_diam(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_diam(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @diam_top(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @diam_top(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @diam_top(ptr %p)
@@ -768,7 +768,7 @@ define amdgpu_kernel void @k_musttail_forward(ptr %p) {
 
 define internal fastcc void @callee_inlinehint_uniform(ptr %p, i32 %i) #0 {
 ; CHECK-LABEL: define internal fastcc void @callee_inlinehint_uniform(
-; CHECK-SAME: ptr inreg [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr float, ptr [[P]], i32 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4
@@ -784,7 +784,7 @@ define amdgpu_kernel void @k_inlinehint_uniform(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_inlinehint_uniform(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    call fastcc void @callee_inlinehint_uniform(ptr inreg [[P]], i32 [[TID]])
+; CHECK-NEXT:    call fastcc void @callee_inlinehint_uniform(ptr [[P]], i32 [[TID]])
 ; CHECK-NEXT:    ret void
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -794,7 +794,7 @@ define amdgpu_kernel void @k_inlinehint_uniform(ptr %p) {
 
 define internal fastcc void @callee_alwaysinline_uniform(ptr %p, i32 %i) #1 {
 ; CHECK-LABEL: define internal fastcc void @callee_alwaysinline_uniform(
-; CHECK-SAME: ptr inreg [[P:%.*]], i32 [[I:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]], i32 [[I:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr float, ptr [[P]], i32 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    store float [[V]], ptr [[P]], align 4
@@ -810,7 +810,7 @@ define amdgpu_kernel void @k_alwaysinline_uniform(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_alwaysinline_uniform(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    call fastcc void @callee_alwaysinline_uniform(ptr inreg [[P]], i32 [[TID]])
+; CHECK-NEXT:    call fastcc void @callee_alwaysinline_uniform(ptr [[P]], i32 [[TID]])
 ; CHECK-NEXT:    ret void
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -852,7 +852,7 @@ define amdgpu_kernel void @k_readfirstlane(ptr %base) {
 
 define internal fastcc void @multi_src(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @multi_src(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -863,7 +863,7 @@ define internal fastcc void @multi_src(ptr %p) {
 define amdgpu_kernel void @k_multi_sgpr(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_multi_sgpr(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call fastcc void @multi_src(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @multi_src(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @multi_src(ptr %p)
@@ -876,7 +876,7 @@ define amdgpu_kernel void @k_multi_readfirstlane(ptr %base) {
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[PDIV:%.*]] = getelementptr float, ptr [[BASE]], i32 [[TID]]
 ; CHECK-NEXT:    [[PUNI:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr [[PDIV]])
-; CHECK-NEXT:    call fastcc void @multi_src(ptr inreg [[PUNI]])
+; CHECK-NEXT:    call fastcc void @multi_src(ptr [[PUNI]])
 ; CHECK-NEXT:    ret void
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1094,7 +1094,7 @@ define internal fastcc void @ci2_mid_at(ptr %p) {
 
 define internal fastcc void @ci2_mid_clean(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @ci2_mid_clean(
-; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call fastcc void @ci2_leaf(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1107,7 +1107,7 @@ define amdgpu_kernel void @k_ci2(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store ptr @ci2_mid_at, ptr @addr_slot2, align 8
 ; CHECK-NEXT:    call fastcc void @ci2_mid_at(ptr [[P]])
-; CHECK-NEXT:    call fastcc void @ci2_mid_clean(ptr inreg [[P]])
+; CHECK-NEXT:    call fastcc void @ci2_mid_clean(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   store ptr @ci2_mid_at, ptr @addr_slot2
