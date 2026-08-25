@@ -2375,7 +2375,6 @@ ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
                                sourceTensorType.getEncoding());
 }
 
-// TODO: This uses neither offsets nor strides!
 RankedTensorType
 ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
                                 ArrayRef<OpFoldResult> sizes) {
@@ -2742,6 +2741,9 @@ void mlir::tensor::populateFoldConstantExtractSlicePatterns(
 }
 
 /// Return the canonical type of the result of an extract_slice op.
+/// Note: offsets and strides are not needed to determine the result type of
+/// an extract_slice. The operator arguments are just there for interface
+/// compatibility.
 struct SliceReturnTypeCanonicalizer {
   RankedTensorType operator()(ExtractSliceOp op,
                               ArrayRef<OpFoldResult> mixedOffsets,

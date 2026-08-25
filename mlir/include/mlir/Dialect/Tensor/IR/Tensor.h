@@ -138,12 +138,16 @@ OpFoldResult getMixedSize(OpBuilder &builder, Location loc, Value value,
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
                                         Value value);
 
-/// Infer a slice type with an exact rank-reduction pattern. The source tensor
-/// type provides the element type and encoding; its rank may differ from the
-/// number of sizes when dimensions are dropped.
+/// Infer a slice type for the given sizes and exact dropped-dimension mask. The
+/// result shape omits the sizes whose corresponding bits are set in
+/// `droppedDims`. The encoding of `sourceTensorType` is propagated to the
+/// inferred result type.
 RankedTensorType inferSliceType(RankedTensorType sourceTensorType,
                                 ArrayRef<int64_t> staticSizes,
                                 const llvm::SmallBitVector &droppedDims);
+/// SSA-valued sizes resolve to dynamic dimensions in the inferred type. Only
+/// static unit dimensions may be dropped from the source type to produce the
+/// result slice type.
 RankedTensorType inferSliceType(RankedTensorType sourceTensorType,
                                 ArrayRef<OpFoldResult> sizes,
                                 const llvm::SmallBitVector &droppedDims);
