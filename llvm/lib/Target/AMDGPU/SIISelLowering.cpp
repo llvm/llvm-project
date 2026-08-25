@@ -20640,9 +20640,19 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::LOAD: {
     const LoadSDNode *L = cast<LoadSDNode>(N);
     unsigned AS = L->getAddressSpace();
-    // A flat load may access private memory.
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+    // A flat load may access private memory. A load of the VGPR "as memory"
+    // address space reads this lane's own registers, so it is divergent however
+    // uniform the index is - and it is still an ISD::LOAD until the pre-ISel
+    // combine turns it into a REG_LOAD below.
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
+           AS == AMDGPUAS::VGPR;
   }
+  // The lowered form of the above. Without this the DAG takes the node's
+  // divergence to be that of its operands, so a uniform index makes the loaded
+  // value look uniform, and a consumer that requires a uniform operand gets a
+  // v_readfirstlane - broadcasting one lane's value to the whole wave.
+  case AMDGPUISD::REG_LOAD:
+    return true;
   case ISD::CALLSEQ_END:
     return true;
   case ISD::INTRINSIC_WO_CHAIN:
