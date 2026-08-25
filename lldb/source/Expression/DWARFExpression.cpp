@@ -1380,6 +1380,15 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
   return llvm::Error::success();
 }
 
+// Scalar does not preserve DWARF's generic type identifier. Since generic
+// values are address-sized integers, use the scalar kind and width as an
+// approximation.
+static bool IsPotentiallyGenericIntegerOperand(const Scalar &operand,
+                                               size_t address_size) {
+  return address_size != 0 && operand.GetType() == Scalar::e_int &&
+         operand.GetByteSize() == address_size;
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
