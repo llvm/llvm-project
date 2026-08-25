@@ -5168,10 +5168,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
         CI->getType(), Intrinsic::amdgcn_ballot, Cmp);
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     NewCall->takeName(CI);
-    // TODO: Copy per-argument attributes over to Cmp or NewCall as appropriate.
     return NewCall;
   }
 
