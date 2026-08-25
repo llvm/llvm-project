@@ -300,8 +300,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
 
-  // Only to give an alloca in the VGPR ("as memory") address space the address
-  // it was allocated; every other frame index is left alone.
+  // Only for an alloca in the VGPR ("as memory") address space.
   setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, {MVT::i32, MVT::i64}, Custom);
   setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
@@ -1683,10 +1682,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   }
   case Intrinsic::amdgcn_vgpr_lifetime_start:
   case Intrinsic::amdgcn_vgpr_lifetime_end: {
-    // A marker covers the whole object, whose size and placement within the
-    // VGPR ("as memory") address space AMDGPUPromoteAlloca recorded on the
-    // alloca. Carrying that as a memory operand is what lets
-    // AMDGPUPrivateObjectVGPRs find the registers the object occupies.
+    // The MMO names the whole object, which is how AMDGPUPrivateObjectVGPRs
+    // finds the registers it occupies.
     const auto *Alloca = cast<AllocaInst>(CI.getArgOperand(0));
     const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
     Info.opc = ISD::INTRINSIC_VOID;
@@ -10261,9 +10258,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                          MachineMemOperand::MOInvariant);
 }
 
-// The address of an object in the VGPR ("as memory") address space is where
-// AMDGPUPromoteAlloca placed it, recorded on the alloca. Every other frame
-// index keeps its default lowering.
+// The address is where AMDGPUPromoteAlloca placed the object, recorded on the
+// alloca. Every other frame index keeps its default lowering.
 SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   int FI = cast<FrameIndexSDNode>(Op)->getIndex();
@@ -20608,9 +20604,8 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
 
   Info->limitOccupancy(MF);
 
-  // An object in the VGPR "as memory" address space lives in registers, and
-  // every reference to its frame index has been replaced by the address it was
-  // allocated, so it must not take up stack space as well.
+  // The object lives in registers and every reference to its frame index is
+  // now its address, so it must not take up stack space as well.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   for (int FI = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); FI != E;
        ++FI) {

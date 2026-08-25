@@ -185,10 +185,9 @@ public:
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
 
-  /// IsLatePass is true if invoked as a codegen pass and false if invoked from
-  /// the optimization pipeline ("amdgpu-promote-alloca-to-vector" pass). NoOpt
-  /// indicates to perform only the codegen work that is strictly required for
-  /// functionality, which is allocating objects in the VGPR address space.
+  /// IsLatePass distinguishes the codegen pass from the optimization-pipeline
+  /// one ("amdgpu-promote-alloca-to-vector"). NoOpt restricts the work to what
+  /// functionality requires: allocating objects in the VGPR address space.
   bool run(Function &F, bool IsLatePass, bool NoOpt = false);
 };
 
@@ -422,10 +421,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
 
       AllocaAnalysis AA{AI};
 
-      // An alloca that is already in the VGPR ("as memory") address space is
-      // not promoted, only given a place in that address space, which only the
-      // codegen pass does. It happens whether or not optimizations are enabled,
-      // since the address space cannot be used without it.
+      // An alloca already in the VGPR address space is not promoted, only
+      // given a place there. Required for functionality, so it runs whether
+      // or not optimizations are enabled.
       if (AI->getAddressSpace() == AMDGPUAS::VGPR) {
         if (IsLatePass)
           Allocas.push_back(std::move(AA));
@@ -514,25 +512,22 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
   return Changed;
 }
 
-// Give an alloca in the VGPR ("as memory") address space a place in that
-// address space, recorded on it as !amdgpu.allocated.vgprs, and lifetime
-// markers the backend understands. AMDGPUPrivateObjectVGPRs turns the two into
-// defs and uses of the physical registers the object occupies, which is what
-// keeps register allocation off them while it is live.
+// Give an alloca in the VGPR ("as memory") address space a place there,
+// recorded as !amdgpu.allocated.vgprs, plus lifetime markers the backend
+// understands. AMDGPUPrivateObjectVGPRs turns those into defs and uses of the
+// physical registers, which keeps register allocation off them.
 void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
   LLVMContext &Ctx = Mod.getContext();
   const unsigned AllocaSize =
       DL.getTypeAllocSize(AA.Alloca->getAllocatedType()).getFixedValue();
 
   // The generic lifetime intrinsics do not survive into the backend, so use
-  // the address-space specific ones instead. An object with no lifetime start
-  // is live from its definition.
+  // the address-space specific ones. An object with no start is live from its
+  // definition.
   //
-  // A marker that is already the address-space specific one counts as a start:
-  // this runs over IR it has converted before, since an object written in the
-  // address space to begin with reaches the backend that way, as does one an
-  // earlier run promoted. Adding a second start would move the start of the
-  // live range back to the alloca and keep the object live from there.
+  // An already-converted marker counts as a start: this runs over IR it has
+  // converted before, and a second start would move the live range back to
+  // the alloca and keep the object live from there.
   bool HaveLifetimeStart = false;
   for (Use &U : AA.Alloca->uses()) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
@@ -566,10 +561,9 @@ void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
                       AA.Alloca);
   }
 
-  // Allocating twice would place a second object on top of this one, so an
-  // object that already has its place keeps it, and the next one is allocated
-  // after it. The markers above are still rewritten, since IR that carries the
-  // metadata need not carry them.
+  // An object that already has its place keeps it, or a second allocation
+  // would land on top of it. The markers above are still rewritten, since IR
+  // carrying the metadata need not carry them.
   unsigned Address = AllocVGPROffset;
   if (MDNode *MD = AA.Alloca->getMetadata("amdgpu.allocated.vgprs")) {
     Address = cast<AMDGPU::AllocatedVGPRsMetadata>(MD)->getAddress();
@@ -587,17 +581,14 @@ void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
     AllocVGPROffset += alignTo(AllocaSize, 4);
   }
 
-  // The object occupies whole registers named by its address, and nothing may
-  // move or spill it, so it has to fit in the registers this function is
-  // entitled to. That budget is what promotion elsewhere in this pass already
-  // uses, and for a non-entry function it is the 32 registers the ABI preserves
-  // unless the function is known to be inlined.
+  // Nothing may move or spill the object, so it has to fit the register
+  // budget this function is entitled to - for a non-entry function, the 32
+  // the ABI preserves unless it is known to be inlined.
   //
-  // Diagnose the overflow here rather than leaving it to register allocation,
-  // which reports "ran out of registers" from a pass with no idea what an
-  // object in this address space is - and only once the object is large enough
-  // to starve everything else, so an object that merely overruns the budget
-  // goes through silently.
+  // Diagnosed here rather than left to register allocation, which would only
+  // report "ran out of registers" once the object is large enough to starve
+  // everything else; one that merely overruns the budget goes through
+  // silently.
   const unsigned FirstReg = Address / 4;
   const unsigned LastReg = (Address + alignTo(AllocaSize, 4)) / 4 - 1;
   if (LastReg >= MaxVGPRs) {

@@ -75,10 +75,9 @@ public:
   }
 };
 
-// Wrapper for the markers bounding the lifetime of an object in the VGPR "as
-// memory" (address space 13) address space. The object is named by the memory
-// operand, which is the only thing these carry until
-// AMDGPUPrivateObjectVGPRs gives them the registers it occupies.
+// Wrapper for the VGPR "as memory" lifetime markers. The object is named by
+// the memory operand, the only thing these carry until
+// AMDGPUPrivateObjectVGPRs gives them its registers.
 class VGPRLifetimeInst : public MachineInstr {
 public:
   bool isStart() const { return getOpcode() == AMDGPU::VGPR_LIFETIME_START; }
