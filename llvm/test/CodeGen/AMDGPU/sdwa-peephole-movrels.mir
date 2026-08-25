@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.03 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck %s
 
 # V_MOVRELS_B32_sdwa is unencodable on gfx8/gfx9, and asm-only
 # (SIInstrInfo::isAsmOnlyOpcode) on gfx10.
