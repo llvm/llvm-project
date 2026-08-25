@@ -1447,7 +1447,8 @@ static Address emitPointerArithmetic(CodeGenFunction &CGF,
                                      const BinaryOperator *BO,
                                      LValueBaseInfo *BaseInfo,
                                      TBAAAccessInfo *TBAAInfo,
-                                     KnownNonNull_t IsKnownNonNull) {
+                                     KnownNonNull_t IsKnownNonNull,
+                                     CodeGenFunction::ObjectRequirement_t Req) {
   assert(BO->isAdditiveOp() && "Expect an addition or subtraction.");
   Expr *pointerOperand = BO->getLHS();
   Expr *indexOperand = BO->getRHS();
@@ -1461,16 +1462,16 @@ static Address emitPointerArithmetic(CodeGenFunction &CGF,
     std::swap(pointerOperand, indexOperand);
     index = CGF.EmitScalarExpr(indexOperand);
     BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
-                                            NotKnownNonNull);
+                                            NotKnownNonNull, Req);
   } else {
     BaseAddr = CGF.EmitPointerWithAlignment(pointerOperand, BaseInfo, TBAAInfo,
-                                            NotKnownNonNull);
+                                            NotKnownNonNull, Req);
     index = CGF.EmitScalarExpr(indexOperand);
   }
 
   llvm::Value *pointer = BaseAddr.getBasePointer();
   llvm::Value *Res = CGF.EmitPointerArithmetic(
-      BO, pointerOperand, pointer, indexOperand, index, isSubtraction);
+      BO, pointerOperand, pointer, indexOperand, index, isSubtraction, Req);
   QualType PointeeTy = BO->getType()->getPointeeType();
   CharUnits Align =
       getArrayElementAlign(BaseAddr.getAlignment(), index,
@@ -1608,7 +1609,8 @@ EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
   // Pointer arithmetic: pointer +/- index.
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     if (BO->isAdditiveOp())
-      return emitPointerArithmetic(CGF, BO, BaseInfo, TBAAInfo, IsKnownNonNull);
+      return emitPointerArithmetic(CGF, BO, BaseInfo, TBAAInfo, IsKnownNonNull,
+                                   Req);
   }
 
   // TODO: conditional operators, comma.

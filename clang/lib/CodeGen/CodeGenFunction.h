@@ -5365,7 +5365,8 @@ public:
   llvm::Value *EmitPointerArithmetic(const BinaryOperator *BO,
                                      Expr *pointerOperand, llvm::Value *pointer,
                                      Expr *indexOperand, llvm::Value *index,
-                                     bool isSubtraction);
+                                     bool isSubtraction,
+                                     ObjectRequirement_t Req = ObjectNotRequired);
 
   /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
   /// detect undefined behavior when the pointer overflow sanitizer is enabled.

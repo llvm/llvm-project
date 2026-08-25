@@ -4533,7 +4533,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF, const BinOpInfo &op,
 /// Emit pointer + index arithmetic.
 llvm::Value *CodeGenFunction::EmitPointerArithmetic(
     const BinaryOperator *BO, Expr *pointerOperand, llvm::Value *pointer,
-    Expr *indexOperand, llvm::Value *index, bool isSubtraction) {
+    Expr *indexOperand, llvm::Value *index, bool isSubtraction,
+    ObjectRequirement_t Req) {
   bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
 
   unsigned width = cast<llvm::IntegerType>(index->getType())->getBitWidth();
@@ -4593,8 +4594,7 @@ llvm::Value *CodeGenFunction::EmitPointerArithmetic(
     index = Builder.CreateNeg(index, "idx.neg");
 
   if (SanOpts.has(SanitizerKind::ArrayBounds))
-    EmitBoundsCheck(BO, pointerOperand, index, indexOperand->getType(),
-                    CodeGenFunction::ObjectNotRequired);
+    EmitBoundsCheck(BO, pointerOperand, index, indexOperand->getType(), Req);
 
   const PointerType *pointerType =
       pointerOperand->getType()->getAs<PointerType>();

@@ -195,6 +195,16 @@ void c_extension(int i) { __extension__(a[i]) = 1; }
 // CHECK: icmp ult i64 {{.*}}, 4
 void c_cast_store(int i) { *(int *)&a[i] = 1; }
 
+// C99 6.5.2.1p2 makes `a[i]` mean `*(a + i)`, so these must agree with c_store
+// and c_load.
+// CHECK-LABEL: define {{.*}}@c_deref_plus_store(
+// CHECK: icmp ult i64 {{.*}}, 4
+void c_deref_plus_store(int i) { *(a + i) = 1; }
+
+// CHECK-LABEL: define {{.*}}@c_deref_plus_load(
+// CHECK: icmp ult i64 {{.*}}, 4
+void c_deref_plus_load(int i) { v = *(a + i); }
+
 // CHECK-LABEL: define {{.*}}@c_counted(
 // CHECK: icmp ult i32 {{.*}}
 void c_counted(struct CB *s, int i) { s->fam[i] = 1; }
