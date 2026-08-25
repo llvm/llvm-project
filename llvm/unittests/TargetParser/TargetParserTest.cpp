@@ -3128,13 +3128,13 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   EXPECT_FALSE(
       TargetID::parseTargetIDString("amdgpu11-amd-amdhsa-unknown-gfx1200"));
 
-  // A subarchless "amdgpu" or an unrecognized "amdgpu<x>" arch is rejected,
-  // even with an otherwise valid processor.
-  EXPECT_FALSE(
+  // A subarchless "amdgpu" is the canonical spelling of the offload triple and
+  // is accepted, but an unrecognized "amdgpu<x>" suffix is rejected.
+  EXPECT_TRUE(
       TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-gfx900"));
   EXPECT_FALSE(
       TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown-gfx900"));
-  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
   EXPECT_FALSE(TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown"));
 
   // Constructing directly from a triple and processor+features string must
@@ -3153,12 +3153,12 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   }
 
   EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
-                ->getCanonicalFeatureString(),
+                ->getCanonicalTargetIDString(),
             "gfx908:sramecc-:xnack+");
-  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalTargetIDString(),
             "gfx908");
   EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
-                ->getCanonicalFeatureString(),
+                ->getCanonicalTargetIDString(),
             "gfx908:xnack-");
   EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());

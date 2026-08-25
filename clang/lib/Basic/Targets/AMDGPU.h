@@ -42,13 +42,13 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Whether having image instructions.
   bool HasImage = false;
 
-  /// Target ID is device name followed by optional feature name postfixed
-  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
-  /// If the target ID contains feature+, map it to true.
-  /// If the target ID contains feature-, map it to false.
-  /// If the target ID does not contain a feature (default), do not map it.
-  llvm::StringMap<bool> OffloadArchFeatures;
-  std::string TargetID;
+  /// Explicit xnack/sramecc target-id feature settings from the command line,
+  /// e.g. gfx908:xnack+:sramecc-. "Unsupported" means the feature was not
+  /// specified (or is not a valid target-id modifier for the processor).
+  llvm::AMDGPU::TargetIDSetting XnackSetting =
+      llvm::AMDGPU::TargetIDSetting::Unsupported;
+  llvm::AMDGPU::TargetIDSetting SramEccSetting =
+      llvm::AMDGPU::TargetIDSetting::Unsupported;
 
   bool hasFP64() const { return getTriple().isAMDGCN(); }
 
@@ -463,8 +463,8 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     HasFullBFloat16 = true;
-    auto TargetIDFeatures =
-        getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
+    const llvm::AMDGPU::AMDGPUFeatureBitset &ArchFeatures =
+        llvm::AMDGPU::getFeatureBitset(GPUKind);
     for (const auto &F : Features) {
       assert(F.front() == '+' || F.front() == '-');
       if (F == "+wavefrontsize64")
@@ -475,12 +475,18 @@ public:
         CUMode = false;
       else if (F == "+image-insts")
         HasImage = true;
-      bool IsOn = F.front() == '+';
+      llvm::AMDGPU::TargetIDSetting Setting =
+          F.front() == '+' ? llvm::AMDGPU::TargetIDSetting::On
+                           : llvm::AMDGPU::TargetIDSetting::Off;
       StringRef Name = StringRef(F).drop_front();
-      if (!llvm::is_contained(TargetIDFeatures, Name))
-        continue;
-      assert(!OffloadArchFeatures.contains(Name));
-      OffloadArchFeatures[Name] = IsOn;
+      // xnack is a valid target-id modifier only when the processor supports
+      // on/off modes; sramecc when the processor supports sramecc.
+      if (Name == "xnack" &&
+          ArchFeatures.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
+        XnackSetting = Setting;
+      else if (Name == "sramecc" &&
+               ArchFeatures.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
+        SramEccSetting = Setting;
     }
     return true;
   }
