@@ -204,7 +204,7 @@ public:
     case 3:
       return f(char32_t{});
     default:
-      llvm_unreachable("unsupported character kind/monostate");
+      DIE("unsupported character kind/monostate");
     }
   }
 
@@ -219,7 +219,7 @@ public:
     case 4:
       return f(char32_t{});
     default:
-      llvm_unreachable("unsupported character kind/monostate");
+      DIE("unsupported character kind/monostate");
     }
   }
 
@@ -234,7 +234,7 @@ public:
     case 3:
       return f(std::get<std::u32string>(storage_));
     default:
-      llvm_unreachable("operation on uninitialized CharacterValue");
+      DIE("operation on uninitialized CharacterValue");
     }
   }
 

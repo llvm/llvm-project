@@ -87,7 +87,7 @@ LLVM_DUMP_METHOD void RealValueImpl::dump() const {
 
 int RealValueImpl::kind() const {
   if (IsMonostate()) {
-    llvm_unreachable("uninitialized value has not a defined kind");
+    DIE("uninitialized value has not a defined kind");
   }
 
   return withWord([](const auto &v) -> int {
@@ -122,7 +122,7 @@ bool RealValueImpl::operator==(const RealValueImpl &y) const {
                         std::decay_t<decltype(v2)>>) {
         return v1 == v2;
       }
-      llvm_unreachable("Uncomparable reals");
+      DIE("Uncomparable reals");
     });
   });
 }
@@ -254,7 +254,7 @@ IntegerValue RealValueImpl::RawBits() const {
 
 Relation RealValueImpl::Compare(const RealValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("uncomparable value");
+    DIE("uncomparable value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -278,7 +278,7 @@ RealValueImpl RealValueImpl::Negate() const {
 
 RealValueImpl RealValueImpl::SIGN(const RealValueImpl &x) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -288,7 +288,7 @@ RealValueImpl RealValueImpl::SIGN(const RealValueImpl &x) const {
 
 RealValueImpl RealValueImpl::SetSign(bool toNegative) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord(
       [&](const auto &v) { return FromWord(v.SetSign(toNegative)); });
@@ -296,7 +296,7 @@ RealValueImpl RealValueImpl::SetSign(bool toNegative) const {
 
 RealValueImpl RealValueImpl::FlushSubnormalToZero() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord(
       [](const auto &v) { return FromWord(v.FlushSubnormalToZero()); });
@@ -305,7 +305,7 @@ RealValueImpl RealValueImpl::FlushSubnormalToZero() const {
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Add(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -316,7 +316,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Add(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Subtract(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -327,7 +327,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Subtract(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Multiply(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -338,7 +338,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Multiply(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Divide(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -348,7 +348,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Divide(
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::SQRT(Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) { return FromWord(v.SQRT(rounding)); });
 }
@@ -356,7 +356,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::SQRT(Rounding rounding) const {
 ValueWithRealFlags<RealValueImpl> RealValueImpl::HYPOT(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -367,7 +367,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::HYPOT(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::MOD(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -378,7 +378,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::MOD(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::MODULO(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -389,7 +389,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::MODULO(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::DIM(
     const RealValueImpl &y, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -399,35 +399,35 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::DIM(
 
 RealValueImpl RealValueImpl::FRACTION() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) { return FromWord(v.FRACTION()); });
 }
 
 RealValueImpl RealValueImpl::RRSPACING() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) { return FromWord(v.RRSPACING()); });
 }
 
 RealValueImpl RealValueImpl::SPACING() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) { return FromWord(v.SPACING()); });
 }
 
 RealValueImpl RealValueImpl::SET_EXPONENT(std::int64_t e) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) { return FromWord(v.SET_EXPONENT(e)); });
 }
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::NEAREST(bool upward) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) { return FromWord(v.NEAREST(upward)); });
 }
@@ -435,7 +435,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::NEAREST(bool upward) const {
 ValueWithRealFlags<RealValueImpl> RealValueImpl::ToWholeNumber(
     common::RoundingMode mode) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord(
       [&](const auto &v) { return FromWord(v.ToWholeNumber(mode)); });
@@ -444,7 +444,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::ToWholeNumber(
 ValueWithRealFlags<IntegerValue> RealValueImpl::ToInteger(
     common::RoundingMode mode, int toBits) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) -> ValueWithRealFlags<IntegerValue> {
     auto pick{[&](auto target) -> ValueWithRealFlags<IntegerValue> {
@@ -475,7 +475,7 @@ ValueWithRealFlags<IntegerValue> RealValueImpl::ToInteger(
 ValueWithRealFlags<RealValueImpl> RealValueImpl::SCALE(
     const IntegerValue &by, Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) -> ValueWithRealFlags<RealValueImpl> {
     return FromWord(v.SCALE(Integer<64>{by.ToInt64()}, rounding));
@@ -486,7 +486,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::KahanSummation(
     const RealValueImpl &y, RealValueImpl &correction,
     Rounding rounding) const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
@@ -499,7 +499,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::KahanSummation(
 
 IntegerValue RealValueImpl::EXPONENT() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) -> IntegerValue {
     IntegerValue result;
@@ -553,7 +553,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Read(
 
 std::string RealValueImpl::DumpHexadecimal() const {
   if (IsMonostate()) {
-    llvm_unreachable("unsupported operation over uninitialized value");
+    DIE("unsupported operation over uninitialized value");
   }
   return withWord([](const auto &v) { return v.DumpHexadecimal(); });
 }

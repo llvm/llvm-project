@@ -60,7 +60,7 @@ std::size_t CharacterValueImpl::charSize() const {
       [](const auto &s) -> std::size_t {
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           return sizeof(typename std::decay_t<decltype(s)>::value_type);
         }
@@ -126,7 +126,7 @@ Ordering CharacterValueImpl::Compare(const CharacterValueImpl &y) const {
             std::is_same_v<YS, std::monostate>) {
           return Fortran::evaluate::Compare(xs, XS{});
         } else {
-          llvm_unreachable("character comparison across differing kinds");
+          DIE("character comparison across differing kinds");
         }
       },
       this->storage_, y.storage_);
@@ -149,7 +149,7 @@ bool CharacterValueImpl::operator<(const CharacterValueImpl &y) const {
             std::is_same_v<YS, std::monostate>) {
           return xs < XS{};
         } else {
-          llvm_unreachable("character comparison across differing kinds");
+          DIE("character comparison across differing kinds");
         }
       },
       this->storage_, y.storage_);
@@ -172,7 +172,7 @@ bool CharacterValueImpl::operator==(const CharacterValueImpl &y) const {
             std::is_same_v<YS, std::monostate>) {
           return xs == XS{};
         } else {
-          llvm_unreachable("character comparison across differing kinds");
+          DIE("character comparison across differing kinds");
         }
       },
       this->storage_, y.storage_);
@@ -190,7 +190,7 @@ void CharacterValueImpl::erase(std::size_t pos) {
       [pos](auto &s) {
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           s.erase(pos);
         }
@@ -203,7 +203,7 @@ void CharacterValueImpl::append(std::size_t n, char32_t c) {
       [n, c](auto &s) {
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           using CharT = typename std::decay_t<decltype(s)>::value_type;
           s.append(n, static_cast<CharT>(c));
@@ -223,8 +223,8 @@ CharacterValueImpl &CharacterValueImpl::replace(
                 std::decay_t<decltype(o)>>) {
           s.replace(pos, len, o);
         } else {
-          llvm_unreachable("operation not supported on uninitialized value or "
-                           "values of different kinds");
+          DIE("operation not supported on uninitialized value or "
+              "values of different kinds");
         }
       },
       storage_, other.storage_);
@@ -236,7 +236,7 @@ CharacterValueImpl CharacterValueImpl::substr(std::size_t pos) const {
       [pos](const auto &s) -> CharacterValueImpl {
         using StringT = std::decay_t<decltype(s)>;
         if constexpr (std::is_same_v<StringT, std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
               sizeof(typename StringT::value_type), s.substr(pos)};
@@ -252,7 +252,7 @@ CharacterValueImpl CharacterValueImpl::substr(
         using StringT = std::decay_t<decltype(s)>;
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           return CharacterValueImpl{
               sizeof(typename StringT::value_type), s.substr(pos, len)};
@@ -366,7 +366,7 @@ char32_t CharacterValueImpl::operator[](std::size_t i) const {
       [i](const auto &s) -> char32_t {
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           return static_cast<char32_t>(s[i]);
         }
@@ -386,8 +386,8 @@ CharacterValueImpl CharacterValueImpl::operator+(
           return CharacterValueImpl{
               sizeof(typename StringT::value_type), a + b};
         } else {
-          llvm_unreachable("operation not supported on uninitialized value or "
-                           "values of different kinds");
+          DIE("operation not supported on uninitialized value or "
+              "values of different kinds");
         }
         return CharacterValueImpl{};
       },
@@ -403,8 +403,8 @@ CharacterValueImpl &CharacterValueImpl::operator+=(
             !std::is_same_v<std::decay_t<decltype(a)>, std::monostate>) {
           a += b;
         } else {
-          llvm_unreachable("operation not supported on uninitialized value or "
-                           "values of different kinds");
+          DIE("operation not supported on uninitialized value or "
+              "values of different kinds");
         }
       },
       storage_, y.storage_);
@@ -416,7 +416,7 @@ CharacterValueImpl &CharacterValueImpl::operator+=(char c) {
       [c](auto &s) {
         if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
                           std::monostate>) {
-          llvm_unreachable("operation not supported on uninitialized value");
+          DIE("operation not supported on uninitialized value");
         } else {
           using CharT = typename std::decay_t<decltype(s)>::value_type;
           s.push_back(static_cast<CharT>(c));
@@ -434,7 +434,7 @@ std::size_t CharacterValueImpl::find_first_not_of(char32_t c) const {
           using CharT = typename std::decay_t<decltype(s)>::value_type;
           return s.find_first_not_of(static_cast<CharT>(c));
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -449,7 +449,7 @@ std::size_t CharacterValueImpl::find_last_not_of(char32_t c) const {
           using CharT = typename std::decay_t<decltype(s)>::value_type;
           return s.find_last_not_of(static_cast<CharT>(c));
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -469,7 +469,7 @@ std::size_t CharacterValueImpl::find_first_not_of(
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.find_first_not_of(p);
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -489,7 +489,7 @@ std::size_t CharacterValueImpl::find_last_not_of(
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.find_last_not_of(p);
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -513,7 +513,7 @@ std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.find(p);
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -532,7 +532,7 @@ std::size_t CharacterValueImpl::rfind(const CharacterValueImpl &pattern) const {
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.rfind(p);
         }
-        llvm_unreachable("Unsupported combination of character kinds");
+        DIE("Unsupported combination of character kinds");
         return std::string::npos;
       },
       storage_, pattern.storage_);
@@ -551,7 +551,7 @@ std::size_t CharacterValueImpl::find_first_of(
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.find_first_of(p);
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
@@ -571,7 +571,7 @@ std::size_t CharacterValueImpl::find_last_of(
             !std::is_same_v<std::decay_t<decltype(s)>, std::monostate>) {
           return s.find_last_of(p);
         } else {
-          llvm_unreachable("Unsupported combination of character kinds");
+          DIE("Unsupported combination of character kinds");
           return std::string::npos;
         }
       },
