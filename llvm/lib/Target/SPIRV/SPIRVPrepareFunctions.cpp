@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -637,9 +636,13 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
       std::move(ChangedTypes), NewF->getName());
 
   for (User *U : F->users()) {
-    if (auto *CI = dyn_cast<CallInst>(U); CI && CI->getCalledFunction() == F)
-      CI->mutateFunctionType(NewF->getFunctionType());
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+      CB->mutateFunctionType(NewF->getFunctionType());
   }
+  // NewF keeps F's address space, so their pointer types match and
+  // RAUW is safe despite the differing signatures.
+  assert(F->getType() == NewF->getType() &&
+         "RAUW requires F and NewF to share the same pointer type");
   F->replaceAllUsesWith(NewF);
 
   // register the mutation
@@ -900,8 +903,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPrepareFunctionsPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {

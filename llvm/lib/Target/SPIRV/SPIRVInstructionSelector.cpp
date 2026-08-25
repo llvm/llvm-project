@@ -480,6 +480,9 @@ private:
   bool selectFrexp(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
+  bool selectCopySign(Register ResVReg, SPIRVTypeInst ResType,
+                      MachineInstr &I) const;
+
   bool selectLdexp(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
   bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
@@ -1189,7 +1192,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
-    return selectExtInst(ResVReg, ResType, I, CL::copysign);
+    return selectCopySign(ResVReg, ResType, I);
 
   case TargetOpcode::G_FCEIL:
     return selectExtInst(ResVReg, ResType, I, CL::ceil, GL::Ceil);
@@ -1571,6 +1574,55 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectCopySign(Register ResVReg,
+                                              SPIRVTypeInst ResType,
+                                              MachineInstr &I) const {
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return selectExtInst(ResVReg, ResType, I, CL::copysign);
+
+  // There is no copysign instruction in the GLSL Extended Instruction set, so
+  // it is implemented with bit manipulation:
+  //   bitcast((bitcast(magnitude) & ~signBit) | (bitcast(sign) & signBit))
+  Register MagnitudeReg = I.getOperand(1).getReg();
+  Register SignReg = I.getOperand(2).getReg();
+
+  const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+  const unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
+  SPIRVTypeInst IntType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
+  const APInt SignMaskVal = APInt::getSignMask(BitWidth);
+
+  Register SignMask, NotSignMask;
+  unsigned AndOpcode, OrOpcode;
+  if (ComponentCount > 1) {
+    IntType = GR.getOrCreateSPIRVVectorType(IntType, ComponentCount, I, TII);
+    SignMask = GR.getOrCreateConstVector(SignMaskVal, I, IntType, TII);
+    NotSignMask = GR.getOrCreateConstVector(~SignMaskVal, I, IntType, TII);
+    AndOpcode = SPIRV::OpBitwiseAndV;
+    OrOpcode = SPIRV::OpBitwiseOrV;
+  } else {
+    SignMask = GR.getOrCreateConstInt(SignMaskVal, I, IntType, TII);
+    NotSignMask = GR.getOrCreateConstInt(~SignMaskVal, I, IntType, TII);
+    AndOpcode = SPIRV::OpBitwiseAndS;
+    OrOpcode = SPIRV::OpBitwiseOrS;
+  }
+
+  auto EmitBitOp = [&](Register &ResReg, ArrayRef<Register> SrcRegs,
+                       unsigned Opcode) {
+    ResReg = MRI->createVirtualRegister(GR.getRegClass(IntType));
+    return selectOpWithSrcs(ResReg, IntType, I, SrcRegs, Opcode);
+  };
+
+  Register MagnitudeInt, SignInt, MagnitudeBits, SignBits, CombinedInt;
+  if (!EmitBitOp(MagnitudeInt, {MagnitudeReg}, SPIRV::OpBitcast) ||
+      !EmitBitOp(SignInt, {SignReg}, SPIRV::OpBitcast) ||
+      !EmitBitOp(MagnitudeBits, {MagnitudeInt, NotSignMask}, AndOpcode) ||
+      !EmitBitOp(SignBits, {SignInt, SignMask}, AndOpcode) ||
+      !EmitBitOp(CombinedInt, {MagnitudeBits, SignBits}, OrOpcode))
+    return false;
+
+  return selectOpWithSrcs(ResVReg, ResType, I, {CombinedInt}, SPIRV::OpBitcast);
 }
 
 bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,

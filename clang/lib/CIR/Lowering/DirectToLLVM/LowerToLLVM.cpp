@@ -857,6 +857,23 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
 
   uint64_t insertIdx = 0;
   auto paddingItr = paddingAddedIndexes.begin();
+  auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmTy);
+
+  // The field \p elt lands in, when that field holds no bytes and the element
+  // kept a type it cannot take.  Only a zero-width bit-field is like this.  A
+  // flexible array member's field also holds no bytes, but does match.
+  auto emptyFieldFor = [&](uint64_t idx, mlir::Attribute elt) -> mlir::Type {
+    if (!structTy || idx >= structTy.getBody().size())
+      return {};
+    mlir::Type fieldTy = structTy.getBody()[idx];
+    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(fieldTy);
+    if (!arrayTy || arrayTy.getNumElements() != 0)
+      return {};
+    auto typedElt = mlir::dyn_cast<mlir::TypedAttr>(elt);
+    if (!typedElt || converter->convertType(typedElt.getType()) == fieldTy)
+      return {};
+    return fieldTy;
+  };
 
   // Iteratively lower each constant element of the record.
   for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
@@ -865,7 +882,10 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
       ++paddingItr;
     }
 
-    mlir::Value init = visit(elt);
+    mlir::Type emptyTy = emptyFieldFor(insertIdx, elt);
+    mlir::Value init = emptyTy
+                           ? mlir::LLVM::ZeroOp::create(rewriter, loc, emptyTy)
+                           : visit(elt);
     result = mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init,
                                                insertIdx);
     ++insertIdx;
@@ -3243,7 +3263,7 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
     mlir::Value minusOne;
     if (isVector) {
       const uint64_t numElements =
-          mlir::dyn_cast<cir::VectorType>(op.getType()).getSize();
+          mlir::cast<cir::VectorType>(op.getType()).getSize();
       SmallVector<int32_t> values(numElements, -1);
       mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
       minusOne =
@@ -3255,11 +3275,22 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
                                                    minusOne);
     return mlir::success();
   }
+
   if (mlir::isa<cir::BoolType>(elementType)) {
-    auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+    mlir::Value one;
+    if (isVector) {
+      const uint64_t numElements =
+          mlir::cast<cir::VectorType>(op.getType()).getSize();
+      SmallVector<bool> values(numElements, true);
+      mlir::DenseIntElementsAttr denseVec = rewriter.getBoolVectorAttr(values);
+      one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
+    } else {
+      one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, adaptor.getInput(), one);
     return mlir::success();
   }
+
   return op.emitError() << "Unsupported type for bitwise NOT";
 }
 
@@ -3917,7 +3948,16 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
-    for (mlir::Type ty : type.getMembers()) {
+    for (auto [ty, kind] :
+         llvm::zip_equal(type.getMembers(), type.getMemberKinds())) {
+      // Argument passing has already read the declared type, and carrying it
+      // into LLVM would apply the element's alignment and grow the record.  The
+      // member stays, since the members after it are numbered from it.
+      if (cir::isZeroWidthBitField(ty, kind)) {
+        llvmMembers.push_back(mlir::LLVM::LLVMArrayType::get(
+            mlir::IntegerType::get(type.getContext(), 8), 0));
+        continue;
+      }
       mlir::Type memberTy = convertTypeForMemory(converter, dataLayout, ty);
       // A null member means an unsupported type (e.g. a _BitInt with byte-array
       // storage); propagate the conversion failure instead of building an
@@ -4863,12 +4903,17 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
+  mlir::Type elementType = op.getLhs().getType().getElementType();
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
     bitResult = mlir::LLVM::ICmpOp::create(
         rewriter, op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), intType.isSigned()),
+        adaptor.getLhs(), adaptor.getRhs());
+  } else if (auto boolType = mlir::dyn_cast<cir::BoolType>(elementType)) {
+    bitResult = mlir::LLVM::ICmpOp::create(
+        rewriter, op.getLoc(),
+        convertCmpKindToICmpPredicate(op.getKind(), /*isSigned=*/false),
         adaptor.getLhs(), adaptor.getRhs());
   } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     if (cir::FenvAttr fenv = op.getFenvAttr()) {
@@ -4890,7 +4935,9 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // LLVM IR vector comparison returns a vector of i1. This one-bit vector
   // must be sign-extended to the correct result type, unless a vector of i1 is
   // the type we need.
-  if (cast<cir::IntType>(op.getType().getElementType()).getWidth() > 1)
+  mlir::Type vecElemTy = op.getType().getElementType();
+  if (isa<cir::IntType>(vecElemTy) &&
+      cast<cir::IntType>(vecElemTy).getWidth() > 1)
     rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
         op, typeConverter->convertType(op.getType()), bitResult);
   else
@@ -5021,12 +5068,17 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
     cir::VecTernaryOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  // Convert `cond` into a vector of i1, then use that in a `select` op.
-  mlir::Value bitVec = mlir::LLVM::ICmpOp::create(
-      rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
-      mlir::LLVM::ZeroOp::create(
-          rewriter, op.getCond().getLoc(),
-          typeConverter->convertType(op.getCond().getType())));
+  mlir::Value bitVec = adaptor.getCond();
+
+  if (!isa<cir::BoolType>(op.getCond().getType().getElementType())) {
+    // Convert `cond` into a vector of i1, then use that in a `select` op.
+    bitVec = mlir::LLVM::ICmpOp::create(
+        rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, adaptor.getCond(),
+        mlir::LLVM::ZeroOp::create(
+            rewriter, op.getCond().getLoc(),
+            typeConverter->convertType(op.getCond().getType())));
+  }
+
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
