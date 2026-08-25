@@ -754,9 +754,6 @@ private:
     __annotate_shrink(__old_size);
   }
 
-  template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __emplace_back_slow_path(_Args&&... __args);
-
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
   //
@@ -1071,34 +1068,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
   }
 }
 
-template <class _Tp, class _Allocator>
-template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
-vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
-  _SplitBuffer __v(__recommend(size() + 1), size(), this->__layout_.__alloc());
-  //    __v.emplace_back(std::forward<_Args>(__args)...);
-  pointer __end = __v.end();
-  __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__args)...);
-  __v.__set_sentinel(++__end);
-  __layout_.__relocate(__v);
-  return __end;
-}
-
 // This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
 // the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
 // See https://llvm.org/PR154292
-template <class _If, class _Else>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
+template <class _If, class _Else, class... _Args>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 decltype(std::declval<_If>()(std::declval<_Args&&>()...))
+__if_likely_else(bool __cond, _If __if, _Else __else, _Args&&... __args) {
+  static_assert(
+      is_same<decltype(__if(std::forward<_Args>(__args)...)), decltype(__else(std::forward<_Args>(__args)...))>::value,
+      "Return type of if and else branch have to be the same type");
   if (__builtin_constant_p(__cond)) {
     if (__cond)
-      __if();
+      return __if(std::forward<_Args>(__args)...);
     else
-      __else();
+      return __else(std::forward<_Args>(__args)...);
   } else {
     if (__cond) [[__likely__]]
-      __if();
+      return __if(std::forward<_Args>(__args)...);
     else
-      __else();
+      return __else(std::forward<_Args>(__args)...);
   }
 }
 
@@ -1106,16 +1094,23 @@ template <class _Tp, class _Alloc>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
-  pointer __end = __layout_.__end_ptr();
   std::__if_likely_else(
       size() != capacity(),
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__end;
+      [](vector& __self, _Args&&... __largs) static {
+        __self.__emplace_back_assume_capacity(std::forward<_Args>(__largs)...);
       },
-      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+      [](vector& __self, _Args&&... __largs) static {
+        _SplitBuffer __v(__self.__recommend(__self.size() + 1), __self.size(), __self.__layout_.__alloc());
+        //    __v.emplace_back(std::forward<_Args>(__args)...);
+        pointer __end = __v.end();
+        __alloc_traits::construct(
+            __self.__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__largs)...);
+        __v.__set_sentinel(++__end);
+        __self.__layout_.__relocate(__v);
+      },
+      *this,
+      std::forward<_Args>(__args)...);
 
-  __layout_.__set_bound_using_pointer(__end);
 #if _LIBCPP_STD_VER >= 17
   return back();
 #endif
