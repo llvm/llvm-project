@@ -5,7 +5,7 @@
 
 // REQUIRES: plugins
 
-// XFAIL: *
+// UNSUPPORTED: *
 
 // RUN: rm -rf %t && mkdir -p %t
 

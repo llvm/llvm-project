@@ -411,7 +411,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
       const DataLayout &DL = L->getDataLayout();
       if (isModSet(AA->getModRefInfo(CI, MemoryLocation::get(L))) ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(), L->getType(),
-                                       L->getAlign(), DL, L))
+                                       L->getAlign(), SimplifyQuery(DL, L)))
         return false;
     }
   }
