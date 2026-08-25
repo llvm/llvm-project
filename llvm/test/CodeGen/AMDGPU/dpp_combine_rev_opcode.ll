@@ -598,7 +598,7 @@ define amdgpu_kernel void @dpp_fsub_f16(ptr addrspace(1) %arg, half %in) {
 }
 
 ; The shift amount is src0 of v_lshlrev_b32, so the DPP mov would be folded
-; straight into the operand the sequencer swaps away. Rejected before gfx10.3,
+; straight into the operand the sequencer swaps away. Rejected before gfx11,
 ; where the shift REV opcodes stopped reversing their operands.
 define amdgpu_kernel void @dpp_shl_amount(ptr addrspace(1) %arg, i32 %in) {
 ; GFX8-LABEL: dpp_shl_amount:
@@ -651,12 +651,16 @@ define amdgpu_kernel void @dpp_shl_amount(ptr addrspace(1) %arg, i32 %in) {
 ;
 ; GFX1030-LABEL: dpp_shl_amount:
 ; GFX1030:       ; %bb.0:
+; GFX1030-NEXT:    s_clause 0x1
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX1030-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX1030-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dword v1, v0, s[0:1]
+; GFX1030-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_lshlrev_b32_dpp v1, v1, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, v2, v1
 ; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_endpgm
 ;
@@ -746,12 +750,16 @@ define amdgpu_kernel void @dpp_lshr_amount(ptr addrspace(1) %arg, i32 %in) {
 ;
 ; GFX1030-LABEL: dpp_lshr_amount:
 ; GFX1030:       ; %bb.0:
+; GFX1030-NEXT:    s_clause 0x1
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX1030-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX1030-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dword v1, v0, s[0:1]
+; GFX1030-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_lshrrev_b32_dpp v1, v1, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_lshrrev_b32_e32 v1, v2, v1
 ; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_endpgm
 ;
@@ -841,12 +849,16 @@ define amdgpu_kernel void @dpp_ashr_amount(ptr addrspace(1) %arg, i32 %in) {
 ;
 ; GFX1030-LABEL: dpp_ashr_amount:
 ; GFX1030:       ; %bb.0:
+; GFX1030-NEXT:    s_clause 0x1
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX1030-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX1030-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dword v1, v0, s[0:1]
+; GFX1030-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_ashrrev_i32_dpp v1, v1, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX1030-NEXT:    v_ashrrev_i32_e32 v1, v2, v1
 ; GFX1030-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1030-NEXT:    s_endpgm
 ;

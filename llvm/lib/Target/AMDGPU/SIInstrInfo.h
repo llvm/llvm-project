@@ -923,6 +923,17 @@ public:
 
   bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
 
+  // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+  // transforms them and reverse the order of their operands at runtime.
+  //
+  // Documentation is incomplete on which instructions are effected, so
+  // the implementation is derived from experimentation.
+  //
+  // Listed as target-independent pseudos; the per-subtarget MC opcodes
+  // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+  // Defined out of line because GCNSubtarget is incomplete here.
+  static bool isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode);
+
   static bool isTRANS(const MachineInstr &MI) {
     return SIInstrFlags::isTRANS(MI);
   }
