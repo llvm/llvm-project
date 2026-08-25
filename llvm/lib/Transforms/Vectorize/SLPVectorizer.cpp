@@ -6346,10 +6346,10 @@ static bool isMaskedLoadCompress(
   LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
-  IsMasked = !isSafeToLoadUnconditionally(
-      Ptr0, LoadVecTy, CommonAlignment, DL,
-      cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC, &DT,
-      &TLI);
+  SimplifyQuery SQ(
+      DL, &TLI, &DT, &AC,
+      cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]));
+  IsMasked = !isSafeToLoadUnconditionally(Ptr0, LoadVecTy, CommonAlignment, SQ);
   if (IsMasked && !TTI.isLegalMaskedLoad(LoadVecTy, CommonAlignment,
                                          LI->getPointerAddressSpace()))
     return false;
@@ -6394,9 +6394,9 @@ static bool isMaskedLoadCompress(
     // Check for potential segmented(interleaved) loads.
     VectorType *AlignedLoadVecTy = cast<VectorType>(getWidenedType(
         ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1)));
+    SimplifyQuery SQ(DL, &TLI, &DT, &AC, cast<LoadInst>(VL.back()));
     if (!isSafeToLoadUnconditionally(Ptr0, AlignedLoadVecTy, CommonAlignment,
-                                     DL, cast<LoadInst>(VL.back()), &AC, &DT,
-                                     &TLI))
+                                     SQ))
       AlignedLoadVecTy = LoadVecTy;
     if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
@@ -15547,7 +15547,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, VecTy, {}, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecTy, CostKind, {},
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }

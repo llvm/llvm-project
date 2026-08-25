@@ -1081,14 +1081,16 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     DominatorTree DT(const_cast<Function &>(F));
     BlockFrequencyInfo *BFI = nullptr;
     std::unique_ptr<BlockFrequencyInfo> BFIPtr;
-    if (GetBFICallback)
-      BFI = GetBFICallback(F);
-    else if (F.hasProfileData()) {
-      CycleInfo CI;
-      CI.compute(const_cast<Function &>(F));
-      BranchProbabilityInfo BPI{F, CI};
-      BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
-      BFI = BFIPtr.get();
+    if (F.hasProfileData()) {
+      if (GetBFICallback) {
+        BFI = GetBFICallback(F);
+      } else {
+        CycleInfo CI;
+        CI.compute(const_cast<Function &>(F));
+        BranchProbabilityInfo BPI{F, CI};
+        BFIPtr = std::make_unique<BlockFrequencyInfo>(F, BPI, CI);
+        BFI = BFIPtr.get();
+      }
     }
 
     computeFunctionSummary(Index, M, F, BFI, PSI, DT,
