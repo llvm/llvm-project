@@ -524,11 +524,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     int NumFlags = 0;
     const ListInit *LI = R.getValueAsListInit("Flags");
     for (const Init *I : *LI)
-      OS << (NumFlags++ ? " | " : "") << cast<DefInit>(I)->getDef()->getName();
+      OS << (NumFlags++ ? " | " : "") << "static_cast<unsigned>("
+         << cast<DefInit>(I)->getDef()->getName() << ")";
     if (GroupFlags) {
       for (const Init *I : *GroupFlags)
-        OS << (NumFlags++ ? " | " : "")
-           << cast<DefInit>(I)->getDef()->getName();
+        OS << (NumFlags++ ? " | " : "") << "static_cast<unsigned>("
+           << cast<DefInit>(I)->getDef()->getName() << ")";
     }
     if (NumFlags == 0)
       OS << '0';
@@ -538,12 +539,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     int NumVisFlags = 0;
     LI = R.getValueAsListInit("Visibility");
     for (const Init *I : *LI)
-      OS << (NumVisFlags++ ? " | " : "")
-         << cast<DefInit>(I)->getDef()->getName();
+      OS << (NumVisFlags++ ? " | " : "") << "static_cast<unsigned>("
+         << cast<DefInit>(I)->getDef()->getName() << ")";
     if (GroupVis) {
       for (const Init *I : *GroupVis)
-        OS << (NumVisFlags++ ? " | " : "")
-           << cast<DefInit>(I)->getDef()->getName();
+        OS << (NumVisFlags++ ? " | " : "") << "static_cast<unsigned>("
+           << cast<DefInit>(I)->getDef()->getName() << ")";
     }
     if (NumVisFlags == 0)
       OS << '0';
