@@ -207,6 +207,12 @@ RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
 Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
+  {
+    std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+    if (Buffers[Device.getDeviceId()])
+      return Error::success();
+  }
+
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   auto RPCBufferOrErr = Device.allocate(
