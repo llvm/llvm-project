@@ -252,7 +252,8 @@ public:
     // We are going to generate an alloca, so save the stack pointer.
     if (!savedStackPtr)
       savedStackPtr = genStackSave(loc);
-    if (attr.isByVal() || attr.isIndirect()) {
+    if (attr.isByVal() || attr.isIndirect() ||
+        mlir::isa<fir::ReferenceType>(resTy)) {
       // Both forms require the caller to materialize a copy of the value and
       // pass the address of that copy. They differ only in the attribute that
       // is attached to the argument in the signature.
@@ -377,7 +378,8 @@ public:
       const fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
     return llvm::any_of(newInTyAndAttrs, [](auto arg) {
       const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
-      return attr.isByVal() || attr.isSRet() || attr.isIndirect();
+      return attr.isByVal() || attr.isSRet() || attr.isIndirect() ||
+             attr.hasAlignment();
     });
   }
 
@@ -1310,7 +1312,9 @@ public:
       auto index = e.index();
       auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
       auto argNo = newInTyAndAttrs.size();
-      if (attr.isByVal() || attr.isIndirect()) {
+      auto resTy = std::get<mlir::Type>(tup);
+      if (attr.isByVal() || attr.isIndirect() ||
+          mlir::isa<fir::ReferenceType>(resTy)) {
         // In both cases the callee receives a pointer to a copy made by the
         // caller and loads the value from it. They differ only in the attribute
         // attached to the argument: `byval` marks it as a by-value aggregate

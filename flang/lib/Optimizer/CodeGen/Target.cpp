@@ -2004,11 +2004,11 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
           mlir::IntegerType::get(ty.getContext(), byteSize * 8), AT{});
       return marshal;
     }
-    // Larger structs passed via implicit by-value reference.
+    // Larger structs passed via implicit reference (pointer in register/stack).
     unsigned short align{
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
     marshal.emplace_back(fir::ReferenceType::get(ty),
-                         AT{/*align=*/align, /*byval=*/true, /*sret=*/false});
+                         AT{/*align=*/align, /*byval=*/false, /*sret=*/false});
     return marshal;
   }
 
