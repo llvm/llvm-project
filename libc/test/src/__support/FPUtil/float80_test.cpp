@@ -16,10 +16,53 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
+TEST(LlvmLibcFloat80Test, Operators) {
+  Float80 a(1.0f), b(1.0f), c(2.0f), d(3.0f), pa(1.0f), na(-1.0f);
+
+  // comparison operators
+  ASSERT_TRUE(a == b);
+  ASSERT_TRUE(a == Float80(1.0));
+  ASSERT_TRUE(a != c);
+  ASSERT_TRUE(b != c);
+  ASSERT_TRUE(c > b);
+  ASSERT_TRUE(a >= b);
+  ASSERT_TRUE(b <= c);
+  ASSERT_TRUE(a < c);
+
+  // Unary operators
+  ASSERT_TRUE(-pa == na);
+  ASSERT_TRUE(-(-pa) == pa);
+
+  // Binary operators
+  ASSERT_TRUE((a + b) == c);
+  ASSERT_TRUE((a - b) == Float80(0.0f));
+  ASSERT_TRUE((c * d) == Float80(6.0f));
+  ASSERT_TRUE((Float80(6.0f) / d) == Float80(2.0f));
+}
+
+TEST(LlvmLibcFloat80Test, SpecialValues) {
+  Float80 inf = FPBits::inf(Sign::POS).get_val();
+  Float80 neg_inf = FPBits::inf(Sign::NEG).get_val();
+  Float80 nan = FPBits::quiet_nan().get_val();
+
+  // checking operators with special values
+  ASSERT_TRUE(Float80(0.0f) == Float80(-0.0f)); // +0.0 == -0.0 is true
+  ASSERT_TRUE(Float80(0.0f) == Float80(0.0f));
+  ASSERT_TRUE(inf == inf);
+  ASSERT_TRUE(-inf == neg_inf);
+  ASSERT_TRUE((inf + Float80(1.0f)) == inf);
+  ASSERT_TRUE(inf + inf == inf);
+  ASSERT_TRUE(nan != nan);
+  ASSERT_TRUE(!(nan == nan));
+  ASSERT_TRUE(nan != Float80(0.0f));
+}
+
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float80(0.0f)), 0);
+  ASSERT_EQ(static_cast<int>(Float80(-0.0f)), 0);
   ASSERT_EQ(static_cast<int>(Float80(1.0f)), 1);
+  ASSERT_EQ(static_cast<int>(Float80(-1.0f)), -1);
   ASSERT_EQ(static_cast<long long>(Float80(1000000000.0)),
             static_cast<long long>(1000000000));
   ASSERT_EQ(static_cast<unsigned>(Float80(7.0f)), 7U);

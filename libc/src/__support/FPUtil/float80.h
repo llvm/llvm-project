@@ -14,6 +14,7 @@
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/FPUtil/generic/mul.h"
@@ -94,6 +95,58 @@ struct Float80 {
     DyadicFloat<FPBits<Float80>::STORAGE_LEN> xd(
         x_bits.sign(), x_bits_exp, x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type());
+  }
+
+  // unary operator
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR Float80 operator-() const {
+    fputil::FPBits<Float80> result(*this);
+    result.set_sign(result.is_pos() ? Sign::NEG : Sign::POS);
+    return result.get_val();
+  }
+
+  LIBC_INLINE constexpr Float80 operator+(const Float80 &other) const {
+    return fputil::generic::add<Float80>(fputil::cast<Float128>(*this),
+                                         fputil::cast<Float128>(other));
+  }
+
+  LIBC_INLINE constexpr Float80 operator-(const Float80 &other) const {
+    return fputil::generic::sub<Float80>(fputil::cast<Float128>(*this),
+                                         fputil::cast<Float128>(other));
+  }
+
+  LIBC_INLINE constexpr Float80 operator*(const Float80 &other) const {
+    return fputil::generic::mul<Float80>(fputil::cast<Float128>(*this),
+                                         fputil::cast<Float128>(other));
+  }
+
+  LIBC_INLINE constexpr Float80 operator/(const Float80 &other) const {
+    return fputil::generic::div<Float80>(fputil::cast<Float128>(*this),
+                                         fputil::cast<Float128>(other));
+  }
+
+  // Comparison operators
+  LIBC_INLINE constexpr bool operator==(const Float80 &other) const {
+    return fputil::equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator!=(const Float80 &other) const {
+    return !fputil::equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<(const Float80 &other) const {
+    return fputil::less_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<=(const Float80 &other) const {
+    return fputil::less_than_or_equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>(const Float80 &other) const {
+    return fputil::greater_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>=(const Float80 &other) const {
+    return fputil::greater_than_or_equals(*this, other);
   }
 };
 
