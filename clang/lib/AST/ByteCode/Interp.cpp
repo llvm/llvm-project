@@ -360,6 +360,16 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!U.getFieldDesc()->isUnion())
     return true;
 
+  // Check if we're currently initializing another member of the same union.
+  if (WillActivate && !S.InitializingPtrs.empty()) {
+    if (PtrView B = S.InitializingPtrs.back();
+        B != Ptr.view() && !B.isRoot() && B.getBase() == U) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_union_member_change_during_init);
+      return false;
+    }
+  }
+
   // When we will activate Ptr, check that none of the unions in its path have a
   // non-trivial default constructor.
   if (WillActivate) {
@@ -1993,10 +2003,19 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
+  bool RVO = false;
+  if (Func->hasRVO()) {
+    RVO = true;
+    Pointer RVOPtr = NewFrame->getRVOPtr();
+    S.InitializingPtrs.push_back(RVOPtr.view());
+  }
+
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
-  // Remove initializing  block again.
+  // Remove initializing blocks again.
   if (InstancePtrTracked)
+    S.InitializingPtrs.pop_back();
+  if (RVO)
     S.InitializingPtrs.pop_back();
 
   if (!Success) {
