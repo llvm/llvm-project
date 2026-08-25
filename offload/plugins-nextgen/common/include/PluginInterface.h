@@ -1027,11 +1027,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
-  /// Indicate whether dataSubmitImpl has a faster path for host buffers that
-  /// are registered as pinned memory. If a plugin returns true, the kernel
-  /// launch environment is copied into a pinned host buffer before it is
-  /// submitted, so that its transfer takes that path.
-  virtual bool hasFastSubmitFromPinnedMemory() const { return false; }
+  /// Indicate whether the plugin transfers data faster when the host side of
+  /// the transfer is pinned memory. If a plugin returns true, the kernel
+  /// launch environment is staged in a pinned host buffer before it is
+  /// submitted. Plugins may benefit for different reasons: some pick a cheaper
+  /// copy path for buffers they know are pinned, others rely on the driver
+  /// only issuing a true asynchronous transfer out of page-locked memory.
+  virtual bool hasFastTransferWithPinnedMemory() const { return false; }
 
   /// Allocate a pinned host buffer to stage a kernel launch environment. The
   /// caller owns it until it registers it with

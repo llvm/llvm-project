@@ -2840,7 +2840,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return true;
   }
 
-  bool hasFastSubmitFromPinnedMemory() const override { return true; }
+  /// Transfers out of registered pinned memory take the one-step path in
+  /// dataSubmitImpl instead of staging through an intermediate buffer.
+  bool hasFastTransferWithPinnedMemory() const override { return true; }
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,

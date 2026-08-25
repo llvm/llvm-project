@@ -164,9 +164,8 @@ GenericKernelTy::getKernelLaunchEnvironment(
         *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
   }
 
-  // Copy into a pinned buffer if the plugin transfers those faster: dataAlloc
-  // registers TARGET_ALLOC_HOST memory in PinnedAllocs, so the dataSubmit
-  // below can take the one-step copy path.
+  // Stage the launch environment in pinned memory if the plugin transfers it
+  // faster from there, so the dataSubmit below can take that path.
   const void *LaunchEnvSrc = &LocalKLE;
   auto *PinnedKLE = GenericDevice.getPinnedLaunchEnvBuffer();
   if (PinnedKLE) {
@@ -1009,7 +1008,7 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
 }
 
 KernelLaunchEnvironmentTy *GenericDeviceTy::getPinnedLaunchEnvBuffer() {
-  if (!hasFastSubmitFromPinnedMemory())
+  if (!hasFastTransferWithPinnedMemory())
     return nullptr;
 
   // While recording or replaying, dataAlloc serves every allocation kind from
