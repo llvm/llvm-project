@@ -199,8 +199,15 @@ static Register getVReg(MachineOperand &Op) {
   return Reg;
 }
 
-static bool runRegBankSelect(MachineFunction &MF, GISelCSEInfo &CSEInfo,
-                             const MachineUniformityInfo &MUI) {
+static bool
+runRegBankSelect(MachineFunction &MF, function_ref<GISelCSEInfo *()> GetCSEInfo,
+                 function_ref<const MachineUniformityInfo *()> GetMUI) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
+  GISelCSEInfo &CSEInfo = *GetCSEInfo();
+  const MachineUniformityInfo &MUI = *GetMUI();
+
   // Setup the instruction builder with CSE.
   GISelObserverWrapper Observer;
   Observer.addObserver(&CSEInfo);
@@ -285,17 +292,17 @@ static bool runRegBankSelect(MachineFunction &MF, GISelCSEInfo &CSEInfo,
 }
 
 bool AMDGPURegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
-
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
-  const MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
-
-  return runRegBankSelect(MF, CSEInfo, MUI);
+  return runRegBankSelect(
+      MF,
+      [&]() {
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(getAnalysis<TargetPassConfig>().getCSEConfig());
+      },
+      [&]() {
+        return &getAnalysis<MachineUniformityAnalysisPass>()
+                    .getUniformityInfo();
+      });
 }
 
 PreservedAnalyses
@@ -303,14 +310,9 @@ AMDGPURegBankSelectPass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  if (MF.getProperties().hasFailedISel())
-    return PreservedAnalyses::all();
-
-  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
-  const MachineUniformityInfo &MUI =
-      MFAM.getResult<MachineUniformityAnalysis>(MF);
-
-  if (!runRegBankSelect(MF, *CSEInfo, MUI))
+  if (!runRegBankSelect(
+          MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
+          [&]() { return &MFAM.getResult<MachineUniformityAnalysis>(MF); }))
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses();
