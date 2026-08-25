@@ -1005,3 +1005,5 @@ Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {
 
 } // namespace rc
 } // namespace llvm
+
+#undef RETURN_IF_ERROR
