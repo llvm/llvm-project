@@ -713,23 +713,24 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     }
   }
 
+  const auto *MethodDecl = dyn_cast_or_null<CXXMethodDecl>(Call.getDecl());
+  if (!MethodDecl)
+    return;
+
   // Calls to explicit-object member functions are represented as ordinary
   // function calls because they have no implicit 'this' argument.  Model an
   // explicit-object assignment here before handling instance calls below.
-  const auto *ExplicitObjectMethod =
-      dyn_cast_or_null<CXXMethodDecl>(Call.getDecl());
-  if (ExplicitObjectMethod &&
-      ExplicitObjectMethod->isExplicitObjectMemberFunction() &&
-      ExplicitObjectMethod->getOverloadedOperator() == OO_Equal) {
+  if (MethodDecl->isExplicitObjectMemberFunction() &&
+      MethodDecl->getOverloadedOperator() == OO_Equal) {
     const MemRegion *ThisRegion = Call.getArgSVal(0).getAsRegion();
     State = removeFromState(State, ThisRegion);
 
-    if (ExplicitObjectMethod->isCopyAssignmentOperator() ||
-        ExplicitObjectMethod->isMoveAssignmentOperator()) {
+    if (MethodDecl->isCopyAssignmentOperator() ||
+        MethodDecl->isMoveAssignmentOperator()) {
       const MemRegion *ArgRegion = Call.getArgSVal(1).getAsRegion();
-      const CXXRecordDecl *RD = ExplicitObjectMethod->getParent();
+      const CXXRecordDecl *RD = MethodDecl->getParent();
       MisuseKind MK =
-          ExplicitObjectMethod->isMoveAssignmentOperator() ? MK_Move : MK_Copy;
+          MethodDecl->isMoveAssignmentOperator() ? MK_Move : MK_Copy;
       modelUse(State, ArgRegion, RD, MK, C);
       return;
     }
@@ -743,11 +744,6 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
 
   const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
   if (!ThisRegion)
-    return;
-
-  // The remaining part is check only for method call on a moved-from object.
-  const auto MethodDecl = dyn_cast_or_null<CXXMethodDecl>(IC->getDecl());
-  if (!MethodDecl)
     return;
 
   // Calling a destructor on a moved object is fine.
