@@ -136,6 +136,20 @@ static bool reachesNamedBitFieldUnit(mlir::Type ty) {
   return llvm::any_of(recTy.getMembers(), reachesNamedBitFieldUnit);
 }
 
+/// Whether \p ty, or an aggregate member/element reached by value (never
+/// through a pointer), is an incomplete record.  Such a record has no known
+/// layout, so no eightbyte classification can be built for it.  Classic skips
+/// full ABI lowering for a function type that depends on an incomplete tag type
+/// rather than attempting one.
+static bool hasIncompleteRecordByValue(mlir::Type ty) {
+  if (auto recTy = dyn_cast<cir::RecordType>(ty))
+    return !recTy.isComplete() ||
+           llvm::any_of(recTy.getMembers(), hasIncompleteRecordByValue);
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return hasIncompleteRecordByValue(arrTy.getElementType());
+  return false;
+}
+
 /// The CIR types the x86_64 bridge handles.  Scalars: an integer up to 128
 /// bits (including `_BitInt` and `__int128`), pointer, vtable pointer, bool,
 /// void, or any floating-point type.  Aggregates: a complete struct or union
@@ -839,6 +853,15 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
+    // C++ requires a complete type at any call or definition, so only a
+    // declaration can carry an incomplete-by-value parameter or return
+    // type, and no translation unit can ever call or define it with real
+    // argument data.  Leave it unclassified, mirroring classic CodeGen.
+    cir::FuncType fnTy = f.getFunctionType();
+    if (isX86 && f.isDeclaration() &&
+        (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
+         llvm::any_of(fnTy.getInputs(), hasIncompleteRecordByValue)))
+      return;
     std::optional<FunctionClassification> fc;
     if (isX86)
       fc = classifyX86_64Function(f, dl, *x86TypeMapper,

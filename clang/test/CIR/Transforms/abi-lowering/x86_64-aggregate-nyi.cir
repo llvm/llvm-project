@@ -32,6 +32,7 @@
 !rec_EBits = !cir.struct<"EBits" {empty !u32i}>
 !rec_HoldsEmptyBits = !cir.struct<"HoldsEmptyBits" {empty !rec_EBits, data !s32i}>
 !rec_LeadPad = !cir.struct<"LeadPad" {pad !cir.array<!u8i x 8>, data !s32i}>
+!rec_Incomplete = !cir.struct<"Incomplete" incomplete>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -236,4 +237,13 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.struct<"NamedPlusZeroWidth"
+
+  // A definition (unlike a declaration) is refused: no incomplete-by-value
+  // definition can arise from valid C++, so this stays a hard reject rather
+  // than the declaration-only skip in x86_64-incomplete-record-declaration.cir.
+  cir.func @take_incomplete_defined(%arg0: !rec_Incomplete) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"Incomplete" incomplete>'
 }
