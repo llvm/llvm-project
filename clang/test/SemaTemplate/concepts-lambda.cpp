@@ -493,3 +493,26 @@ static_assert(count_if_v_bad_2<L, double> == 111);
 static_assert(count_if_v_bad_2<L, char> == 111);
 
 }
+
+namespace GH210346 {
+
+template<auto L, auto... Ts>
+concept foo =
+  requires { L.template operator()<Ts...>(Ts...); }; // #GH210346_foo
+
+template<auto P, auto... Ts>
+concept bar = foo<[]<auto... Us>{}, Ts...>; // #GH210346_bar
+
+template<auto P, auto... Ts>
+  requires bar<P, Ts...> // #GH210346_baz
+constexpr unsigned baz = [] { return 42; }();
+
+constexpr auto L = []<typename T> {};
+
+static_assert(baz<L> == 42);
+static_assert(baz<L, 1> == 42);
+// expected-error@-1 {{constraints not satisfied}}
+// expected-note@#GH210346_baz {{evaluated to false}}
+// expected-note@#GH210346_bar {{evaluated to false}}
+// expected-note@#GH210346_foo {{no matching member function for call}}
+}

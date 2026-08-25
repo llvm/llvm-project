@@ -128,8 +128,8 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
     }
 
     ParamLists.push_back(Actions.ActOnTemplateParameterList(
-        CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
-        TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
+        ExportLoc, TemplateLoc, LAngleLoc, TemplateParams, RAngleLoc,
+        OptionalRequiresClauseConstraintER.get()));
   } while (Tok.isOneOf(tok::kw_export, tok::kw_template));
 
   ParsedTemplateInfo TemplateInfo(&ParamLists, isSpecialization,
@@ -797,8 +797,8 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     DiagnoseMisplacedEllipsis(EllipsisLoc, NameLoc, AlreadyHasEllipsis, true);
 
   TemplateParameterList *ParamList = Actions.ActOnTemplateParameterList(
-      Depth, SourceLocation(), TemplateLoc, LAngleLoc, TemplateParams,
-      RAngleLoc, OptionalRequiresClauseConstraintER.get());
+      SourceLocation(), TemplateLoc, LAngleLoc, TemplateParams, RAngleLoc,
+      OptionalRequiresClauseConstraintER.get());
 
   // Grab a default argument (if available).
   // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before

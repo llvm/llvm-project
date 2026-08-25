@@ -2053,7 +2053,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           // "template<>", so that we treat this construct as a class
           // template specialization.
           FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-              0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+              SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
               LAngleLoc, nullptr));
           TemplateParams = &FakedParamLists;
         }

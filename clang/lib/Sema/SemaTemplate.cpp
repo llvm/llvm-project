@@ -1886,14 +1886,10 @@ bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
   return Checker.getResult();
 }
 
-TemplateParameterList *
-Sema::ActOnTemplateParameterList(unsigned Depth,
-                                 SourceLocation ExportLoc,
-                                 SourceLocation TemplateLoc,
-                                 SourceLocation LAngleLoc,
-                                 ArrayRef<NamedDecl *> Params,
-                                 SourceLocation RAngleLoc,
-                                 Expr *RequiresClause) {
+TemplateParameterList *Sema::ActOnTemplateParameterList(
+    SourceLocation ExportLoc, SourceLocation TemplateLoc,
+    SourceLocation LAngleLoc, ArrayRef<NamedDecl *> Params,
+    SourceLocation RAngleLoc, Expr *RequiresClause) {
   if (ExportLoc.isValid())
     Diag(ExportLoc, diag::warn_template_export_unsupported);
 

@@ -3986,13 +3986,17 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
   if (IsExpandedParameterPack)
     Param = NonTypeTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
-        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getDepth() - (TemplateArgs.retainInnerDepths()
+                             ? 0
+                             : TemplateArgs.getNumSubstitutedLevels()),
         D->getPosition(), D->getIdentifier(), T, TSI,
         ExpandedParameterPackTypes, ExpandedParameterPackTypesAsWritten);
   else
     Param = NonTypeTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getInnerLocStart(), D->getLocation(),
-        D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
+        D->getDepth() - (TemplateArgs.retainInnerDepths()
+                             ? 0
+                             : TemplateArgs.getNumSubstitutedLevels()),
         D->getPosition(), D->getIdentifier(), T, D->isParameterPack(), TSI);
 
   if (AutoTypeLoc AutoLoc = TSI->getTypeLoc().getContainedAutoTypeLoc())
