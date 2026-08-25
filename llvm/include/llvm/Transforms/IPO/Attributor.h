@@ -6209,12 +6209,21 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual bool reachesReturn() const = 0;
   virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
 
+  enum AccessOverlapTy {
+    UNKNOWN,  /// No known overlap.
+    COHERENT, /// Matches the size and has sufficient alignment to be not broken
+              /// apart but stay a coherent value if it matches the target
+              /// range.
+    EXACT,    /// Matches the exact location and size of the access.
+  };
+
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
   /// all of them, false otherwise. An access interferes with an offset-size
   /// pair if it might read or write that memory region.
   virtual bool forallInterferingAccesses(
-      AA::RangeTy Range, function_ref<bool(const Access &, bool)> CB) const = 0;
+      AA::RangeTy Range,
+      function_ref<bool(const Access &, AccessOverlapTy)> CB) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p I and
   /// return true if all such accesses were known and the callback returned true
@@ -6228,8 +6237,8 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       bool FindInterferingWrites, bool FindInterferingReads,
-      function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
-      AA::RangeTy &Range,
+      function_ref<bool(const Access &, AccessOverlapTy)> CB,
+      bool &HasBeenWrittenTo, AA::RangeTy &Range,
       function_ref<bool(const Access &)> SkipCB = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
