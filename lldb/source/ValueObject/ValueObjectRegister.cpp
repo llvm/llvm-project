@@ -20,6 +20,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -207,27 +208,38 @@ ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
 ValueObjectRegister::~ValueObjectRegister() = default;
 
 CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
-  if (!m_compiler_type.IsValid()) {
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    if (auto *target = exe_ctx.GetTargetPtr()) {
-      if (auto *exe_module = target->GetExecutableModulePointer()) {
-        auto type_system_or_err =
-            exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
-        if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
-                         "Unable to get CompilerType from TypeSystem: {0}");
-        } else {
-          if (auto ts = *type_system_or_err)
-            m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
-                m_reg_info.encoding, m_reg_info.byte_size * 8);
-        }
-      }
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  Target *target = exe_ctx.GetTargetPtr();
+  if (target && llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
+                    m_reg_info.register_type)) {
+    CompilerType register_type = target->GetRegisterType(m_reg_info);
+    if (register_type.IsValid())
+      return register_type;
+  }
+
+  if (!m_compiler_type.IsValid() && target) {
+    auto *exe_module = target->GetExecutableModulePointer();
+    if (!exe_module)
+      return m_compiler_type;
+    auto type_system_or_err =
+        exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
+                     "Unable to get CompilerType from TypeSystem: {0}");
+    } else {
+      if (auto ts = *type_system_or_err)
+        m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
+            m_reg_info.encoding, m_reg_info.byte_size * 8);
     }
   }
   return m_compiler_type;
 }
 
 ConstString ValueObjectRegister::GetTypeName() {
+  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
+          m_reg_info.register_type))
+    return GetCompilerType().GetTypeName();
+
   if (m_type_name.IsEmpty())
     m_type_name = GetCompilerType().GetTypeName();
   return m_type_name;

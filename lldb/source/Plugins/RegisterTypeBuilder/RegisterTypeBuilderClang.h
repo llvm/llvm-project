@@ -33,6 +33,10 @@ public:
   CompilerType GetRegisterType(const RegisterInfo &reg_info) override;
 
 private:
+  CompilerType BuildBuiltinType(const RegisterTypeBuiltin *builtin_type,
+                                uint32_t available_byte_size,
+                                lldb::TypeSystemClangSP type_system);
+
   CompilerType BuildEnumType(const RegisterTypeEnum *enum_type_info,
                              uint32_t register_byte_size,
                              lldb::TypeSystemClangSP type_system);
@@ -40,6 +44,10 @@ private:
   CompilerType BuildFlagsType(const RegisterTypeFlags *flags_info,
                               uint32_t register_byte_size,
                               lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildVectorType(const RegisterTypeVector *vector_type,
+                               uint32_t available_byte_size,
+                               lldb::TypeSystemClangSP type_system);
 
   Target &m_target;
 

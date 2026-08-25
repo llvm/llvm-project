@@ -76,6 +76,7 @@
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -5313,6 +5314,160 @@ void ParseFlags(
       });
 }
 
+static const RegisterTypeBuiltin *
+ResolveGDBBuiltinType(llvm::StringRef type_name) {
+  static const RegisterTypeBuiltin bool_type("bool", eEncodingUint,
+                                             eFormatBoolean, 1);
+  static const RegisterTypeBuiltin int8_type("int8", eEncodingSint,
+                                             eFormatDecimal, 1);
+  static const RegisterTypeBuiltin int16_type("int16", eEncodingSint,
+                                              eFormatDecimal, 2);
+  static const RegisterTypeBuiltin int32_type("int32", eEncodingSint,
+                                              eFormatDecimal, 4);
+  static const RegisterTypeBuiltin int64_type("int64", eEncodingSint,
+                                              eFormatDecimal, 8);
+  static const RegisterTypeBuiltin int128_type("int128", eEncodingSint,
+                                               eFormatDecimal, 16);
+  static const RegisterTypeBuiltin uint8_type("uint8", eEncodingUint,
+                                              eFormatHex, 1);
+  static const RegisterTypeBuiltin uint16_type("uint16", eEncodingUint,
+                                               eFormatHex, 2);
+  static const RegisterTypeBuiltin uint32_type("uint32", eEncodingUint,
+                                               eFormatHex, 4);
+  static const RegisterTypeBuiltin uint64_type("uint64", eEncodingUint,
+                                               eFormatHex, 8);
+  static const RegisterTypeBuiltin uint128_type("uint128", eEncodingUint,
+                                                eFormatHex, 16);
+  static const RegisterTypeBuiltin code_ptr_type("code_ptr", eEncodingUint,
+                                                 eFormatAddressInfo, 0);
+  static const RegisterTypeBuiltin data_ptr_type("data_ptr", eEncodingUint,
+                                                 eFormatAddressInfo, 0);
+  static const RegisterTypeBuiltin ieee_half_type("ieee_half", eEncodingIEEE754,
+                                                  eFormatFloat, 2);
+  static const RegisterTypeBuiltin ieee_single_type(
+      "ieee_single", eEncodingIEEE754, eFormatFloat, 4);
+  static const RegisterTypeBuiltin ieee_double_type(
+      "ieee_double", eEncodingIEEE754, eFormatFloat, 8);
+  static const RegisterTypeBuiltin i387_ext_type("i387_ext", eEncodingIEEE754,
+                                                 eFormatFloat, 10);
+  static const RegisterTypeBuiltin bfloat16_type("bfloat16", eEncodingIEEE754,
+                                                 eFormatFloat, 2);
+
+  return llvm::StringSwitch<const RegisterTypeBuiltin *>(type_name)
+      .Case("bool", &bool_type)
+      .Case("int8", &int8_type)
+      .Case("int16", &int16_type)
+      .Case("int32", &int32_type)
+      .Case("int64", &int64_type)
+      .Case("int128", &int128_type)
+      .Case("uint8", &uint8_type)
+      .Case("uint16", &uint16_type)
+      .Case("uint32", &uint32_type)
+      .Case("uint64", &uint64_type)
+      .Case("uint128", &uint128_type)
+      .Case("code_ptr", &code_ptr_type)
+      .Case("data_ptr", &data_ptr_type)
+      .Case("ieee_half", &ieee_half_type)
+      .Case("ieee_single", &ieee_single_type)
+      .Case("ieee_double", &ieee_double_type)
+      .Case("i387_ext", &i387_ext_type)
+      .Case("bfloat16", &bfloat16_type)
+      .Default(nullptr);
+}
+
+static const RegisterType *
+ResolveGDBType(llvm::StringRef type_name,
+               const RegisterTypeMap &feature_register_types) {
+  auto type_it = feature_register_types.find(type_name);
+  if (type_it != feature_register_types.end())
+    return type_it->second;
+  return ResolveGDBBuiltinType(type_name);
+}
+
+static void
+ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
+            std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+  std::optional<llvm::StringRef> element_type_name;
+  std::optional<uint32_t> count;
+
+  vector_node.ForEachAttribute(
+      [&id, &element_type_name, &count, log](llvm::StringRef name,
+                                             llvm::StringRef value) {
+        if (name == "id") {
+          id = value;
+        } else if (name == "type") {
+          element_type_name = value;
+        } else if (name == "count") {
+          uint32_t parsed_count = 0;
+          if (llvm::to_integer(value, parsed_count))
+            count = parsed_count;
+          else
+            LLDB_LOG(log, "ProcessGDBRemote::ParseVector Invalid count \"{0}\"",
+                     value);
+        } else {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseVector Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        }
+        return true;
+      });
+
+  constexpr uint32_t max_vector_count = 65536;
+  if (!id || id->empty() || !element_type_name || element_type_name->empty() ||
+      !count || *count == 0 || *count > max_vector_count) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseVector Ignoring vector with invalid "
+                  "id, type, or count");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  const RegisterType *element_type =
+      ResolveGDBType(*element_type_name, feature_register_types);
+  if (!element_type || (!llvm::isa<RegisterTypeBuiltin>(element_type) &&
+                        !llvm::isa<RegisterTypeVector>(element_type))) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Could not resolve element type "
+             "\"{0}\" for vector \"{1}\"",
+             *element_type_name, *id);
+    return;
+  }
+
+  std::optional<uint64_t> element_size = element_type->GetByteSize();
+  if (element_size &&
+      *element_size > RegisterValue::kMaxRegisterByteSize / *count) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Size of vector \"{0}\" is too "
+             "large",
+             *id);
+    return;
+  }
+
+  auto vector_type =
+      std::make_unique<RegisterTypeVector>(id->str(), element_type, *count);
+  feature_register_types.try_emplace(*id, vector_type.get());
+  owned_register_types.push_back(std::move(vector_type));
+}
+
+static void
+ParseVectors(XMLNode feature_node, RegisterTypeMap &feature_register_types,
+             std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  feature_node.ForEachChildElementWithName(
+      "vector", [&feature_register_types,
+                 &owned_register_types](const XMLNode &vector_node) {
+        ParseVector(vector_node, feature_register_types, owned_register_types);
+        return true;
+      });
+}
+
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
@@ -5335,6 +5490,8 @@ bool ParseRegisters(
     if (const auto *flags_type =
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
+
+  ParseVectors(feature_node, feature_register_types, owned_register_types);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -5416,11 +5573,37 @@ bool ParseRegisters(
         });
 
         if (!gdb_type.empty()) {
-          // gdb_type could reference some flags type defined in XML.
           auto it = feature_register_types.find(gdb_type);
           if (it != feature_register_types.end()) {
-            if (const auto *flags_type =
-                    llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
+            if (const auto *vector_type =
+                    llvm::dyn_cast<RegisterTypeVector>(it->second)) {
+              std::optional<uint64_t> type_size = vector_type->GetByteSize();
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for vector type {1}",
+                         reg_info.name, vector_type->GetID());
+              } else if (!type_size || *type_size == reg_info.byte_size) {
+                reg_info.register_type = vector_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingVector;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatVectorOfUInt8;
+                  format_set = true;
+                }
+              } else {
+                LLDB_LOG(
+                    log,
+                    "ProcessGDBRemote::ParseRegisters Size of register type "
+                    "{0} ({1} bytes) for register {2} does not match the "
+                    "register size ({3} bytes). Ignoring this type.",
+                    vector_type->GetID(), *type_size, reg_info.name,
+                    reg_info.byte_size);
+              }
+            } else if (const auto *flags_type =
+                           llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
               if (reg_info.byte_size == flags_type->GetSize())
                 reg_info.register_type = flags_type;
               else
@@ -5434,10 +5617,7 @@ bool ParseRegisters(
             }
           }
 
-          // There's a slim chance that the gdb_type name is both a flags type
-          // and a simple type. Just in case, look for that too (setting both
-          // does no harm).
-          if (!gdb_type.empty() && !(encoding_set || format_set)) {
+          if (!(encoding_set || format_set)) {
             if (llvm::StringRef(gdb_type).starts_with("int")) {
               reg_info.format = eFormatHex;
               reg_info.encoding = eEncodingUint;
@@ -5460,6 +5640,18 @@ bool ParseRegisters(
               // registers.
               reg_info.format = eFormatVectorOfUInt8;
               reg_info.encoding = eEncodingVector;
+            } else if (const RegisterTypeBuiltin *builtin_type =
+                           ResolveGDBBuiltinType(gdb_type)) {
+              if (builtin_type->GetEncoding() != eEncodingIEEE754) {
+                reg_info.format = builtin_type->GetFormat();
+                reg_info.encoding = builtin_type->GetEncoding();
+              } else {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Keeping "
+                         "unsupported floating-point gdb type {0} as a raw "
+                         "integer",
+                         gdb_type);
+              }
             } else {
               LLDB_LOGF(
                   log,
