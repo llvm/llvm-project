@@ -109,17 +109,23 @@ static bool has45BitNumRecordsBufferResource(const Chipset &chipset) {
          (chipset.majorVersion == 12 && chipset.minorVersion >= 5);
 }
 
+/// Zero-extend or truncate the unsigned number `val` to `width` bits.
+static Value convertUnsignedToInt(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val, unsigned width) {
+  IntegerType destTy = rewriter.getIntegerType(width);
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (destTy == valTy)
+    return val;
+  return valTy.getWidth() > width
+             ? Value(LLVM::TruncOp::create(rewriter, loc, destTy, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, destTy, val));
+}
+
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i32 = rewriter.getI32Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i32 == valTy)
-    return val;
-  return valTy.getWidth() > 32
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i32, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i32, val));
+  return convertUnsignedToInt(rewriter, loc, val, 32);
 }
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
@@ -130,14 +136,7 @@ static Value createI32Constant(ConversionPatternRewriter &rewriter,
 /// Convert an unsigned number `val` to i64.
 static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
                                   Location loc, Value val) {
-  IntegerType i64 = rewriter.getI64Type();
-  // Force check that `val` is of int type.
-  auto valTy = cast<IntegerType>(val.getType());
-  if (i64 == valTy)
-    return val;
-  return valTy.getWidth() > 64
-             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
-             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+  return convertUnsignedToInt(rewriter, loc, val, 64);
 }
 
 static Value createI64Constant(ConversionPatternRewriter &rewriter,
@@ -257,9 +256,9 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
     }
   }
   Value flagsConst = createI32Constant(rewriter, loc, flags);
-  numRecords = has45BitNumRecordsBufferResource(chipset)
-                   ? convertUnsignedToI64(rewriter, loc, numRecords)
-                   : convertUnsignedToI32(rewriter, loc, numRecords);
+  numRecords =
+      convertUnsignedToInt(rewriter, loc, numRecords,
+                           has45BitNumRecordsBufferResource(chipset) ? 45 : 32);
   Type rsrcType =
       LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
   Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(

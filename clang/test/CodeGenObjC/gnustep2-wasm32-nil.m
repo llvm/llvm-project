@@ -1,3 +1,4 @@
+// REQUIRES: webassembly-registered-target
 // RUN: %clang_cc1 -triple wasm32-unknown-emscripten -emit-llvm -fobjc-runtime=gnustep-2.2 -o - %s | FileCheck %s
 
 
