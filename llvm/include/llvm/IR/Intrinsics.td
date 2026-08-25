@@ -181,6 +181,11 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int Upper = upper;
 }
 
+// The underlying object of the argument/return can not be freed.
+class NoFreeObj<AttrIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
 // ArgProperty - Base class for argument properties that can be specified in
 // ArgInfo.
 class ArgProperty;
