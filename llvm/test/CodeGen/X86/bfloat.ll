@@ -25,11 +25,11 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movq %rdx, %rbx
 ; SSE2-NEXT:    movzwl (%rsi), %eax
+; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    pslld $16, %xmm1
 ; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -40,11 +40,11 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; AVX512BF16-LABEL: add:
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    movzwl (%rsi), %eax
+; AVX512BF16-NEXT:    shll $16, %eax
 ; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    movzwl (%rdi), %eax
+; AVX512BF16-NEXT:    shll $16, %eax
 ; AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX512BF16-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rdx)
@@ -64,11 +64,11 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; AVXNC-LABEL: add:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    movzwl (%rsi), %eax
+; AVXNC-NEXT:    shll $16, %eax
 ; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    movzwl (%rdi), %eax
+; AVXNC-NEXT:    shll $16, %eax
 ; AVXNC-NEXT:    vmovd %eax, %xmm1
-; AVXNC-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVXNC-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rdx)
@@ -392,8 +392,8 @@ define void @add_constant(ptr %pa, ptr %pc) nounwind {
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movq %rsi, %rbx
 ; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    pslld $16, %xmm0
 ; SSE2-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %eax
@@ -404,8 +404,8 @@ define void @add_constant(ptr %pa, ptr %pc) nounwind {
 ; AVX512BF16-LABEL: add_constant:
 ; AVX512BF16:       # %bb.0:
 ; AVX512BF16-NEXT:    movzwl (%rdi), %eax
+; AVX512BF16-NEXT:    shll $16, %eax
 ; AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX512BF16-NEXT:    vpextrw $0, %xmm0, (%rsi)
@@ -423,8 +423,8 @@ define void @add_constant(ptr %pa, ptr %pc) nounwind {
 ; AVXNC-LABEL: add_constant:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    movzwl (%rdi), %eax
+; AVXNC-NEXT:    shll $16, %eax
 ; AVXNC-NEXT:    vmovd %eax, %xmm0
-; AVXNC-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVXNC-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; AVXNC-NEXT:    vpextrw $0, %xmm0, (%rsi)

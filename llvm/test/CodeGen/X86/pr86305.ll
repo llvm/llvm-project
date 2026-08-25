@@ -7,11 +7,11 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movzwl (%rsi), %eax
+; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
 ; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    vmovd %eax, %xmm1
-; CHECK-NEXT:    vpslld $16, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    vpextrw $0, %xmm0, (%rbx)

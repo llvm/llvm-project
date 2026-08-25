@@ -22985,22 +22985,33 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
   else
     Src = DAG.getAnyExtOrTrunc(Src, DL, MVT::i16);
 
-  // Peek through to bf16's underlying f16 register
-  MVT VecVT = MVT::v8i16;
-  SDValue VecSrc = Src;
-  if (Src.getOpcode() == ISD::BITCAST &&
-      Src.getOperand(0).getValueType() == MVT::f16) {
-    VecSrc = Src.getOperand(0);
-    VecVT = MVT::v8f16;
-  }
+  SDValue Res;
+  if (!Subtarget.hasFP16() && ISD::isNormalLoad(Src.getNode())) {
+    // Without AVX512FP16 we need a GPR to load Src anyway (there's no direct
+    // memory-to-XMM move for a 16-bit value), so do the shift in GPR
+    // instead of in the vector domain, since SHL has better throughput
+    // than a vector shift.
+    SDValue Wide = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
+    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide, DAG.getConstant(16, DL, MVT::i32));
+    Res = DAG.getBitcast(MVT::f32, Wide);
+  } else {
+    // Peek through to bf16's underlying f16 register
+    MVT VecVT = MVT::v8i16;
+    SDValue VecSrc = Src;
+    if (Src.getOpcode() == ISD::BITCAST &&
+        Src.getOperand(0).getValueType() == MVT::f16) {
+      VecSrc = Src.getOperand(0);
+      VecVT = MVT::v8f16;
+    }
 
-  // Shift the bf16 bits into the high half of the f32.
-  SDValue Vec = DAG.getBitcast(
-      MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, VecSrc));
-  Vec = DAG.getBitcast(MVT::v4i32, Vec);
-  Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
-  Vec = DAG.getBitcast(MVT::v4f32, Vec);
-  SDValue Res = DAG.getExtractVectorElt(DL, MVT::f32, Vec, 0);
+    // Shift the bf16 bits into the high half of the f32.
+    SDValue Vec = DAG.getBitcast(
+        MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, VecSrc));
+    Vec = DAG.getBitcast(MVT::v4i32, Vec);
+    Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
+    Vec = DAG.getBitcast(MVT::v4f32, Vec);
+    Res = DAG.getExtractVectorElt(DL, MVT::f32, Vec, 0);
+  }
 
   EVT DstVT = Op.getValueType();
   if (DstVT != MVT::f32)

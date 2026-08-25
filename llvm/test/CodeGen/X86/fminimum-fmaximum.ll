@@ -2295,10 +2295,12 @@ define bfloat @test_fmaximum_bf16(bfloat %x, bfloat %y) nounwind {
 ; X86-LABEL: test_fmaximum_bf16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vpslld $16, %xmm0, %xmm0
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vpslld $16, %xmm1, %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm2
 ; X86-NEXT:    vandps %xmm0, %xmm2, %xmm0
@@ -2831,10 +2833,12 @@ define bfloat @test_fminimum_bf16(bfloat %x, bfloat %y) nounwind {
 ; X86-LABEL: test_fminimum_bf16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vpslld $16, %xmm0, %xmm0
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vpslld $16, %xmm1, %xmm1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm2
 ; X86-NEXT:    vorps %xmm0, %xmm2, %xmm0

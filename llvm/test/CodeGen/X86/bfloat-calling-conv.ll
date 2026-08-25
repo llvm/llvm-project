@@ -529,8 +529,8 @@ define bfloat @call_ret_bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %rax
 ; FAST_ISEL_SSE2-NEXT:    movzwl (%rdi), %eax
+; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
 ; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    callq returns_bf16@PLT
 ;
@@ -544,8 +544,8 @@ define bfloat @call_ret_bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
 ; FAST_ISEL_AVX512BF16-NEXT:    pushq %rax
 ; FAST_ISEL_AVX512BF16-NEXT:    movzwl (%rdi), %eax
+; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    callq returns_bf16@PLT
 ;
@@ -559,8 +559,8 @@ define bfloat @call_ret_bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
 ; FAST_ISEL_AVXNECONVERT-NEXT:    pushq %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    movzwl (%rdi), %eax
+; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    callq returns_bf16@PLT
   %val = load bfloat, ptr %ptr
