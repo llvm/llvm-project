@@ -1293,9 +1293,6 @@ static bool CheckConstraintSatisfaction(
           /*BuildExpression=*/ConvertedExpr != nullptr)
           .Evaluate(*C, TemplateArgsLists);
 
-  if (Res.isInvalid())
-    return true;
-
   if (Res.isUsable() && ConvertedExpr)
     *ConvertedExpr = Res.get();
 
