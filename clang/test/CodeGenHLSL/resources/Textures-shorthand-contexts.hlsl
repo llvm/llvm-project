@@ -9,13 +9,13 @@ struct S {
   TEXTURE tex;
 };
 
-// CHECK: define {{.*}}void @use_struct(S)(ptr nofree noundef {{.*}}%s)
+// CHECK: define {{.*}}void @use_struct(S)(ptr nofreeobj noundef {{.*}}%s)
 void use_struct(S s) {
   // CHECK: call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]])
   float4 val = s.tex.Sample(g_s, (COORD_TYPE)0.5);
 }
 
-// CHECK: define {{.*}}void @use_param(hlsl::[[TEXTURE]]<float vector[4]>)(ptr nofree noundef {{.*}}%p)
+// CHECK: define {{.*}}void @use_param(hlsl::[[TEXTURE]]<float vector[4]>)(ptr nofreeobj noundef {{.*}}%p)
 void use_param(TEXTURE p) {
   // CHECK: call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, float vector[[[COORD_DIM]]])
   float4 val = p.Sample(g_s, (COORD_TYPE)0.5);

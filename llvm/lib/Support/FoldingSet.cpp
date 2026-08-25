@@ -184,26 +184,29 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
-    : Buckets(Arg.Buckets), NumBuckets(Arg.NumBuckets), NumNodes(Arg.NumNodes) {
-  Arg.Buckets = nullptr;
-  Arg.NumBuckets = 0;
-  Arg.NumNodes = 0;
+    : Buckets(std::exchange(Arg.Buckets, nullptr)),
+      NumBuckets(std::exchange(Arg.NumBuckets, 0)),
+      NumNodes(std::exchange(Arg.NumNodes, 0)) {
+  Arg.incrementEpoch();
 }
 
 FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
+  if (this == &RHS)
+    return *this;
+
+  incrementEpoch();
+  RHS.incrementEpoch();
   free(Buckets); // This may be null if the set is in a moved-from state.
-  Buckets = RHS.Buckets;
-  NumBuckets = RHS.NumBuckets;
-  NumNodes = RHS.NumNodes;
-  RHS.Buckets = nullptr;
-  RHS.NumBuckets = 0;
-  RHS.NumNodes = 0;
+  Buckets = std::exchange(RHS.Buckets, nullptr);
+  NumBuckets = std::exchange(RHS.NumBuckets, 0);
+  NumNodes = std::exchange(RHS.NumNodes, 0);
   return *this;
 }
 
 FoldingSetBase::~FoldingSetBase() { free(Buckets); }
 
 void FoldingSetBase::clear() {
+  incrementEpoch();
   // Set all but the last bucket to null pointers.
   memset(Buckets, 0, NumBuckets * sizeof(void *));
 
@@ -278,6 +281,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
   assert(!N->getNextInBucket());
+  incrementEpoch();
   // Do we need to grow the hashtable?
   if (NumNodes + 1 > capacity()) {
     GrowBucketCount(NumBuckets * 2, Info);
@@ -311,6 +315,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   if (!Ptr)
     return false; // Not in folding set.
 
+  incrementEpoch();
   --NumNodes;
   N->SetNextInBucket(nullptr);
 
@@ -357,7 +362,9 @@ FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
 //===----------------------------------------------------------------------===//
 // FoldingSetIteratorImpl Implementation
 
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
+FoldingSetIteratorImpl::FoldingSetIteratorImpl(const DebugEpochBase *Epoch,
+                                               void **Bucket)
+    : DebugEpochBase::HandleBase(Epoch) {
   // Skip to the first non-null non-self-cycle bucket.
   while (*Bucket != reinterpret_cast<void *>(-1) &&
          (!*Bucket || !GetNextPtr(*Bucket)))
@@ -367,6 +374,7 @@ FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
 }
 
 void FoldingSetIteratorImpl::advance() {
+  assert(isHandleInSync() && "invalid iterator access!");
   // If there is another link within this bucket, go to it.
   void *Probe = NodePtr->getNextInBucket();
 

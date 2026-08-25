@@ -9890,17 +9890,16 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
-        // If the freeze(undef) has multiple uses then we must fold to zero.
-        if (SubVec.hasOneUse()) {
-          ++NumFreezeUndef;
-        } else {
-          ++NumZero;
-          Undefs.insert(SubVec);
-        }
-    }
-    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+      // If the freeze(undef) has multiple uses then we must fold to zero.
+      if (SubVec.hasOneUse()) {
+        ++NumFreezeUndef;
+      } else {
+        ++NumZero;
+        Undefs.insert(SubVec);
+      }
+    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
       ++NumZero;
-    else {
+    } else {
       assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
       NonZeros |= 1 << i;
       ++NumNonZero;
@@ -9912,9 +9911,9 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
     ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(0, NumOperands/2));
+                             Ops.slice(0, NumOperands / 2));
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(NumOperands/2));
+                             Ops.slice(NumOperands / 2));
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
@@ -30217,6 +30216,13 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                            DAG.getVectorIdxConstant(0, DL));
     else
       MinMax = Result;
+
+    // The signed-zero fixup may corrupt the numeric NewY result with the sign
+    // bit of a NaN NewX. Restore NewY in that case.
+    if (IsNum && !IgnoreNaN && !IsXNeverNaN) {
+      SDValue IsXNaN = DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+      MinMax = DAG.getSelect(DL, VT, IsXNaN, NewY, MinMax);
+    }
   }
 
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
@@ -50716,9 +50722,21 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       Attribute::StrictFP);
   if (IsStrict) {
     // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
-    // requires 512-bit types to be legal and a power of 2 lane count.
-    if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
+    // requires 512-bit types to be legal.
+    if (!Subtarget.useAVX512Regs())
       return SDValue();
+    // Widen a non-power-of-two lane count to get a machine type, but only
+    // while it still fits one divide. Two chains lose to a chain plus a scalar.
+    unsigned NumElts = VT.getVectorNumElements();
+    if (!isPowerOf2_32(NumElts)) {
+      if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
+        return SDValue();
+      SDValue WideDividend = DAG.WidenVector(Dividend, DL);
+      EVT WideVT = WideDividend.getValueType();
+      SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
+      SDValue Wide = DAG.getNode(Opc, DL, WideVT, WideDividend, WideDivisor);
+      return DAG.getExtractSubvector(DL, VT, Wide, 0);
+    }
   } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
              !Subtarget.hasAVX2()) {
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
@@ -53632,6 +53650,9 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   SDValue Y = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
+  if (N->getOpcode() == ISD::OR && !N->getFlags().hasDisjoint())
+    return SDValue();
+
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
 
@@ -53921,6 +53942,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
+
+  if (SDValue R = combineAddOrSubToADCOrSBB(N, dl, DAG))
     return R;
 
   return SDValue();

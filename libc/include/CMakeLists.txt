@@ -377,6 +377,8 @@ add_header_macro(
     .llvm-libc-types.tm_gmtoff_t
     .llvm-libc-types.locale_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sigevent
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(
