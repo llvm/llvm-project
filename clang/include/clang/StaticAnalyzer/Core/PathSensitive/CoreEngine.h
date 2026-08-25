@@ -49,7 +49,6 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class NodeBuilderContext;
 
 public:
   using BlocksExhausted =
@@ -208,37 +207,6 @@ public:
   void enqueueStmtNode(ExplodedNode *N, const CFGBlock *Block, unsigned Idx);
 
   DataTag::Factory &getDataTags() { return DataTags; }
-};
-
-class NodeBuilderContext {
-  const CoreEngine &Eng;
-  const CFGBlock *Block;
-  const StackFrame *SF;
-
-public:
-  NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
-                     const StackFrame *S)
-      : Eng(E), Block(B), SF(S) {
-    assert(B);
-  }
-
-  NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : NodeBuilderContext(E, B, N->getStackFrame()) {}
-
-  /// Return the CoreEngine associated with this builder.
-  const CoreEngine &getEngine() const { return Eng; }
-
-  /// Return the CFGBlock associated with this builder.
-  const CFGBlock *getBlock() const { return Block; }
-
-  /// Return the stack frame associated with this builder.
-  const StackFrame *getStackFrame() const { return SF; }
-
-  /// Returns the number of times the current basic block has been
-  /// visited on the exploded graph path.
-  unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(SF, Block->getBlockID());
-  }
 };
 
 } // namespace ento
