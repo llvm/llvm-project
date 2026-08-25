@@ -7082,11 +7082,9 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
   let summary = "Performs block scaled MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
 
   let description = [{
-    The `tcgen05.mma.block_scale.decompress_b` operation is an asynchronous tensor core
-    instruction that decompresses the B matrix and performs matrix
-    multiplication, accumulation with block scaling in a single fused operation.
-    It targets 5th-generation tensor cores, providing developers with
-    fine-grained control over execution and scheduling.
+    The `tcgen05.mma.block_scale.decompress_b` operation is similar to
+    `tcgen05.mma.decompress_b`, but with block scaling support for the A and B
+    matrices.
 
     ```
     D = (A * scale_a)  * (B * scale_b)`      // if `enableInputD` is false
@@ -7105,14 +7103,8 @@ def NVVM_Tcgen05MMABlockScaleDecompressBOp :
 
     - `decompressBMetadata` is a decompress metadata of B matrix
 
-    Required Attributes:
-    - `ctaGroup` specifies CTA group configuration
-      * cta_1: MMA will be performed on the current thread's CTA
-      * cta_2: MMA will be performed on the current thread and it's peer CTA
-
     Default Attributes:
-    - collectorOpA is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
-    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+    - `blockScale` specifies the block scaling granularity
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
   }];

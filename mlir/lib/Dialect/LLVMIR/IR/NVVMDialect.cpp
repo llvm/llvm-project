@@ -6837,11 +6837,12 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleDecompressBOp::getIntrinsicIDAndArgs(
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
-  using namespace llvm::Intrinsic;
-  ID intrinsicID =
+  llvm::Intrinsic::ID intrinsicID =
       isATensor
-          ? nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32_decompress_b
-          : nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32_decompress_b;
+          ? llvm::Intrinsic::
+                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32_decompress_b
+          : llvm::Intrinsic::
+                nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32_decompress_b;
 
   return {intrinsicID, args};
 }
