@@ -1665,56 +1665,49 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   if (auto *CAT = Context.getAsConstantArrayType(DecompType)) {
     if (checkArrayDecomposition(*this, Bindings, DD, DecompType, CAT))
       DD->setInvalidDecl();
-    CleanupVarDeclMarking();
-    return;
-  }
-  if (auto *VT = DecompType->getAs<VectorType>()) {
+  } else if (auto *VT = DecompType->getAs<VectorType>()) {
     if (checkVectorDecomposition(*this, Bindings, DD, DecompType, VT))
       DD->setInvalidDecl();
-    CleanupVarDeclMarking();
-    return;
-  }
-  if (auto *CT = DecompType->getAs<ComplexType>()) {
+  } else if (auto *CT = DecompType->getAs<ComplexType>()) {
     if (checkComplexDecomposition(*this, Bindings, DD, DecompType, CT))
       DD->setInvalidDecl();
-    CleanupVarDeclMarking();
-    return;
-  }
-
-  // C++1z [dcl.decomp]/3:
-  //   if the expression std::tuple_size<E>::value is a well-formed integral
-  //   constant expression, [...]
-  unsigned TupleSize;
-  switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
-  case IsTupleLike::Error:
-    DD->setInvalidDecl();
-    return;
-
-  case IsTupleLike::TupleLike:
-    if (checkTupleLikeDecomposition(*this, Bindings, DD, DecompType, TupleSize))
+  } else {
+    // C++1z [dcl.decomp]/3:
+    //   if the expression std::tuple_size<E>::value is a well-formed integral
+    //   constant expression, [...]
+    unsigned TupleSize;
+    switch (isTupleLike(*this, DD->getLocation(), DecompType, TupleSize)) {
+    case IsTupleLike::Error:
       DD->setInvalidDecl();
-    CleanupVarDeclMarking();
-    return;
+      return;
 
-  case IsTupleLike::NotTupleLike:
-    break;
+    case IsTupleLike::TupleLike:
+      if (checkTupleLikeDecomposition(*this, Bindings, DD, DecompType,
+                                      TupleSize))
+        DD->setInvalidDecl();
+      break;
+
+    case IsTupleLike::NotTupleLike: {
+      // C++1z [dcl.dcl]/8:
+      //   [E shall be of array or non-union class type]
+      CXXRecordDecl *RD = DecompType->getAsCXXRecordDecl();
+      if (!RD || RD->isUnion()) {
+        Diag(DD->getLocation(), diag::err_decomp_decl_unbindable_type)
+            << DD << !RD << DecompType;
+        DD->setInvalidDecl();
+        return;
+      }
+
+      // C++1z [dcl.decomp]/4:
+      //   all of E's non-static data members shall be [...] direct members of
+      //   E or of the same unambiguous public base class of E, ...
+      if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
+        DD->setInvalidDecl();
+      break;
+    }
+    }
   }
 
-  // C++1z [dcl.dcl]/8:
-  //   [E shall be of array or non-union class type]
-  CXXRecordDecl *RD = DecompType->getAsCXXRecordDecl();
-  if (!RD || RD->isUnion()) {
-    Diag(DD->getLocation(), diag::err_decomp_decl_unbindable_type)
-        << DD << !RD << DecompType;
-    DD->setInvalidDecl();
-    return;
-  }
-
-  // C++1z [dcl.decomp]/4:
-  //   all of E's non-static data members shall be [...] direct members of
-  //   E or of the same unambiguous public base class of E, ...
-  if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
-    DD->setInvalidDecl();
   CleanupVarDeclMarking();
 }
 
