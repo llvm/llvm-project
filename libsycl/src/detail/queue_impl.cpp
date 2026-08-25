@@ -93,9 +93,7 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
 
 void QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
                                       const detail::UnifiedRangeView &Range) {
-  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
-  MCurrentSubmitInfo.DepEvents = std::move(Events);
-  MCurrentSubmitInfo.Range = convertToOlRange(Range);
+  setKernelLaunchParams(std::move(Events), convertToOlRange(Range));
 }
 
 void QueueImpl::setKernelLaunchParams(

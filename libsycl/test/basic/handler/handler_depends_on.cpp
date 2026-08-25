@@ -8,8 +8,6 @@
 #include <cassert>
 #include <numeric>
 
-namespace {
-
 void testMemcpyDependency() {
   constexpr size_t N = 4;
   sycl::queue Queue;
@@ -72,8 +70,6 @@ void testNDRangeDependency() {
   sycl::free(Data, Queue);
   sycl::free(Token, Queue);
 }
-
-} // namespace
 
 int main() {
   testMemcpyDependency();

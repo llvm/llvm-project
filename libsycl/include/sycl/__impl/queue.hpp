@@ -61,25 +61,12 @@ public:
 } // namespace detail
 
 class TypelessCGF {
-  // SYCL 2020 command group function object is a type which is callable with
-  // operator() that takes a reference to a command group handler, that defines
-  // a command group which can be submitted by a queue. The function object can
-  // be a named type, lambda expression or std::function.
-  template <typename T> struct Invoker {
-    static void call(const void *Object, handler &CGH) {
-      (*const_cast<T *>(static_cast<const T *>(Object)))(CGH);
-    }
-  };
-  const void *Object;
-  using InvokerTy = void (*)(const void *, handler &);
-  const InvokerTy InvokerF;
-
 public:
   template <class T>
   TypelessCGF(T &&F)
       // NOTE: Even if `F` is a pointer to a function, `&F` is a pointer to a
-      // pointer to a function and as such can be casted to `void *` (pointer to
-      // a function cannot be casted).
+      // pointer to a function and as such can be cast to `void *` (pointer to
+      // a function cannot be cast).
       : Object(static_cast<const void *>(&F)),
         InvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
   ~TypelessCGF() = default;
@@ -90,6 +77,20 @@ public:
   TypelessCGF &operator=(TypelessCGF &&) = delete;
 
   void operator()(handler &CGH) const { InvokerF(Object, CGH); }
+
+private:
+  // SYCL 2020 command group function object is a type that is callable with
+  // operator(), takes a reference to a command group handler, and defines
+  // a command group that can be submitted by a queue. The function object can
+  // be a named type, lambda expression or std::function.
+  template <typename T> struct Invoker {
+    static void call(const void *Object, handler &CGH) {
+      (*const_cast<T *>(static_cast<const T *>(Object)))(CGH);
+    }
+  };
+  const void *Object;
+  using InvokerTy = void (*)(const void *, handler &);
+  const InvokerTy InvokerF;
 };
 
 // SYCL 2020 4.6.5. Queue class.
