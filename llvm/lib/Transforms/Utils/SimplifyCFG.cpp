@@ -3234,7 +3234,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   if (!Options.SpeculateBlocks)
     return false;
 
-  Value *BrCond = BI->getCondition();
   BasicBlock *BB = BI->getParent();
   BasicBlock *EndBB = ThenBB->getTerminator()->getSuccessor(0);
   InstructionCost Budget =
@@ -3355,6 +3354,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
+    Value *BrCond = BI->getCondition();
     Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
@@ -3434,6 +3434,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
+  Value *BrCond = BI->getCondition();
   for (PHINode &PN : EndBB->phis()) {
     unsigned OrigI = PN.getBasicBlockIndex(BB);
     unsigned ThenI = PN.getBasicBlockIndex(ThenBB);
@@ -3451,9 +3452,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     if (Invert)
       std::swap(TrueV, FalseV);
     // Propagate fast-math flags from the phi node to the replacement select.
-    Value *V = Builder.CreateSelectFMF(BrCond, TrueV, FalseV,
-                                       isa<FPMathOperator>(PN) ? &PN : nullptr,
-                                       "spec.select", BI);
+    Value *V = Builder.CreateSelectFMF(
+        BrCond, TrueV, FalseV, PN.getFastMathFlagsOrNone(), "spec.select", BI);
     PN.setIncomingValue(OrigI, V);
     PN.setIncomingValue(ThenI, V);
   }
