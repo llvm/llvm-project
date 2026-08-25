@@ -537,7 +537,7 @@ Hardened containers status
       - ❌
     * - ``optional``
       - ✅
-      - N/A
+      - ✅
     * - ``function``
       - ❌
       - N/A
