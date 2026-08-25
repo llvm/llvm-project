@@ -489,11 +489,15 @@ public:
 
   template <typename SINT = std::int64_t, typename UINT = std::uint64_t>
   constexpr SINT ToSInt() const {
-    SINT n(ToUInt<UINT>());
+    // SINT/UINT may be a user-defined type from uint128.h whose signed/
+    // unsigned conversion constructor is explicit. Hence, cast explicitly.
+    SINT n{static_cast<SINT>(ToUInt<UINT>())};
     constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
     if constexpr (bits < maxBits) {
       // Avoid left shifts of negative signed values (that's an undefined
       // behavior in C++).
+      // std::make_unsigned_t cannot be use here because SINT/UINT may be a
+      // user-defined type from uint128.h.
       UINT u{ToUInt<UINT>()};
       u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
       u = ~u + 1; // Negate top bits if not 0.

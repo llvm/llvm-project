@@ -277,12 +277,6 @@ public:
                 .IBSET(significandBits - 2)};
   }
 
-  // A signaling NaN: like NotANumber(), but with the most significant
-  // significand bit clear so that IsSignalingNaN() holds.
-  static constexpr Real SignalingNaN() {
-    return {Word{maxExponent}.SHIFTL(significandBits).IBSET(0)};
-  }
-
   static constexpr Real PositiveZero() { return Real{}; }
 
   static constexpr Real NegativeZero() { return {Word{}.MASKL(1)}; }

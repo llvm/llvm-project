@@ -171,11 +171,6 @@ RealValueImpl RealValueImpl::NotANumber(int kind) {
       kind, [](auto p) { return FromWord(decltype(p)::NotANumber()); });
 }
 
-RealValueImpl RealValueImpl::SignalingNaN(int kind) {
-  return withWordProto(
-      kind, [](auto p) { return FromWord(decltype(p)::SignalingNaN()); });
-}
-
 RealValueImpl RealValueImpl::Infinity(int kind, bool negative) {
   return withWordProto(kind,
       [negative](auto p) { return FromWord(decltype(p)::Infinity(negative)); });

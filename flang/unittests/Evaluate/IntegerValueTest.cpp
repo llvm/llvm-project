@@ -43,7 +43,7 @@ inline constexpr std::size_t IntKindPos =
     type_index<Target, IntegerTypedKinds>::value;
 struct KindName {
   template <typename TK> static std::string GetName(int) {
-    return "INTEGER(" + std::to_string(TK::kind) + ")";
+    return "INTEGER_" + std::to_string(TK::kind);
   }
 };
 
@@ -54,7 +54,7 @@ class IntegerValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(IntegerValueKind, IntegerValueKind,
     testing::ValuesIn(IntegerKinds),
     [](const testing::TestParamInfo<int> &info) {
-      return "INTEGER(" + std::to_string(info.param) + ")";
+      return "INTEGER_" + std::to_string(info.param);
     });
 
 //===----------------------------------------------------------------------===//

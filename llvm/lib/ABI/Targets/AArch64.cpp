@@ -72,13 +72,12 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 
   if (!passAsAggregateType(RetTy)) {
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
-      if (IntTy->isBitInt()) {
-        reportNYI("BitInt return type handling");
-        return ArgInfo::getDirect();
-      }
-      if (isPromotableInteger(IntTy) && isDarwinPCS()) {
+      if (IntTy->isBitInt())
+        if (RetTy->getSizeInBits().getFixedValue() > 128)
+          return getNaturalAlignIndirect(RetTy);
+
+      if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
-      }
     }
 
     // Everything not handled above is returned directly.
@@ -103,13 +102,12 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
 
   if (!passAsAggregateType(Ty)) {
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
-      if (IntTy->isBitInt()) {
-        reportNYI("BitInt argument type handling");
-        return ArgInfo::getDirect();
-      }
-      if (isPromotableInteger(IntTy) && isDarwinPCS()) {
+      if (IntTy->isBitInt())
+        if (Ty->getSizeInBits().getFixedValue() > 128)
+          return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+
+      if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
-      }
     }
 
     // TODO: Legal vector types will update NSRN or NPRN.

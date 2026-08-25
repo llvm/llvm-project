@@ -56,10 +56,6 @@ RealValue RealValue::Infinity(int kind, bool negative) {
   return FromImpl(RealValueImpl::Infinity(kind, negative));
 }
 
-RealValue RealValue::SignalingNaN(int kind) {
-  return FromImpl(RealValueImpl::SignalingNaN(kind));
-}
-
 bool RealValue::IsMonostate() const { return impl().IsMonostate(); }
 
 int RealValue::kind() const { return impl().kind(); }

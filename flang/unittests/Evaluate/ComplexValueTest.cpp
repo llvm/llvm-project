@@ -21,7 +21,7 @@ namespace {
 class ComplexValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(ComplexValueKind, ComplexValueKind,
     testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
-      return "COMPLEX(" + std::to_string(info.param) + ")";
+      return "COMPLEX_" + std::to_string(info.param);
     });
 
 RealValue Real(int kind, std::int64_t n) {

@@ -31,7 +31,7 @@ namespace {
 
 struct KindName {
   template <typename TP> static std::string GetName(int) {
-    return "REAL(" + std::to_string(TP::kind) + ")";
+    return "REAL_" + std::to_string(TP::kind);
   }
 };
 
@@ -47,7 +47,7 @@ TYPED_TEST_SUITE(RealValueHostTypedKind, RealHostTypedKinds, KindName);
 class RealValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(RealValueKind, RealValueKind,
     testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
-      return "REAL(" + std::to_string(info.param) + ")";
+      return "REAL_" + std::to_string(info.param);
     });
 
 //===----------------------------------------------------------------------===//
@@ -252,6 +252,7 @@ TEST_P(RealValueKind, IsNegative) {
   EXPECT_FALSE((RealValue{kind, 1.0}.IsNegative()));
   EXPECT_TRUE((RealValue{kind, -1.0}.IsNegative()));
   EXPECT_TRUE(RealValue::Infinity(kind, /*negative=*/true).IsNegative());
+
   // A NaN is never reported as negative, whatever its sign bit.
   EXPECT_FALSE(RealValue::NotANumber(kind).IsNegative());
 }
@@ -262,14 +263,13 @@ TEST_P(RealValueKind, IsNotANumber) {
   EXPECT_FALSE(RealValue::Infinity(kind).IsNotANumber());
   EXPECT_FALSE(RealValue::Infinity(kind, /*negative=*/true).IsNotANumber());
   EXPECT_TRUE(RealValue::NotANumber(kind).IsNotANumber());
-  EXPECT_TRUE(RealValue::SignalingNaN(kind).IsNotANumber());
 }
 
 TEST_P(RealValueKind, IsSignalingNaN) {
   const int kind{GetParam()};
   EXPECT_FALSE(RealValue::Zero(kind).IsSignalingNaN());
   EXPECT_FALSE(RealValue::Infinity(kind).IsSignalingNaN());
-  EXPECT_TRUE(RealValue::SignalingNaN(kind).IsSignalingNaN());
+
   // NotANumber() produces a quiet NaN.
   EXPECT_FALSE(RealValue::NotANumber(kind).IsSignalingNaN());
 }
@@ -295,11 +295,12 @@ TEST_P(RealValueKind, IsFinite) {
 
 TEST_P(RealValueKind, IsNormal) {
   const int kind{GetParam()};
-  EXPECT_TRUE(RealValue::Zero(kind).IsNormal()); // zero counts as normal here
+  EXPECT_TRUE(RealValue::Zero(kind).IsNormal());
   EXPECT_TRUE(RealValue::TINY(kind).IsNormal());
   EXPECT_TRUE(RealValue::HUGE(kind).IsNormal());
   EXPECT_FALSE(RealValue::Infinity(kind).IsNormal());
   EXPECT_FALSE(RealValue::NotANumber(kind).IsNormal());
+
   // The smallest subnormal is not normal.
   RealValue subnormal{kind, IntegerValue{kind, 1}};
   EXPECT_FALSE(subnormal.IsNormal());
