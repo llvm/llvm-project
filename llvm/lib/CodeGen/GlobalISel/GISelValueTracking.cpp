@@ -1772,96 +1772,110 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     }
     break;
   }
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FDIV: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
-
-    if (Opcode == TargetOpcode::G_FREM)
-      Known.knownNot(fcInf);
 
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
     if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1)) {
-      if (Opcode == TargetOpcode::G_FDIV) {
-        const bool WantNan = (InterestedClasses & fcNan) != fcNone;
-        if (!WantNan) {
-          // X / X is always exactly 1.0 or a NaN.
-          Known.KnownFPClasses = fcPosNormal | fcNan;
-          break;
-        }
-        KnownFPClass KnownSrc;
-        computeKnownFPClass(LHS, DemandedElts,
-                            fcNan | fcInf | fcZero | fcSubnormal, KnownSrc,
-                            Depth + 1);
-        Known = KnownFPClass::fdiv_self(KnownSrc, Mode);
-      } else {
-        const bool WantNan = (InterestedClasses & fcNan) != fcNone;
-        if (!WantNan) {
-          // X % X is always exactly [+-]0.0 or a NaN.
-          Known.KnownFPClasses = fcZero | fcNan;
-          break;
-        }
-        KnownFPClass KnownSrc;
-        computeKnownFPClass(LHS, DemandedElts,
-                            fcNan | fcInf | fcZero | fcSubnormal, KnownSrc,
-                            Depth + 1);
-        Known = KnownFPClass::frem_self(KnownSrc, Mode);
-      }
+      // X / X is always exactly 1.0 or a NaN.
+      Known.KnownFPClasses = fcPosNormal | fcNan;
+
+      if (!WantNan)
+        break;
+
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(LHS, DemandedElts,
+                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc,
+                          Depth + 1);
+      Known = KnownFPClass::fdiv_self(KnownSrc, Mode);
       break;
     }
 
-    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
     const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
-    if (!WantNan && !WantNegative && !WantPositive) {
+    if (!WantNan && !WantNegative && !WantPositive)
+      break;
+
+    KnownFPClass KnownLHS, KnownRHS;
+    computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Depth + 1);
+
+    bool KnowSomethingUseful =
+        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+        KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+
+    if (KnowSomethingUseful)
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
+
+    Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
+    break;
+  }
+  case TargetOpcode::G_FREM: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+
+    Register LHS = MI.getOperand(1).getReg();
+    Register RHS = MI.getOperand(2).getReg();
+
+    Known.knownNot(fcInf);
+
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+
+    if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1)) {
+      // X % X is always exactly [+-]0.0 or a NaN.
+      Known.KnownFPClasses = fcZero | fcNan;
+
+      if (!WantNan)
+        break;
+
+      KnownFPClass KnownSrc;
+      computeKnownFPClass(LHS, DemandedElts,
+                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc,
+                          Depth + 1);
+      Known = KnownFPClass::frem_self(KnownSrc, Mode);
       break;
     }
 
+    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
+    if (!WantNan && !WantNegative && !WantPositive)
+      break;
+
     KnownFPClass KnownLHS, KnownRHS;
-    const bool IsFDiv = Opcode == TargetOpcode::G_FDIV;
-    FPClassTest InterestedRHS =
-        IsFDiv ? fcAllFlags : fcNan | fcInf | fcZero | fcNegative;
+    computeKnownFPClass(RHS, DemandedElts, fcNan | fcInf | fcZero | fcNegative,
+                        KnownRHS, Depth + 1);
 
-    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Depth + 1);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
+                               KnownRHS.isKnownNever(fcNegative) ||
+                               KnownRHS.isKnownNever(fcPositive);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN();
-    if (IsFDiv) {
-      KnowSomethingUseful |=
-          KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
-          KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
-    } else {
-      KnowSomethingUseful |= KnownRHS.isKnownNever(fcNegative) ||
-                             KnownRHS.isKnownNever(fcPositive);
-    }
-
-    if (KnowSomethingUseful || (!IsFDiv && WantPositive)) {
+    if (KnowSomethingUseful || WantPositive)
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
+
+    // Inf REM x and x REM 0 produce NaN.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        KnownLHS.isKnownNeverInfinity() &&
+        KnownRHS.isKnownNeverLogicalZero(Mode)) {
+      Known.knownNot(fcNan);
     }
 
-    if (IsFDiv) {
-      Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
-    } else {
-      // Inf REM x and x REM 0 produce NaN.
-      if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-          KnownLHS.isKnownNeverInfinity() &&
-          KnownRHS.isKnownNeverLogicalZero(Mode)) {
-        Known.knownNot(fcNan);
-      }
+    // The sign for frem is the same as the first operand.
+    if (KnownLHS.cannotBeOrderedLessThanZero())
+      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+    if (KnownLHS.cannotBeOrderedGreaterThanZero())
+      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
 
-      // The sign for frem is the same as the first operand.
-      if (KnownLHS.cannotBeOrderedLessThanZero())
-        Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-      if (KnownLHS.cannotBeOrderedGreaterThanZero())
-        Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+    // See if we can be more aggressive about the sign of 0.
+    if (KnownLHS.isKnownNever(fcNegative))
+      Known.knownNot(fcNegative);
+    if (KnownLHS.isKnownNever(fcPositive))
+      Known.knownNot(fcPositive);
 
-      // See if we can be more aggressive about the sign of 0.
-      if (KnownLHS.isKnownNever(fcNegative))
-        Known.knownNot(fcNegative);
-      if (KnownLHS.isKnownNever(fcPositive))
-        Known.knownNot(fcPositive);
-    }
     break;
   }
   case TargetOpcode::G_FFREXP: {
