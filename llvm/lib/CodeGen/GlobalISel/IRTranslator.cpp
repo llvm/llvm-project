@@ -474,6 +474,11 @@ class IRTranslatorImpl {
                            MachineBasicBlock *DefaultMBB,
                            MachineIRBuilder &MIB);
 
+  MachineInstrBuilder
+  buildFCmpOrConstant(MachineIRBuilder &MIB, CmpInst::Predicate Pred,
+                      const DstOp &Res, const SrcOp &Op0, const SrcOp &Op1,
+                      std::optional<unsigned> Flags = std::nullopt);
+
   bool translateSwitch(const User &U, MachineIRBuilder &MIRBuilder);
   // End switch lowering section.
 
@@ -1111,6 +1116,24 @@ bool IRTranslatorImpl::translateFNeg(const User &U,
   return translateUnaryOp(TargetOpcode::G_FNEG, U, MIRBuilder);
 }
 
+MachineInstrBuilder IRTranslatorImpl::buildFCmpOrConstant(
+    MachineIRBuilder &MIB, CmpInst::Predicate Pred, const DstOp &Res,
+    const SrcOp &Op0, const SrcOp &Op1, std::optional<unsigned> Flags) {
+
+  if (Pred != CmpInst::FCMP_FALSE && Pred != CmpInst::FCMP_TRUE)
+    return MIB.buildFCmp(Pred, Res, Op0, Op1, Flags);
+
+  // For FCMP_FALSE and FCMP_TRUE, lower it to a constant value.
+  LLT ResTy = Res.getLLTTy(*MIB.getMRI());
+  Type *ResIRTy = getTypeForLLT(ResTy, MIB.getContext());
+
+  Constant *C = Pred == CmpInst::FCMP_FALSE
+                    ? Constant::getNullValue(ResIRTy)
+                    : Constant::getAllOnesValue(ResIRTy);
+
+  return MIB.buildCopy(Res, getOrCreateVReg(*C));
+}
+
 bool IRTranslatorImpl::translateCompare(const User &U,
                                         MachineIRBuilder &MIRBuilder) {
   if (!mayTranslateUserTypes(U))
@@ -1124,14 +1147,8 @@ bool IRTranslatorImpl::translateCompare(const User &U,
   uint32_t Flags = MachineInstr::copyFlagsFromInstruction(*CI);
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
-  else if (Pred == CmpInst::FCMP_FALSE)
-    MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
-  else if (Pred == CmpInst::FCMP_TRUE)
-    MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else
-    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1, Flags);
+    buildFCmpOrConstant(MIRBuilder, Pred, Res, Op0, Op1, Flags);
 
   return true;
 }
@@ -1713,7 +1730,8 @@ void IRTranslatorImpl::emitSwitchCase(SwitchCG::CaseBlock &CB,
       Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
       if (CmpInst::isFPPredicate(CB.PredInfo.Pred))
         Cond =
-            MIB.buildFCmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
+            buildFCmpOrConstant(MIB, CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS)
+                .getReg(0);
       else
         Cond =
             MIB.buildICmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
