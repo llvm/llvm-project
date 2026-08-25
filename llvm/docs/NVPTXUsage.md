@@ -1024,11 +1024,12 @@ The following table describes the rounding modes used across these intrinsics:
 
 (scale-factor)=
 
-Some conversions involve a scale factor which is provided as a packed 16-bit
-integer containing two scaling factors of type `ue8m0`, one for each input.
-For down conversion, inputs are divided by `scale_factor` and then the
-conversion is performed. For up-conversion, inputs are converted to destination
-type and then multiplied by `scale_factor`.
+Some conversions involve a scale factor of type `ue8m0`. For
+`scale.n2.ue8m0`, the operand is a packed 16-bit integer containing two
+`ue8m0` scale values, one for each input. For `scale.n1.ue8m0`, a single `ue8m0`
+scale factor is applied to both inputs. For down conversion, inputs are divided
+by `scale_factor` and then the conversion is performed. For up-conversion, 
+inputs are converted to destination type and then multiplied by `scale_factor`.
 
 #### `fp8` Conversion Intrinsics
 
@@ -1037,21 +1038,31 @@ type and then multiplied by `scale_factor`.
 ```llvm
 declare i16 @llvm.nvvm.ff.to{.e4m3x2, .e5m2x2}.rn{.relu}(float %a, float %b)
 declare i16 @llvm.nvvm.ff.to.ue8m0x2{.rz, .rp}{.satfinite}(float %a, float %b)
+declare i16 @llvm.nvvm.ff.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(float %a, float %b)
+declare i16 @llvm.nvvm.ff.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(float %a, float %b, i16 %scale_factor)
 declare i16 @llvm.f16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}(<2 x half> %a)
+declare i16 @llvm.nvvm.f16x2.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(<2 x half> %a)
+declare i16 @llvm.nvvm.f16x2.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(<2 x half> %a, i16 %scale_factor)
 declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
 declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
+declare i16 @llvm.nvvm.bf16x2.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(<2 x bfloat> %a)
+declare i16 @llvm.nvvm.bf16x2.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
 declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+declare <2 x half> @llvm.nvvm.ue5m3x2.to.f16x2.rn(i16 %a)
 declare <2 x bfloat> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
 declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
+declare <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn{.satfinite}(i16 %a)
+declare <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
 declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
 ```
 
 ##### Overview:
 
-These intrinsics perform conversions involving the `e4m3` and `e5m2` narrow
-floating-point formats. In case of two inputs, the value converted from input
-`%a` is stored in the upper 8-bits of the result, and the value converted
-from input `%b` is stored in the lower 8-bits of the result.
+These intrinsics perform conversions involving the `e4m3`, `e5m2`, `ue8m0`,
+and `ue5m3` narrow floating-point formats. In case of two inputs, the value
+converted from input `%a` is stored in the upper 8-bits of the result, and
+the value converted from input `%b` is stored in the lower 8-bits of the
+result.
 
 For rounding modes, see {ref}`narrow-fp-rounding-modes`.
 
@@ -1060,9 +1071,9 @@ The `relu` modifier clamps negative results to 0.
 When `satfinite` is specified, if the absolute value of input (ignoring sign)
 is greater than `MAX_NORM` of the specified destination format, then the
 result is sign-preserved `MAX_NORM` of the destination format and a positive
-`MAX_NORM` in `.ue8m0x2` for which the destination sign is not supported.
-Also, if the input value is `NaN`, then the result is `NaN` in the
-specified destination format. The `satfinite` modifier is assumed to be
+`MAX_NORM` in `.ue8m0x2`/`.ue5m3x2` for which the destination sign is not
+supported. Also, if the input value is `NaN`, then the result is `NaN` in
+the specified destination format. The `satfinite` modifier is assumed to be
 present for conversions involving `e4m3` and `e5m2` types as the
 destination.
 

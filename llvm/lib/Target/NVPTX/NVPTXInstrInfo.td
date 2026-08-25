@@ -57,6 +57,8 @@ def CvtRS_RELU     : PatLeaf<(i32 0x4A)>;
 
 def CvtNONE_SATFINITE  : PatLeaf<(i32 0x80)>;
 def CvtRN_SATFINITE   : PatLeaf<(i32 0x85)>;
+def CvtRZ_SATFINITE   : PatLeaf<(i32 0x86)>;
+def CvtRP_SATFINITE   : PatLeaf<(i32 0x88)>;
 def CvtRN_RELU_SATFINITE : PatLeaf<(i32 0xC5)>;
 
 def CvtMode : Operand<i32> {
@@ -936,6 +938,36 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
             "cvt${mode:base}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.ue5m3x2">,
     Requires<[hasUE5M3TypeSupport]>;
 
+  def CVT_ue5m3x2_f32 : BasicFlagsNVPTXInst<(outs B16:$dst),
+            (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.ue5m3x2.f32">,
+    Requires<[hasUE5M3TypeSupport]>;
+  def CVT_ue5m3x2_f16x2 : BasicFlagsNVPTXInst<(outs B16:$dst),
+            (ins B32:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.ue5m3x2.f16x2">,
+    Requires<[hasUE5M3TypeSupport]>;
+  def CVT_ue5m3x2_bf16x2 : BasicFlagsNVPTXInst<(outs B16:$dst),
+            (ins B32:$src), (ins CvtMode:$mode),
+            "cvt${mode:base}${mode:satfinite}.ue5m3x2.bf16x2">,
+    Requires<[hasUE5M3TypeSupport]>;
+
+  class CVT_TO_UE5M3X2_SCALE_N1<dag ins, string SrcType, string SrcOps>
+      : NVPTXInst<(outs B16:$dst), ins,
+            "{{ \n\t" #
+            ".reg .b8 \t%b8_in; \n\t" #
+            "cvt.u8.u16 \t%b8_in, $scale; \n\t" #
+            "cvt${mode:base}${mode:satfinite}.scaled::n1::ue8m0.ue5m3x2." #
+            SrcType # " \t$dst, " # SrcOps # ", %b8_in; \n\t" #
+            "}}", []>,
+        Requires<[hasUE5M3TypeSupport]>;
+
+  def CVT_ue5m3x2_f32_scale_n1
+      : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B32:$src2, B16:$scale, CvtMode:$mode),
+                                "f32", "$src1, $src2">;
+  foreach type = ["f16x2", "bf16x2"] in
+    def CVT_ue5m3x2_ # type # _scale_n1
+        : CVT_TO_UE5M3X2_SCALE_N1<(ins B32:$src1, B16:$scale, CvtMode:$mode), type, "$src1">;
+        
 }
 
 def fpround_oneuse : OneUse1<fpround>;

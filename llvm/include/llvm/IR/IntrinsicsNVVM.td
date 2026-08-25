@@ -2016,6 +2016,32 @@ let TargetPrefix = "nvvm" in {
         : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
   }
 
+  foreach rnd = ["rn", "rz", "rp"] in {
+    foreach satfinite = ["", "_satfinite"] in {
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+    }
+  }
+
+  foreach rnd = ["rn", "rz"] in {
+    foreach satfinite = ["", "_satfinite"] in {
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
+
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i16_ty]>;
+
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i16_ty]>;
+    }
+  }
+
   //
   // Bar.Sync
   //
