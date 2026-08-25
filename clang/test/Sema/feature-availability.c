@@ -47,6 +47,9 @@ __attribute__((deprecated))
 CLANG_ENABLED_AVAILABILITY_DOMAIN(deprecated_feature2);
 #endif
 
+// A domain name doesn't name a declaration, so it stays available for other uses.
+int g13 = feature1; // expected-error {{use of undeclared identifier 'feature1'}}
+
 #pragma clang attribute push (__attribute__((availability(domain:feature1, AVAIL))), apply_to=any(function))
 void func12(void);
 #pragma clang attribute pop
