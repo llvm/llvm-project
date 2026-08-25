@@ -788,10 +788,10 @@ if (MSVC)
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
-      # This is triggered for every variable that is a template type of a class even 
+      # This is triggered for every variable that is a template type of a class even
       # if there private when the class is dllexport'ed
       -wd4251 # Suppress 'needs to have dll-interface to be used by clients'
-      # We only putting dll export on classes with out of line members so this 
+      # We only putting dll export on classes with out of line members so this
       # warning gets triggered a lot for bases we haven't exported'
       -wd4275 # non dll-interface class used as base for dll-interface class
 
@@ -1373,6 +1373,10 @@ endif()
 # This option is handled below and is defined here as it impacts the PCH status.
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 
+
+
+
+
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
   if(LLVM_ENABLE_MODULES)
     # PCH with modules is difficult to get right and modules should make PCH
@@ -1443,14 +1447,6 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
         "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
     endif()
-    if (CMAKE_HOST_WIN32)
-      # Until a way to reliably configure ccache on Windows is found,
-      # disable precompiled headers for Windows + ccache builds
-      message(WARNING "Using ccache with precompiled headers on Windows is "
-        "currently not supported. "
-        "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
-      set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
-    endif()
   endif()
 endif()
 
@@ -1478,10 +1474,10 @@ if(LLVM_CCACHE_BUILD)
   if(CCACHE_PROGRAM)
     set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
     set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
-        CACHE STRING "Parameters to pass through to ccache")
 
     if(NOT CMAKE_HOST_WIN32)
+      set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
       set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
       if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
         # ccache's preprocessor mode yields false postives for changes in macro
@@ -1512,10 +1508,19 @@ if(LLVM_CCACHE_BUILD)
       endif()
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
     else()
-      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
-         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
-        message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
+      # configure ccache with the command line configuration syntax
+      set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
+      if (LLVM_CCACHE_MAXSIZE)
+        list(APPEND LLVM_CCACHE_PARAMS "cache_maxsize=${LLVM_CCACHE_MAXSIZE}")
       endif()
+      if (LLVM_CCACHE_DIR)
+        list(APPEND LLVM_CCACHE_PARAMS "cache_dir=${LLVM_CCACHE_DIR}")
+      endif()
+
+      # Since ccache 4.8 it is possible to pass options as arguments
+      set(CCACHE_PROGRAM ${CCACHE_PROGRAM} ${LLVM_CCACHE_PARAMS})
+      # TODO: Is the below true at this point?
       # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
       # with cmd.exe and some MSVC tools other than cl.exe
       set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
