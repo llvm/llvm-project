@@ -1,3 +1,4 @@
+// REQUIRES: webassembly-registered-target
 // RUN: %clang_cc1 -triple wasm32-unknown-emscripten -fobjc-exceptions -fexceptions -exception-model=wasm -mllvm -wasm-enable-eh -emit-llvm -fobjc-runtime=gnustep-2.2 -o - %s | FileCheck --enable-var-scope %s
 
 __attribute__((objc_root_class)) @interface Object
