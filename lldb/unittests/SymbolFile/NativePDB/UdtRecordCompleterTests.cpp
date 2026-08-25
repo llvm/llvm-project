@@ -41,10 +41,11 @@ private:
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const WrappedMember &w) {
-    os << llvm::formatv("Member{.kind={0}, .name=\"{1}\", .bit_offset={2}, "
-                        ".bit_size={3}, .base_offset={4}, .fields=[",
-                        w.m_obj.kind, w.m_obj.name, w.m_obj.bit_offset,
-                        w.m_obj.bit_size, w.m_obj.base_offset);
+    os << llvm::formatv(
+        "Member{.kind={0}, .name=\"{1}\", .bit_offset={2}, "
+        ".bit_size={3}, .base_offset={4}, .original_order={5}, .fields=[",
+        w.m_obj.kind, w.m_obj.name, w.m_obj.bit_offset, w.m_obj.bit_size,
+        w.m_obj.base_offset, w.m_obj.original_order);
     llvm::ListSeparator sep;
     for (auto &f : w.m_obj.fields)
       os << sep << WrappedMember(*f);
@@ -83,21 +84,27 @@ private:
 class UdtRecordCompleterRecordTests : public testing::Test {
 protected:
   Record record;
+  uint32_t field_index = 0;
 
 public:
   void SetKind(Member::Kind kind) { record.record.kind = kind; }
   void CollectMember(StringRef name, uint64_t byte_offset, uint64_t byte_size) {
     record.CollectMember(name, byte_offset * 8, byte_size * 8,
-                         clang::QualType(), lldb::eAccessPublic, 0);
+                         clang::QualType(), lldb::eAccessPublic, 0,
+                         ++field_index);
   }
-  void ConstructRecord() { record.ConstructRecord(); }
+  void ConstructRecord() {
+    record.ConstructRecord();
+    field_index = 0;
+  }
 };
+
 Member *AddField(Member *member, StringRef name, uint64_t byte_offset,
                  uint64_t byte_size, Member::Kind kind,
                  uint64_t base_offset = 0) {
-  auto field =
-      std::make_unique<Member>(name, byte_offset * 8, byte_size * 8,
-                               clang::QualType(), lldb::eAccessPublic, 0);
+  auto field = std::make_unique<Member>(
+      name, byte_offset * 8, byte_size * 8, clang::QualType(),
+      lldb::eAccessPublic, /*bitfield_width=*/0, /*original_order=*/0);
   field->kind = kind;
   field->base_offset = base_offset * 8;
   member->fields.push_back(std::move(field));
@@ -291,5 +298,32 @@ TEST_F(UdtRecordCompleterRecordTests, TestNestedStructInUnionInStructInUnion) {
   AddField(u, "m5", 6, 2, Member::Field);
   AddField(u, "m6", 6, 2, Member::Field);
   AddField(s, "m7", 8, 2, Member::Field);
+  EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
+}
+
+TEST_F(UdtRecordCompleterRecordTests, TestReorderedStuctFields) {
+  SetKind(Member::Kind::Struct);
+  CollectMember("__0", 12, 2);
+  CollectMember("__1", 14, 2);
+  CollectMember("__2", 8, 4);
+  CollectMember("__3", 0, 8);
+  ConstructRecord();
+
+  // From Rust.
+  // struct Foo(i16, u16, i32, u64)
+  // Is reordered by Rust to:
+  // struct Foo {
+  //   u64 __3;
+  //   i32 __2;
+  //   i16 __0;
+  //   u16 __1:
+  // };
+
+  Record record;
+  record.start_offset = 0;
+  AddField(&record.record, "__0", 12, 2, Member::Field);
+  AddField(&record.record, "__1", 14, 2, Member::Field);
+  AddField(&record.record, "__2", 8, 4, Member::Field);
+  AddField(&record.record, "__3", 0, 8, Member::Field);
   EXPECT_EQ(WrappedRecord(this->record), WrappedRecord(record));
 }
