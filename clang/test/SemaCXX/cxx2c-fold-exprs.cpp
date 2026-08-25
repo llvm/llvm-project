@@ -629,3 +629,33 @@ static_assert(MutabilityAlias<Constant::alias>);
 static_assert(MutabilityAlias<Mutable::alias>);
 
 }
+
+namespace GH218035 {
+
+template <class T, class UnusedParam>
+concept same_as_impl = sizeof(T) == 8;
+template <typename... P>
+void f()
+  requires(same_as_impl<P...[0], P> && ...)
+{}
+void g() { f<long long, float>(); }
+
+}
+
+namespace GH218548 {
+
+template <class T>
+concept same_as_impl = sizeof(T) == 2;
+template <typename... P>
+void f() requires(same_as_impl<P...[sizeof(P)]> && ...) // #GH218548_f
+{}
+void g() {
+  f<char, short, short>();
+
+  f<char, int, short>();
+  // expected-error@-1 {{no matching function}}
+  // expected-note@#GH218548_f {{constraints not satisfied}}
+  // expected-note@#GH218548_f {{invalid index}}
+}
+
+}

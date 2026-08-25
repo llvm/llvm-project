@@ -14,6 +14,8 @@
 !rec_UVP = !cir.union<"UVP" {data !cir.vptr, data !s64i}>
 !rec_VPBig = !cir.struct<"VPBig" {data !cir.vptr, data !s64i, data !s64i}>
 !rec_VPNoRegs = !cir.struct<"VPNoRegs" {data !cir.vptr, data !s64i}>
+!u8i = !cir.int<u, 8>
+!rec_Poly = !cir.struct<"Poly" packed {data !cir.vptr, data !s32i, pad !cir.array<!u8i x 4>}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -44,7 +46,10 @@ module attributes {
       record_align = 8>,
     VPNoRegs = #cir.record_layout<
       arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = true,
-      record_align = 8>},
+      record_align = 8>,
+    Poly = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 1>},
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
@@ -227,4 +232,23 @@ module attributes {
   // CHECK:   %[[X:.*]] = cir.load %{{.*}} : !cir.ptr<!s64i>, !s64i
   // CHECK:   cir.call @take_vp_long(%[[P]], %[[X]]) : (!cir.ptr<!void>, !s64i) -> !s64i
   // LLVM: define i64 @caller(ptr %{{[^,]+}}, i64 %{{[^,)]+}})
+
+  // A polymorphic class with tail padding lowers to a packed record, since
+  // CIRGen marks that packed as a layout fallback.  Its vtable-pointer
+  // eightbyte still coerces to a pointer, the same as an unpacked one.
+  cir.func @take_poly(%arg0: !rec_Poly) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_poly(%arg0: !cir.ptr<!void>, %arg1: !s32i)
+  // LLVM: define void @take_poly(ptr %{{[^,]+}}, i32 %{{[^,)]+}})
+
+  cir.func @ret_poly() -> !rec_Poly {
+    %0 = cir.alloca "r" align(8) : !cir.ptr<!rec_Poly>
+    %1 = cir.load %0 : !cir.ptr<!rec_Poly>, !rec_Poly
+    cir.return %1 : !rec_Poly
+  }
+
+  // CHECK: cir.func{{.*}} @ret_poly() -> !rec_anon_struct{{[0-9]*}}
+  // LLVM: define { ptr, i32 } @ret_poly()
 }
