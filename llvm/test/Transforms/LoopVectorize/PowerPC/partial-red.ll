@@ -119,11 +119,11 @@ define dso_local signext i32 @dotu8(ptr noundef readonly captures(none) %a, ptr 
 ; P8CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P8CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 15
 ; P8CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P8CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P8CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P8CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P8CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P8CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P8CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX39]]
 ; P8CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <16 x i8>, ptr [[TMP43]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P8CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX39]]
@@ -275,11 +275,11 @@ define dso_local signext i32 @dotu8(ptr noundef readonly captures(none) %a, ptr 
 ; P9CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P9CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 15
 ; P9CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P9CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P9CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P9CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P9CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P9CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P9CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX39]]
 ; P9CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <16 x i8>, ptr [[TMP43]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P9CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX39]]
@@ -431,11 +431,11 @@ define dso_local signext i32 @dotu8(ptr noundef readonly captures(none) %a, ptr 
 ; P10CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P10CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 15
 ; P10CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P10CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P10CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P10CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P10CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P10CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P10CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX39]]
 ; P10CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <16 x i8>, ptr [[TMP43]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P10CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX39]]
@@ -580,11 +580,11 @@ define dso_local signext i32 @dots8(ptr noundef readonly captures(none) %a, ptr 
 ; P8CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP25]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P8CHECK-NEXT:    [[N_MOD_VF14:%.*]] = and i64 [[N]], 3
 ; P8CHECK-NEXT:    [[N_VEC15:%.*]] = sub i64 [[N]], [[N_MOD_VF14]]
-; P8CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P8CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P8CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P8CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P8CHECK-NEXT:    [[INDEX16:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P8CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <4 x i32> [ [[TMP26]], %[[VEC_EPILOG_PH]] ], [ [[TMP32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P8CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <4 x i32> [ [[TMP37]], %[[VEC_EPILOG_PH]] ], [ [[TMP32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P8CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX16]]
 ; P8CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x i8>, ptr [[TMP27]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P8CHECK-NEXT:    [[TMP28:%.*]] = sext <4 x i8> [[WIDE_LOAD18]] to <4 x i32>
@@ -736,11 +736,11 @@ define dso_local signext i32 @dots8(ptr noundef readonly captures(none) %a, ptr 
 ; P9CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP49]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P9CHECK-NEXT:    [[N_MOD_VF30:%.*]] = and i64 [[N]], 7
 ; P9CHECK-NEXT:    [[N_VEC31:%.*]] = sub i64 [[N]], [[N_MOD_VF30]]
-; P9CHECK-NEXT:    [[TMP50:%.*]] = insertelement <8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P9CHECK-NEXT:    [[TMP61:%.*]] = insertelement <8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P9CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P9CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P9CHECK-NEXT:    [[INDEX32:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT36:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P9CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <8 x i32> [ [[TMP50]], %[[VEC_EPILOG_PH]] ], [ [[TMP56:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P9CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <8 x i32> [ [[TMP61]], %[[VEC_EPILOG_PH]] ], [ [[TMP56:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P9CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX32]]
 ; P9CHECK-NEXT:    [[WIDE_LOAD34:%.*]] = load <8 x i8>, ptr [[TMP51]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P9CHECK-NEXT:    [[TMP52:%.*]] = sext <8 x i8> [[WIDE_LOAD34]] to <8 x i32>
@@ -852,11 +852,11 @@ define dso_local signext i32 @dots8(ptr noundef readonly captures(none) %a, ptr 
 ; P10CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP25]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P10CHECK-NEXT:    [[N_MOD_VF14:%.*]] = and i64 [[N]], 3
 ; P10CHECK-NEXT:    [[N_VEC15:%.*]] = sub i64 [[N]], [[N_MOD_VF14]]
-; P10CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P10CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P10CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P10CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P10CHECK-NEXT:    [[INDEX16:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P10CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <4 x i32> [ [[TMP26]], %[[VEC_EPILOG_PH]] ], [ [[TMP32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P10CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <4 x i32> [ [[TMP37]], %[[VEC_EPILOG_PH]] ], [ [[TMP32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P10CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX16]]
 ; P10CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x i8>, ptr [[TMP27]], align 1, !tbaa [[CHAR_TBAA8]]
 ; P10CHECK-NEXT:    [[TMP28:%.*]] = sext <4 x i8> [[WIDE_LOAD18]] to <4 x i32>
@@ -1034,11 +1034,11 @@ define dso_local signext range(i32 0, -2147483648) i32 @dotu16(ptr noundef reado
 ; P8CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P8CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P8CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P8CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P8CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P8CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P8CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P8CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P8CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P8CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P8CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
@@ -1190,11 +1190,11 @@ define dso_local signext range(i32 0, -2147483648) i32 @dotu16(ptr noundef reado
 ; P9CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P9CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P9CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P9CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P9CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P9CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P9CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P9CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P9CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P9CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P9CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
@@ -1346,11 +1346,11 @@ define dso_local signext range(i32 0, -2147483648) i32 @dotu16(ptr noundef reado
 ; P10CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P10CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P10CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P10CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P10CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P10CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P10CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P10CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P10CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P10CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P10CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
@@ -1528,11 +1528,11 @@ define dso_local signext i32 @dots16(ptr noundef readonly captures(none) %a, ptr
 ; P8CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P8CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P8CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P8CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P8CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P8CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P8CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P8CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P8CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P8CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P8CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P8CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
@@ -1684,11 +1684,11 @@ define dso_local signext i32 @dots16(ptr noundef readonly captures(none) %a, ptr
 ; P9CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P9CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P9CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P9CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P9CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P9CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P9CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P9CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P9CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P9CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P9CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P9CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
@@ -1840,11 +1840,11 @@ define dso_local signext i32 @dots16(ptr noundef readonly captures(none) %a, ptr
 ; P10CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP41]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; P10CHECK-NEXT:    [[N_MOD_VF37:%.*]] = and i64 [[N]], 7
 ; P10CHECK-NEXT:    [[N_VEC38:%.*]] = sub i64 [[N]], [[N_MOD_VF37]]
-; P10CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
+; P10CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; P10CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; P10CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; P10CHECK-NEXT:    [[INDEX39:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP42]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; P10CHECK-NEXT:    [[VEC_PHI40:%.*]] = phi <4 x i32> [ [[TMP52]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE43:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; P10CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A]], i64 [[INDEX39]]
 ; P10CHECK-NEXT:    [[WIDE_LOAD41:%.*]] = load <8 x i16>, ptr [[TMP43]], align 2, !tbaa [[SHORT_TBAA20]]
 ; P10CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[B]], i64 [[INDEX39]]
