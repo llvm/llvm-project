@@ -125,12 +125,12 @@ std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &F,
 
   assert(Spec == WebAssembly::S_None &&
          "Instruction offsets in branch hints should have no specifier");
-  const auto *SymExpr = cast<MCSymbolRefExpr>(Fixup.getValue());
+  const auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Fixup.getValue());
+  if (!SymExpr)
+    return {};
   const MCSymbol &SymA = SymExpr->getSymbol();
-  assert(SymA.isInSection() && SymA.isTemporary() &&
-         SymA.getSection().isText() &&
-         "Branch hint instruction target must be a temporary symbol in text "
-         "section");
+  if (!SymA.isInSection() || !SymA.isTemporary() || !SymA.getSection().isText())
+    return {};
 
   const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
   uint8_t Buffer[5];

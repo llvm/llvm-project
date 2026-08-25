@@ -94,8 +94,8 @@ private:
   void addSections();
 
   void createCustomSections();
-  // branch hint custom section must be placed before code section
-  void createBranchHintSection();
+  // Code metadata custom sections must be placed before code section
+  void createCodeMetaDataSections();
   void createSyntheticSections();
   void createSyntheticSectionsPostLayout();
   void finalizeSections();
@@ -175,8 +175,8 @@ void Writer::createCustomSections() {
   log("createCustomSections");
   for (auto &pair : customSectionMapping) {
     StringRef name = pair.first;
-    if (name == "metadata.code.branch_hint") {
-      // Branch hint section is created separately.
+    if (name.starts_with("metadata.code.")) {
+      // Code metadata sections are created separately before the code section.
       continue;
     }
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
@@ -190,19 +190,21 @@ void Writer::createCustomSections() {
   }
 }
 
-void Writer::createBranchHintSection() {
-  log("createBranchHintSection");
-  std::string SectionName = "metadata.code.branch_hint";
-  if (const auto &Ins = customSectionMapping.find(SectionName);
-      Ins != customSectionMapping.end()) {
-    OutputSection *Sec =
-        make<CodeMetaDataOutputSection>(std::move(SectionName), Ins->second);
+void Writer::createCodeMetaDataSections() {
+  log("createCodeMetaDataSections");
+  for (auto &pair : customSectionMapping) {
+    StringRef name = pair.first;
+    if (!name.starts_with("metadata.code."))
+      continue;
+    LLVM_DEBUG(dbgs() << "createCodeMetaDataSection: " << name << "\n");
+    OutputSection *sec =
+        make<CodeMetaDataOutputSection>(std::string(name), pair.second);
     if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
-      auto *sym = make<OutputSectionSymbol>(Sec);
+      auto *sym = make<OutputSectionSymbol>(sec);
       out.linkingSec->addToSymtab(sym);
-      Sec->sectionSym = sym;
+      sec->sectionSym = sym;
     }
-    addSection(Sec);
+    addSection(sec);
   }
 }
 
@@ -588,7 +590,7 @@ void Writer::addSections() {
   addSection(out.elemSec);
   addSection(out.dataCountSec);
 
-  createBranchHintSection();
+  createCodeMetaDataSections();
 
   addSection(make<CodeSection>(out.functionSec->inputFunctions));
   addSection(make<DataSection>(segments));
