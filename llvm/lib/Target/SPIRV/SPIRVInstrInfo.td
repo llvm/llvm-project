@@ -813,7 +813,7 @@ def OpWritePipe: Op<275, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer,
                   "$res = OpWritePipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
 def OpReservedReadPipe : Op<276, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
                   "$res = OpReservedReadPipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
-def OpReservedWritePipe : Op<277, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+def OpReservedWritePipe : Op<277, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign), 
                   "$res = OpReservedWritePipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
 def OpReserveReadPipePackets : Op<278, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
                   "$res = OpReserveReadPipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
@@ -1015,15 +1015,15 @@ def OpBitwiseFunctionINTEL: Op<6242, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:
                   "$res = OpBitwiseFunctionINTEL $type $a $b $c $lut_index">;
 
 // SPV_ALTERA_arbitrary_precision_floating_point
-def OpArbitraryFloatGTALTERA: Op<5850, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb),
+def OpArbitraryFloatGTALTERA: Op<5850, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatGTALTERA $type $A $Ma $B $Mb">;
-def OpArbitraryFloatGEALTERA: Op<5851, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb),
+def OpArbitraryFloatGEALTERA: Op<5851, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatGEALTERA $type $A $Ma $B $Mb">;
-def OpArbitraryFloatLTALTERA: Op<5852, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb),
+def OpArbitraryFloatLTALTERA: Op<5852, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatLTALTERA $type $A $Ma $B $Mb">;
-def OpArbitraryFloatLEALTERA: Op<5853, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb),
+def OpArbitraryFloatLEALTERA: Op<5853, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatLEALTERA $type $A $Ma $B $Mb">;
-def OpArbitraryFloatEQALTERA: Op<5854, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb),
+def OpArbitraryFloatEQALTERA: Op<5854, (outs ID:$res), (ins TYPE:$type, ID:$A, i32imm:$Ma , ID:$B, i32imm:$Mb), 
                   "$res = OpArbitraryFloatEQALTERA $type $A $Ma $B $Mb">;
 def OpArbitraryFloatRecipALTERA: Op<5855, (outs ID:$res),
                   (ins TYPE:$type, ID:$A, i32imm:$Ma, i32imm:$Mresult, i32imm:$subnormalMode, i32imm:$RoundingMode, i32imm:$RoundingAccuracy),
