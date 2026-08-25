@@ -535,7 +535,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_NO_UNIQUE_ADDRESS
 #endif
 
-#ifdef _LIBCPP_SHORT_WCHAR
+#if defined(_WIN32) || defined(__SIZEOF_WCHAR_T__) && __SIZEOF_WCHAR_T__ == 2
 #  define TEST_SHORT_WCHAR
 #endif
 

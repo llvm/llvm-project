@@ -1532,10 +1532,16 @@ defm LdsBarrierArriveAtomic : AMDGPUSubtargetFeature<"lds-barrier-arrive-atomic"
   "Has LDS barrier-arrive atomic instructions"
 >;
 
-defm 45BitNumRecordsBufferResource : AMDGPUSubtargetFeature<"45-bit-num-records-buffer-resource",
-  "The buffer resource (V#) supports 45-bit num_records",
-  /*GenPredicate=*/0
+// The width of the num_records field of the buffer resource (V#).
+class FeatureNumRecordsBufferResource<int width> : SubtargetFeature<
+  !cast<string>(width)#"-bit-num-records-buffer-resource",
+  "BufferResourceNumRecordsWidth",
+  !cast<string>(width),
+  "The buffer resource (V#) has "#width#"-bit num_records"
 >;
+
+def Feature32BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<32>;
+def Feature45BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<45>;
 
 defm Clusters : AMDGPUSubtargetFeature<"clusters",
   "Has clusters of workgroups support",
@@ -1584,7 +1590,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
   FeatureSadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
   FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode, FeatureMTBUFInsts,
-  FeatureFormattedMUBUFInsts
+  FeatureFormattedMUBUFInsts, Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1602,7 +1608,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
   FeatureMqsadInsts, FeatureCvtPkNormVOP2Insts,
   FeatureDX10ClampAndIEEEMode, FeatureInstCacheLineSize64,
-  FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+  FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+  Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1623,7 +1630,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts,
    FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1647,7 +1655,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureMsadInsts, FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1679,7 +1688,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
-   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1710,7 +1720,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
-   FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1738,7 +1749,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
-   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
+   Feature32BitNumRecordsBufferResource
   ]
 >;
 
@@ -1768,7 +1780,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
+   Feature45BitNumRecordsBufferResource
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2494,7 +2507,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureRestrictedSOffset,
-   Feature45BitNumRecordsBufferResource,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,

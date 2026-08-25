@@ -63,10 +63,6 @@ public:
   /// Returns the value of a marshalled native pointer.
   const void *getNativePointer(unsigned Idx) const;
 
-  /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S,
-                              const Expr *Base = nullptr);
-
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
 

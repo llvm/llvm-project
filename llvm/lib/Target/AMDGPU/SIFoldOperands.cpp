@@ -2414,6 +2414,18 @@ static int getOModValue(unsigned Opc, int64_t Val) {
       return SIOutMods::NONE;
     }
   }
+  case AMDGPU::V_PK_MUL_BF16: {
+    switch (static_cast<uint16_t>(Val)) {
+    case 0x3F00: // 0.5 in BF16
+      return SIOutMods::DIV2;
+    case 0x4000: // 2.0 in BF16
+      return SIOutMods::MUL2;
+    case 0x4080: // 4.0 in BF16
+      return SIOutMods::MUL4;
+    default:
+      return SIOutMods::NONE;
+    }
+  }
   default:
     llvm_unreachable("invalid mul opcode");
   }
@@ -2491,6 +2503,63 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
 
     return {nullptr, SIOutMods::NONE};
   }
+  case AMDGPU::V_PK_MUL_BF16: {
+    // OMOD folding for BF16 packed multiply
+    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign ||
+        MI.mayRaiseFPException())
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    // If there is an immediate operand, it must be Src1
+    std::optional<int64_t> Src1Imm =
+        TII->getImmOrMaterializedImm(const_cast<MachineOperand &>(*Src1));
+    if (!Src1Imm)
+      return {nullptr, SIOutMods::NONE};
+
+    int OMod = getOModValue(AMDGPU::V_PK_MUL_BF16, *Src1Imm);
+    if (OMod == SIOutMods::NONE)
+      return {nullptr, SIOutMods::NONE};
+
+    // Modifiers other than op_sel_hi block OMOD folding
+    const MachineOperand *Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    const MachineOperand *Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    if ((Src0Mods && (Src0Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+        (Src1Mods && (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return {nullptr, SIOutMods::NONE};
+
+    return {Src0, OMod};
+  }
+  case AMDGPU::V_PK_ADD_BF16: {
+    // OMOD folding for BF16 packed add: x + x -> x * 2
+    if (MFI->getMode().FP32Denormals.Output != DenormalMode::PreserveSign)
+      return {nullptr, SIOutMods::NONE};
+
+    const MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    if (!Src0->isReg() || !Src1->isReg() || Src0->getReg() != Src1->getReg() ||
+        Src0->getSubReg() != Src1->getSubReg())
+      return {nullptr, SIOutMods::NONE};
+
+    // Modifiers other than op_sel_hi block OMOD folding
+    const MachineOperand *Src0Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
+    const MachineOperand *Src1Mods =
+        TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+    if ((Src0Mods && (Src0Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+        (Src1Mods && (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1)) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
+        TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+      return {nullptr, SIOutMods::NONE};
+
+    return {Src0, SIOutMods::MUL2};
+  }
   default:
     return {nullptr, SIOutMods::NONE};
   }
@@ -2507,6 +2576,31 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
     return false;
 
   MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());
+  Register OModSrcReg = Def->getOperand(0).getReg();
+
+  // In real-true16 mode, vgpr_16 results are packed into vgpr_32 via
+  // REG_SEQUENCE. Look through it to find the actual instruction.
+  if (Def->isRegSequence() && Def->getNumOperands() == 5 &&
+      Def->getOperand(1).isReg() && Def->getOperand(2).isImm() &&
+      Def->getOperand(2).getImm() == AMDGPU::lo16 &&
+      Def->getOperand(3).isReg()) {
+    // Only look through if the high 16 bits are undefined
+    bool CanLookThrough = true;
+    MachineInstr *Hi16Def = MRI->getVRegDef(Def->getOperand(3).getReg());
+    if (!Hi16Def || !Hi16Def->isImplicitDef())
+      CanLookThrough = false;
+
+    if (CanLookThrough) {
+      Register SrcReg = Def->getOperand(1).getReg();
+      if (!MRI->hasOneNonDBGUse(SrcReg))
+        return false;
+
+      Def = MRI->getVRegDef(SrcReg);
+      if (!Def)
+        return false;
+    }
+  }
+
   MachineOperand *DefOMod = TII->getNamedOperand(*Def, AMDGPU::OpName::omod);
   if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
     return false;
@@ -2522,7 +2616,6 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def);
 
   DefOMod->setImm(OMod);
-  Register OModSrcReg = Def->getOperand(0).getReg();
   MRI->replaceRegWith(MI.getOperand(0).getReg(), OModSrcReg);
   // Kill flags can be wrong if we replaced a def inside a loop with a def
   // outside the loop.

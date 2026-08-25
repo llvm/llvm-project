@@ -4086,24 +4086,11 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svpsel_lane_c16:
   case SVE::BI__builtin_sve_svpsel_lane_c32:
   case SVE::BI__builtin_sve_svpsel_lane_c64: {
-    bool IsSVCount = isa<TargetExtType>(Ops[0]->getType());
-    assert(((!IsSVCount || cast<TargetExtType>(Ops[0]->getType())->getName() ==
-                               "aarch64.svcount")) &&
-           "Unexpected TargetExtType");
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
-    Function *CastFromSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
-    Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
-
     auto OverloadedTy = getSVEType(SVETypeFlags(Builtin->TypeModifier));
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel, OverloadedTy);
-    llvm::Value *Ops0 =
-        IsSVCount ? Builder.CreateCall(CastFromSVCountF, Ops[0]) : Ops[0];
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_psel,
+                                   {Ops[0]->getType(), OverloadedTy});
     llvm::Value *Ops1 = EmitSVEPredicateCast(Ops[1], OverloadedTy);
-    llvm::Value *PSel = Builder.CreateCall(F, {Ops0, Ops1, Ops[2]});
-    return IsSVCount ? Builder.CreateCall(CastToSVCountF, PSel) : PSel;
+    return Builder.CreateCall(F, {Ops[0], Ops1, Ops[2]});
   }
   case SVE::BI__builtin_sve_svmov_b_z: {
     // svmov_b_z(pg, op) <=> svand_b_z(pg, op, op)
@@ -4226,12 +4213,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svpfalse_b:
     return ConstantInt::getFalse(Ty);
 
-  case SVE::BI__builtin_sve_svpfalse_c: {
-    auto SVBoolTy = ScalableVectorType::get(Builder.getInt1Ty(), 16);
-    Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, Ty);
-    return Builder.CreateCall(CastToSVCountF, ConstantInt::getFalse(SVBoolTy));
-  }
+  case SVE::BI__builtin_sve_svpfalse_c:
+    return Constant::getNullValue(Ty);
 
   case SVE::BI__builtin_sve_svlen_bf16:
   case SVE::BI__builtin_sve_svlen_f16:
@@ -4277,7 +4260,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svset_neonq_f16:
   case SVE::BI__builtin_sve_svset_neonq_f32:
   case SVE::BI__builtin_sve_svset_neonq_f64:
-  case SVE::BI__builtin_sve_svset_neonq_bf16: {
+  case SVE::BI__builtin_sve_svset_neonq_bf16:
+  case SVE::BI__builtin_sve_svset_neonq_mf8: {
     return Builder.CreateInsertVector(Ty, Ops[0], Ops[1], uint64_t(0));
   }
 
@@ -4292,7 +4276,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svget_neonq_f16:
   case SVE::BI__builtin_sve_svget_neonq_f32:
   case SVE::BI__builtin_sve_svget_neonq_f64:
-  case SVE::BI__builtin_sve_svget_neonq_bf16: {
+  case SVE::BI__builtin_sve_svget_neonq_bf16:
+  case SVE::BI__builtin_sve_svget_neonq_mf8: {
     return Builder.CreateExtractVector(Ty, Ops[0], uint64_t(0));
   }
 
@@ -4307,7 +4292,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_neonq_f16:
   case SVE::BI__builtin_sve_svdup_neonq_f32:
   case SVE::BI__builtin_sve_svdup_neonq_f64:
-  case SVE::BI__builtin_sve_svdup_neonq_bf16: {
+  case SVE::BI__builtin_sve_svdup_neonq_bf16:
+  case SVE::BI__builtin_sve_svdup_neonq_mf8: {
     Value *Insert = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
                                                uint64_t(0));
     return Builder.CreateIntrinsic(Intrinsic::aarch64_sve_dupq_lane, {Ty},

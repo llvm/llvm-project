@@ -486,9 +486,12 @@ void OMPClauseProfiler::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  Profiler->VisitInteger(C->getPrescriptivenessModifier());
+  Profiler->VisitInteger(C->getDimsModifier());
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Profiler->VisitStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  if (C->getNumThreads())
-    Profiler->VisitStmt(C->getNumThreads());
 }
 
 void OMPClauseProfiler::VisitOMPAlignClause(const OMPAlignClause *C) {

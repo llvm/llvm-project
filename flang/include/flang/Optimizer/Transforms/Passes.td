@@ -781,7 +781,9 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
             clEnumValN(::fir::LICMNestedHoistingMode::None,
                        "none", "Do not hoist from nested regions"),
             clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
-                       "cheap", "Only hoist cheap ops like fir.convert"),
+                       "cheap", "Only hoist cheap ops like fir.convert, "
+                                "fir.address_of, and scalar or descriptor "
+                                "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
            )}]>];

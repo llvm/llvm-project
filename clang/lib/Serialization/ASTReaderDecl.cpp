@@ -2103,7 +2103,27 @@ void ASTDeclMerger::MergeDefinitionData(
       PFDI->second == ASTReader::PendingFakeDefinitionKind::Fake) {
     // We faked up this definition data because we found a class for which we'd
     // not yet loaded the definition. Replace it with the real thing now.
-    assert(!DD.IsLambda && !MergeDD.IsLambda && "faked up lambda definition?");
+    assert(!DD.IsLambda && "faked up lambda definition?");
+
+    // This is possible for some special loading ordering. See
+    // clang/test/Modules/pr217858.cppm for an example.
+    //
+    // LambdaDefinitionData is larger than DefinitionData, so it cannot replace
+    // the fake DefinitionData object in place.
+    if (MergeDD.IsLambda) {
+      auto *Def = DD.Definition;
+      MergeDD.Definition = Def;
+      // Unlike an instantiated class definition,
+      // whose update-record reader removes the fake entry after loading its
+      // lexical declarations, a lambda's definition is part of its declaration
+      // record and is fully loaded here.
+      Reader.PendingFakeDefinitionData.erase(PFDI);
+      for (auto *R = Reader.getMostRecentExistingDecl(Def); R;
+           R = R->getPreviousDecl())
+        cast<CXXRecordDecl>(R)->DefinitionData = &MergeDD;
+      return;
+    }
+
     PFDI->second = ASTReader::PendingFakeDefinitionKind::FakeLoaded;
 
     // Don't change which declaration is the definition; that is required

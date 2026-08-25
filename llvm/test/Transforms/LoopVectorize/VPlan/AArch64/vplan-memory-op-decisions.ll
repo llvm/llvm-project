@@ -503,3 +503,545 @@ latch:
 exit:
   ret void
 }
+
+; FIXME: getSCEVExprForVPValue should support disjoint or.
+define void @or_disjoint_address(ptr noalias %A) {
+; CHECK-LABEL: VPlan for loop in 'or_disjoint_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%or> = or disjoint ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%or>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %or = or disjoint i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %A, i64 %or
+  %lv = load i32, ptr %gep, align 4
+  %add = add i32 %lv, 1
+  store i32 %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: getSCEVExprForVPValue should support `sdiv` with non-negative operands
+; which is equivalent to an `udiv`.
+define void @sdiv_with_nonnegative_operands_address(ptr noalias %A) {
+; CHECK-LABEL: VPlan for loop in 'sdiv_with_nonnegative_operands_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%mul> = mul nuw nsw ir<%iv>, ir<4>
+; CHECK-NEXT:      EMIT ir<%div> = sdiv ir<%mul>, ir<4>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%div>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw nsw i64 %iv, 4
+  %div = sdiv i64 %mul, 4
+  %gep = getelementptr inbounds i32, ptr %A, i64 %div
+  %lv = load i32, ptr %gep, align 4
+  %add = add i32 %lv, 1
+  store i32 %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: getSCEVExprForVPValue should support `ashr (shl X, C), C` which
+; sign-extends the low bits of X.
+define void @ashr_of_shl_address(ptr noalias %A) {
+; CHECK-LABEL: VPlan for loop in 'ashr_of_shl_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%shl> = shl ir<%iv>, ir<32>
+; CHECK-NEXT:      EMIT ir<%ashr> = ashr ir<%shl>, ir<32>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%ashr>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %shl = shl i64 %iv, 32
+  %ashr = ashr i64 %shl, 32
+  %gep = getelementptr inbounds i32, ptr %A, i64 %ashr
+  %lv = load i32, ptr %gep, align 4
+  %add = add i32 %lv, 1
+  store i32 %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: getSCEVExprForVPValue should support extracting the result of a
+; with-overflow intrinsic that is known not to overflow is equivalent to
+; the plain binary operation.
+define void @extractvalue_of_with_overflow_address(ptr noalias %A) {
+; CHECK-LABEL: VPlan for loop in 'extractvalue_of_with_overflow_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%res> = call ir<%iv>, ir<1>, ir<@llvm.sadd.with.overflow.i64>
+; CHECK-NEXT:      EMIT ir<%idx> = extractvalue ir<%res>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %iv, i64 1)
+  %idx = extractvalue { i64, i1 } %res, 0
+  %gep = getelementptr inbounds i32, ptr %A, i64 %idx
+  %lv = load i32, ptr %gep, align 4
+  %add = add i32 %lv, 1
+  store i32 %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; FIXME: getSCEVExprForVPValue should support blends with all equal incoming values.
+define void @blend_with_identical_incoming_values_address(ptr noalias %A, i1 %c) {
+; CHECK-LABEL: VPlan for loop in 'blend_with_identical_incoming_values_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:    Successor(s): else
+; CHECK-EMPTY:
+; CHECK-NEXT:    else:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c>
+; CHECK-NEXT:      EMIT ir<%idx.else> = add nsw ir<%iv>, ir<-1>, vp<[[VP4]]>
+; CHECK-NEXT:    Successor(s): then
+; CHECK-EMPTY:
+; CHECK-NEXT:    then:
+; CHECK-NEXT:      EMIT ir<%idx.then> = add nsw ir<%iv>, ir<-1>, ir<%c>
+; CHECK-NEXT:    Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    latch:
+; CHECK-NEXT:      BLEND ir<%idx> = ir<%idx.else>/vp<[[VP4]]> ir<%idx.then>/ir<%c>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr inbounds ir<%A>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep>
+; CHECK-NEXT:      EMIT ir<%add> = add ir<%lv>, ir<1>
+; CHECK-NEXT:      EMIT store ir<%add>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  br i1 %c, label %then, label %else
+
+then:
+  %idx.then = add nsw i64 %iv, -1
+  br label %latch
+
+else:
+  %idx.else = add nsw i64 %iv, -1
+  br label %latch
+
+latch:
+  %idx = phi i64 [ %idx.then, %then ], [ %idx.else, %else ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %idx
+  %lv = load i32, ptr %gep, align 4
+  %add = add i32 %lv, 1
+  store i32 %add, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+; A plain `or` without the disjoint flag is not equivalent to an `add`.
+define void @or_without_disjoint_address(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: VPlan for loop in 'or_without_disjoint_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%idx> = or ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.B>
+; CHECK-NEXT:      EMIT ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%lv>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = or i64 %iv, 1
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %idx
+  %lv = load i32, ptr %gep.B, align 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %lv, ptr %gep.A, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; An `sdiv` by a negative constant is not equivalent to an `udiv`.
+define void @sdiv_with_negative_operand_address(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: VPlan for loop in 'sdiv_with_negative_operand_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%mul> = mul nuw nsw ir<%iv>, ir<4>
+; CHECK-NEXT:      EMIT ir<%idx> = sdiv ir<%mul>, ir<-4>
+; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.B>
+; CHECK-NEXT:      EMIT ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%lv>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw nsw i64 %iv, 4
+  %idx = sdiv i64 %mul, -4
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %idx
+  %lv = load i32, ptr %gep.B, align 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %lv, ptr %gep.A, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; `ashr (shl X, C1), C2` with C1 < C2 is not a sign-extend-in-register of X.
+define void @ashr_amount_larger_than_shl_address(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: VPlan for loop in 'ashr_amount_larger_than_shl_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%shl> = shl ir<%iv>, ir<16>
+; CHECK-NEXT:      EMIT ir<%idx> = ashr ir<%shl>, ir<32>
+; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.B>
+; CHECK-NEXT:      EMIT ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%lv>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %shl = shl i64 %iv, 16
+  %idx = ashr i64 %shl, 32
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %idx
+  %lv = load i32, ptr %gep.B, align 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %lv, ptr %gep.A, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; A blend selecting between values with different SCEVs has no known stride.
+define void @blend_with_different_incoming_values_address(ptr noalias %A, ptr noalias %B, i1 %c) {
+; CHECK-LABEL: VPlan for loop in 'blend_with_different_incoming_values_address'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<101> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:    Successor(s): else
+; CHECK-EMPTY:
+; CHECK-NEXT:    else:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c>
+; CHECK-NEXT:      EMIT ir<%idx.else> = add nsw ir<%iv>, ir<-2>, vp<[[VP4]]>
+; CHECK-NEXT:    Successor(s): then
+; CHECK-EMPTY:
+; CHECK-NEXT:    then:
+; CHECK-NEXT:      EMIT ir<%idx.then> = add nsw ir<%iv>, ir<-1>, ir<%c>
+; CHECK-NEXT:    Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    latch:
+; CHECK-NEXT:      BLEND ir<%idx> = ir<%idx.else>/vp<[[VP4]]> ir<%idx.then>/ir<%c>
+; CHECK-NEXT:      EMIT ir<%gep.B> = getelementptr inbounds ir<%B>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.B>
+; CHECK-NEXT:      EMIT ir<%gep.A> = getelementptr inbounds ir<%A>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%lv>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  br i1 %c, label %then, label %else
+
+then:
+  %idx.then = add nsw i64 %iv, -1
+  br label %latch
+
+else:
+  %idx.else = add nsw i64 %iv, -2
+  br label %latch
+
+latch:
+  %idx = phi i64 [ %idx.then, %then ], [ %idx.else, %else ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i64 %idx
+  %lv = load i32, ptr %gep.B, align 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %lv, ptr %gep.A, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

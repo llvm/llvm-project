@@ -26,7 +26,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable '1 = 1'",
             error=True,
-            substrs=["Not allowed to change the value of a constant"],
+            substrs=["value is not in a writable location"],
         )
 
         # Assigning to an int var

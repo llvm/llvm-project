@@ -292,6 +292,11 @@ void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
   linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
+void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateSwapExtractSliceWithFillPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

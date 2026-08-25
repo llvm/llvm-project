@@ -1592,6 +1592,8 @@ public:
     Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
 
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
     // Floating point reductions require reassocation.
     if (!IsIntVec && !FMF.allowReassoc())
       return;
@@ -1609,7 +1611,8 @@ public:
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
-    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+    auto GetCostForArg = [this, &CanBeFlattened, CostKind](Value *Op,
+                                                           unsigned N) {
       if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
@@ -1632,10 +1635,10 @@ public:
       if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
-                                       EltTy) *
+                                       EltTy, CostKind) *
             N;
         InstructionCost NewCost = TTI.getArithmeticInstrCost(
-            cast<Instruction>(Op)->getOpcode(), VecTy);
+            cast<Instruction>(Op)->getOpcode(), VecTy, CostKind);
         return NewCost - OriginalCost;
       }
 
@@ -1688,12 +1691,12 @@ public:
     InstructionCost ReductionCost =
         TTI.getArithmeticReductionCost(
             AddOpCode, cast<FixedVectorType>(LHS->getType()),
-            IsIntVec ? std::nullopt : std::optional(FMF)) +
-        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
+            IsIntVec ? std::nullopt : std::optional(FMF), CostKind) +
+        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType(), CostKind);
     InstructionCost SequentialAddCost =
-        TTI.getArithmeticInstrCost(AddOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(AddOpCode, ElementType, CostKind) *
             (LShape.NumColumns - 1) +
-        TTI.getArithmeticInstrCost(MulOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(MulOpCode, ElementType, CostKind) *
             (LShape.NumColumns);
     if ((LHSCost + ReductionCost - SequentialAddCost) > InstructionCost(0))
       return;

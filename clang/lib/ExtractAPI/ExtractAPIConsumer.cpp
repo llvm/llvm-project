@@ -287,8 +287,15 @@ public:
       : Ctx(Ctx), SM(SM), API(API), PP(PP) {}
 
   void EndOfMainFile() override {
-    for (const auto &M : PP.macros()) {
-      auto *II = M.getFirst();
+    SmallVector<const IdentifierInfo *> Macros;
+    for (const auto &M : PP.macros())
+      Macros.push_back(M.getFirst());
+    llvm::sort(Macros,
+               [](const IdentifierInfo *LHS, const IdentifierInfo *RHS) {
+                 return LHS->getName() < RHS->getName();
+               });
+
+    for (const auto *II : Macros) {
       auto MD = PP.getMacroDefinition(II);
       auto *MI = MD.getMacroInfo();
 

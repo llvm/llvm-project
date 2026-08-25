@@ -3281,8 +3281,8 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                              [llvm_nxv16i1_ty,
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>,
                                llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 

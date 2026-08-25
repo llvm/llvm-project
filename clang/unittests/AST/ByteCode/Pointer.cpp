@@ -272,3 +272,86 @@ TEST(Pointer, TypesPrimitive) {
     ASSERT_EQ(GlobalPtr, GlobalPtr.atIndex(2).narrow().expand().getArray());
   }
 }
+
+TEST(Pointer, Strings) {
+  constexpr char Code[] = "constexpr const char *str1 = \"foobar\";\n"
+                          "constexpr const auto *str2 = L\"foobar\";\n"
+                          "constexpr const auto *c = &L\"foobar\"[5];\n"
+                          "constexpr const auto *str3 = \"\";\n";
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code, {"-fexperimental-new-constant-interpreter"});
+  ASTContext &ASTCtx = AST->getASTContext();
+  const VarDecl *D =
+      match(varDecl(hasGlobalStorage(), hasName("str1")).bind("str1"),
+            ASTCtx)[0]
+          .getNodeAs<VarDecl>("str1");
+  ASSERT_NE(D, nullptr);
+
+  const auto &Ctx = AST->getASTContext().getInterpContext();
+  Program &Prog = Ctx.getProgram();
+  ASSERT_TRUE(Prog.getGlobal(D));
+
+  Pointer GlobalPtr = Prog.getPtrGlobal(*Prog.getGlobal(D));
+  ASSERT_TRUE(GlobalPtr.isBlockPointer());
+  ASSERT_TRUE(GlobalPtr.getFieldDesc()->getPrimType() == PT_Ptr);
+
+  Pointer Pointee = GlobalPtr.load<Pointer>();
+  ASSERT_TRUE(Pointee.isStringPointer());
+  ASSERT_EQ(Pointee.getNumElems(), 7u);
+  ASSERT_EQ(Pointee.elemSize(), 1u);
+  ASSERT_EQ(Pointee.atIndex(3).getIndex(), 3u);
+  ASSERT_EQ(Pointee.atIndex(7).getIndex(), 7u);
+  ASSERT_TRUE(Pointee.atIndex(7).isOnePastEnd());
+  ASSERT_TRUE(Pointee.atIndex(7).isPastEnd());
+
+  D = match(varDecl(hasGlobalStorage(), hasName("str2")).bind("str2"),
+            ASTCtx)[0]
+          .getNodeAs<VarDecl>("str2");
+  ASSERT_NE(D, nullptr);
+  GlobalPtr = Prog.getPtrGlobal(*Prog.getGlobal(D));
+  ASSERT_TRUE(GlobalPtr.isBlockPointer());
+  ASSERT_TRUE(GlobalPtr.getFieldDesc()->getPrimType() == PT_Ptr);
+
+  Pointee = GlobalPtr.load<Pointer>();
+  ASSERT_TRUE(Pointee.isStringPointer());
+  ASSERT_EQ(Pointee.getNumElems(), 7u);
+  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
+
+  D = match(varDecl(hasGlobalStorage(), hasName("c")).bind("c"), ASTCtx)[0]
+          .getNodeAs<VarDecl>("c");
+  ASSERT_NE(D, nullptr);
+  GlobalPtr = Prog.getPtrGlobal(*Prog.getGlobal(D));
+  ASSERT_TRUE(GlobalPtr.isBlockPointer());
+  ASSERT_TRUE(GlobalPtr.getFieldDesc()->getPrimType() == PT_Ptr);
+
+  Pointee = GlobalPtr.load<Pointer>();
+  ASSERT_TRUE(Pointee.isStringPointer());
+  ASSERT_EQ(Pointee.getNumElems(), 7u);
+  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
+  ASSERT_EQ(Pointee.getIndex(), 5u);
+  APValue APV = Pointee.toAPValue(ASTCtx);
+  ASSERT_TRUE(APV.isLValue());
+  ASSERT_FALSE(APV.isLValueOnePastTheEnd());
+  ASSERT_EQ(static_cast<size_t>(APV.getLValueOffset().getQuantity()),
+            5 * sizeof(wchar_t));
+  ASSERT_TRUE(APV.hasLValuePath());
+  const auto &Path = APV.getLValuePath();
+  ASSERT_EQ(Path.size(), 1u);
+  ASSERT_EQ(Path[0].getAsArrayIndex(), 5u);
+
+  D = match(varDecl(hasGlobalStorage(), hasName("str3")).bind("str3"),
+            ASTCtx)[0]
+          .getNodeAs<VarDecl>("str3");
+  ASSERT_NE(D, nullptr);
+  GlobalPtr = Prog.getPtrGlobal(*Prog.getGlobal(D));
+  ASSERT_TRUE(GlobalPtr.isBlockPointer());
+  ASSERT_TRUE(GlobalPtr.getFieldDesc()->getPrimType() == PT_Ptr);
+
+  Pointee = GlobalPtr.load<Pointer>();
+  ASSERT_EQ(Pointee.getNumElems(), 1u);
+  ASSERT_EQ(Pointee.atIndex(0).getIndex(), 0u);
+  ASSERT_FALSE(Pointee.atIndex(0).isOnePastEnd());
+  ASSERT_FALSE(Pointee.atIndex(0).isPastEnd());
+  ASSERT_TRUE(Pointee.atIndex(1).isOnePastEnd());
+  ASSERT_TRUE(Pointee.atIndex(1).isPastEnd());
+}

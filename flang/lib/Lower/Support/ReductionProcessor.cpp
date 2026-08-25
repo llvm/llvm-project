@@ -195,6 +195,26 @@ bool ReductionProcessor::supportedIntrinsicProcReduction(
   return redType;
 }
 
+const semantics::Symbol *
+ReductionProcessor::findUserDefinedReductionForIntrinsic(
+    const semantics::Scope &scope,
+    const omp::clause::ProcedureDesignator &reductionIntrinsic,
+    const semantics::DeclTypeSpec *type) {
+  const semantics::Symbol *symbol = reductionIntrinsic.v.sym();
+  if (!symbol || !type)
+    return nullptr;
+
+  std::string mangledName = "op." + getRealName(symbol).ToString();
+  const semantics::Symbol *reductionSymbol =
+      scope.FindSymbol(parser::CharBlock{mangledName});
+  if (!reductionSymbol)
+    return nullptr;
+
+  const semantics::Symbol &ultimate = reductionSymbol->GetUltimate();
+  const auto *details = ultimate.detailsIf<semantics::UserReductionDetails>();
+  return details && details->SupportsType(*type) ? &ultimate : nullptr;
+}
+
 std::string
 ReductionProcessor::getReductionName(llvm::StringRef name,
                                      const fir::KindMapping &kindMap,
@@ -1344,70 +1364,65 @@ bool ReductionProcessor::processReductionArguments(
         // resolve-names). If one is visible in the current scope and supports
         // the variable's type, bind to the omp.declare_reduction op the
         // directive materialized for it instead of generating the intrinsic.
-        semantics::Symbol *sym = reductionIntrinsic->v.sym();
-        std::string mangledName = "op." + getRealName(sym).ToString();
-        if (const semantics::Symbol *redSym =
-                converter.getCurrentScope().FindSymbol(
-                    parser::CharBlock{mangledName})) {
-          const semantics::Symbol &ultimate = redSym->GetUltimate();
-          const semantics::UserReductionDetails *userDetails =
-              ultimate.detailsIf<semantics::UserReductionDetails>();
-          const semantics::DeclTypeSpec *varType =
-              reductionSymbols[idx]->GetUltimate().GetType();
+        const semantics::DeclTypeSpec *varType =
+            reductionSymbols[idx]->GetUltimate().GetType();
+        if (const semantics::Symbol *userReduction =
+                findUserDefinedReductionForIntrinsic(
+                    converter.getCurrentScope(), *reductionIntrinsic,
+                    varType)) {
+          const semantics::Symbol &ultimate = *userReduction;
           // A user-defined reduction shadows the intrinsic only for the types
           // it is declared for. If it does not cover this variable's type, the
           // user has not redefined the reduction for that type and the
           // implicit intrinsic reduction still applies, so fall through to it.
-          if (userDetails && varType && userDetails->SupportsType(*varType)) {
-            // The user declaration takes precedence over the intrinsic for this
-            // type. A declaration listing several types (or several merged
-            // declarations) is handled the same way as the operator and named
-            // paths: the directive emits one op per type and the variable's
-            // type selects the matching per-type name below. A USE-associated
-            // shadowing reduction is found by FindSymbol as a use wrapper;
-            // naming from its ultimate (name, owner) below binds the source
-            // module's op, materialized on demand here for separate
-            // compilation, exactly as the named path does. A renamed shadowing
-            // intrinsic does not reach here: the renamed name resolves to the
-            // intrinsic rather than the user reduction, so semantics rejects
-            // the clause with a type-incompatibility error before lowering.
-            std::string opName = ReductionProcessor::getScopedUserReductionName(
-                converter, ultimate, namingType, isByRef);
-            mlir::ModuleOp module = builder.getModule();
-            auto existingDecl = module.lookupSymbol<OpType>(opName);
-            // Separate compilation: materialize the imported shadowing
-            // reduction on demand when its defining module is a mod file, then
-            // re-look it up (same-file ops already exist here).
-            if (!existingDecl && semaCtx && ultimate.owner().symbol() &&
-                ultimate.owner().symbol()->test(
-                    semantics::Symbol::Flag::ModFile)) {
-              Fortran::lower::materializeUserReduction(
-                  converter, *semaCtx, ultimate, opName, namingType, isByRef);
-              existingDecl = module.lookupSymbol<OpType>(opName);
-            }
-            if (isBoxedTrivialElemReduction) {
-              // Trivial-element allocatable/pointer: synthesize the boxed op.
-              if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
-                      converter, semaCtx, ultimate, redType, currentLocation)) {
-                reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-                    builder.getContext(), boxedDecl.getSymName()));
-                ++idx;
-                continue;
-              }
-            }
-            if (!existingDecl ||
-                fir::unwrapRefType(existingDecl.getType()) !=
-                    fir::unwrapRefType(namingType) ||
-                isBoxedTrivialReduction) {
-              TODO(currentLocation,
-                   "OpenMP user-defined reduction declaration was not "
-                   "materialized for this type");
-            }
-            reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
-                builder.getContext(), existingDecl.getSymName()));
-            ++idx;
-            continue;
+          // The user declaration takes precedence over the intrinsic for this
+          // type. A declaration listing several types (or several merged
+          // declarations) is handled the same way as the operator and named
+          // paths: the directive emits one op per type and the variable's
+          // type selects the matching per-type name below. A USE-associated
+          // shadowing reduction is found by FindSymbol as a use wrapper;
+          // naming from its ultimate (name, owner) below binds the source
+          // module's op, materialized on demand here for separate
+          // compilation, exactly as the named path does. A renamed shadowing
+          // intrinsic does not reach here: the renamed name resolves to the
+          // intrinsic rather than the user reduction, so semantics rejects
+          // the clause with a type-incompatibility error before lowering.
+          std::string opName = ReductionProcessor::getScopedUserReductionName(
+              converter, ultimate, namingType, isByRef);
+          mlir::ModuleOp module = builder.getModule();
+          auto existingDecl = module.lookupSymbol<OpType>(opName);
+          // Separate compilation: materialize the imported shadowing
+          // reduction on demand when its defining module is a mod file, then
+          // re-look it up (same-file ops already exist here).
+          if (!existingDecl && semaCtx && ultimate.owner().symbol() &&
+              ultimate.owner().symbol()->test(
+                  semantics::Symbol::Flag::ModFile)) {
+            Fortran::lower::materializeUserReduction(
+                converter, *semaCtx, ultimate, opName, namingType, isByRef);
+            existingDecl = module.lookupSymbol<OpType>(opName);
           }
+          if (isBoxedTrivialElemReduction) {
+            // Trivial-element allocatable/pointer: synthesize the boxed op.
+            if (OpType boxedDecl = getOrCreateBoxedUserReduction<OpType>(
+                    converter, semaCtx, ultimate, redType, currentLocation)) {
+              reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                  builder.getContext(), boxedDecl.getSymName()));
+              ++idx;
+              continue;
+            }
+          }
+          if (!existingDecl ||
+              fir::unwrapRefType(existingDecl.getType()) !=
+                  fir::unwrapRefType(namingType) ||
+              isBoxedTrivialReduction) {
+            TODO(currentLocation,
+                 "OpenMP user-defined reduction declaration was not "
+                 "materialized for this type");
+          }
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
+          ++idx;
+          continue;
         }
 
         redId = getReductionType(*reductionIntrinsic);

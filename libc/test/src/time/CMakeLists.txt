@@ -119,6 +119,23 @@ add_libc_test(
 )
 
 add_libc_test(
+  clock_getcpuclockid_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_getcpuclockid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_getcpuclockid
+    libc.src.time.clock_gettime
+    libc.src.unistd.getpid
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   clock_getres_test
   SUITE
     libc_time_unittests

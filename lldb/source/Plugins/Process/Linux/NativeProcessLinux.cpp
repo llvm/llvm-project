@@ -63,6 +63,22 @@
 #define HWCAP2_MTE (1 << 18)
 #endif
 
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -131,7 +147,8 @@ static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
 
 static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
-  const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+  constexpr uint32_t kDebugPTraceMaxBytes = 20;
+  const uint32_t loop_count = std::min<uint32_t>(kDebugPTraceMaxBytes, count);
   for (uint32_t i = 0; i < loop_count; i++) {
     s.Printf("[%x]", *ptr);
     ptr++;

@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "Char.h"
 #include "Context.h"
 #include "Function.h"
-#include "Integral.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -30,54 +28,6 @@ unsigned Program::getOrCreateNativePointer(const void *Ptr) {
 
 const void *Program::getNativePointer(unsigned Idx) const {
   return NativePointers[Idx];
-}
-
-unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
-  const size_t CharWidth = S->getCharByteWidth();
-  const size_t BitWidth = CharWidth * Ctx.getCharBit();
-  unsigned StringLength = S->getLength();
-
-  OptPrimType CharType =
-      Ctx.classify(S->getType()->castAsArrayTypeUnsafe()->getElementType());
-  assert(CharType);
-
-  if (!Base)
-    Base = S;
-
-  // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(Base, S->getType().getTypePtr(),
-                                        *CharType, StringLength + 1,
-                                        /*IsConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false,
-                                        /*IsVolatile=*/false);
-
-  // Allocate storage for the string.
-  // The byte length does not include the null terminator.
-  unsigned GlobalIndex = Globals.size();
-  unsigned Sz = Desc->getAllocSize() + Block::GlobalMD;
-  auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, Block::GlobalMD,
-                                       /*IsStatic=*/true, /*IsExtern=*/false);
-  G->block()->invokeCtor();
-
-  new (G->block()->rawData())
-      GlobalInlineDescriptor{GlobalInitState::Initialized};
-  Globals.push_back(G);
-
-  const Pointer Ptr(G->block());
-  if (CharWidth == 1) {
-    std::memcpy(&Ptr.elem<char>(0), S->getString().data(), StringLength);
-  } else {
-    // Construct the string in storage.
-    for (unsigned I = 0; I <= StringLength; ++I) {
-      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-      INT_TYPE_SWITCH_NO_BOOL(*CharType,
-                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
-    }
-  }
-  Ptr.initializeAllElements();
-
-  return GlobalIndex;
 }
 
 Pointer Program::getPtrGlobal(unsigned Idx) const {
@@ -218,7 +168,7 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
     // block.
     auto [Iter, Inserted] = GlobalIndices.try_emplace(Redecl);
     if (Inserted) {
-      GlobalIndices[Redecl] = *Idx;
+      Iter->second = *Idx;
       continue;
     }
 

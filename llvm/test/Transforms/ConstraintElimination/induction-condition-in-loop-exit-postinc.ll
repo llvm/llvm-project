@@ -634,12 +634,9 @@ define void @header_postdec_negative_step_folds() {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[UGT]])
-; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[ULE]])
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
@@ -678,12 +675,9 @@ define void @latch_postdec_negative_step_folds() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 5, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[UGT]])
-; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[ULE]])
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
-; CHECK-NEXT:    call void @use(i1 [[SGT]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -769,10 +763,8 @@ define void @header_postdec_negative_step_strict_precond(i8 %start, i8 %b) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[B]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[UGT]])
-; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[IV]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[ULE]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -864,10 +856,8 @@ define void @header_postdec_negative_step_signed_precond(i8 %start, i8 %b) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], [[B]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], [[B]]
-; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT]])
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -900,6 +890,52 @@ exit:
   ret void
 }
 
+; The compared offset of -2 does not match the induction step of -1, so the
+; loop exits at %iv == B + 2.
+define void @postdec_incstep_ne_step_not_folded(i8 %start, i8 %b) {
+; CHECK-LABEL: define void @postdec_incstep_ne_step_not_folded(
+; CHECK-SAME: i8 [[START:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i8 [[B]], [[START]]
+; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[START]], %[[LOOP_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_MINUS2:%.*]] = add i8 [[IV]], -2
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_MINUS2]], [[B]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[IV]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ult i8 %b, %start
+  br i1 %pre, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ %start, %loop.ph ], [ %iv.next, %loop.latch ]
+  %iv.minus2 = add i8 %iv, -2
+  %ec = icmp eq i8 %iv.minus2, %b
+  br i1 %ec, label %exit, label %loop.latch
+
+loop.latch:
+  %ugt = icmp ugt i8 %iv, %b
+  call void @use(i1 %ugt)
+  %iv.next = add i8 %iv, -1
+  br label %loop
+
+exit:
+  ret void
+}
+
 define void @latch_postdec_redundant_header_guard(i32 %n) {
 ; CHECK-LABEL: define void @latch_postdec_redundant_header_guard(
 ; CHECK-SAME: i32 [[N:%.*]]) {
@@ -908,8 +944,7 @@ define void @latch_postdec_redundant_header_guard(i32 %n) {
 ; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[IV]], 0
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[EXIT]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[EXIT]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
 ; CHECK-NEXT:    call void @launch(i32 [[IV_NEXT]])
@@ -963,10 +998,9 @@ define i64 @latch_postdec_umin_clamp(ptr %s, i64 %n) {
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[IF_FOUND]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = sub i64 [[N]], [[IV]]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 [[IDX]])
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N]], %[[LOOP_LATCH]] ], [ [[CLAMPED]], %[[IF_FOUND]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N]], %[[LOOP_LATCH]] ], [ [[IDX]], %[[IF_FOUND]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

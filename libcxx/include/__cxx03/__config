@@ -221,7 +221,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 #  if defined(_WIN32)
 #    define _LIBCPP_WIN32API
-#    define _LIBCPP_SHORT_WCHAR 1
 // Both MinGW and native MSVC provide a "MSVC"-like environment
 #    define _LIBCPP_MSVCRT_LIKE
 // If mingw not explicitly detected, assume using MS C runtime only if
@@ -231,11 +230,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    endif
 #    define _LIBCPP_HAS_OPEN_WITH_WCHAR
 #  endif // defined(_WIN32)
-
-#  if defined(_AIX) && !defined(__64BIT__)
-// The size of wchar is 2 byte on 32-bit mode on AIX.
-#    define _LIBCPP_SHORT_WCHAR 1
-#  endif
 
 // Libc++ supports various implementations of std::random_device.
 //

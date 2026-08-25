@@ -1672,6 +1672,8 @@ private:
   friend class SCEVExpander;
   friend class SCEVUnknown;
   friend class VPSCEVExpander;
+  // Needs getWithOperands to rebuild a node from its canonical operands.
+  friend void SCEV::computeAndSetCanonical(ScalarEvolution &SE);
 
   /// The function we are analyzing.
   Function &F;

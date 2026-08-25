@@ -609,6 +609,18 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
       "Composite pass inner pipeline">,
     Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
+    Option<"convergenceFailureAction", "on-convergence-failure",
+      "mlir::ConvergenceFailureAction",
+      /*default=*/"mlir::ConvergenceFailureAction::Warn",
+      "Action to take if the pass fails to converge within max-iterations",
+      [{::llvm::cl::values(
+        clEnumValN(mlir::ConvergenceFailureAction::Warn, "warn",
+         "Emit a warning (default)"),
+        clEnumValN(mlir::ConvergenceFailureAction::Error, "error",
+         "Emit an error and fail the pass"),
+        clEnumValN(mlir::ConvergenceFailureAction::Silent, "silent",
+         "Do nothing")
+       )}]>,
   ];
 }
 

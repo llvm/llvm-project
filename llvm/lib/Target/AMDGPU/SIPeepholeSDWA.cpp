@@ -1179,7 +1179,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
     return false;
 
   // Check if target supports this SDWA opcode
-  if (TII->pseudoToMCOpcode(Opc) == -1)
+  if (TII->pseudoToMCOpcode(Opc) == -1 ||
+      TII->pseudoToMCOpcode(AMDGPU::getSDWAOp(Opc)) == -1)
     return false;
 
   if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {

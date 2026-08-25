@@ -53,6 +53,18 @@
 #define HWCAP2_POE (1ULL << 63)
 #endif
 
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_PEEKMTETAGS
+#define PTRACE_PEEKMTETAGS 33
+#endif
+
+#ifndef PTRACE_POKEMTETAGS
+#define PTRACE_POKEMTETAGS 34
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;

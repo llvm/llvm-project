@@ -178,6 +178,7 @@ public:
   LLVM_ABI void add(const MemoryLocation &Loc);
   LLVM_ABI void add(LoadInst *LI);
   LLVM_ABI void add(StoreInst *SI);
+  LLVM_ABI void addWithoutAATags(StoreInst *SI);
   LLVM_ABI void add(VAArgInst *VAAI);
   LLVM_ABI void add(AnyMemSetInst *MSI);
   LLVM_ABI void add(AnyMemTransferInst *MTI);

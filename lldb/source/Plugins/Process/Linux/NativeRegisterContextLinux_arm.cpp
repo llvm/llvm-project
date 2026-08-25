@@ -46,6 +46,10 @@
 #define PTRACE_TYPE_ARG4 void *
 #endif
 
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA 22
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;

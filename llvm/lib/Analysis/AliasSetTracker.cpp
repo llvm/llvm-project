@@ -329,6 +329,13 @@ void AliasSetTracker::add(StoreInst *SI) {
   addMemoryLocation(MemoryLocation::get(SI), ModRefInfo::Mod);
 }
 
+void AliasSetTracker::addWithoutAATags(StoreInst *SI) {
+  assert(!isStrongerThanMonotonic(SI->getOrdering()) &&
+         "Can't handle release stores here");
+  addMemoryLocation(MemoryLocation::get(SI).getWithoutAATags(),
+                    ModRefInfo::Mod);
+}
+
 void AliasSetTracker::add(VAArgInst *VAAI) {
   addMemoryLocation(MemoryLocation::get(VAAI), ModRefInfo::ModRef);
 }
