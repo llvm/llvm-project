@@ -47,7 +47,7 @@ void callByref() {
 // LLVM-CIR:     call void @_Z9takeByref8WithDtor(ptr byref(%struct.WithDtor) align 4 %[[TMP]])
 // LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP]])
 // LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[T]])
-// OGCG:         call void @_Z9takeByref8WithDtor(ptr nofree noundef align 4 dereferenceable(4) %[[TMP]])
+// OGCG:         call void @_Z9takeByref8WithDtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[T]])
 
@@ -71,7 +71,7 @@ void callTwoByref() {
 // LLVM-CIR:     call void @_Z12takeTwoByref8WithDtorS_(ptr byref(%struct.WithDtor) align 4 %[[TMP_A]], ptr byref(%struct.WithDtor) align 4 %[[TMP_B]])
 // LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP_B]])
 // LLVM-CIR:     call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP_A]])
-// OGCG:         call void @_Z12takeTwoByref8WithDtorS_(ptr nofree noundef align 4 dereferenceable(4) %[[TMP_A]], ptr nofree noundef align 4 dereferenceable(4) %[[TMP_B]])
+// OGCG:         call void @_Z12takeTwoByref8WithDtorS_(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP_A]], ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP_B]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_B]])
 // OGCG:         call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[TMP_A]])
 
@@ -94,7 +94,7 @@ void callCopyCtorByref() {
 // LLVM:         call void @_ZN12WithCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[C:[^)]+]])
 // LLVM:         call void @_ZN12WithCopyCtorC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP:[^,]+]], ptr noundef nonnull align 4 dereferenceable(4) %[[C]])
 // LLVM-CIR:     call void @_Z17takeCopyCtorByref12WithCopyCtor(ptr byref(%struct.WithCopyCtor) align 4 %[[TMP]])
-// OGCG:         call void @_Z17takeCopyCtorByref12WithCopyCtor(ptr nofree noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
+// OGCG:         call void @_Z17takeCopyCtorByref12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
 
 // byval keeps the fresh copy the callee owns.
 void callByval() {
