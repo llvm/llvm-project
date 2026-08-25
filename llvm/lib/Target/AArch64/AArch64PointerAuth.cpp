@@ -309,6 +309,42 @@ void AArch64PointerAuthImpl::authenticateLR(
       MF.getSubtarget().getFrameLowering());
   int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
 
+  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
+  // this instruction can safely be used for any v8a architecture.
+  // From v8.3a onwards there are optimised authenticate LR and return
+  // instructions, namely RETA{A,B}, that can be used instead. In this case
+  // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
+  // RET{A,B} requires the SP to match its incoming value on entry to the
+  // function.
+  bool TerminatorIsCombinable = TI != MBB.end() &&
+                                TI->getOpcode() == AArch64::RET &&
+                                ArgumentStackToRestore == 0;
+
+  if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
+      !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      BuildMI(MBB, TI, DL,
+              TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
+          .addSym(PACSym)
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      if (MFnI->branchProtectionPAuthLR()) {
+        emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                        AArch64::X16);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
+      BuildMI(MBB, TI, DL,
+              TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
+          .copyImplicitOps(*MBBI)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+    MBB.erase(TI);
+    return;
+  }
+
   // When ArgumentStackToRestore > 0, this function received more argument
   // space than the tail callee pops. The epilogue contains an SP adjustment
   // (e.g. "add sp, sp, #N") to discard the leftover argument space. We must
@@ -342,48 +378,12 @@ void AArch64PointerAuthImpl::authenticateLR(
     }
   }
 
-  // If there will not be an SP bump afterward, we can use an AUT or RET form
-  // with a hardcoded SP discriminator.
+  for (auto *MI : SPMods)
+    MI->removeFromParent();
+
+  // If there is a net zero offset on SP, we can use an AUT form with a
+  // hardcoded SP discriminator.
   if (!Offset) {
-    // The AUTIASP instruction assembles to a hint instruction before v8.3a so
-    // this instruction can safely be used for any v8a architecture.
-    // From v8.3a onwards there are optimised authenticate LR and return
-    // instructions, namely RETA{A,B}, that can be used instead. In this case
-    // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
-    // RET{A,B} requires the SP to match its incoming value on entry to the
-    // function.
-    bool TerminatorIsCombinable = TI != MBB.end() &&
-                                  TI->getOpcode() == AArch64::RET &&
-                                  ArgumentStackToRestore == 0;
-
-    if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
-        !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-      if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-        assert(PACSym && "No PAC instruction to refer to");
-        BuildMI(MBB, TI, DL,
-                TII->get(UseBKey ? AArch64::RETABSPPCi : AArch64::RETAASPPCi))
-            .addSym(PACSym)
-            .copyImplicitOps(*MBBI)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      } else {
-        if (MFnI->branchProtectionPAuthLR()) {
-          emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                          AArch64::X16);
-          BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-              .setMIFlag(MachineInstr::FrameDestroy);
-        }
-        BuildMI(MBB, TI, DL,
-                TII->get(UseBKey ? AArch64::RETAB : AArch64::RETAA))
-            .copyImplicitOps(*MBBI)
-            .setMIFlag(MachineInstr::FrameDestroy);
-      }
-      MBB.erase(TI);
-      return;
-    }
-
-    for (auto *MI : SPMods)
-      MI->removeFromParent();
-
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
       BuildMI(MBB, MBBI, DL,
@@ -417,9 +417,6 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     return;
   }
-
-  for (auto *MI : SPMods)
-    MI->removeFromParent();
 
   // Otherwise there is an offset to the incoming SP, and we can't use the aut
   // variants that hard-code SP. Reconstruct entry SP in x16 and authenticate
