@@ -598,6 +598,87 @@ define amdgpu_kernel void @vector_preferred(ptr addrspace(1) %out, i32 %i) {
   store i32 %v, ptr addrspace(1) %out
   ret void
 }
+; Almost every intrinsic lowers to instructions, so one in the live range must
+; not stand in the way of promotion.
+declare float @llvm.fabs.f32(float)
+
+define amdgpu_kernel void @intrinsic_is_not_a_call(ptr addrspace(1) %out, i32 %i, float %f) {
+; CHECK-LABEL: define amdgpu_kernel void @intrinsic_is_not_a_call(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs [[META0]]
+; CHECK-NEXT:    call void @llvm.amdgcn.vgpr.lifetime.start.p13(ptr addrspace(13) [[OBJ]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(13) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[F]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(13) [[P]], align 4
+; CHECK-NEXT:    [[B:%.*]] = bitcast float [[A]] to i32
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[V]], [[B]]
+; CHECK-NEXT:    store i32 [[S]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_kernel void @intrinsic_is_not_a_call(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], float [[F:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[F]])
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[B:%.*]] = bitcast float [[A]] to i32
+; OFF-NEXT:    [[S:%.*]] = add i32 [[V]], [[B]]
+; OFF-NEXT:    store i32 [[S]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  %a = call float @llvm.fabs.f32(float %f)
+  %v = load i32, ptr addrspace(5) %p, align 4
+  %b = bitcast float %a to i32
+  %s = add i32 %v, %b
+  store i32 %s, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; A whole-wave call is an intrinsic that really does become a call, so an object
+; live across it cannot be promoted. Getting this wrong does not cost an
+; optimization: the object would be promoted and the backend would then refuse
+; it, turning a working program into a failed compile. The llc run above is what
+; would catch that.
+declare amdgpu_gfx_whole_wave i32 @whole_wave_callee(i1 %active, i32 %x, i32 %y, i32 inreg %c)
+
+define amdgpu_cs void @not_promoted_whole_wave_call(ptr addrspace(1) %out, i32 %i, i32 inreg %c) {
+; CHECK-LABEL: define amdgpu_cs void @not_promoted_whole_wave_call(
+; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i32 inreg [[C:%.*]]) {
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; CHECK-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 (ptr, ...) @llvm.amdgcn.call.whole.wave.i32.p0(ptr @whole_wave_callee, i32 [[I]], i32 [[I]], i32 inreg [[C]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[V]], [[R]]
+; CHECK-NEXT:    store i32 [[S]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+; OFF-LABEL: define amdgpu_cs void @not_promoted_whole_wave_call(
+; OFF-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[I:%.*]], i32 inreg [[C:%.*]]) {
+; OFF-NEXT:    [[OBJ:%.*]] = alloca [8 x i32], align 4, addrspace(5)
+; OFF-NEXT:    [[P:%.*]] = getelementptr i8, ptr addrspace(5) [[OBJ]], i32 [[I]]
+; OFF-NEXT:    store i32 7, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[R:%.*]] = call i32 (ptr, ...) @llvm.amdgcn.call.whole.wave.i32.p0(ptr @whole_wave_callee, i32 [[I]], i32 [[I]], i32 inreg [[C]])
+; OFF-NEXT:    [[V:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; OFF-NEXT:    [[S:%.*]] = add i32 [[V]], [[R]]
+; OFF-NEXT:    store i32 [[S]], ptr addrspace(1) [[OUT]], align 4
+; OFF-NEXT:    ret void
+;
+  %obj = alloca [8 x i32], align 4, addrspace(5)
+  %p = getelementptr i8, ptr addrspace(5) %obj, i32 %i
+  store i32 7, ptr addrspace(5) %p, align 4
+  %r = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @whole_wave_callee, i32 %i, i32 %i, i32 inreg %c)
+  %v = load i32, ptr addrspace(5) %p, align 4
+  %s = add i32 %v, %r
+  store i32 %s, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 32}
 ;.
