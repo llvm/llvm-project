@@ -1155,9 +1155,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
     // AR may wrap.
     // The loop exits once the compared value reaches B, that is at PN == B when
-    // comparing the phi, and at PN == B + 1 for a post-decrement. Use strict
-    // predicate for the former, and a non-strict one for the latter to ensure
-    // the loop exits before wrapping.
+    // comparing the phi, and at PN == B + 1 for a post-decrement. Use
+    // non-strict predicate for the former, and a strict one for the latter to
+    // ensure the loop exits before wrapping.
     CmpInst::Predicate UPrecond =
         IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
     ConditionTy BBeforeStartUnsigned = {UPrecond, B, StartValue};
