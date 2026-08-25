@@ -19,9 +19,8 @@ define void @constant_strided_two_checks(ptr %p0, ptr %p0.out, ptr %p1, ptr %p1.
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 9
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], -9
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P0_OUT2]], [[P03]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
@@ -75,14 +74,12 @@ define void @constant_strided_two_checks_different_access_size(ptr %p0, ptr %p0.
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 9
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], -9
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P0_OUT1]], [[P02]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 13
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP3]], -13
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[P1_OUT3]], [[P14]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP11]], [[TMP9]]
