@@ -589,8 +589,12 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
 }
 
 ExprResult Sema::BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx) {
-  if (Idx->isValueDependent() || InitListContainsPack(Range))
+  if (Idx->isValueDependent() || InitListContainsPack(Range)) {
+    // The elements are only evaluated by the expansion that selects them, so
+    // their cleanups must not wrap this expression.
+    DiscardCleanupsInEvaluationContext();
     return new (Context) CXXExpansionSelectExpr(Context, Range, Idx);
+  }
 
   // The index is a DRE to a template parameter; we should never
   // fail to evaluate it.
