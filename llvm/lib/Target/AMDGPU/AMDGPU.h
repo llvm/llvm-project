@@ -322,7 +322,7 @@ private:
 };
 
 struct AMDGPUPromoteUniformArgsPass
-    : PassInfoMixin<AMDGPUPromoteUniformArgsPass> {
+    : OptionalPassInfoMixin<AMDGPUPromoteUniformArgsPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
