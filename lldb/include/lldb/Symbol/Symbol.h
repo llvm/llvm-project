@@ -54,8 +54,7 @@ public:
   Symbol(const Symbol &rhs);
 
   ~Symbol() {
-    if (m_type != lldb::eSymbolTypeReExported &&
-        m_type != lldb::eSymbolTypeInvalid)
+    if (m_type != lldb::eSymbolTypeReExported)
       m_addr_or_reexport.GetAddressRange(*this).Clear();
   }
 
