@@ -184,10 +184,20 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
           if (!Update)
             continue;
 
-          // We are live-out from the successor because of the newly found
-          // live-in. If the successor is earlier in RPOT, we will have to
-          // re-evaluate it on the next outer iteration.
-          if (!It->Starts && !It->Ends && SuccI < MBBI) {
+          // The successor's live-out has just changed, so whatever follows it
+          // has to be told. A block whose own marker decides the matter is the
+          // exception: a start makes it live-out regardless, an end makes it
+          // dead regardless, so neither depends on this live-in.
+          //
+          // The first pass visits every block in reverse post order, so a
+          // successor later in that order is reached again in this same pass
+          // and needs no queueing; only a back edge does. Every later pass
+          // visits queued blocks alone, so there is no such second chance and
+          // every changed successor must be queued - including one later in the
+          // order, which is otherwise never revisited and never propagates. A
+          // start inside a loop reaches the header only on the second pass,
+          // which is exactly when this happens.
+          if (!It->Starts && !It->Ends && (SuccI < MBBI || !FirstPass)) {
             Worklist[SuccI] = true;
             Dirty = true;
           }

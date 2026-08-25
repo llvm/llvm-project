@@ -28,6 +28,11 @@
     ret void
   }
 
+  define amdgpu_kernel void @start_in_a_loop(ptr addrspace(1) %out) {
+    %obj = alloca [2 x i32], align 4, addrspace(13), !amdgpu.allocated.vgprs !1
+    ret void
+  }
+
   !0 = !{i32 0, i32 16}
   !1 = !{i32 0, i32 8}
   !2 = !{i32 8, i32 8}
@@ -102,5 +107,56 @@ body:             |
     VGPR_LIFETIME_START :: (store (s64) into %ir.b, addrspace 13)
     VGPR_LIFETIME_END :: (store (s64) into %ir.b, addrspace 13)
     VGPR_LIFETIME_END :: (store (s64) into %ir.a, addrspace 13)
+    S_ENDPGM 0
+...
+---
+# The live range has to reach the exit block even when it only gets there the
+# long way round. The start is inside a loop, so the header learns it is live
+# only from the back edge, on the second pass of the fixed point; and the exit
+# path hangs off the header, so it is two forward edges further on. Propagating
+# a back edge alone leaves bb.5 with no live-ins and no synthesized end, which
+# means the object's registers are defined and never killed - free, as far as
+# everything downstream can tell.
+#
+# The exit path precedes the loop body in reverse post order here, which is what
+# depth-first search gives whenever the body is explored first, so this is the
+# ordinary arrangement rather than a contrived one.
+name:            start_in_a_loop
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: start_in_a_loop
+  ; CHECK: bb.1:
+  ; CHECK: liveins: $vgpr0, $vgpr1
+  ; CHECK: bb.3:
+  ; CHECK: VGPR_LIFETIME_START implicit-def $vgpr0, implicit-def $vgpr1
+  ; CHECK: bb.4:
+  ; CHECK: liveins: $vgpr0, $vgpr1
+  ; CHECK: bb.5:
+  ; CHECK: liveins: $vgpr0, $vgpr1
+  ; CHECK: VGPR_LIFETIME_END implicit killed $vgpr0, implicit killed $vgpr1
+  ; CHECK-NEXT: S_ENDPGM 0
+  bb.0:
+    successors: %bb.1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.4
+    S_CBRANCH_SCC1 %bb.4, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.1
+    VGPR_LIFETIME_START :: (store (s64) into %ir.obj, addrspace 13)
+    S_BRANCH %bb.1
+
+  bb.4:
+    successors: %bb.5
+    S_BRANCH %bb.5
+
+  bb.5:
     S_ENDPGM 0
 ...
