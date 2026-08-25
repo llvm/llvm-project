@@ -428,8 +428,9 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
-                            llvm::opt::DerivedArgList &DAL, ID Id) {
-  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
+                            llvm::opt::DerivedArgList &DAL,
+                            llvm::ArrayRef<InputTy> Inputs, ID Id) {
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL, Inputs));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {
