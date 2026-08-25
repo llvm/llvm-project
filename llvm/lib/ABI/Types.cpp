@@ -22,13 +22,10 @@ bool RecordType::isEmpty() const {
       return false;
   }
 
-  for (const FieldInfo &FI : getFields()) {
-    // Don't treat vtable pointers as a source field for emptiness.
-    if (FI.IsVTablePointer)
-      continue;
+  for (const FieldInfo &FI : getFields())
     if (!FI.isEmpty())
       return false;
-  }
+
   return true;
 }
 

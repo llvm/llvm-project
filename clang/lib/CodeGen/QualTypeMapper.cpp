@@ -393,10 +393,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   if (RD->isPolymorphic()) {
     const llvm::abi::Type *VtablePointer =
         createPointerTypeForPointee(ASTCtx.VoidPtrTy);
-    Fields.emplace_back(VtablePointer, 0, /*IsBitField=*/false,
-                        /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
-                        /*HasNoUniqueAddress=*/false,
-                        /*IsVTablePointer=*/true);
+    Fields.emplace_back(VtablePointer, 0);
   }
 
   for (const auto &Base : RD->bases()) {
@@ -408,7 +405,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
     uint64_t BaseOffset =
         Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
         8;
-
     BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
@@ -419,7 +415,6 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
             .getQuantity() *
         8;
-
     VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
 

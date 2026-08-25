@@ -103,36 +103,31 @@ TEST_F(ABITypesTest, DirectVirtualBasesAndVTablePointer) {
       {FieldInfo(TB.getIntegerType(32, Align(4), /*Signed=*/true), 0)}, 32,
       CXXFlags);
   const llvm::abi::Type *VPtr = TB.getPointerType(64, Align(8));
-  FieldInfo VTable(VPtr, 0, /*IsBitField=*/false, /*BitFieldWidth=*/0,
-                   /*IsUnnamedBitField=*/false,
-                   /*HasNoUniqueAddress=*/false,
-                   /*IsVTablePointer=*/true);
+  FieldInfo VTable(VPtr, 0);
   // Direct virtual bases appear in both the base-class list (with
   // IsVirtualBase) and the virtual-base list, matching CXXRecordDecl::bases()
   // and vbases().
   FieldInfo EmptyVBase(Empty, 0, /*IsBitField=*/false, /*BitFieldWidth=*/0,
                        /*IsUnnamedBitField=*/false,
                        /*HasNoUniqueAddress=*/false,
-                       /*IsVTablePointer=*/false,
                        /*IsVirtualBase=*/true);
   FieldInfo NonEmptyVBase(IntField, 0, /*IsBitField=*/false,
                           /*BitFieldWidth=*/0,
                           /*IsUnnamedBitField=*/false,
                           /*HasNoUniqueAddress=*/false,
-                          /*IsVTablePointer=*/false,
                           /*IsVirtualBase=*/true);
 
-  EXPECT_TRUE(makeRecord({}, 8, CXXFlags, /*Bases=*/{EmptyVBase},
-                         /*VBases=*/{EmptyVBase})
-                  ->isEmpty());
-  EXPECT_FALSE(makeRecord({}, 32, CXXFlags, /*Bases=*/{NonEmptyVBase},
+  EXPECT_FALSE(makeRecord({VTable}, 8, CXXFlags, /*Bases=*/{EmptyVBase},
+                          /*VBases=*/{EmptyVBase})
+                   ->isEmpty());
+  EXPECT_FALSE(makeRecord({VTable}, 32, CXXFlags, /*Bases=*/{NonEmptyVBase},
                           /*VBases=*/{NonEmptyVBase})
                    ->isEmpty());
-  EXPECT_TRUE(makeRecord({VTable}, 64,
-                         static_cast<RecordFlags>(CXXFlags |
-                                                  RecordFlags::IsPolymorphic),
-                         {FieldInfo(Empty, 0)})
-                  ->isEmpty());
+  EXPECT_FALSE(makeRecord({VTable}, 64,
+                          static_cast<RecordFlags>(CXXFlags |
+                                                   RecordFlags::IsPolymorphic),
+                          {FieldInfo(Empty, 0)})
+                   ->isEmpty());
 }
 
 } // namespace

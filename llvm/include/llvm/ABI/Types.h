@@ -238,17 +238,14 @@ struct FieldInfo {
   bool IsBitField;
   bool IsUnnamedBitfield;
   bool HasNoUniqueAddress;
-  bool IsVTablePointer;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false,
-            bool IsVTablePointer = false)
+            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
         IsUnnamedBitfield(IsUnnamedBitField),
-        HasNoUniqueAddress(HasNoUniqueAddress),
-        IsVTablePointer(IsVTablePointer) {}
+        HasNoUniqueAddress(HasNoUniqueAddress) {}
 
   LLVM_ABI bool isEmpty() const;
 };
