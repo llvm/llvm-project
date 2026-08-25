@@ -1,4 +1,5 @@
 import errno
+import functools
 import itertools
 import math
 import numbers
@@ -130,7 +131,12 @@ def which(command, paths=None):
     # Get suffixes to search.
     # On Cygwin, 'PATHEXT' may exist but it should not be used.
     if os.pathsep == ";":
-        pathext = os.environ.get("PATHEXT", "").split(";")
+        # If PATHEXT was stripped from the environment (e.g. when
+        # running with a hermetic build system like Bazel) then
+        # use a sane fallback so binaries can still be located.
+        fallback = ".COM;.EXE;.BAT;.CMD"
+
+        pathext = os.environ.get("PATHEXT", fallback).split(";")
     else:
         pathext = [""]
 
@@ -445,22 +451,7 @@ def killProcessAndChildren(pid):
             pass
 
 
-def memoize(f):
-    cache = {}  # Unbounded
-
-    def make_key(args, kwargs):
-        return args, tuple(kwargs.items())
-
-    def memoized(*args, **kwargs):
-        key = make_key(args, kwargs)
-        if key not in cache:
-            cache[key] = f(*args, **kwargs)
-        return cache[key]
-
-    return memoized
-
-
-@memoize
+@functools.lru_cache(maxsize=None)
 def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
     """
     Run a command with subprocess.run, with a cache global to this llvm-lit invocation

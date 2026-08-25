@@ -90,8 +90,11 @@ define void @test_mul_copyable_args(ptr %dst, ptr %srcB, float %p, float %q, flo
 ; ENABLED-LABEL: define void @test_mul_copyable_args(
 ; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCB:%.*]], float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]]) {
 ; ENABLED-NEXT:  [[ENTRY:.*:]]
-; ENABLED-NEXT:    [[A0:%.*]] = fmul float [[P]], [[Q]]
-; ENABLED-NEXT:    [[A1:%.*]] = fmul float [[R]], [[S]]
+; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[R]], i64 1
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
+; ENABLED-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
 ; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[E]], i64 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[G]], i64 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[F]], i64 0
@@ -102,8 +105,8 @@ define void @test_mul_copyable_args(ptr %dst, ptr %srcB, float %p, float %q, flo
 ; ENABLED-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
 ; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[X]], i64 2
 ; ENABLED-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> [[TMP17]], float [[Y]], i64 3
-; ENABLED-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[A0]], i64 0
-; ENABLED-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[A1]], i64 1
+; ENABLED-NEXT:    [[TMP19:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP20:%.*]] = shufflevector <4 x float> [[TMP18]], <4 x float> [[TMP19]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP21]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

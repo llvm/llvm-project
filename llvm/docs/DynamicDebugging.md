@@ -21,9 +21,11 @@ Important info:
 * LLD does not support `--wrap=<symbol>` with Dynamic Debugging.
 * Dynamic Debugging with LTO is not supported.
 
+When adding support for additional targets, `prepareForDynamicDebugging` needs to be taught the correct `tail-pad-to-size` and `tail-pad-value` attribute values, which would otherwise be omitted.
+
 ## Nested object design
 
-The broad idea is that the unoptimized program (“inner object”) is compiled and stored in a new `.debug_llvm_dyndbg` section in the optimized version (“outer object"). “Nesting” the objects allows build systems and other tools to continue to manage a single object file per translation unit.
+The broad idea is that the unoptimized program (“inner object”) is compiled and stored in a new section in the optimized version (“outer object"). “Nesting” the objects allows build systems and other tools to continue to manage a single object file per translation unit.
 
 High level nested object design:
 
@@ -40,7 +42,7 @@ This diagram illustrates the result of compiling a simple source example:
 
 `llvm::prepareForDynamicDebugging` is an LLVM utility that clones the input module without global variable definitions, renames the functions as appropriate, and generates aliases as needed in the original (to-be-optimized) module.
 
-Clang calls `llvm::prepareForDynamicDebugging` after CodeGen (`clang::emitBackendOutput`) and runs a separate optimization pipeline (`emitAssembly`), set to optimization level `O0`, on the unoptimized module. The binary output is embedded into the to-be-optimized module (using `embedBufferInModule`) to be embedded in a `.debug_llvm_dyndbg` section.
+Clang calls `llvm::prepareForDynamicDebugging` after CodeGen (`clang::emitBackendOutput`) and runs a separate optimization pipeline (`emitAssembly`), set to optimization level `O0`, on the unoptimized module. The binary output is embedded into the to-be-optimized module (using `embedBufferInModule`) to be embedded in a section of type `SHT_LLVM_DYNDBG_ELF` named `.debug_llvm_dyndbg`.
 
 It's essential for the debugger's run-time detour patching that the inner and outer function interfaces are identical. To block interprocedural optimizations `noipa` is applied to functions in the outer module. In order for the debugger to switch to an unoptimized function it must exist, so we block function specialization through `noipa` and `nooutline`.
 
@@ -48,7 +50,7 @@ Functions are padded to prevent the debugger writing over unrelated program byte
 
 ## Linker implementation
 
-In a link with dynamic debugging enabled, ELF LLD basically performs a relocatable link of the inner (unoptimized) objects within the regular link of the outer (optimized) objects. The outer link includes the symbol dependencies of any inner objects. The result of the inner relocatable link is placed in the `.debug_llvm_dyndbg` output section of the outer link output. For executable outputs, the inner relocatable link uses the option `--force-group-allocation` to resolve groups and discards groups. It also enables merging of the input sections. This helps to reduce the size of the final `.debug_llvm_dyndbg` output section for executables, especially for input objects that use `-ffunction-sections`. For relocatable output, the inner relocatable link is the same as a regular ELF relocatable link.
+In a link with dynamic debugging enabled, ELF LLD basically performs a relocatable link of the inner (unoptimized) objects within the regular link of the outer (optimized) objects. The outer link includes the symbol dependencies of any inner objects. The result of the inner relocatable link is placed in the `SHT_LLVM_DYNDBG_ELF` `.debug_llvm_dyndbg` output section of the outer link output. For executable outputs, the inner relocatable link uses the option `--force-group-allocation` to resolve groups and discards groups. It also enables merging of the input sections. This helps to reduce the size of the final `.debug_llvm_dyndbg` output section for executables, especially for input objects that use `-ffunction-sections`. For relocatable output, the inner relocatable link is the same as a regular ELF relocatable link.
 
 The key changes required to ELF LLD are to support the nested linking and to handle the symbol dependencies from the inner (unoptimized) objects to the outer (optimized) objects and the final executable output.
 

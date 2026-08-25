@@ -246,6 +246,12 @@ public:
     NonStrictDefault = NonZero
   };
 
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -397,9 +403,13 @@ public:
   /// Prefix to use for -save-temps output.
   std::string SaveTempsFilePrefix;
 
-  /// Name of file passed with -fcuda-include-gpubinary option to forward to
-  /// CUDA runtime back-end for incorporating them into host-side object file.
-  std::string CudaGpuBinaryFileName;
+  /// Prefix to use for -save-dynamic-debugging-temps output.
+  std::string SaveDynDbgTempsFilePrefix;
+
+  /// Name of file passed with -foffload-include-binary option to forward to
+  /// offloading runtime back-end for incorporating them into host-side object
+  /// file.
+  std::string OffloadBinaryToEmbedFile;
 
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
@@ -719,6 +729,10 @@ public:
     }
     llvm_unreachable("Unknown BoolFromMem enum");
   }
+
+  /// Remap specified path prefix using provided DebugPrefixMap map.
+  /// Returns updated path or unchanged if no substitution was found.
+  std::string remapDebugPathPrefix(StringRef Path) const;
 };
 
 }  // end namespace clang

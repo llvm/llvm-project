@@ -109,6 +109,7 @@ public:
     default:
       return MCPlusBuilder::isPseudo(Inst);
     case RISCV::PseudoCALL:
+    case RISCV::PseudoCALLReg:
     case RISCV::PseudoTAIL:
       return false;
     }
@@ -162,11 +163,13 @@ public:
     }
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
     replaceBranchTarget(Inst, TBB, Ctx);
+    return {Inst};
   }
 
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
@@ -215,7 +218,7 @@ public:
 
     switch (Inst.getOpcode()) {
     default:
-      llvm_unreachable("unsupported tail call opcode");
+      return false;
     case RISCV::JAL:
     case RISCV::JALR:
     case RISCV::C_J:
@@ -224,6 +227,14 @@ public:
     }
 
     setTailCall(Inst);
+    return true;
+  }
+
+  bool convertTailCallToJmp(MCInst &Inst) override {
+    removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    clearOffset(Inst);
+    if (getConditionalTailCall(Inst))
+      unsetConditionalTailCall(Inst);
     return true;
   }
 
@@ -249,16 +260,33 @@ public:
   }
 
   void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
-                  MCContext *Ctx) {
+                  MCContext *Ctx, MCRegister LinkReg = MCRegister()) const {
     Inst.setOpcode(Opcode);
     Inst.clear();
+    if (LinkReg.isValid())
+      Inst.addOperand(MCOperand::createReg(LinkReg));
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
         MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
+  MCPhysReg getCallLinkRegister(const MCInst &Inst) const {
+    switch (Inst.getOpcode()) {
+    default:
+      return RISCV::X1;
+    case RISCV::JAL:
+    case RISCV::JALR:
+    case RISCV::PseudoCALLReg:
+      return Inst.getOperand(0).getReg();
+    }
+  }
+
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
-    return createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    MCPhysReg LinkReg = getCallLinkRegister(Inst);
+    if (LinkReg == RISCV::X1)
+      createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+    else
+      createCall(RISCV::PseudoCALLReg, Inst, Target, Ctx, LinkReg);
   }
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
@@ -328,7 +356,12 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case RISCV::PseudoCALL:
+    case RISCV::PseudoTAIL:
       OpNum = 0;
+      return true;
+    case RISCV::PseudoCALLReg:
+      OpNum = 1;
       return true;
     case RISCV::AUIPC:
     case RISCV::JAL:
@@ -557,8 +590,8 @@ public:
                  MCPhysReg RegCnt) const {
     Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
-               .addReg(RegTo)
-               .addReg(RegCnt);
+               .addReg(RegCnt)
+               .addReg(RegTo);
   }
 
   InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,

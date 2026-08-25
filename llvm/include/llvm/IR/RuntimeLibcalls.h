@@ -47,6 +47,11 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
 };
 
 class LibcallLoweringInfo;
+class Type;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
 
 namespace RTLIB {
 
@@ -87,7 +92,16 @@ public:
       EABI EABIVersion = EABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
-  LLVM_ABI explicit RuntimeLibcallsInfo(const Module &M);
+  // FIXME: The floating-point ABI is read from the "float-abi" module flag, but
+  // the ExceptionModel/EABIVersion/ABIName/VecLib parameters are still
+  // TargetOptions values that are not yet represented in the IR. Delete these
+  // parameters (and build everything from the Module) once those fields are
+  // migrated to module flags.
+  LLVM_ABI explicit RuntimeLibcallsInfo(
+      const Module &M,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
                            ModuleAnalysisManager::Invalidator &);
@@ -116,6 +130,13 @@ public:
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
   }
+
+  /// Return the runtime libcall that the floating-point math intrinsic \p ID
+  /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
+  ///
+  /// \p FTy must be the intrinsic's call signature.
+  LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
+                                                        FunctionType *FTy);
 
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();
@@ -217,13 +238,15 @@ private:
   void setTargetRuntimeLibcallSets(const Triple &TT,
                                    ExceptionHandling ExceptionModel,
                                    FloatABI::ABIType FloatABI, EABI ABIType,
-                                   StringRef ABIName);
+                                   StringRef ABIName,
+                                   LongDoubleFormat LongDoubleFormat);
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
   LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
                              FloatABI::ABIType FloatABI, EABI ABIType,
-                             StringRef ABIName);
+                             StringRef ABIName,
+                             LongDoubleFormat LongDoubleFormat);
 };
 
 } // namespace RTLIB

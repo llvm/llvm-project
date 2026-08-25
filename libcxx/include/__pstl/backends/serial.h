@@ -15,15 +15,17 @@
 #include <__algorithm/merge.h>
 #include <__algorithm/mismatch.h>
 #include <__algorithm/reverse.h>
+#include <__algorithm/search.h>
+#include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__numeric/transform_reduce.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -114,6 +116,35 @@ struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
     std::reverse(std::move(__first), std::move(__last));
     return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::search(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __search_n<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _Size __count,
+             const _Tp& __value,
+             _Predicate __pred) const noexcept {
+    return std::search_n(std::move(__first), std::move(__last), __count, __value, std::move(__pred));
   }
 };
 

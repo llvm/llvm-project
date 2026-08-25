@@ -16,6 +16,7 @@ static_library("llvm") {
     "FormatvStringCheck.cpp",
     "HeaderGuardCheck.cpp",
     "IncludeOrderCheck.cpp",
+    "InvalidRegexPatternCheck.cpp",
     "LLVMTidyModule.cpp",
     "PreferIsaOrDynCastInConditionalsCheck.cpp",
     "PreferRegisterOverUnsignedCheck.cpp",

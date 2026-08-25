@@ -15,7 +15,7 @@ define void @test_tcgen05_shift_cg1(ptr addrspace(6) %tmem_addr) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_shift_cg1_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_shift_cg1_param_0];
 ; CHECK-NEXT:    tcgen05.shift.cta_group::1.down [%r1];
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.shift.down.cg1(ptr addrspace(6) %tmem_addr)
@@ -29,7 +29,7 @@ define void @test_tcgen05_shift_cg2(ptr addrspace(6) %tmem_addr) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_tcgen05_shift_cg2_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_tcgen05_shift_cg2_param_0];
 ; CHECK-NEXT:    tcgen05.shift.cta_group::2.down [%r1];
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.tcgen05.shift.down.cg2(ptr addrspace(6) %tmem_addr)

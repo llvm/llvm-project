@@ -13,14 +13,14 @@ add_entrypoint_object(
   setitimer
   ALIAS
   DEPENDS
-  .${LIBC_TARGET_OS}.setitimer 
+    .${LIBC_TARGET_OS}.setitimer
 )
 
 add_entrypoint_object(
   getitimer
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.getitimer 
+    .${LIBC_TARGET_OS}.getitimer
 )
 
 add_entrypoint_object(

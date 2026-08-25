@@ -14,12 +14,14 @@
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -93,12 +95,20 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     // require hex float notation.
     if (FP.isInfinity() || FP.isNaN()) {
       unsigned MaxExp = APFloat::semanticsMaxExponent(FP.getSemantics()) + 1;
+      if (FP.isNegative())
+        O << '-';
       if (FP.isInfinity()) {
-        if (FP.isNegative())
-          O << '-';
         O << "0x1p+" << MaxExp;
       } else {
-        O << "0x1.8p+" << MaxExp;
+        unsigned MantissaBits =
+            APFloat::semanticsPrecision(FP.getSemantics()) - 1;
+        uint64_t Mantissa = Imm & (maskTrailingOnes<uint64_t>(MantissaBits));
+        unsigned Pad = alignTo(MantissaBits, 4) - MantissaBits;
+        std::string Hex = utohexstr(Mantissa << Pad, /*LowerCase=*/true,
+                                    (MantissaBits + Pad) / 4);
+        while (Hex.size() > 1 && Hex.back() == '0')
+          Hex.pop_back();
+        O << "0x1." << Hex << "p+" << MaxExp;
       }
       return;
     }
