@@ -7,14 +7,9 @@ legalized: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: degrees_instcombine_float
-    ; CHECK: [[OpTypeFloat:%[0-9]+]]:type(s64) = OpTypeFloat 32
-    ; CHECK-NEXT: [[OpTypeFunction:%[0-9]+]]:type(s64) = OpTypeFunction [[OpTypeFloat]](s64), [[OpTypeFloat]](s64)
-    ; CHECK-NEXT: OpName %2(s32), 120
-    ; CHECK-NEXT: [[OpFunction:%[0-9]+]]:iid(s64) = OpFunction [[OpTypeFloat]](s64), 5, [[OpTypeFunction]](s64)
-    ; CHECK-NEXT: [[OpFunctionParameter:%[0-9]+]]:fid(s32) = OpFunctionParameter [[OpTypeFloat]](s64)
-    ; CHECK-NEXT: OpName [[OpFunction]](s64), 1949588063, 1718907749, 0
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.degrees), [[OpFunctionParameter]](s32)
-    ; CHECK-NEXT: OpReturnValue [[INT]](s32)
+    ; CHECK-NOT: %4:_(s32) = G_FCONSTANT float f0x42652EE1
+    ; CHECK-NOT: %5:id(s32) = G_FMUL %0, %4
+    ; CHECK: %5:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.degrees), %2(s32)
     %1:type(s64) = OpTypeFloat 32
     %3:type(s64) = OpTypeFunction %1(s64), %1(s64)
     OpName %0(s32), 120
@@ -22,7 +17,7 @@ body:             |
     %0:fid(s32) = OpFunctionParameter %1(s64)
     OpName %2(s64), 1949588063, 1718907749, 0
     %4:_(s32) = G_FCONSTANT float f0x42652EE1
-    %5:id(s32) = nnan ninf nsz arcp afn reassoc G_FMUL %0, %4
+    %5:id(s32) = G_FMUL %0, %4
     OpReturnValue %5(s32)
 ...
 ---
@@ -32,15 +27,9 @@ legalized: true
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: degrees_instcombine_float4
-    ; CHECK: [[OpTypeVector:%[0-9]+]]:type(s64) = OpTypeVector %1(s64), 4
-    ; CHECK-NEXT: [[OpTypeFunction:%[0-9]+]]:type(s64) = OpTypeFunction [[OpTypeVector]](s64), [[OpTypeVector]](s64)
-    ; CHECK-NEXT: [[OpTypeFloat:%[0-9]+]]:type(s64) = OpTypeFloat 32
-    ; CHECK-NEXT: OpName %3(<4 x s32>), 118
-    ; CHECK-NEXT: [[OpFunction:%[0-9]+]]:iid(s64) = OpFunction [[OpTypeVector]](s64), 5, [[OpTypeFunction]](s64)
-    ; CHECK-NEXT: [[OpFunctionParameter:%[0-9]+]]:vfid(<4 x s32>) = OpFunctionParameter [[OpTypeVector]](s64)
-    ; CHECK-NEXT: OpName [[OpFunction]](s64), 808540767, 1953719668, 1952671062, 1984197231, 6709044
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.degrees), [[OpFunctionParameter]](<4 x s32>)
-    ; CHECK-NEXT: OpReturnValue [[INT]](<4 x s32>)
+    ; CHECK-NOT: %6:_(s32) = G_FCONSTANT float f0x42652EE1
+    ; CHECK-NOT: %7:id(<4 x s32>) = G_FMUL %0, %5
+    ; CHECK: %7:id(<4 x s32>) = G_INTRINSIC intrinsic(@llvm.spv.degrees), %3(<4 x s32>)
     %2:type(s64) = OpTypeVector %1(s64), 4
     %4:type(s64) = OpTypeFunction %2(s64), %2(s64)
     %1:type(s64) = OpTypeFloat 32
@@ -50,5 +39,6 @@ body:             |
     OpName %3(s64), 808540767, 1953719668, 1952671062, 1984197231, 6709044
     %6:_(s32) = G_FCONSTANT float f0x42652EE1
     %5:_(<4 x s32>) = G_BUILD_VECTOR %6(s32), %6(s32), %6(s32), %6(s32)
-    %7:id(<4 x s32>) = nnan ninf nsz arcp afn reassoc G_FMUL %0, %5
+    %7:id(<4 x s32>) = G_FMUL %0, %5
     OpReturnValue %7(<4 x s32>)
+...

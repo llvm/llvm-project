@@ -50,16 +50,16 @@ define noundef float @fmul_to_degrees(float noundef %x) {
 entry:
 ; CHECK: %[[#arg:]] = OpFunctionParameter %[[#float_32]]
 ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] Degrees %[[#arg]]
-  %mul = fmul reassoc nnan ninf nsz arcp afn float %x, f0x42652EE1
+  %mul = fmul float %x, f0x42652EE1
   ret float %mul
 }
 
 ; CHECK-LABEL: Begin function fmul_to_degrees_vector
-define hidden noundef nofpclass(nan inf) <4 x float> @fmul_to_degrees_vector(<4 x float> noundef nofpclass(nan inf) %v) local_unnamed_addr #0 {
+define noundef <4 x float> @fmul_to_degrees_vector(<4 x float> %v) {
 entry:
 ; CHECK: %[[#arg:]] = OpFunctionParameter %[[#vec4_float_32]]
 ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Degrees %[[#arg]]
-  %mul.i = fmul reassoc nnan ninf nsz arcp afn <4 x float> %v, splat (float f0x42652EE1)
+  %mul.i = fmul <4 x float> %v, splat (float f0x42652EE1)
   ret <4 x float> %mul.i
 }
 
