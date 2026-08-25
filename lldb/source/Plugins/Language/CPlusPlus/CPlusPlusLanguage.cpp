@@ -1753,6 +1753,31 @@ static bool GenericExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
   return false;
 }
 
+static SyntheticChildrenFrontEnd *
+GenericValarraySyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlValarray(*valobj_sp))
+    return MsvcStlValarraySyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static bool GenericValarraySummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (!IsMsvcStlValarray(valobj))
+    return false;
+  return ContainerSizeSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlSourceLocation(valobj))
+    return MsvcStlSourceLocationSummaryProvider(valobj, stream, options);
+  return LibStdcppSourceLocationSummaryProvider(valobj, stream, options);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1871,6 +1896,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericFilesystemPathSummaryProvider,
                 "MSVC STL/libstdc++ std::filesystem::path summary provider",
                 "^std::filesystem::(__cxx11::)?path$", stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
+                "MSVC STL/libstdc++ std::source_location summary provider",
+                "std::source_location", stl_summary_flags);
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -2024,6 +2053,13 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericExpectedSummaryProvider,
                 "MSVC STL std::expected summary provider",
                 "^std::expected<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericValarraySyntheticFrontEndCreator,
+                  "MSVC STL std::valarray synthetic children",
+                  "^std::valarray<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericValarraySummaryProvider,
+                "MSVC STL std::valarray summary provider",
+                "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

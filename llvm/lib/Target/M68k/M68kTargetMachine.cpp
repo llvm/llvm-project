@@ -159,7 +159,7 @@ bool M68kPassConfig::addRegBankSelect() {
 }
 
 bool M68kPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 

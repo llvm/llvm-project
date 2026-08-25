@@ -1138,8 +1138,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getStackFrame());
-  ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
-  if (N && !N->isSink())
+  if (ExplodedNode *N = Engine.makeNode(PP, NewState, Pred))
     Engine.enqueueStmtNode(N, getCurrBlock(), currStmtIdx);
 }
 
@@ -1153,7 +1152,7 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
 
   ExplodedNodeSet Dst;
   getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1566,10 +1565,9 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
 
   ExplodedNode *CleanPred = Engine.makePostStmtNode(BTE, State, Pred);
-  if (!CleanPred || CleanPred->isSink()) {
+  if (!CleanPred) {
     // FIXME: We can get a null node here due to temporaries being
     // bound to default parameters.
-    // Sink check is just PosteriorlyOverconstrained paranoia.
     CleanPred = Pred;
   }
 

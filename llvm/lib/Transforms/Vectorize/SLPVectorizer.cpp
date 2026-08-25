@@ -686,7 +686,7 @@ public:
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
           const DataLayout *DL, OptimizationRemarkEmitter *ORE)
       : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt),
-        AC(AC), DB(DB), DL(DL), ORE(ORE),
+        AC(AC), DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
         Builder(Se->getContext(), TargetFolder(*DL)) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
@@ -747,6 +747,12 @@ public:
 
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
+
+  /// Sets the narrowed reduction chain instructions, dropped together with
+  /// the reduction.
+  void setNarrowedChainInsts(ArrayRef<Instruction *> Insts) {
+    NarrowedChainInsts.insert(Insts.begin(), Insts.end());
+  }
 
   /// Returns true if the last buildTree() observed a may-alias memory
   /// dependency between two distinct, range-checkable base objects, i.e. a
@@ -958,6 +964,7 @@ public:
     ExtraBitWidthNodes.clear();
     InstrElementSize.clear();
     UserIgnoreList = nullptr;
+    NarrowedChainInsts.clear();
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
@@ -5528,6 +5535,10 @@ private:
   /// List of users to ignore during scheduling and that don't need extracting.
   const SmallDenseSet<Value *> *UserIgnoreList = nullptr;
 
+  /// Narrowed reduction chain instructions, dropped together with the
+  /// reduction. Subset of UserIgnoreList.
+  SmallPtrSet<Value *, 4> NarrowedChainInsts;
+
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
@@ -5552,8 +5563,8 @@ private:
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
   /// Cached cost-model mode for this function.
-  /// Only use RecipThroughput currently.
-  const TargetTransformInfo::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  /// If -Os/-Oz, use CodeSize. Otherwise use RecipThroughput.
+  const TargetTransformInfo::TargetCostKind CostKind;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
@@ -6335,10 +6346,10 @@ static bool isMaskedLoadCompress(
   LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
-  IsMasked = !isSafeToLoadUnconditionally(
-      Ptr0, LoadVecTy, CommonAlignment, DL,
-      cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC, &DT,
-      &TLI);
+  SimplifyQuery SQ(
+      DL, &TLI, &DT, &AC,
+      cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]));
+  IsMasked = !isSafeToLoadUnconditionally(Ptr0, LoadVecTy, CommonAlignment, SQ);
   if (IsMasked && !TTI.isLegalMaskedLoad(LoadVecTy, CommonAlignment,
                                          LI->getPointerAddressSpace()))
     return false;
@@ -6383,9 +6394,9 @@ static bool isMaskedLoadCompress(
     // Check for potential segmented(interleaved) loads.
     VectorType *AlignedLoadVecTy = cast<VectorType>(getWidenedType(
         ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1)));
+    SimplifyQuery SQ(DL, &TLI, &DT, &AC, cast<LoadInst>(VL.back()));
     if (!isSafeToLoadUnconditionally(Ptr0, AlignedLoadVecTy, CommonAlignment,
-                                     DL, cast<LoadInst>(VL.back()), &AC, &DT,
-                                     &TLI))
+                                     SQ))
       AlignedLoadVecTy = LoadVecTy;
     if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
@@ -14489,16 +14500,40 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   // Compare the costs.
   InstructionCost FMulPlusFAddCost = 0;
   InstructionCost FMACost = 0;
+  // Price both sides of the fmul+fadd pair as not fused. Passing a context
+  // instruction would let targets that model the fusion discount the unfused
+  // side of the comparison as well.
+  auto GetUnfusedFMulCost = [&](Instruction *I) {
+    assert(I->getOpcode() == Instruction::FMul && "Expected an fmul");
+    TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
+    TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
+    return TTI.getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind,
+                                      Op1Info, Op2Info,
+                                      {I->getOperand(0), I->getOperand(1)});
+  };
   FastMathFlags FMF;
   FMF.set();
+  const bool IsArithmeticState = S.isAddSubLikeOp() || S.isMulDivLikeOp() ||
+                                 S.isShiftOp() || S.isBitwiseLogicOp();
   for (Value *V : VL) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
-    if (!S.isCopyableElement(I))
+    const bool IsCopyable = S.isCopyableElement(I);
+    if (!IsCopyable)
       if (auto *FPCI = dyn_cast<FPMathOperator>(I))
         FMF &= FPCI->getFastMathFlags();
-    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+    if (IsCopyable || !IsArithmeticState ||
+        (I->getOpcode() != S.getOpcode() &&
+         I->getOpcode() != S.getAltOpcode())) {
+      FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+      continue;
+    }
+    TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
+    TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
+    FMulPlusFAddCost += TTI.getArithmeticInstrCost(
+        I->getOpcode(), I->getType(), CostKind, Op1Info, Op2Info,
+        {I->getOperand(0), I->getOperand(1)});
   }
   unsigned NumOps = 0;
   for (auto [V, Op] : zip(VL, Operands.front())) {
@@ -14515,7 +14550,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     ++NumOps;
     if (auto *FPCI = dyn_cast<FPMathOperator>(I))
       FMF &= FPCI->getFastMathFlags();
-    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost += GetUnfusedFMulCost(I);
   }
   Type *Ty = VL.front()->getType();
   IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
@@ -15512,7 +15547,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, VecTy, {}, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecTy, CostKind, {},
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
@@ -18343,7 +18378,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
           const bool HasState = TE->hasState();
           const unsigned Op = HasState ? TE->getOpcode() : 0u;
           if (IsGather && (!HasState || Op != Instruction::ExtractElement) &&
-              count_if(TE->Scalars, IsaPred<ExtractElementInst>) <= Limit)
+              static_cast<unsigned>(
+                  count_if(TE->Scalars, IsaPred<ExtractElementInst>)) <= Limit)
             return true;
           return HasState && Op == Instruction::PHI;
         }))
@@ -18358,7 +18394,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         const bool HasState = TE->hasState();
         const unsigned Op = HasState ? TE->getOpcode() : 0u;
         if (IsGather && (!HasState || Op != Instruction::ExtractElement) &&
-            count_if(TE->Scalars, IsaPred<ExtractElementInst>) <= Limit)
+            static_cast<unsigned>(
+                count_if(TE->Scalars, IsaPred<ExtractElementInst>)) <= Limit)
           return true;
         if (!HasState)
           return false;
@@ -18748,7 +18785,13 @@ InstructionCost BoUpSLP::getSpillCost() {
           LastInst, Completed ? First : &*PrevInstIt, NoCallsInRange ? 1 : 0);
     return NoCallsInRange;
   };
-  auto AddCosts = [&](const TreeEntry *Op) {
+  // The spill/reload is executed once per execution of the call, so the
+  // cost is scaled by the trip count of the loop containing the call, even
+  // for hoisted loop-invariant values defined outside of it.
+  auto GetSpillScale = [&](const BasicBlock *BB) {
+    return getLoopNestScale(LI->getLoopFor(BB));
+  };
+  auto AddCosts = [&](const TreeEntry *Op, uint64_t Scale) {
     if (ScalarOrPseudoEntries.contains(Op))
       return;
     Type *ScalarTy = Op->Scalars.front()->getType();
@@ -18756,7 +18799,6 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
     auto *VecTy = getWidenedType(ScalarTy, Op->getVectorFactor());
-    uint64_t Scale = getScaleToLoopIterations(*Op);
     InstructionCost KeepLiveCost = TTI->getCostOfKeepingLiveOverCall(VecTy);
     KeepLiveCost *= Scale;
     Cost += KeepLiveCost;
@@ -18766,10 +18808,11 @@ InstructionCost BoUpSLP::getSpillCost() {
               Scale;
     }
   };
-  // Memoize the relationship between blocks, i.e. if there is (at least one)
-  // non-vectorized call between the blocks. This allows to skip the analysis of
-  // the same block paths multiple times.
-  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
+  // Memoize the relationship between blocks, i.e. the spill scale if every
+  // path between the blocks crosses a non-vectorized call, 0 if there is (at
+  // least one) call-free path. This allows to skip the analysis of the same
+  // block paths multiple times.
+  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, uint64_t>
       ParentOpParentToPreds;
   // Memoize whether a basic block contains a non-terminator no-return call.
   // Such blocks are dead-end paths in normal control flow (execution does not
@@ -18823,7 +18866,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (auto It = ParentOpParentToPreds.find(Key);
         It != ParentOpParentToPreds.end())
       return It->second;
-    bool Res = false;
+    uint64_t Res = 0;
     scope_exit Cleanup([&]() { ParentOpParentToPreds.try_emplace(Key, Res); });
     // If Op is loop-invariant, a call anywhere in the loop body forces a spill,
     // even when a call-free forward path from Root back to OpParent exists on
@@ -18835,8 +18878,10 @@ InstructionCost BoUpSLP::getSpillCost() {
       Outermost = L;
       L = L->getParentLoop();
     }
-    if (Outermost && LoopBodyHasCall(Outermost))
+    if (Outermost && LoopBodyHasCall(Outermost)) {
+      Res = getLoopNestScale(Outermost);
       return Res;
+    }
     SmallVector<BasicBlock *> Worklist;
     if (Pred)
       Worklist.push_back(Pred);
@@ -18848,7 +18893,7 @@ InstructionCost BoUpSLP::getSpillCost() {
     // blocks that were visited during the BFS are not necessarily
     // call-free-reachable to OpParent themselves - we may have reached
     // OpParent through a *sibling* path that bypassed them.
-    // We return `true` (no spill cost) if at least one backward path from
+    // We return 0 (no spill cost) if at least one backward path from
     // some predecessor of Root back to OpParent is call-free. Only when
     // *every* such path goes through a non-vec call do we charge the spill
     // cost: only then is it actually necessary to keep the vectorized value
@@ -18861,15 +18906,14 @@ InstructionCost BoUpSLP::getSpillCost() {
     //
     // If we ever pop OpParent from the worklist, we have reached it through
     // a chain of call-free, non-dominated blocks: a call-free path exists
-    // and we return true. If the worklist is exhausted without reaching
-    // OpParent, every admissible path is blocked by a call and we return
-    // false so the caller charges the spill cost.
+    // and we return 0. If the worklist is exhausted or the scan budget
+    // overflows without reaching OpParent, no call-free path was found and
+    // we return the scale of the loop containing Root, so the caller charges
+    // the spill cost.
     while (!Worklist.empty()) {
       BasicBlock *BB = Worklist.pop_back_val();
-      if (BB == OpParent) {
-        Res = true;
+      if (BB == OpParent)
         return Res;
-      }
       if (!Visited.insert(BB).second)
         continue;
       // Blocks strictly dominated by Root are reached only *after* Root in
@@ -18886,11 +18930,9 @@ InstructionCost BoUpSLP::getSpillCost() {
       auto Pair = std::make_pair(BB, OpParent);
       if (auto It = ParentOpParentToPreds.find(Pair);
           It != ParentOpParentToPreds.end()) {
-        if (It->second) {
-          // BB is known to reach OpParent via a call-free path.
-          Res = true;
+        // BB is known to reach OpParent via a call-free path.
+        if (It->second == 0)
           return Res;
-        }
         // BB is known to be blocked from OpParent by calls; keep checking
         // other paths.
         continue;
@@ -18900,15 +18942,14 @@ InstructionCost BoUpSLP::getSpillCost() {
         continue;
       Budget += BlockSize;
       if (Budget > BudgetLimit)
-        return Res;
+        break;
       if (!isa<CatchSwitchInst>(BB->getTerminator()) &&
           !CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrDbgOrAlloca(),
                                           BB->getTerminator()))
         continue;
       Worklist.append(pred_begin(BB), pred_end(BB));
     }
-    // Worklist drained without ever reaching OpParent: every path between
-    // Root and OpParent is blocked by a non-vec call.
+    Res = GetSpillScale(Root);
     return Res;
   };
   SmallVector<const TreeEntry *> LiveEntries(1, Root);
@@ -18962,7 +19003,7 @@ InstructionCost BoUpSLP::getSpillCost() {
             all_of(Op->Scalars, [&](Value *V) {
               return !isa<Instruction>(V) || L->isLoopInvariant(V);
             }))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       Budget = 0;
@@ -18995,11 +19036,11 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (OpParent == Parent) {
         if (Entry->getOpcode() == Instruction::PHI) {
           if (!CheckForNonVecCallsInSameBlock(LastInst, OpLastInst))
-            AddCosts(Op);
+            AddCosts(Op, GetSpillScale(Parent));
           continue;
         }
         if (!CheckForNonVecCallsInSameBlock(OpLastInst, LastInst))
-          AddCosts(Op);
+          AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // Check for call instruction in between blocks.
@@ -19007,20 +19048,18 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Entry->getOpcode() != Instruction::PHI &&
           !CheckForNonVecCallsInSameBlock(
               &*Parent->getFirstNonPHIOrDbgOrAlloca(), LastInst)) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
       // 2. Check op's block from the end.
       if (!CheckForNonVecCallsInSameBlock(OpLastInst,
                                           OpParent->getTerminator())) {
-        AddCosts(Op);
+        AddCosts(Op, GetSpillScale(OpParent));
         continue;
       }
       // 3. Check the predecessors of entry's block till op's block.
-      if (!CheckPredecessors(Parent, Pred, OpParent)) {
-        AddCosts(Op);
-        continue;
-      }
+      if (uint64_t Scale = CheckPredecessors(Parent, Pred, OpParent))
+        AddCosts(Op, Scale);
     }
   }
 
@@ -19788,8 +19827,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // shuffles, inserts, and extracts.
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
-  if (SLPInstCountCheck && TTI->preferSLPInstCountCheck() &&
-      getRootNode().getVectorFactor() == 2 && SLPCostThreshold == 0 &&
+  if (CostKind != TTI::TCK_CodeSize && SLPInstCountCheck &&
+      TTI->preferSLPInstCountCheck() && getRootNode().getVectorFactor() == 2 &&
+      SLPCostThreshold == 0 &&
       (!SLPReVec ||
        !isa<VectorType>(getRootNodeScalars().front()->getType()))) {
     // Loop containing the tree root; null for flat code or disabled
@@ -26157,7 +26197,11 @@ Value *BoUpSLP::vectorizeTree(
           !(GatheredLoadsEntriesFirst.has_value() &&
             IE->Idx >= *GatheredLoadsEntriesFirst && getRootNode().isGather() &&
             is_contained(getRootNodeScalars(), I)) &&
-          !(!getRootNode().isGather() && getRootNode().isCopyableElement(I)))
+          !(!getRootNode().isGather() && getRootNode().isCopyableElement(I)) &&
+          // Dropped narrowed reduction chain instructions may still use
+          // non-root scalars; such uses must be cleared as well.
+          none_of(I->users(),
+                  [&](User *U) { return NarrowedChainInsts.contains(U); }))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
@@ -28802,13 +28846,42 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // only merges the stores, while the scalars remain live for the other users
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
-    // loads, where the vector loads may pay off the gathering.
+    // loads, where the vector loads may pay off the gathering. Two outside
+    // uses may still be part of the same profitable tree when they look like
+    // carry deps (cmp, select, non-div/rem binop, or a two-incoming phi);
+    // reject 3+ outside users, or exactly 2 when at least one is not benign.
+    auto IsBenignOutsideUser = [](Instruction *UI) {
+      assert(UI && "Expected instruction.");
+      if (auto *PN = dyn_cast<PHINode>(UI))
+        return PN->getNumIncomingValues() == 2;
+      if (auto *BO = dyn_cast<BinaryOperator>(UI))
+        return !BO->isIntDivRem() && !BO->isFPDivRem();
+      return isa<CmpInst, SelectInst>(UI);
+    };
+    auto HasTooManyOutsideUsers = [&](Instruction *I) {
+      // To save compilation time, bail out if the use list is huge.
+      if (I->hasNUsesOrMore(UsesLimit))
+        return true;
+      unsigned Outside = 0;
+      bool HasNonBenign = false;
+      for (User *U : I->users()) {
+        if (Stores.contains(U))
+          continue;
+        ++Outside;
+        if (Outside > 2)
+          return true;
+        if (!IsBenignOutsideUser(cast<Instruction>(U)))
+          HasNonBenign = true;
+        if (Outside == 2 && HasNonBenign)
+          return true;
+      }
+      return false;
+    };
     if (S && S.getOpcode() != Instruction::Load &&
         all_of(ValOps.getArrayRef(), [&](Value *V) {
-          return none_of(cast<Instruction>(V)->operand_values(),
-                         IsaPred<LoadInst>) &&
-                 count_if(V->users(),
-                          [&](User *U) { return !Stores.contains(U); }) > 1;
+          auto *I = cast<Instruction>(V);
+          return none_of(I->operand_values(), IsaPred<LoadInst>) &&
+                 HasTooManyOutsideUsers(I);
         })) {
       Size = 1;
       return false;
@@ -31026,9 +31099,14 @@ public:
         TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
-      // Try to handle shuffled extractelements.
+      // Try to handle shuffled extractelements. Only pure extractelement
+      // groups can be merged: merged groups are skipped for external uses,
+      // and other values would be erased while still used by reduction ops.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && I + 1 < E &&
+          all_of(ReducedVals[I + 1], [&](Value *RV) {
+            return isa<ExtractElementInst>(TrackedVals.at(RV));
+          })) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);
@@ -31218,10 +31296,12 @@ public:
               return RedValI && V.isDeleted(RedValI);
             }))
           break;
-        if (RK == ReductionOrdering::Ordered)
+        if (RK == ReductionOrdering::Ordered) {
           V.buildTree(VL);
-        else
+        } else {
           V.buildTree(VL, IgnoreList);
+          V.setNarrowedChainInsts(NarrowedChainInsts);
+        }
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
           constexpr unsigned CandidatesLimit = 64;
