@@ -14,6 +14,10 @@ body[data-theme="dark"] {
   --clang-code-comparison-good-border: #3fb950;
 }
 
+.content img.light-background {
+  background-color: #fff;
+}
+
 .content table.colored-code-table td,
 .content table.colored-code-table th {
   text-align: left;
