@@ -446,6 +446,12 @@ define void @changing_end_bound4(i32 %start, ptr %n_addr, ptr %addr) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i32 1073741823
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 2147483644
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is i32 1073741823
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 2147483644
 ;
 entry:
   br label %loop
@@ -573,10 +579,27 @@ define void @max_overflow_me(i8 %n) mustprogress {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: i8 1
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: i8 0
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 65
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i8 1
 ; CHECK-NEXT:    symbolic max exit count for loop: i8 1
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: i8 0
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 65
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is i8 0
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 65
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i8 0
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 65
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is i8 0
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %n sle) 65
 ;
 entry:
   br label %loop

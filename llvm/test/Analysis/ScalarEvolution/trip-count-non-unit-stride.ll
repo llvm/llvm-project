@@ -14,11 +14,39 @@ define void @test_preinc_ult(i64 %len) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop: ((1 + %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: ((-1 + (2 umax %len)) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop: ((1 + %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: ((-1 + (2 umax %len)) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((1 + %len) /u 2) umin ((-1 + (2 umax %len)) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775806
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((1 + %len) /u 2) umin ((-1 + (2 umax %len)) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
 ;
 start:
   br label %loop
@@ -49,11 +77,39 @@ define void @test_postinc_ult(i64 %len) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop: ((1 umax %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: ((-1 + (2 umax %len)) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop: ((1 umax %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: ((-1 + (2 umax %len)) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 + (2 umax %len)) /u 2) umin ((1 umax %len) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775806
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 + (2 umax %len)) /u 2) umin ((1 umax %len) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len ule) -2
+; CHECK-NEXT:      Compare predicate: %len ule) -2
 ;
 start:
   br label %loop
@@ -83,11 +139,39 @@ define void @test_preinc_slt(i64 %len) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_slt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop: ((1 + (0 smax %len))<nuw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: ((-1 + (2 smax %len))<nsw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop: ((1 + (0 smax %len))<nuw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: ((-1 + (2 smax %len))<nsw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((1 + (0 smax %len))<nuw> /u 2) umin ((-1 + (2 smax %len))<nsw> /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387902
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((1 + (0 smax %len))<nuw> /u 2) umin ((-1 + (2 smax %len))<nsw> /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
 ;
 start:
   br label %loop
@@ -118,11 +202,39 @@ define void @test_postinc_slt(i64 %len) {
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_slt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop: ((1 smax %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: ((-1 + (2 smax %len))<nsw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop: ((1 smax %len) /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: ((-1 + (2 smax %len))<nsw> /u 2)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 + (2 smax %len))<nsw> /u 2) umin ((1 smax %len) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387902
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 + (2 smax %len))<nsw> /u 2) umin ((1 smax %len) /u 2))
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
+; CHECK-NEXT:      Compare predicate: %len sle) 9223372036854775806
 ;
 start:
   br label %loop
