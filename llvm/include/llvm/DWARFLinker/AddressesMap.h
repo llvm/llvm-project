@@ -103,24 +103,29 @@ public:
     return std::nullopt;
   }
 
-  /// Constrains the source-space end of a code range, given its start \p LowPC,
-  /// its end \p HighPC as an address, and the \p Adjustment all of its
-  /// addresses shift by in the output.
+  /// Constrains the end of the code range starting at \p LowPC, whose addresses
+  /// shift by \p Adjustment in the output. \p HighPC is an address, not a
+  /// length.
   ///
-  /// Neighbouring symbols shift by different amounts, so a range reaching past
-  /// the symbol holding its start can land inside the next symbol in the
-  /// output. Only that collision is repaired. Coverage that overlaps nothing is
-  /// left alone, and a symbol nested in the same extent is never a neighbour,
-  /// so it cannot shorten a range that legitimately spans it.
+  /// The linker places symbols independently, so a range overrunning the symbol
+  /// it starts in can cover a different one once linked. Only that overlap is
+  /// repaired.
   uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
                                     int64_t Adjustment) {
     std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
     if (!Symbol)
       return HighPC;
+    assert(Symbol->LowPC <= LowPC && LowPC < Symbol->HighPC &&
+           "Symbol range must contain the address it was looked up for");
+    uint64_t LinkedSymbolHighPC = Symbol->HighPC + Adjustment;
+    assert(LinkedSymbolHighPC > Symbol->LowPC + Adjustment &&
+           "Adjusting a symbol range must preserve its order");
     std::optional<uint64_t> NextStart =
-        getNextLinkedSymbolStart(Symbol->HighPC + Adjustment);
+        getNextLinkedSymbolStart(LinkedSymbolHighPC);
     if (!NextStart)
       return HighPC;
+    assert(*NextStart >= LinkedSymbolHighPC &&
+           "A range must never be cut short of its own symbol");
     return std::min(HighPC, *NextStart - Adjustment);
   }
 

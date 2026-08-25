@@ -311,12 +311,6 @@ public:
   ///
   LLVM_ABI void clearCodeModel();
 
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    MaybeAlign Align = getAlign();
-    return Align ? Align->value() : 0;
-  }
-
   /// Returns the alignment of the given variable.
   MaybeAlign getAlign() const { return GlobalObject::getAlign(); }
 

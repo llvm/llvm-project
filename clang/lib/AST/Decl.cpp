@@ -60,6 +60,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2578,9 +2579,11 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
 
   Eval->IsEvaluating = true;
 
+  SmallVector<PartialDiagnosticAt> MSWarning;
   ASTContext &Ctx = getASTContext();
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
+  EStatus.ExtendedDiag = &MSWarning;
   bool Result =
       Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
@@ -2600,8 +2603,14 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   // failed.
   if (!Result)
     Eval->Evaluated = APValue();
-  else if (Eval->Evaluated.needsCleanup())
-    Ctx.addDestruction(&Eval->Evaluated);
+  else {
+    if (!MSWarning.empty())
+      for (auto &Info : MSWarning)
+        getASTContext().getDiagnostics().Report(Info.first,
+                                                Info.second.getDiagID());
+    if (Eval->Evaluated.needsCleanup())
+      Ctx.addDestruction(&Eval->Evaluated);
+  }
 
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;

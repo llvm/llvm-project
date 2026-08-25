@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <mutex>
 
@@ -126,6 +127,14 @@ ol_device_handle_t ThreadStateTy::setDefaultDevice(int DeviceNo) {
 ol_device_handle_t ThreadStateTy::getDevice(int *DeviceNo) {
   *DeviceNo = ThreadStateTy::get().DefaultDevice;
   return ThreadStateTy::getDefaultDevice();
+}
+
+uint32_t ThreadStateTy::getLastError() {
+  return ThreadStateTy::get().LastError;
+}
+
+uint32_t ThreadStateTy::setLastError(uint32_t Error) {
+  return ThreadStateTy::get().LastError = Error;
 }
 
 void ThreadStateTy::createDefaultQueue(ol_device_handle_t Device) {

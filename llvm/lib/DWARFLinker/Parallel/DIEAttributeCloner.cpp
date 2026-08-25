@@ -33,8 +33,8 @@ void DIEAttributeCloner::clone() {
       DWARFDataExtractor(DIECopy, Data.isLittleEndian(), Data.getAddressSize());
 
   // Modify the copy with relocated addresses.
-  InUnit.getContaingFile().Addresses->applyValidRelocs(DIECopy, Offset,
-                                                       Data.isLittleEndian());
+  InUnit.getContainingFile().Addresses->applyValidRelocs(DIECopy, Offset,
+                                                         Data.isLittleEndian());
 
   // Reset the Offset to 0 as we will be working on the local copy of
   // the data.
@@ -312,7 +312,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   case dwarf::DW_AT_macro_info: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          InUnit.getContaingFile().Dwarf->getDebugMacinfo();
+          InUnit.getContainingFile().Dwarf->getDebugMacinfo();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
@@ -326,7 +326,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   case dwarf::DW_AT_macros: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          InUnit.getContaingFile().Dwarf->getDebugMacro();
+          InUnit.getContainingFile().Dwarf->getDebugMacro();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
@@ -525,15 +525,11 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       !OutUnit.isCompileUnit())
     return 0;
 
-  // A nested scope inherits the range its parent function overran, so every
-  // range is constrained, not just the subprogram's own.
-  if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
-    if (std::optional<uint64_t> LowPC =
-            dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
-      Value = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
-                  *LowPC, *LowPC + Value, *FuncAddressAdjustment) -
-              *LowPC;
-  }
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      InputDieEntry->getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(Value, /*IsLength=*/true);
 
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
@@ -689,12 +685,8 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     else
       return 0;
   } else {
-    if (AttrSpec.Attr == dwarf::DW_AT_high_pc && FuncAddressAdjustment) {
-      if (std::optional<uint64_t> LowPC =
-              dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc)))
-        Addr = InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
-            *LowPC, *Addr, *FuncAddressAdjustment);
-    }
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(*Addr, /*IsLength=*/false);
     if (VarAddressAdjustment)
       *Addr += *VarAddressAdjustment;
     else if (FuncAddressAdjustment)
@@ -710,6 +702,19 @@ size_t DIEAttributeCloner::cloneAddressAttr(
       .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx,
                           OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr))
       .second;
+}
+
+uint64_t DIEAttributeCloner::constrainHighPC(uint64_t HighPC, bool IsLength) {
+  if (!FuncAddressAdjustment)
+    return HighPC;
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained =
+      InUnit.getContainingFile().Addresses->constrainCodeRangeHighPC(
+          *LowPC, IsLength ? *LowPC + HighPC : HighPC, *FuncAddressAdjustment);
+  return IsLength ? Constrained - *LowPC : Constrained;
 }
 
 unsigned DIEAttributeCloner::finalizeAbbreviations(bool HasChildrenToClone) {

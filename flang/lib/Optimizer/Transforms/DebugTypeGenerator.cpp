@@ -12,7 +12,7 @@
 
 #define DEBUG_TYPE "flang-debug-type-generator"
 
-#include "DebugTypeGenerator.h"
+#include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
