@@ -144,6 +144,8 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
 
   // If this is a Unix-style path, just use it as is. Don't try to canonicalize
   // it textually because one of the path components could be a symlink.
+  // FIXME: This heuristic doesn't work for relative paths. Should we use the
+  // style from the target platform?
   if (Dir.starts_with("/") || Filename.starts_with("/")) {
     if (llvm::sys::path::is_absolute(Filename, llvm::sys::path::Style::posix))
       return Filename;
@@ -158,44 +160,17 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   // operates on full paths.  We could change Clang to emit full paths too, but
   // that would increase the IR size and probably not needed for other users.
   // For now, just concatenate and canonicalize the path here.
-  if (Filename.find(':') == 1)
-    Filepath = std::string(Filename);
-  else
-    Filepath = (Dir + "\\" + Filename).str();
-
-  // Canonicalize the path.  We have to do it textually because we may no longer
-  // have access the file in the filesystem.
-  // First, replace all slashes with backslashes.
-  llvm::replace(Filepath, '/', '\\');
-
-  // Remove all "\.\" with "\".
-  size_t Cursor = 0;
-  while ((Cursor = Filepath.find("\\.\\", Cursor)) != std::string::npos)
-    Filepath.erase(Cursor, 2);
-
-  // Replace all "\XXX\..\" with "\".  Don't try too hard though as the original
-  // path should be well-formatted, e.g. start with a drive letter, etc.
-  Cursor = 0;
-  while ((Cursor = Filepath.find("\\..\\", Cursor)) != std::string::npos) {
-    // Something's wrong if the path starts with "\..\", abort.
-    if (Cursor == 0)
-      break;
-
-    size_t PrevSlash = Filepath.rfind('\\', Cursor - 1);
-    if (PrevSlash == std::string::npos)
-      // Something's wrong, abort.
-      break;
-
-    Filepath.erase(PrevSlash, Cursor + 3 - PrevSlash);
-    // The next ".." might be following the one we've just erased.
-    Cursor = PrevSlash;
+  SmallString<256> CanonFilepath;
+  if (llvm::sys::path::is_absolute(Filename, llvm::sys::path::Style::windows)) {
+    CanonFilepath = Filename;
+  } else {
+    CanonFilepath = Dir;
+    llvm::sys::path::append(CanonFilepath, llvm::sys::path::Style::windows,
+                            Filename);
   }
-
-  // Remove all duplicate backslashes.
-  Cursor = 0;
-  while ((Cursor = Filepath.find("\\\\", Cursor)) != std::string::npos)
-    Filepath.erase(Cursor, 1);
-
+  llvm::sys::path::remove_dots(CanonFilepath, /*remove_dot_dot=*/true,
+                               llvm::sys::path::Style::windows);
+  Filepath = CanonFilepath.str();
   return Filepath;
 }
 
