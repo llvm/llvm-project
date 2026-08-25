@@ -1084,7 +1084,7 @@ static void processStubLibrariesPreLTO() {
         // members that might need to be exported due to stub library
         // symbols being referenced.  Without this the LTO object could be
         // extracted during processStubLibraries, which is too late since
-        // LTO has already being performed at that point.
+        // LTO has already been performed at that point.
         if (needed->isLazy() && isa<BitcodeFile>(needed->getFile())) {
           if (!ctx.arg.whyExtract.empty())
             ctx.whyExtractRecords.emplace_back(toString(stub_file),
@@ -1109,6 +1109,8 @@ static void processStubLibrariesPreLTO() {
       }
     }
 
+    // Iterate by index because handleDeps may extract archive members, adding
+    // new symbols to symVector and potentially invalidating iterators.
     for (size_t i = 0; i < symtab->symbols().size(); ++i) {
       Symbol *sym = symtab->symbols()[i];
       if (sym->isUndefined() && sym->importName.has_value()) {
@@ -1156,7 +1158,7 @@ static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
         lazy->extract();
         if (!ctx.arg.whyExtract.empty())
           ctx.whyExtractRecords.emplace_back(toString(stub_file),
-                                             needed->getFile(), *needed);
+                                             sym->getFile(), *sym);
       }
     }
   }
@@ -1165,7 +1167,7 @@ static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
 
 static void processStubLibraries() {
   log("-- processStubLibraries");
-  bool depsAdded;
+  bool depsAdded = false;
   do {
     depsAdded = false;
     for (auto &stub_file : ctx.stubFiles) {
@@ -1186,13 +1188,10 @@ static void processStubLibraries() {
                        << "stub symbol not needed: `" << name << "`\n");
         }
       }
-    }
 
-    // Secondly looks for any symbols with an `importName` that matches
-    for (size_t i = 0; i < symtab->symbols().size(); ++i) {
-      Symbol *sym = symtab->symbols()[i];
-      if (sym->isUndefined() && sym->importName.has_value()) {
-        for (auto &stub_file : ctx.stubFiles) {
+      // Secondly looks for any symbols with an `importName` that matches
+      for (Symbol *sym : symtab->symbols()) {
+        if (sym->isUndefined() && sym->importName.has_value()) {
           auto it = stub_file->symbolDependencies.find(sym->importName.value());
           if (it != stub_file->symbolDependencies.end()) {
             depsAdded |= addStubSymbolDeps(stub_file, sym, it->second);
@@ -1507,7 +1506,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (errorCount())
     return;
 
-  // We process the stub libraries once before LTO to ensure that any possible
+  // We process the stub libraries once beofore LTO to ensure that any possible
   // required exports are preserved by the LTO process.
   processStubLibrariesPreLTO();
 
