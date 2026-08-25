@@ -592,12 +592,18 @@ public:
 
     // To create a value we need to compute the storage requirement.
     if (auto value = dyn_cast<ValueType>(resultType)) {
+      // Computing the storage requirement emits a GEP over the stored type, so
+      // the payload type must have an LLVM counterpart.
+      Type storedType = converter->convertType(value.getValueType());
+      if (!storedType)
+        return rewriter.notifyMatchFailure(
+            op, "failed to convert async value type to LLVM type");
+
       // Returns the size requirements for the async value storage.
-      auto sizeOf = [&](ValueType valueType) -> Value {
+      auto sizeOf = [&]() -> Value {
         auto loc = op->getLoc();
         auto i64 = rewriter.getI64Type();
 
-        auto storedType = converter->convertType(valueType.getValueType());
         auto storagePtrType =
             AsyncAPI::opaquePointerType(rewriter.getContext());
 
@@ -611,7 +617,7 @@ public:
       };
 
       rewriter.replaceOpWithNewOp<func::CallOp>(op, kCreateValue, resultType,
-                                                sizeOf(value));
+                                                sizeOf());
 
       return success();
     }
