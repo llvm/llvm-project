@@ -24,7 +24,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
-#include "llvm/Support/AArch64AtomicHints.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -518,7 +518,7 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
-  AArch64AtomicStoreHint decodeAtomicHintFlags(MachineMemOperand *MMO) const;
+  AArch64MemoryHint decodeMemoryHintFlags(MachineMemOperand *MMO) const;
   bool isAtomicSTSHH_KEEP(SDNode *N) const;
   bool isAtomicSTSHH_STRM(SDNode *N) const;
 
@@ -4616,36 +4616,32 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   return true;
 }
 
-AArch64AtomicStoreHint
-AArch64DAGToDAGISel::decodeAtomicHintFlags(MachineMemOperand *MMO) const {
-  int AtomicHint = -1;
+AArch64MemoryHint
+AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
+  int MemoryHint = -1;
   const MDNode *MemCacheHint = MMO->getMemCacheHint();
   if (!MemCacheHint)
-    return AArch64AtomicStoreHint::HINT_NONE;
+    return AArch64MemoryHint::HINT_NONE;
 
   for (unsigned I = 0; I + 1 < MemCacheHint->getNumOperands(); I += 2) {
-    const auto *Key = cast<MDString>(MemCacheHint->getOperand(I));
-    StringRef KeyStr = Key->getString();
-    const Metadata *Val = MemCacheHint->getOperand(I + 1).get();
-
-    if (KeyStr != "aarch64.atomic_hint")
-      continue;
-
-    AtomicHint = cast<ConstantInt>(cast<ConstantAsMetadata>(Val)->getValue())
-                     ->getZExtValue();
+    if (MemCacheHint->getOperand(I).equalsStr("aarch64.mem_hint")) {
+      const Metadata *Val = MemCacheHint->getOperand(I + 1).get();
+      MemoryHint = cast<ConstantInt>(cast<ConstantAsMetadata>(Val)->getValue())
+                       ->getZExtValue();
+    }
   }
 
-  return getAtomicStoreHintFromMD(AtomicHint);
+  return toAArch64Hint(MemoryHint);
 }
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_KEEP(SDNode *N) const {
-  return decodeAtomicHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64AtomicStoreHint::HINT_STSHH_KEEP;
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::HINT_STSHH_KEEP;
 }
 
 bool AArch64DAGToDAGISel::isAtomicSTSHH_STRM(SDNode *N) const {
-  return decodeAtomicHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
-         AArch64AtomicStoreHint::HINT_STSHH_STRM;
+  return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) ==
+         AArch64MemoryHint::HINT_STSHH_STRM;
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,

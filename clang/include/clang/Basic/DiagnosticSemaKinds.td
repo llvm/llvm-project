@@ -9656,6 +9656,8 @@ def err_atomic_builtin_must_be_pointer_intptr : Error<
 def err_atomic_hint_builtin_must_be_pointer : Error<
   "address argument to atomic hint builtin must be a pointer to a scalar "
   "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+def err_atomic_hint_has_invalid_hint_type : Error<
+   "invalid hint type argument to atomic hint operation (%0)">;
 
 def err_atomic_builtin_cannot_be_const : Error<
   "address argument to atomic builtin cannot be const-qualified (%0 invalid)">;

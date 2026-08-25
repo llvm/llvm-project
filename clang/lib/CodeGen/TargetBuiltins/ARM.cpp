@@ -20,7 +20,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
-#include "llvm/Support/AArch64AtomicHints.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include <numeric>
@@ -2105,14 +2105,14 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
   unsigned HintArg = Result.Val.getInt().getExtValue();
 
   // Attach the hint if valid
-  if (getAtomicStoreHintFromMD(HintArg) != AArch64AtomicStoreHint::HINT_NONE) {
+  if (toAArch64Hint(HintArg) != AArch64MemoryHint::HINT_NONE) {
     LLVMContext &Ctx = CGM.getLLVMContext();
-    MDNode *AtomicHint = MDNode::get(
-        Ctx, {MDString::get(Ctx, "aarch64.atomic_hint"),
+    MDNode *MemHint = MDNode::get(
+        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
               llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
     MDNode *HintNode = MDNode::get(
         CGM.getLLVMContext(),
-        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), AtomicHint});
+        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
 
     Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
   }

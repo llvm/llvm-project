@@ -195,9 +195,8 @@ define void @test_atomic_store_strm_relaxed_half(ptr %ptr, half %val) nounwind {
 define void @test_atomic_store_strm_relaxed_float(ptr %ptr, float %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   store atomic float %val, ptr %ptr monotonic, align 8, !mem.cache_hint !2
   ret void
@@ -206,9 +205,8 @@ define void @test_atomic_store_strm_relaxed_float(ptr %ptr, float %val) nounwind
 define void @test_atomic_store_strm_relaxed_double(ptr %ptr, double %val) nounwind {
 ; CHECK-LABEL: test_atomic_store_strm_relaxed_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store atomic double %val, ptr %ptr monotonic, align 8, !mem.cache_hint !2
   ret void
@@ -334,8 +332,8 @@ define void @test_atomic_store_invalid_hint(ptr %ptr, i8 %val) nounwind {
 }
 
 !0 = !{i32 1, !1}
-!1 = !{!"aarch64.atomic_hint", i32 0}
+!1 = !{!"aarch64.mem_hint", i32 0}
 !2 = !{i32 1, !3}
-!3 = !{!"aarch64.atomic_hint", i32 1}
+!3 = !{!"aarch64.mem_hint", i32 1}
 !4 = !{i32 1, !5}
-!5 = !{!"aarch64.atomic_hint", i32 2}
+!5 = !{!"aarch64.mem_hint", i32 2}

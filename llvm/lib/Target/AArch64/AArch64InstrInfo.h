@@ -16,7 +16,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/Support/AArch64AtomicHints.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -231,7 +231,7 @@ public:
   /// Return true if the given load or store is a strided memory access.
   static bool isStridedAccess(const MachineInstr &MI);
 
-  static AArch64AtomicStoreHint decodeAtomicHintFlags(MachineMemOperand &MMO);
+  static AArch64MemoryHint decodeMemoryFlags(MachineMemOperand &MMO);
 
   /// Return true if it has an unscaled load/store offset.
   static bool hasUnscaledLdStOffset(unsigned Opc);
