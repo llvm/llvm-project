@@ -19984,16 +19984,13 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
   return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
 }
 
-static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
+static QualType buildCountAttributedType(Sema &S, QualType T,
                                          const ParsedAttr &AL) {
   if (!AL.diagnoseLangOpts(S))
     return QualType();
 
-  assert(isa<FieldDecl>(D));
-
   auto *CountExpr = AL.getArgAsExpr(0);
-  if (!CountExpr)
-    return QualType();
+  assert(CountExpr);
 
   bool CountInBytes;
   bool OrNull;
@@ -20064,7 +20061,7 @@ struct RebuildTypeWithLateParsedAttr
       return QualType();
     }
 
-    QualType T = handleCountedByAttrField(SemaRef, InnerType, FD, AL);
+    QualType T = buildCountAttributedType(SemaRef, InnerType, AL);
     if (T.isNull()) {
       AL.setInvalid();
       FD->setInvalidDecl();
@@ -20149,8 +20146,10 @@ void Sema::ProcessLateParsedTypeAttributes(
   for (auto *I : EnclosingDecl->decls()) {
     FieldDecl *FD = dyn_cast<FieldDecl>(I);
     IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
-    if (!FD && IFD)
+    if (IFD) {
+      assert(!FD);
       FD = IFD->getAnonField();
+    }
 
     if (!FD || !FD->getType()->hasLateParsedAttr() ||
         FD->getType()->isRecordType())
