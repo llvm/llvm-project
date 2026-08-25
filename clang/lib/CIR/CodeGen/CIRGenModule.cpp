@@ -24,9 +24,11 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -117,13 +119,11 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
               astContext.getTargetInfo().getPointerAlign(LangAS::Default))
           .getQuantity();
 
-  const unsigned charSize = astContext.getTargetInfo().getCharWidth();
+  const unsigned charSize = target.getCharWidth();
   uCharTy = cir::IntType::get(&getMLIRContext(), charSize, /*isSigned=*/false);
 
-  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
-  const unsigned sizeTypeSize =
-      astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  const unsigned sizeTypeSize = target.getTypeWidth(target.getSizeType());
+  SizeSizeInBytes = sizeTypeSize / charSize;
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   uIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -137,6 +137,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  // TODO(CIR): These attributes should eventually be replaced by
+  // TypeSizeInfoAttr once it is upstreamed.
+  theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(sizeTypeSize));
+  theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
+                     builder.getI32IntegerAttr(target.getIntWidth()));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -3888,6 +3894,23 @@ void CIRGenModule::release() {
     getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
+
+  // Precompute the mangled C++20 named-module initializer function name and
+  // stash it on the ModuleOp so LoweringPrepare (which may run without a live
+  // ASTContext in split-compilation flows) can read it back as an attribute.
+  if (langOpts.CPlusPlusModules &&
+      getCXXABI().getMangleContext().getKind() ==
+          clang::ItaniumMangleContext::MK_Itanium) {
+    if (clang::Module *primary = astContext.getCurrentNamedModule();
+        primary && !primary->isModuleImplementation()) {
+      llvm::SmallString<256> fnName;
+      llvm::raw_svector_ostream out(fnName);
+      cast<clang::ItaniumMangleContext>(getCXXABI().getMangleContext())
+          .mangleModuleInitializer(primary, out);
+      theModule->setAttr(cir::CIRDialect::getCXXModuleInitFnNameAttrName(),
+                         builder.getStringAttr(fnName));
+    }
+  }
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.
