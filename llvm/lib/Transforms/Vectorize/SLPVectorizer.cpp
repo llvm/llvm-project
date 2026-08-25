@@ -13648,13 +13648,11 @@ bool BoUpSLP::areAllUsersVectorized(
          });
 }
 
-static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
-                                       const InstructionsState &S,
-                                       DominatorTree &DT, const DataLayout &DL,
-                                       TargetTransformInfo &TTI,
-                                       const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind,
-                                       unsigned FMulOpIdx = 0);
+static InstructionCost
+canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
+                DominatorTree &DT, const DataLayout &DL,
+                TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+                const TTI::TargetCostKind CostKind, unsigned FMulOpIdx = 0);
 
 /// \returns the operand of \p I that is a one-use fmul, 0 if there is none.
 static unsigned getFMulOperandIdx(const Instruction *I) {
@@ -14463,13 +14461,11 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
 
 /// Check if we can convert fadd/fsub sequence to FMAD.
 /// \returns Cost of the FMAD, if conversion is possible, invalid cost otherwise.
-static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
-                                       const InstructionsState &S,
-                                       DominatorTree &DT, const DataLayout &DL,
-                                       TargetTransformInfo &TTI,
-                                       const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind,
-                                       unsigned FMulOpIdx) {
+static InstructionCost
+canConvertToFMA(ArrayRef<Value *> VL, const InstructionsState &S,
+                DominatorTree &DT, const DataLayout &DL,
+                TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+                const TTI::TargetCostKind CostKind, unsigned FMulOpIdx) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
