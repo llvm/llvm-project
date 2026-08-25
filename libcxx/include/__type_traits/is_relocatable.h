@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_RELOCATABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_RELOCATABLE_H
+#ifndef _LIBCPP___TYPE_TRAITS_IS_RELOCATABLE_H
+#define _LIBCPP___TYPE_TRAITS_IS_RELOCATABLE_H
 
 #include <__config>
 #include <__type_traits/enable_if.h>
@@ -45,4 +45,4 @@ inline const bool
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_TRIVIALLY_RELOCATABLE_H
+#endif // _LIBCPP___TYPE_TRAITS_IS_RELOCATABLE_H
