@@ -2693,10 +2693,28 @@ class AtomicSDNodeXForm<SDNode atomic> {
   SDNodeXForm GetAddSp = SDNodeXForm<atomic, [{
     return getI32Imm(getAddrSpace(cast<MemSDNode>(N)), SDLoc(N));
   }]>;
-}
 
-def atomic_addr : ComplexPattern<pAny, 4, "SelectAtomicADDR"> {
-  let WantsRoot = true;
+  SDNodeXForm GetEvictionAndPrefetchHint = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/true)
+        .EvictionAndPrefetchHint;
+  }]>;
+
+  SDNodeXForm GetCachePolicy = SDNodeXForm<atomic, [{
+    auto *MN = cast<MemSDNode>(N);
+    unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
+    NVPTXMemCacheHintAccess Access{
+        NVPTXMemCacheHintInstruction::Atom, getAddrSpace(MN),
+        /*NumElts=*/1, EltWidth, MN->isVolatile()};
+    return getMemCacheHintOperands(MN, Access, SDLoc(N),
+                                   /*EmitDiagnostics=*/false)
+        .CachePolicyReg;
+  }]>;
 }
 
 multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
@@ -2725,25 +2743,18 @@ multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
 
   defvar XForm = AtomicSDNodeXForm<atomic>;
 
-  def : Pat<(op:$this
-             (atomic_addr ADDR:$addr,
-                          EvictionAndPrefetchHint:$evictionAndPrefetchHint,
-                          CachePolicy:$policy),
-             t.Ty:$b),
+  def : Pat<(op:$this addr:$addr, t.Ty:$b),
   (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this),
     (XForm.GetScope $this), (XForm.GetAddSp $this),
-    EvictionAndPrefetchHint:$evictionAndPrefetchHint, CachePolicy:$policy)>;
+    (XForm.GetEvictionAndPrefetchHint $this),
+    (XForm.GetCachePolicy $this))>;
 
   if t.SupportsImm then
-    def : Pat<(op:$this
-               (atomic_addr ADDR:$addr,
-                            EvictionAndPrefetchHint:$evictionAndPrefetchHint,
-                            CachePolicy:$policy),
-               (t.Ty t.ImmNode:$b)),
+    def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b)),
       (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b),
         (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this),
-        EvictionAndPrefetchHint:$evictionAndPrefetchHint,
-        CachePolicy:$policy)>;
+        (XForm.GetEvictionAndPrefetchHint $this),
+        (XForm.GetCachePolicy $this))>;
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {

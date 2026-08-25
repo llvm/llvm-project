@@ -148,9 +148,6 @@ private:
   NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectAtomicADDR(SDNode *Root, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, SDValue &EvictionAndPrefetchHint,
-                        SDValue &CachePolicyReg);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
@@ -161,7 +158,7 @@ private:
   // value. Otherwise returns NOREG for the policy operand.
   NVPTXMemCacheHintOperands
   getMemCacheHintOperands(const MemSDNode *N, NVPTXMemCacheHintAccess Access,
-                          const SDLoc &DL);
+                          const SDLoc &DL, bool EmitDiagnostics = true);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
@@ -1190,16 +1187,19 @@ template <typename T>
 static std::optional<T>
 parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
                              const Metadata *Value,
-                             std::optional<T> (*Parse)(StringRef)) {
+                             std::optional<T> (*Parse)(StringRef),
+                             bool EmitDiagnostics) {
   const auto *Val = dyn_cast<MDString>(Value);
   if (!Val) {
-    emitInvalidMemCacheHint(Ctx, Twine("'") + Key + "' expects a string value");
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx,
+                              Twine("'") + Key + "' expects a string value");
     return std::nullopt;
   }
 
   StringRef ValStr = Val->getString();
   auto Parsed = Parse(ValStr);
-  if (!Parsed)
+  if (!Parsed && EmitDiagnostics)
     emitInvalidMemCacheHint(Ctx, Twine("unknown value '") + ValStr + "' for '" +
                                      Key + "'");
   return Parsed;
@@ -1263,14 +1263,16 @@ static bool isCachePolicySupported(const NVPTXSubtarget &Subtarget,
 }
 
 NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
-    const MemSDNode *N, NVPTXMemCacheHintAccess Access, const SDLoc &DL) {
+    const MemSDNode *N, NVPTXMemCacheHintAccess Access, const SDLoc &DL,
+    bool EmitDiagnostics) {
   LLVMContext &Ctx = *CurDAG->getContext();
   const MDNode *Node = N->getMemCacheHint();
   SDValue PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
   if (!Node)
     return {getI32Imm(0, DL), PolicyReg};
   if (Node->getNumOperands() == 0) {
-    emitInvalidMemCacheHint(Ctx, "empty hint node");
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx, "empty hint node");
     return {getI32Imm(0, DL), PolicyReg};
   }
 
@@ -1285,24 +1287,24 @@ NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
     const Metadata *Value = Node->getOperand(I + 1).get();
 
     if (KeyStr == "nvvm.l1_eviction") {
-      auto ParsedL1 =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL1Eviction);
+      auto ParsedL1 = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL1Eviction, EmitDiagnostics);
       if (ParsedL1 && isL1EvictionSupported(*Subtarget, *ParsedL1, Access))
         L1 = *ParsedL1;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_eviction") {
-      auto ParsedL2 =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Eviction);
+      auto ParsedL2 = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL2Eviction, EmitDiagnostics);
       if (ParsedL2 && isL2EvictionSupported(*Subtarget, *ParsedL2, Access))
         L2 = *ParsedL2;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_prefetch_size") {
-      auto ParsedPrefetch =
-          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Prefetch);
+      auto ParsedPrefetch = parseMemCacheHintStringValue(
+          Ctx, KeyStr, Value, parseL2Prefetch, EmitDiagnostics);
       if (ParsedPrefetch &&
           isL2PrefetchSupported(*Subtarget, *ParsedPrefetch, Access))
         Prefetch = *ParsedPrefetch;
@@ -1311,15 +1313,18 @@ NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
 
     if (KeyStr == "nvvm.l2_cache_hint") {
       const auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value);
-      if (!ValCI)
-        emitInvalidMemCacheHint(
-            Ctx, "'nvvm.l2_cache_hint' expects an integer value");
-      else if (isCachePolicySupported(*Subtarget, Access))
+      if (!ValCI) {
+        if (EmitDiagnostics)
+          emitInvalidMemCacheHint(
+              Ctx, "'nvvm.l2_cache_hint' expects an integer value");
+      } else if (isCachePolicySupported(*Subtarget, Access)) {
         CachePolicy = ValCI->getZExtValue();
+      }
       continue;
     }
 
-    emitInvalidMemCacheHint(Ctx, Twine("unknown key '") + KeyStr + "'");
+    if (EmitDiagnostics)
+      emitInvalidMemCacheHint(Ctx, Twine("unknown key '") + KeyStr + "'");
   }
 
   unsigned EvictionAndPrefetchHint =
@@ -1332,25 +1337,6 @@ NVPTXMemCacheHintOperands NVPTXDAGToDAGISel::getMemCacheHintOperands(
   }
 
   return {getI32Imm(EvictionAndPrefetchHint, DL), PolicyReg};
-}
-
-bool NVPTXDAGToDAGISel::SelectAtomicADDR(SDNode *Root, SDValue Addr,
-                                         SDValue &Base, SDValue &Offset,
-                                         SDValue &EvictionAndPrefetchHint,
-                                         SDValue &CachePolicyReg) {
-  if (!SelectADDR(Addr, Base, Offset))
-    return false;
-
-  auto *MN = cast<MemSDNode>(Root);
-  unsigned EltWidth = MN->getMemoryVT().getFixedSizeInBits();
-  NVPTXMemCacheHintAccess Access{NVPTXMemCacheHintInstruction::Atom,
-                                 getAddrSpace(MN),
-                                 /*NumElts=*/1, EltWidth, MN->isVolatile()};
-  NVPTXMemCacheHintOperands CacheHintOperands =
-      getMemCacheHintOperands(MN, Access, SDLoc(Root));
-  EvictionAndPrefetchHint = CacheHintOperands.EvictionAndPrefetchHint;
-  CachePolicyReg = CacheHintOperands.CachePolicyReg;
-  return true;
 }
 
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
