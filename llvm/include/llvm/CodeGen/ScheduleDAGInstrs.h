@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_SCHEDULEDAGINSTRS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -104,15 +104,7 @@ namespace llvm {
 
   using ValueType = PointerUnion<const Value *, const PseudoSourceValue *>;
 
-  struct UnderlyingObject : PointerIntPair<ValueType, 1, bool> {
-    UnderlyingObject(ValueType V, bool MayAlias)
-        : PointerIntPair<ValueType, 1, bool>(V, MayAlias) {}
-
-    ValueType getValue() const { return getPointer(); }
-    bool mayAlias() const { return getInt(); }
-  };
-
-  using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
+  using UnderlyingObjectsVector = SmallVector<ValueType, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
@@ -158,8 +150,6 @@ namespace llvm {
     /// After calling BuildSchedGraph, each machine instruction in the current
     /// scheduling region is mapped to an SUnit.
     DenseMap<MachineInstr*, SUnit*> MISUnitMap;
-
-    unsigned MemOpsProcessed = 0;
 
     // State internal to DAG building.
     // -------------------------------
@@ -221,8 +211,8 @@ namespace llvm {
 
     /// Adds a chain edge between SUa and SUb, but only if both
     /// AAResults and Target fail to deny the dependency.
-    void addChainDependency(SUnit *SUa, SUnit *SUb,
-                            unsigned Latency = 0);
+    /// Returns true if an edge was inserted and false otherwise.
+    bool addChainDependency(SUnit *SUa, SUnit *SUb, unsigned Latency = 0);
 
     /// Adds dependencies as needed from all SUs in list to SU.
     void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {

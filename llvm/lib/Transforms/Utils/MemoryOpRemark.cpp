@@ -354,7 +354,8 @@ void MemoryOpRemark::visitVariable(const Value *V,
 void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimization &R) {
   // Find if Ptr is a known variable we can give more information on.
   SmallVector<Value *, 2> Objects;
-  getUnderlyingObjectsForCodeGen(Ptr, Objects);
+  if (!getUnderlyingObjectsForCodeGen(Ptr, Objects))
+    Objects.clear();
   SmallVector<VariableInfo, 2> VIs;
   for (const Value *V : Objects)
     visitVariable(V, VIs);
