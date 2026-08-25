@@ -93,7 +93,6 @@ linux_defines = posix_so_defines + fenv_defines + [
 
 macos_defines = posix_defines + fenv_defines + [
     "HAVE_CRASHREPORTER_INFO=1",
-    "HAVE_DECL_ARC4RANDOM=1",
     "HAVE_MACH_MACH_H=1",
     "HAVE_MALLOC_MALLOC_H=1",
     "HAVE_MALLOC_ZONE_STATISTICS=1",
