@@ -153,7 +153,7 @@ void computeEdgeWeights(BinaryBasicBlock *BB, EdgeWeightMap &EdgeWeights) {
                                           E = GraphT::child_end(BB);
        CI != E; ++CI) {
     typename GraphT::NodeRef Child = *CI;
-    double Weight = 1 / (GraphT::child_end(BB) - GraphT::child_begin(BB));
+    double Weight = 1.0 / (GraphT::child_end(BB) - GraphT::child_begin(BB));
     if (TotalChildrenCount != 0.0)
       Weight = ChildrenExecCount[ChildIndex] / TotalChildrenCount;
     updateEdgeWeight<NodeT>(EdgeWeights, BB, Child, Weight);
