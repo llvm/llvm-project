@@ -26,8 +26,11 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static TimerGroup OffloadBundlerTimerGroup("Offload Bundler Timer Group",
-                                           "Timer group for offload bundler");
+static TimerGroup &offloadBundlerTimerGroup() {
+  static TimerGroup Group("Offload Bundler Timer Group",
+                          "Timer group for offload bundler");
+  return Group;
+}
 
 // Returns the on-disk size recorded in the compressed offload bundle header at
 // the start of \p Blob, or std::nullopt if the header carries no size field.
@@ -344,7 +347,7 @@ CompressedOffloadBundle::compress(compression::Params P,
   if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
     return createStringError("compression not supported.");
   Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
-                  OffloadBundlerTimerGroup);
+                  offloadBundlerTimerGroup());
   if (VerboseStream)
     HashTimer.startTimer();
   MD5 Hash;
@@ -360,7 +363,7 @@ CompressedOffloadBundle::compress(compression::Params P,
       reinterpret_cast<const uint8_t *>(Input.getBuffer().data()),
       Input.getBuffer().size());
   Timer CompressTimer("Compression Timer", "Compression time",
-                      OffloadBundlerTimerGroup);
+                      offloadBundlerTimerGroup());
   if (VerboseStream)
     CompressTimer.startTimer();
   compression::compress(P, BufferUint8, CompressedBuffer);
@@ -576,7 +579,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
   auto StoredHash = Normalized.Hash;
 
   Timer DecompressTimer("Decompression Timer", "Decompression time",
-                        OffloadBundlerTimerGroup);
+                        offloadBundlerTimerGroup());
   if (VerboseStream)
     DecompressTimer.startTimer();
 
@@ -598,7 +601,7 @@ CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
 
     // Recalculate MD5 hash for integrity check.
     Timer HashRecalcTimer("Hash Recalculation Timer", "Hash recalculation time",
-                          OffloadBundlerTimerGroup);
+                          offloadBundlerTimerGroup());
     HashRecalcTimer.startTimer();
     MD5 Hash;
     MD5::MD5Result Result;

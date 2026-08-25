@@ -33,7 +33,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -455,16 +454,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
                                                   *C, *FailingCommand))
     Res = 1;
 
-  if (!UseNewCC1Process && IsCrash) {
-    // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
-    // the internal linked list might point to already released stack frames.
-    llvm::BuryPointer(llvm::TimerGroup::acquireTimerGlobals());
-  } else {
-    // If any timers were active but haven't been destroyed yet, print their
-    // results now.  This happens in -disable-free mode.
-    llvm::TimerGroup::printAll(llvm::errs());
-    llvm::TimerGroup::clearAll();
-  }
+  // If any timers were active but haven't been destroyed yet, print their
+  // results now.  This happens in -disable-free mode.
+  llvm::TimerGroup::printAll(llvm::errs());
+  llvm::TimerGroup::clearAll();
 
 #ifdef _WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.

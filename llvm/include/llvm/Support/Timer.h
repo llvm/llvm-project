@@ -260,9 +260,19 @@ public:
   /// global constructors and destructors.
   LLVM_ABI static void constructForStatistics();
 
-  /// This makes the timer globals unmanaged, and lets the user manage the
-  /// lifetime.
-  LLVM_ABI static void *acquireTimerGlobals();
+  /// When a crash occurs CrashRecoveryContext needs to ensure that the process
+  /// can recover from two failure modes:
+  /// 1. A crash occuring under RunSafelyOnNewStack or similar APIs. This can
+  ///    lead to a lock being held by a now terminated thread; and
+  /// 2. A crash occuring while a stack allocated timer or timergroup was live.
+  /// The first case leads to an eventual deadlock due to the global timer lock
+  /// being held, the latter leads to corruption of the timergroup list due to
+  /// the presence of dangling references.
+  /// To fix this CrashRecoveryContext calls recoverFromCrash. This resets the
+  /// global lock as the only possible holder would be a now dead thread or
+  /// stackframe, and uses \p StackBoundary to determine which locks are now
+  /// dead and should be evicted.
+  LLVM_ABI static void recoverFromCrash(uintptr_t StackBoundary);
 
 private:
   friend class Timer;

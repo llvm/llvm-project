@@ -23,9 +23,11 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ProgramStack.h"
 #include "llvm/Support/Signposts.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
+#include <new>
 #include <optional>
 
 #if HAVE_UNISTD_H
@@ -328,6 +330,74 @@ TimerGroup::~TimerGroup() {
   unlink();
 }
 
+// ***REVIEWER***: I really don't know if this is warranted? I'm unaware of any
+// major environment where the stack grows up these days, but there's a
+// difference between me being unaware of such, and it not actually existing or
+// being a supported host platform.
+__attribute__((noinline)) static void
+stackGrowsDownResult(uintptr_t BaseStackPtr, bool *Result) {
+  *Result = llvm::getStackPointer() < BaseStackPtr;
+}
+__attribute__((noinline)) static bool
+stackGrowsDownInner(uintptr_t BaseStackPtr) {
+  // We use this to force a non-zero-sized stack frame, and we force it to live
+  // by using it to return the growth direction;
+  bool StackGrowsDown = false;
+  stackGrowsDownResult(BaseStackPtr, &StackGrowsDown);
+  return StackGrowsDown;
+}
+static bool stackGrowsDown() {
+  static bool GrowsDown = stackGrowsDownInner(llvm::getStackPointer());
+  return GrowsDown;
+}
+
+void TimerGroup::recoverFromCrash(uintptr_t StackBoundary) {
+  if (!isTimerGlobalsConstructed())
+    return;
+
+  // Reset the global timer group lock. We cannot call the destructor as it may
+  // currently be held by a dead thread, so we simply reinitialize in place.
+  sys::SmartMutex<true> &Lock = timerLock();
+  new (&Lock) sys::SmartMutex<true>();
+
+  sys::SmartScopedLock<true> L(Lock);
+
+  // Drop any dead stack allocated timer groups. We have to be careful
+  // to avoid ever trying to use or dereference any of these pointers until
+  // we have verified that they are still in a live part of the stack.
+  // We have to compare to StackBoundary rather than local stack position
+  // as our own stack frame may be one of the frames responsible for overwriting
+  // the dangling TimerGroups we're evicting.
+  auto IsTimerGroupInDeadFrame = [&](const void *Candidate) {
+    if (stackGrowsDown())
+      return (uintptr_t)Candidate < StackBoundary;
+    return (uintptr_t)Candidate > StackBoundary;
+  };
+
+  TimerGroup **PrevGroupSlot = &TimerGroupList;
+  TimerGroup *TG = TimerGroupList;
+  while (TG) {
+    if (IsTimerGroupInDeadFrame(TG)) {
+      *PrevGroupSlot = nullptr;
+      break;
+    }
+
+    Timer **PrevTimerSlot = &TG->FirstTimer;
+    Timer *T = TG->FirstTimer;
+    while (T) {
+      if (IsTimerGroupInDeadFrame(T)) {
+        *PrevTimerSlot = nullptr;
+        break;
+      }
+      PrevTimerSlot = &T->Next;
+      T = T->Next;
+    }
+
+    PrevGroupSlot = &TG->Next;
+    TG = TG->Next;
+  }
+}
+
 void TimerGroup::removeTimer(Timer &T) {
   sys::SmartScopedLock<true> L(timerLock());
 
@@ -570,8 +640,6 @@ void llvm::initTimerOptions() { *ManagedTimerGlobals; }
 void TimerGroup::constructForStatistics() {
   ManagedTimerGlobals->initDeferred();
 }
-
-void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
 
 static bool isTimerGlobalsConstructed() {
   return ManagedTimerGlobals.isConstructed();

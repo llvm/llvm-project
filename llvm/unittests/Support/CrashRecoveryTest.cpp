@@ -14,6 +14,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -45,6 +46,31 @@ TEST(CrashRecoveryTest, Basic) {
   EXPECT_EQ(1, GlobalInt);
   EXPECT_FALSE(CrashRecoveryContext().RunSafely(nullDeref));
   EXPECT_FALSE(CrashRecoveryContext().RunSafely(llvmTrap));
+}
+
+// Mirrors clang's `#pragma clang __debug crash`, which keeps a Timer live on
+// the stack across a deliberate crash (clang/lib/Lex/Pragma.cpp). Recovery
+// runs no destructors, so without TimerGroup::recoverFromCrash() this leaves
+// a dangling entry in the shared, default TimerGroup's list.
+static void crashWithLiveTimer() {
+  llvm::Timer T("crash-recovery-test", "timer live during crash");
+  llvm::TimeRegion R(&T);
+  llvmTrap();
+}
+
+TEST(CrashRecoveryTest, TimerReuseAfterCrash) {
+  llvm::CrashRecoveryContext::Enable();
+  EXPECT_FALSE(CrashRecoveryContext().RunSafely(crashWithLiveTimer));
+
+  // An unrelated, later Timer on the same (default) group must construct and
+  // destroy without hanging.
+  {
+    llvm::Timer T("crash-recovery-test-2", "unrelated later timer");
+    T.startTimer();
+    T.stopTimer();
+  }
+
+  llvm::CrashRecoveryContext::Disable();
 }
 
 struct IncrementGlobalCleanup : CrashRecoveryContextCleanup {
