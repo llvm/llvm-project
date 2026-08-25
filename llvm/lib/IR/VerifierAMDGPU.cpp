@@ -26,6 +26,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 using namespace llvm;
 
@@ -422,6 +423,48 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     break;
   }
   }
+}
+
+// The documented carriers of the "amdgpu.atomicity" bundle, i.e. the buffer
+// memory intrinsics whose selected instruction is the same whether or not the
+// access is atomic.
+static bool acceptsAtomicityBundle(Intrinsic::ID ID) {
+  StringRef Name = Intrinsic::getBaseName(ID);
+  if (!Name.consume_front("llvm.amdgcn."))
+    return false;
+  if (!Name.consume_front("raw.") && !Name.consume_front("struct."))
+    return false;
+  if (!Name.consume_front("ptr."))
+    return false;
+  if (Name.consume_front("buffer.atomic."))
+    return !Name.empty();
+  return Name == "buffer.load" || Name == "buffer.store" ||
+         Name == "buffer.load.format" || Name == "buffer.store.format" ||
+         Name == "atomic.buffer.load";
+}
+
+void llvm::verifyAMDGPUAtomicityBundle(VerifierSupport &VS,
+                                       const CallBase &Call,
+                                       const OperandBundleUse &BU) {
+  const Function *Callee = Call.getCalledFunction();
+  Check(Callee && acceptsAtomicityBundle(Callee->getIntrinsicID()),
+        "\"amdgpu.atomicity\" operand bundle is only valid on AMDGPU buffer "
+        "memory intrinsics",
+        &Call);
+  Check(BU.Inputs.size() == 2,
+        "Expected exactly two \"amdgpu.atomicity\" bundle operands", &Call);
+  auto GetMDString = [](const Value *V) -> const MDString * {
+    const auto *MAV = dyn_cast<MetadataAsValue>(V);
+    return MAV ? dyn_cast<MDString>(MAV->getMetadata()) : nullptr;
+  };
+  const MDString *Ordering = GetMDString(BU.Inputs[0]);
+  Check(Ordering && parseAtomicOrdering(Ordering->getString()),
+        "\"amdgpu.atomicity\" ordering operand must be a metadata string "
+        "naming an atomic ordering",
+        &Call);
+  Check(GetMDString(BU.Inputs[1]),
+        "\"amdgpu.atomicity\" syncscope operand must be a metadata string",
+        &Call);
 }
 
 #undef Check

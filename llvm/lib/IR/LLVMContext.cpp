@@ -59,6 +59,8 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "convergencectrl";
   case LLVMContext::OB_deactivation_symbol:
     return "deactivation-symbol";
+  case LLVMContext::OB_amdgpu_atomicity:
+    return "amdgpu.atomicity";
   default:
     llvm_unreachable("unknown bundle id");
   }

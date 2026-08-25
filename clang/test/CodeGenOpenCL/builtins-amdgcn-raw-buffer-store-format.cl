@@ -9,7 +9,7 @@ typedef half v4f16 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: @test_raw_buffer_store_format_v4f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0, metadata [[META8:![0-9]+]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_raw_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc) {
@@ -18,7 +18,7 @@ void test_raw_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc
 
 // CHECK-LABEL: @test_raw_buffer_store_format_v4f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_raw_buffer_store_format_v4f16(v4f16 vdata, __amdgpu_buffer_rsrc_t rsrc) {
@@ -27,7 +27,7 @@ void test_raw_buffer_store_format_v4f16(v4f16 vdata, __amdgpu_buffer_rsrc_t rsrc
 
 // CHECK-LABEL: @test_raw_buffer_store_format_v4f32_non_const_offset(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_raw_buffer_store_format_v4f32_non_const_offset(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset) {
@@ -36,7 +36,7 @@ void test_raw_buffer_store_format_v4f32_non_const_offset(v4f32 vdata, __amdgpu_b
 
 // CHECK-LABEL: @test_raw_buffer_store_format_v4f32_non_const_soffset(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 0, i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_raw_buffer_store_format_v4f32_non_const_soffset(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc, int soffset) {

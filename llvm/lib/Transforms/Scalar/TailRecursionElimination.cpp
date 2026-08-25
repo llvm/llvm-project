@@ -303,13 +303,14 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         if (II->getIntrinsicID() == Intrinsic::stackrestore)
           continue;
 
-      // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
-      // "kcfi".
+      // Special-case operand bundles "clang.arc.attachedcall", "ptrauth",
+      // "kcfi", and "amdgpu.atomicity".
       bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
-      bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
-                      CI->hasOperandBundlesOtherThan(
-                          {LLVMContext::OB_clang_arc_attachedcall,
-                           LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+      bool IsNoTail =
+          CI->isNoTailCall() || DisableForCold ||
+          CI->hasOperandBundlesOtherThan(
+              {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth,
+               LLVMContext::OB_kcfi, LLVMContext::OB_amdgpu_atomicity});
       if (!CI->isNoTailCall() && DisableForCold)
         ++NumTREPreventedCold;
 

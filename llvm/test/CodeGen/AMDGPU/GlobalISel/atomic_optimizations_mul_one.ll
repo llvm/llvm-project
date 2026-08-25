@@ -10,7 +10,7 @@ declare void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32>, <4 x i32>,
 declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32, ptr addrspace(8), i32, i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32, ptr addrspace (8), i32, i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32, ptr addrspace(8), i32, i32, i32, i32 immarg)
-declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg, metadata)
+declare void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32>, ptr addrspace(8), i32, i32, i32, i32 immarg)
 
 
 define amdgpu_cs void @atomic_add(<4 x i32> inreg %arg)  {
@@ -322,7 +322,7 @@ define amdgpu_cs void @atomic_ptr_add(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
-; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
 ; IR-NEXT:    ret void
@@ -362,7 +362,7 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
-; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
 ; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
@@ -370,7 +370,7 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    [[ARG_INT:%.*]] = ptrtoint ptr addrspace(8) [[ARG]] to i128
 ; IR-NEXT:    [[ARG_VEC:%.*]] = bitcast i128 [[ARG_INT]] to <4 x i32>
-; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]])
+; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_ptr_add_and_format:
@@ -403,7 +403,7 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
   %a = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.add.i32(i32 1, ptr addrspace(8) %arg, i32 0, i32 0, i32 0, i32 0)
   %arg.int = ptrtoint ptr addrspace(8) %arg to i128
   %arg.vec = bitcast i128 %arg.int to <4 x i32>
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0, metadata !0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -422,7 +422,7 @@ define amdgpu_cs void @atomic_ptr_sub(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[BB9:.*]], label %[[BB11:.*]]
 ; IR:       [[BB9]]:
-; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
 ; IR-NEXT:    ret void
@@ -462,7 +462,7 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP8]], label %[[TMP9:.*]], label %[[BB11:.*]]
 ; IR:       [[TMP9]]:
-; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 [[TMP7]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB11]]
 ; IR:       [[BB11]]:
 ; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], %[[TMP9]] ]
@@ -470,7 +470,7 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    [[ARG_INT:%.*]] = ptrtoint ptr addrspace(8) [[ARG]] to i128
 ; IR-NEXT:    [[ARG_VEC:%.*]] = bitcast i128 [[ARG_INT]] to <4 x i32>
-; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]])
+; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_ptr_sub_and_format:
@@ -503,7 +503,7 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
   %a = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.i32(i32 1, ptr addrspace(8) %arg, i32 0, i32 0, i32 0, i32 0)
   %arg.int = ptrtoint ptr addrspace(8) %arg to i128
   %arg.vec = bitcast i128 %arg.int to <4 x i32>
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0, metadata !0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -523,7 +523,7 @@ define amdgpu_cs void @atomic_ptr_xor(ptr addrspace(8) inreg %arg)  {
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[BB10:.*]], label %[[BB12:.*]]
 ; IR:       [[BB10]]:
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 [[TMP8]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 [[TMP8]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB12]]
 ; IR:       [[BB12]]:
 ; IR-NEXT:    ret void
@@ -565,7 +565,7 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label %[[TMP10:.*]], label %[[BB12:.*]]
 ; IR:       [[TMP10]]:
-; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 [[TMP8]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0, metadata !0)
+; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 [[TMP8]], ptr addrspace(8) [[ARG]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label %[[BB12]]
 ; IR:       [[BB12]]:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP11]], %[[TMP10]] ]
@@ -574,7 +574,7 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ; IR-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP14]], [[TMP15]]
 ; IR-NEXT:    [[ARG_INT:%.*]] = ptrtoint ptr addrspace(8) [[ARG]] to i128
 ; IR-NEXT:    [[ARG_VEC:%.*]] = bitcast i128 [[ARG_INT]] to <4 x i32>
-; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP16]], i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]])
+; IR-NEXT:    call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> [[ARG_VEC]], ptr addrspace(8) [[ARG]], i32 [[TMP16]], i32 0, i32 0, i32 0)
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: atomic_ptr_xor_and_format:
@@ -609,8 +609,6 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
   %a = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.xor.i32(i32 1, ptr addrspace(8) %arg, i32 0, i32 0, i32 0, i32 0)
   %arg.int = ptrtoint ptr addrspace(8) %arg to i128
   %arg.vec = bitcast i128 %arg.int to <4 x i32>
-  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0, metadata !0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4i32(<4 x i32> %arg.vec, ptr addrspace(8) %arg, i32 %a, i32 0, i32 0, i32 0)
   ret void
 }
-
-!0 = !{}

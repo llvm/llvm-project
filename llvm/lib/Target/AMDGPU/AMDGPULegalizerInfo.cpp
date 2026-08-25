@@ -6705,17 +6705,11 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   unsigned ImmOffset;
 
-  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
-  // of the positional arguments counted below.
-  unsigned NumOperands = MI.getNumOperands();
-  if (MI.getOperand(NumOperands - 1).isMetadata())
-    --NumOperands;
-
   // The typed intrinsics add an immediate after the registers.
   const unsigned NumVIndexOps = IsTyped ? 8 : 7;
 
   // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = NumOperands == NumVIndexOps;
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
   Register VIndex;
   int OpOffset = 0;
   if (HasVIndex) {
@@ -6826,17 +6820,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   castBufferRsrcArgToV4I32(MI, B, 2 + OpOffset);
   Register RSrc = MI.getOperand(2 + OpOffset).getReg();
 
-  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
-  // of the positional arguments counted below.
-  unsigned NumOperands = MI.getNumOperands();
-  if (MI.getOperand(NumOperands - 1).isMetadata())
-    --NumOperands;
-
   // The typed intrinsics add an immediate after the registers.
   const unsigned NumVIndexOps = IsTyped ? 8 : 7;
 
   // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = NumOperands == NumVIndexOps + OpOffset;
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps + OpOffset;
   Register VIndex;
   if (HasVIndex) {
     VIndex = MI.getOperand(3 + OpOffset).getReg();
@@ -7108,14 +7096,8 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   Register RSrc = MI.getOperand(3 + OpOffset).getReg();
   const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
 
-  // The trailing atomicity metadata operand on _ptr_ intrinsics is not one
-  // of the positional arguments counted below.
-  unsigned NumOperands = MI.getNumOperands();
-  if (MI.getOperand(NumOperands - 1).isMetadata())
-    --NumOperands;
-
   // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = NumOperands == NumVIndexOps;
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
   Register VIndex;
   if (HasVIndex) {
     VIndex = MI.getOperand(4 + OpOffset).getReg();

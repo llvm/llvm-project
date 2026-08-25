@@ -1550,30 +1550,33 @@ loads.
 Buffer memory intrinsic atomicity
 ---------------------------------
 
-The buffer memory intrinsics (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}``,
+A call to a buffer memory intrinsic (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}``,
 ``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}.format``,
-``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` and
-``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) each take a trailing metadata
-argument that records the atomicity of the access. It is either the empty node,
-``!{}``, meaning that the access is not atomic, or a two-element node
-``!{!"<ordering>", !"<syncscope>"}``, where ``<ordering>`` is the LLVM IR
-spelling of the memory ordering (``unordered``, ``monotonic``, ``acquire``,
-``release``, ``acq_rel`` or ``seq_cst``) and ``<syncscope>`` is a synchronization
-scope name from table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table` (the empty
-string denotes system scope).
+``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` or
+``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) may carry an
+``"amdgpu.atomicity"`` operand bundle recording the atomicity of the access:
 
-This argument is needed because a buffer instruction is the same instruction
+.. code-block:: llvm
+
+  call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %val, ptr addrspace(8) %rsrc,
+      i32 %off, i32 0, i32 0)
+      [ "amdgpu.atomicity"(metadata !"release", metadata !"agent") ]
+
+The first bundle operand is the LLVM IR spelling of the memory ordering
+(``unordered``, ``monotonic``, ``acquire``, ``release``, ``acq_rel`` or
+``seq_cst``). The second is a synchronization scope name from table
+:ref:`amdgpu-amdhsa-llvm-sync-scopes-table`, where the empty string denotes
+system scope. An access with no such bundle is not atomic.
+
+The bundle is needed because a buffer instruction is the same instruction
 whether or not the access it implements is atomic, so the atomicity cannot be
 recovered from the selected instruction. The information is transferred to the
 ``MachineMemOperand`` during instruction selection, where ``SIMemoryLegalizer``
 uses it to set the cache-bypass bits and to insert the cache invalidations and
 writebacks the memory model requires.
 
-``AMDGPULowerBufferFatPointers`` populates the argument from the ``atomicrmw``,
-``cmpxchg``, ``load`` or ``store`` instruction it lowers. A non-atomic access
-should pass ``!{}``.
-For compatibility, bitcode from before this argument existed is upgraded by
-appending ``!{}``.
+``AMDGPULowerBufferFatPointers`` populates the bundle from the ``atomicrmw``,
+``cmpxchg``, ``load`` or ``store`` instruction it lowers.
 
 Target Types
 ------------
@@ -2519,6 +2522,7 @@ whether to skip the DPP optimization.
 
   ; Many expected active lanes: the DPP optimization is not skipped.
   %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+
 
 LLVM IR Attributes
 ==================

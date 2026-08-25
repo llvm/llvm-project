@@ -1993,10 +1993,9 @@ def ROCDL_RawPtrBufferLoadOp :
   dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux,
-                  Arg<LLVM_MetadataType, "Atomicity of the access as !{ordering, syncscope}, or an empty metadata node if not atomic">:$atomicity);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $atomicity prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2080,10 +2079,9 @@ def ROCDL_RawPtrBufferStoreOp :
                   Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux,
-                  Arg<LLVM_MetadataType, "Atomicity of the access as !{ordering, syncscope}, or an empty metadata node if not atomic">:$atomicity);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $atomicity prop-dict attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2100,10 +2098,9 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux,
-                  Arg<LLVM_MetadataType, "Atomicity of the access as !{ordering, syncscope}, or an empty metadata node if not atomic">:$atomicity);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $atomicity prop-dict attr-dict `:` type($res)";
+  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2118,10 +2115,9 @@ class ROCDL_RawPtrBufferAtomicRet<string op> :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux,
-                  Arg<LLVM_MetadataType, "Atomicity of the access as !{ordering, syncscope}, or an empty metadata node if not atomic">:$atomicity);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) `,` $atomicity prop-dict attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};

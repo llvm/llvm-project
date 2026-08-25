@@ -45,7 +45,7 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:    [[BUF_PTR_4_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_4]] to i32, !dbg [[DBG32]]
 ; CHECK-NEXT:      #dbg_value(i32 [[BUF_PTR_4_PTR_OFF]], [[META19:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DBG32]])
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[BUF_PTR_4_PTR_RSRC]], [[META19]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG32]])
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF_PTR_4_PTR_RSRC]], i32 [[BUF_PTR_4_PTR_OFF]], i32 0, i32 0, metadata [[META8:![0-9]+]]), !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF_PTR_4_PTR_RSRC]], i32 [[BUF_PTR_4_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(float [[RET]], [[META20:![0-9]+]], !DIExpression(), [[DBG33]])
 ; CHECK-NEXT:    [[AUX_PTR_2:%.*]] = load i160, ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG34:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i160 [[AUX_PTR_2]], 32, !dbg [[DBG34]]
@@ -56,10 +56,10 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX_PTR_2_PTR_RSRC]], [[META21]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DBG34]])
 ; CHECK-NEXT:    [[BUF_PTR_4_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4]] to <5 x i32>, !dbg [[DBG35:![0-9]+]]
 ; CHECK-NEXT:    [[BUF_PTR_4_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG35]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0, metadata [[META8]]), !dbg [[DBG35]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG35]]
 ; CHECK-NEXT:    [[AUX_PTR_2_PTR_PART_4:%.*]] = add nuw i32 [[AUX_PTR_2_PTR_OFF]], 16, !dbg [[DBG35]]
 ; CHECK-NEXT:    [[BUF_PTR_4_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_LEGAL]], i64 4, !dbg [[DBG35]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0, metadata [[META8]]), !dbg [[DBG35]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG35]]
 ; CHECK-NEXT:    ret float [[RET]], !dbg [[DBG36:![0-9]+]]
 ;
   %buf.ptr.var = alloca ptr addrspace(7), align 32, addrspace(5), !dbg !20

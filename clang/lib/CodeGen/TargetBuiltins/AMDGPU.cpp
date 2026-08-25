@@ -32,25 +32,21 @@ using namespace llvm;
 
 namespace {
 
-// Non-atomic buffer builtins have no ordering/scope, so the trailing
-// atomicity metadata arg is always the empty node.
 static Value *emitAMDGPUBufferBuiltin(CodeGenFunction &CGF, const CallExpr *E,
                                       unsigned IntrinsicID,
                                       llvm::Type *OverloadTy = nullptr) {
   llvm::SmallVector<Value *, 7> Args;
   for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
     Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
-  Args.push_back(MetadataAsValue::get(CGF.getLLVMContext(),
-                                      MDNode::get(CGF.getLLVMContext(), {})));
   Function *F = CGF.CGM.getIntrinsic(
       IntrinsicID, OverloadTy ? OverloadTy : Args[0]->getType());
   return CGF.Builder.CreateCall(F, Args);
 }
 
-// Trailing order/scope args become the real `!{ordering, syncscope}` node.
 static Value *emitAMDGPUBufferAtomicBuiltin(CodeGenFunction &CGF,
                                             const CallExpr *E,
                                             unsigned IntrinsicID) {
+  assert(E->getNumArgs() > 2 && "buffer atomic builtin needs order and scope");
   unsigned NumArgs = E->getNumArgs() - 2;
   llvm::SmallVector<Value *, 7> Args;
   for (unsigned I = 0; I != NumArgs; ++I)
@@ -63,12 +59,14 @@ static Value *emitAMDGPUBufferAtomicBuiltin(CodeGenFunction &CGF,
                               SSID);
   llvm::LLVMContext &Ctx = CGF.getLLVMContext();
   StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
-  Metadata *Ops[] = {MDString::get(Ctx, toIRString(AO)),
-                     MDString::get(Ctx, Scope)};
-  Args.push_back(MetadataAsValue::get(Ctx, MDNode::get(Ctx, Ops)));
+  Value *Ops[] = {MetadataAsValue::get(Ctx, MDString::get(Ctx, toIRString(AO))),
+                  MetadataAsValue::get(Ctx, MDString::get(Ctx, Scope))};
+  llvm::OperandBundleDef Bundle("amdgpu.atomicity", Ops);
 
   Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
-  return CGF.Builder.CreateCall(F, Args);
+  CallInst *Call = CGF.Builder.CreateCall(F, Args, {Bundle});
+  CGF.AddAMDGPUAvailableVisibleMMRA(Call);
+  return Call;
 }
 
 static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,

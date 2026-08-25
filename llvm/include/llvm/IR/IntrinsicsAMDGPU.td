@@ -1576,14 +1576,13 @@ class AMDGPURawPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntri
   [AMDGPUBufferRsrcTy,    // rsrc(SGPR)
    llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,           // auxiliary/cachepolicy(imm):
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
                           //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
-   llvm_metadata_ty],     // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
   ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1595,11 +1594,10 @@ class AMDGPURawPtrAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [AMDGPUBufferRsrcTy,// rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
+   llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
                       //                                       bit 1 = slc,
                       //                                       bit 2 = dlc on gfx10+),
                       //                      swizzled buffer (bit 3 = swz))
-   llvm_metadata_ty], // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_ptr_atomic_buffer_load : AMDGPURawPtrAtomicBufferLoad;
@@ -1645,14 +1643,13 @@ class AMDGPUStructPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIn
    llvm_i32_ty,           // vindex(VGPR)
    llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,           // auxiliary/cachepolicy(imm):
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
                           //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
-   llvm_metadata_ty],     // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
    ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1665,14 +1662,13 @@ class AMDGPUStructPtrAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsi
    llvm_i32_ty,           // vindex(VGPR)
    llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,           // auxiliary/cachepolicy(imm):
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
                           //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
-   llvm_metadata_ty],     // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, NoCapture<ArgIndex<0>>,
    ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1702,14 +1698,13 @@ class AMDGPURawPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntr
    AMDGPUBufferRsrcTy,    // rsrc(SGPR)
    llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,           // auxiliary/cachepolicy(imm):
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
                           //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
-   llvm_metadata_ty],     // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
   ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1742,14 +1737,13 @@ class AMDGPUStructPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsI
    llvm_i32_ty,           // vindex(VGPR)
    llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,           // auxiliary/cachepolicy(imm):
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
                           //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
-   llvm_metadata_ty],     // atomicity: !{ordering, syncscope} or !{} if not atomic
   [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1798,8 +1792,7 @@ class AMDGPURawPtrBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
    AMDGPUBufferRsrcTy,          // rsrc(SGPR)
    llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                 // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
-   llvm_metadata_ty],           // atomicity: !{ordering, syncscope} or !{} if not atomic
+   llvm_i32_ty],                // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
   [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1, 0>;
@@ -1827,8 +1820,7 @@ def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
    AMDGPUBufferRsrcTy, // rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,       // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
-   llvm_metadata_ty], // atomicity: !{ordering, syncscope} or !{} if not atomic
+   llvm_i32_ty],      // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
   [IntrArgMemOnly, NoCapture<ArgIndex<2>>,
    ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<2, 0>;
@@ -1882,8 +1874,7 @@ class AMDGPUStructPtrBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
    llvm_i32_ty,                 // vindex(VGPR)
    llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                 // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
-   llvm_metadata_ty],           // atomicity: !{ordering, syncscope} or !{} if not atomic
+   llvm_i32_ty],                // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
   [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1, 0>;
@@ -1909,8 +1900,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,       // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
-   llvm_metadata_ty], // atomicity: !{ordering, syncscope} or !{} if not atomic
+   llvm_i32_ty],      // cachepolicy(imm; bit 1 = slc, ..., bit 31 = volatile)
   [IntrArgMemOnly, NoCapture<ArgIndex<2>>,
    ImmArg<ArgIndex<6>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<2, 0>;

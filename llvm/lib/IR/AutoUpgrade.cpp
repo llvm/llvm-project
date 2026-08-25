@@ -14,7 +14,6 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1519,60 +1518,6 @@ static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
   return true;
 }
 
-// The intrinsics carrying a trailing atomicity metadata argument. Excludes the
-// tbuffer and buffer-to-LDS intrinsics, which do not.
-static bool isAMDGCNBufferMemIntrinsic(Intrinsic::ID IID) {
-  static constexpr Intrinsic::ID BufferMemIntrinsics[] = {
-      Intrinsic::amdgcn_raw_ptr_buffer_load,
-      Intrinsic::amdgcn_raw_ptr_buffer_load_format,
-      Intrinsic::amdgcn_raw_ptr_atomic_buffer_load,
-      Intrinsic::amdgcn_struct_ptr_buffer_load,
-      Intrinsic::amdgcn_struct_ptr_buffer_load_format,
-      Intrinsic::amdgcn_struct_ptr_atomic_buffer_load,
-      Intrinsic::amdgcn_raw_ptr_buffer_store,
-      Intrinsic::amdgcn_raw_ptr_buffer_store_format,
-      Intrinsic::amdgcn_struct_ptr_buffer_store,
-      Intrinsic::amdgcn_struct_ptr_buffer_store_format,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_swap,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_add,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_umax,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_and,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_or,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_inc,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd,
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_add,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmin,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_and,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_or,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_inc,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd,
-      Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap,
-  };
-  return llvm::is_contained(BufferMemIntrinsics, IID);
-}
-
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                       bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
@@ -1634,16 +1579,6 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           return true;
         }
         break;
-      }
-
-      // Detect the old form by the missing operand rather than by argument
-      // count, since the count differs per intrinsic.
-      if (isAMDGCNBufferMemIntrinsic(F->getIntrinsicID()) &&
-          !F->getFunctionType()
-               ->getParamType(F->arg_size() - 1)
-               ->isMetadataTy()) {
-        NewFn = nullptr;
-        return true;
       }
 
       if (Name.consume_front("ds.") || Name.consume_front("global.atomic.") ||
@@ -5174,39 +5109,6 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     Type *T3 = CI->getArgOperand(3)->getType();
     Type *T4 = CI->getArgOperand(5)->getType();
     return UpgradeLegacyWMMAIUIntrinsicCall(F, CI, Builder, {T1, T2, T3, T4});
-  }
-
-  // Before the trailing atomicity operand existed these calls were treated as
-  // not atomic, which the empty MDNode denotes.
-  auto AddNotAtomicMDToBufferCall =
-      [](Function *F, CallBase *CI, IRBuilder<> &Builder,
-         ArrayRef<Type *> OverloadTys) -> Value * {
-    SmallVector<Value *, 8> Args(CI->args());
-    Args.push_back(MetadataAsValue::get(Builder.getContext(),
-                                        MDNode::get(Builder.getContext(), {})));
-
-    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), F->getIntrinsicID(), OverloadTys);
-
-    SmallVector<OperandBundleDef, 1> Bundles;
-    CI->getOperandBundlesAsDefs(Bundles);
-
-    auto *NewCall = cast<CallInst>(Builder.CreateCall(NewDecl, Args, Bundles));
-    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
-    NewCall->setCallingConv(CI->getCallingConv());
-    NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
-    NewCall->copyMetadata(*CI);
-    NewCall->takeName(CI);
-    return NewCall;
-  };
-
-  if (isAMDGCNBufferMemIntrinsic(F->getIntrinsicID())) {
-    // Stores are overloaded on their data arg, everything else on the return.
-    Type *OverloadTy = F->getReturnType()->isVoidTy()
-                           ? CI->getArgOperand(0)->getType()
-                           : F->getReturnType();
-    return AddNotAtomicMDToBufferCall(F, CI, Builder, {OverloadTy});
   }
 
   switch (F->getIntrinsicID()) {

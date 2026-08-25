@@ -648,7 +648,7 @@ define i32 @invariant_start_end(ptr addrspace(7) %p) {
 ; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
 ; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
 ; CHECK-NEXT:    [[INV:%.*]] = call ptr @llvm.invariant.start.p8(i64 256, ptr addrspace(8) [[P_RSRC]])
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 [[P_RSRC]], i32 [[P_OFF]], i32 0, i32 0, metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 [[P_RSRC]], i32 [[P_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    call void @llvm.invariant.end.p8(ptr [[INV]], i64 256, ptr addrspace(8) [[P_RSRC]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;

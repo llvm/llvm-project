@@ -107,10 +107,19 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
-  case AMDGPU::BI__builtin_amdgcn_fence: {
+  case AMDGPU::BI__builtin_amdgcn_fence:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64:
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64: {
     bool IsFence = BuiltinID == AMDGPU::BI__builtin_amdgcn_fence;
-    unsigned OrderIndex = IsFence ? 0 : 2;
-    unsigned ScopeIndex = IsFence ? 1 : 3;
+    assert(TheCall->getNumArgs() >= 2 && "builtin needs order and scope args");
+    // Fence takes order and scope first, everything else takes them last.
+    unsigned OrderIndex = IsFence ? 0 : TheCall->getNumArgs() - 2;
+    unsigned ScopeIndex = OrderIndex + 1;
     Expr *OrderExpr = TheCall->getArg(OrderIndex);
     Expr *ScopeExpr = TheCall->getArg(ScopeIndex);
 

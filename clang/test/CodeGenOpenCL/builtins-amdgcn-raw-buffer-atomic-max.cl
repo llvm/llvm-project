@@ -8,7 +8,7 @@
 // CHECK-LABEL: define dso_local float @test_atomic_fmax_f32(
 // CHECK-SAME: ptr addrspace(8) nofree captures(none) [[RSRC:%.*]], float noundef [[X:%.*]], i32 noundef [[OFFSET:%.*]], i32 noundef [[SOFFSET:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0, metadata [[META8:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_atomic_fmax_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int soffset) {
@@ -18,12 +18,9 @@ float test_atomic_fmax_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int
 // CHECK-LABEL: define dso_local double @test_atomic_fmax_f64(
 // CHECK-SAME: ptr addrspace(8) nofree captures(none) [[RSRC:%.*]], double noundef [[X:%.*]], i32 noundef [[OFFSET:%.*]], i32 noundef [[SOFFSET:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    ret double [[TMP0]]
 //
 double test_atomic_fmax_f64(__amdgpu_buffer_rsrc_t rsrc, double x, int offset, int soffset) {
   return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
-//.
-// CHECK: [[META8]] = !{!"seq_cst", !"agent"}
-//.

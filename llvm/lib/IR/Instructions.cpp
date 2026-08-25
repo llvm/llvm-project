@@ -635,7 +635,8 @@ bool CallBase::hasReadingOperandBundles() const {
   return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
                                      LLVMContext::OB_kcfi,
                                      LLVMContext::OB_convergencectrl,
-                                     LLVMContext::OB_deactivation_symbol}) &&
+                                     LLVMContext::OB_deactivation_symbol,
+                                     LLVMContext::OB_amdgpu_atomicity}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -644,7 +645,8 @@ bool CallBase::hasClobberingOperandBundles() const {
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
               LLVMContext::OB_convergencectrl,
-              LLVMContext::OB_deactivation_symbol}) &&
+              LLVMContext::OB_deactivation_symbol,
+              LLVMContext::OB_amdgpu_atomicity}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 

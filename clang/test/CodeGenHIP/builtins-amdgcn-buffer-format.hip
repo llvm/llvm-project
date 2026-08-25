@@ -9,7 +9,7 @@ typedef _Float16 v4f16 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: @_Z33test_raw_buffer_load_format_v4f32u22__amdgpu_buffer_rsrc_tii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 __device__ v4f32 test_raw_buffer_load_format_v4f32(__amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
@@ -18,7 +18,7 @@ __device__ v4f32 test_raw_buffer_load_format_v4f32(__amdgpu_buffer_rsrc_t rsrc, 
 
 // CHECK-LABEL: @_Z33test_raw_buffer_load_format_v4f16u22__amdgpu_buffer_rsrc_tii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v4f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret <4 x half> [[TMP0]]
 //
 __device__ v4f16 test_raw_buffer_load_format_v4f16(__amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
@@ -27,7 +27,7 @@ __device__ v4f16 test_raw_buffer_load_format_v4f16(__amdgpu_buffer_rsrc_t rsrc, 
 
 // CHECK-LABEL: @_Z34test_raw_buffer_store_format_v4f32Dv4_fu22__amdgpu_buffer_rsrc_tii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 __device__ void test_raw_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
@@ -36,7 +36,7 @@ __device__ void test_raw_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buffer_
 
 // CHECK-LABEL: @_Z34test_raw_buffer_store_format_v4f16Dv4_DF16_u22__amdgpu_buffer_rsrc_tii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.raw.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 __device__ void test_raw_buffer_store_format_v4f16(v4f16 vdata, __amdgpu_buffer_rsrc_t rsrc, int offset, int soffset) {
@@ -45,7 +45,7 @@ __device__ void test_raw_buffer_store_format_v4f16(v4f16 vdata, __amdgpu_buffer_
 
 // CHECK-LABEL: @_Z36test_struct_buffer_load_format_v4f32u22__amdgpu_buffer_rsrc_tiii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x float> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f32(ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 __device__ v4f32 test_struct_buffer_load_format_v4f32(__amdgpu_buffer_rsrc_t rsrc, int vindex, int offset, int soffset) {
@@ -54,7 +54,7 @@ __device__ v4f32 test_struct_buffer_load_format_v4f32(__amdgpu_buffer_rsrc_t rsr
 
 // CHECK-LABEL: @_Z36test_struct_buffer_load_format_v4f16u22__amdgpu_buffer_rsrc_tiii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <4 x half> @llvm.amdgcn.struct.ptr.buffer.load.format.v4f16(ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret <4 x half> [[TMP0]]
 //
 __device__ v4f16 test_struct_buffer_load_format_v4f16(__amdgpu_buffer_rsrc_t rsrc, int vindex, int offset, int soffset) {
@@ -63,7 +63,7 @@ __device__ v4f16 test_struct_buffer_load_format_v4f16(__amdgpu_buffer_rsrc_t rsr
 
 // CHECK-LABEL: @_Z37test_struct_buffer_store_format_v4f32Dv4_fu22__amdgpu_buffer_rsrc_tiii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f32(<4 x float> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 __device__ void test_struct_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buffer_rsrc_t rsrc, int vindex, int offset, int soffset) {
@@ -72,7 +72,7 @@ __device__ void test_struct_buffer_store_format_v4f32(v4f32 vdata, __amdgpu_buff
 
 // CHECK-LABEL: @_Z37test_struct_buffer_store_format_v4f16Dv4_DF16_u22__amdgpu_buffer_rsrc_tiii(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.struct.ptr.buffer.store.format.v4f16(<4 x half> [[VDATA:%.*]], ptr addrspace(8) [[RSRC:%.*]], i32 [[VINDEX:%.*]], i32 [[OFFSET:%.*]], i32 [[SOFFSET:%.*]], i32 0)
 // CHECK-NEXT:    ret void
 //
 __device__ void test_struct_buffer_store_format_v4f16(v4f16 vdata, __amdgpu_buffer_rsrc_t rsrc, int vindex, int offset, int soffset) {

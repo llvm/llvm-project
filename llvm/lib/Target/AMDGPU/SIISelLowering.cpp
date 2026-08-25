@@ -1428,33 +1428,36 @@ static AtomicOrdering parseAtomicOrderingCABIArg(const CallBase &CI,
   }
 }
 
-static unsigned parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
+static SyncScope::ID getSyncScopeID(const CallBase &CI, const Metadata *MD) {
+  return CI.getContext().getOrInsertSyncScopeID(
+      cast<MDString>(MD)->getString());
+}
+
+static SyncScope::ID parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   MDNode *ScopeMD = cast<MDNode>(
       cast<MetadataAsValue>(CI.getArgOperand(ArgIdx))->getMetadata());
-  StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
-  return CI.getContext().getOrInsertSyncScopeID(Scope);
+  return getSyncScopeID(CI, ScopeMD->getOperand(0));
 }
 
 // A buffer instruction is identical whether or not the access is atomic, so
-// the trailing !{ordering, syncscope} argument is the only record of it.
-// Returns std::nullopt for a non-atomic access, and for the intrinsics
-// reaching this dispatch that have no such trailing argument at all.
-static std::optional<std::pair<AtomicOrdering, SyncScope::ID>>
-parseBufferAtomicityMDArg(const CallBase &CI) {
-  auto *MDArg = dyn_cast<MetadataAsValue>(CI.getArgOperand(CI.arg_size() - 1));
-  if (!MDArg)
-    return std::nullopt;
-  auto *MD = cast<MDNode>(MDArg->getMetadata());
-  if (MD->getNumOperands() == 0)
-    return std::nullopt;
+// the "amdgpu.atomicity" bundle is the only record of it.
+static void applyBufferAtomicityBundle(const CallBase &CI,
+                                       TargetLowering::IntrinsicInfo &Info) {
+  std::optional<OperandBundleUse> Bundle =
+      CI.getOperandBundle(LLVMContext::OB_amdgpu_atomicity);
+  if (!Bundle)
+    return;
 
-  StringRef OrderStr = cast<MDString>(MD->getOperand(0))->getString();
-  std::optional<AtomicOrdering> Order = parseAtomicOrdering(OrderStr);
-  if (!Order)
-    return std::nullopt;
-
-  StringRef Scope = cast<MDString>(MD->getOperand(1))->getString();
-  return std::make_pair(*Order, CI.getContext().getOrInsertSyncScopeID(Scope));
+  // The Verifier guarantees the shape of the bundle.
+  assert(Bundle->Inputs.size() == 2 && "malformed amdgpu.atomicity bundle");
+  auto GetMD = [](const Value *V) {
+    return cast<MetadataAsValue>(V)->getMetadata();
+  };
+  std::optional<AtomicOrdering> Order = parseAtomicOrdering(
+      cast<MDString>(GetMD(Bundle->Inputs[0]))->getString());
+  assert(Order && "malformed amdgpu.atomicity ordering");
+  Info.order = *Order;
+  Info.ssid = getSyncScopeID(CI, GetMD(Bundle->Inputs[1]));
 }
 
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
@@ -1478,12 +1481,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
 
     bool IsSPrefetch = IntrID == Intrinsic::amdgcn_s_buffer_prefetch_data;
     if (!IsSPrefetch) {
-      // Buffer memory intrinsics have a trailing atomicity metadata arg after
-      // the cachepolicy immarg.
-      unsigned AuxIdx = CI.arg_size() - 1;
-      if (isa<MetadataAsValue>(CI.getArgOperand(AuxIdx)))
-        --AuxIdx;
-      auto *Aux = cast<ConstantInt>(CI.getArgOperand(AuxIdx));
+      auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
       if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
         Flags |= MachineMemOperand::MOVolatile;
     }
@@ -1512,6 +1510,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         // areMemAccessesTriviallyDisjoint.
         Info.ptrVal = RsrcArg;
     }
+
+    applyBufferAtomicityBundle(CI, Info);
 
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
@@ -1549,8 +1549,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.memVT = getValueType(MF.getDataLayout(), DataTy);
 
       Info.flags = Flags | MachineMemOperand::MOStore;
-      if (auto Atomicity = parseBufferAtomicityMDArg(CI))
-        std::tie(Info.order, Info.ssid) = *Atomicity;
     } else {
       // Atomic, NoReturn Sampler or prefetch
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID
@@ -1569,8 +1567,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
           // XXX - Should this be volatile without known ordering?
           Info.flags |= MachineMemOperand::MOVolatile;
           Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
-          if (auto Atomicity = parseBufferAtomicityMDArg(CI))
-            std::tie(Info.order, Info.ssid) = *Atomicity;
         }
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
@@ -1611,8 +1607,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
             memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
                                     std::numeric_limits<unsigned>::max());
         Info.flags = Flags | MachineMemOperand::MOLoad;
-        if (auto Atomicity = parseBufferAtomicityMDArg(CI))
-          std::tie(Info.order, Info.ssid) = *Atomicity;
         Infos.push_back(Info);
         return;
       }
@@ -17549,9 +17543,8 @@ handleMulOperand(const SDValue &MulOperand, SelectionDAG &DAG) {
   if (Byte1 && !Byte1->isConstantZero()) {
     return std::nullopt;
   }
-  // Byte1 above only rules out an untraceable or nonzero byte 1; bytes 2 and
-  // 3 are never queried. Require the operand to be a known extension of its
-  // low byte so those upper bytes can't smuggle in a nonzero contribution.
+  // Bytes 2 and 3 are never queried above, so require a known extension of the
+  // low byte. checkDot4MulSignedness relies on this.
   if (AMDGPUTargetLowering::numBitsUnsigned(MulOperand, DAG) > 8 &&
       AMDGPUTargetLowering::numBitsSigned(MulOperand, DAG) > 8)
     return std::nullopt;
@@ -17824,9 +17817,8 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return Folded;
   }
 
-  // The dot4 accumulates and produces a 32-bit result; a wider VT would need
-  // its upper bits from something other than the dot, so the fold can't
-  // apply.
+  // The dot4 result is 32-bit, so a wider VT would need upper bits from
+  // elsewhere. Narrower VTs are fine because truncation is exact mod 2^n.
   if (!VT.isVector() && VT.getSizeInBits() <= 32 &&
       (isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
@@ -17966,7 +17958,6 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
                                                   : Intrinsic::amdgcn_udot4,
                                         SL, MVT::i64);
 
-    assert(!VT.isVector());
     auto Dot = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, IID, Src0,
                            Src1, Src2, DAG.getTargetConstant(0, SL, MVT::i1));
 

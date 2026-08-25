@@ -69,28 +69,28 @@ void test_cvt_scalef32_pk32_fp6_f32(global uint6 *out, float32 srcf32, float src
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[OFFSET_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[SOFFSET_ADDR]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f32(float [[TMP0]], ptr addrspace(8) [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], i32 0, metadata [[META3:![0-9]+]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f32(float [[TMP0]], ptr addrspace(8) [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[FOUT_ADDR]], align 8
 // CHECK-NEXT:    store float [[TMP4]], ptr addrspace(1) [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr addrspace(5) [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(5) [[OFFSET_ADDR]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(5) [[SOFFSET_ADDR]], align 4
-// CHECK-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float [[TMP6]], ptr addrspace(8) [[TMP7]], i32 [[TMP8]], i32 [[TMP9]], i32 0, metadata [[META3]])
+// CHECK-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float [[TMP6]], ptr addrspace(8) [[TMP7]], i32 [[TMP8]], i32 [[TMP9]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[FOUT_ADDR]], align 8
 // CHECK-NEXT:    store float [[TMP10]], ptr addrspace(1) [[TMP11]], align 4
 // CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr addrspace(5) [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(5) [[OFFSET_ADDR]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr addrspace(5) [[SOFFSET_ADDR]], align 4
-// CHECK-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double [[TMP12]], ptr addrspace(8) [[TMP13]], i32 [[TMP14]], i32 [[TMP15]], i32 0, metadata [[META3]])
+// CHECK-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double [[TMP12]], ptr addrspace(8) [[TMP13]], i32 [[TMP14]], i32 [[TMP15]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DOUT_ADDR]], align 8
 // CHECK-NEXT:    store double [[TMP16]], ptr addrspace(1) [[TMP17]], align 8
 // CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr addrspace(5) [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[RSRC_ADDR]], align 16
 // CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(5) [[OFFSET_ADDR]], align 4
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr addrspace(5) [[SOFFSET_ADDR]], align 4
-// CHECK-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double [[TMP18]], ptr addrspace(8) [[TMP19]], i32 [[TMP20]], i32 [[TMP21]], i32 0, metadata [[META3]])
+// CHECK-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double [[TMP18]], ptr addrspace(8) [[TMP19]], i32 [[TMP20]], i32 [[TMP21]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DOUT_ADDR]], align 8
 // CHECK-NEXT:    store double [[TMP22]], ptr addrspace(1) [[TMP23]], align 8
 // CHECK-NEXT:    ret void

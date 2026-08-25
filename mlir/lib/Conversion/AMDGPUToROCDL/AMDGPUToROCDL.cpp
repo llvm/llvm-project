@@ -34,7 +34,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <optional>
-#include <type_traits>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTAMDGPUTOROCDLPASS
@@ -496,10 +495,6 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       sgprOffset = createI32Constant(rewriter, loc, 0);
     sgprOffset = LLVM::MulOp::create(rewriter, loc, sgprOffset, byteWidthConst);
     args.push_back(sgprOffset);
-
-    // These ops are never atomic, so report the empty metadata node.
-    args.push_back(LLVM::MetadataAsValueOp::create(
-        rewriter, loc, LLVM::MDNodeAttr::get(rewriter.getContext(), {})));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);

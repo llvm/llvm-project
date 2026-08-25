@@ -224,6 +224,9 @@ void verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI);
 void verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                CallBase &Call);
 
+void verifyAMDGPUAtomicityBundle(VerifierSupport &VS, const CallBase &Call,
+                                 const OperandBundleUse &BU);
+
 bool isAMDGPUCallBrIntrinsic(Intrinsic::ID ID);
 
 //==============================================================================

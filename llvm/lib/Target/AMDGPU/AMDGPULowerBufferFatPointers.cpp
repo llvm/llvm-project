@@ -1556,8 +1556,9 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   void setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx);
   void insertPreMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
   void insertPostMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
-  // Builds !{ordering, syncscope}, or !{} when the access is not atomic.
-  Value *getAtomicityMDArg(AtomicOrdering Order, SyncScope::ID SSID);
+  // Empty when the access is not atomic.
+  SmallVector<OperandBundleDef, 1> getAtomicityBundle(AtomicOrdering Order,
+                                                      SyncScope::ID SSID);
   Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr, Type *Ty,
                           Align Alignment, AtomicOrdering Order,
                           bool IsVolatile, SyncScope::ID SSID);
@@ -1864,15 +1865,16 @@ void SplitPtrStructs::setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx) {
   Intr->addParamAttr(RsrcArgIdx, Attribute::getWithAlignment(Ctx, A));
 }
 
-Value *SplitPtrStructs::getAtomicityMDArg(AtomicOrdering Order,
-                                          SyncScope::ID SSID) {
-  LLVMContext &Ctx = IRB.getContext();
+SmallVector<OperandBundleDef, 1>
+SplitPtrStructs::getAtomicityBundle(AtomicOrdering Order, SyncScope::ID SSID) {
   if (Order == AtomicOrdering::NotAtomic)
-    return MetadataAsValue::get(Ctx, MDNode::get(Ctx, {}));
+    return {};
+  LLVMContext &Ctx = IRB.getContext();
   StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
-  Metadata *Ops[] = {MDString::get(Ctx, toIRString(Order)),
-                     MDString::get(Ctx, Scope)};
-  return MetadataAsValue::get(Ctx, MDNode::get(Ctx, Ops));
+  Value *Ops[] = {
+      MetadataAsValue::get(Ctx, MDString::get(Ctx, toIRString(Order))),
+      MetadataAsValue::get(Ctx, MDString::get(Ctx, Scope))};
+  return {OperandBundleDef("amdgpu.atomicity", Ops)};
 }
 
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
@@ -2024,9 +2026,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  Args.push_back(getAtomicityMDArg(Order, SSID));
-
-  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
+  CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
+      IID, {Ty}, Args, /*FMFSource=*/{}, /*Name=*/"",
+      getAtomicityBundle(Order, SSID));
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -2094,9 +2096,10 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
   CallInst *Call = IRB.CreateIntrinsicWithoutFolding(
-      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, {Ty},
       {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
-       IRB.getInt32(0), IRB.getInt32(Aux), getAtomicityMDArg(Order, SSID)});
+       IRB.getInt32(0), IRB.getInt32(Aux)},
+      /*FMFSource=*/{}, /*Name=*/"", getAtomicityBundle(Order, SSID));
   copyMetadata(Call, &AI);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);

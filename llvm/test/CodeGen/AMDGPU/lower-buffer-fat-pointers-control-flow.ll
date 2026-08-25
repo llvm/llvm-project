@@ -14,7 +14,7 @@ define float @sum(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[SUM_PREV:%.*]] = phi float [ [[SUM:%.*]], [[LOOP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[PTR]] = add i32 [[PTR_PREV_OFF]], 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
@@ -53,7 +53,7 @@ define float @sum_integer_ops(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_RSRC:%.*]] = phi ptr addrspace(8) [ [[PTR_RSRC:%.*]], [[LOOP]] ], [ [[BUF]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[PTR_PREV_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[PTR_PREV_RSRC]] to i160
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i160 [[PTR_PREV_INT_RSRC]], 32
@@ -106,7 +106,7 @@ define float @sum_2d(ptr addrspace(8) %buf, i32 %ii, i32 %jj) {
 ; CHECK-NEXT:    [[SUM2_PREV:%.*]] = phi float [ [[SUM]], [[LOOP2]] ], [ [[SUM1_PREV]], [[LOOP1_ENTRY]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[LOOP2]] ], [ 0, [[LOOP1_ENTRY]] ]
 ; CHECK-NEXT:    [[PTR2_PREV_OFF:%.*]] = phi i32 [ [[PTR2:%.*]], [[LOOP2]] ], [ [[PTR1_PREV_OFF]], [[LOOP1_ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR2_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR2_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM2_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[PTR2]] = add i32 [[PTR2_PREV_OFF]], 4
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
@@ -162,7 +162,7 @@ define float @sum_jump_on_negative(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[SUM_PREV:%.*]] = phi float [ [[SUM:%.*]], [[LOOP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[SKIP_NEXT:%.*]] = fcmp olt float [[VAL]], 0.000000e+00
 ; CHECK-NEXT:    [[SMALL_JUMP:%.*]] = add i32 [[PTR_PREV_OFF]], 4
@@ -206,7 +206,7 @@ define float @sum_jump_on_negative_with_phi(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[SUM_PREV:%.*]] = phi float [ [[SUM:%.*]], [[LOOP_EXIT:%.*]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP_EXIT]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP_EXIT]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ult i32 [[I_NEXT]], [[LEN]]
@@ -264,7 +264,7 @@ define float @sum_new_buffer_on_negative(ptr addrspace(8) %buf1, ptr addrspace(8
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_RSRC:%.*]] = phi ptr addrspace(8) [ [[PTR_RSRC:%.*]], [[LOOP]] ], [ [[BUF1]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[HOP:%.*]] = fcmp olt float [[VAL]], 0.000000e+00
 ; CHECK-NEXT:    [[THIS_NEXT:%.*]] = add i32 [[PTR_PREV_OFF]], 4
@@ -310,7 +310,7 @@ define float @sum_new_buffer_on_negative_with_phi(ptr addrspace(8) %buf1, ptr ad
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP_EXIT]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_RSRC:%.*]] = phi ptr addrspace(8) [ [[PTR_RSRC:%.*]], [[LOOP_EXIT]] ], [ [[BUF1]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP_EXIT]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ult i32 [[I_NEXT]], [[LEN]]
@@ -363,7 +363,7 @@ define float @sum_duplicate_preds(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[SUM_PREV:%.*]] = phi float [ [[SUM:%.*]], [[LOOP]] ], [ [[SUM]], [[LOOP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ], [ [[I_NEXT]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ], [ [[PTR]], [[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[PTR]] = add i32 [[PTR_PREV_OFF]], 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
@@ -410,7 +410,7 @@ define float @sum_integer_ops_duplicate_preds(ptr addrspace(8) %buf, i32 %len) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ], [ [[I_NEXT]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_PREV_RSRC:%.*]] = phi ptr addrspace(8) [ [[PTR_RSRC:%.*]], [[LOOP]] ], [ [[BUF]], [[ENTRY]] ], [ [[PTR_RSRC]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_PREV_OFF:%.*]] = phi i32 [ [[PTR_OFF:%.*]], [[LOOP]] ], [ 0, [[ENTRY]] ], [ [[PTR_OFF]], [[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0, metadata [[META0]])
+; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[PTR_PREV_RSRC]], i32 [[PTR_PREV_OFF]], i32 0, i32 0)
 ; CHECK-NEXT:    [[SUM]] = fadd float [[SUM_PREV]], [[VAL]]
 ; CHECK-NEXT:    [[PTR_PREV_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[PTR_PREV_RSRC]] to i160
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i160 [[PTR_PREV_INT_RSRC]], 32

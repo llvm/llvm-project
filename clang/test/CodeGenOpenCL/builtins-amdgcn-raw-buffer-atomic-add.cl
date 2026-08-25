@@ -10,7 +10,7 @@ typedef half __attribute__((ext_vector_type(2))) float16x2_t;
 // CHECK-LABEL: define dso_local i32 @test_atomic_add_i32(
 // CHECK-SAME: ptr addrspace(8) nofree captures(none) [[RSRC:%.*]], i32 noundef [[X:%.*]], i32 noundef [[OFFSET:%.*]], i32 noundef [[SOFFSET:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0, metadata [[META8:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int test_atomic_add_i32(__amdgpu_buffer_rsrc_t rsrc, int x, int offset, int soffset) {
@@ -20,7 +20,7 @@ int test_atomic_add_i32(__amdgpu_buffer_rsrc_t rsrc, int x, int offset, int soff
 // CHECK-LABEL: define dso_local float @test_atomic_fadd_f32(
 // CHECK-SAME: ptr addrspace(8) nofree captures(none) [[RSRC:%.*]], float noundef [[X:%.*]], i32 noundef [[OFFSET:%.*]], i32 noundef [[SOFFSET:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_atomic_fadd_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int soffset) {
@@ -30,12 +30,9 @@ float test_atomic_fadd_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset, int
 // CHECK-LABEL: define dso_local <2 x half> @test_atomic_fadd_v2f16(
 // CHECK-SAME: ptr addrspace(8) nofree captures(none) [[RSRC:%.*]], <2 x half> noundef [[X:%.*]], i32 noundef [[OFFSET:%.*]], i32 noundef [[SOFFSET:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0, metadata [[META8]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> [[X]], ptr addrspace(8) [[RSRC]], i32 [[OFFSET]], i32 [[SOFFSET]], i32 0) [ "amdgpu.atomicity"(metadata !"seq_cst", metadata !"agent") ]
 // CHECK-NEXT:    ret <2 x half> [[TMP0]]
 //
 float16x2_t test_atomic_fadd_v2f16(__amdgpu_buffer_rsrc_t rsrc, float16x2_t x, int offset, int soffset) {
   return __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16(x, rsrc, offset, soffset, 0, __ATOMIC_SEQ_CST, "agent");
 }
-//.
-// CHECK: [[META8]] = !{!"seq_cst", !"agent"}
-//.

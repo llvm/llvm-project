@@ -8,8 +8,8 @@ define amdgpu_kernel void @test_make_buffer_rsrc(ptr %p, ptr %q) {
 ; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 4, i32 822243328)
 ; FNATTRS-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[Q]], i16 0, i64 4, i32 822243328)
-; FNATTRS-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) [[P_RSRC]], i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]])
-; FNATTRS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) [[Q_RSRC]], i32 0, i32 0, i32 0, metadata [[META0]])
+; FNATTRS-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) [[P_RSRC]], i32 0, i32 0, i32 0)
+; FNATTRS-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) [[Q_RSRC]], i32 0, i32 0, i32 0)
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
@@ -17,8 +17,8 @@ define amdgpu_kernel void @test_make_buffer_rsrc(ptr %p, ptr %q) {
 ; ATTRIBUTOR-SAME: (ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[P]], i16 0, i64 4, i32 822243328) #[[ATTR4:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr [[Q]], i16 0, i64 4, i32 822243328) #[[ATTR4]]
-; ATTRIBUTOR-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) readonly captures(none) [[P_RSRC]], i32 0, i32 0, i32 0, metadata [[META0:![0-9]+]]) #[[ATTR5:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) writeonly captures(none) [[Q_RSRC]], i32 0, i32 0, i32 0, metadata [[META0]]) #[[ATTR6:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) readonly captures(none) [[P_RSRC]], i32 0, i32 0, i32 0) #[[ATTR5:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[V]], ptr addrspace(8) writeonly captures(none) [[Q_RSRC]], i32 0, i32 0, i32 0) #[[ATTR6:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %p.rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0.i64(ptr %p, i16 0, i64 4, i32 822243328)

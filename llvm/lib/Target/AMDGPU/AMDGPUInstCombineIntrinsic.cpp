@@ -2342,6 +2342,11 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     APInt DemandedElts,
                                                     int DMaskIdx, bool IsLoad) {
 
+  // Narrowing the access and shifting its offset would change the granularity
+  // of an atomic access.
+  if (II.getOperandBundle(LLVMContext::OB_amdgpu_atomicity))
+    return nullptr;
+
   auto *IIVTy = cast<FixedVectorType>(IsLoad ? II.getType()
                                              : II.getOperand(0)->getType());
   unsigned VWidth = IIVTy->getNumElements();
