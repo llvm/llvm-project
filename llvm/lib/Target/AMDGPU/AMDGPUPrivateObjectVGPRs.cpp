@@ -8,15 +8,12 @@
 //
 /// \file
 /// Mark the physical VGPRs an object in the VGPR ("as memory") address space
-/// was allocated to as used, so that register allocation does not hand them to
-/// anything else where the object is live:
+/// was allocated to as used, by giving the VGPR_LIFETIME_{START,END} pseudos
+/// implicit operands and adding the registers to block live-ins, so register
+/// allocation cannot hand them to anything else while the object is live.
 ///
-///  * Add implicit use/def operands to the VGPR_LIFETIME_{START,END} pseudos
-///  * Add the VGPRs to basic block live-ins
-///
-/// The allocation itself is recorded on the alloca as !amdgpu.allocated.vgprs
-/// by AMDGPUPromoteAlloca, and reaches this pass through the memory operand of
-/// the lifetime markers.
+/// AMDGPUPromoteAlloca records the allocation on the alloca as
+/// !amdgpu.allocated.vgprs; it reaches this pass through the markers' MMO.
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,8 +89,7 @@ ObjectRegs AMDGPUPrivateObjectVGPRsImpl::computeObjectRegs(
 }
 
 bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
-  // Sort basic blocks in reverse post-order for the live-out/live-in
-  // propagation.
+  // Reverse post-order, for the live-out/live-in propagation below.
   DenseMap<MachineBasicBlock *, unsigned> BlockToIndex;
   SmallVector<MachineBasicBlock *> IndexToBlock;
   ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
@@ -102,9 +98,8 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
     IndexToBlock.push_back(MBB);
   }
 
-  // Fixed-point iteration to determine basic block live-ins.
-  //
-  // The first pass of the fixed-point iteration also scans instructions.
+  // Fixed-point iteration for block live-ins. The first pass also scans
+  // instructions, augmenting the markers and recording per-block state.
   SmallVector<SmallVector<AllocaBBInfo>> BBInfos(IndexToBlock.size());
   SmallBitVector Worklist(IndexToBlock.size());
   bool Changed = false;
@@ -115,9 +110,6 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
     for (auto [MBBI, MBB] : enumerate(IndexToBlock)) {
       auto &BBI = BBInfos[MBBI];
 
-      // During the first outer iteration, augment VGPR_LIFETIME_{START,END}
-      // with implicit operands and record the initial per-basic block
-      // information to compute live-ins.
       if (FirstPass) {
         for (MachineInstr &MI : *MBB) {
           if (MI.getOpcode() != AMDGPU::VGPR_LIFETIME_START &&
@@ -135,7 +127,6 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
                     .try_emplace(Alloca, computeObjectRegs(*Alloca), MMO)
                     .first;
 
-          // The object comes into existence at the start and dies at the end.
           for (MCPhysReg Reg : ObjRegsIt->second.first)
             MI.addOperand(MachineOperand::CreateReg(
                 Reg, /*isDef=*/IsStart, /*isImp=*/true, /*isKill=*/!IsStart));
@@ -158,7 +149,6 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
         Worklist[MBBI] = false;
       }
 
-      // Propagate live-outs into successors.
       for (const auto &ABBI : BBI) {
         if (!((ABBI.LiveIn && !ABBI.Ends) || ABBI.Starts))
           continue;
@@ -184,10 +174,15 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
           if (!Update)
             continue;
 
-          // We are live-out from the successor because of the newly found
-          // live-in. If the successor is earlier in RPOT, we will have to
-          // re-evaluate it on the next outer iteration.
-          if (!It->Starts && !It->Ends && SuccI < MBBI) {
+          // A block whose own marker decides the matter does not depend on
+          // this live-in, so it needs no queueing.
+          //
+          // Later passes visit queued blocks alone, with none of the reverse
+          // post-order sweep that revisits a successor for free, so every
+          // changed successor must be queued - not just back edges. A start
+          // inside a loop reaches the header only on the second pass, which
+          // is exactly where that matters.
+          if (!It->Starts && !It->Ends && (SuccI < MBBI || !FirstPass)) {
             Worklist[SuccI] = true;
             Dirty = true;
           }
@@ -199,12 +194,8 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
     }
   }
 
-  // It is legal for the pre-isel LLVM IR to have a lifetime.start without a
-  // lifetime.end. Liveness analysis is strong enough to mark physical registers
-  // as unused immediately after VGPR_LIFETIME_START in this case.
-  //
-  // Add VGPR_LIFETIME_END instructions at the end of basic blocks that end the
-  // function.
+  // A lifetime.start without a matching end is legal in the incoming IR, so
+  // close the object off in every block that ends the function.
   for (auto [BBIdx, MBB] : enumerate(IndexToBlock)) {
     if (!MBB->succ_empty())
       continue;
@@ -213,11 +204,10 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
       if (ABBI.Ends || (!ABBI.LiveIn && !ABBI.Starts))
         continue;
 
-      // There may be a COPY to a conflicting physical VGPR before a function
-      // return, so put the end as late as possible: walk back over the
-      // instructions that cannot be observing the object. Anything that touches
-      // memory, calls, or has side effects ends the walk, since the object has
-      // to stay reserved across it.
+      // A COPY to a conflicting physical VGPR may precede the return, so place
+      // the end as late as possible: walk back over instructions that cannot
+      // observe the object, stopping at anything the object must stay
+      // reserved across.
       MachineBasicBlock::iterator IP = MBB->getFirstTerminator();
       while (IP != MBB->begin()) {
         --IP;
@@ -240,12 +230,11 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
     }
   }
 
-  // An object lives in caller-saved registers, so a callee is free to overwrite
-  // it. Being live across a call is diagnosed rather than left to read back
-  // whatever the callee happened to leave behind. Inline asm is diagnosed too,
-  // but only when it clobbers registers the object occupies: unlike a call it
-  // names registers directly, so the liveness above cannot keep it away from
-  // them. One diagnostic per object: the rest would say the same thing.
+  // An object lives in caller-saved registers, so being live across a call is
+  // diagnosed rather than left to read back whatever the callee left behind.
+  // Inline asm is diagnosed too, but only when it clobbers registers the
+  // object occupies: it names registers directly, so the liveness above
+  // cannot keep it away from them. One diagnostic per object.
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SmallPtrSet<const AllocaInst *, 4> Diagnosed;
   for (auto [BBIdx, MBB] : enumerate(IndexToBlock)) {
@@ -271,11 +260,8 @@ bool AMDGPUPrivateObjectVGPRsImpl::run(MachineFunction &MF) {
           if (any_of(Regs, [&](MCPhysReg Reg) {
                 return MI.modifiesRegister(Reg, &TRI);
               })) {
-            // Name the registers the object occupies. Unlike a callee, which
-            // may write any caller-saved register, the asm names a fixed set,
-            // so seeing the two side by side is what makes this fixable: either
-            // the asm gives those registers up, or the object is placed
-            // elsewhere.
+            // Name the registers, so the conflict is actionable: either the
+            // asm gives them up or the object is placed elsewhere.
             const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*ABBI.Alloca);
             unsigned Begin = MD.getAddress() / 4;
             unsigned End = (MD.getAddress() + MD.getSize() - 1) / 4;
