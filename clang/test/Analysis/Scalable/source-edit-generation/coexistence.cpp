@@ -6,7 +6,7 @@
 
 // REQUIRES: plugins
 
-// XFAIL: *
+// UNSUPPORTED: *
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -load %llvmshlibdir/SSAFTestTransformationPlugin%pluginext \
