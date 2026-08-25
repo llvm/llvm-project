@@ -1927,26 +1927,21 @@ static bool isIndvarOverflowCheckKnownFalse(
           Cost->PSE, Cost->TheLoop,
           /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
           /*ComputeUpperBoundOnly=*/true)) {
-    uint64_t MaxVF = VF.getKnownMinValue();
-    uint64_t MaxTC = TC->getKnownMinValue();
-    if (VF.isScalable() || TC->isScalable()) {
-      std::optional<unsigned> MaxVScale =
-          getMaxVScale(*Cost->TheFunction, Cost->TTI);
-      if (!MaxVScale)
-        return false;
-      if (VF.isScalable())
-        MaxVF *= *MaxVScale;
-      if (TC->isScalable())
-        MaxTC *= *MaxVScale;
-    }
+    // Compute the maximum runtime values of VF and the trip count.
+    std::optional<uint64_t> MaxVF =
+        getMaxRuntimeElementCount(VF, *Cost->TheFunction, Cost->TTI);
+    std::optional<uint64_t> MaxTC =
+        getMaxRuntimeElementCount(*TC, *Cost->TheFunction, Cost->TTI);
+    if (!MaxVF || !MaxTC)
+      return false;
 
     // Bail out if the maximum trip count is not representable in the induction
     // variable's type.
-    if (MaxUIntTripCount.ult(MaxTC))
+    if (MaxUIntTripCount.ult(*MaxTC))
       return false;
 
-    uint64_t MaxStep = MaxVF * MaxUF;
-    return (MaxUIntTripCount - MaxTC).ugt(MaxStep);
+    uint64_t MaxStep = *MaxVF * MaxUF;
+    return (MaxUIntTripCount - *MaxTC).ugt(MaxStep);
   }
 
   return false;
@@ -5947,8 +5942,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
                  VectorPH);
   std::optional<uint64_t> MaxRuntimeStep;
-  if (auto MaxVScale = getMaxVScale(*OrigLoop->getHeader()->getParent(), TTI))
-    MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+  if (std::optional<uint64_t> MaxRuntimeVF = getMaxRuntimeElementCount(
+          BestVF, *OrigLoop->getHeader()->getParent(), TTI))
+    MaxRuntimeStep = *MaxRuntimeVF * BestUF;
+
   assert((LI->getUniqueLatchExitBlock(*OrigLoop) || RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
   RUN_VPLAN_PASS(VPlanTransforms::materializeVectorTripCount, BestVPlan,
