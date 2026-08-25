@@ -2476,6 +2476,21 @@ def : GCNPat <
 >;
 }
 let True16Predicate = UseRealTrue16Insts in {
+// Uniform true16 values use SReg_32. Copy them to VGPR_16 before packing so
+// subregister liveness tracks the source lane in the correct coordinates.
+let AddedComplexity = 1 in
+def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt SReg_32:$src0),
+                             (fp16vt SReg_32:$src1)),
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+    (REG_SEQUENCE VGPR_32,
+      (fp16vt (COPY_TO_REGCLASS SReg_32:$src0, VGPR_16)), lo16,
+      (i16 (IMPLICIT_DEF)), hi16),
+    (REG_SEQUENCE VGPR_32,
+      (fp16vt (COPY_TO_REGCLASS SReg_32:$src1, VGPR_16)), lo16,
+      (i16 (IMPLICIT_DEF)), hi16)), lo16)
+>;
+
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
