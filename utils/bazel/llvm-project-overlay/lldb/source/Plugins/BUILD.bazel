@@ -566,6 +566,7 @@ cc_library(
     hdrs = glob(["Process/wasm/*.h"]),
     includes = [".."],
     deps = [
+        ":PluginObjectFileWasm",
         ":PluginProcessGDBRemote",
         "//lldb:CoreHeaders",
         "//lldb:Headers",
@@ -604,6 +605,21 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginObjectContainerBigArchive",
+    srcs = glob(["ObjectContainer/Big-Archive/*.cpp"]),
+    hdrs = glob(["ObjectContainer/Big-Archive/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
         "//llvm:Support",
     ],
 )
@@ -716,6 +732,39 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PlatformWasmProperties",
+    strip_include_prefix = "Platform/WebAssembly",
+    tbl_outs = {
+        "Platform/WebAssembly/PlatformWasmProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/WebAssembly/PlatformWasmPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Platform/WebAssembly/PlatformWasmProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
+cc_library(
+    name = "PluginPlatformWasm",
+    srcs = glob(["Platform/WebAssembly/*.cpp"]),
+    hdrs = glob(["Platform/WebAssembly/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PlatformWasmProperties",
+        ":PluginPlatformGDB",
+        ":PluginProcessWasm",
+        "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:InterpreterHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "PluginPlatformGDB",
     srcs = glob(["Platform/gdb-server/*.cpp"]),
@@ -785,12 +834,25 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "PlatformWindowsProperties",
+    strip_include_prefix = "Platform/Windows",
+    tbl_outs = {
+        "Platform/Windows/PlatformWindowsProperties.inc": ["-gen-lldb-property-defs"],
+        "Platform/Windows/PlatformWindowsPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Platform/Windows/PlatformWindowsProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginPlatformWindows",
     srcs = glob(["Platform/Windows/*.cpp"]),
     hdrs = glob(["Platform/Windows/*.h"]),
     includes = [".."],
     deps = [
+        ":PlatformWindowsProperties",
         ":PluginPlatformGDB",
         ":PluginTypeSystemClangHeaders",
         "//lldb:Breakpoint",
@@ -1229,6 +1291,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
@@ -1240,6 +1303,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
@@ -1252,9 +1316,11 @@ cc_library(
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )
@@ -1833,6 +1899,37 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "SymbolLocatorSymStoreProperties",
+    strip_include_prefix = "SymbolLocator/SymStore",
+    tbl_outs = {
+        "SymbolLocator/SymStore/SymbolLocatorSymStoreProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolLocator/SymStore/SymbolLocatorSymStorePropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "SymbolLocator/SymStore/SymbolLocatorSymStoreProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
+cc_library(
+    name = "PluginSymbolLocatorSymStore",
+    srcs = glob(["SymbolLocator/SymStore/*.cpp"]),
+    hdrs = glob(["SymbolLocator/SymStore/*.h"]),
+    includes = [".."],
+    deps = [
+        ":SymbolLocatorSymStoreProperties",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:InterpreterHeaders",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Utility",
+        "//llvm:HTTP",
+        "//llvm:Support",
+    ],
+)
+
 cc_library(
     name = "PluginSymbolLocatorDebugSymbols",
     srcs = glob(["SymbolLocator/DebugSymbols/*.cpp"]),
@@ -1981,6 +2078,7 @@ cc_library(
     includes = [".."],
     deps = [
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -2033,12 +2131,14 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
@@ -2140,6 +2240,26 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginObjectFileXCOFF",
+    srcs = glob(["ObjectFile/XCOFF/*.cpp"]),
+    hdrs = glob(["ObjectFile/XCOFF/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:UtilityHeaders",
+        "//llvm:BinaryFormat",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginUnwindAssemblyX86",
     srcs = glob(["UnwindAssembly/x86/*.cpp"]),
     hdrs = glob(["UnwindAssembly/x86/*.h"]),
@@ -2223,10 +2343,29 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:CoreHeaders",
+        "//lldb:Expression",
         "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginScriptedFrameProvider",
+    srcs = glob(["SyntheticFrameProvider/ScriptedFrameProvider/*.cpp"]),
+    hdrs = glob(["SyntheticFrameProvider/ScriptedFrameProvider/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginScriptedProcess",
+        "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:InterpreterHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
@@ -2267,7 +2406,9 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginDynamicLoaderStatic",
         ":PluginObjectFileELF",
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Target",
@@ -2275,6 +2416,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2379,6 +2521,32 @@ cc_library(
         "//lldb:Headers",
         "//lldb:Target",
         "//lldb:TargetHeaders",
+        "//lldb:Utility",
+    ],
+)
+
+cc_library(
+    name = "PluginProcessWindowsCommon",
+    srcs = glob(["Process/Windows/Common/*.cpp"]),
+    hdrs = glob([
+        "Process/Windows/Common/*.h",
+        "Process/Windows/Common/**/*.h",
+    ]),
+    includes = [".."],
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":PluginDynamicLoaderWindowsDYLD",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2389,9 +2557,17 @@ expand_template(
     name = "plugins_config_gen",
     out = "Plugins.def",
     substitutions = {
-        "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
     } | select({
+        # ProcessWindowsCommon registers via its dedicated slot in Plugins.def.in
+        # (ordered after all other process plugins, before ProcessGDBRemote).
+        "@platforms//os:windows": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "LLDB_PLUGIN(ProcessWindowsCommon)",
+        },
+        "//conditions:default": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
+        },
+    }) | select({
         "@platforms//os:macos": {
             "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
 LLDB_PLUGIN(ProcessMacOSXKernel)

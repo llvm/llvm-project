@@ -84,8 +84,7 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
       gpu::GPUFuncOp::create(builder, gpuModule->getLoc(), kernelName, type);
-  gpuFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                   builder.getUnitAttr());
+  gpuFunc.setKernel(true);
   return gpuFunc;
 }
 
@@ -1299,6 +1298,11 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
                                 PatternRewriter &rewriter) const override {
     if (op.getNumDpsInits() != 1)
       return failure(); // reject multi-output
+    // The rewrites below query the sparse tensor encoding of the operands,
+    // which is only defined for ranked tensor types. Reject buffer semantics
+    // rather than casting a memref operand to a tensor type.
+    if (!op.hasPureTensorSemantics())
+      return failure();
 
     const unsigned numLoops = op.getNumLoops();
     const unsigned numTensors = op->getNumOperands();

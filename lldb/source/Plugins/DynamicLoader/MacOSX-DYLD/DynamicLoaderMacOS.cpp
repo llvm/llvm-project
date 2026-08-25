@@ -245,7 +245,7 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
             load_addresses.push_back(val);
         }
       }
-      AddBinaries(load_addresses);
+      AddBinaries(load_addresses, /*expedited_binary_infos=*/{});
     }
   }
 
@@ -326,7 +326,8 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     argument_values.PushValue(count_value);
     argument_values.PushValue(headers_value);
 
-    if (abi->GetArgumentValues(exe_ctx.GetThreadRef(), argument_values)) {
+    Thread &thread = exe_ctx.GetThreadRef();
+    if (abi->GetArgumentValues(thread, argument_values)) {
       uint32_t dyld_mode =
           argument_values.GetValueAtIndex(0)->GetScalar().UInt(-1);
       if (dyld_mode != static_cast<uint32_t>(-1)) {
@@ -349,21 +350,38 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
             //
             // and we only need the imageLoadAddress fields.
 
-            const int addrsize =
-                process->GetTarget().GetArchitecture().GetAddressByteSize();
-            for (uint64_t i = 0; i < image_infos_count; i++) {
-              Status error;
-              addr_t dyld_image_info = header_array + (addrsize * 3 * i);
-              addr_t addr =
-                  process->ReadPointerFromMemory(dyld_image_info, error);
-              if (error.Success()) {
-                image_load_addresses.push_back(addr);
-              } else {
+            // The remote stub may have provided the addresses in the
+            // stop packet already.
+            image_load_addresses = thread.FetchNewlyAddedBinaries();
+            // Or, read them from memory.
+            if (image_load_addresses.size() != image_infos_count) {
+              image_load_addresses.clear();
+              ArchSpec target_arch = process->GetTarget().GetArchitecture();
+              const int addrsize = target_arch.GetAddressByteSize();
+              // Read the entire block of memory that we'll need to
+              // iterate over in one large read, to minimize packets sent.
+              WritableDataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(
+                  addrsize * 3 * image_infos_count, 0);
+              Status read_error;
+              if (process->ReadMemory(header_array, buffer_sp->GetBytes(),
+                                      buffer_sp->GetByteSize(),
+                                      read_error) == buffer_sp->GetByteSize() &&
+                  read_error.Success()) {
+                DataExtractor added_binaries(
+                    buffer_sp, target_arch.GetByteOrder(), addrsize);
+
+                offset_t offset = 0;
+                for (uint64_t i = 0; i < image_infos_count; i++) {
+                  addr_t addr = added_binaries.GetAddress(&offset);
+                  image_load_addresses.push_back(addr);
+                  offset += 2 * addrsize;
+                }
+              }
+              if (!read_error.Success())
                 Debugger::ReportWarning(
                     "DynamicLoaderMacOS::NotifyBreakpointHit unable "
                     "to read binary mach-o load address at 0x%" PRIx64,
-                    addr);
-              }
+                    header_array);
             }
             if (dyld_mode == 0) {
               // dyld_notify_adding
@@ -381,7 +399,8 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
                 dyld_instance->DoInitialImageFetch();
                 dyld_instance->SetNotificationBreakpoint();
               } else {
-                dyld_instance->AddBinaries(image_load_addresses);
+                dyld_instance->AddBinaries(image_load_addresses,
+                                           thread.FetchDetailedBinariesInfo());
               }
             } else if (dyld_mode == 1) {
               // dyld_notify_removing
@@ -435,10 +454,39 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
   return dyld_instance->GetStopWhenImagesChange();
 }
 
+static size_t LibraryInfosCount(StructuredData::ObjectSP binaries_info_sp) {
+  if (!binaries_info_sp)
+    return 0;
+  if (StructuredData::Dictionary *dict = binaries_info_sp->GetAsDictionary()) {
+    if (!dict->HasKey("images"))
+      return 0;
+    if (StructuredData::Array *images =
+            dict->GetValueForKey("images")->GetAsArray())
+      return images->GetSize();
+  }
+
+  return 0;
+}
+
 void DynamicLoaderMacOS::AddBinaries(
-    const std::vector<lldb::addr_t> &load_addresses) {
+    const std::vector<lldb::addr_t> &load_addresses,
+    StructuredData::ObjectSP expedited_binary_infos) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
+  if (load_addresses.empty())
+    return;
+
+  // If the expedited detailed binaries information covers
+  // all of the newly added binaries, use that info and
+  // return.
+  if (LibraryInfosCount(expedited_binary_infos) == load_addresses.size() &&
+      JSONImageInformationIntoImageInfo(expedited_binary_infos, image_infos)) {
+    auto new_images = PreloadModulesFromImageInfos(image_infos);
+    UpdateSpecialBinariesFromPreloadedModules(new_images);
+    AddModulesUsingPreloadedModules(new_images);
+    m_dyld_image_infos_stop_id = m_process->GetStopID();
+    return;
+  }
 
   // For now, hardcode a limit of fetching 600 binaries at once.
   // Fetching the full binary information for a large number of
@@ -460,16 +508,8 @@ void DynamicLoaderMacOS::AddBinaries(
     StructuredData::ObjectSP binaries_info_sp =
         m_process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelFull,
                                                   fetch_binaries);
-    if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
-        binaries_info_sp->GetAsDictionary()->HasKey("images") &&
-        binaries_info_sp->GetAsDictionary()
-            ->GetValueForKey("images")
-            ->GetAsArray()) {
-      StructuredData::Array *images = binaries_info_sp->GetAsDictionary()
-                                          ->GetValueForKey("images")
-                                          ->GetAsArray();
-      if (images->GetSize() == fetch_binaries.size() &&
-          JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
+    if (LibraryInfosCount(binaries_info_sp) == fetch_binaries.size()) {
+      if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
         auto new_images = PreloadModulesFromImageInfos(image_infos);
         UpdateSpecialBinariesFromPreloadedModules(new_images);
         AddModulesUsingPreloadedModules(new_images);

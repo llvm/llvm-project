@@ -397,6 +397,8 @@ public:
     N = NewN;
   }
 
+  void setValueToPoison(const Value *V, const SDLoc &dl);
+
   bool shouldKeepJumpConditionsTogether(
       const FunctionLoweringInfo &FuncInfo, const CondBrInst &I,
       Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
@@ -670,7 +672,6 @@ private:
                           const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedStore(const VPIntrinsic &VPIntrin,
                            const SmallVectorImpl<SDValue> &OpValues);
-  void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);
@@ -733,8 +734,11 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
+public:
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
+
+private:
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
 

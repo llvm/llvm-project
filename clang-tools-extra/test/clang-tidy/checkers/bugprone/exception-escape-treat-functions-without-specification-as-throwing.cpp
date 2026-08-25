@@ -11,6 +11,8 @@
 // RUN:       "bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing": "None" \
 // RUN:     }}' -- -fexceptions
 
+#include <string>
+
 void unannotated_no_throw_body() {}
 
 void calls_unannotated() noexcept {
@@ -35,13 +37,29 @@ void calls_unknown() noexcept {
   extern_declared();
 }
 
+struct Error {};
+
 void calls_unknown_caught() noexcept {
   // CHECK-MESSAGES-ALL-NOT: warning:
   // CHECK-MESSAGES-UNDEFINED-NOT: warning:
   // CHECK-MESSAGES-NONE-NOT: warning:
   try {
     extern_declared();
-  } catch(...) {
+  } catch (const Error &) {
+  } catch (...) {
+  }
+}
+
+void calls_unknown_typed_catch() noexcept {
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  // CHECK-MESSAGES-ALL: :[[@LINE-28]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-ALL: :[[@LINE+5]]:5: note: frame #1: function 'calls_unknown_typed_catch' calls function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-4]]:6: warning: an exception may be thrown in function 'calls_unknown_typed_catch' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-31]]:6: note: frame #0: an exception of unknown type may be thrown in function 'extern_declared' here
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE+2]]:5: note: frame #1: function 'calls_unknown_typed_catch' calls function 'extern_declared' here
+  try {
+    extern_declared();
+  } catch (const Error &) {
   }
 }
 
@@ -92,4 +110,29 @@ void calls_explicit_throw() noexcept {
   // CHECK-MESSAGES-NONE: :[[@LINE-9]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_throw' here
   // CHECK-MESSAGES-NONE: :[[@LINE+1]]:3: note: frame #1: function 'calls_explicit_throw' calls function 'explicit_throw' here
   explicit_throw();
+}
+
+struct ImplicitDtor {
+  ImplicitDtor() = default;
+};
+
+struct DefaultedDtor {
+  DefaultedDtor() = default;
+  ~DefaultedDtor() = default;
+};
+
+struct WithString {
+  WithString(const ImplicitDtor &Implicit, const DefaultedDtor &Defaulted,
+             const std::string &Text)
+      : Implicit(Implicit), Defaulted(Defaulted), Text(Text) {}
+
+  ImplicitDtor Implicit;
+  DefaultedDtor Defaulted;
+  std::string Text;
+};
+
+void constructs_with_string() {
+  ImplicitDtor Implicit;
+  DefaultedDtor Defaulted;
+  WithString Value(Implicit, Defaulted, "");
 }

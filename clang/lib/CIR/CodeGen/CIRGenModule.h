@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
@@ -31,9 +32,11 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -43,6 +46,9 @@ class CodeGenOptions;
 class Decl;
 class GlobalDecl;
 class LangOptions;
+class OpenACCConstructDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 class TargetInfo;
 class VarDecl;
 
@@ -95,6 +101,9 @@ private:
   /// Holds the CUDA runtime
   std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
 
+  /// Holds the OpenMP runtime
+  std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
@@ -106,6 +115,23 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// -------
+  /// Annotations
+  /// -------
+
+  /// We store each annotation as an attribute of GlobalOp and FuncOp rather
+  /// than collecting them into a single module-level list.  The deferred map
+  /// lets us attach annotations at the end of codegen so the most up-to-date
+  /// ValueDecl (which carries all inherited annotations) is used.
+
+  /// Used for uniquing of annotation arguments.
+  llvm::DenseMap<unsigned, mlir::ArrayAttr> annotationArgs;
+
+  /// Store deferred function annotations so they can be emitted at the end
+  /// with the most up to date ValueDecl that will have all the inherited
+  /// annotations.
+  llvm::DenseMap<llvm::StringRef, const clang::ValueDecl *> deferredAnnotations;
+
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl *> deferredVTables;
 
@@ -113,6 +139,7 @@ private:
   std::vector<const CXXRecordDecl *> opportunisticVTables;
 
   void createCUDARuntime();
+  void createOpenMPRuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -120,7 +147,8 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, bool isThunk,
+      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
@@ -167,23 +195,6 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
-  /// LabelOp. This provides the main lookup table used to resolve block
-  /// addresses into their label operations.
-  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
-  /// Used once a block address has been successfully lowered to a label.
-  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
-  /// Track CIR BlockAddressOps that cannot be resolved immediately
-  /// because their LabelOp has not yet been emitted. These entries
-  /// are solved later once the corresponding label is available.
-  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
-  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
-  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
-  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
-  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
-  void updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                  cir::LabelOp newLabel);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
@@ -203,7 +214,30 @@ public:
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
   llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
+  /// Cache for O(1) symbol lookups by name, replacing the O(N) linear scan
+  /// in SymbolTable::lookupSymbolIn that getGlobalValue used previously.
+  llvm::StringMap<mlir::Operation *> symbolLookupCache;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
+
+  /// O(1) lookup of a FuncOp by name in the symbol cache.
+  /// Returns nullptr if the name is not found or is not a FuncOp.
+  cir::FuncOp lookupFuncOp(llvm::StringRef name) {
+    auto *op = getGlobalValue(name);
+    return op ? mlir::dyn_cast<cir::FuncOp>(op) : cir::FuncOp{};
+  }
+
+  void insertGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op))
+      symbolLookupCache[sym.getName()] = op;
+  }
+  void eraseGlobalSymbol(mlir::Operation *op) {
+    if (auto sym = mlir::dyn_cast<mlir::SymbolOpInterface>(op)) {
+      auto it = symbolLookupCache.find(sym.getName());
+      if (it != symbolLookupCache.end() && it->second == op)
+        symbolLookupCache.erase(it);
+    }
+  }
 
   cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *d) {
     return staticLocalDeclMap[d];
@@ -228,9 +262,9 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp
-  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
-                 mlir::Type t, bool isConstant = false,
+  cir::GlobalOp
+  createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
+                 bool isConstant = false,
                  mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
                  mlir::Operation *insertPoint = nullptr);
 
@@ -310,6 +344,13 @@ public:
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
+  /// Get the GlobalOp of a template parameter object.
+  cir::GlobalOp
+  getAddrOfTemplateParamObject(const TemplateParamObjectDecl *tpo);
+  // Get the GlobalOp of a source_location object.
+  cir::GlobalOp
+  getAddrOfUnnamedGlobalConstantDecl(const UnnamedGlobalConstantDecl *gcd);
+
   CharUnits computeNonVirtualBaseClassOffset(
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
@@ -377,7 +418,34 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
+  llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
+      unnamedGlobalConstantDeclMap;
+  llvm::DenseMap<const CompoundLiteralExpr *, cir::GlobalOp>
+      emittedCompoundLiterals;
+
+  cir::GlobalOp
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *e) {
+    return emittedCompoundLiterals.lookup(e);
+  }
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
+                                        cir::GlobalOp gv) {
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
+    assert(ok && "compound literal global already emitted");
+  }
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -496,6 +564,16 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool mustBeEmitted(const clang::ValueDecl *d);
 
+  /// Check if `fd` ends up calling itself directly through asm label or
+  /// builtin-pointer-to-self trickery (e.g., glibc's `extern inline` libc
+  /// wrappers that call `__builtin_strrchr`, which the codegen lowers to a
+  /// call on the same asm-named symbol).  Emitting an
+  /// `available_externally` body for such a function feeds the LLVM
+  /// Decide whether to emit the body of `gd` to CIR.  Returns false for
+  /// available_externally functions that are trivially recursive (PR9614).
+  /// Mirrors classic CodeGen's `CodeGenModule::shouldEmitFunction`.
+  bool shouldEmitFunction(clang::GlobalDecl gd);
+
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function
@@ -540,10 +618,14 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
+  /// Emit a definition for an `__attribute__((alias))` declaration.
+  void emitAliasDefinition(GlobalDecl gd);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
@@ -553,11 +635,13 @@ public:
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
   /// Set TLS mode for the given operation based on the given variable
-  /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+  /// declaration. If `isExtendingDecl` is true, then the operation is a
+  /// temporary whose lifetime is extended by the variable declared by `d`.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d,
+                  bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
-  cir::TLS_Model getDefaultCIRTLSModel() const;
+  cir::TLSModel getDefaultCIRTLSModel() const;
 
   /// Set function attributes for a function declaration.
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
@@ -571,16 +655,34 @@ public:
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
 
+  /// Generate OpenCL kernel argument metadata for a kernel function.
+  void emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                   const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+
+  /// Emit the SYCL kernel caller offload entry point function generated for a
+  /// function declared with the sycl_kernel_entry_point attribute.
+  void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
+                            clang::ASTContext &ctx);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Helper function for the below two that will create the
+  /// constructor/destructor in specified regions, rather than in the GlobalOp.
+  void emitCXXSpecialVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                 bool performInit, mlir::Region &ctorRegion,
+                                 mlir::Region &dtorRegion);
+  /// Emit the function that initializes the specified static-local variable.
+  void emitCXXStaticLocalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
+                                     bool performInit);
   /// Emit the function that initializes the specified global
   void emitCXXGlobalVarDeclInit(const VarDecl *varDecl, cir::GlobalOp addr,
                                 bool performInit);
 
+  void setGlobalTlsReferences(const VarDecl &vd, cir::GlobalOp globalOp);
   void emitCXXGlobalVarDeclInitFunc(const VarDecl *vd, cir::GlobalOp addr,
                                     bool performInit);
 
@@ -626,6 +728,18 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
+  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Returns std::nullopt and emits errorNYI for virtual-base paths.
+  std::optional<llvm::SmallVector<int32_t>>
+  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
+  /// Returns true if \p field is an empty field that isn't laid out in the CIR
+  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
+  /// CIR field index, so a pointer-to-data-member to them is represented by an
+  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
+  /// path.
+  bool isEmptyFieldForMemberPointer(const FieldDecl *field);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
   // alternate name for the function to be called by. This function mangles
@@ -659,6 +773,13 @@ public:
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
+  /// Print the postfix for externalized static variable or kernels for single
+  /// source offloading languages CUDA and HIP. The unique postfix is created
+  /// using either the CUID argument, or the file's UniqueID and active macros.
+  /// The fallback method without a CUID requires that the offloading toolchain
+  /// does not define separate macros via the -cc1 options.
+  void printPostfixForExternalizedDecl(llvm::raw_ostream &os, const Decl *d);
+
   /// Replace all uses of the old global with the new global, updating types
   /// and references as needed. Erases the old global when done.
   void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);
@@ -691,19 +812,15 @@ public:
                                        cir::FuncType ty,
                                        const clang::FunctionDecl *fd);
 
-  /// Mark the function as a special member (e.g. constructor, destructor)
-  void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
-                               const clang::FunctionDecl *funcDecl);
+  /// Record the func_info tag for a function, either a C++ special member
+  /// form (constructor, destructor, assignment) or a known standard library
+  /// entity that passes can recognize without the AST.
+  void setFuncInfoAttr(cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,
                                     bool assumeConvergent = false);
-
-  static constexpr const char *builtinCoroId = "__builtin_coro_id";
-  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
-  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
-  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
@@ -713,6 +830,14 @@ public:
     assert(cudaRuntime != nullptr);
     return *cudaRuntime;
   }
+
+  CIRGenOpenMPRuntime &getOpenMPRuntime() {
+    assert(openMPRuntime != nullptr);
+    return *openMPRuntime;
+  }
+
+  bool isPaddedAtomicType(QualType type);
+  bool isPaddedAtomicType(const AtomicType *type);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -756,8 +881,7 @@ public:
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
-                                                    GVALinkage linkage,
-                                                    bool isConstantVariable);
+                                                    GVALinkage linkage);
   void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
     cir::GlobalLinkageKind l = getFunctionLinkage(gd);
     f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
@@ -765,8 +889,7 @@ public:
                                            getMLIRVisibilityFromCIRLinkage(l));
   }
 
-  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
-                                                    bool isConstant);
+  cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd);
 
   void addReplacement(llvm::StringRef name, mlir::Operation *op);
 
@@ -816,7 +939,16 @@ public:
   /// Emits AMDGPU specific Metadata.
   void emitAMDGPUMetadata();
 
+  /// Add global annotations for a global value (GlobalOp or FuncOp).
+  void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
+
 private:
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
+
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
@@ -826,10 +958,23 @@ private:
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
+  bool getCPUAndFeaturesAttributes(GlobalDecl gd,
+                                   llvm::StringMap<std::string> &attrs,
+                                   bool setTargetFeatures = true);
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Emit all the global annotations.
+  void emitGlobalAnnotations();
+
+  /// Build (or fetch from the dedup cache) the args ArrayAttr for an
+  /// annotation. Returns the empty ArrayAttr when the annotation has none.
+  mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
+
+  /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
+  cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
   /// Return the AST address space of the underlying global variable for D, as
   /// determined by its declaration. Normally this is the same as the address

@@ -17,6 +17,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/BacktraceTools.h"
+#include "llvm/ExecutionEngine/Orc/COFFAutoImportGenerator.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -39,6 +40,7 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -166,6 +168,12 @@ static cl::list<std::string> WeakLibraries(
              "TextAPI file, and all symbols in the interface will "
              "resolve to null"),
     cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    LibrariesAuto("auto-l",
+                  cl::desc("Link against library X in the library search paths "
+                           "(auto-generate corresponding import library)"),
+                  cl::Prefix, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> SearchSystemLibrary(
     "search-sys-lib",
@@ -753,30 +761,24 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
-  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
+createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSimpleMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
 #else
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
+createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
            {SAs.Reserve,
             rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
@@ -798,24 +800,27 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, EPC, SAs);
 }
 
-#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
-  switch (UseMemMgr) {
-  case MemMgr::Default:
-  case MemMgr::Generic:
-    break;
-  case MemMgr::SimpleRemote:
-    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
-    break;
-  case MemMgr::Shared:
-    S.CreateMemoryManager = createSharedMemoryManager;
-    break;
+static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createMemoryManager(ExecutorProcessControl &EPC) {
+  if (OutOfProcessExecutor.getNumOccurrences() ||
+      OutOfProcessExecutorConnect.getNumOccurrences()) {
+
+    switch (UseMemMgr) {
+    case MemMgr::Default:
+    case MemMgr::Generic:
+      return EPC.createDefaultMemoryManager();
+    case MemMgr::SimpleRemote:
+      return createSimpleRemoteMemoryManager(EPC);
+    case MemMgr::Shared:
+      return createSharedMemoryManager(EPC);
+    }
   }
+
+  return createInProcessMemoryManager();
 }
-#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -974,12 +979,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -1063,12 +1065,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD,
+      *SockFD);
 #endif
 }
 
@@ -1172,7 +1171,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize, createInProcessMemoryManager());
+        std::move(TT), *PageSize);
   }
 
   Error Err = Error::success();
@@ -1225,9 +1224,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     Session &S;
   };
 
-  ObjLayer = std::make_unique<ObjectLinkingLayer>(
-      ES, ES.getExecutorProcessControl().getMemMgr());
   ErrorAsOutParameter _(&Err);
+
+  if (auto MM = createMemoryManager(ES.getExecutorProcessControl())) {
+    MemoryMgr = std::move(*MM);
+    ObjLayer = std::make_unique<orc::ObjectLinkingLayer>(ES, *MemoryMgr);
+  } else {
+    Err = MM.takeError();
+    return;
+  }
 
   if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
     DylibMgr = std::move(*DM);
@@ -1267,13 +1272,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   }
 
   if (DebuggerSupport && TT.isOSBinFormatMachO()) {
-    if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
-                                    inconvertibleErrorCode());
-      return;
-    }
     ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
-        this->ES, *ProcessSymsJD, TT)));
+        this->ES, this->ES.getBootstrapJITDylib())));
   }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {
@@ -1361,7 +1361,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
       auto Plugin =
-          std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, TargetSymErr);
       if (!TargetSymErr)
         ObjLayer->addPlugin(std::move(Plugin));
       else
@@ -1495,9 +1495,8 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   auto It = DynLibJDs.find(LibPath);
-  if (It != DynLibJDs.end()) {
+  if (It != DynLibJDs.end())
     return It->second;
-  }
   auto G =
       EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
@@ -1521,6 +1520,37 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   LLVM_DEBUG({
     dbgs() << "Linking dynamic library " << LibPath << " to " << JD.getName()
            << "\n";
+  });
+  return Error::success();
+}
+
+Expected<JITDylib *> Session::getOrLoadAutoImportDLL(StringRef LibPath) {
+  auto It = AutoImportJDs.find(LibPath);
+  if (It != AutoImportJDs.end())
+    return It->second;
+  auto G = orc::COFFAutoImportGenerator::Load(ES, *ObjLayer, *DylibMgr,
+                                              LibPath.data());
+  if (!G)
+    return G.takeError();
+  auto JD = &ES.createBareJITDylib(LibPath.str());
+
+  JD->addGenerator(std::move(*G));
+  AutoImportJDs.emplace(LibPath.str(), JD);
+  LLVM_DEBUG({
+    dbgs() << "Loaded auto-import dynamic library " << LibPath.data() << " for "
+           << LibPath << "\n";
+  });
+  return JD;
+}
+
+Error Session::loadAndLinkAutoImportDLL(JITDylib &JD, StringRef LibPath) {
+  auto DL = getOrLoadAutoImportDLL(LibPath);
+  if (!DL)
+    return DL.takeError();
+  JD.addToLinkOrder(**DL);
+  LLVM_DEBUG({
+    dbgs() << "Linking auto-import dynamic library " << LibPath << " to "
+           << JD.getName() << "\n";
   });
   return Error::success();
 }
@@ -2309,7 +2339,7 @@ static Error addLibraries(Session &S,
     bool IsPath = false;
     unsigned Position;
     ArrayRef<StringRef> CandidateExtensions;
-    enum { Standard, Hidden, Weak } Modifier;
+    enum { Standard, Hidden, Weak, Auto } Modifier;
   };
 
   // Queue to load library as in the order as it appears in the argument list.
@@ -2395,6 +2425,18 @@ static Error addLibraries(Session &S,
     LibraryLoadQueue.push_back(std::move(LL));
   }
 
+  // Add -auto-lx arguments to LibraryLoads.
+  for (auto LibAutoItr = LibrariesAuto.begin(),
+            LibAutoEnd = LibrariesAuto.end();
+       LibAutoItr != LibAutoEnd; ++LibAutoItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibAutoItr;
+    LL.Position = LibrariesAuto.getPosition(LibAutoItr - LibrariesAuto.begin());
+    LL.CandidateExtensions = DynLibExtensionsOnly;
+    LL.Modifier = LibraryLoad::Auto;
+    LibraryLoadQueue.push_back(std::move(LL));
+  }
+
   // Sort library loads by position in the argument list.
   llvm::sort(LibraryLoadQueue,
              [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
@@ -2415,6 +2457,7 @@ static Error addLibraries(Session &S,
       S.HiddenArchives.insert(Path);
       break;
     case LibraryLoad::Weak:
+    case LibraryLoad::Auto:
       llvm_unreachable("Unsupported");
       break;
     }
@@ -2486,6 +2529,10 @@ static Error addLibraries(Session &S,
             "Can't use -weak-lx or -weak_library to load JITDylib " +
                 LL.LibName,
             inconvertibleErrorCode());
+      if (LL.Modifier == LibraryLoad::Auto)
+        return make_error<StringError>("Can't use -auto-lx to load JITDylib " +
+                                           LL.LibName,
+                                       inconvertibleErrorCode());
       JD.addToLinkOrder(*LJD);
       continue;
     }
@@ -2556,6 +2603,9 @@ static Error addLibraries(Session &S,
               JD.addGenerator(std::move(*G));
             else
               return G.takeError();
+          } else if (LL.Modifier == LibraryLoad::Auto) {
+            if (auto Err = S.loadAndLinkAutoImportDLL(JD, LibPath.data()))
+              return Err;
           } else {
             if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
               return Err;
@@ -2753,8 +2803,7 @@ getTargetInfo(const Triple &TT,
         make_error<StringError>("Unable to create target asm info " + TT.str(),
                                 inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
-                                         STI.get());
+  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), *MAI, *MRI, *STI);
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));

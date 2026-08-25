@@ -12,7 +12,8 @@
 
 namespace llvm {
 
-class SPIRVCBufferAccess : public PassInfoMixin<SPIRVCBufferAccess> {
+class SPIRVCBufferAccessPass
+    : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

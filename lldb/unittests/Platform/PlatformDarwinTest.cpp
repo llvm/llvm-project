@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include <memory>
 #include <tuple>
@@ -767,3 +768,20 @@ INSTANTIATE_TEST_SUITE_P(PlatformDarwinLocateWithSpecialCharsTest,
                          PlatformDarwinLocateWithSpecialCharsTestFixture,
                          testing::ValuesIn(std::vector<SpecialCharTestCase>{
                              {' ', '_'}, {'.', '_'}, {'-', '_'}, {'+', 'x'}}));
+
+TEST_F(PlatformDarwinLocateTest, GetSafeAutoLoadPaths) {
+  // Tests PlatformDarwin::GetSafeAutoLoadPaths returns a path into the SDK on
+  // Darwin platforms.
+
+  auto paths_or_err = std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+                          ->GetSafeAutoLoadPaths(*m_target_sp);
+
+  ASSERT_THAT_EXPECTED(paths_or_err, llvm::Succeeded());
+
+  ASSERT_EQ(paths_or_err->GetSize(), 1u);
+
+  // The returned path should be $SDKROOT/usr/share/lldb.
+  FileSpec path = paths_or_err->GetFileSpecAtIndex(0);
+  EXPECT_TRUE(llvm::StringRef(path.GetPath()).ends_with("/usr/share/lldb"))
+      << "Unexpected path: " << path.GetPath();
+}

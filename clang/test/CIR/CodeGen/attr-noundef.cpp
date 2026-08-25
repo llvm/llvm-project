@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -emit-cir %s -o %t.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports vector types.
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
@@ -41,7 +43,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN13check_structs10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef dead_on_return %
+// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 
 struct Huge {
   int a[1024];
@@ -91,7 +93,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN12check_unions10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef dead_on_return %
+// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %
 } // namespace check_unions
 
 //************ Passing `this` pointers

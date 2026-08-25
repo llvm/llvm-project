@@ -59,16 +59,6 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
 CompilerType ResolveTypeByName(const std::string &name,
                                ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
@@ -102,21 +92,12 @@ CompilerType ResolveTypeByName(const std::string &name,
 
 llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
                                            DILLexer lexer,
-                                           std::shared_ptr<StackFrame> frame_sp,
+                                           StackFrame &stack_frame,
                                            lldb::DynamicValueType use_dynamic,
-                                           uint32_t options,
                                            lldb::DILMode mode) {
-  const bool check_ptr_vs_member =
-      (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
-  const bool no_synth_child =
-      (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
-
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic,
-                   !no_synth_child, !no_fragile_ivar, check_ptr_vs_member,
-                   error, mode);
+  DILParser parser(dil_input_expr, lexer, stack_frame, use_dynamic, error,
+                   mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -128,14 +109,12 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
 }
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<StackFrame> frame_sp,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error, lldb::DILMode mode)
-    : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
+                     StackFrame &stack_frame,
+                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
+                     lldb::DILMode mode)
+    : m_stack_frame(stack_frame), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member), m_mode(mode) {}
+      m_mode(mode) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -148,14 +127,259 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    cast_expression
+//    assignment_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseConditionalExpression(); }
+
+// Parse a conditional_expression.
+//
+//  conditional_expression:
+//    assignment_expression
+//    assignment_expression "?" expression ":" expression
+//
+ASTNodeUP DILParser::ParseConditionalExpression() {
+  auto lhs = ParseAssignmentExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's a ternary operator.
+  if (CurToken().Is(Token::question)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto true_op = ParseExpression();
+    assert(true_op && "ASTNodeUP must not contain a nullptr");
+    Expect(Token::colon);
+    m_dil_lexer.Advance();
+    auto false_op = ParseExpression();
+    assert(false_op && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<ConditionalNode>(token.GetLocation(), std::move(lhs),
+                                            std::move(true_op),
+                                            std::move(false_op));
+  }
+
+  return lhs;
+}
+
+// Parse an assignment_expression
+//
+//  assignment_expression
+//    logical_or_expression
+//    logical_or_expression assignment_operator assignment_expression
+//
+//  assignment_operator:
+//    "="
+//    "+="
+//    "-="
+//
+ASTNodeUP DILParser::ParseAssignmentExpression() {
+  auto lhs = ParseLogicalOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's an assignment expression.
+  if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal})) {
+    // That's an assignment!
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAssignmentExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+  return lhs;
+}
+
+// Parse a logical_or_expression.
+//
+//  logical_or_expression:
+//    logical_and_expression {"||" logical_and_expression}
+//
+ASTNodeUP DILParser::ParseLogicalOrExpression() {
+  auto lhs = ParseLogicalAndExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::pipepipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseLogicalAndExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a logical_and_expression.
+//
+//  logical_and_expression:
+//    inclusive_or_expression {"&&" inclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseLogicalAndExpression() {
+  auto lhs = ParseInclusiveOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::ampamp)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseInclusiveOrExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an inclusive_or_expression.
+//
+//  inclusive_or_expression:
+//    exclusive_or_expression {"|" exclusive_or_expression}
+//
+ASTNodeUP DILParser::ParseInclusiveOrExpression() {
+  auto lhs = ParseExclusiveOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::pipe)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseExclusiveOrExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an exclusive_or_expression.
+//
+//  exclusive_or_expression:
+//    and_expression {"^" and_expression}
+//
+ASTNodeUP DILParser::ParseExclusiveOrExpression() {
+  auto lhs = ParseAndExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::caret)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAndExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an and_expression.
+//
+//  and_expression:
+//    equality_expression {"&" equality_expression}
+//
+ASTNodeUP DILParser::ParseAndExpression() {
+  auto lhs = ParseEqualityExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().Is(Token::amp)) {
+    Token token = CurToken();
+    if (token.Is(Token::amp) && m_mode != lldb::eDILModeFull) {
+      BailOut("bitwise and (&) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
+    m_dil_lexer.Advance();
+    auto rhs = ParseEqualityExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse an equality_expression.
+//
+//  equality_expression:
+//    relational_expression {"==" relational_expression}
+//    relational_expression {"!=" relational_expression}
+//
+ASTNodeUP DILParser::ParseEqualityExpression() {
+  auto lhs = ParseRelationalExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf({Token::equalequal, Token::exclaimequal})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseRelationalExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a relational_expression.
+//
+//  relational_expression:
+//    shift_expression {"<" shift_expression}
+//    shift_expression {">" shift_expression}
+//    shift_expression {"<=" shift_expression}
+//    shift_expression {">=" shift_expression}
+//
+ASTNodeUP DILParser::ParseRelationalExpression() {
+  auto lhs = ParseShiftExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf(
+      {Token::less, Token::greater, Token::lessequal, Token::greaterequal})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseShiftExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a shift_expression.
+//
+//  shift_expression:
+//    additive_expression {"<<" additive_expression}
+//    additive_expression {">>" additive_expression}
+//
+ASTNodeUP DILParser::ParseShiftExpression() {
+  auto lhs = ParseAdditiveExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf({Token::lessless, Token::greatergreater})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAdditiveExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an additive_expression.
 //
 //  additive_expression:
 //    multiplicative_expression {"+" multiplicative_expression}
+//    multiplicative_expression {"-" multiplicative_expression}
 //
 ASTNodeUP DILParser::ParseAdditiveExpression() {
   auto lhs = ParseMultiplicativeExpression();
@@ -261,10 +485,12 @@ ASTNodeUP DILParser::ParseCastExpression() {
 //    "*"
 //    "+"
 //    "-"
+//    "~"
+//    "!"
 //
 ASTNodeUP DILParser::ParseUnaryExpression() {
-  if (CurToken().IsOneOf(
-          {Token::amp, Token::star, Token::minus, Token::plus})) {
+  if (CurToken().IsOneOf({Token::amp, Token::star, Token::minus, Token::plus,
+                          Token::tilde, Token::exclaim})) {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
@@ -282,6 +508,12 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
                                            std::move(rhs));
     case Token::plus:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Plus,
+                                           std::move(rhs));
+    case Token::tilde:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Not,
+                                           std::move(rhs));
+    case Token::exclaim:
+      return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::LNot,
                                            std::move(rhs));
     default:
       llvm_unreachable("invalid token kind");
@@ -365,8 +597,24 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     uint32_t loc = CurToken().GetLocation();
     std::string identifier = ParseIdExpression();
 
-    if (!identifier.empty())
+    if (!identifier.empty()) {
+      if (identifier == "sizeof" && CurToken().Is(Token::l_paren)) {
+        m_dil_lexer.Advance();
+        uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+        auto type_id = ParseTypeId();
+        if (type_id) {
+          Expect(Token::r_paren);
+          m_dil_lexer.Advance();
+          return std::make_unique<SizeOfNode>(loc, *type_id);
+        }
+        TentativeParsingRollback(save_token_idx);
+        ASTNodeUP expr = ParseExpression();
+        Expect(Token::r_paren);
+        m_dil_lexer.Advance();
+        return std::make_unique<SizeOfNode>(loc, std::move(expr));
+      }
       return std::make_unique<IdentifierNode>(loc, identifier);
+    }
   }
 
   if (CurToken().Is(Token::l_paren)) {
@@ -469,18 +717,18 @@ std::optional<CompilerType> DILParser::ParseTypeId() {
 
     if (type_name.empty())
       return {};
-    type = ResolveTypeByName(type_name, *m_ctx_scope);
+    type = ResolveTypeByName(type_name, m_stack_frame);
     if (!type.IsValid())
       return {};
 
     // Same-name identifiers should be preferred over typenames.
-    if (LookupIdentifier(type_name, m_ctx_scope, m_use_dynamic))
+    if (LookupIdentifier(type_name, m_stack_frame, m_use_dynamic))
       // TODO: Make type accessible with 'class', 'struct' and 'union' keywords.
       return {};
 
     // Same-name identifiers should be preferred over typenames.
-    if (LookupGlobalIdentifier(type_name, m_ctx_scope,
-                               m_ctx_scope->CalculateTarget(), m_use_dynamic))
+    if (LookupGlobalIdentifier(type_name, m_stack_frame,
+                               m_stack_frame.CalculateTarget(), m_use_dynamic))
       // TODO: Make type accessible with 'class', 'struct' and 'union' keywords
       return {};
   }
@@ -516,8 +764,10 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
   bool first_word = true;
   while (CurToken().GetKind() == Token::identifier) {
     if (CurToken().GetSpelling() == "const" ||
-        CurToken().GetSpelling() == "volatile")
+        CurToken().GetSpelling() == "volatile") {
+      m_dil_lexer.Advance();
       continue;
+    }
     if (!first_word)
       type_name.push_back(' ');
     else
@@ -527,8 +777,8 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
   }
 
   if (type_name.size() > 0) {
-    lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
-    ConstString const_type_name(type_name.c_str());
+    lldb::TargetSP target_sp = m_stack_frame.CalculateTarget();
+    ConstString const_type_name(type_name);
     for (auto type_system_sp : target_sp->GetScratchTypeSystems())
       if (auto compiler_type =
               type_system_sp->GetBuiltinTypeByName(const_type_name))

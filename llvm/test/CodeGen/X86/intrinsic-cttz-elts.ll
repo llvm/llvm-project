@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx512f < %s | FileCheck %s --check-prefix=AVX512
 
 define i8 @ctz_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: .LCPI0_0:
@@ -15,32 +16,40 @@ define i8 @ctz_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqw %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    psubusw %xmm0, %xmm1
+; CHECK-NEXT:    paddw %xmm0, %xmm1
 ; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    cmpw %cx, %ax
 ; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pextrw $2, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $4, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $5, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $6, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $7, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_v8i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $9, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %res = call i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16> %a, i1 0)
   ret i8 %res
 }
@@ -56,23 +65,44 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; CHECK-NEXT:    por %xmm3, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm1
+; CHECK-NEXT:    pandn %xmm3, %xmm2
+; CHECK-NEXT:    por %xmm1, %xmm2
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cmpl %eax, %ecx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cmpl %eax, %ecx
-; CHECK-NEXT:    cmovbel %eax, %ecx
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $5, %al
+; AVX512-NEXT:    movzbl %al, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %res = call i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32> %a, i1 0)
   ret i16 %res
 }
@@ -94,34 +124,76 @@ define i8 @ctz_v8i16_poison(<8 x i16> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqw %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    psubusw %xmm0, %xmm1
+; CHECK-NEXT:    paddw %xmm0, %xmm1
 ; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    cmpw %cx, %ax
 ; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pextrw $2, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $4, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $5, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $6, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pextrw $7, %xmm1, %eax
-; CHECK-NEXT:    cmpw %ax, %cx
-; CHECK-NEXT:    cmovbel %eax, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_v8i16_poison:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $9, %al
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %res = call i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16> %a, i1 1)
   ret i8 %res
+}
+
+define i32 @ctz_zero_v4i1() {
+; CHECK-LABEL: ctz_zero_v4i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_zero_v4i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vphminposuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $5, %al
+; AVX512-NEXT:    movzbl %al, %eax
+; AVX512-NEXT:    retq
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> zeroinitializer, i1 false)
+  ret i32 %res
+}
+
+define i32 @ctz_zero_v8i1() {
+; CHECK-LABEL: ctz_zero_v8i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $8, %eax
+; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_zero_v8i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vphminposuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $9, %al
+; AVX512-NEXT:    movzbl %al, %eax
+; AVX512-NEXT:    retq
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v8i1(<8 x i1> zeroinitializer, i1 false)
+  ret i32 %res
 }
 
 declare i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16>, i1)

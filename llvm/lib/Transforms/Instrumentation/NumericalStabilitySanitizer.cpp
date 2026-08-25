@@ -811,9 +811,9 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
     return false;
 
   const auto ID = Fn->getIntrinsicID();
-  LibFunc LFunc = LibFunc::NotLibFunc;
+  LibFunc LFunc = TLI.getLibFunc(*Fn);
   // Always check args of unknown functions.
-  if (ID == Intrinsic::ID() && !TLI.getLibFunc(*Fn, LFunc))
+  if (ID == Intrinsic::ID() && LFunc == NotLibFunc)
     return true;
 
   // Do not check args of an `fabs` call that is used for a comparison.
@@ -856,8 +856,7 @@ void NumericalStabilitySanitizer::populateShadowStack(
 
   // Do not create shadow stacks for intrinsics/known lib funcs.
   if (Function *Fn = CI.getCalledFunction()) {
-    LibFunc LFunc;
-    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn, LFunc))
+    if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn) != NotLibFunc)
       return;
   }
 
@@ -1532,8 +1531,8 @@ const KnownIntrinsic::WidenedIntrinsic *KnownIntrinsic::widen(StringRef Name) {
 // Returns the name of the LLVM intrinsic corresponding to the given function.
 static const char *getIntrinsicFromLibfunc(Function &Fn, Type *VT,
                                            const TargetLibraryInfo &TLI) {
-  LibFunc LFunc;
-  if (!TLI.getLibFunc(Fn, LFunc))
+  LibFunc LFunc = TLI.getLibFunc(Fn);
+  if (LFunc == NotLibFunc)
     return nullptr;
 
   if (const char *Name = KnownIntrinsic::get(LFunc))
@@ -1578,14 +1577,10 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   }
 
   // Check that the widened intrinsic is valid.
-  SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(WidenedId, Table);
-  SmallVector<Type *, 4> ArgTys;
-  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
-  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
-  assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
-         "invalid widened intrinsic");
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] bool IsValid =
+      Intrinsic::isSignatureValid(WidenedId, WidenedFnTy, OverloadTys);
+  assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.
   SmallVector<Value *, 4> Args;
@@ -1611,7 +1606,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
     // There is no intrinsic with his level of precision, truncate the shadow.
     Args.push_back(Builder.CreateFPTrunc(Shadow, IntrinsicArgTy));
   }
-  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, ArgTys, Args);
+  Value *IntrinsicCall = Builder.CreateIntrinsic(WidenedId, OverloadTys, Args);
   return WidenedFnTy->getReturnType() == ExtendedVT
              ? IntrinsicCall
              : Builder.CreateFPExt(IntrinsicCall, ExtendedVT);
@@ -1901,8 +1896,9 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
         break;
       }
 
-      if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
-        BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
+      if (BitcastTy)
+        if (auto *VectorTy = dyn_cast<VectorType>(C->getType()))
+          BitcastTy = VectorType::get(BitcastTy, VectorTy->getElementCount());
     }
     if (BitcastTy) {
       const MemoryExtents Extents = getMemoryExtentsOrDie(BitcastTy);
@@ -2092,7 +2088,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   //
   //    For example, in the following example, the instrumentation in
   //    `instrumented_1` rejects the shadow return value from `instrumented_3`
-  //    because is is not tagged as expected (`&instrumented_3` instead of
+  //    because it is not tagged as expected (`&instrumented_3` instead of
   //    `non_instrumented_2`):
   //
   //        instrumented_1()

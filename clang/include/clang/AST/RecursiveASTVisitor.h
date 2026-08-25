@@ -259,7 +259,8 @@ public:
   /// appropriate method.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseTemplateName(TemplateName Template);
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true);
 
   /// Recursively visit a template argument and dispatch to the
   /// appropriate method for the argument type.
@@ -323,6 +324,16 @@ public:
 
   // Visit concept reference.
   bool VisitConceptReference(ConceptReference *CR) { return true; }
+
+  /// Recursively visit a single component of an __builtin_offsetof
+  /// designator (a field, identifier, base-class, or array-index node).
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  bool TraverseOffsetOfNode(const OffsetOfNode *Node);
+
+  /// Visit a single component of an __builtin_offsetof designator.
+  bool VisitOffsetOfNode(const OffsetOfNode *Node) { return true; }
+
   // ---- Methods on Attrs ----
 
   // Visit an attribute.
@@ -861,12 +872,14 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
+bool RecursiveASTVisitor<Derived>::TraverseTemplateName(
+    TemplateName Template, bool TraverseQualifier) {
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
-    TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
+    if (TraverseQualifier)
+      TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
   } else if (QualifiedTemplateName *QTN =
                  Template.getAsQualifiedTemplateName()) {
-    if (QTN->getQualifier()) {
+    if (TraverseQualifier && QTN->getQualifier()) {
       TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
     }
   }
@@ -1154,6 +1167,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
+DEF_TRAVERSE_TYPE(LateParsedAttrType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1196,24 +1212,12 @@ DEF_TRAVERSE_TYPE(DependentNameType, {
 })
 
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
 DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseType(T->getDeducedType()));
 })
 
@@ -1512,6 +1516,9 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
+DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
@@ -1549,10 +1556,8 @@ DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
   if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(TraverseTemplateName(
-      TemplateName(TL.getTypePtr()->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(TL.getTypePtr()->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
     TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
@@ -1564,10 +1569,8 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
   const auto *T = TL.getTypePtr();
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(
-      TraverseTemplateName(TemplateName(T->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(T->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   TRY_TO(TraverseType(T->getDeducedType()));
 })
@@ -1723,17 +1726,15 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
+  const TemplateName Template = D->getFriendTemplateName();
   if (D->getFriendType())
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else if (!Template.isNull())
+    TRY_TO(TraverseTemplateName(Template));
   else
     TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(I);
-    for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
-         ITPL != ETPL; ++ITPL) {
-      TRY_TO(TraverseDecl(*ITPL));
-    }
-  }
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})
@@ -1746,6 +1747,18 @@ DEF_TRAVERSE_DECL(ObjCPropertyImplDecl, {// FIXME: implement this
 DEF_TRAVERSE_DECL(StaticAssertDecl, {
   TRY_TO(TraverseStmt(D->getAssertExpr()));
   TRY_TO(TraverseStmt(D->getMessage()));
+})
+
+DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
+  // No double visiting: getTypeAsWritten() returns null for class
+  // templates/nested classes where the qualifier lives inside the TSI.
+  if (D->getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+  if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
@@ -1887,6 +1900,14 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
+
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
     TRY_TO(TraverseStmt(I));
@@ -1955,10 +1976,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
@@ -2027,8 +2046,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      // FIXME: For now traverse explicit instantiations here. Change that
-      // once they are represented as dedicated nodes in the AST.
+      // Unlike class/variable template specializations, function template
+      // specializations are not independent children of the DeclContext —
+      // they are only reachable via FunctionTemplateDecl::specializations().
+      // We must traverse them here so visitors can see the instantiated body.
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
         TRY_TO(TraverseDecl(RD));
@@ -2196,29 +2217,24 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        the source code anywhere.  (Note the instatiated *type* --              \
        set<int> -- is written, and will still get a callback of                \
        TemplateSpecializationType).  For explicit instantiations               \
-       ("template set<int>;"), we do need a callback, since this               \
-       is the only callback that's made for this instantiation.                \
-       We use getTemplateArgsAsWritten() to distinguish. */                    \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      /* The args that remains unspecialized. */                               \
+       ("template set<int>;"), the ExplicitInstantiationDecl node              \
+       handles traversal of template args and qualifier.                       \
+       For explicit specializations ("template<> set<int> {...};"),            \
+       we traverse template args here since there is no EID. */                \
+    if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
+      const auto *ArgsWritten = D->getTemplateArgsAsWritten();                 \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
-    }                                                                          \
-                                                                               \
-    if (getDerived().shouldVisitTemplateInstantiations() ||                    \
-        D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {    \
-      /* Traverse base definition for explicit specializations */              \
-      TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
-    } else {                                                                   \
-      TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));            \
-                                                                               \
+    } else if (!getDerived().shouldVisitTemplateInstantiations()) {            \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
          which contains the instantiated members of the template. */           \
       return true;                                                             \
     }                                                                          \
+                                                                               \
+    /* Traverse base definition for explicit specializations */                \
+    TRY_TO(Traverse##DECLKIND##Helper(D));                                     \
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
@@ -2544,6 +2560,11 @@ DEF_TRAVERSE_STMT(CXXCatchStmt, {
   // children() iterates over the handler block.
 })
 
+DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {
+  TRY_TO(TraverseDecl(S->getCatchParamDecl()));
+  // children() iterates over the handler block.
+})
+
 DEF_TRAVERSE_STMT(DeclStmt, {
   for (auto *I : S->decls()) {
     TRY_TO(TraverseDecl(I));
@@ -2573,7 +2594,6 @@ DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
 DEF_TRAVERSE_STMT(AttributedStmt, {})
 DEF_TRAVERSE_STMT(NullStmt, {})
-DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtFinallyStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtSynchronizedStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtThrowStmt, {})
@@ -2611,6 +2631,12 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
     TRY_TO(TraverseTemplateArgumentLocsHelper(S->getTemplateArgs(),
                                               S->getNumTemplateArgs()));
   }
+})
+
+DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
+  TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+  TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
+                                            S->getNumTemplateArgs()));
 })
 
 DEF_TRAVERSE_STMT(DeclRefExpr, {
@@ -2716,6 +2742,13 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseOffsetOfNode(
+    const OffsetOfNode *Node) {
+  TRY_TO(VisitOffsetOfNode(Node));
+  return true;
+}
+
 // If shouldVisitImplicitCode() returns false, this method traverses only the
 // syntactic form of InitListExpr.
 // If shouldVisitImplicitCode() return true, this method is called once for
@@ -2787,11 +2820,12 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 })
 
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
-  // The child-iterator will pick up the expression representing
-  // the field.
-  // FIXME: for code like offsetof(Foo, a.b.c), should we get
-  // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
+  // Visit each designator component (e.g. the `a`, `b`, `c` in
+  // offsetof(Foo, a.b.c)). Array index expressions are reached through the
+  // child-iterator, which DEF_TRAVERSE_STMT walks automatically.
+  for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I)
+    TRY_TO(TraverseOffsetOfNode(&S->getComponent(I)));
 })
 
 DEF_TRAVERSE_STMT(UnaryExprOrTypeTraitExpr, {
@@ -3136,6 +3170,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
     TRY_TO(TraverseConceptRequirement(Req));
 })
 
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
+
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
 DEF_TRAVERSE_STMT(FixedPointLiteral, {})
@@ -3276,7 +3314,10 @@ DEF_TRAVERSE_STMT(OMPDepobjDirective,
 DEF_TRAVERSE_STMT(OMPScanDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
-DEF_TRAVERSE_STMT(OMPOrderedDirective,
+DEF_TRAVERSE_STMT(OMPOrderedStandaloneDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPOrderedBlockAssocDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAtomicDirective,
@@ -3668,6 +3709,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPCaptureClause(OMPCaptureClause *) {
   return true;
 }
@@ -3768,6 +3815,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  // VisitOMPClauseList covers the interop var and the per-pref-spec fr exprs
+  // (the varlist); the prefer_type attr() exprs live outside it.
+  for (Expr *A : C->attrs())
+    TRY_TO(TraverseStmt(A));
   return true;
 }
 
@@ -4043,6 +4094,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPMapClause(OMPMapClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
     OMPNumTeamsClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;
@@ -4051,6 +4104,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;

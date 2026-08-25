@@ -10,14 +10,15 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
-#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
 class PredicatedScalarEvolution;
+class VPBuilder;
 } // namespace llvm
 
 namespace llvm {
@@ -55,14 +56,17 @@ bool isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE, const Loop *L);
 /// same value for all lanes or only has its first lane used.
 bool isSingleScalar(const VPValue *VPV);
 
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, const VPlan &Plan);
-
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
-bool isUniformAcrossVFsAndUFs(VPValue *V);
+/// or its operands are known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or the canonical IV).
+bool isUniformAcrossVFsAndUFs(const VPValue *V);
+
+/// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
+bool isElementwise(const VPValue *V);
+
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -72,17 +76,51 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 /// one.
 unsigned getVFScaleFactor(VPRecipeBase *R);
 
-/// Returns the VPValue representing the uncountable exit comparison used by
-/// AnyOf if the recipes it depends on can be traced back to live-ins and
-/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
-/// generating the values for the comparison. The recipes are stored in
-/// \p Recipes, and recipes forming an address for a load are also added to
-/// \p GEPs.
-LLVM_ABI_FOR_TEST
-std::optional<VPValue *>
-getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                             SmallVectorImpl<VPInstruction *> &GEPs,
-                             VPBasicBlock *LatchVPBB);
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
+/// Return the intrinsic ID underlying a call.
+template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
+  if (const auto *Intr = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return Intr->getVectorIntrinsicID();
+  if (const auto *Call = dyn_cast<VPWidenCallRecipe>(R))
+    return Call->getCalledScalarFunction()->getIntrinsicID();
+
+  auto GetCalleeIntrinsic = [&](VPValue *CalleeOp) -> Intrinsic::ID {
+    if (!isa<VPIRValue>(CalleeOp))
+      return Intrinsic::not_intrinsic;
+    auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+    return F->getIntrinsicID();
+  };
+  if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+    if (Rep->getOpcode() == Instruction::Call)
+      // The callee is the last operand, excluding the mask if predicated.
+      return GetCalleeIntrinsic(
+          Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
+  if (const auto *VPI = dyn_cast<VPInstruction>(R)) {
+    if (VPI->getOpcode() == Instruction::Call)
+      // The callee is the last operand, excluding the mask if masked.
+      return GetCalleeIntrinsic(
+          VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
+    if (VPI->getOpcode() == VPInstruction::Intrinsic) {
+      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
+          ->getZExtValue();
+    }
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+/// Return the instruction opcode for the recipe defining \p V or 0 for
+/// unsupported recipes and VPValues not defined by a recipe.
+unsigned getOpcode(const VPValue *V);
+
+/// Get the instruction opcode or intrinsic ID for the recipe defining \p V.
+/// Returns an optional pair, where the first element indicates whether it is an
+/// intrinsic ID.
+std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPValue *V);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -126,33 +164,111 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   return nullptr;
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
+VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
+/// Returns the GEP nowrap flags for \p Ptr, looking through pointer casts
+/// mirroring Value::stripPointerCasts.
+GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
+
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
-/// Collect the header mask with the pattern:
-/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
-/// TODO: Introduce explicit recipe for header-mask instead of searching
-/// the header-mask pattern manually.
-VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Returns the (early exiting block, exit block) pairs of \p Plan, i.e. all
+/// edges to an exit block that do not come from \p MiddleVPBB.
+SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
+getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
+
+/// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
+/// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
+/// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is
+/// non-null, inserting recipes via \p Builder.
+VPScalarIVStepsRecipe *createScalarIVSteps(
+    VPlan &Plan, InductionDescriptor::InductionKind Kind,
+    Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
+    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
+
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+VPValue *scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                          VPlan &Plan, VPBuilder &Builder);
+
+/// Returns true if \p R is dead, i.e. none of its defined values are used and
+/// it has no side effects (with the exception of conditional assumes, which are
+/// considered dead as their conditions may be flattened).
+bool isDeadRecipe(VPRecipeBase &R);
+
+/// Recursively delete \p V and any of its operands that become dead.
+void recursivelyDeleteDeadRecipes(VPValue *V);
+
+/// Collect all users of \p V, looking through recipes that define other values.
+SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
+
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
+                            const DataLayout &DL);
+
+namespace detail {
+
+/// Template-independent implementation for pullOutPermutations.
+void pullOutPermutationsImpl(
+    VPlan &Plan, function_ref<VPValue *(VPValue *Op)> Perm,
+    function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> Build);
+} // namespace detail
+
+/// Removes the permutation pattern \p Perm from any elementwise operations
+/// in the plan, by constructing a new permutation via \p Build.
+/// e.g. binop(perm(x), perm(y)) -> perm(binop(x,y)).
+template <typename Match_t, typename Builder>
+void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
+  // Convert matcher to function returing the matched VPValue.
+  auto MatchPerm = [&Perm](VPValue *Op) -> VPValue * {
+    VPValue *X;
+    return match(Op, Perm(X)) ? X : nullptr;
+  };
+  detail::pullOutPermutationsImpl(Plan, MatchPerm, Build);
+}
 
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions where possible, and returning nullptr for unsupported
+/// expressions (like adds, casts, min/max).
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  ScalarEvolution &SE;
+  DebugLoc DL;
+
+  /// When true, nested SCEVUDivExprs are expanded so that they cannot divide by
+  /// zero, matching SCEVExpander's SafeUDivMode.
+  bool SafeUDivMode = false;
+
+  /// Try to find a loop-invariant IR value in the plan's entry block whose
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
+  /// if none is found.
+  VPValue *tryToReuseIRValue(const SCEV *S);
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
+      : Builder(Builder), SE(SE), DL(DL) {}
+
+  /// Try to expand \p S into recipes and live-ins using the builder. Returns
+  /// nullptr if \p S cannot be expanded yet.
+  VPValue *tryToExpand(const SCEV *S);
+};
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//
@@ -274,15 +390,25 @@ public:
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
 
-    // We need to first create an iterator range over (const) BlocktTy & instead
-    // of (const) BlockTy * for filter_range to work properly.
-    auto Mapped =
-        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
-    auto Filter = make_filter_range(
-        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
+    // We need the pointee range over (const) BlocktTy & instead of (const)
+    // BlockTy * for filter_range to work properly.
+    auto Filter =
+        make_filter_range(make_pointee_range(Range),
+                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
     return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });
+  }
+
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
   }
 
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
@@ -310,6 +436,15 @@ public:
 
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns the header and latch of the outermost loop of \p Plan in plain
+  /// CFG form (before regions are formed).
+  static std::pair<VPBasicBlock *, VPBasicBlock *>
+  getPlainCFGHeaderAndLatch(const VPlan &Plan);
+
+  /// Returns the middle block of \p Plan in plain CFG form (before regions
+  /// are formed).
+  static VPBasicBlock *getPlainCFGMiddleBlock(const VPlan &Plan);
 };
 
 } // namespace llvm

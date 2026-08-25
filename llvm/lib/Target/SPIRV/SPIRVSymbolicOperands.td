@@ -398,6 +398,13 @@ defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
 defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_masked_gather_scatter : ExtensionOperand<136, [EnvOpenCL]>;
+defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
+// SPV_KHR_abort is currently only supported in the OpenCL environment.
+// Vulkan/Shader support requires emitting explicit layout decorations on the
+// Message Type, which is not yet implemented.
+defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
+defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
+defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -598,6 +605,7 @@ defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INT
 defm CacheControlsINTEL : CapabilityOperand<6441, 0, 0, [SPV_INTEL_cache_controls], []>;
 defm CooperativeMatrixKHR : CapabilityOperand<6022, 0, 0, [SPV_KHR_cooperative_matrix], []>;
 defm ArithmeticFenceEXT : CapabilityOperand<6144, 0, 0, [SPV_EXT_arithmetic_fence], []>;
+defm AbortKHR : CapabilityOperand<5120, 0, 0, [SPV_KHR_abort], []>;
 defm SplitBarrierINTEL : CapabilityOperand<6141, 0, 0, [SPV_INTEL_split_barrier], []>;
 defm CooperativeMatrixCheckedInstructionsINTEL : CapabilityOperand<6192, 0, 0, [SPV_INTEL_joint_matrix], []>;
 defm CooperativeMatrixPrefetchINTEL : CapabilityOperand<6411, 0, 0, [SPV_INTEL_joint_matrix], []>;
@@ -629,10 +637,13 @@ defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tenso
 defm MaskedGatherScatterINTEL : CapabilityOperand<6427, 0, 0, [SPV_INTEL_masked_gather_scatter], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
+defm WeakLinkageAMD : CapabilityOperand<5181, 0, 0, [SPV_AMD_weak_linkage], [Linkage]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
+defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
+defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -837,6 +848,7 @@ defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
 defm MaxWorkgroupSizeINTEL : ExecutionModeOperand<5893, [KernelAttributesINTEL]>;
+defm ArithmeticPoisonKHR : ExecutionModeOperand<5157, [PoisonFreezeKHR]>;
 // TODO-SPIRV: Add the following once they are used / tested.
 // defm MaxWorkDimINTEL : ExecutionModeOperand<5894, [KernelAttributesINTEL]>;
 // defm NoGlobalOffsetINTEL : ExecutionModeOperand<5895, [KernelAttributesINTEL]>;
@@ -1044,6 +1056,8 @@ defm Rg16ui : ImageFormatOperand<36, [StorageImageExtendedFormats]>;
 defm Rg8ui : ImageFormatOperand<37, [StorageImageExtendedFormats]>;
 defm R16ui : ImageFormatOperand<38, [StorageImageExtendedFormats]>;
 defm R8ui : ImageFormatOperand<39, [StorageImageExtendedFormats]>;
+defm R64ui : ImageFormatOperand<40, [Int64ImageEXT]>;
+defm R64i : ImageFormatOperand<41, [Int64ImageEXT]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define ImageChannelOrder enum values and at the same time
@@ -1258,6 +1272,7 @@ multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
 defm Import : LinkageTypeOperand<1, [Linkage]>;
 defm LinkOnceODR : LinkageTypeOperand<2, [Linkage]>;
+defm WeakAMD : LinkageTypeOperand<3, [WeakLinkageAMD]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define AccessQualifier enum values and at the same time
@@ -1670,6 +1685,7 @@ defm ImageMemory : MemorySemanticsOperand<0x800, 0, 0, [], []>;
 defm OutputMemoryKHR : MemorySemanticsOperand<0x1000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeAvailableKHR : MemorySemanticsOperand<0x2000, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakeVisibleKHR : MemorySemanticsOperand<0x4000, 0, 0, [], [VulkanMemoryModelKHR]>;
+defm Volatile : MemorySemanticsOperand<0x8000, 0, 0, [], [VulkanMemoryModelKHR]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryOperand enum values and at the same time
@@ -1853,6 +1869,8 @@ multiclass OpcodeOperand<bits<32> value> {
 // TODO: implement other mnemonics.
 defm InBoundsAccessChain : OpcodeOperand<66>;
 defm InBoundsPtrAccessChain : OpcodeOperand<70>;
+defm UntypedInBoundsAccessChainKHR : OpcodeOperand<4420>;
+defm UntypedInBoundsPtrAccessChainKHR : OpcodeOperand<4424>;
 defm PtrCastToGeneric : OpcodeOperand<121>;
 defm GenericCastToPtr : OpcodeOperand<122>;
 defm GenericCastToPtrExplicit : OpcodeOperand<123>;
@@ -2012,6 +2030,10 @@ defm AccessChain :  SpecConstantOpOperandsOperand<65, [], [Kernel]>;
 defm InBoundsAccessChain :  SpecConstantOpOperandsOperand<66, [], [Kernel]>;
 defm PtrAccessChain :  SpecConstantOpOperandsOperand<67, [], [Kernel]>;
 defm InBoundsPtrAccessChain :  SpecConstantOpOperandsOperand<70, [], [Kernel]>;
+defm UntypedAccessChainKHR :  SpecConstantOpOperandsOperand<4419, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsAccessChainKHR :  SpecConstantOpOperandsOperand<4420, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4423, [SPV_KHR_untyped_pointers], [Kernel]>;
+defm UntypedInBoundsPtrAccessChainKHR :  SpecConstantOpOperandsOperand<4424, [SPV_KHR_untyped_pointers], [Kernel]>;
 defm CooperativeMatrixLengthKHR : SpecConstantOpOperandsOperand<4460, [], []>;
 
 //===----------------------------------------------------------------------===//

@@ -23,6 +23,7 @@ namespace llvm {
 class Function;
 class BasicBlock;
 class Instruction;
+class MDNode;
 class Value;
 class formatted_raw_ostream;
 
@@ -52,6 +53,10 @@ public:
   /// before an instruction is emitted.
   virtual void emitInstructionAnnot(const Instruction *,
                                     formatted_raw_ostream &) {}
+
+  /// emitMDNodeAnnot - This may be implemented to emit a string right before a
+  /// metadata node is emitted.
+  virtual void emitMDNodeAnnot(const MDNode *, formatted_raw_ostream &) {}
 
   /// printInfoComment - This may be implemented to emit a comment to the
   /// right of an instruction or global value.

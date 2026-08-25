@@ -54,6 +54,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -75,7 +76,7 @@ class SymbolContextScope;
 using namespace lldb;
 using namespace lldb_private;
 
-static user_id_t g_value_obj_uid = 0;
+static std::atomic<user_id_t> g_value_obj_uid{0};
 
 // FIXME: this will return true for vector types whose elements
 // are floats. Audit all usages of this function and call
@@ -375,6 +376,24 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   ret = scalar_value.ULongLong(1) != 0;
   error.Clear();
   return ret;
+}
+
+ValueObjectSP ValueObject::CheckValueObjectOwnership(ValueObject *child) {
+  Target *target_ptr = GetTargetSP().get();
+  if (!target_ptr)
+    return {};
+
+  if (target_ptr->GetCheckValueObjectOwnership()) {
+    // Child value objects should always be owned by their parent's manager.
+    if (child && (child->GetManager() != GetManager())) {
+      Status error = Status::FromErrorStringWithFormatv(
+          "ValueObject: '{0}' not owned by its parent: '{1}'", child->GetName(),
+          GetName());
+      return ValueObjectConstResult::Create(target_ptr, std::move(error),
+                                            this->GetManager());
+    }
+  }
+  return {};
 }
 
 ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
@@ -706,7 +725,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       Status error;
       return child_sp->GetData(data, error);
     }
-    return true;
+    return 0;
   } else /* (items > 1) */
   {
     Status error;
@@ -746,6 +765,19 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         size_t bytes_read =
             target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
                                error, /*force_live_memory=*/true);
+        if (!error.Success()) {
+          // The live read failed. Fall back to the object file's read-only
+          // sections, but keep the live-memory error to report if the fallback
+          // fails too.
+          Status file_error;
+          size_t file_bytes_read =
+              target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                                 file_error, /*force_live_memory=*/false);
+          if (file_error.Success() || file_bytes_read > 0) {
+            bytes_read = file_bytes_read;
+            error = std::move(file_error);
+          }
+        }
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -792,6 +824,10 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -960,7 +996,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       if ((bytes_read = data.GetByteSize()) > 0) {
         total_bytes_read = bytes_read;
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
         if (capped_data)
           was_capped = true;
       }
@@ -992,7 +1028,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           len = cstr_len;
 
         for (size_t offset = 0; offset < bytes_read; offset++)
-          s.Printf("%c", *data.PeekData(offset, 1));
+          s.PutChar(*data.PeekData(offset, 1));
 
         if (len < k_max_buf_size)
           break;
@@ -1191,99 +1227,111 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
     auto value_or_err = GetValueAsAPSInt();
     if (value_or_err)
       return value_or_err->getBoolValue();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPSInt failed: {0}");
   }
   if (HasFloatingRepresentation(val_type)) {
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err)
       return value_or_err->isNonZero();
+    else
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), value_or_err.takeError(),
+                     "GetValueAsAPFloat failed: {0}");
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::createStringError("type cannot be converted to bool");
 }
 
-void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
-                                      bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError(
+        "Not allowed to change the value of a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
-        "Not allowed to update program variables in this case.");
-    return;
-  }
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
+        "Not allowed to update program variables in this case");
+
+  // Make sure we're not trying to assign to a constant.
+  if (GetIsConstant())
+    return llvm::createStringError(
+        "Not allowed to change the value of a constant");
 
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp =
-          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
-    byte_size = temp.value();
-  if (value.getBitWidth() != byte_size * CHAR_BIT) {
-    error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
-    return;
+  // Exclude size check when assigning an integer 1 or 0 to a boolean.
+  if (!val_type.IsBoolean() || (!value.isOne() && !value.isZero())) {
+    byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
+    // Check that the value is representable in the destination type.
+    unsigned dest_bits = byte_size * CHAR_BIT;
+    unsigned needed_bits = val_type.IsSigned() ? value.getSignificantBits()
+                                               : value.getActiveBits();
+    if (needed_bits > dest_bits)
+      return llvm::createStringError("Illegal argument: new value is too big");
   }
 
+  // The DataExtractor below reads exactly byte_size bytes from the APInt's raw
+  // storage.  If the incoming value has fewer bits than the destination type,
+  // reading byte_size bytes could run past the APInt's backing store and pull
+  // in garbage (an out-of-bounds read). Extend the value so its storage always
+  // covers the full read, preserving the sign so that negative values keep
+  // their value in the wider destination.
+  llvm::APInt sized_value = value;
+  if (sized_value.getBitWidth() < byte_size * CHAR_BIT)
+    sized_value = sized_value.sext(byte_size * CHAR_BIT);
+
+  Status error;
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
-      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      reinterpret_cast<const void *>(sized_value.getRawData()), byte_size,
       target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
+  return error.takeError();
 }
 
-void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error, bool can_update_var) {
+llvm::Error ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                             bool can_update_var) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
-      !val_type.IsScalarType()) {
-    error =
-        Status::FromErrorString("current value object is not an scalar object");
-    return;
-  }
+      !val_type.IsScalarType())
+    return llvm::createStringError("Not allowed to update a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
-  if (GetVariable() && !can_update_var) {
-    error = Status::FromErrorString(
-        "Not allowed to update program variables in this case.");
-    return;
-  }
+  if (GetVariable() && !can_update_var)
+    return llvm::createStringError(
+        "Not allowed to update program variables in this case");
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
-  if (!new_val_type.IsInteger() && !HasFloatingRepresentation(new_val_type) &&
-      !new_val_type.IsPointerType()) {
-    error = Status::FromErrorString(
-        "illegal argument: new value should be of the same size");
-    return;
-  }
+  if (!new_val_type.IsInteger() && !new_val_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(new_val_type) && !new_val_type.IsPointerType())
+    return llvm::createStringError(
+        "Illegal argument: new value is not a scalar object");
 
-  if (new_val_type.IsInteger()) {
+  if (new_val_type.IsInteger() || new_val_type.IsUnscopedEnumerationType()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error, can_update_var);
-    else
-      error = Status::FromErrorString("error getting APSInt from new_val_sp");
+      return SetValueFromInteger(*value_or_err, can_update_var);
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error,
-                          can_update_var);
-    else
-      error = Status::FromErrorString("error getting APFloat from new_val_sp");
+      return SetValueFromInteger(value_or_err->bitcastToAPInt(),
+                                 can_update_var);
   } else if (new_val_type.IsPointerType()) {
     bool success = true;
     uint64_t int_val = new_val_sp->GetValueAsUnsigned(0, &success);
@@ -1293,11 +1341,12 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error,
-                          can_update_var);
+      return SetValueFromInteger(llvm::APInt(num_bits, int_val),
+                                 can_update_var);
     } else
-      error = Status::FromErrorString("error converting new_val_sp to integer");
+      return llvm::createStringError("Error converting new_val_sp to integer");
   }
+  llvm_unreachable("Unrecognized type for RHS of assignment");
 }
 
 // if any more "special cases" are added to
@@ -1385,7 +1434,13 @@ bool ValueObject::DumpPrintableRepresentation(
         options.SetQuote('"');
         options.SetSourceSize(buffer_sp->GetByteSize());
         options.SetIsTruncated(read_string.second);
-        options.SetBinaryZeroIsTerminator(custom_format != eFormatVectorOfChar);
+        if (custom_format == eFormatVectorOfChar) {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::Ignore);
+        } else {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::ZeroTerminate);
+        }
         formatters::StringPrinter::ReadBufferAndDumpToStream<
             lldb_private::formatters::StringPrinter::StringElementType::ASCII>(
             options);
@@ -1675,6 +1730,10 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
+    return false;
+  }
   // Make sure our value is up to date first so that our location and location
   // type is valid.
   if (!UpdateValueIfNeeded(false)) {
@@ -1846,7 +1905,7 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_array_item_for_pointer = true;
       }
     }
@@ -1882,7 +1941,7 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       if (synthetic_child) {
         AddSyntheticChild(index_const_str, synthetic_child);
         synthetic_child_sp = synthetic_child->GetSP();
-        synthetic_child_sp->SetName(ConstString(index_str));
+        synthetic_child_sp->SetName(index_str);
         synthetic_child_sp->m_flags.m_is_bitfield_for_scalar = true;
       }
     }
@@ -1923,6 +1982,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     synthetic_child_sp = synthetic_child->GetSP();
     synthetic_child_sp->SetName(name_const_str);
     synthetic_child_sp->m_flags.m_is_child_at_offset = true;
+    synthetic_child_sp->SetSyntheticChildrenGenerated(true);
   }
   return synthetic_child_sp;
 }
@@ -2018,18 +2078,20 @@ void ValueObject::CalculateSyntheticValue() {
     return;
   }
 
-  lldb::SyntheticChildrenSP current_synth_sp(m_synthetic_children_sp);
+  lldb::SyntheticChildrenSP prev_synth_sp(GetSyntheticChildren());
 
   if (!UpdateFormatsIfNeeded() && m_synthetic_value)
     return;
 
-  if (m_synthetic_children_sp.get() == nullptr)
+  lldb::SyntheticChildrenSP curr_synth_sp(GetSyntheticChildren());
+
+  if (curr_synth_sp.get() == nullptr)
     return;
 
-  if (current_synth_sp == m_synthetic_children_sp && m_synthetic_value)
+  if (curr_synth_sp == prev_synth_sp && m_synthetic_value)
     return;
 
-  m_synthetic_value = new ValueObjectSynthetic(*this, m_synthetic_children_sp);
+  m_synthetic_value = new ValueObjectSynthetic(*this, curr_synth_sp);
 }
 
 void ValueObject::CalculateDynamicValue(DynamicValueType use_dynamic) {
@@ -2087,21 +2149,6 @@ ValueObject *ValueObject::GetNonBaseClassParent() {
       return GetParent();
   }
   return nullptr;
-}
-
-bool ValueObject::IsBaseClass(uint32_t &depth) {
-  if (!IsBaseClass()) {
-    depth = 0;
-    return false;
-  }
-  if (GetParent()) {
-    GetParent()->IsBaseClass(depth);
-    depth = depth + 1;
-    return true;
-  }
-  // TODO: a base of no parent? weird..
-  depth = 1;
-  return true;
 }
 
 void ValueObject::GetExpressionPath(Stream &s,
@@ -2881,9 +2928,6 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
 }
 
 ValueObjectSP ValueObject::AddressOf(Status &error) {
-  if (m_addr_of_valobj_sp)
-    return m_addr_of_valobj_sp;
-
   auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
@@ -2897,6 +2941,10 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
 
     case eAddressTypeFile:
     case eAddressTypeLoad: {
+      if (m_addr_of_valobj_sp &&
+          m_addr_of_valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS) == addr)
+        return m_addr_of_valobj_sp;
+      m_addr_of_valobj_sp.reset();
       CompilerType compiler_type = GetCompilerType();
       if (compiler_type) {
         std::string name(1, '&');
@@ -2907,8 +2955,9 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
             new lldb_private::DataBufferHeap(&addr, sizeof(lldb::addr_t)));
         m_addr_of_valobj_sp = ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            compiler_type.GetPointerType(), ConstString(name.c_str()), buffer,
-            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize());
+            compiler_type.GetPointerType(), ConstString(name), buffer,
+            endian::InlHostByteOrder(), exe_ctx.GetAddressByteSize(),
+            LLDB_INVALID_ADDRESS, this->GetManager());
       }
     } break;
     default:
@@ -2964,7 +3013,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       std::move(error));
 }
 
-lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
+lldb::ValueObjectSP ValueObject::Clone(llvm::StringRef new_name) {
   return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 
@@ -3322,7 +3371,8 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
     byte_size = temp.value();
 
   if (is_float) {
-    llvm::APSInt integer(byte_size * CHAR_BIT, !type.IsSigned());
+    llvm::APSInt integer(byte_size * CHAR_BIT,
+                         !type.IsEnumerationIntegerTypeSigned());
     bool is_exact;
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err) {
@@ -3334,15 +3384,15 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       if (status & llvm::APFloatBase::opInvalidOp)
         return ValueObjectConstResult::Create(
             exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorStringWithFormat(
-                "invalid type cast detected: %s",
-                llvm::toString(value_or_err.takeError()).c_str()));
+            Status::FromErrorString("invalid cast from float to integer"));
       return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                      "result");
     } else
       return ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorString("cannot get value as APFloat"));
+          Status::FromErrorStringWithFormatv(
+              "cannot get value as APFloat: {0}",
+              llvm::toString(value_or_err.takeError())));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();
@@ -3521,33 +3571,37 @@ SymbolContextScope *ValueObject::GetSymbolContextScope() {
   return nullptr;
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromExpression(llvm::StringRef name,
-                                             llvm::StringRef expression,
-                                             const ExecutionContext &exe_ctx) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
+    llvm::StringRef name, llvm::StringRef expression,
+    const ExecutionContext &exe_ctx, ValueObject *parent) {
   return CreateValueObjectFromExpression(name, expression, exe_ctx,
-                                         EvaluateExpressionOptions());
+                                         EvaluateExpressionOptions(), parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
     llvm::StringRef name, llvm::StringRef expression,
-    const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options) {
+    const ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+    ValueObject *parent) {
+  // FIXME: I haven't handled parent in this case yet.  That is a WHOLE lot of
+  // plumbing.
+
   lldb::ValueObjectSP retval_sp;
   lldb::TargetSP target_sp(exe_ctx.GetTargetSP());
   if (!target_sp)
     return retval_sp;
   if (expression.empty())
     return retval_sp;
+
   target_sp->EvaluateExpression(expression, exe_ctx.GetFrameSP().get(),
                                 retval_sp, options);
   if (retval_sp && !name.empty())
-    retval_sp->SetName(ConstString(name));
+    retval_sp->SetName(name);
   return retval_sp;
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
-    CompilerType type, bool do_deref) {
+    CompilerType type, bool do_deref, ValueObject *parent) {
   if (type) {
     CompilerType pointer_type(type.GetPointerType());
     if (!do_deref)
@@ -3558,7 +3612,8 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
       lldb::ValueObjectSP ptr_result_valobj_sp(ValueObjectConstResult::Create(
           exe_ctx.GetBestExecutionContextScope(), pointer_type,
           ConstString(name), buffer, exe_ctx.GetByteOrder(),
-          exe_ctx.GetAddressByteSize()));
+          exe_ctx.GetAddressByteSize(), /*address=*/LLDB_INVALID_ADDRESS,
+          parent ? parent->GetManager() : nullptr));
       if (ptr_result_valobj_sp) {
         if (do_deref)
           ptr_result_valobj_sp->GetValue().SetValueType(
@@ -3567,7 +3622,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
         if (do_deref)
           ptr_result_valobj_sp = ptr_result_valobj_sp->Dereference(err);
         if (ptr_result_valobj_sp && !name.empty())
-          ptr_result_valobj_sp->SetName(ConstString(name));
+          ptr_result_valobj_sp->SetName(name);
       }
       return ptr_result_valobj_sp;
     }
@@ -3577,21 +3632,20 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromData(
     llvm::StringRef name, const DataExtractor &data,
-    const ExecutionContext &exe_ctx, CompilerType type) {
+    const ExecutionContext &exe_ctx, CompilerType type, ValueObject *parent) {
   lldb::ValueObjectSP new_value_sp;
   new_value_sp = ValueObjectConstResult::Create(
       exe_ctx.GetBestExecutionContextScope(), type, ConstString(name), data,
-      LLDB_INVALID_ADDRESS);
+      LLDB_INVALID_ADDRESS, parent ? parent->GetManager() : nullptr);
   new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   if (new_value_sp && !name.empty())
-    new_value_sp->SetName(ConstString(name));
+    new_value_sp->SetName(name);
   return new_value_sp;
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
-                                        const llvm::APInt &v, CompilerType type,
-                                        llvm::StringRef name) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPInt(
+    const ExecutionContext &exe_ctx, const llvm::APInt &v, CompilerType type,
+    llvm::StringRef name, ValueObject *parent) {
   uint64_t byte_size =
       llvm::expectedToOptional(
           type.GetByteSize(exe_ctx.GetBestExecutionContextScope()))
@@ -3599,27 +3653,28 @@ ValueObject::CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(v.getRawData()), byte_size,
       exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAPFloat(
     const ExecutionContext &exe_ctx, const llvm::APFloat &v, CompilerType type,
-    llvm::StringRef name) {
-  return CreateValueObjectFromAPInt(exe_ctx, v.bitcastToAPInt(), type, name);
+    llvm::StringRef name, ValueObject *parent) {
+  return CreateValueObjectFromAPInt(exe_ctx, v.bitcastToAPInt(), type, name,
+                                    parent);
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromScalar(const ExecutionContext &exe_ctx,
-                                         Scalar &s, CompilerType type,
-                                         llvm::StringRef name) {
-  return ValueObjectConstResult::Create(exe_ctx.GetBestExecutionContextScope(),
-                                        type, s, ConstString(name));
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromScalar(
+    const ExecutionContext &exe_ctx, Scalar &s, CompilerType type,
+    llvm::StringRef name, ValueObject *parent) {
+  return ValueObjectConstResult::Create(
+      exe_ctx.GetBestExecutionContextScope(), type, s, ConstString(name),
+      /*module_ptr=*/nullptr, parent ? parent->GetManager() : nullptr);
 }
 
-lldb::ValueObjectSP
-ValueObject::CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
-                                       TypeSystemSP typesystem_sp, bool value,
-                                       llvm::StringRef name) {
+lldb::ValueObjectSP ValueObject::CreateValueObjectFromBool(
+    const ExecutionContext &exe_ctx, TypeSystemSP typesystem_sp, bool value,
+    llvm::StringRef name, ValueObject *parent) {
   CompilerType type = typesystem_sp->GetBasicTypeFromAST(lldb::eBasicTypeBool);
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   uint64_t byte_size =
@@ -3627,11 +3682,13 @@ ValueObject::CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(&value), byte_size, exe_ctx.GetByteOrder(),
       exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
-    const ExecutionContext &exe_ctx, CompilerType type, llvm::StringRef name) {
+    const ExecutionContext &exe_ctx, CompilerType type, llvm::StringRef name,
+    ValueObject *parent) {
   if (!type.IsNullPtrType()) {
     lldb::ValueObjectSP ret_val;
     return ret_val;
@@ -3644,7 +3701,8 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(zero), byte_size, exe_ctx.GetByteOrder(),
       exe_ctx.GetAddressByteSize());
-  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type);
+  return ValueObject::CreateValueObjectFromData(name, *data_sp, exe_ctx, type,
+                                                parent);
 }
 
 ModuleSP ValueObject::GetModule() {
@@ -3808,9 +3866,10 @@ bool ValueImpl::IsValid() {
   return target_sp && target_sp->IsValid();
 }
 
-lldb::ValueObjectSP
-ValueImpl::GetSP(Process::StopLocker &stop_locker,
-                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                                     TargetAPIMutex &api_mutex,
+                                     std::unique_lock<TargetAPIMutex> &lock,
+                                     Status &error) {
   if (!m_valobj_sp) {
     error = Status::FromErrorString("invalid value object");
     return m_valobj_sp;
@@ -3826,7 +3885,8 @@ ValueImpl::GetSP(Process::StopLocker &stop_locker,
   if (!target)
     return ValueObjectSP();
 
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+  api_mutex = target->GetAPIMutex();
+  lock = std::unique_lock<TargetAPIMutex>(api_mutex);
 
   ProcessSP process_sp(value_sp->GetProcessSP());
   if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {

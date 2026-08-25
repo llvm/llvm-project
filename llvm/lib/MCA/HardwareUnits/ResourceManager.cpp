@@ -70,11 +70,11 @@ static uint64_t computeResourceSizeMask(uint64_t Mask, bool IsAGroup,
 }
 
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
-                             uint64_t Mask)
+                             uint64_t Mask, const MCSchedModel &SM)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
       IsAGroup(llvm::popcount(ResourceMask) > 1),
       ResourceSizeMask(computeResourceSizeMask(Mask, IsAGroup, Desc.NumUnits)),
-      BufferSize(Desc.BufferSize) {
+      BufferSize(SM.getResourceBufferSize(Index)) {
   ReadyMask = ResourceSizeMask;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;
@@ -131,7 +131,7 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     Resources[Index] =
-        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask, SM);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
 

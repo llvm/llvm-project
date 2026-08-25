@@ -83,13 +83,13 @@ void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeThumb2SizeReducePass(PassRegistry &);
 
 class ARMPreAllocLoadStoreOptPass
-    : public PassInfoMixin<ARMPreAllocLoadStoreOptPass> {
+    : public OptionalPassInfoMixin<ARMPreAllocLoadStoreOptPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-class ARMLoadStoreOptPass : public PassInfoMixin<ARMLoadStoreOptPass> {
+class ARMLoadStoreOptPass : public OptionalPassInfoMixin<ARMLoadStoreOptPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

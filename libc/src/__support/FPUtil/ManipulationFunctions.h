@@ -53,7 +53,7 @@ LIBC_INLINE constexpr T frexp(T x, int &exp) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T modf(T x, T &iptr) {
+LIBC_INLINE constexpr T modf(T x, T &iptr) {
   FPBits<T> bits(x);
   if (bits.is_zero() || bits.is_nan()) {
     iptr = x;
@@ -170,14 +170,17 @@ ldexp(T x, U exp) {
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   // Make sure that we can safely cast exp to int when not returning early.
   static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
+
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    int rounding_mode = quick_get_round();
 
     if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
         (rounding_mode == FE_TOWARDZERO))
       return FPBits<T>::max_normal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_OVERFLOW);
@@ -186,12 +189,13 @@ ldexp(T x, U exp) {
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
-
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    int rounding_mode = quick_get_round();
     if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
       return FPBits<T>::min_subnormal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_UNDERFLOW);
@@ -210,7 +214,7 @@ template <typename T, typename U,
                                cpp::is_floating_point_v<U> &&
                                (sizeof(T) <= sizeof(U)),
                            int> = 0>
-LIBC_INLINE T nextafter(T from, U to) {
+LIBC_INLINE constexpr T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;

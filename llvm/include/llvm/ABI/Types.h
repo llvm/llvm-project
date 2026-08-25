@@ -17,10 +17,9 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -82,6 +81,7 @@ public:
   bool isRecord() const { return Kind == TypeKind::Record; }
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
   bool isComplex() const { return Kind == TypeKind::Complex; }
+  bool isZeroSize() const { return getSizeInBits().getFixedValue() == 0; }
 };
 
 class VoidType : public Type {
@@ -237,13 +237,16 @@ struct FieldInfo {
   uint64_t BitFieldWidth;
   bool IsBitField;
   bool IsUnnamedBitfield;
+  bool IsVirtualBase;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false)
+            bool IsUnnamedBitField = false, bool IsVirtualBase = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
-        IsUnnamedBitfield(IsUnnamedBitField) {}
+        IsUnnamedBitfield(IsUnnamedBitField), IsVirtualBase(IsVirtualBase) {}
+
+  LLVM_ABI bool isEmpty() const;
 };
 
 enum class StructPacking { Default, Packed, ExplicitPacking };
@@ -302,9 +305,30 @@ public:
     return static_cast<unsigned>(Flags & RecordFlags::IsTransparent) != 0;
   }
   ArrayRef<FieldInfo> getFields() const { return Fields; }
+
+  /// Returns the direct base classes, both virtual and non-virtual, mirroring
+  /// clang::CXXRecordDecl::bases(). A virtual base is marked with
+  /// FieldInfo::IsVirtualBase, and its offset is only meaningful when this
+  /// record is the most-derived object.
   ArrayRef<FieldInfo> getBaseClasses() const { return BaseClasses; }
+
+  /// Returns the virtual base classes, both direct and indirect, mirroring
+  /// clang::CXXRecordDecl::vbases(). Direct virtual bases therefore appear
+  /// both here and in getBaseClasses().
   ArrayRef<FieldInfo> getVirtualBaseClasses() const {
     return VirtualBaseClasses;
+  }
+
+  LLVM_ABI bool isEmpty() const;
+
+  /// Returns the field, base, or virtual base whose extent contains
+  /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
+  /// unnamed bitfields are skipped.
+  LLVM_ABI const FieldInfo *
+  getElementContainingOffset(unsigned OffsetInBits) const;
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Record;
   }
 };
 

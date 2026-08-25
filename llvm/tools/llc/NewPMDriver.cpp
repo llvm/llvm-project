@@ -35,6 +35,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -92,7 +93,7 @@ int llvm::compileModuleWithNewPM(
     std::unique_ptr<TargetMachine> Target, std::unique_ptr<ToolOutputFile> Out,
     std::unique_ptr<ToolOutputFile> DwoOut, LLVMContext &Context,
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
-    CodeGenFileType FileType) {
+    ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
     WithColor::error(errs(), Arg0)
@@ -128,7 +129,20 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
+
+  MAM.registerPass([&] {
+    const TargetOptions &Options = Target->Options;
+    return RuntimeLibraryAnalysis(Options.ExceptionModel, Options.EABIVersion,
+                                  Options.MCOptions.ABIName, Options.VecLib);
+  });
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
+  for (auto &PassPlugin : PassPlugins)
+    PassPlugin.registerPassBuilderCallbacks(PB);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -136,19 +150,6 @@ int llvm::compileModuleWithNewPM(
   PB.registerMachineFunctionAnalyses(MFAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
   SI.registerCallbacks(PIC, &MAM);
-
-  FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-
-  MAM.registerPass([&] {
-    const TargetOptions &Options = Target->Options;
-    return RuntimeLibraryAnalysis(
-        M->getTargetTriple(), Target->Options.ExceptionModel,
-        Target->Options.FloatABIType, Target->Options.EABIVersion,
-        Options.MCOptions.ABIName, Target->Options.VecLib);
-  });
-  MAM.registerPass([&] { return LibcallLoweringModuleAnalysis(); });
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
   FunctionPassManager FPM;
@@ -186,7 +187,8 @@ int llvm::compileModuleWithNewPM(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << PipelineStr << '\n';
+    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    outs() << '\n';
     return 0;
   }
 

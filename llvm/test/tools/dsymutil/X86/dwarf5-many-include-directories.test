@@ -3,7 +3,7 @@
 # RUN: %python %t/all.py > %t/all.ll
 # RUN: sed 's@---TEMPORARY_DIR---@%{/t:regex_replacement}@' %t/debug.map.template > %t/debug.map
 # RUN: %llc_dwarf -mtriple x86_64-apple-macosx10.4.0 -o %t/all.o -filetype=obj %t/all.ll
-# RUN: dsymutil -f -y %t/debug.map -o - | llvm-dwarfdump -debug-line - | FileCheck %s
+# RUN: dsymutil --linker classic -f -y %t/debug.map -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 # RUN: dsymutil --linker parallel -f -y %t/debug.map -o - | llvm-dwarfdump -debug-line - | tee %t/output.txt | FileCheck %s
 
 # CHECK:      include_directories[255] = "/tmp/tmp.0HPkdttdoU/d254"

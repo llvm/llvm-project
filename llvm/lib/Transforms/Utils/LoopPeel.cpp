@@ -32,6 +32,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -463,7 +464,8 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
-            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
+            !isDereferenceablePointer(Ptr, LI->getType(),
+                                      SimplifyQuery(DL, &DT, AC, LI)))
           LoadUsers.insert_range(I.users());
       }
     }
@@ -876,7 +878,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
                       << *EstimatedTripCount << "\n");
 
-    if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+    std::optional<unsigned> TotalPeeled =
+        llvm::checkedAddUnsigned(*EstimatedTripCount, AlreadyPeeled);
+    if (TotalPeeled && *TotalPeeled <= MaxPeelCount) {
       unsigned PeelCount = *EstimatedTripCount;
       LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
       PP.PeelCount = PeelCount;
@@ -1116,7 +1120,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
-  L->getExitEdges(ExitEdges);
+  LI->getExitEdges(*L, ExitEdges);
 
   // Remember dominators of blocks we might reach through exits to change them
   // later. Immediate dominator of such block might change, because we add more

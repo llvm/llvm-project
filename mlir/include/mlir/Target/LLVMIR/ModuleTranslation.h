@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
@@ -34,8 +35,12 @@ class CallBase;
 class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
+class Metadata;
 class OpenMPIRBuilder;
 class Value;
+namespace vfs {
+class FileSystem;
+} // namespace vfs
 } // namespace llvm
 
 namespace mlir {
@@ -64,7 +69,7 @@ class ComdatSelectorOp;
 class ModuleTranslation {
   friend std::unique_ptr<llvm::Module>
   mlir::translateModuleToLLVMIR(Operation *, llvm::LLVMContext &, StringRef,
-                                bool);
+                                bool, llvm::vfs::FileSystem *);
 
 public:
   /// Stores the mapping between a function name and its LLVM IR representation.
@@ -259,6 +264,11 @@ public:
     return globalsMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value by the mlir.global symbol name.
+  llvm::GlobalValue *lookupGlobal(StringRef name) const {
+    return globalsByNameMapping.lookup(name);
+  }
+
   /// Finds an LLVM IR global value that corresponds to the given MLIR operation
   /// defining a global alias value.
   llvm::GlobalValue *lookupAlias(Operation *op) {
@@ -274,6 +284,10 @@ public:
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
+
+  /// Returns the virtual filesystem to use for file operations. Falls back to
+  /// the real filesystem if none was provided.
+  llvm::vfs::FileSystem &getFileSystem();
 
   /// Returns the LLVM module in which the IR is being constructed.
   llvm::Module *getLLVMModule() { return llvmModule.get(); }
@@ -333,6 +347,13 @@ public:
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
 
+  /// Converts an LLVM dialect metadata attribute to LLVM IR metadata.
+  /// Returns failure and emits a diagnostic using `emitError` if the attribute
+  /// cannot be converted.
+  FailureOr<llvm::Metadata *>
+  convertMetadataAttr(Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError);
+
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
   /// arguments. Doing this before entering the region of the op being
@@ -386,8 +407,8 @@ public:
   llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
 
 private:
-  ModuleTranslation(Operation *module,
-                    std::unique_ptr<llvm::Module> llvmModule);
+  ModuleTranslation(Operation *module, std::unique_ptr<llvm::Module> llvmModule,
+                    llvm::vfs::FileSystem *fs = nullptr);
   ~ModuleTranslation();
 
   /// Converts individual components.
@@ -395,6 +416,7 @@ private:
                                      llvm::IRBuilderBase &builder,
                                      bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
+  LogicalResult convertFunctionMetadata();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
   LogicalResult convertComdats();
@@ -456,8 +478,18 @@ private:
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
 
+  /// Optional virtual filesystem for file operations. When null, the real
+  /// filesystem is used (via getFileSystem()). Not owned.
+  llvm::vfs::FileSystem *fileSystem = nullptr;
+
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Name-keyed mirror of `globalsMapping`, populated alongside it during
+  /// `convertGlobalsAndAliases`.  Lets `getLLVMConstant` resolve
+  /// `FlatSymbolRefAttr` leaves of aggregate constants that name a global
+  /// (mirroring how `functionMapping` resolves function names).
+  llvm::StringMap<llvm::GlobalValue *> globalsByNameMapping;
 
   /// Mappings between llvm.mlir.alias definitions and corresponding global
   /// aliases.

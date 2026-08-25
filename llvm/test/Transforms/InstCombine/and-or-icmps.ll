@@ -2661,12 +2661,12 @@ define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail0(i64 %x) {
   ret i64 %E
 }
 
-define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail1(i64 %x) {
-; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail1(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[C:%.*]] = ashr i64 [[X]], 63
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], [[D]]
+; ashr (instead of icmp slt 0) on the LHS: not the icmp-or-icmp shape, but
+; this is the signum idiom and folds to scmp.
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_signum(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_signum(
+; CHECK-NEXT:    [[E:%.*]] = call i64 @llvm.scmp.i64.i64(i64 [[X:%.*]], i64 0)
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %B = icmp sgt i64 %x, 0
@@ -3341,9 +3341,7 @@ define i1 @icmp_eq_or_z_or_pow2orz_fail_nonzero_const(i8 %x, i8 %y) {
 
 define <2 x i1> @icmp_ne_and_z_and_pow2orz_fail_bad_pred(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_ne_and_z_and_pow2orz_fail_bad_pred(
-; CHECK-NEXT:    [[NY:%.*]] = sub <2 x i8> zeroinitializer, [[Y:%.*]]
-; CHECK-NEXT:    [[POW2ORZ:%.*]] = and <2 x i8> [[Y]], [[NY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], [[POW2ORZ]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

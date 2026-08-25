@@ -53,6 +53,10 @@ bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
   return Num < FuseLimit;
 }
 
+bool llvm::isNonDataDep(const SDep *Dep) {
+  return Dep && Dep->getKind() != SDep::Data;
+}
+
 bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
                                SUnit &SecondSU) {
   // Check that neither instr is already associated with a cluster (either
@@ -165,7 +169,7 @@ public:
   bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                               const TargetSubtargetInfo &STI,
                               const MachineInstr *FirstMI,
-                              const MachineInstr &SecondMI);
+                              const MachineInstr &SecondMI, const SDep *Dep);
 };
 
 } // end anonymous namespace
@@ -173,9 +177,10 @@ public:
 bool MacroFusion::shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                          const TargetSubtargetInfo &STI,
                                          const MachineInstr *FirstMI,
-                                         const MachineInstr &SecondMI) {
+                                         const MachineInstr &SecondMI,
+                                         const SDep *Dep) {
   return llvm::any_of(Predicates, [&](MacroFusionPredTy Predicate) {
-    return Predicate(TII, STI, FirstMI, SecondMI);
+    return Predicate(TII, STI, FirstMI, SecondMI, Dep);
   });
 }
 
@@ -199,15 +204,11 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
   const TargetSubtargetInfo &ST = DAG.MF.getSubtarget();
 
   // Check if the anchor instr may be fused.
-  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI))
+  if (!shouldScheduleAdjacent(TII, ST, nullptr, AnchorMI, nullptr))
     return false;
 
   // Explorer for fusion candidates among the dependencies of the anchor instr.
   for (SDep &Dep : AnchorSU.Preds) {
-    // Ignore dependencies other than data or strong ordering.
-    if (Dep.isWeak() || isHazard(Dep))
-      continue;
-
     SUnit &DepSU = *Dep.getSUnit();
     if (DepSU.isBoundaryNode())
       continue;
@@ -215,7 +216,7 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
     // Only chain two instructions together at most.
     const MachineInstr *DepMI = DepSU.getInstr();
     if (!hasLessThanNumFused(DepSU, 2) ||
-        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI))
+        !shouldScheduleAdjacent(TII, ST, DepMI, AnchorMI, &Dep))
       continue;
 
     if (fuseInstructionPair(DAG, DepSU, AnchorSU))

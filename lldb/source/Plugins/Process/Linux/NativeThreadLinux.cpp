@@ -8,13 +8,11 @@
 
 #include "NativeThreadLinux.h"
 
-#include <csignal>
-#include <sstream>
-
-#include "NativeProcessLinux.h"
-#include "NativeRegisterContextLinux.h"
-#include "SingleStepCheck.h"
-
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Linux/SingleStepCheck.h"
+#include "Plugins/Process/POSIX/CrashReason.h"
+#include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Support.h"
@@ -23,12 +21,10 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
-
 #include "llvm/ADT/SmallString.h"
 
-#include "Plugins/Process/POSIX/CrashReason.h"
-#include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
-
+#include <csignal>
+#include <sstream>
 #include <sys/syscall.h>
 // Try to define a macro to encapsulate the tgkill syscall
 #define tgkill(pid, tid, sig)                                                  \
@@ -95,11 +91,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
 NativeThreadLinux::NativeThreadLinux(NativeProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(),
       m_reg_context_up(
           NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-              process.GetArchitecture(), *this)),
-      m_stop_description() {}
+              process.GetArchitecture(), *this)) {}
 
 std::string NativeThreadLinux::GetName() {
   NativeProcessLinux &process = GetProcess();
@@ -214,8 +208,7 @@ Status NativeThreadLinux::Resume(uint32_t signo) {
   MaybeLogStateChange(new_state);
   m_state = new_state;
 
-  m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_description.clear();
+  ClearStopInfo();
 
   // If watchpoints have been set, but none on this thread, then this is a new
   // thread. So set all existing watchpoints.
@@ -255,7 +248,7 @@ Status NativeThreadLinux::SingleStep(uint32_t signo) {
   const StateType new_state = StateType::eStateStepping;
   MaybeLogStateChange(new_state);
   m_state = new_state;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 
   if(!m_step_workaround) {
     // If we already hava a workaround inplace, don't reset it. Otherwise, the

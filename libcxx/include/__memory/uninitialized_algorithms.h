@@ -11,11 +11,10 @@
 #define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
 #include <__algorithm/copy.h>
-#include <__algorithm/move.h>
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
 #include <__config>
-#include <__cstddef/size_t.h>
 #include <__fwd/memory.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
@@ -25,15 +24,14 @@
 #include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/extent.h>
-#include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/remove_const.h>
-#include <__type_traits/remove_extent.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -57,7 +55,8 @@ struct __always_false {
 // uninitialized_copy
 
 template <class _ValueType, class _InputIterator, class _Sentinel1, class _ForwardIterator, class _EndPredicate>
-inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_copy(
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
+__uninitialized_copy(
     _InputIterator __ifirst, _Sentinel1 __ilast, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -65,22 +64,22 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(*__ifirst);
   __guard.__complete();
 
-  return pair<_InputIterator, _ForwardIterator>(std::move(__ifirst), std::move(__idx));
+  return {std::move(__ifirst), std::move(__idx)};
 }
 
 template <class _InputIterator, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_copy(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   auto __result = std::__uninitialized_copy<_ValueType>(
       std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __always_false());
-  return std::move(__result.second);
+  return std::move(__result.__out_);
 }
 
 // uninitialized_copy_n
 
 template <class _ValueType, class _InputIterator, class _Size, class _ForwardIterator, class _EndPredicate>
-inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
 __uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -88,22 +87,22 @@ __uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __of
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(*__ifirst);
   __guard.__complete();
 
-  return pair<_InputIterator, _ForwardIterator>(std::move(__ifirst), std::move(__idx));
+  return {std::move(__ifirst), std::move(__idx)};
 }
 
 template <class _InputIterator, class _Size, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   auto __result =
       std::__uninitialized_copy_n<_ValueType>(std::move(__ifirst), __n, std::move(__ofirst), __always_false());
-  return std::move(__result.second);
+  return std::move(__result.__out_);
 }
 
 // uninitialized_fill
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) {
   _ForwardIterator __idx = __first;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -115,7 +114,7 @@ __uninitialized_fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __x)
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   (void)std::__uninitialized_fill<_ValueType>(__first, __last, __x);
@@ -124,7 +123,7 @@ uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp&
 // uninitialized_fill_n
 
 template <class _ValueType, class _ForwardIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   _ForwardIterator __idx = __first;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -136,7 +135,7 @@ __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   return std::__uninitialized_fill_n<_ValueType>(__first, __n, __x);
@@ -144,10 +143,18 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 
 #if _LIBCPP_STD_VER >= 17
 
+template <class _Iter>
+_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __deref_move(_Iter& __it) {
+  if constexpr (is_lvalue_reference_v<decltype(*__it)>)
+    return std::move(*__it);
+  else
+    return *__it;
+}
+
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -159,7 +166,8 @@ __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI void uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   (void)std::__uninitialized_default_construct<_ValueType>(std::move(__first), std::move(__last));
 }
@@ -167,8 +175,9 @@ inline _LIBCPP_HIDE_FROM_ABI void uninitialized_default_construct(_ForwardIterat
 // uninitialized_default_construct_n
 
 template <class _ValueType, class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
-  auto __idx = __first;
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+__uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+  auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
   for (; __n > 0; ++__idx, (void)--__n)
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType;
@@ -178,7 +187,8 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_default_construct_
 }
 
 template <class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   return std::__uninitialized_default_construct_n<_ValueType>(std::move(__first), __n);
 }
@@ -186,7 +196,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_default_construct_n(
 // uninitialized_value_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_value_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -198,7 +208,8 @@ __uninitialized_value_construct(_ForwardIterator __first, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI void uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   (void)std::__uninitialized_value_construct<_ValueType>(std::move(__first), std::move(__last));
 }
@@ -206,8 +217,9 @@ inline _LIBCPP_HIDE_FROM_ABI void uninitialized_value_construct(_ForwardIterator
 // uninitialized_value_construct_n
 
 template <class _ValueType, class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
-  auto __idx = __first;
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+__uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
+  auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
   for (; __n > 0; ++__idx, (void)--__n)
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType();
@@ -217,7 +229,8 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_value_construct_n(
 }
 
 template <class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   return std::__uninitialized_value_construct_n<_ValueType>(std::move(__first), __n);
 }
@@ -230,12 +243,12 @@ template <class _ValueType,
           class _ForwardIterator,
           class _EndPredicate,
           class _IterMove>
-inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_move(
-    _InputIterator __ifirst,
-    _Sentinel1 __ilast,
-    _ForwardIterator __ofirst,
-    _EndPredicate __stop_moving,
-    _IterMove __iter_move) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
+__uninitialized_move(_InputIterator __ifirst,
+                     _Sentinel1 __ilast,
+                     _ForwardIterator __ofirst,
+                     _EndPredicate __stop_moving,
+                     _IterMove __iter_move) {
   auto __idx   = __ofirst;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
   for (; __ifirst != __ilast && !__stop_moving(__idx); ++__idx, (void)++__ifirst) {
@@ -247,14 +260,14 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
 }
 
 template <class _InputIterator, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_move(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
   auto __result = std::__uninitialized_move<_ValueType>(
       std::move(__ifirst), std::move(__ilast), std::move(__ofirst), __always_false(), __iter_move);
-  return std::move(__result.second);
+  return std::move(__result.__out_);
 }
 
 // uninitialized_move_n
@@ -265,7 +278,8 @@ template <class _ValueType,
           class _ForwardIterator,
           class _EndPredicate,
           class _IterMove>
-inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitialized_move_n(
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
+__uninitialized_move_n(
     _InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_moving, _IterMove __iter_move) {
   auto __idx   = __ofirst;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -277,169 +291,51 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
 }
 
 template <class _InputIterator, class _Size, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<_InputIterator, _ForwardIterator>
 uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::move(*__iter); };
+  auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
 
-  return std::__uninitialized_move_n<_ValueType>(
+  auto __result = std::__uninitialized_move_n<_ValueType>(
       std::move(__ifirst), __n, std::move(__ofirst), __always_false(), __iter_move);
-}
-
-// TODO: Rewrite this to iterate left to right and use reverse_iterators when calling
-// Destroys every element in the range [first, last) FROM RIGHT TO LEFT using allocator
-// destruction. If elements are themselves C-style arrays, they are recursively destroyed
-// in the same manner.
-//
-// This function assumes that destructors do not throw, and that the allocator is bound to
-// the correct type.
-template <class _Alloc,
-          class _BidirIter,
-          __enable_if_t<__has_bidirectional_iterator_category<_BidirIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _BidirIter __last) noexcept {
-  using _ValueType = typename iterator_traits<_BidirIter>::value_type;
-  static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _ValueType>,
-                "The allocator should already be rebound to the correct type");
-
-  if (__first == __last)
-    return;
-
-  if constexpr (is_array_v<_ValueType>) {
-    static_assert(!__is_unbounded_array_v<_ValueType>,
-                  "arrays of unbounded arrays don't exist, but if they did we would mess up here");
-
-    using _Element = remove_extent_t<_ValueType>;
-    __allocator_traits_rebind_t<_Alloc, _Element> __elem_alloc(__alloc);
-    do {
-      --__last;
-      decltype(auto) __array = *__last;
-      std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + extent_v<_ValueType>);
-    } while (__last != __first);
-  } else {
-    do {
-      --__last;
-      allocator_traits<_Alloc>::destroy(__alloc, std::addressof(*__last));
-    } while (__last != __first);
-  }
-}
-
-// Constructs the object at the given location using the allocator's construct method.
-//
-// If the object being constructed is an array, each element of the array is allocator-constructed,
-// recursively. If an exception is thrown during the construction of an array, the initialized
-// elements are destroyed in reverse order of initialization using allocator destruction.
-//
-// This function assumes that the allocator is bound to the correct type.
-template <class _Alloc, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr void __allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc) {
-  static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _Tp>,
-                "The allocator should already be rebound to the correct type");
-
-  if constexpr (is_array_v<_Tp>) {
-    using _Element = remove_extent_t<_Tp>;
-    __allocator_traits_rebind_t<_Alloc, _Element> __elem_alloc(__alloc);
-    size_t __i   = 0;
-    _Tp& __array = *__loc;
-
-    // If an exception is thrown, destroy what we have constructed so far in reverse order.
-    auto __guard = std::__make_exception_guard([&]() {
-      std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i);
-    });
-
-    for (; __i != extent_v<_Tp>; ++__i) {
-      std::__allocator_construct_at_multidimensional(__elem_alloc, std::addressof(__array[__i]));
-    }
-    __guard.__complete();
-  } else {
-    allocator_traits<_Alloc>::construct(__alloc, __loc);
-  }
-}
-
-// Constructs the object at the given location using the allocator's construct method, passing along
-// the provided argument.
-//
-// If the object being constructed is an array, the argument is also assumed to be an array. Each
-// each element of the array being constructed is allocator-constructed from the corresponding
-// element of the argument array. If an exception is thrown during the construction of an array,
-// the initialized elements are destroyed in reverse order of initialization using allocator
-// destruction.
-//
-// This function assumes that the allocator is bound to the correct type.
-template <class _Alloc, class _Tp, class _Arg>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc, _Arg const& __arg) {
-  static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _Tp>,
-                "The allocator should already be rebound to the correct type");
-
-  if constexpr (is_array_v<_Tp>) {
-    static_assert(is_array_v<_Arg>,
-                  "Provided non-array initialization argument to __allocator_construct_at_multidimensional when "
-                  "trying to construct an array.");
-
-    using _Element = remove_extent_t<_Tp>;
-    __allocator_traits_rebind_t<_Alloc, _Element> __elem_alloc(__alloc);
-    size_t __i   = 0;
-    _Tp& __array = *__loc;
-
-    // If an exception is thrown, destroy what we have constructed so far in reverse order.
-    auto __guard = std::__make_exception_guard([&]() {
-      std::__allocator_destroy_multidimensional(__elem_alloc, __array, __array + __i);
-    });
-    for (; __i != extent_v<_Tp>; ++__i) {
-      std::__allocator_construct_at_multidimensional(__elem_alloc, std::addressof(__array[__i]), __arg[__i]);
-    }
-    __guard.__complete();
-  } else {
-    allocator_traits<_Alloc>::construct(__alloc, __loc, __arg);
-  }
-}
-
-// Given a range starting at it and containing n elements, initializes each element in the
-// range from left to right using the construct method of the allocator (rebound to the
-// correct type).
-//
-// If an exception is thrown, the initialized elements are destroyed in reverse order of
-// initialization using allocator_traits destruction. If the elements in the range are C-style
-// arrays, they are initialized element-wise using allocator construction, and recursively so.
-template <class _Alloc,
-          class _BidirIter,
-          class _Tp,
-          class _Size = typename iterator_traits<_BidirIter>::difference_type>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__uninitialized_allocator_fill_n_multidimensional(_Alloc& __alloc, _BidirIter __it, _Size __n, _Tp const& __value) {
-  using _ValueType = typename iterator_traits<_BidirIter>::value_type;
-  __allocator_traits_rebind_t<_Alloc, _ValueType> __value_alloc(__alloc);
-  _BidirIter __begin = __it;
-
-  // If an exception is thrown, destroy what we have constructed so far in reverse order.
-  auto __guard =
-      std::__make_exception_guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
-  for (; __n != 0; --__n, ++__it) {
-    std::__allocator_construct_at_multidimensional(__value_alloc, std::addressof(*__it), __value);
-  }
-  __guard.__complete();
-}
-
-// Same as __uninitialized_allocator_fill_n_multidimensional, but doesn't pass any initialization argument
-// to the allocator's construct method, which results in value initialization.
-template <class _Alloc, class _BidirIter, class _Size = typename iterator_traits<_BidirIter>::difference_type>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _BidirIter __it, _Size __n) {
-  using _ValueType = typename iterator_traits<_BidirIter>::value_type;
-  __allocator_traits_rebind_t<_Alloc, _ValueType> __value_alloc(__alloc);
-  _BidirIter __begin = __it;
-
-  // If an exception is thrown, destroy what we have constructed so far in reverse order.
-  auto __guard =
-      std::__make_exception_guard([&]() { std::__allocator_destroy_multidimensional(__value_alloc, __begin, __it); });
-  for (; __n != 0; --__n, ++__it) {
-    std::__allocator_construct_at_multidimensional(__value_alloc, std::addressof(*__it));
-  }
-  __guard.__complete();
+  return {std::move(__result.__in_), std::move(__result.__out_)};
 }
 
 #endif // _LIBCPP_STD_VER >= 17
+
+// __uninitialized_relocate relocates the objects in [__first, __last) into __result element-by-element from __first to
+// __last. Relocation means that the objects in [__first, __last) are placed into __result as-if by move-construct and
+// destroy, except that the move constructor and destructor may never be called if they are known to be equivalent to a
+// memcpy.
+//
+// Preconditions:  At __result there is no object and [__first, __last) contains objects
+// Postconditions: If no exceptions were thrown, __result contains the objects from [__first, __last), otherwise it
+//                 doesn't contain any objects.
+//                 [__first, __last) doesn't contain any objects.
+template <class _ContiguousIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
+  static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
+  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  // TODO: Accept non-trivially relocatable types
+  static_assert(__is_trivially_relocatable_v<_ValueType>);
+
+  if (__libcpp_is_constant_evaluated()) {
+    auto __iter = __first;
+    while (__iter != __last) {
+      std::__construct_at(std::__to_address(__result), std::move(*__iter));
+      std::__destroy_at(std::__to_address(__iter));
+      ++__iter;
+      ++__result;
+    }
+  } else {
+    // Casting to void* to suppress clang complaining that this is technically UB.
+    __builtin_memmove(static_cast<void*>(std::__to_address(__result)),
+                      std::__to_address(__first),
+                      sizeof(_ValueType) * (__last - __first));
+  }
+}
 
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
@@ -486,7 +382,7 @@ inline const bool __allocator_has_trivial_copy_construct_v<allocator<_Type>, _Ty
 template <class _Alloc,
           class _In,
           class _Out,
-          __enable_if_t<is_trivially_copy_constructible<_In>::value && is_trivially_copy_assignable<_In>::value &&
+          __enable_if_t<is_trivially_copy_constructible<_In>::value && is_trivially_assignable<_Out&, _In&>::value &&
                             is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
                             __allocator_has_trivial_copy_construct_v<_Alloc, _In>,
                         int> = 0>
@@ -536,37 +432,51 @@ inline const bool __allocator_has_trivial_destroy_v<allocator<_Tp>, _Up> = true;
 // The strong exception guarantee is provided if any of the following are true:
 // - is_nothrow_move_constructible<_ValueType>
 // - is_copy_constructible<_ValueType>
-// - __libcpp_is_trivially_relocatable<_ValueType>
+// - __is_trivially_relocatable_v<_ValueType>
 template <class _Alloc, class _ContiguousIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
     _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
-  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
   static_assert(
       __is_cpp17_move_insertable_v<_Alloc>, "The specified type does not meet the requirements of Cpp17MoveInsertable");
-  if (__libcpp_is_constant_evaluated() || !__libcpp_is_trivially_relocatable<_ValueType>::value ||
-      !__allocator_has_trivial_move_construct_v<_Alloc, _ValueType> ||
-      !__allocator_has_trivial_destroy_v<_Alloc, _ValueType>) {
+
+  using __value_type = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  if _LIBCPP_CONSTEXPR (__allocator_has_trivial_move_construct_v<_Alloc, __value_type> &&
+                        __allocator_has_trivial_destroy_v<_Alloc, __value_type> &&
+                        __is_trivially_relocatable_v<__value_type>) {
+    if (!__libcpp_is_constant_evaluated()) {
+      // Casting to void* to suppress clang complaining that this is technically UB.
+      __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
+                       std::__to_address(__first),
+                       sizeof(__value_type) * (__last - __first));
+      return;
+    }
+  }
+
+  using __alloc_traits = allocator_traits<_Alloc>;
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (!_LIBCPP_HAS_EXCEPTIONS || is_nothrow_move_constructible<__value_type>::value) {
+    while (__first != __last) {
+      __alloc_traits::construct(__alloc, std::__to_address(__result), std::move(*__first));
+      __alloc_traits::destroy(__alloc, std::__to_address(__first));
+      ++__first;
+      ++__result;
+    }
+  } else
+#endif
+  {
     auto __destruct_first = __result;
     auto __guard          = std::__make_exception_guard(
         _AllocatorDestroyRangeReverse<_Alloc, _ContiguousIterator>(__alloc, __destruct_first, __result));
     auto __iter = __first;
     while (__iter != __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
       allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move_if_noexcept(*__iter));
-#else
-      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__iter));
-#endif
       ++__iter;
       ++__result;
     }
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
-  } else {
-    // Casting to void* to suppress clang complaining that this is technically UB.
-    __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
-                     std::__to_address(__first),
-                     sizeof(_ValueType) * (__last - __first));
   }
 }
 

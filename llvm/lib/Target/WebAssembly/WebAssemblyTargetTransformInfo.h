@@ -59,6 +59,7 @@ public:
   bool enableInterleavedAccessVectorization() const override { return true; }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   InstructionCost getArithmeticInstrCost(
@@ -87,7 +88,7 @@ public:
       bool UseMaskForCond, bool UseMaskForGaps) const override;
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 

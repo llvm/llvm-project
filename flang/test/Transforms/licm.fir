@@ -1332,6 +1332,7 @@ func.func @_QPtest_dummy_scalar_pointer_optional(%arg0: !fir.ref<!fir.array<?xi3
 // CHECK: omp.parallel
 // CHECK-NEXT: omp.wsloop
 // CHECK-NEXT: omp.loop_nest
+omp.private {type = private} @_QFtest_omp_loop_wrapperEi_private_i32 : i32
 func.func @_QPtest_omp_loop_wrapper(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
   %c10_i32 = arith.constant 10 : i32
   %c1_i32 = arith.constant 1 : i32
@@ -1680,8 +1681,8 @@ func.func @test_if_hoisting(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name =
 // CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<f32> {fir.bindc_name = "a"},
 // CHECK-SAME:      %[[ARG1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           acc.parallel private(%{{.*}} : !fir.box<!fir.array<?xf32>>) {
-// CHECK:             %[[PRIVATE_1:.*]] = acc.private var(%{{.*}} : !fir.box<!fir.array<?xf32>>) recipe(@{{.*}}) -> !fir.box<!fir.array<?xf32>> {name = "b"}
-// CHECK:             %[[PRIVATE_2:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@{{.*}}) -> !fir.ref<i32> {implicit = true, name = "i"}
+// CHECK:             %[[PRIVATE_1:.*]] = acc.private var(%{{.*}} : !fir.box<!fir.array<?xf32>>) recipe(@{{.*}}) name("b") -> !fir.box<!fir.array<?xf32>>
+// CHECK:             %[[PRIVATE_2:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@{{.*}}) implicit(true) name("i") -> !fir.ref<i32>
 // CHECK-NOT:         fir.box_addr %[[PRIVATE_1]]
 // CHECK:             acc.loop private(%[[PRIVATE_1]], %[[PRIVATE_2]] : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) {{.*}} {
 // CHECK:               %[[BOX_ADDR_1:.*]] = fir.box_addr %[[PRIVATE_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
@@ -1704,13 +1705,13 @@ func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = 
   %10 = fir.shape %8 : (index) -> !fir.shape<1>
   %11 = fir.declare %9(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   %12 = fir.embox %11(%10) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-  %13 = acc.private var(%12 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "b"}
+  %13 = acc.private var(%12 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) name("b") -> !fir.box<!fir.array<?xf32>>
   acc.parallel private(%13 : !fir.box<!fir.array<?xf32>>) {
     %14 = fir.box_addr %13 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
     %15 = fir.declare %14(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
     %16 = fir.embox %15(%10) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-    %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) -> !fir.box<!fir.array<?xf32>> {name = "b"}
-    %18 = acc.private varPtr(%4 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+    %17 = acc.private var(%16 : !fir.box<!fir.array<?xf32>>) recipe(@privatization_box_Uxf32) name("b") -> !fir.box<!fir.array<?xf32>>
+    %18 = acc.private varPtr(%4 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
     acc.loop private(%17, %18 : !fir.box<!fir.array<?xf32>>, !fir.ref<i32>) control(%arg2 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %19 = fir.box_addr %17 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
       %20 = fir.declare %19(%10) {uniq_name = "_QFtest_acc_loop_with_privateEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
@@ -1722,7 +1723,7 @@ func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = 
       %25 = fir.array_coor %20(%10) %24 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       fir.store %cst to %25 : !fir.ref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -1911,13 +1912,13 @@ func.func @test_acc_loop_private_hoisting() {
   %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
   %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
   acc.parallel combined(loop) {
-    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) name("b") -> !fir.ref<f32>
     acc.loop combined(parallel) private(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
       %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
       fir.store %cst to %7 : !fir.ref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -1936,13 +1937,13 @@ func.func @test_acc_loop_firstprivate_hoisting() {
   %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
   %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
   acc.parallel combined(loop) {
-    %5 = acc.firstprivate varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %5 = acc.firstprivate varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) name("b") -> !fir.ref<f32>
     acc.loop combined(parallel) firstprivate(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
       %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
       fir.store %cst to %7 : !fir.ref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -1961,13 +1962,13 @@ func.func @test_acc_loop_reduction_hoisting() {
   %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
   %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
   acc.parallel combined(loop) {
-  %5 = acc.reduction varPtr(%2 : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "b"}
+  %5 = acc.reduction varPtr(%2 : !fir.ref<f32>) recipe(@reduction_add_ref_f32) name("b") -> !fir.ref<f32>
     acc.loop combined(parallel) reduction(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
       %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
       fir.store %cst to %7 : !fir.ref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -1997,8 +1998,8 @@ func.func @test_acc_loop_private2_hoisting() {
   %3 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
   %4 = fir.declare %3 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
   acc.parallel combined(loop) {
-    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
-    %6 = acc.private varPtr(%4 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "a"}
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) name("b") -> !fir.ref<f32>
+    %6 = acc.private varPtr(%4 : !fir.ref<f32>) recipe(@privatization_ref_f32) name("a") -> !fir.ref<f32>
     acc.loop combined(parallel) private(%5, %6 : !fir.ref<f32>, !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
       %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -2007,7 +2008,7 @@ func.func @test_acc_loop_private2_hoisting() {
       %8 = fir.declare %cvt2 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
       fir.store %cst to %8 : !fir.ref<f32>
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -2374,7 +2375,7 @@ func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>
   %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
   %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
   acc.parallel combined(loop) {
-    %priv = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %priv = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) name("b") -> !fir.ref<f32>
     acc.loop combined(parallel) private(%priv : !fir.ref<f32>) control(%arg1 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
       %cond = arith.cmpi slt, %arg1, %c5_i32 : i32
       scf.if %cond {
@@ -2385,7 +2386,7 @@ func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>
         memref.store %cst, %cvt_arg[%idx] : memref<10xf32>
       }
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -2405,6 +2406,7 @@ func.func @test_acc_loop_nested_canMoveOutOf(%arg0: !fir.ref<!fir.array<10xf32>>
 // CHECK-NEXT:        omp.loop_nest
 // CHECK:               scf.if
 // CHECK:                 fir.convert %[[ARG0]]
+omp.private {type = private} @_QFtestEi_private_i32 : i32
 func.func @test_omp_wsloop_nested_canMoveFromDescendant(%arg0: !fir.ref<!fir.array<10xf32>>) {
   %cst = arith.constant 1.000000e+00 : f32
   %c10_i32 = arith.constant 10 : i32
@@ -2684,6 +2686,243 @@ func.func @test_hoist_hlfir_null(%arg0: !fir.ref<i64>) {
     %0 = hlfir.null !fir.ref<none>
     %1 = fir.convert %0 : (!fir.ref<none>) -> i64
     fir.store %1 to %arg0 : !fir.ref<i64>
+  }
+  return
+}
+
+// -----
+// Test that a scalar load inside scf.if is hoisted in the default "cheap"
+// nested hoisting mode, along with the fir.convert chain depending on it.
+// CHECK-LABEL:   func.func @test_cheap_nested_scalar_load(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<10xf32>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<i32>
+// CHECK:           %[[DECL:.*]] = fir.declare %[[ARG1]]
+// CHECK:           %[[CVT:.*]] = fir.convert %[[ARG0]]
+// CHECK:           %[[LOAD:.*]] = fir.load %[[DECL]]
+// CHECK:           %[[IDX:.*]] = fir.convert %[[LOAD]] : (i32) -> index
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load
+// CHECK:               memref.store %{{.*}}, %[[CVT]]{{\[}}%[[IDX]]{{\]}}
+func.func @test_cheap_nested_scalar_load(%arg0: !fir.ref<!fir.array<10xf32>>, %arg1: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %cvt = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
+      %val = fir.load %1 : !fir.ref<i32>
+      %idx = fir.convert %val : (i32) -> index
+      memref.store %cst, %cvt[%idx] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a load of a global scalar inside scf.if is hoisted in the default
+// "cheap" nested hoisting mode.
+// CHECK-LABEL:   func.func @test_cheap_nested_global_scalar_load(
+// CHECK:           %[[ADDR:.*]] = fir.address_of(@global_scalar)
+// CHECK:           %[[LOAD:.*]] = fir.load %[[ADDR]]
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load
+// CHECK:               fir.store %[[LOAD]]
+fir.global @global_scalar : f32
+
+func.func @test_cheap_nested_global_scalar_load(%arg0: !fir.ref<f32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %addr = fir.address_of(@global_scalar) : !fir.ref<f32>
+      %val = fir.load %addr : !fir.ref<f32>
+      fir.store %val to %arg0 : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a descriptor load inside scf.if is hoisted in the default "cheap"
+// nested hoisting mode. A descriptor load is a fixed-size copy. The element
+// load must stay inside the guard.
+// CHECK-LABEL:   func.func @test_cheap_nested_descriptor_load(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX:.*]] = fir.load %[[ARG0]]
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK-NOT:           fir.load %[[ARG0]]
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[BOX]]
+// CHECK:               %[[ELT:.*]] = fir.coordinate_of %[[ADDR]]
+// CHECK:               fir.load %[[ELT]]
+func.func @test_cheap_nested_descriptor_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %arg1: !fir.ref<f32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %box = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+      %addr = fir.box_addr %box : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+      %elt = fir.coordinate_of %addr, %c0 : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      %val = fir.load %elt : !fir.ref<f32>
+      fir.store %val to %arg1 : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a load of a derived type inside scf.if is NOT hoisted in the
+// default "cheap" nested hoisting mode, because it may be arbitrarily large.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_derived_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+func.func @test_cheap_nested_skips_derived_load(%arg0: !fir.ref<!fir.type<t{a:i32,b:i32}>>, %arg1: !fir.ref<!fir.type<t{a:i32,b:i32}>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.type<t{a:i32,b:i32}>>
+      fir.store %val to %arg1 : !fir.ref<!fir.type<t{a:i32,b:i32}>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a vector load inside scf.if is NOT hoisted in the default "cheap"
+// nested hoisting mode. Vector loads may be large and are excluded from cheap
+// mode.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_vector_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+// CHECK:               fir.store
+func.func @test_cheap_nested_skips_vector_load(%arg0: !fir.ref<!fir.vector<8:f64>>, %arg1: !fir.ref<!fir.vector<8:f64>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.vector<8:f64>>
+      fir.store %val to %arg1 : !fir.ref<!fir.vector<8:f64>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that an assumed-rank descriptor load inside scf.if is NOT hoisted in the
+// default "cheap" nested hoisting mode. The descriptor size depends on the rank,
+// which is only known at runtime, so the load lowers to a memcpy whose length is
+// computed from the descriptor.
+// CHECK-LABEL:   func.func @test_cheap_nested_skips_assumed_rank_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load
+// CHECK:               fir.store
+func.func @test_cheap_nested_skips_assumed_rank_load(%arg0: !fir.ref<!fir.box<!fir.array<*:f32>>>, %arg1: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+      fir.store %val to %arg1 : !fir.ref<!fir.box<!fir.array<*:f32>>>
+    }
+  }
+  return
+}
+
+// -----
+// Test that a volatile scalar load inside scf.if is NOT hoisted in the default
+// "cheap" nested hoisting mode. The cost model admits it as a trivial scalar;
+// the safety path rejects it.
+// CHECK-LABEL:   func.func @test_cheap_nested_volatile_load(
+// CHECK:           scf.for
+// CHECK:             scf.if
+// CHECK:               fir.load{{.*}}volatile
+// CHECK:               fir.store
+func.func @test_cheap_nested_volatile_load(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.volatile_cast %arg0 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
+  %2 = fir.declare %1 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFtest_cheap_nested_volatile_loadEv"} : (!fir.ref<i32, volatile>, !fir.dscope) -> !fir.ref<i32, volatile>
+  scf.for %i = %c0 to %c10 step %c1 {
+    %cond = arith.cmpi slt, %i, %c5 : index
+    scf.if %cond {
+      %val = fir.load %2 : !fir.ref<i32, volatile>
+      fir.store %val to %arg1 : !fir.ref<i32>
+    }
+  }
+  return
+}
+
+// -----
+// Test the shape that motivates the change: a global scalar read under a guard
+// in a serial loop nested inside an OpenMP worksharing region. The load must
+// move out of the inner fir.do_loop but stay inside omp.loop_nest, since
+// omp.wsloop requires tight nesting.
+// CHECK-LABEL:   func.func @test_cheap_nested_omp_global_scalar(
+// CHECK:           omp.parallel
+// CHECK:             omp.wsloop
+// CHECK:               omp.loop_nest
+// CHECK:                 %[[ADDR:.*]] = fir.address_of(@omp_global_scalar)
+// CHECK:                 %[[LOAD:.*]] = fir.load %[[ADDR]]
+// CHECK:                 fir.do_loop
+// CHECK:                   scf.if
+// CHECK-NOT:                 fir.load
+// CHECK:                     fir.store %[[LOAD]]
+fir.global @omp_global_scalar : f64
+
+omp.private {type = private} @_QFtest_ompEi_private_i32 : i32
+
+func.func @test_cheap_nested_omp_global_scalar(%arg0: !fir.ref<f64>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_ompEi"}
+  %1 = fir.declare %0 {uniq_name = "_QFtest_ompEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  omp.parallel {
+    omp.wsloop private(@_QFtest_ompEi_private_i32 %1 -> %arg1 : !fir.ref<i32>) {
+      omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32) {
+        fir.do_loop %k = %c1 to %c3 step %c1 {
+          %cond = arith.cmpi slt, %k, %c2 : index
+          scf.if %cond {
+            %addr = fir.address_of(@omp_global_scalar) : !fir.ref<f64>
+            %val = fir.load %addr : !fir.ref<f64>
+            fir.store %val to %arg0 : !fir.ref<f64>
+          }
+        }
+        omp.yield
+      }
+    }
+    omp.terminator
   }
   return
 }

@@ -9,6 +9,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/GSYM/DwarfTransformer.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
@@ -26,6 +27,7 @@
 #include "llvm/DebugInfo/GSYM/StringTable.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -2811,6 +2813,145 @@ FinalizeEncodeAndDecode(GsymCreator &GC) {
   if (Err)
     return std::move(Err);
   return GsymReader::copyBuffer(OutStrm.str());
+}
+
+template <typename CreatorT>
+static void AddDuplicateRangePair(CreatorT &GC, uint64_t Addr,
+                                  gsym_strp_t RichName, gsym_strp_t NonRichName,
+                                  bool AddRichFirst, uint32_t FileIdx,
+                                  uint32_t FirstLine) {
+  FunctionInfo RichFI(Addr, 0x20, RichName);
+  RichFI.OptLineTable = LineTable();
+  RichFI.OptLineTable->push(LineEntry(Addr, FileIdx, FirstLine));
+  RichFI.OptLineTable->push(LineEntry(Addr + 0x10, FileIdx, FirstLine + 1));
+
+  FunctionInfo NonRichFI(Addr, 0x20, NonRichName);
+  if (AddRichFirst) {
+    GC.addFunctionInfo(std::move(RichFI));
+    GC.addFunctionInfo(std::move(NonRichFI));
+  } else {
+    GC.addFunctionInfo(std::move(NonRichFI));
+    GC.addFunctionInfo(std::move(RichFI));
+  }
+}
+
+static void VerifyDuplicateRangeResult(const GsymReader &GR, uint64_t Addr,
+                                       StringRef ExpectedName,
+                                       uint32_t ExpectedFileIdx,
+                                       uint32_t FirstLine) {
+  auto ExpFI = GR.getFunctionInfo(Addr);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  EXPECT_EQ(GR.getString(ExpFI->Name), ExpectedName);
+  ASSERT_TRUE(ExpFI->OptLineTable.has_value());
+  ASSERT_EQ(ExpFI->OptLineTable->size(), 2u);
+  EXPECT_EQ((*ExpFI->OptLineTable)[0],
+            LineEntry(Addr, ExpectedFileIdx, FirstLine));
+  EXPECT_EQ((*ExpFI->OptLineTable)[1],
+            LineEntry(Addr + 0x10, ExpectedFileIdx, FirstLine + 1));
+}
+
+template <typename CreatorT> static void TestMangledNameReplacement() {
+  CreatorT GC;
+  const uint32_t FileIdx = GC.insertFile("/tmp/main.cpp");
+  const gsym_strp_t ShortName = GC.insertString("make_ftype");
+  const gsym_strp_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const gsym_strp_t SwiftMangledName =
+      GC.insertString("$s4main10make_ftypeyyF");
+
+  AddDuplicateRangePair(GC, 0x1000, ShortName, MangledName,
+                        /*AddRichFirst=*/false, FileIdx, 10);
+  AddDuplicateRangePair(GC, 0x2000, ShortName, MangledName,
+                        /*AddRichFirst=*/true, FileIdx, 20);
+  AddDuplicateRangePair(GC, 0x3000, ShortName, SwiftMangledName,
+                        /*AddRichFirst=*/false, FileIdx, 30);
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  VerifyDuplicateRangeResult(*GR, 0x1000, "_Z10make_ftypePci", FileIdx, 10);
+  VerifyDuplicateRangeResult(*GR, 0x2000, "_Z10make_ftypePci", FileIdx, 20);
+  VerifyDuplicateRangeResult(*GR, 0x3000, "$s4main10make_ftypeyyF", FileIdx,
+                             30);
+}
+
+TEST(GSYMTest, TestMangledNameReplacement) {
+  TestMangledNameReplacement<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestMangledNameReplacementV2) {
+  TestMangledNameReplacement<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestMangledNameReplacementNegative() {
+  CreatorT GC;
+  const uint32_t FileIdx = GC.insertFile("/tmp/test.cpp");
+  const gsym_strp_t MangledA = GC.insertString("_Z3foov");
+  const gsym_strp_t MangledB = GC.insertString("_Z3barv");
+  const gsym_strp_t MangledName = GC.insertString("_Z10make_ftypePci");
+  const gsym_strp_t UnrelatedName = GC.insertString("some_other_func");
+  const gsym_strp_t SwiftShortName = GC.insertString("foo");
+  const gsym_strp_t SwiftLongerName = GC.insertString("$s5fooBaryyF");
+
+  AddDuplicateRangePair(GC, 0x3000, MangledB, MangledA,
+                        /*AddRichFirst=*/false, FileIdx, 5);
+  AddDuplicateRangePair(GC, 0x4000, UnrelatedName, MangledName,
+                        /*AddRichFirst=*/false, FileIdx, 15);
+  AddDuplicateRangePair(GC, 0x5000, SwiftShortName, SwiftLongerName,
+                        /*AddRichFirst=*/false, FileIdx, 25);
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  EXPECT_EQ(GR->getNumAddresses(), 3u);
+  VerifyDuplicateRangeResult(*GR, 0x3000, "_Z3barv", FileIdx, 5);
+  VerifyDuplicateRangeResult(*GR, 0x4000, "some_other_func", FileIdx, 15);
+  VerifyDuplicateRangeResult(*GR, 0x5000, "foo", FileIdx, 25);
+}
+
+TEST(GSYMTest, TestMangledNameReplacementNegative) {
+  TestMangledNameReplacementNegative<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestMangledNameReplacementNegativeV2) {
+  TestMangledNameReplacementNegative<GsymCreatorV2>();
+}
+
+template <typename CreatorT> static void TestDuplicateRangeKeepsCallSites() {
+  CreatorT GC;
+  const gsym_strp_t FuncName = GC.insertString("foo");
+  const gsym_strp_t MatchRegex = GC.insertString("callee");
+
+  FunctionInfo NonRichFI(0x5000, 0x20, FuncName);
+  FunctionInfo RichFI(0x5000, 0x20, FuncName);
+  RichFI.CallSites = CallSiteInfoCollection();
+  CallSiteInfo CSI;
+  CSI.ReturnOffset = 0x10;
+  CSI.MatchRegex.push_back(MatchRegex);
+  RichFI.CallSites->CallSites.push_back(CSI);
+
+  GC.addFunctionInfo(std::move(NonRichFI));
+  GC.addFunctionInfo(std::move(RichFI));
+
+  auto GROrErr = FinalizeEncodeAndDecode(GC);
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  auto ExpFI = GR->getFunctionInfo(0x5000);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_TRUE(ExpFI->CallSites.has_value());
+  ASSERT_EQ(ExpFI->CallSites->CallSites.size(), 1u);
+  EXPECT_EQ(ExpFI->CallSites->CallSites[0].ReturnOffset, 0x10u);
+  ASSERT_EQ(ExpFI->CallSites->CallSites[0].MatchRegex.size(), 1u);
+  EXPECT_EQ(GR->getString(ExpFI->CallSites->CallSites[0].MatchRegex[0]),
+            "callee");
+}
+
+TEST(GSYMTest, TestDuplicateRangeKeepsCallSites) {
+  TestDuplicateRangeKeepsCallSites<GsymCreatorV1>();
+}
+TEST(GSYMTest, TestDuplicateRangeKeepsCallSitesV2) {
+  TestDuplicateRangeKeepsCallSites<GsymCreatorV2>();
 }
 
 template <typename CreatorT>
@@ -5686,4 +5827,555 @@ TEST(GSYMTest, TestMergedFunctionsInfoLargeOffsets) {
   ASSERT_EQ(DecResult->MergedFunctions.size(), 2u);
   EXPECT_EQ(DecResult->MergedFunctions[0].Name, LargeName1);
   EXPECT_EQ(DecResult->MergedFunctions[1].Name, LargeName2);
+}
+
+TEST(GSYMTest, TestDWARFTypedefCycleDoesNotCrash) {
+  // Test that a self-referencing typedef cycle in DWARF does not cause
+  // infinite recursion in DWARFTypePrinter::unwrapReferencedTypedefType().
+  // This can happen when dsymutil's classic linker incorrectly deduplicates
+  // typedefs with the same name but different underlying types (e.g. from
+  // preferred_name), creating a typedef that points to itself.
+  //
+  // The crash path: DWARFTypePrinter::appendUnqualifiedNameBefore sees a
+  // DW_AT_name with the _STN| prefix (simplified template name), calls
+  // appendTemplateParameters, which for each DW_TAG_template_type_parameter
+  // calls unwrapReferencedTypedefType. With a cyclic typedef, this recurses
+  // infinitely.
+  //
+  // debug_info layout (DWARF32, AddrSize=8):
+  //   0x00: unit_length (4 bytes)
+  //   0x04: version=4 (2), abbrev_offset (4), addr_size=8 (1) = 7 bytes
+  //   0x0B: CU DIE (abbrev 1): strp(4) + addr(8) + addr(8) + data2(2) = 23
+  //   0x22: Subprogram DIE (abbrev 2): strp(4) + addr(8) + addr(8) = 21
+  //   0x37: Template param DIE (abbrev 3): strp(4) + ref4(4) = 9
+  //   0x40: null terminator (1 byte, end of subprogram children)
+  //   0x41: Typedef DIE (abbrev 4): strp(4) + ref4(4) = 9
+  //   0x4A: null terminator (1 byte, end of CU children)
+  //
+  // Template param's DW_AT_type -> 0x41 (typedef)
+  // Typedef's DW_AT_type -> 0x41 (self-referencing cycle)
+
+  // String table: "" (0x00), "/tmp/main.cpp" (0x01), "_STN|foo|<MyType>"
+  // (0x0F), "T" (0x21), "MyType" (0x23)
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.cpp
+    - '_STN|foo|<MyType>'
+    - T
+    - MyType
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000003
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000004
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000F
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000021
+            - Value:           0x0000000000000041
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000023
+            - Value:           0x0000000000000041
+        - AbbrCode:        0x00000000
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+
+  // Verify the typedef DIE is at offset 0x41 and self-references.
+  auto &CUDie = *DwarfContext->compile_units().begin();
+  DWARFDie CURoot = CUDie->getUnitDIE(false);
+  ASSERT_TRUE(CURoot.isValid());
+  // Walk children to find the typedef and verify the cycle.
+  bool FoundTypedef = false;
+  for (DWARFDie Child : CURoot.children()) {
+    if (Child.getTag() == dwarf::DW_TAG_typedef) {
+      EXPECT_EQ(Child.getOffset(), 0x41u);
+      auto TypeAttr = Child.find(dwarf::DW_AT_type);
+      ASSERT_TRUE(TypeAttr.has_value());
+      auto RefDie = Child.getAttributeValueAsReferencedDie(*TypeAttr);
+      EXPECT_EQ(RefDie.getOffset(), Child.getOffset());
+      FoundTypedef = true;
+    }
+  }
+  ASSERT_TRUE(FoundTypedef);
+
+  // Exercise DWARFTypePrinter on the subprogram with the _STN| name.
+  // appendUnqualifiedName -> appendTemplateParameters ->
+  // unwrapReferencedTypedefType must not infinitely recurse.
+  for (DWARFDie Child : CURoot.children()) {
+    if (Child.getTag() == dwarf::DW_TAG_subprogram) {
+      std::string Result;
+      raw_string_ostream StrOS(Result);
+      DWARFTypePrinter<DWARFDie>(StrOS).appendUnqualifiedName(Child);
+      EXPECT_FALSE(Result.empty());
+    }
+  }
+
+  // Also verify DwarfTransformer::convert() succeeds.
+  auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
+  GsymCreatorV1 GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  ASSERT_THAT_ERROR(DT.convert(1, OSAgg), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+}
+
+// The exact byte-size values dumpStatistics() should report for the canned
+// DWARF below. They differ between v1 and v2 (e.g. wider addr-info offsets and
+// string offsets in v2, and the v2-only GlobalData directory), so each version
+// supplies its own set. Every value is fully determined by the YAML input.
+struct ExpectedGsymStats {
+  uint64_t NumAddresses;
+  // byte-sizes (top level)
+  int64_t FileSize;
+  int64_t Header;
+  int64_t GlobalDataDirectory;
+  int64_t UUIDSection;
+  int64_t Padding;
+  int64_t AddressTable;
+  int64_t AddrInfoOffsets;
+  int64_t FileTable;
+  int64_t StringTable;
+  int64_t FunctionInfoData;
+  // function_info_type_sizes
+  int64_t FISizeAndName;
+  int64_t FILineTableInfo;
+  int64_t FIInlineInfo;
+  int64_t FICallSiteInfo;
+  int64_t FIMergedFuncInfo;
+  int64_t FIEndOfList;
+  int64_t FIPadding;
+  // merged_func_info_type_sizes
+  int64_t MInfoTypeInfoLengthCountAndFnSize;
+  int64_t MSizeAndName;
+  int64_t MLineTableInfo;
+  int64_t MInlineInfo;
+  int64_t MCallSiteInfo;
+  int64_t MMergedFuncInfo;
+  int64_t MEndOfList;
+};
+
+// Build a small GSYM from canned DWARF that exercises every statistics bucket -
+// a function with a line table, inline info, a call site, a merged function,
+// and a UUID - then exercise GsymReader::dumpStatistics() and verify that every
+// reported byte size matches the exact value determined by the YAML input, and
+// that the sizes account for every byte of the file exactly once at each
+// nesting level. Works for both GSYM v1 and v2.
+template <typename CreatorT>
+static void TestGsymStatistics(const ExpectedGsymStats &E) {
+  // A single compile unit with a function "main" that has a line table, one
+  // inlined subroutine ("inline1"), and a call site. A second subprogram
+  // ("dupfunc") shares main's address range so it gets folded into a merged
+  // function. A UUID is set on the creator further below.
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+    - inline1
+    - dupfunc
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data4
+        - Code:            0x00000004
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000005
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000000004
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000001100
+            - Value:           0x0000000000000100
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000A
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000001010
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x000000000000001A
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000001000
+        - AbbrCode:        0x00000000
+  debug_line:
+    - Length:          96
+      Version:         2
+      PrologueLength:  46
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - /tmp
+      Files:
+        - Name:            main.c
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+        - Name:            inline.h
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            4096
+        - Opcode:          DW_LNS_copy
+          Data:            4096
+        - Opcode:          DW_LNS_advance_pc
+          Data:            256
+        - Opcode:          DW_LNS_set_file
+          Data:            2
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            2
+        - Opcode:          DW_LNS_copy
+          Data:            2
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            128
+        - Opcode:          DW_LNS_copy
+          Data:            128
+        - Opcode:          DW_LNS_advance_pc
+          Data:            128
+        - Opcode:          DW_LNS_set_file
+          Data:            1
+        - Opcode:          DW_LNS_advance_line
+          SData:           -10
+          Data:            1
+        - Opcode:          DW_LNS_copy
+          Data:            1
+        - Opcode:          DW_LNS_advance_pc
+          Data:            3584
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            3584
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            3584
+  )";
+
+  // Create the gsym data
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  auto &OS = llvm::nulls();
+  OutputAggregator OSAgg(&OS);
+  CreatorT GC;
+  // Give the GSYM a 16-byte UUID (only v2 stores this as a data section; v1
+  // keeps it inline in the header).
+  const uint8_t UUIDBytes[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab,
+                                 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98,
+                                 0x76, 0x54, 0x32, 0x10};
+  GC.setUUID(UUIDBytes);
+  // Load DW_TAG_call_site DIEs so the call-site bucket is populated.
+  DwarfTransformer DT(*DwarfContext, GC, /*LoadDwarfCallSites=*/true,
+                      /*IsMachO=*/false);
+  ASSERT_THAT_ERROR(DT.convert(/*ThreadCount=*/1, OSAgg), Succeeded());
+  // Fold same-range functions ("main" and "dupfunc") into a merged function.
+  GC.prepareMergedFunctions(OSAgg);
+  ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+
+  // Create a GsymReader to read the gsym data
+  auto GROrErr = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GROrErr, Succeeded());
+  const std::unique_ptr<GsymReader> &GR = *GROrErr;
+
+  // Dump statistics
+  const StringRef DisplayPath = "in-memory.gsym";
+  std::string StatsStr;
+  raw_string_ostream StatsOS(StatsStr);
+  GR->dumpStatistics(StatsOS, GsymReader::StatisticsFormat::JSON, DisplayPath);
+
+  // Get the JSON object which contains the statistics
+  auto ValOrErr = json::parse(StatsStr);
+  ASSERT_THAT_EXPECTED(ValOrErr, Succeeded());
+  const json::Object *Root = ValOrErr->getAsObject();
+  ASSERT_NE(Root, nullptr);
+
+  // Top-level fields. The path is only a display label.
+  auto Path = Root->getString("path");
+  ASSERT_TRUE(Path.has_value());
+  EXPECT_EQ(*Path, DisplayPath);
+  // The UUID we set on the creator is reported the same way in v1 and v2.
+  auto UUID = Root->getString("uuid");
+  ASSERT_TRUE(UUID.has_value());
+  EXPECT_EQ(*UUID, "01234567-89AB-CDEF-FEDC-BA9876543210");
+  auto NumAddrs = Root->getInteger("num_addresses");
+  ASSERT_TRUE(NumAddrs.has_value());
+  EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), GR->getNumAddresses());
+  EXPECT_EQ(static_cast<uint64_t>(*NumAddrs), E.NumAddresses);
+
+  const json::Object *BS = Root->getObject("byte-sizes");
+  ASSERT_NE(BS, nullptr);
+  const json::Object *FT = BS->getObject("function_info_type_sizes");
+  ASSERT_NE(FT, nullptr);
+  const json::Object *MT = FT->getObject("merged_func_info_type_sizes");
+  ASSERT_NE(MT, nullptr);
+
+  // Assert an integer field is present and equals its expected value.
+  auto ExpectField = [](const json::Object *O, StringRef Key,
+                        int64_t Expected) {
+    std::optional<int64_t> V = O->getInteger(Key);
+    ASSERT_TRUE(V.has_value()) << "missing field: " << Key.str();
+    EXPECT_EQ(*V, Expected) << "field: " << Key.str();
+  };
+
+  // Every field's exact value is determined by the canned YAML above.
+  ExpectField(BS, "file_size", E.FileSize);
+  ExpectField(BS, "header", E.Header);
+  ExpectField(BS, "global_data_directory", E.GlobalDataDirectory);
+  ExpectField(BS, "uuid_section", E.UUIDSection);
+  ExpectField(BS, "padding", E.Padding);
+  ExpectField(BS, "address_table", E.AddressTable);
+  ExpectField(BS, "addr_info_offsets", E.AddrInfoOffsets);
+  ExpectField(BS, "file_table", E.FileTable);
+  ExpectField(BS, "string_table", E.StringTable);
+  ExpectField(BS, "function_info_data", E.FunctionInfoData);
+
+  ExpectField(FT, "size_and_name", E.FISizeAndName);
+  ExpectField(FT, "line_table_info", E.FILineTableInfo);
+  ExpectField(FT, "inline_info", E.FIInlineInfo);
+  ExpectField(FT, "call_site_info", E.FICallSiteInfo);
+  ExpectField(FT, "merged_func_info", E.FIMergedFuncInfo);
+  ExpectField(FT, "end_of_list", E.FIEndOfList);
+  ExpectField(FT, "padding", E.FIPadding);
+
+  ExpectField(MT, "infotype_infolength_count_and_fnsize",
+              E.MInfoTypeInfoLengthCountAndFnSize);
+  ExpectField(MT, "size_and_name", E.MSizeAndName);
+  ExpectField(MT, "line_table_info", E.MLineTableInfo);
+  ExpectField(MT, "inline_info", E.MInlineInfo);
+  ExpectField(MT, "call_site_info", E.MCallSiteInfo);
+  ExpectField(MT, "merged_func_info", E.MMergedFuncInfo);
+  ExpectField(MT, "end_of_list", E.MEndOfList);
+
+  // Cross-check the byte-to-byte completeness invariants hold at each level.
+  EXPECT_EQ(E.Header + E.GlobalDataDirectory + E.UUIDSection + E.Padding +
+                E.AddressTable + E.AddrInfoOffsets + E.FileTable +
+                E.StringTable + E.FunctionInfoData,
+            E.FileSize);
+  EXPECT_EQ(E.FISizeAndName + E.FILineTableInfo + E.FIInlineInfo +
+                E.FICallSiteInfo + E.FIMergedFuncInfo + E.FIEndOfList +
+                E.FIPadding,
+            E.FunctionInfoData);
+  EXPECT_EQ(E.MInfoTypeInfoLengthCountAndFnSize + E.MSizeAndName +
+                E.MLineTableInfo + E.MInlineInfo + E.MCallSiteInfo +
+                E.MMergedFuncInfo + E.MEndOfList,
+            E.FIMergedFuncInfo);
+
+  // The text and pretty-JSON formats must not crash on the same input.
+  GR->dumpStatistics(OS, GsymReader::StatisticsFormat::Text, DisplayPath);
+  GR->dumpStatistics(OS, GsymReader::StatisticsFormat::PrettyJSON, DisplayPath);
+}
+
+TEST(GSYMTest, TestGsymStatisticsV1) {
+  // "main" (line table + inline + call site) is folded into a merged function
+  // behind "dupfunc", so the inline/call-site bytes appear in the merged
+  // breakdown; v1 stores the UUID inline in the header (uuid_section == 0).
+  ExpectedGsymStats E = {};
+  E.NumAddresses = 1;        // one address (0x1000); main+dupfunc share it
+  E.FileSize = 297;          // = sum of all byte-size fields below
+  E.Header = 48;             // fixed V1 header struct (incl. inline UUID[20])
+  E.GlobalDataDirectory = 0; // v1 has no on-disk GlobalData directory
+  E.UUIDSection = 0;         // v1 keeps the UUID inline in the header
+  E.Padding = 3;             // inter-section alignment (remainder to file_size)
+  E.AddressTable = 1;        // 1 addr * 1-byte addr offset
+  E.AddrInfoOffsets = 4;     // 1 addr * 4-byte (32-bit) info offset
+  E.FileTable = 28;          // u32 count + 3 entries * 2 strp(4B)
+  E.StringTable = 43;        // unique names+files+dirs; same bytes in v1/v2
+  E.FunctionInfoData = 170;  // the one top-level FunctionInfo (FT fields below)
+  E.FISizeAndName = 8;       // Size(u32=4) + name strp(4B)
+  E.FILineTableInfo = 32;    // LineTable TLV: 8B type+length hdr + 24B payload
+  E.FIInlineInfo = 0;        // main's inline moved into the merged inner (MT)
+  E.FICallSiteInfo = 0;     // main's call site moved into the merged inner (MT)
+  E.FIMergedFuncInfo = 121; // MergedFunctionsInfo TLV holding main (MT fields)
+  E.FIEndOfList = 8;        // terminator TLV: InfoType(0,4B) + InfoLength(0,4B)
+  E.FIPadding = 1;          // pad the top-level FunctionInfo to a 4B boundary
+  E.MInfoTypeInfoLengthCountAndFnSize = 16; // TLV hdr(8)+Count(4)+1*FnSize(4)
+  E.MSizeAndName = 8;    // inner func: Size(4) + name strp(4B)
+  E.MLineTableInfo = 32; // inner LineTable TLV: 8B hdr + 24B payload
+  E.MInlineInfo = 32;    // inner InlineInfo TLV: 8B hdr + 24B payload
+  E.MCallSiteInfo = 25;  // CallSite TLV: 8B hdr + 1 site, no regex
+  E.MMergedFuncInfo = 0; // the inner function has no further merged functions
+  E.MEndOfList = 8;      // inner func terminator TLV (4B + 4B)
+  TestGsymStatistics<GsymCreatorV1>(E);
+}
+
+TEST(GSYMTest, TestGsymStatisticsV2) {
+  // Same as above, but v2 stores the UUID as its own 16-byte data section
+  // (uuid_section == 16) and has an on-disk GlobalData directory.
+  ExpectedGsymStats E = {};
+  E.NumAddresses = 1;          // one address (0x1000); main+dupfunc share it
+  E.FileSize = 473;            // = sum of all byte-size fields below
+  E.Header = 20;               // fixed HeaderV2 struct
+  E.GlobalDataDirectory = 140; // 7 entries * 20B: 5 sections + UUID + EndOfList
+  E.UUIDSection = 16;          // v2 stores the 16-byte UUID as its own section
+  E.Padding = 8;         // inter-section alignment (remainder to file_size)
+  E.AddressTable = 1;    // 1 addr * 1-byte addr offset
+  E.AddrInfoOffsets = 8; // 1 addr * 8-byte (64-bit) info offset
+  E.FileTable = 52;      // u32 count + 3 entries * 2 strp(8B)
+  E.StringTable = 43;    // same strings as v1 (content is version-independent)
+  E.FunctionInfoData = 185; // the one top-level FunctionInfo (FT fields below)
+  E.FISizeAndName = 12;     // Size(u32=4) + name strp(8B)
+  E.FILineTableInfo = 32;   // LineTable TLV: 8B hdr + 24B payload (no strps)
+  E.FIInlineInfo = 0;       // main's inline moved into the merged inner (MT)
+  E.FICallSiteInfo = 0;     // main's call site moved into the merged inner (MT)
+  E.FIMergedFuncInfo = 133; // MergedFunctionsInfo TLV holding main (MT fields)
+  E.FIEndOfList = 8;        // terminator TLV: InfoType(0,4B) + InfoLength(0,4B)
+  E.FIPadding = 0;          // top-level FunctionInfo already 4B aligned
+  E.MInfoTypeInfoLengthCountAndFnSize = 16; // TLV hdr(8)+Count(4)+1*FnSize(4)
+  E.MSizeAndName = 12;   // inner func: Size(4) + name strp(8B)
+  E.MLineTableInfo = 32; // inner LineTable TLV: 8B hdr + 24B payload
+  E.MInlineInfo = 40;    // inner InlineInfo TLV; +8B vs v1 (8B string offsets)
+  E.MCallSiteInfo = 25;  // CallSite TLV; version-independent (no match regex)
+  E.MMergedFuncInfo = 0; // the inner function has no further merged functions
+  E.MEndOfList = 8;      // inner func terminator TLV (4B + 4B)
+  TestGsymStatistics<GsymCreatorV2>(E);
 }

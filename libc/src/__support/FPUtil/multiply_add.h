@@ -37,11 +37,17 @@ multiply_add(T x, T y, T z) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_USE_CONSTEXPR)
 
 // FMA instructions are available.
 // We use builtins directly instead of including FMA.h to avoid a circular
 // dependency: multiply_add.h -> FMA.h -> generic/FMA.h -> dyadic_float.h.
+//
+// TODO: for constexpr evaluation of multiply_add using FMA, we will need to
+// use the generic fma implementation from generic/FMA.h.  But currently that
+// implementation will use dyadic_float.h , which in turns including this
+// multiply_add.h .  We will need to break the dependency to enable constexpr
+// for other math functions.
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

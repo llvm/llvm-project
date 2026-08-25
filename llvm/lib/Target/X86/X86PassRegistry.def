@@ -15,6 +15,8 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("x86-asm-printer-begin", X86AsmPrinterBeginPass())
+MODULE_PASS("x86-asm-printer-end", X86AsmPrinterEndPass())
 MODULE_PASS("x86-winehstate", X86WinEHStatePass())
 #undef MODULE_PASS
 
@@ -30,6 +32,7 @@ FUNCTION_PASS("x86-partial-reduction", X86PartialReductionPass(this))
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("x86-argument-stack-slot", X86ArgumentStackSlotPass())
+MACHINE_FUNCTION_PASS("x86-asm-printer", X86AsmPrinterPass())
 MACHINE_FUNCTION_PASS("x86-avoid-sfb", X86AvoidStoreForwardingBlocksPass())
 MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
 MACHINE_FUNCTION_PASS("x86-cf-opt", X86CallFrameOptimizationPass())
@@ -50,6 +53,7 @@ MACHINE_FUNCTION_PASS("x86-flags-copy-lowering", X86FlagsCopyLoweringPass())
 MACHINE_FUNCTION_PASS("x86-fp-stackifier", X86FPStackifierPass())
 MACHINE_FUNCTION_PASS("x86-global-base-reg", X86GlobalBaseRegPass())
 MACHINE_FUNCTION_PASS("x86-indirect-branch-tracking", X86IndirectBranchTrackingPass())
+MACHINE_FUNCTION_PASS("x86-insert-vzeroupper", X86InsertVZeroUpperPass())
 MACHINE_FUNCTION_PASS("x86-insert-x87-wait", X86InsertX87WaitPass())
 MACHINE_FUNCTION_PASS("x86-isel", X86ISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("x86-lower-tile-copy", X86LowerTileCopyPass())
@@ -58,6 +62,7 @@ MACHINE_FUNCTION_PASS("x86-lvi-ret", X86LoadValueInjectionRetHardeningPass())
 MACHINE_FUNCTION_PASS("x86-optimize-leas", X86OptimizeLEAsPass())
 MACHINE_FUNCTION_PASS("x86-postlegalizer-combiner-pass", X86PostLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("x86-pre-tile-config", X86PreTileConfigPass())
+MACHINE_FUNCTION_PASS("x86-prelegalizer-combiner-pass", X86PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("x86-return-thunks", X86ReturnThunksPass())
 MACHINE_FUNCTION_PASS("x86-seses", X86SpeculativeExecutionSideEffectSuppressionPass())
 MACHINE_FUNCTION_PASS("x86-slh", X86SpeculativeLoadHardeningPass())
@@ -71,6 +76,5 @@ MACHINE_FUNCTION_PASS("x86-wineh-unwindv2", X86WinEHUnwindV2Pass())
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("x86-execution-domain-fix", X86ExecutionDomainFix())
 DUMMY_MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunks())
-DUMMY_MACHINE_FUNCTION_PASS("x86-issue-vzero-upper", X86IssueVZeroUpperPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions", X86PadShortFunctionsPass())
 #undef DUMMY_MACHINE_FUNCTION_PASS

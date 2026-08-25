@@ -405,6 +405,14 @@ ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
     if (!val)
       return emitError(tok.getLoc()) << "floating point value too large";
 
+    // A type with no signed representation, such as f8E8M0FNU, has no encoding
+    // for this value at all; the conversion below would keep the sign bit and
+    // produce a value that asserts when it is printed.
+    if (isNegative && !APFloat::semanticsHasSignedRepr(semantics))
+      return emitError(tok.getLoc())
+             << "negative floating point literal for a type with no signed "
+                "representation";
+
     result.emplace(isNegative ? -*val : *val);
     bool unused;
     result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);
@@ -1812,19 +1820,21 @@ public:
     SmallVector<UnresolvedOperand, 2> dimOperands;
     SmallVector<UnresolvedOperand, 1> symOperands;
 
-    auto parseElement = [&](bool isSymbol) -> ParseResult {
+    auto parseElement = [&]() -> FailureOr<UnresolvedOperand> {
       UnresolvedOperand operand;
       if (parseOperand(operand))
-        return failure();
+        return {};
+      return operand;
+    };
+    auto addOperand = [&](bool isSymbol, UnresolvedOperand operand) {
       if (isSymbol)
         symOperands.push_back(operand);
       else
         dimOperands.push_back(operand);
-      return success();
     };
 
     AffineMap map;
-    if (parser.parseAffineMapOfSSAIds(map, parseElement, delimiter))
+    if (parser.parseAffineMapOfSSAIds(map, parseElement, addOperand, delimiter))
       return failure();
     // Add AffineMap attribute.
     if (map) {
@@ -1841,20 +1851,22 @@ public:
   /// Parse an AffineExpr of SSA ids.
   ParseResult
   parseAffineExprOfSSAIds(SmallVectorImpl<UnresolvedOperand> &dimOperands,
-                          SmallVectorImpl<UnresolvedOperand> &symbOperands,
+                          SmallVectorImpl<UnresolvedOperand> &symOperands,
                           AffineExpr &expr) override {
-    auto parseElement = [&](bool isSymbol) -> ParseResult {
+    auto parseElement = [&]() -> FailureOr<UnresolvedOperand> {
       UnresolvedOperand operand;
       if (parseOperand(operand))
-        return failure();
+        return {};
+      return operand;
+    };
+    auto addOperand = [&](bool isSymbol, UnresolvedOperand operand) {
       if (isSymbol)
-        symbOperands.push_back(operand);
+        symOperands.push_back(operand);
       else
         dimOperands.push_back(operand);
-      return success();
     };
 
-    return parser.parseAffineExprOfSSAIds(expr, parseElement);
+    return parser.parseAffineExprOfSSAIds(expr, parseElement, addOperand);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2555,10 +2567,15 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 
 ParseResult OperationParser::codeCompleteSSAUse() {
   for (IsolatedSSANameScope &scope : isolatedNameScopes) {
-    for (auto &it : scope.values) {
-      if (it.second.empty())
-        continue;
-      Value frontValue = it.second.front().value;
+    // Collect and sort SSA value names for deterministic completion ordering.
+    SmallVector<StringRef> sortedNames;
+    for (auto &it : scope.values)
+      if (!it.second.empty())
+        sortedNames.push_back(it.getKey());
+    llvm::sort(sortedNames);
+
+    for (StringRef name : sortedNames) {
+      Value frontValue = scope.values[name].front().value;
 
       std::string detailData;
       llvm::raw_string_ostream detailOS(detailData);
@@ -2579,11 +2596,11 @@ ParseResult OperationParser::codeCompleteSSAUse() {
       // FIXME: We should define a policy for packed values, e.g. with a limit
       // on the detail size, but it isn't clear what would be useful right now.
       // For now we just only emit the first type.
-      if (it.second.size() > 1)
+      if (scope.values[name].size() > 1)
         detailOS << ", ...";
 
       state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailData));
+          name, std::move(detailData));
     }
   }
 

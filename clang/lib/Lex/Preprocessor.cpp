@@ -52,6 +52,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +80,7 @@ using namespace clang;
 /// Minimum distance between two check points, in tokens.
 static constexpr unsigned CheckPointStepSize = 1024;
 
-LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
@@ -100,6 +101,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
+
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
 
   // Default to discarding comments.
   KeepComments = false;
@@ -154,6 +158,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_GetExceptionInfo = Ident_GetExceptionCode = nullptr;
     Ident_AbnormalTermination = nullptr;
   }
+
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
@@ -357,19 +363,18 @@ void Preprocessor::PrintStats() {
                << llvm::capacity_in_bytes(CommentHandlers) << "\n";
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_begin(bool IncludeExternalMacros) const {
+llvm::iterator_range<Preprocessor::macro_iterator>
+Preprocessor::macros(bool IncludeExternalMacros) const {
   if (IncludeExternalMacros && ExternalSource &&
       !ReadMacrosFromExternalSource) {
     ReadMacrosFromExternalSource = true;
     ExternalSource->ReadDefinedMacros();
   }
-
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
     CurSubmoduleState->Macros.try_emplace(Macro.II);
 
-  return CurSubmoduleState->Macros.begin();
+  return CurSubmoduleState->Macros;
 }
 
 size_t Preprocessor::getTotalMemory() const {
@@ -384,17 +389,6 @@ size_t Preprocessor::getTotalMemory() const {
     + llvm::capacity_in_bytes(CommentHandlers);
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_end(bool IncludeExternalMacros) const {
-  if (IncludeExternalMacros && ExternalSource &&
-      !ReadMacrosFromExternalSource) {
-    ReadMacrosFromExternalSource = true;
-    ExternalSource->ReadDefinedMacros();
-  }
-
-  return CurSubmoduleState->Macros.end();
-}
-
 /// Compares macro tokens with a specified token value sequence.
 static bool MacroDefinitionEquals(const MacroInfo *MI,
                                   ArrayRef<TokenValue> Tokens) {
@@ -407,10 +401,9 @@ StringRef Preprocessor::getLastMacroWithSpelling(
                                     ArrayRef<TokenValue> Tokens) const {
   SourceLocation BestLocation;
   StringRef BestSpelling;
-  for (Preprocessor::macro_iterator I = macro_begin(), E = macro_end();
-       I != E; ++I) {
-    const MacroDirective::DefInfo
-      Def = I->second.findDirectiveAtLoc(Loc, SourceMgr);
+  for (const auto &M : macros()) {
+    const MacroDirective::DefInfo Def =
+        M.second.findDirectiveAtLoc(Loc, SourceMgr);
     if (!Def || !Def.getMacroInfo())
       continue;
     if (!Def.getMacroInfo()->isObjectLike())
@@ -423,21 +416,23 @@ StringRef Preprocessor::getLastMacroWithSpelling(
         (Location.isValid() &&
          SourceMgr.isBeforeInTranslationUnit(BestLocation, Location))) {
       BestLocation = Location;
-      BestSpelling = I->first->getName();
+      BestSpelling = M.first->getName();
     }
   }
   return BestSpelling;
 }
 
 void Preprocessor::recomputeCurLexerKind() {
-  if (CurLexer)
+  if (InCachingLexMode())
+    CurLexerCallback = CLK_CachingLexer;
+  else if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else
-    CurLexerCallback = CLK_CachingLexer;
+    CurLexerCallback = CLK_Lexer;
 }
 
 bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
@@ -1024,7 +1019,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1359,35 +1355,38 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
 
+  assert(CurPPLexer && "CurPPLexer must not be null");
+
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
-
-  std::optional<Token> NextTok = peekNextPPToken();
-  if (!NextTok)
-    return false;
-
-  if (NextTok->is(tok::raw_identifier))
-    LookUpIdentifierInfo(*NextTok);
-
-  if (Result.getIdentifierInfo()->isImportKeyword()) {
-    if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
-                         tok::header_name)) {
-      Result.setKind(tok::kw_import);
-      ModuleImportLoc = Result.getLocation();
-      return true;
+  if (II->isModuleKeyword()) {
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
+        Result.setKind(tok::kw_module);
+        ModuleDeclLoc = Result.getLocation();
+        return true;
+      }
     }
+    return false;
   }
 
-  if (Result.getIdentifierInfo()->isModuleKeyword() &&
-      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
-    Result.setKind(tok::kw_module);
-    ModuleDeclLoc = Result.getLocation();
-    return true;
+  if (II->isImportKeyword()) {
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon,
+                           tok::less, tok::code_completion)) {
+        Result.setKind(tok::kw_import);
+        ModuleImportLoc = Result.getLocation();
+        return true;
+      }
+    }
+    return false;
   }
 
   // Ok, it's an identifier.
@@ -1450,7 +1449,7 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
 
   // Add this module to the imports list of the currently-built submodule.
   if (!BuildingSubmoduleStack.empty() && M != BuildingSubmoduleStack.back().M)
-    BuildingSubmoduleStack.back().M->Imports.insert(M);
+    BuildingSubmoduleStack.back().M->Imports.push_back(M);
 }
 
 bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
@@ -1743,19 +1742,25 @@ void Preprocessor::createPreprocessingRecord() {
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
 }
 
+void Preprocessor::removePPCallbacks() {
+  auto IsPreserved = [&](PPCallbacks *C) {
+    return C == Record || C == DirTracer;
+  };
+  SmallVector<PPCallbacks *, 2> Released;
+  PPCallbacks::releaseIfPreserved(Callbacks, IsPreserved, Released);
+  Callbacks.reset();
+  for (auto *P : Released)
+    addPPCallbacks(std::unique_ptr<PPCallbacks>(P));
+}
+
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
-    }
-    return Last;
+    auto P = llvm::upper_bound(FileCheckPoints, Start);
+    if (P == FileCheckPoints.begin())
+      return nullptr;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 

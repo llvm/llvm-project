@@ -70,6 +70,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+struct LateParsedTypeAttribute;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -1134,6 +1135,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1154,6 +1160,10 @@ public:
 
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1625,6 +1635,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Strip nullability attributes from the given type.
+  QualType stripNullability(const ASTContext &ctx) const;
+
   /// Remove all qualifiers including _Atomic.
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
@@ -1962,7 +1975,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -2217,6 +2230,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2224,14 +2240,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -2786,8 +2802,13 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records in standard layout
+  bool isHLSLStandardLayoutRecordOrArrayOf() const;
+
+#define SPIRV_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/SPIRVTypes.def"
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -2798,6 +2819,12 @@ public:
   bool isCUDADeviceBuiltinSurfaceType() const;
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
+
+  /// Check if the type is the AMDGPU named barrier type, or an array thereof.
+  bool isAMDGPUNamedBarrierType() const;
+  /// Check if the type is the AMDGPU named barrier type/a RecordType of a named
+  /// barrier wrapper, or an array thereof.
+  bool isAMDGPUNamedBarrierTypeOrWrapper() const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -3238,6 +3265,9 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// SPIRV types
+#define SPIRV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/SPIRVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -3531,6 +3561,40 @@ public:
   }
 
   StringRef getAttributeName(bool WithMacroPrefix) const;
+};
+
+/// Represents a placeholder type for late-parsed type attributes.
+/// This type wraps another type and holds an opaque pointer to a
+/// LateParsedTypeAttribute that will be parsed later (e.g., in ActOnFields).
+/// Once parsed, this type is replaced with the appropriate attributed type
+/// (e.g., CountAttributedType for `__counted_by`).
+///
+/// Its canonical type is that of the wrapped type, so a consumer walking the
+/// AST during late parsing must treat this as "attribute unresolved", not "no
+/// attribute here".
+class LateParsedAttrType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType WrappedTy;
+  LateParsedTypeAttribute *LateParsedTypeAttr;
+
+  LateParsedAttrType(QualType Wrapped, QualType Canon,
+                     LateParsedTypeAttribute *Attr)
+      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+        WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedTy; }
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return LateParsedTypeAttr;
+  }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return WrappedTy; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == LateParsedAttr;
+  }
 };
 
 /// Represents a type which was implicitly adjusted by the semantic
@@ -6451,7 +6515,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   };
 
 private:
@@ -6729,18 +6793,13 @@ public:
   /// \returns the top-level nullability, if present.
   static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent,
-                      const Attr *attr) {
-    ID.AddInteger(attrKind);
-    ID.AddPointer(modified.getAsOpaquePtr());
-    ID.AddPointer(equivalent.getAsOpaquePtr());
-    ID.AddPointer(attr);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      Kind attrKind, QualType modified, QualType equivalent,
+                      const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;
@@ -6835,26 +6894,40 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsArray : 1;
+
+    /// The N in Texture2DMS<T, N>; null for every resource that is not
+    /// multisampled. A multisampled resource always carries a sample count,
+    /// defaulting to 0, which means the count comes from the bound resource
+    /// at runtime rather than denoting zero samples.
+    Expr *SampleCountExpr;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
-               bool IsCounter = false)
+               bool IsCounter = false, bool IsArray = false,
+               Expr *SampleCountExpr = nullptr)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
-          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
+          IsArray(IsArray), SampleCountExpr(SampleCountExpr) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
-                     llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false) {}
+                     llvm::dxil::ResourceDimension::Unknown) {}
+
+    bool isMultiSampled() const { return SampleCountExpr != nullptr; }
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
-                      LHS.RawBuffer, LHS.IsCounter) ==
+                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray,
+                      LHS.SampleCountExpr) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
-                      RHS.RawBuffer, RHS.IsCounter);
+                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray,
+                      RHS.SampleCountExpr);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6869,16 +6942,18 @@ private:
   const Attributes Attrs;
 
   HLSLAttributedResourceType(QualType Wrapped, QualType Contained,
-                             const Attributes &Attrs)
-      : Type(HLSLAttributedResource, QualType(),
-             Contained.isNull() ? TypeDependence::None
-                                : Contained->getDependence()),
-        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+                             const Attributes &Attrs);
+
+  /// WrappedType is always __hlsl_resource_t, so it never contributes.
+  static TypeDependence computeDependence(QualType Contained,
+                                          const Attributes &Attrs);
 
 public:
   QualType getWrappedType() const { return WrappedType; }
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
+  Expr *getSampleCountExpr() const { return Attrs.SampleCountExpr; }
+  bool isMultiSampled() const { return Attrs.isMultiSampled(); }
   const Attributes &getAttrs() const { return Attrs; }
   bool isRaw() const { return Attrs.RawBuffer; }
   bool isStructured() const { return !ContainedType->isChar8Type(); }
@@ -6886,20 +6961,13 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, WrappedType, ContainedType, Attrs);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, WrappedType, ContainedType, Attrs);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
-                      QualType Contained, const Attributes &Attrs) {
-    ID.AddPointer(Wrapped.getAsOpaquePtr());
-    ID.AddPointer(Contained.getAsOpaquePtr());
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
-    ID.AddBoolean(Attrs.IsROV);
-    ID.AddBoolean(Attrs.RawBuffer);
-    ID.AddBoolean(Attrs.IsCounter);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      QualType Wrapped, QualType Contained,
+                      const Attributes &Attrs);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == HLSLAttributedResource;
@@ -7053,6 +7121,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;
@@ -7308,10 +7378,10 @@ public:
 class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  TemplateDecl *TypeConstraintConcept;
+  TemplateName TypeConstraintConcept;
 
   AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+           AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7320,13 +7390,11 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  TemplateDecl *getTypeConstraintConcept() const {
+  TemplateName getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
-  bool isConstrained() const {
-    return TypeConstraintConcept != nullptr;
-  }
+  bool isConstrained() const { return !TypeConstraintConcept.isNull(); }
 
   bool isDecltypeAuto() const {
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
@@ -7343,7 +7411,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
-                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
+                      TemplateName CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -7365,6 +7433,9 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
       : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
                        DeducedAsTypeOrCanon),
         Template(Template) {
+
+    assert(!Template.isNull());
+
     auto Dep = toTypeDependence(Template.getDependence());
     // A deduced AutoType only syntactically depends on its template name.
     if (DK == DeducedKind::Deduced)
@@ -8975,6 +9046,12 @@ inline bool Type::isOpenCLSpecificType() const {
     return isSpecificBuiltinType(BuiltinType::Id);                             \
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/SPIRVTypes.def"
 
 inline bool Type::isHLSLBuiltinIntangibleType() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||

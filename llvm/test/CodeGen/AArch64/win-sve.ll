@@ -1582,14 +1582,11 @@ define void @f16(ptr swiftasync %ctx, <vscale x 2 x i64> %foo) {
 ; CHECK-NEXT:    add x29, sp, #8
 ; CHECK-NEXT:    .seh_add_fp 8
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    ldr x8, [x22]
 ; CHECK-NEXT:    stur x8, [x29, #-8]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
 ; CHECK-NEXT:    add sp, sp, #32

@@ -265,7 +265,8 @@ struct FoldLessThanOpF32ToI1 : public OpRewritePattern<test::LessThanOp> {
 
     Attribute operandAttrs[2] = {lhsAttr, rhsAttr};
     TypedAttr res = cast_or_null<TypedAttr>(
-        constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+        constFoldBinaryOp<FloatAttr, FloatAttr, FloatAttr::ValueType,
+                          FloatAttr::ValueType, void, IntegerAttr>(
             operandAttrs, op.getType(), [](APFloat lhs, APFloat rhs) -> APInt {
               return APInt(1, lhs < rhs);
             }));
@@ -383,7 +384,8 @@ struct CloneRegionBeforeOp : public RewritePattern {
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_cloned", rewriter.getUnitAttr()); });
     return success();
   }
 };
@@ -433,6 +435,33 @@ public:
     }
 
     return failure();
+  }
+};
+
+/// Creates and immediately erases an operation and a block.
+class CreateAndEraseOpAndBlock : public RewritePattern {
+public:
+  CreateAndEraseOpAndBlock(MLIRContext *context)
+      : RewritePattern("test.create_and_erase_op_and_block", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasAttr("was_rewritten"))
+      return failure();
+
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.transient_op", op->getContext()).getIdentifier(),
+        ValueRange(), TypeRange());
+    rewriter.eraseOp(newOp);
+
+    Block *newBlock = rewriter.createBlock(op->getParentRegion());
+    rewriter.eraseBlock(newBlock);
+
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_rewritten", rewriter.getUnitAttr()); });
+    return success();
   }
 };
 
@@ -708,8 +737,8 @@ struct TestWalkPatternDriver final
 
     // Patterns for testing the WalkPatternRewriteDriver.
     patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
-                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
-        &getContext());
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock,
+                 CreateAndEraseOpAndBlock>(&getContext());
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),
@@ -1530,7 +1559,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Split F32 into F16,F16.
     if (t.isF32()) {
-      results.assign(2, Float16Type::get(t.getContext()));
+      results.append(2, Float16Type::get(t.getContext()));
       return success();
     }
 

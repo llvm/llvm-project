@@ -13,6 +13,7 @@ from lldbsuite.test import lldbtest
 import dummy_scripted_process
 
 
+@requireThreadSupport
 class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -111,7 +112,7 @@ class ScriptedProcesTestCase(TestBase):
             log,
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""
@@ -157,7 +158,11 @@ class ScriptedProcesTestCase(TestBase):
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
         self.assertTrue(error.Fail())
-        self.assertEqual(error.GetCString(), "This is an invalid scripted process!")
+        self.assertEqual(
+            error.GetCString(),
+            "Failed to read memory from scripted process at 0x500000000: "
+            "This is an invalid scripted process!",
+        )
 
         with open(log_file, "r") as f:
             log = f.read()

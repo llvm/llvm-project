@@ -71,7 +71,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -89,7 +93,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -107,7 +115,11 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()->getNamedConcept()->getName().str();
+        Type = Param->getTypeConstraint()
+                   ->getNamedConcept()
+                   .getAsTemplateDecl()
+                   ->getName()
+                   .str();
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -1380,11 +1392,12 @@ private:
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-                        PresumedLoc Loc, DeclarationFragments Declaration,
+                        PresumedLoc Loc, const DocComment &Comment,
+                        DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         bool IsFromSystemHeader)
       : APIRecord(RK_MacroDefinition, USR, Name, Parent, Loc,
-                  AvailabilityInfo(), LinkageInfo(), {}, Declaration,
+                  AvailabilityInfo(), LinkageInfo(), Comment, Declaration,
                   SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {

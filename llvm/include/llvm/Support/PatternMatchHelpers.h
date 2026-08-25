@@ -79,6 +79,40 @@ template <typename... To, typename SubPattern>
 inline auto m_Isa(const SubPattern &P) { // NOLINT
   return m_CombineAnd(m_Isa<To...>(), P);
 }
+
+/// Matcher for a specific value, but stores a reference to the value, not the
+/// value itself.
+template <typename Ty> struct match_deferred { // NOLINT
+  Ty *const &Val;
+  match_deferred(Ty *const &V) : Val(V) {}
+  template <typename ITy> bool match(ITy *const V) const { return V == Val; }
+};
+
+/// Matcher to bind the captured value.
+template <typename Ty> struct match_bind { // NOLINT
+  Ty *&VR;
+  match_bind(Ty *&V) : VR(V) {}
+  template <typename ITy> bool match(ITy *V) const {
+    if (auto *CV = dyn_cast<Ty>(V)) {
+      VR = CV;
+      return true;
+    }
+    return false;
+  }
+};
+
+/// Inverting matcher that matches a value not matching P.
+template <typename Ty> struct match_unless { // NOLINT
+  Ty P;
+  match_unless(const Ty &P) : P(P) {}
+  template <typename ITy> bool match(ITy *V) const { return !P.match(V); }
+};
+
+/// Match if the inner matcher does *NOT* match.
+template <typename Pattern>
+inline match_unless<Pattern> m_Unless(const Pattern &P) { // NOLINT
+  return P;
+}
 } // namespace llvm::PatternMatchHelpers
 
 #endif // LLVM_SUPPORT_PATTERNMATCHHELPERS_H

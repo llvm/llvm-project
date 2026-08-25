@@ -18,7 +18,6 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Region.h"
-#include "llvm/ADT/Twine.h"
 #include <optional>
 
 namespace mlir {
@@ -481,6 +480,26 @@ public:
   /// Access a discardable attribute by name, returns a null Attribute if the
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringAttr name) { return attrs.get(name); }
+
+  /// Access a discardable attribute by name and cast it to `AttrClass`.
+  template <typename AttrClass>
+  AttrClass getDiscardableAttrOfType(StringRef name) {
+    return llvm::dyn_cast_or_null<AttrClass>(getDiscardableAttr(name));
+  }
+  template <typename AttrClass>
+  AttrClass getDiscardableAttrOfType(StringAttr name) {
+    return llvm::dyn_cast_or_null<AttrClass>(getDiscardableAttr(name));
+  }
+
+  /// Return true if this operation has a discardable attribute with the
+  /// provided name.
+  bool hasDiscardableAttr(StringRef name) { return bool(attrs.get(name)); }
+  bool hasDiscardableAttr(StringAttr name) { return bool(attrs.get(name)); }
+  template <typename AttrClass, typename NameT>
+  bool hasDiscardableAttrOfType(NameT &&name) {
+    return static_cast<bool>(
+        getDiscardableAttrOfType<AttrClass>(std::forward<NameT>(name)));
+  }
 
   /// Set a discardable attribute by name.
   void setDiscardableAttr(StringAttr name, Attribute value) {

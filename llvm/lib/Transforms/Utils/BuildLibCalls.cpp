@@ -61,6 +61,7 @@ STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
 STATISTIC(NumCold, "Number of functions inferred as cold");
 STATISTIC(NumNoReturn, "Number of functions inferred as no return");
+STATISTIC(NumNoSync, "Number of functions inferred as nosync");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
@@ -195,6 +196,14 @@ static bool setDoesNotAlias(Function &F, unsigned ArgNo) {
   return true;
 }
 
+static bool setDoesNotSync(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoSync))
+    return false;
+  F.addFnAttr(Attribute::NoSync);
+  ++NumNoSync;
+  return true;
+}
+
 static bool setOnlyReadsMemory(Function &F, unsigned ArgNo) {
   if (F.hasParamAttribute(ArgNo, Attribute::ReadOnly))
     return false;
@@ -326,8 +335,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Module *M, StringRef Name,
 
 bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
                                          const TargetLibraryInfo &TLI) {
-  LibFunc TheLibFunc;
-  if (!(TLI.getLibFunc(F, TheLibFunc) && TLI.has(TheLibFunc)))
+  LibFunc TheLibFunc = TLI.getLibFunc(F);
+  if (!TLI.has(TheLibFunc))
     return false;
 
   bool Changed = false;
@@ -348,6 +357,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strchr:
   case LibFunc_strrchr:
@@ -356,6 +366,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strtol:
   case LibFunc_strtod:
@@ -381,6 +392,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotAlias(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strcpy:
   case LibFunc_strncpy:
@@ -397,6 +409,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 1);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setDoesNotAlias(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strxfrm:
     Changed |= setDoesNotThrow(F);
@@ -417,6 +430,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strcoll:
   case LibFunc_strcasecmp:  // 0,1
@@ -438,6 +452,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_strtok:
   case LibFunc_strtok_r:
@@ -547,6 +562,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_memchr:
   case LibFunc_memrchr:
@@ -555,6 +571,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setWillReturn(F);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_modf:
   case LibFunc_modff:
@@ -565,6 +582,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyWritesMemory(F);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_memcpy:
     Changed |= setDoesNotThrow(F);
@@ -577,6 +595,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotAlias(F, 1);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_memmove:
     Changed |= setDoesNotThrow(F);
@@ -587,6 +606,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_mempcpy:
   case LibFunc_memccpy:
@@ -601,6 +621,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotAlias(F, 1);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_memalign:
     Changed |= setAllocFamily(F, "malloc");
@@ -704,6 +725,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     Changed |= setOnlyWritesMemory(F, 1);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_bcmp:
     Changed |= setDoesNotThrow(F);
@@ -713,6 +735,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_bzero:
     Changed |= setDoesNotThrow(F);
@@ -721,6 +744,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_calloc:
   case LibFunc_vec_calloc:
@@ -757,6 +781,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_access:
     Changed |= setRetAndArgsNoUndef(F);
@@ -836,6 +861,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyWritesMemory(F);
     Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_fstatvfs:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1197,6 +1223,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_abort:
     Changed |= setIsCold(F);
@@ -1337,6 +1364,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setWillReturn(F);
     Changed |= setOnlyWritesErrnoMemory(F);
+    Changed |= setDoesNotSync(F);
     break;
   case LibFunc_abs:
   case LibFunc_cbrt:
@@ -1412,6 +1440,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
     Changed |= setOnlyWritesArgMemOrErrnoMem(F);
+    Changed |= setDoesNotSync(F);
     break;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're
@@ -1571,9 +1600,7 @@ bool llvm::isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
 
 bool llvm::isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
                               StringRef Name) {
-  LibFunc TheLibFunc;
-  return TLI->getLibFunc(Name, TheLibFunc) &&
-         isLibFuncEmittable(M, TLI, TheLibFunc);
+  return isLibFuncEmittable(M, TLI, TLI->getLibFunc(Name));
 }
 
 bool llvm::hasFloatFn(const Module *M, const TargetLibraryInfo *TLI, Type *Ty,
@@ -1669,7 +1696,7 @@ Value *llvm::emitStrChr(Value *Ptr, char C, IRBuilderBase &B,
   Type *CharPtrTy = B.getPtrTy();
   Type *IntTy = getIntTy(B, TLI);
   return emitLibCall(LibFunc_strchr, CharPtrTy, {CharPtrTy, IntTy},
-                     {Ptr, ConstantInt::get(IntTy, C)}, B, TLI);
+                     {Ptr, ConstantInt::get(IntTy, (unsigned char)C)}, B, TLI);
 }
 
 Value *llvm::emitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilderBase &B,
@@ -1918,10 +1945,8 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op, Name, NameBuffer);
 
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
-
-  return emitUnaryFloatFnCallHelper(Op, TheLibFunc, Name, B, Attrs, TLI);
+  return emitUnaryFloatFnCallHelper(Op, TLI->getLibFunc(Name), Name, B, Attrs,
+                                    TLI);
 }
 
 Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
@@ -1971,10 +1996,8 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op1, Name, NameBuffer);
 
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
-
-  return emitBinaryFloatFnCallHelper(Op1, Op2, TheLibFunc, Name, B, Attrs, TLI);
+  return emitBinaryFloatFnCallHelper(Op1, Op2, TLI->getLibFunc(Name), Name, B,
+                                     Attrs, TLI);
 }
 
 Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,

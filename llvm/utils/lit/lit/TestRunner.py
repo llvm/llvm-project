@@ -1,31 +1,45 @@
-from __future__ import absolute_import, annotations
-import errno
+from __future__ import annotations
+
+import enum
+import functools
 import io
-import itertools
-import getopt
-import os, signal, subprocess, sys
-import re
-import stat
+import os
 import pathlib
-import platform
+import re
 import shlex
-import shutil
+import signal
+import subprocess
+import sys
 import tempfile
 import threading
 import traceback
-from io import StringIO
+from typing import IO, BinaryIO, Callable, List, TextIO, Union
 
-from lit.ShCommands import GlobItem, Command
+import lit.InprocBuiltins as InprocBuiltins
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
+import lit.builtin_commands.cat as builtin_cat
+import lit.builtin_commands.diff as builtin_diff
 from lit.BooleanExpression import BooleanExpression
-
-
-class InternalShellError(Exception):
-    def __init__(self, command, message):
-        self.command = command
-        self.message = message
+from lit.ShCommands import Command
+from lit.ShellEnvironment import (
+    ByteWriter,
+    InternalShellError,
+    ShellCommandResult,
+    ShellEnvironment,
+    as_binary_reader,
+    binary_fd,
+    expand_glob,
+    expand_glob_expressions,
+    kAvoidDevNull,
+    kDevNull,
+    kIsWindows,
+    kUseCloseFDs,
+    processRedirects,
+    quote_windows_command,
+    updateEnv,
+)
 
 
 class ScriptFatal(Exception):
@@ -48,15 +62,6 @@ class TestUpdaterException(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-
-kIsWindows = platform.system() == "Windows"
-
-# Don't use close_fds on Windows.
-kUseCloseFDs = not kIsWindows
-
-# Use temporary files to replace /dev/null on Windows.
-kAvoidDevNull = kIsWindows
-kDevNull = "/dev/null"
 
 # A regex that matches %dbg(ARG), which lit inserts at the beginning of each
 # run command pipeline such that ARG specifies the pipeline's source line
@@ -81,30 +86,7 @@ def buildPdbgCommand(msg, cmd):
     return res
 
 
-class ShellEnvironment(object):
-
-    """Mutable shell environment containing things like CWD and env vars.
-
-    Environment variables are not implemented, but cwd tracking is. In addition,
-    we maintain a dir stack for pushd/popd.
-    """
-
-    def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
-        self.cwd = cwd
-        self.env = dict(env)
-        self.umask = umask
-        self.dirStack = []
-        self.ulimit = ulimit if ulimit else {}
-        self.normalize_slashes = normalize_slashes
-
-    def change_dir(self, newdir):
-        if os.path.isabs(newdir):
-            self.cwd = newdir
-        else:
-            self.cwd = lit.util.abs_path_preserve_drive(os.path.join(self.cwd, newdir))
-
-
-class TimeoutHelper(object):
+class TimeoutHelper:
     """
     Object used to helper manage enforcing a timeout in
     _executeShCmd(). It is passed through recursive calls
@@ -186,20 +168,6 @@ class TimeoutHelper(object):
             self._doneKillPass = True
 
 
-class ShellCommandResult(object):
-    """Captures the result of an individual command."""
-
-    def __init__(
-        self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
-    ):
-        self.command = command
-        self.stdout = stdout
-        self.stderr = stderr
-        self.exitCode = exitCode
-        self.timeoutReached = timeoutReached
-        self.outputFiles = list(outputFiles)
-
-
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
     Wrapper around _executeShCmd that handles
@@ -226,508 +194,6 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     return (finalExitCode, timeoutInfo)
 
 
-def expand_glob(arg, cwd):
-    if isinstance(arg, GlobItem):
-        return sorted(arg.resolve(cwd))
-    return [arg]
-
-
-def expand_glob_expressions(args, cwd):
-    result = [args[0]]
-    for arg in args[1:]:
-        result.extend(expand_glob(arg, cwd))
-    return result
-
-
-def quote_windows_command(seq):
-    r"""
-    Reimplement Python's private subprocess.list2cmdline for MSys compatibility
-
-    Based on CPython implementation here:
-      https://hg.python.org/cpython/file/849826a900d2/Lib/subprocess.py#l422
-
-    Some core util distributions (MSys) don't tokenize command line arguments
-    the same way that MSVC CRT does. Lit rolls its own quoting logic similar to
-    the stock CPython logic to paper over these quoting and tokenization rule
-    differences.
-
-    We use the same algorithm from MSDN as CPython
-    (http://msdn.microsoft.com/en-us/library/17w5ykft.aspx), but we treat more
-    characters as needing quoting, such as double quotes themselves, and square
-    brackets.
-
-    For MSys based tools, this is very brittle though, because quoting an
-    argument makes the MSys based tool unescape backslashes where it shouldn't
-    (e.g. "a\b\\c\\\\d" becomes "a\b\c\\d" where it should stay as it was,
-    according to regular win32 command line parsing rules).
-    """
-    result = []
-    needquote = False
-    for arg in seq:
-        bs_buf = []
-
-        # Add a space to separate this argument from the others
-        if result:
-            result.append(" ")
-
-        # This logic differs from upstream list2cmdline.
-        needquote = (
-            (" " in arg)
-            or ("\t" in arg)
-            or ('"' in arg)
-            or ("[" in arg)
-            or (";" in arg)
-            or not arg
-        )
-        if needquote:
-            result.append('"')
-
-        for c in arg:
-            if c == "\\":
-                # Don't know if we need to double yet.
-                bs_buf.append(c)
-            elif c == '"':
-                # Double backslashes.
-                result.append("\\" * len(bs_buf) * 2)
-                bs_buf = []
-                result.append('\\"')
-            else:
-                # Normal char
-                if bs_buf:
-                    result.extend(bs_buf)
-                    bs_buf = []
-                result.append(c)
-
-        # Add remaining backslashes, if any.
-        if bs_buf:
-            result.extend(bs_buf)
-
-        if needquote:
-            result.extend(bs_buf)
-            result.append('"')
-
-    return "".join(result)
-
-
-# args are from 'export' or 'env' command.
-# Skips the command, and parses its arguments.
-# Modifies env accordingly.
-# Returns copy of args without the command or its arguments.
-def updateEnv(env, args):
-    arg_idx_next = len(args)
-    unset_next_env_var = False
-    for arg_idx, arg in enumerate(args[1:]):
-        # Support for the -u flag (unsetting) for env command
-        # e.g., env -u FOO -u BAR will remove both FOO and BAR
-        # from the environment.
-        if arg == "-u":
-            unset_next_env_var = True
-            continue
-        # Support for the -i flag which clears the environment
-        if arg == "-i":
-            env.env = {}
-            continue
-        if unset_next_env_var:
-            unset_next_env_var = False
-            if arg in env.env:
-                del env.env[arg]
-            continue
-
-        # Partition the string into KEY=VALUE.
-        key, eq, val = arg.partition("=")
-        # Stop if there was no equals.
-        if eq == "":
-            arg_idx_next = arg_idx + 1
-            break
-        env.env[key] = val
-    return args[arg_idx_next:]
-
-
-def executeBuiltinCd(cmd, shenv):
-    """executeBuiltinCd - Change the current directory."""
-    if len(cmd.args) != 2:
-        raise InternalShellError(cmd, "'cd' supports only one argument")
-    # Update the cwd in the parent environment.
-    shenv.change_dir(cmd.args[1])
-    # The cd builtin always succeeds. If the directory does not exist, the
-    # following Popen calls will fail instead.
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinPushd(cmd, shenv):
-    """executeBuiltinPushd - Change the current dir and save the old."""
-    if len(cmd.args) != 2:
-        raise InternalShellError(cmd, "'pushd' supports only one argument")
-    shenv.dirStack.append(shenv.cwd)
-    shenv.change_dir(cmd.args[1])
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinPopd(cmd, shenv):
-    """executeBuiltinPopd - Restore a previously saved working directory."""
-    if len(cmd.args) != 1:
-        raise InternalShellError(cmd, "'popd' does not support arguments")
-    if not shenv.dirStack:
-        raise InternalShellError(cmd, "popd: directory stack empty")
-    shenv.cwd = shenv.dirStack.pop()
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinExport(cmd, shenv):
-    """executeBuiltinExport - Set an environment variable."""
-    if len(cmd.args) != 2:
-        raise InternalShellError(cmd, "'export' supports only one argument")
-    updateEnv(shenv, cmd.args)
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinEcho(cmd, shenv):
-    """Interpret a redirected echo or @echo command"""
-    opened_files = []
-    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
-    if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
-        raise InternalShellError(
-            cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
-        )
-
-    # Some tests have un-redirected echo commands to help debug test failures.
-    # Buffer our output and return it to the caller.
-    is_redirected = True
-    if stdout == subprocess.PIPE:
-        is_redirected = False
-        stdout = StringIO()
-    elif kIsWindows:
-        # Reopen stdout with `newline=""` to avoid CRLF translation.
-        # The versions of echo we are replacing on Windows all emit plain LF,
-        # and the LLVM tests now depend on this.
-        stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
-        opened_files.append((None, None, stdout, None))
-
-    # Implement echo flags. We only support -e and -n, and not yet in
-    # combination. We have to ignore unknown flags, because `echo "-D FOO"`
-    # prints the dash.
-    args = cmd.args[1:]
-    interpret_escapes = False
-    write_newline = True
-    while len(args) >= 1 and args[0] in ("-e", "-n"):
-        flag = args[0]
-        args = args[1:]
-        if flag == "-e":
-            interpret_escapes = True
-        elif flag == "-n":
-            write_newline = False
-
-    def maybeUnescape(arg):
-        if not interpret_escapes:
-            return arg
-
-        return arg.encode("utf-8").decode("unicode_escape")
-
-    if args:
-        for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg))
-            stdout.write(" ")
-        stdout.write(maybeUnescape(args[-1]))
-    if write_newline:
-        stdout.write("\n")
-
-    for (name, mode, f, path) in opened_files:
-        f.close()
-
-    output = "" if is_redirected else stdout.getvalue()
-    return ShellCommandResult(cmd, output, "", 0, False)
-
-
-def executeBuiltinMkdir(cmd, cmd_shenv):
-    """executeBuiltinMkdir - Create new directories."""
-    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
-    try:
-        opts, args = getopt.gnu_getopt(args, "p")
-    except getopt.GetoptError as err:
-        raise InternalShellError(cmd, "Unsupported: 'mkdir':  %s" % str(err))
-
-    parent = False
-    for o, a in opts:
-        if o == "-p":
-            parent = True
-        else:
-            assert False, "unhandled option"
-
-    if len(args) == 0:
-        raise InternalShellError(cmd, "Error: 'mkdir' is missing an operand")
-
-    stderr = StringIO()
-    exitCode = 0
-    for dir in args:
-        dir = pathlib.Path(dir)
-        cwd = pathlib.Path(cmd_shenv.cwd)
-        if not dir.is_absolute():
-            dir = lit.util.abs_path_preserve_drive(cwd / dir)
-        if parent:
-            dir.mkdir(parents=True, exist_ok=True)
-        else:
-            try:
-                dir.mkdir(exist_ok=True)
-            except OSError as err:
-                stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
-                exitCode = 1
-    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
-
-
-def executeBuiltinRm(cmd, cmd_shenv):
-    """executeBuiltinRm - Removes (deletes) files or directories."""
-    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
-    try:
-        opts, args = getopt.gnu_getopt(args, "frR", ["--recursive"])
-    except getopt.GetoptError as err:
-        raise InternalShellError(cmd, "Unsupported: 'rm':  %s" % str(err))
-
-    force = False
-    recursive = False
-    for o, a in opts:
-        if o == "-f":
-            force = True
-        elif o in ("-r", "-R", "--recursive"):
-            recursive = True
-        else:
-            assert False, "unhandled option"
-
-    if len(args) == 0:
-        raise InternalShellError(cmd, "Error: 'rm' is missing an operand")
-
-    def on_rm_error(func, path, exc_info):
-        # path contains the path of the file that couldn't be removed
-        # let's just assume that it's read-only and remove it.
-        os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
-        os.remove(path)
-
-    stderr = StringIO()
-    exitCode = 0
-    for path in args:
-        cwd = cmd_shenv.cwd
-        if not os.path.isabs(path):
-            path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
-        if force and not os.path.exists(path):
-            continue
-        try:
-            if os.path.islink(path):
-                os.remove(path)
-            elif os.path.isdir(path):
-                if not recursive:
-                    stderr.write("Error: %s is a directory\n" % path)
-                    exitCode = 1
-                if platform.system() == "Windows":
-                    # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
-                    # use the NT style path to get access to long file paths which
-                    # cannot be removed otherwise.
-                    from ctypes.wintypes import BOOL, HWND, LPCWSTR, UINT, WORD
-                    from ctypes import addressof, byref, c_void_p, create_unicode_buffer
-                    from ctypes import Structure
-                    from ctypes import windll, WinError, POINTER
-
-                    class SHFILEOPSTRUCTW(Structure):
-                        _fields_ = [
-                            ("hWnd", HWND),
-                            ("wFunc", UINT),
-                            ("pFrom", LPCWSTR),
-                            ("pTo", LPCWSTR),
-                            ("fFlags", WORD),
-                            ("fAnyOperationsAborted", BOOL),
-                            ("hNameMappings", c_void_p),
-                            ("lpszProgressTitle", LPCWSTR),
-                        ]
-
-                    FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
-
-                    FOF_SILENT = 4
-                    FOF_NOCONFIRMATION = 16
-                    FOF_NOCONFIRMMKDIR = 512
-                    FOF_NOERRORUI = 1024
-
-                    FOF_NO_UI = (
-                        FOF_SILENT
-                        | FOF_NOCONFIRMATION
-                        | FOF_NOERRORUI
-                        | FOF_NOCONFIRMMKDIR
-                    )
-
-                    SHFileOperationW = windll.shell32.SHFileOperationW
-                    SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
-
-                    path = os.path.abspath(path)
-
-                    pFrom = create_unicode_buffer(path, len(path) + 2)
-                    pFrom[len(path)] = pFrom[len(path) + 1] = "\0"
-                    operation = SHFILEOPSTRUCTW(
-                        wFunc=UINT(FO_DELETE),
-                        pFrom=LPCWSTR(addressof(pFrom)),
-                        fFlags=FOF_NO_UI,
-                    )
-                    result = SHFileOperationW(byref(operation))
-                    if result:
-                        raise WinError(result)
-                else:
-                    shutil.rmtree(path, onerror=on_rm_error if force else None)
-            else:
-                if force and not os.access(path, os.W_OK):
-                    os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
-                os.remove(path)
-        except OSError as err:
-            stderr.write("Error: 'rm' command failed, %s" % str(err))
-            exitCode = 1
-    return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
-
-
-def executeBuiltinUmask(cmd, shenv):
-    """executeBuiltinUmask - Change the current umask."""
-    if os.name != "posix":
-        raise InternalShellError(cmd, "'umask' not supported on this system")
-    if len(cmd.args) != 2:
-        raise InternalShellError(cmd, "'umask' supports only one argument")
-    try:
-        # Update the umask in the parent environment.
-        shenv.umask = int(cmd.args[1], 8)
-    except ValueError as err:
-        raise InternalShellError(cmd, "Error: 'umask': %s" % str(err))
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinUlimit(cmd, shenv):
-    """executeBuiltinUlimit - Change the current limits."""
-    try:
-        # Try importing the resource module (available on POSIX systems) and
-        # emit an error where it does not exist (e.g., Windows).
-        import resource
-    except ImportError:
-        raise InternalShellError(cmd, "'ulimit' not supported on this system")
-    if len(cmd.args) != 3:
-        raise InternalShellError(cmd, "'ulimit' requires two arguments")
-    try:
-        if cmd.args[2] == "unlimited":
-            new_limit = resource.RLIM_INFINITY
-        else:
-            new_limit = int(cmd.args[2])
-    except ValueError as err:
-        raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
-    if cmd.args[1] == "-v":
-        if new_limit != resource.RLIM_INFINITY:
-            new_limit = new_limit * 1024
-        shenv.ulimit["RLIMIT_AS"] = new_limit
-    elif cmd.args[1] == "-n":
-        shenv.ulimit["RLIMIT_NOFILE"] = new_limit
-    elif cmd.args[1] == "-s":
-        if new_limit != resource.RLIM_INFINITY:
-            new_limit = new_limit * 1024
-        shenv.ulimit["RLIMIT_STACK"] = new_limit
-    elif cmd.args[1] == "-f":
-        shenv.ulimit["RLIMIT_FSIZE"] = new_limit
-    else:
-        raise InternalShellError(
-            cmd, "'ulimit' does not support option: %s" % cmd.args[1]
-        )
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def executeBuiltinColon(cmd, cmd_shenv):
-    """executeBuiltinColon - Discard arguments and exit with status 0."""
-    return ShellCommandResult(cmd, "", "", 0, False)
-
-
-def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
-    """Return the standard fds for cmd after applying redirects
-
-    Returns the three standard file descriptors for the new child process.  Each
-    fd may be an open, writable file object or a sentinel value from the
-    subprocess module.
-    """
-
-    # Apply the redirections, we use (N,) as a sentinel to indicate stdin,
-    # stdout, stderr for N equal to 0, 1, or 2 respectively. Redirects to or
-    # from a file are represented with a list [file, mode, file-object]
-    # where file-object is initially None.
-    redirects = [(0,), (1,), (2,)]
-    for (op, filename) in cmd.redirects:
-        if op == (">", 2):
-            redirects[2] = [filename, "w", None]
-        elif op == (">>", 2):
-            redirects[2] = [filename, "a", None]
-        elif op == (">&", 2) and filename in "012":
-            redirects[2] = redirects[int(filename)]
-        elif op == (">&",) or op == ("&>",):
-            redirects[1] = redirects[2] = [filename, "w", None]
-        elif op == (">",):
-            redirects[1] = [filename, "w", None]
-        elif op == (">>",):
-            redirects[1] = [filename, "a", None]
-        elif op == ("<",):
-            redirects[0] = [filename, "r", None]
-        else:
-            raise InternalShellError(
-                cmd, "Unsupported redirect: %r" % ((op, filename),)
-            )
-
-    # Open file descriptors in a second pass.
-    std_fds = [None, None, None]
-    for (index, r) in enumerate(redirects):
-        # Handle the sentinel values for defaults up front.
-        if isinstance(r, tuple):
-            if r == (0,):
-                fd = stdin_source
-            elif r == (1,):
-                if index == 0:
-                    raise InternalShellError(cmd, "Unsupported redirect for stdin")
-                elif index == 1:
-                    fd = subprocess.PIPE
-                else:
-                    fd = subprocess.STDOUT
-            elif r == (2,):
-                if index != 2:
-                    raise InternalShellError(cmd, "Unsupported redirect on stdout")
-                fd = subprocess.PIPE
-            else:
-                raise InternalShellError(cmd, "Bad redirect")
-            std_fds[index] = fd
-            continue
-
-        (filename, mode, fd) = r
-
-        # Check if we already have an open fd. This can happen if stdout and
-        # stderr go to the same place.
-        if fd is not None:
-            std_fds[index] = fd
-            continue
-
-        redir_filename = None
-        name = expand_glob(filename, cmd_shenv.cwd)
-        if len(name) != 1:
-            raise InternalShellError(
-                cmd, "Unsupported: glob in " "redirect expanded to multiple files"
-            )
-        name = name[0]
-        if kAvoidDevNull and name == kDevNull:
-            fd = tempfile.TemporaryFile(mode=mode)
-        elif kIsWindows and name == "/dev/tty":
-            # Simulate /dev/tty on Windows.
-            # "CON" is a special filename for the console.
-            fd = open("CON", mode)
-        else:
-            # Make sure relative paths are relative to the cwd.
-            redir_filename = os.path.join(cmd_shenv.cwd, name)
-            fd = open(redir_filename, mode, encoding="utf-8")
-        # Workaround a Win32 and/or subprocess bug when appending.
-        #
-        # FIXME: Actually, this is probably an instance of PR6753.
-        if mode == "a":
-            fd.seek(0, 2)
-        # Mutate the underlying redirect list so that we can redirect stdout
-        # and stderr to the same place without opening the file twice.
-        r[2] = fd
-        opened_files.append((filename, mode, fd) + (redir_filename,))
-        std_fds[index] = fd
-
-    return std_fds
-
-
 def _expandLateSubstitutions(cmd, arguments, cwd, normalize_slashes=False):
     for i, arg in enumerate(arguments):
         if not isinstance(arg, str):
@@ -752,6 +218,326 @@ def _expandLateSubstitutions(cmd, arguments, cwd, normalize_slashes=False):
         arguments[i] = re.sub(r"%{readfile:([^}]*)}", _replaceReadFile, arg)
 
     return arguments
+
+
+class PipeIOConfig:
+    """Configuration for how one pipeline stage's output is routed, whether
+    to the next stage, a redirect file, or captured for the caller, and the
+    working directory the stage runs in.
+
+    Attributes:
+        out_sink: Where a non-last stage's output goes if the next stage
+            reads it. None for the last stage or a real redirect.
+        redirect_out: Binary writer for a '>'/'>>' target, else None.
+        capture_out: True if this stage's output should be captured and
+            returned to the caller instead of piped or redirected.
+        err_sink: Binary writer for a '2>file' target, else None.
+        cwd: The shell environment's current working directory.
+        merge_err: True for '2>&1', stderr writes to the out target instead.
+    """
+
+    # TODO: Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "out_sink",
+        "redirect_out",
+        "capture_out",
+        "err_sink",
+        "cwd",
+        "merge_err",
+    )
+
+    def __init__(
+        self,
+        out_sink: IO[bytes] | None,
+        redirect_out: ByteWriter | None,
+        capture_out: bool,
+        err_sink: ByteWriter | None,
+        cwd: str,
+        merge_err: bool = False,
+    ) -> None:
+        self.out_sink = out_sink
+        self.redirect_out = redirect_out
+        self.capture_out = capture_out
+        self.err_sink = err_sink
+        self.cwd = cwd
+        self.merge_err = merge_err
+
+
+# A builtin's run(argv, stdin, stdout, stderr, cwd) entry point, e.g.
+# builtin_cat.run or builtin_diff.run. stdout/stderr accept anything with a
+# byte-oriented write() method: a real BytesIO or the duck-typed ByteWriter.
+RunFn = Callable[
+    [
+        List[str],
+        BinaryIO,
+        Union[IO[bytes], ByteWriter, None],
+        Union[IO[bytes], ByteWriter, None],
+        str,
+    ],
+    int,
+]
+
+
+class InProcessPipe:
+    """Popen-compatible shim for an I/O-heavy builtin command.
+
+    Runs the builtin (e.g., cat or diff) in-process instead of spawning
+    it. Anything that isn't a lit builtin still spawns a real subprocess.
+
+    Exposes the same interface as subprocess.Popen, so it's a drop-in
+    replacement wherever a real subprocess is expected.
+
+    Attributes:
+        returncode: The builtin's exit code.
+        stdout: The captured stdout if this stage's output was captured,
+            else None.
+        stderr: The captured stderr.
+    """
+
+    # TODO: Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = ("returncode", "stdout", "stderr", "_out", "_err")
+
+    def __init__(
+        self,
+        run_fn: RunFn,
+        args: List[str],
+        stdin: None | int | io.TextIOBase | BinaryIO,
+        stage_io: PipeIOConfig,
+    ) -> None:
+        """Runs run_fn synchronously and captures the result.
+
+        Args:
+            run_fn: The builtin's run function, e.g. cat.run or diff.run.
+            args: The argv to pass to run_fn, args[0] is the command name.
+            stdin: This stage's input stream.
+            stage_io: Where this stage's output and error streams go, and
+                its cwd.
+        """
+        in_stream = as_binary_reader(stdin)
+        out_buf = io.BytesIO() if stage_io.capture_out else None
+        out_target = (
+            out_buf
+            if stage_io.capture_out
+            else (stage_io.redirect_out or stage_io.out_sink)
+        )
+        if stage_io.merge_err:
+            err_target, err_buf = out_target, None
+        elif stage_io.err_sink is not None:
+            err_target, err_buf = stage_io.err_sink, None
+        else:
+            err_buf = io.BytesIO()
+            err_target = err_buf
+
+        self.returncode = run_fn(args, in_stream, out_target, err_target, stage_io.cwd)
+
+        self._out = out_buf.getvalue() if out_buf is not None else b""
+        self._err = err_buf.getvalue() if err_buf is not None else b""
+        self.stdout = io.BytesIO(self._out) if stage_io.capture_out else None
+        self.stderr = io.BytesIO(self._err)
+
+    def communicate(self) -> tuple[bytes, bytes]:
+        return (self._out, self._err)
+
+    def wait(self) -> int:
+        return self.returncode
+
+    def poll(self) -> int:
+        return self.returncode
+
+    def kill(self) -> None:
+        pass
+
+    def terminate(self) -> None:
+        pass
+
+
+def _resolve_redirect_out(stdout: int | TextIO) -> ByteWriter | None:
+    """Wraps a '>' or '>>' redirect target as a binary writer.
+
+    Args:
+        stdout: This stage's stdout target, a subprocess sentinel
+            (PIPE/STDOUT) or an open file object for a real redirect.
+
+    Returns:
+        A binary writer wrapping the redirect file. None if stdout is a
+        PIPE or STDOUT sentinel instead of a real redirect file, since
+        that case doesn't need this sink.
+    """
+    if isinstance(stdout, int):
+        return None
+    return binary_fd(stdout)
+
+
+def _should_capture(is_last: bool, stdout: int | TextIO) -> bool:
+    """Whether this stage's output should be captured for the caller.
+
+    Args:
+        is_last: True for the pipeline's final stage, the only stage allowed
+            to capture instead of feeding the next stage or a redirect.
+        stdout: The stage's stdout target. Capture only applies when
+            this is subprocess.PIPE, ruling out a real redirect file.
+
+    Returns:
+        True only for the last stage of a piped command reading from a
+        PIPE, the one stage that reports output back to the caller
+        instead of writing to a temp file or redirect.
+    """
+    return is_last and stdout == subprocess.PIPE
+
+
+def _make_out_sink(stdout: int | TextIO, is_last: bool) -> IO[bytes] | None:
+    """Builds the output sink for a non-last stage feeding a pipe.
+
+    Args:
+        stdout: The stage's stdout target. Only subprocess.PIPE gets a
+            sink here, a real redirect target writes there directly.
+        is_last: True for the pipeline's final stage, which streams to
+            the caller instead of spooling for a downstream stage.
+
+    Returns:
+        A SpooledTemporaryFile, which stays in memory unless its size or
+        a downstream call to .fileno() forces it to disk. None for the
+        last stage or a non-pipe target, which don't need this sink.
+    """
+    if stdout == subprocess.PIPE and not is_last:
+        return tempfile.SpooledTemporaryFile(max_size=1 << 20)
+    return None
+
+
+def _resolve_err_sink(stderr: int | TextIO, merge_err: bool) -> ByteWriter | None:
+    """Wraps a '2>file' redirect target as a binary writer.
+
+    Args:
+        stderr: This stage's stderr target. Only a real redirect file
+            needs wrapping here, PIPE/STDOUT are handled elsewhere.
+        merge_err: Whether stderr is merged into stdout (2>&1).
+
+    Returns:
+        A binary writer wrapping the redirect file. None when stderr is
+        merged into stdout or is a PIPE/STDOUT sentinel, since both cases
+        are captured into the result instead of written through a sink
+        here.
+    """
+    if merge_err or isinstance(stderr, int):
+        return None
+    return binary_fd(stderr)
+
+
+def _should_run_inproc(
+    builtin_fn: RunFn | None,
+    not_crash: bool,
+    cmd_shenv: ShellEnvironment,
+    shenv: ShellEnvironment,
+) -> bool:
+    """Whether this pipeline stage can run in-process instead of spawning.
+
+    Args:
+        builtin_fn: The builtin's run function for this command (e.g.
+            builtin_cat.run), or None if the command has no in-process
+            implementation.
+        not_crash: True if the command is wrapped in 'not --crash'.
+        cmd_shenv: The environment this specific command runs under.
+        shenv: The pipeline's shared environment.
+
+    Returns:
+        False if builtin_fn is None, if not_crash is set, or if cmd_shenv
+        is not shenv (a per-command 'env' only takes effect on a spawned
+        child, not an in-process call sharing our environment). True
+        otherwise.
+    """
+    return builtin_fn is not None and not not_crash and cmd_shenv is shenv
+
+
+def _make_env_print_fn(env: dict) -> RunFn:
+    """Builds a RunFn that writes env's environment as sorted KEY=VALUE lines.
+
+    Args:
+        env: The shell environment to print, already updated by updateEnv()
+            for this stage's KEY=VALUE/-u/-i arguments.
+
+    Returns:
+        A RunFn ignoring argv/stdin/stderr/cwd, writing the sorted
+        environment to stdout and returning 0.
+    """
+
+    def run(
+        argv: List[str],
+        stdin: BinaryIO,
+        stdout: IO[bytes] | ByteWriter | None,
+        stderr: IO[bytes] | ByteWriter | None,
+        cwd: str,
+    ) -> int:
+        assert stdout is not None
+        env_str = "\n".join(f"{key}={value}" for key, value in sorted(env.items()))
+        stdout.write(env_str.encode())
+        return 0
+
+    return run
+
+
+def _run_inproc_stage(
+    args: List[str],
+    builtin_fn: RunFn,
+    stdin: None | int | io.TextIOBase | BinaryIO,
+    stdout: int | TextIO,
+    stderr: int | TextIO,
+    cmd_shenv: ShellEnvironment,
+    is_last: bool,
+    named_temp_files: List[str],
+) -> tuple[InProcessPipe, IO[bytes] | int]:
+    """Runs one in-process pipeline stage and returns its default_stdin.
+
+    Args:
+        args: The command's argument vector.
+        builtin_fn: The builtin's run function to execute (e.g.,
+            cat.run or diff.run).
+        stdin: Current stage's input. None or a placeholder int means no
+            real input, otherwise an open binary or text stream to read
+            from.
+        stdout: Target for the stage's stdout, either subprocess.PIPE or
+            an open redirect file. Whether PIPE feeds the next stage or
+            is captured depends on is_last.
+        stderr: Target for the stage's stderr. Set to subprocess.STDOUT
+            when merged into stdout.
+        cmd_shenv: Shell environment the stage runs under.
+        is_last: True for the final stage in the pipeline. Together with
+            stdout being subprocess.PIPE, this determines whether output
+            is captured instead of feeding a downstream stage.
+        named_temp_files: Caller-owned cleanup list. Any temp file created
+            to stand in for /dev/null is appended here.
+
+    Returns:
+        The InProcessPipe wrapping the stage, and the stdin the next stage
+        should read from (the spooled output, or subprocess.PIPE).
+    """
+    if kAvoidDevNull:
+        for arg_idx, arg in enumerate(args):
+            if isinstance(arg, str) and kDevNull in arg:
+                devnull = tempfile.NamedTemporaryFile(delete=False)
+                devnull.close()
+                named_temp_files.append(devnull.name)
+                args[arg_idx] = arg.replace(kDevNull, devnull.name)
+    args = expand_glob_expressions(args, cmd_shenv.cwd)
+    merge_err = stderr == subprocess.STDOUT
+    stage_io = PipeIOConfig(
+        out_sink=_make_out_sink(stdout, is_last),
+        redirect_out=_resolve_redirect_out(stdout),
+        capture_out=_should_capture(is_last, stdout),
+        err_sink=_resolve_err_sink(stderr, merge_err),
+        cwd=cmd_shenv.cwd,
+        merge_err=merge_err,
+    )
+    proc = InProcessPipe(builtin_fn, args, stdin, stage_io)
+    if stage_io.out_sink is not None:
+        stage_io.out_sink.seek(0)
+        default_stdin = stage_io.out_sink
+    else:
+        default_stdin = subprocess.PIPE
+    return proc, default_stdin
 
 
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
@@ -798,17 +584,21 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
     )
     inproc_builtins = {
-        "cd": executeBuiltinCd,
-        "export": executeBuiltinExport,
-        "echo": executeBuiltinEcho,
-        "@echo": executeBuiltinEcho,
-        "mkdir": executeBuiltinMkdir,
-        "popd": executeBuiltinPopd,
-        "pushd": executeBuiltinPushd,
-        "rm": executeBuiltinRm,
-        "ulimit": executeBuiltinUlimit,
-        "umask": executeBuiltinUmask,
-        ":": executeBuiltinColon,
+        "cd": InprocBuiltins.executeBuiltinCd,
+        "export": InprocBuiltins.executeBuiltinExport,
+        "echo": InprocBuiltins.executeBuiltinEcho,
+        "@echo": InprocBuiltins.executeBuiltinEcho,
+        "mkdir": InprocBuiltins.executeBuiltinMkdir,
+        "popd": InprocBuiltins.executeBuiltinPopd,
+        "pushd": InprocBuiltins.executeBuiltinPushd,
+        "rm": InprocBuiltins.executeBuiltinRm,
+        "ulimit": InprocBuiltins.executeBuiltinUlimit,
+        "umask": InprocBuiltins.executeBuiltinUmask,
+        ":": InprocBuiltins.executeBuiltinColon,
+    }
+    pipeline_builtins = {
+        "cat": builtin_cat.run,
+        "diff": builtin_diff.run,
     }
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
@@ -820,6 +610,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_args = []
         not_count = 0
         not_crash = False
+        bare_env = False
 
         # Expand all late substitutions.
         args = _expandLateSubstitutions(
@@ -843,16 +634,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     )
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    # Return the environment variables if no argument is provided.
-                    env_str = "\n".join(
-                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
-                    )
-                    results.append(
-                        ShellCommandResult(
-                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
-                        )
-                    )
-                    return 0
+                    # 'env' by itself is this stage's command
+                    bare_env = True
+                    break
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
@@ -869,47 +653,59 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 break
 
-        # Handle in-process builtins.
-        #
-        # Handle "echo" as a builtin if it is not part of a pipeline. This
-        # greatly speeds up tests that construct input files by repeatedly
-        # echo-appending to a file.
-        # FIXME: Standardize on the builtin echo implementation. We can use a
-        # temporary file to sidestep blocking pipe write issues.
+        if bare_env:
+            # A bare 'env' (no subcommand) leaves args empty. Without this
+            # handling, the stage would have no command to run, stopping
+            # the pipeline and dropping downstream stages (e.g. a trailing
+            # 'FileCheck', lit issue #115578). Instead, execute in-process
+            # to print the environment as this stage's output, so
+            # downstream commands still receive input and run.
+            args = ["env"]
+            builtin_fn = _make_env_print_fn(cmd_shenv.env)
+            use_inproc = True
+        else:
+            # Handle in-process builtins.
+            #
+            # Handle "echo" as a builtin if it is not part of a pipeline. This
+            # greatly speeds up tests that construct input files by repeatedly
+            # echo-appending to a file.
+            # FIXME: Standardize on the builtin echo implementation. We can use a
+            # temporary file to sidestep blocking pipe write issues.
 
-        # Ensure args[0] is hashable.
-        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+            # Ensure args[0] is hashable.
+            args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
 
-        inproc_builtin = inproc_builtins.get(args[0], None)
-        if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
-            # env calling an in-process builtin is useless, so we take the safe
-            # approach of complaining.
-            if not cmd_shenv is shenv:
-                raise InternalShellError(
-                    j, "Error: 'env' cannot call '{}'".format(args[0])
-                )
-            if not_crash:
-                raise InternalShellError(
-                    j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
-                )
-            if len(cmd.commands) != 1:
-                raise InternalShellError(
-                    j,
-                    "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
-                )
-            result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
-            if not_count % 2:
-                result.exitCode = int(not result.exitCode)
-            result.command.args = j.args
-            results.append(result)
-            return result.exitCode
+            inproc_builtin = inproc_builtins.get(args[0], None)
+            if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
+                # env calling an in-process builtin is useless, so we take the safe
+                # approach of complaining.
+                if not cmd_shenv is shenv:
+                    raise InternalShellError(
+                        j, "Error: 'env' cannot call '{}'".format(args[0])
+                    )
+                if not_crash:
+                    raise InternalShellError(
+                        j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
+                    )
+                if len(cmd.commands) != 1:
+                    raise InternalShellError(
+                        j,
+                        "Unsupported: '{}' cannot be part"
+                        " of a pipeline".format(args[0]),
+                    )
+                result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
+                if not_count % 2:
+                    result.exitCode = int(not result.exitCode)
+                result.command.args = j.args
+                results.append(result)
+                return result.exitCode
 
-        # Resolve any out-of-process builtin command before adding back 'not'
-        # commands.
-        if args[0] in builtin_commands:
-            args.insert(0, sys.executable)
-            cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
-            args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
+            builtin_fn = pipeline_builtins.get(args[0])
+            use_inproc = _should_run_inproc(builtin_fn, not_crash, cmd_shenv, shenv)
+            if not use_inproc and args[0] in builtin_commands:
+                args.insert(0, sys.executable)
+                cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+                args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
 
         # We had to search through the 'not' commands to find all the 'env'
         # commands and any other in-process builtin command.  We don't want to
@@ -937,6 +733,21 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             j, default_stdin, cmd_shenv, opened_files
         )
 
+        if use_inproc:
+            proc, default_stdin = _run_inproc_stage(
+                args,
+                builtin_fn,
+                stdin,
+                stdout,
+                stderr,
+                cmd_shenv,
+                is_last=j is cmd.commands[-1],
+                named_temp_files=named_temp_files,
+            )
+            procs.append(proc)
+            proc_not_counts.append(not_count)
+            proc_not_fail_if_crash.append(False)
+            continue
         # If stderr wants to come from stdout, but stdout isn't a pipe, then put
         # stderr on a pipe and treat it as stdout.
         if stderr == subprocess.STDOUT and stdout != subprocess.PIPE:
@@ -1168,8 +979,11 @@ def formatOutput(title, data, limit=None):
     if not data.strip():
         return ""
     if not limit is None and len(data) > limit:
+        msg = (
+            f"data was truncated ({limit}/{len(data)})"
+            + " (change limit with -D output_limit=N)"
+        )
         data = data[:limit] + "\n...\n"
-        msg = "data was truncated"
     else:
         msg = ""
     ndashes = 30
@@ -1233,9 +1047,20 @@ def executeScriptInternal(
                 f"shell parser error on {dbg}: {command.lstrip()}\n"
             ) from None
 
-    cmd = cmds[0]
-    for c in cmds[1:]:
-        cmd = ShUtil.Seq(cmd, "&&", c)
+    # Link all of `cmds` into a single command, consisting of the original
+    # commands chained together with &&. To avoid RecursionError in large tests
+    # (e.g. with 1000 RUN: lines), we do this by subdividing the list in half
+    # each time, so that we make a balanced tree structure with depth
+    # proportional to only the log of the list length.
+    def make_tree(cmds):
+        if len(cmds) == 1:
+            return cmds[0]
+        else:
+            assert len(cmds) > 1, "didn't expect an empty sequence"
+            split = len(cmds) // 2
+            return ShUtil.Seq(make_tree(cmds[:split]), "&&", make_tree(cmds[split:]))
+
+    cmd = make_tree(cmds)
 
     results = []
     timeoutInfo = None
@@ -1246,7 +1071,7 @@ def executeScriptInternal(
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
-        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        cmd, shenv, results, timeout=test.config.maxIndividualTestTime
     )
 
     out = err = ""
@@ -1290,7 +1115,7 @@ def executeScriptInternal(
 
         # If nothing interesting happened, move on.
         if (
-            litConfig.maxIndividualTestTime == 0
+            test.config.maxIndividualTestTime == 0
             and result.exitCode == 0
             and not result.stdout.strip()
             and not result.stderr.strip()
@@ -1300,13 +1125,16 @@ def executeScriptInternal(
         # Otherwise, something failed or was printed, show it.
 
         # Add the command output, if redirected.
+        outputLimit = int(litConfig.params.get("output_limit", 10240))
         for (name, path, data) in result.outputFiles:
             data = data.decode("utf-8", errors="replace")
-            out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
+            out += formatOutput(
+                f"redirected output from '{name}'", data, limit=outputLimit
+            )
         if result.stdout.strip():
-            out += formatOutput("command stdout", result.stdout)
+            out += formatOutput("command stdout", result.stdout, limit=outputLimit)
         if result.stderr.strip():
-            out += formatOutput("command stderr", result.stderr)
+            out += formatOutput("command stderr", result.stderr, limit=outputLimit)
         if not result.stdout.strip() and not result.stderr.strip():
             out += "# note: command had no output on stdout or stderr\n"
 
@@ -1319,7 +1147,7 @@ def executeScriptInternal(
             else:
                 codeStr = str(result.exitCode)
             out += "# error: command failed with exit status: %s\n" % (codeStr,)
-        if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
+        if test.config.maxIndividualTestTime > 0 and result.timeoutReached:
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
@@ -1443,7 +1271,7 @@ def executeScript(
             command,
             cwd=cwd,
             env=env,
-            timeout=litConfig.maxIndividualTestTime,
+            timeout=test.config.maxIndividualTestTime,
         )
         return (out, err, exitCode, None, None)
     except lit.util.ExecuteCommandTimeoutException as e:
@@ -1534,11 +1362,13 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     tmpName = tmpBase + ".tmp"
     tmpBaseName = os.path.basename(tmpBase)
     sourceBaseName = os.path.basename(sourcepath)
+    sourceStem = os.path.splitext(sourceBaseName)[0]
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", tmpBaseName))
 
     substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{s:stem}", sourceStem))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
     fs_sep = os.path.sep
@@ -1609,23 +1439,11 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     return substitutions
 
 
-def _memoize(f):
-    cache = {}  # Intentionally unbounded, see applySubstitutions()
-
-    def memoized(x):
-        if x not in cache:
-            cache[x] = f(x)
-        return cache[x]
-
-    return memoized
-
-
-@_memoize
+@functools.lru_cache(maxsize=None)  # Intentionally unbounded: see applySubstitutions
 def _caching_re_compile(r):
     return re.compile(r)
 
-
-class ExpandableScriptDirective(object):
+class ExpandableScriptDirective:
     """
     Common interface for lit directives for which any lit substitutions must be
     expanded to produce the shell script.  It includes directives (e.g., 'RUN:')
@@ -1989,7 +1807,8 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind(object):
+@enum.unique
+class ParserKind(enum.IntEnum):
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -2008,46 +1827,24 @@ class ParserKind(object):
         'REDEFINE: %{name}=value'
     """
 
-    TAG = 0
-    COMMAND = 1
-    LIST = 2
-    SPACE_LIST = 3
-    BOOLEAN_EXPR = 4
-    INTEGER = 5
-    CUSTOM = 6
-    DEFINE = 7
-    REDEFINE = 8
+    def __new__(cls, value, suffixes):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.allowed_suffixes = suffixes
+        return obj
 
-    @staticmethod
-    def allowedKeywordSuffixes(value):
-        return {
-            ParserKind.TAG: ["."],
-            ParserKind.COMMAND: [":"],
-            ParserKind.LIST: [":"],
-            ParserKind.SPACE_LIST: [":"],
-            ParserKind.BOOLEAN_EXPR: [":"],
-            ParserKind.INTEGER: [":"],
-            ParserKind.CUSTOM: [":", "."],
-            ParserKind.DEFINE: [":"],
-            ParserKind.REDEFINE: [":"],
-        }[value]
-
-    @staticmethod
-    def str(value):
-        return {
-            ParserKind.TAG: "TAG",
-            ParserKind.COMMAND: "COMMAND",
-            ParserKind.LIST: "LIST",
-            ParserKind.SPACE_LIST: "SPACE_LIST",
-            ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
-            ParserKind.INTEGER: "INTEGER",
-            ParserKind.CUSTOM: "CUSTOM",
-            ParserKind.DEFINE: "DEFINE",
-            ParserKind.REDEFINE: "REDEFINE",
-        }[value]
+    TAG = (0, ["."])
+    COMMAND = (1, [":"])
+    LIST = (2, [":"])
+    SPACE_LIST = (3, [":"])
+    BOOLEAN_EXPR = (4, [":"])
+    INTEGER = (5, [":"])
+    CUSTOM = (6, [":", "."])
+    DEFINE = (7, [":"])
+    REDEFINE = (8, [":"])
 
 
-class IntegratedTestKeywordParser(object):
+class IntegratedTestKeywordParser:
     """A parser for LLVM/Clang style integrated test scripts.
 
     keyword: The keyword to parse for. It must end in either '.' or ':'.
@@ -2057,18 +1854,17 @@ class IntegratedTestKeywordParser(object):
     """
 
     def __init__(self, keyword, kind, parser=None, initial_value=None):
-        allowedSuffixes = ParserKind.allowedKeywordSuffixes(kind)
+        allowedSuffixes = kind.allowed_suffixes
         if len(keyword) == 0 or keyword[-1] not in allowedSuffixes:
             if len(allowedSuffixes) == 1:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in '%s'"
-                    % (keyword, ParserKind.str(kind), allowedSuffixes[0])
+                    % (keyword, kind.name, allowedSuffixes[0])
                 )
             else:
                 raise ValueError(
                     "Keyword '%s' of kind '%s' must end in "
-                    " one of '%s'"
-                    % (keyword, ParserKind.str(kind), " ".join(allowedSuffixes))
+                    " one of '%s'" % (keyword, kind.name, " ".join(allowedSuffixes))
                 )
 
         if parser is not None and kind != ParserKind.CUSTOM:
@@ -2376,10 +2172,10 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         scriptCopy = script[:]
         # Set unique LLVM_PROFILE_FILE for each run command
         if litConfig.per_test_coverage:
-            # Extract the test case name from the test object, and remove the
-            # file extension.
-            test_case_name = test.path_in_suite[-1]
-            test_case_name = test_case_name.rsplit(".", 1)[0]
+            # Use the test's full path in the suite, plus the %p (pid) and %m
+            # (binary signature) runtime placeholders, so that distinct tests,
+            # processes, and instrumented binaries don't share a profraw file.
+            test_case_name = "_".join(test.path_in_suite)
             coverage_index = 0  # Counter for coverage file index
             for i, ln in enumerate(scriptCopy):
                 match = re.fullmatch(kPdbgRegex, ln)
@@ -2388,7 +2184,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                     command = match.group(2)
                 else:
                     command = ln
-                profile = f"{test_case_name}{coverage_index}.profraw"
+                profile = f"{test_case_name}-%p-%m{coverage_index}.profraw"
                 coverage_index += 1
                 command = f"export LLVM_PROFILE_FILE={profile}; {command}"
                 if match:

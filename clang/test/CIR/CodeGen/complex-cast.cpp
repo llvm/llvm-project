@@ -340,8 +340,8 @@ void lvalue_to_rvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
-// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, align 8
+// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM: %[[PTR_TO_COMPLEX:.*]] = load { double, double }, ptr %[[PTR_ADDR]], align 8
 // LLVM: store { double, double } %[[PTR_TO_COMPLEX]], ptr %[[COMPLEX_ADDR]], align 8
 
@@ -365,7 +365,7 @@ void lvalue_bitcast() {
 
 // CIR-AFTER: %{{.*}} = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_CX> -> !cir.ptr<!cir.complex<!cir.double>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.CX, align 8
 // LLVM: store { double, double } zeroinitializer, ptr %[[A_ADDR]], align 8
 
 // OGCG: %[[A_ADDR]] = alloca %struct.CX, align 8
@@ -385,8 +385,8 @@ void complex_user_defined_cast() {
   int _Complex c = p;
 }
 
-// CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["p", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_Point>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[P_VALUE:.*]] = cir.get_global @__const._Z25complex_user_defined_castv.p : !cir.ptr<!rec_Point>
 // CIR: cir.copy %[[P_VALUE]] to %[[P_ADDR]] : !cir.ptr<!rec_Point>
 // CIR: %[[POINT_TO_COMPLEX:.*]] = cir.call @_ZZ25complex_user_defined_castvENK5PointcvCiEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Point> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nonnull, llvm.noundef}) -> (!cir.complex<!s32i> {llvm.noundef})
@@ -394,9 +394,10 @@ void complex_user_defined_cast() {
 
 // LLVM: %[[P_ADDR:.*]] = alloca %struct.Point
 // LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr %[[P_ADDR]], ptr @__const._Z25complex_user_defined_castv.p, i64 8, i1 false)
-// LLVM: %[[POINT_TO_COMPLEX:.*]] = call noundef { i32, i32 } @_ZZ25complex_user_defined_castvENK5PointcvCiEv(ptr noundef nonnull align 4 dereferenceable(8) %[[P_ADDR]])
-// LLVM: store { i32, i32 } %[[POINT_TO_COMPLEX]], ptr %[[C_ADDR]], align 4
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[P_ADDR]], ptr align 4 @__const._Z25complex_user_defined_castv.p, i64 8, i1 false)
+// LLVM: %[[POINT_TO_COMPLEX:.*]] = call noundef i64 @_ZZ25complex_user_defined_castvENK5PointcvCiEv(ptr noundef nonnull align 4 dereferenceable(8) %[[P_ADDR]])
+// LLVM: store i64 %[[POINT_TO_COMPLEX]], ptr %[[COERCE:.*]], align 8
+// LLVM: load { i32, i32 }, ptr %[[COERCE]], align 4
 
 // OGCG: %[[P_ADDR:.*]] = alloca %struct.Point, align 4
 // OGCG: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4

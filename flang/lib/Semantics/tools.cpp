@@ -8,6 +8,9 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -19,10 +22,195 @@
 #include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <list>
+#include <optional>
 #include <set>
+#include <utility>
 #include <variant>
+#include <vector>
 
 namespace Fortran::semantics {
+
+// Parse-tree designator to evaluate::DesignatorPath conversion.
+//
+// These helpers build a DesignatorPath from the parse tree (see the note on
+// GetDesignatorPath in the header). They use already-resolved base and
+// component symbols, and analyze only subscript expressions. Anything that
+// cannot be represented is reported as absent so the caller can skip it.
+template <typename A>
+static std::optional<evaluate::Expr<evaluate::SubscriptInteger>>
+AnalyzeSubscriptExpr(SemanticsContext &context, const A &expr) {
+  if (auto maybe{evaluate::Fold(
+          context.foldingContext(), AnalyzeExpr(context, expr))}) {
+    if (auto *intExpr{
+            evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
+                maybe)}) {
+      if (auto value{evaluate::ToInt64(*intExpr)}) {
+        return evaluate::Expr<evaluate::SubscriptInteger>{*value};
+      }
+      return evaluate::ConvertToType<evaluate::SubscriptInteger>(
+          std::move(*intExpr));
+    }
+  }
+  return std::nullopt;
+}
+
+static std::optional<evaluate::Subscript> AnalyzeSectionSubscript(
+    SemanticsContext &context, const parser::SectionSubscript &subscript) {
+  return common::visit(
+      common::visitors{
+          [&](const parser::SubscriptTriplet &triplet)
+              -> std::optional<evaluate::Subscript> {
+            const auto &lower{std::get<0>(triplet.t)};
+            const auto &upper{std::get<1>(triplet.t)};
+            const auto &stride{std::get<2>(triplet.t)};
+            auto lowerExpr{
+                lower ? AnalyzeSubscriptExpr(context, *lower) : std::nullopt};
+            auto upperExpr{
+                upper ? AnalyzeSubscriptExpr(context, *upper) : std::nullopt};
+            auto strideExpr{
+                stride ? AnalyzeSubscriptExpr(context, *stride) : std::nullopt};
+            if ((lower && !lowerExpr) || (upper && !upperExpr) ||
+                (stride && !strideExpr)) {
+              return std::nullopt;
+            }
+            auto result{evaluate::Triplet{std::move(lowerExpr),
+                std::move(upperExpr), std::move(strideExpr)}};
+            return evaluate::Subscript{std::move(result)};
+          },
+          [&](const parser::IntExpr &expr)
+              -> std::optional<evaluate::Subscript> {
+            if (auto subscript{AnalyzeSubscriptExpr(context, expr)}) {
+              return evaluate::Subscript{std::move(*subscript)};
+            }
+            return std::nullopt;
+          },
+      },
+      subscript.u);
+}
+
+static std::optional<std::vector<evaluate::Subscript>> AnalyzeSectionSubscripts(
+    SemanticsContext &context,
+    const std::list<parser::SectionSubscript> &list) {
+  std::vector<evaluate::Subscript> subscripts;
+  for (const parser::SectionSubscript &subscript : list) {
+    if (auto analyzed{AnalyzeSectionSubscript(context, subscript)}) {
+      subscripts.push_back(std::move(*analyzed));
+    } else {
+      return std::nullopt;
+    }
+  }
+  return subscripts;
+}
+
+static bool AddDesignatorPath(SemanticsContext &context,
+    const parser::DataRef &dataRef, evaluate::DesignatorPath &path) {
+  return common::visit(
+      common::visitors{
+          [&](const parser::Name &name) {
+            if (!name.symbol) {
+              return false;
+            }
+            path.SetBase(evaluate::NamedEntity{name.symbol->GetUltimate()});
+            return true;
+          },
+          [&](const common::Indirection<parser::StructureComponent>
+                  &component) {
+            if (!AddDesignatorPath(context, component.value().Base(), path)) {
+              return false;
+            }
+            if (const parser::Name &name{component.value().Component()};
+                name.symbol) {
+              path.AddComponent(name.symbol->GetUltimate());
+              return true;
+            }
+            return false;
+          },
+          [&](const common::Indirection<parser::ArrayElement> &arrayElement) {
+            if (!AddDesignatorPath(
+                    context, arrayElement.value().Base(), path)) {
+              return false;
+            }
+            if (auto subscripts{AnalyzeSectionSubscripts(
+                    context, arrayElement.value().Subscripts())}) {
+              path.AddSubscripts(std::move(*subscripts));
+              return true;
+            }
+            return false;
+          },
+          [](const common::Indirection<parser::CoindexedNamedObject> &) {
+            // DesignatorPath does not represent cosubscripts yet.  Do not
+            // collapse a coindexed reference to its local base object.
+            return false;
+          },
+      },
+      dataRef.u);
+}
+
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &context, const parser::Designator &designator) {
+  evaluate::DesignatorPath path;
+  bool ok{common::visit(common::visitors{
+                            [&](const parser::DataRef &dataRef) {
+                              return AddDesignatorPath(context, dataRef, path);
+                            },
+                            [](const parser::Substring &) { return false; },
+                        },
+      designator.u)};
+  if (ok && !path.empty()) {
+    return path;
+  }
+  return std::nullopt;
+}
+
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &context, const parser::FunctionReference &funcRef) {
+  const auto &call{funcRef.v};
+  const auto &procedureDesignator{
+      std::get<parser::ProcedureDesignator>(call.t)};
+  const auto *name{std::get_if<parser::Name>(&procedureDesignator.u)};
+  if (!name || !name->symbol || !name->symbol->has<ObjectEntityDetails>()) {
+    return std::nullopt;
+  }
+  std::vector<evaluate::Subscript> subscripts;
+  for (const parser::ActualArgSpec &arg :
+      std::get<std::list<parser::ActualArgSpec>>(call.t)) {
+    if (std::get<std::optional<parser::Keyword>>(arg.t)) {
+      return std::nullopt;
+    }
+    const auto *expr{std::get_if<common::Indirection<parser::Expr>>(
+        &std::get<parser::ActualArg>(arg.t).u)};
+    if (!expr) {
+      return std::nullopt;
+    }
+    if (auto subscript{AnalyzeSubscriptExpr(context, expr->value())}) {
+      subscripts.emplace_back(std::move(*subscript));
+    } else {
+      return std::nullopt;
+    }
+  }
+  if (subscripts.empty()) {
+    return std::nullopt;
+  }
+  evaluate::DesignatorPath path;
+  path.SetBase(evaluate::NamedEntity{name->symbol->GetUltimate()});
+  path.AddSubscripts(std::move(subscripts));
+  return path;
+}
+
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &context, const parser::ArrayElement &arrayElement) {
+  evaluate::DesignatorPath path;
+  if (!AddDesignatorPath(context, arrayElement.Base(), path)) {
+    return std::nullopt;
+  }
+  if (auto subscripts{
+          AnalyzeSectionSubscripts(context, arrayElement.Subscripts())}) {
+    path.AddSubscripts(std::move(*subscripts));
+    return path;
+  }
+  return std::nullopt;
+}
 
 // Find this or containing scope that matches predicate
 static const Scope *FindScopeContaining(
@@ -181,9 +369,18 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
           (cat0 != TypeCategory::Complex && cat1 != TypeCategory::Complex);
+    } else if (cat0 == TypeCategory::Character &&
+        cat1 == TypeCategory::Character) {
+      return true;
+    } else if (cat0 == TypeCategory::Derived && cat1 == TypeCategory::Derived) {
+      // Same enumeration type: all six relational operators are allowed
+      const auto *derived0{evaluate::GetDerivedTypeSpec(type0)};
+      const auto *derived1{evaluate::GetDerivedTypeSpec(type1)};
+      return derived0 && derived1 && derived0->IsEnumerationType() &&
+          derived1->IsEnumerationType() &&
+          &derived0->typeSymbol() == &derived1->typeSymbol();
     } else {
-      // not both numeric: only Character is ok
-      return cat0 == TypeCategory::Character && cat1 == TypeCategory::Character;
+      return false;
     }
   }
 }
@@ -262,7 +459,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {
@@ -330,7 +527,13 @@ const Symbol *FindExternallyVisibleObject(
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
   const Symbol &ultimate{GetAssociationRoot(object)};
-  if (IsDummy(ultimate)) {
+  if (ultimate.owner().IsDerivedType()) {
+    return nullptr;
+  } else if (!IsDummy(ultimate) &&
+      (IsUseAssociated(object, scope) ||
+          IsHostAssociatedIntoSubprogram(object, scope))) {
+    return &object;
+  } else if (IsDummy(ultimate)) {
     if (IsIntentIn(ultimate)) {
       return &ultimate;
     }
@@ -338,12 +541,7 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
-  } else if (ultimate.owner().IsDerivedType()) {
-    return nullptr;
-  } else if (&GetProgramUnitContaining(ultimate) !=
-      &GetProgramUnitContaining(scope)) {
-    return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
@@ -772,7 +970,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
     return elemental;
   }
-  // Check components (including ancestors)
+  // Check components (including ancestors via parent component recursion)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
@@ -783,10 +981,14 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   }
   auto iterator{inProgress->insert(&derived).first};
   const Symbol *result{nullptr};
-  for (const Symbol &component : PotentialComponentIterator{derived}) {
-    result = IsFinalizable(component, inProgress, withImpureFinalizer);
-    if (result) {
-      break;
+  // Iterate only the type's own scope to avoid exponential traversal
+  // when combined with recursion through derived-type components.
+  if (const Scope *scope{derived.GetScope()}) {
+    for (const auto &[_, symbolRef] : *scope) {
+      result = IsFinalizable(*symbolRef, inProgress, withImpureFinalizer);
+      if (result) {
+        break;
+      }
     }
   }
   inProgress->erase(iterator);
@@ -824,6 +1026,11 @@ bool MayRequireFinalization(const DerivedTypeSpec &derived) {
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   DirectComponentIterator directs{derived};
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
+}
+
+bool HasPointerDirectComponent(const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::any_of(directs.begin(), directs.end(), IsPointer);
 }
 
 static bool MayHaveDefinedAssignment(
@@ -1070,6 +1277,19 @@ bool IsAssumedType(const Symbol &symbol) {
   return false;
 }
 
+bool IsEnumerationType(const Symbol &symbol) {
+  // Use the ultimate symbol for cases such as USE-associated enumeration types
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<DerivedTypeDetails>()}) {
+    return details->isEnumerationType();
+  }
+  return false;
+}
+
+bool IsEnumerationType(const DerivedTypeSpec &derived) {
+  return derived.IsEnumerationType();
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();
@@ -1120,6 +1340,15 @@ bool HasCUDAComponent(const Symbol &symbol) {
     }
   }
   return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
 }
 
 UltimateComponentIterator::const_iterator

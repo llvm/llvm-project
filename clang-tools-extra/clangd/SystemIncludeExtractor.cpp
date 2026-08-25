@@ -207,8 +207,6 @@ struct DriverArgs {
     return Args;
   }
 
-  static DriverArgs getEmpty() { return {}; }
-
 private:
   DriverArgs() = default;
 };
@@ -217,16 +215,6 @@ private:
 namespace llvm {
 using DriverArgs = clang::clangd::DriverArgs;
 template <> struct DenseMapInfo<DriverArgs> {
-  static DriverArgs getEmptyKey() {
-    auto Driver = DriverArgs::getEmpty();
-    Driver.Driver = "EMPTY_KEY";
-    return Driver;
-  }
-  static DriverArgs getTombstoneKey() {
-    auto Driver = DriverArgs::getEmpty();
-    Driver.Driver = "TOMBSTONE_KEY";
-    return Driver;
-  }
   static unsigned getHashValue(const DriverArgs &Val) {
     unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,

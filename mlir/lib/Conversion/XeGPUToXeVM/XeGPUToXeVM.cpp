@@ -23,7 +23,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -51,11 +51,18 @@ static constexpr int32_t executionSize{16};
 
 // Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
 enum class NdTdescOffset : uint32_t {
-  BasePtr = 0,    // Base pointer (i64)
-  BaseShapeW = 2, // Base shape width (i32)
-  BaseShapeH = 3, // Base shape height (i32)
-  BasePitch = 4,  // Base pitch (i32)
+  BasePtr = 0,        // Base pointer (i64)
+  BaseShapeW = 2,     // Base shape width (i32)
+  BaseShapeH = 3,     // Base shape height (i32)
+  BasePitch = 4,      // Base pitch/stride of dim rank-2 (i32)
+  LeadingStride0 = 5, // Row strides of the leading (batch) dims of a >2D
+  LeadingStride1 = 6, // descriptor (i32); added into offset_h by the load/store
+  LeadingStride2 = 7, // lowering. Left at 0 for 2D descriptors.
 };
+
+// Spare payload slots above, and the resulting max lowerable descriptor rank.
+static constexpr int64_t maxNdTdescLeadingDims{3};
+static constexpr int64_t maxNdTdescRank{2 + maxNdTdescLeadingDims};
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   switch (xeGpuMemspace) {
@@ -67,16 +74,42 @@ static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   llvm_unreachable("Unknown XeGPU memory space");
 }
 
+/// Translates a memref memory space attribute into XeVM's numeric address
+/// space, which follows the OpenCL/SPIR-V convention (0 = private, 1 =
+/// global, 2 = constant, 3 = shared/local, 4 = generic). A null attribute,
+/// meaning the memory space was left unspecified, maps to the default space
+/// 0. Returns failure if `memSpace` is a representation this pass does not
+/// know how to translate (e.g. a SPIR-V storage class or an arbitrary string
+/// attribute), rather than assuming it is an `IntegerAttr` and asserting.
+static FailureOr<unsigned> getNumericMemorySpace(Attribute memSpace) {
+  if (!memSpace)
+    return 0u;
+  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memSpace))
+    return static_cast<unsigned>(intAttr.getInt());
+  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(memSpace))
+    return static_cast<unsigned>(xevmSpace.getValue());
+  if (auto gpuSpace = llvm::dyn_cast<gpu::AddressSpaceAttr>(memSpace)) {
+    switch (gpuSpace.getValue()) {
+    case gpu::AddressSpace::Global:
+      return static_cast<unsigned>(xevm::AddrSpace::GLOBAL);
+    case gpu::AddressSpace::Workgroup:
+      return static_cast<unsigned>(xevm::AddrSpace::SHARED);
+    case gpu::AddressSpace::Private:
+      return static_cast<unsigned>(xevm::AddrSpace::PRIVATE);
+    case gpu::AddressSpace::Constant:
+      return static_cast<unsigned>(xevm::AddrSpace::CONSTANT);
+    }
+    llvm_unreachable("Unknown GPU address space");
+  }
+  return failure();
+}
+
 /// Checks if the given MemRefType refers to shared memory.
 static bool isSharedMemRef(const MemRefType &memrefTy) {
-  Attribute attr = memrefTy.getMemorySpace();
-  if (!attr)
-    return false;
-  if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
-    return intAttr.getInt() == static_cast<int>(xevm::AddrSpace::SHARED);
-  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
-    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
-  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
+  FailureOr<unsigned> addrSpace =
+      getNumericMemorySpace(memrefTy.getMemorySpace());
+  return succeeded(addrSpace) &&
+         *addrSpace == static_cast<unsigned>(xevm::AddrSpace::SHARED);
 }
 
 // Get same bitwidth flat vector type of new element type.
@@ -179,6 +212,31 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 // emulated
 //
 
+//
+// High-D (>2D) nd descriptors are lowered by viewing the source as a single
+// flattened 2D plane: `base_height` is the product of all dims but the
+// innermost, so the 2D-block surface covers every leading (batch) plane at
+// once, and a batch position becomes a row offset into it. Leaving `base_ptr`
+// at the true base means an out-of-range batch index lands past `base_height`,
+// where the HW boundary check handles it, instead of aiming the surface at
+// unmapped memory. Encoding the leading strides as row counts (`stride[d] /
+// stride[R-2]`) also makes them dimensionless, so they survive element-type
+// repacking (e.g. the f16 -> i32 transpose repack) without a unit conversion.
+//
+// Limitations of the flattened-plane view:
+//  1. Each leading stride must be a whole number of rows. A source with gaps
+//     between planes (`stride[d] % stride[R-2] != 0`) is not lowered. This can
+//     only be checked when the strides are static; for dynamic strides the
+//     divisibility is assumed.
+//  2. `base_height` grows to the product of the leading dims, so a source with
+//     a large batch x head x sequence extent can exceed the HW 2D-block
+//     surface height.
+//  3. Plane boundaries are invisible to the boundary check: a tile whose rows
+//     run past `size[R-2]` reads the next plane's rows instead of the zero
+//     padding a per-plane surface would return. This only matters when
+//     `size[R-2]` is not a multiple of the tile height.
+//
+
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -186,17 +244,93 @@ class CreateNdDescToXeVMPattern
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
-    if (mixedOffsets.size() != 0)
-      return rewriter.notifyMatchFailure(op, "Offsets not supported.");
     auto loc = op.getLoc();
     auto source = op.getSource();
+
+    // Check all failure conditions before generating any IR, so nothing has to
+    // be rolled back.
+    int64_t rank = op.getType().getRank();
+    int64_t sourceRank;
+    auto memrefTy = dyn_cast<MemRefType>(source.getType());
+    if (memrefTy) {
+      if (!memrefTy.isStrided())
+        return rewriter.notifyMatchFailure(op, "Expected strided Memref.");
+      sourceRank = memrefTy.getRank();
+    } else if (isa<IntegerType>(source.getType())) {
+      sourceRank = op.getMixedSizes().size();
+    } else {
+      return rewriter.notifyMatchFailure(op,
+                                         "Expected ranked Memref or integer.");
+    }
+    if (sourceRank != rank)
+      return rewriter.notifyMatchFailure(
+          op, "Expected descriptor rank to match source rank; subview the "
+              "source down to the descriptor rank.");
+    if (rank > maxNdTdescRank)
+      return rewriter.notifyMatchFailure(
+          op, "Batched nd descriptor supports at most " +
+                  std::to_string(maxNdTdescLeadingDims) +
+                  " leading dims (rank <= " + std::to_string(maxNdTdescRank) +
+                  ").");
+    // Limitation 1 above; dynamic strides are assumed to divide evenly.
+    if (rank > 2) {
+      SmallVector<std::optional<int64_t>> constStrides(rank, std::nullopt);
+      if (memrefTy) {
+        SmallVector<int64_t> staticStrides;
+        int64_t staticOffset;
+        if (succeeded(
+                memrefTy.getStridesAndOffset(staticStrides, staticOffset)))
+          for (int64_t d = 0; d < rank; ++d)
+            if (!ShapedType::isDynamic(staticStrides[d]))
+              constStrides[d] = staticStrides[d];
+      } else {
+        SmallVector<OpFoldResult> mixed = op.getMixedStrides();
+        for (int64_t d = 0; d < rank; ++d)
+          constStrides[d] = getConstantIntValue(mixed[d]);
+      }
+      if (std::optional<int64_t> pitch = constStrides[rank - 2]) {
+        for (int64_t d = 0; d < rank - 2; ++d) {
+          std::optional<int64_t> leading = constStrides[d];
+          if (leading && (*pitch == 0 || *leading % *pitch != 0))
+            return rewriter.notifyMatchFailure(
+                op, "Expected each leading (batch) stride to be a multiple of "
+                    "the row stride; the source has gaps between planes.");
+        }
+      }
+    }
+
+    Type payloadElemTy = rewriter.getI32Type();
+    Type i64Ty = rewriter.getI64Type();
+
+    // Access the adaptor only after the failure checks, so a bail-out leaves no
+    // materialization cast behind.
+    Value baseAddr = adaptor.getSource();
+    if (isa<IntegerType>(source.getType()) && baseAddr.getType() != i64Ty) {
+      // Pointer type may be i32. Cast to i64 if needed.
+      baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
+    }
+    // 1D tensor descriptor is just the base address.
+    if (rank == 1) {
+      rewriter.replaceOp(op, baseAddr);
+      return success();
+    }
+
+    SmallVector<OpFoldResult> mixedSizes;
+    SmallVector<OpFoldResult> mixedStrides;
+    if (memrefTy && !xegpu::hasStaticShapeAndStrides(memrefTy)) {
+      auto meta =
+          memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
+      mixedSizes = meta.getConstifiedMixedSizes();
+      mixedStrides = meta.getConstifiedMixedStrides();
+    } else {
+      mixedSizes = op.getMixedSizes();
+      mixedStrides = op.getMixedStrides();
+    }
+
     // Op is lowered to a code sequence that populates payload.
     // Payload is a 8xi32 vector. Offset to individual fields are defined in
     // NdTdescOffset enum.
-    Type payloadElemTy = rewriter.getI32Type();
     VectorType payloadTy = VectorType::get(8, payloadElemTy);
-    Type i64Ty = rewriter.getI64Type();
     // 4xi64 view is used for inserting the base pointer.
     VectorType payloadI64Ty = VectorType::get(4, i64Ty);
     // Initialize payload to zero.
@@ -204,38 +338,6 @@ class CreateNdDescToXeVMPattern
         rewriter, loc,
         DenseElementsAttr::get(payloadTy, IntegerAttr::get(payloadElemTy, 0)));
 
-    Value baseAddr;
-    Value baseShapeW;
-    Value baseShapeH;
-
-    // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
-    SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
-    SmallVector<OpFoldResult> mixedStrides = op.getMixedStrides();
-    // Descriptor shape is expected to be 2D.
-    int64_t rank = mixedSizes.size();
-    auto sourceTy = source.getType();
-    auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
-    // If source is a memref, we need to extract the aligned pointer as index.
-    // Pointer type is passed as i32 or i64 by type converter.
-    if (sourceMemrefTy) {
-      if (!sourceMemrefTy.hasRank()) {
-        return rewriter.notifyMatchFailure(op, "Expected ranked Memref.");
-      }
-      // Access adaptor after failure check to avoid rolling back generated code
-      // for materialization cast.
-      baseAddr = adaptor.getSource();
-    } else {
-      baseAddr = adaptor.getSource();
-      if (baseAddr.getType() != i64Ty) {
-        // Pointer type may be i32. Cast to i64 if needed.
-        baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
-      }
-    }
-    // 1D tensor descriptor is just the base address.
-    if (rank == 1) {
-      rewriter.replaceOp(op, baseAddr);
-      return success();
-    }
     // Utility for creating offset values from op fold result.
     auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
                             unsigned idx) -> Value {
@@ -243,11 +345,17 @@ class CreateNdDescToXeVMPattern
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
-    // Get shape values from op fold results.
-    baseShapeW = createOffset(mixedSizes, 1);
-    baseShapeH = createOffset(mixedSizes, 0);
-    // Get pitch value from op fold results.
-    Value basePitch = createOffset(mixedStrides, 0);
+    // The descriptor's innermost 2 dims are the 2D tile (H, W).
+    Value baseShapeW = createOffset(mixedSizes, rank - 1);
+    // Height of the flattened plane: every leading (batch) plane is stacked
+    // into the surface, so the boundary check covers an out-of-range batch.
+    // For rank 2 this is just size[0].
+    Value baseShapeH = createOffset(mixedSizes, rank - 2);
+    for (int64_t d = 0; d < rank - 2; ++d)
+      baseShapeH = arith::MulIOp::create(rewriter, loc, baseShapeH,
+                                         createOffset(mixedSizes, d));
+    // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
+    Value basePitch = createOffset(mixedStrides, rank - 2);
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -264,6 +372,26 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
+    // Leading (batch) strides go into the spare payload slots as a number of
+    // rows; the load/store/prefetch lowering turns the batch offsets into a row
+    // offset with them. Row units keep them independent of the element type, so
+    // an element-type repack cannot put them out of step with the pitch.
+    for (int64_t d = 0; d < rank - 2; ++d) {
+      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
+      std::optional<int64_t> pitch =
+          getConstantIntValue(mixedStrides[rank - 2]);
+      Value leadingRowStride;
+      if (leading && pitch && *pitch != 0) {
+        leadingRowStride = arith::ConstantIntOp::create(
+            rewriter, loc, payloadElemTy, *leading / *pitch);
+      } else {
+        leadingRowStride = arith::DivUIOp::create(
+            rewriter, loc, createOffset(mixedStrides, d), basePitch);
+      }
+      payload = vector::InsertOp::create(
+          rewriter, loc, leadingRowStride, payload,
+          static_cast<int>(NdTdescOffset::LeadingStride0) + d);
+    }
     rewriter.replaceOp(op, payload);
     return success();
   }
@@ -289,6 +417,14 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     if (opOffsetsSize != tileRank)
       return rewriter.notifyMatchFailure(
           op, "Expected offset rank to match descriptor rank.");
+    if (tileRank > 2 && llvm::any_of(tdescTy.getShape().drop_back(2),
+                                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Expected leading (batch) descriptor dims to be unit.");
+    if (tileRank > maxNdTdescRank)
+      return rewriter.notifyMatchFailure(
+          op, "Expected descriptor rank <= " + std::to_string(maxNdTdescRank) +
+                  ".");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     bool isSubByte = elemBitSize < 8;
@@ -346,7 +482,7 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    if (tileRank == 2) {
+    if (tileRank >= 2) {
       // Compute element byte size.
       Value elemByteSize = arith::ConstantIntOp::create(
           rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
@@ -362,16 +498,32 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
       Value basePitch = vector::ExtractOp::create(
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
-      // Offsets are provided by the op.
-      // convert them to i32.
-      Value offsetW =
-          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+
+      Value offsetW = getValueOrCreateConstantIntOp(rewriter, loc,
+                                                    mixedOffsets[tileRank - 1]);
       offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetW);
-      Value offsetH =
-          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+      Value offsetH = getValueOrCreateConstantIntOp(rewriter, loc,
+                                                    mixedOffsets[tileRank - 2]);
       offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetH);
+      // Turn the leading (batch) offsets into a row offset into the flattened
+      // plane, using the row-unit batch strides encoded at create time:
+      //   offsetH += sum_d offset[d] * leadingRowStride[d]
+      // The base pointer stays at the true base, so an out-of-range batch index
+      // is caught by the HW boundary check instead of moving the surface to
+      // unmapped memory.
+      for (int64_t d = 0; d < tileRank - 2; ++d) {
+        Value off =
+            getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[d]);
+        off = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                              rewriter.getI32Type(), off);
+        Value rowStride = vector::ExtractOp::create(
+            rewriter, loc, tdesc,
+            static_cast<int>(NdTdescOffset::LeadingStride0) + d);
+        Value term = arith::MulIOp::create(rewriter, loc, off, rowStride);
+        offsetH = arith::AddIOp::create(rewriter, loc, offsetH, term);
+      }
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
@@ -396,8 +548,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         offsetW =
             arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
       }
-      // Get tile height from the tensor descriptor type.
-      auto tileH = tdescTy.getDimSize(0);
+      // Get tile height from the tensor descriptor type (second-to-last dim).
+      auto tileH = tdescTy.getDimSize(tileRank - 2);
       // Get vblocks from the tensor descriptor type.
       int32_t vblocks = tdescTy.getArrayLength();
       if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
@@ -434,10 +586,31 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter.eraseOp(op);
         } else {
           VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
-          const bool vnni = op.getPacked().value_or(false);
+          bool vnni = op.getPacked().value_or(false);
           auto transposeValue = op.getTranspose();
           bool transpose =
               transposeValue.has_value() && transposeValue.value()[0] == 1;
+          // Handle special case of 32x16 and 8bit element load
+          // with no vnni, no transpose, no vblocks.
+          // For this special case, vnni and non vnni yields the same output
+          // and only the vnni variant is supported by HW.
+          // Check and set vnni of the special case.
+          if (elemBitSize == 8 && tileW == 16 && tileH == 32 && !vnni &&
+              !transpose) {
+            vnni = true;
+          }
+          // Handle tranpose request on small element size
+          // Transpose needs to be requested on 32bit element type.
+          // offsetW and tileW needs to be adjusted to account for element type
+          // change.
+          if (transpose && elemBitSize < 32) {
+            int32_t scale = 32 / elemBitSize;
+            Value scaleLog2 = arith::ConstantIntOp::create(
+                rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(scale));
+            offsetW = arith::ShRSIOp::create(rewriter, loc, offsetW, scaleLog2);
+            tileW = tileW * elemBitSize / 32;
+            elemBitSize = 32;
+          }
           VectorType loadedTy = encodeVectorTypeTo(
               dstVecTy, vnni ? rewriter.getI32Type()
                              : rewriter.getIntegerType(elemBitSize));
@@ -545,7 +718,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(op, "Expected offset to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64;
     // Load result or Store valye Type can be vector or scalar.
     Type valOrResTy;
@@ -567,25 +739,29 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // Base pointer can come from source (load) or dest (store).
     // If they are memrefs, we use their memory space.
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
       basePtrI64 = adaptor.getSource();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     } else {
       basePtrI64 = adaptor.getDest();
       if (auto memRefTy = dyn_cast<MemRefType>(op.getDest().getType())) {
-        auto addrSpace = memRefTy.getMemorySpaceAsInt();
-        if (addrSpace != 0)
-          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+        FailureOr<unsigned> addrSpace =
+            getNumericMemorySpace(memRefTy.getMemorySpace());
+        if (failed(addrSpace))
+          return rewriter.notifyMatchFailure(
+              op, "Unsupported memref memory space attribute.");
+        if (*addrSpace != 0)
+          ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
       }
     }
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
@@ -771,24 +947,23 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     if (valOrResVecTy.getNumElements() >= 1) {
       auto chipOpt = xegpu::getChipStr(op);
-      if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
-        // the lowering for chunk load only works for pvc and bmg
+      if (!chipOpt ||
+          (*chipOpt != "pvc" && *chipOpt != "bmg" && *chipOpt != "cri")) {
+        // the lowering for chunk load only works for pvc, bmg or cri
         return rewriter.notifyMatchFailure(
-            op, "The lowering is specific to pvc or bmg.");
+            op, "The lowering is specific to pvc, bmg or cri.");
       }
     }
 
     if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-      // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
-      // operation. LLVM load/store does not support vector of size 1, so we
-      // need to handle this case separately.
-      auto scalarTy = valOrResVecTy.getElementType();
-      LLVM::LoadOp loadOp;
-      if (valOrResVecTy.getNumElements() == 1)
-        loadOp = LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
-      else
-        loadOp =
-            LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
+      // The load result type is taken from the type converter. This maps
+      // element types that are not directly representable in LLVM (e.g.
+      // f8E8M0FNU) to an integer storage type of the same bit width, and
+      // collapses single-element vectors to a scalar, since LLVM load/store
+      // does not support vectors of size 1.
+      Type loadTy =
+          this->getTypeConverter()->convertType(op.getResult().getType());
+      auto loadOp = LLVM::LoadOp::create(rewriter, loc, loadTy, basePtrLLVM);
       rewriter.replaceOp(op, loadOp);
     } else {
       LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
@@ -805,7 +980,6 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64 = adaptor.getSource();
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
     if (basePtrI64.getType() != rewriter.getI64Type())
@@ -821,12 +995,8 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
       } else {
         int64_t elemBitWidth{0};
         int64_t elemByteSize;
-        // Element byte size can come from three sources:
-        if (tdescTy) {
-          // If tensor descriptor is available, we use its element type to
-          // determine element byte size.
-          elemBitWidth = tdescTy.getElementType().getIntOrFloatBitWidth();
-        } else if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
+        // Element byte size can come from two sources:
+        if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
           // If memref is available, we use its element type to
           // determine element byte size.
           elemBitWidth = memRefTy.getElementType().getIntOrFloatBitWidth();
@@ -847,15 +1017,15 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
-      auto addrSpace = memRefTy.getMemorySpaceAsInt();
-      if (addrSpace != 0)
-        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, addrSpace);
+      FailureOr<unsigned> addrSpace =
+          getNumericMemorySpace(memRefTy.getMemorySpace());
+      if (failed(addrSpace))
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported memref memory space attribute.");
+      if (*addrSpace != 0)
+        ptrTypeLLVM = LLVM::LLVMPointerType::get(ctxt, *addrSpace);
     }
     // Convert base pointer (i64) to LLVM pointer type.
     Value ptrLLVM =
@@ -899,6 +1069,49 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
     return success();
   }
 };
+
+static auto encodePrecision = [](Type type) -> xevm::ElemType {
+  if (type.isBF16())
+    return xevm::ElemType::BF16;
+  else if (type.isF16())
+    return xevm::ElemType::F16;
+  else if (type.isTF32())
+    return xevm::ElemType::TF32;
+  else if (type.isInteger(8)) {
+    if (type.isUnsignedInteger())
+      return xevm::ElemType::U8;
+    return xevm::ElemType::S8;
+  } else if (type.isF32())
+    return xevm::ElemType::F32;
+  else if (type.isInteger(32))
+    return xevm::ElemType::S32;
+  else if (type.isF8E5M2())
+    return xevm::ElemType::BF8;
+  else if (type.isF8E4M3FN())
+    return xevm::ElemType::F8;
+  else if (mlir::isa<Float4E2M1FNType>(type))
+    return xevm::ElemType::E2M1;
+  llvm_unreachable("add more support for ElemType");
+};
+
+static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
+  switch (pTy) {
+  case xevm::ElemType::TF32:
+    return 1;
+  case xevm::ElemType::BF16:
+  case xevm::ElemType::F16:
+    return 2;
+  case xevm::ElemType::U8:
+  case xevm::ElemType::S8:
+  case xevm::ElemType::F8:
+  case xevm::ElemType::BF8:
+    return 4;
+  case xevm::ElemType::E2M1:
+    return 8;
+  default:
+    llvm_unreachable("unsupported xevm::ElemType");
+  }
+}
 
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -945,23 +1158,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "result/accumulator element type not supported by target uArch");
 
-    auto encodePrecision = [&](Type type) -> xevm::ElemType {
-      if (type == rewriter.getBF16Type())
-        return xevm::ElemType::BF16;
-      else if (type == rewriter.getF16Type())
-        return xevm::ElemType::F16;
-      else if (type == rewriter.getTF32Type())
-        return xevm::ElemType::TF32;
-      else if (type.isInteger(8)) {
-        if (type.isUnsignedInteger())
-          return xevm::ElemType::U8;
-        return xevm::ElemType::S8;
-      } else if (type == rewriter.getF32Type())
-        return xevm::ElemType::F32;
-      else if (type.isInteger(32))
-        return xevm::ElemType::S32;
-      llvm_unreachable("add more support for ElemType");
-    };
     xevm::ElemType precATy = encodePrecision(aTy.getElementType());
     xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
     Value c = op.getAcc();
@@ -995,22 +1191,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       dpasRes = vector::ShapeCastOp::create(rewriter, loc, resultType, dpasRes);
     rewriter.replaceOp(op, dpasRes);
     return success();
-  }
-
-private:
-  static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
-    switch (pTy) {
-    case xevm::ElemType::TF32:
-      return 1;
-    case xevm::ElemType::BF16:
-    case xevm::ElemType::F16:
-      return 2;
-    case xevm::ElemType::U8:
-    case xevm::ElemType::S8:
-      return 4;
-    default:
-      llvm_unreachable("unsupported xevm::ElemType");
-    }
   }
 };
 
@@ -1079,6 +1259,276 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
       resVec = vector::InsertOp::create(rewriter, loc, newVal, resVec, i);
     }
     rewriter.replaceOp(op, resVec);
+    return success();
+  }
+};
+
+class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto ctxt = rewriter.getContext();
+    auto aTy = op.getA().getType();
+    auto bTy = op.getB().getType();
+    auto resVecTy =
+        cast<VectorType>(getTypeConverter()->convertType(op.getType()));
+
+    auto chipStr = xegpu::getChipStr(op);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(op, "cannot determine target chip");
+
+    const auto *uArch = xegpu::uArch::getUArch(*chipStr);
+    if (!uArch)
+      return rewriter.notifyMatchFailure(op, "unsupported target uArch");
+
+    // TODO: Add supported shape check
+
+    xevm::ElemType precATy = encodePrecision(aTy.getElementType());
+    xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
+    Value c = adaptor.getAcc();
+    if (!c) {
+      auto elementTy = resVecTy.getElementType();
+      Attribute initValueAttr;
+      if (isa<FloatType>(elementTy))
+        initValueAttr = FloatAttr::get(elementTy, 0.0);
+      else
+        initValueAttr = IntegerAttr::get(elementTy, 0);
+      c = arith::ConstantOp::create(
+          rewriter, loc, DenseElementsAttr::get(resVecTy, initValueAttr));
+    }
+
+    Value aVec = adaptor.getA();
+    Value bVec = adaptor.getB();
+    auto aVecTy = cast<VectorType>(aVec.getType());
+    auto bVecTy = cast<VectorType>(bVec.getType());
+    if (aVecTy.getElementTypeBitWidth() == 4)
+      aVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(aVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          aVec);
+    if (bVecTy.getElementTypeBitWidth() == 4)
+      bVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(bVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          bVec);
+    auto cVecTy = cast<VectorType>(c.getType());
+    xevm::ElemType precCTy = encodePrecision(cVecTy.getElementType());
+    xevm::ElemType precDTy = encodePrecision(resVecTy.getElementType());
+    Value scaleA = adaptor.getScaleA();
+    Value scaleB = adaptor.getScaleB();
+    Value dpasMxRes = xevm::MMAMxOp::create(
+        rewriter, loc, resVecTy, aVec, bVec, scaleA, scaleB, c,
+        xevm::MMAShapeAttr::get(ctxt, cVecTy.getNumElements(), executionSize,
+                                systolicDepth *
+                                    getNumOperandsPerDword(precATy)),
+        xevm::MMATypesAttr::get(ctxt, precDTy, precATy, precBTy, precCTy));
+    rewriter.replaceOp(op, dpasMxRes);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// arith.extf / arith.truncf to xevm.extf / xevm.truncf
+//===----------------------------------------------------------------------===//
+//
+// Micro-scaling (MX) GEMM lowering breaks arith.scaling_extf/scaling_truncf
+// into plain arith.extf/arith.truncf whose narrow side uses one of the MX float
+// formats (f8E5M2, f8E4M3FN or f4E2M1FN). These narrow floats have no native
+// LLVM support, so the conversions are mapped onto the dedicated xevm.extf /
+// xevm.truncf ops which lower to hardware builtins. The f8E8M0FNU scale type is
+// intentionally not handled here: it is expanded into integer arithmetic by
+// arith-expand before this pass runs.
+
+// xevm.extf / xevm.truncf only convert between the MX narrow floats and
+// f16/bf16, and the underlying builtins operate on exactly 16 f16/bf16 values.
+static constexpr int64_t kXeVMExtfTruncfNumElems = 16;
+
+// Maps a narrow MX float element type to the matching xevm.extf source enum.
+static std::optional<xevm::ExtfSrcElemTypes> getExtfNarrowType(Type etype) {
+  if (isa<Float8E5M2Type>(etype))
+    return xevm::ExtfSrcElemTypes::BF8;
+  if (isa<Float8E4M3FNType>(etype))
+    return xevm::ExtfSrcElemTypes::F8;
+  if (isa<Float4E2M1FNType>(etype))
+    return xevm::ExtfSrcElemTypes::E2M1;
+  return std::nullopt;
+}
+
+// Maps a narrow MX float element type to the matching xevm.truncf dest enum.
+static std::optional<xevm::TruncfDstElemTypes> getTruncfNarrowType(Type etype) {
+  if (isa<Float8E5M2Type>(etype))
+    return xevm::TruncfDstElemTypes::BF8;
+  if (isa<Float8E4M3FNType>(etype))
+    return xevm::TruncfDstElemTypes::F8;
+  if (isa<Float4E2M1FNType>(etype))
+    return xevm::TruncfDstElemTypes::E2M1;
+  return std::nullopt;
+}
+
+// Returns true if `op` is an arith.extf that can be lowered to xevm.extf, i.e.
+// a rank-1 widening from an MX narrow float to a 16-element f16/bf16 vector.
+static bool isXeVMExtf(arith::ExtFOp op) {
+  auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
+  auto dstTy = dyn_cast<VectorType>(op.getType());
+  if (!srcTy || !dstTy || srcTy.getRank() != 1 || dstTy.getRank() != 1)
+    return false;
+  if (dstTy.getNumElements() != kXeVMExtfTruncfNumElems)
+    return false;
+  Type dstETy = dstTy.getElementType();
+  if (!dstETy.isF16() && !dstETy.isBF16())
+    return false;
+  return getExtfNarrowType(srcTy.getElementType()).has_value();
+}
+
+// Returns true if `op` is an arith.truncf that can be lowered to xevm.truncf,
+// i.e. a rank-1 truncation from a 16-element f16/bf16 vector to an MX narrow
+// float.
+static bool isXeVMTruncf(arith::TruncFOp op) {
+  auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
+  auto dstTy = dyn_cast<VectorType>(op.getType());
+  if (!srcTy || !dstTy || srcTy.getRank() != 1 || dstTy.getRank() != 1)
+    return false;
+  if (srcTy.getNumElements() != kXeVMExtfTruncfNumElems)
+    return false;
+  Type srcETy = srcTy.getElementType();
+  if (!srcETy.isF16() && !srcETy.isBF16())
+    return false;
+  return getTruncfNarrowType(dstTy.getElementType()).has_value();
+}
+
+class ExtfToXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::ExtFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isXeVMExtf(op))
+      return rewriter.notifyMatchFailure(op, "not a xevm.extf compatible extf");
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
+    auto srcVecTy = cast<VectorType>(op.getIn().getType());
+    auto dstVecTy = cast<VectorType>(op.getType());
+    xevm::ExtfSrcElemTypes srcEnum =
+        *getExtfNarrowType(srcVecTy.getElementType());
+    xevm::ExtfDstElemTypes dstEnum = dstVecTy.getElementType().isF16()
+                                         ? xevm::ExtfDstElemTypes::F16
+                                         : xevm::ExtfDstElemTypes::BF16;
+    // The narrow float operand has already been type-converted to an integer
+    // vector of the same bit width (i4 for fp4, i8 for fp8). xevm.extf takes
+    // the values packed into an i8 vector, so re-pack fp4 (i4) operands.
+    Value src = adaptor.getIn();
+    auto convSrcTy = cast<VectorType>(src.getType());
+    if (convSrcTy.getElementTypeBitWidth() == 4)
+      src = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(convSrcTy.getNumElements() / 2, rewriter.getI8Type()),
+          src);
+    Type resTy = getTypeConverter()->convertType(dstVecTy);
+    Value res = xevm::ExtfOp::create(
+        rewriter, loc, resTy, src, xevm::ExtfSrcElemTypeAttr::get(ctx, srcEnum),
+        xevm::ExtfDstElemTypeAttr::get(ctx, dstEnum));
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
+class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::TruncFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!isXeVMTruncf(op))
+      return rewriter.notifyMatchFailure(op,
+                                         "not a xevm.truncf compatible truncf");
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
+    auto srcVecTy = cast<VectorType>(op.getIn().getType());
+    auto dstVecTy = cast<VectorType>(op.getType());
+    xevm::TruncfSrcElemTypes srcEnum = srcVecTy.getElementType().isF16()
+                                           ? xevm::TruncfSrcElemTypes::F16
+                                           : xevm::TruncfSrcElemTypes::BF16;
+    xevm::TruncfDstElemTypes dstEnum =
+        *getTruncfNarrowType(dstVecTy.getElementType());
+    // xevm.truncf produces the narrow floats packed into an i8 vector.
+    int64_t numNarrowBits =
+        dstVecTy.getNumElements() * dstVecTy.getElementTypeBitWidth();
+    Type packedTy = VectorType::get(numNarrowBits / 8, rewriter.getI8Type());
+    Value res =
+        xevm::TruncfOp::create(rewriter, loc, packedTy, adaptor.getIn(),
+                               xevm::TruncfSrcElemTypeAttr::get(ctx, srcEnum),
+                               xevm::TruncfDstElemTypeAttr::get(ctx, dstEnum));
+    // Re-shape to the type-converted result type (i4 vector for fp4).
+    Type resTy = getTypeConverter()->convertType(dstVecTy);
+    if (res.getType() != resTy)
+      res = vector::BitCastOp::create(rewriter, loc, resTy, res);
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
+// Lowers `xegpu.lane_shuffle` to `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` concatenates the components of its operand across the
+// subgroup, the first component of every lane first, and then hands chunks the
+// size of a result component back out to the lanes in order. Numbering the
+// elements of a `vector<NxT>` fragment held by lane `i` of a subgroup of size
+// `S` by their logical position, that concatenation is exactly the `pack` mode
+// input numbering `j * S + i`. Taking the result as a single `N * width(T)` bit
+// scalar then hands lane `i` the logical positions `i * N .. i * N + N - 1`,
+// which is the `pack` mode output numbering.
+//
+// So `pack` is a vector-to-scalar `xevm.bitcast_shuffle` followed by a bitcast
+// back to the fragment type, and `unpack`, being its inverse, is a bitcast to
+// the scalar followed by a scalar-to-vector `xevm.bitcast_shuffle`.
+//
+// `xevm.bitcast_shuffle` only accepts the integer types `i8`, `i16`, `i32` and
+// `i64`, since it is bit-preserving and so does not depend on how the bits are
+// interpreted. A fragment of a floating point type is therefore bitcast to a
+// same-width integer vector on the way in and back on the way out.
+class LaneShuffleToXeVMPattern
+    : public OpConversionPattern<xegpu::LaneShuffleOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::LaneShuffleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto vecTy = dyn_cast<VectorType>(adaptor.getSource().getType());
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(op, "Expected a vector fragment.");
+    // The shuffle redistributes whole bytes between the lanes, so sub-byte
+    // element types, fp4 in particular, cannot be shuffled. Widths without a
+    // matching integer type the op accepts are rejected for the same reason.
+    unsigned elemBits = vecTy.getElementTypeBitWidth();
+    if (elemBits != 8 && elemBits != 16 && elemBits != 32 && elemBits != 64)
+      return rewriter.notifyMatchFailure(
+          op, "Expected an element type of 8, 16, 32 or 64 bits.");
+    int64_t fragmentBits = vecTy.getNumElements() * elemBits;
+    if (fragmentBits > 64 || !llvm::isPowerOf2_64(fragmentBits))
+      return rewriter.notifyMatchFailure(
+          op, "Expected a fragment of 8, 16, 32 or 64 bits.");
+
+    Location loc = op.getLoc();
+    Type packedTy = rewriter.getIntegerType(fragmentBits);
+    // The integer vector type the shuffle actually operates on. Equal to the
+    // fragment type when that is already an integer vector.
+    VectorType shuffleTy =
+        VectorType::get(vecTy.getShape(), rewriter.getIntegerType(elemBits));
+
+    Value res;
+    if (op.getMode() == xegpu::LaneShuffleMode::Pack) {
+      Value src = adaptor.getSource();
+      if (shuffleTy != vecTy)
+        src = LLVM::BitcastOp::create(rewriter, loc, shuffleTy, src);
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, packedTy, src);
+      res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    } else {
+      Value packed =
+          LLVM::BitcastOp::create(rewriter, loc, packedTy, adaptor.getSource());
+      res = xevm::BitcastShuffleOp::create(rewriter, loc, shuffleTy, packed);
+      if (shuffleTy != vecTy)
+        res = LLVM::BitcastOp::create(rewriter, loc, vecTy, res);
+    }
+    rewriter.replaceOp(op, res);
     return success();
   }
 };
@@ -1366,6 +1816,12 @@ struct ConvertXeGPUToXeVMPass
                            memref::MemRefDialect, gpu::GPUDialect,
                            index::IndexDialect>();
     target.addIllegalDialect<xegpu::XeGPUDialect>();
+    // arith.extf/arith.truncf between MX narrow floats and f16/bf16 are routed
+    // to xevm.extf/xevm.truncf; all other arith float casts stay legal.
+    target.addDynamicallyLegalOp<arith::ExtFOp>(
+        [](arith::ExtFOp op) { return !isXeVMExtf(op); });
+    target.addDynamicallyLegalOp<arith::TruncFOp>(
+        [](arith::TruncFOp op) { return !isXeVMTruncf(op); });
 
     RewritePatternSet patterns(context);
     populateXeGPUToXeVMConversionPatterns(typeConverter, patterns);
@@ -1397,4 +1853,8 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
                CreateMemDescOpPattern>(typeConverter, patterns.getContext());
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
+  patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
+  patterns.add<ExtfToXeVMPattern, TruncfToXeVMPattern>(typeConverter,
+                                                       patterns.getContext());
+  patterns.add<LaneShuffleToXeVMPattern>(typeConverter, patterns.getContext());
 }

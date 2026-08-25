@@ -30,6 +30,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -89,6 +90,22 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                                          strides);
       })
       .Default([&](Type t) -> Operation * { return nullptr; });
+}
+
+static std::optional<TypedAttr>
+getScalarConstantAttrFromDenseSplat(Value input) {
+  DenseElementsAttr splatAttr;
+  matchPattern(input, m_Constant<DenseElementsAttr>(&splatAttr));
+  if (!splatAttr || !splatAttr.isSplat())
+    return std::nullopt;
+
+  // Not every element type has a TypedAttr splat value: a complex splat, for
+  // one, is an ArrayAttr. Decline the fold instead of asserting in the cast.
+  auto splatValue = dyn_cast<TypedAttr>(splatAttr.getSplatValue<Attribute>());
+  if (!splatValue)
+    return std::nullopt;
+
+  return splatValue;
 }
 
 //===----------------------------------------------------------------------===//
@@ -493,6 +510,30 @@ public:
       return math::TanhOp::create(builder, arg.getLoc(), arg);
     case UnaryFn::erf:
       return math::ErfOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::sin:
+      return math::SinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::cos:
+      return math::CosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::tan:
+      return math::TanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acos:
+      return math::AcosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acosh:
+      return math::AcoshOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asin:
+      return math::AsinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asinh:
+      return math::AsinhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atan:
+      return math::AtanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atanh:
+      return math::AtanhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log10:
+      return math::Log10Op::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log1p:
+      return math::Log1pOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log2:
+      return math::Log2Op::create(builder, arg.getLoc(), arg);
     }
     if (emitError) {
       emitError() << "unsupported unary function";
@@ -2151,6 +2192,31 @@ struct FoldTransposeWithTranspose : OpRewritePattern<linalg::TransposeOp> {
   }
 };
 
+/// Rewrite a transpose of a dense splat constant into a dense splat constant of
+/// the transposed output shape.
+struct FoldTransposeSplatConstant : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!transposeOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(transposeOp.getInput());
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(transposeOp.getResult()[0].getType());
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(transposeOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 /// This pattern canonicalize transpose by swapping the order of
 /// broadcast and transpose:
 ///   transpose(broadcast(input)) -> broadcast(transpose(input))
@@ -2211,7 +2277,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<FoldTransposeWithTranspose, SwapTransposeWithBroadcast>(context);
+  results.add<FoldTransposeWithTranspose, FoldTransposeSplatConstant,
+              SwapTransposeWithBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2296,6 +2363,10 @@ LogicalResult BroadcastOp::verify() {
                            << initRank - 1 << "], got: " << dim;
   }
 
+  DenseSet<int64_t> uniquedDims(llvm::from_range, dimensionsRef);
+  if (uniquedDims.size() != dimensionsRef.size())
+    return emitOpError() << "dimensions should not contain duplicates";
+
   // Mapping from input dims to init dims.
   SmallVector<int64_t> dimMap;
   for (auto dim : llvm::seq<int64_t>(0, initRank)) {
@@ -2369,9 +2440,39 @@ struct FoldBroadcasts : OpRewritePattern<linalg::BroadcastOp> {
   }
 };
 
+/// Rewrite a broadcast of a dense splat constant into a dense splat constant of
+/// the broadcast output shape.
+struct FoldBroadcastSplatConstant : OpRewritePattern<linalg::BroadcastOp> {
+  using OpRewritePattern<linalg::BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    if (!broadcastOp.hasPureTensorSemantics())
+      return failure();
+
+    auto splatValue =
+        getScalarConstantAttrFromDenseSplat(broadcastOp.getInput());
+
+    if (!splatValue.has_value())
+      return failure();
+
+    auto resultType =
+        cast<RankedTensorType>(broadcastOp.getResult()[0].getType());
+    if (!resultType.hasStaticShape())
+      return rewriter.notifyMatchFailure(broadcastOp,
+                                         "result type has dynamic shape");
+
+    auto resultAttr = DenseElementsAttr::get(resultType, splatValue.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(broadcastOp, resultType,
+                                                   resultAttr);
+    return success();
+  }
+};
+
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts>(context);
+  results.add<EraseIdentityLinalgOp<BroadcastOp>, FoldBroadcasts,
+              FoldBroadcastSplatConstant>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2850,6 +2951,15 @@ SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
   return iteratorTypes;
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> SoftmaxOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 SoftmaxOp::getTiledImplementation(OpBuilder &builder,
                                   ArrayRef<OpFoldResult> offsets,
@@ -3203,6 +3313,15 @@ LogicalResult WinogradFilterTransformOp::getResultTilePosition(
   return success();
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 /// Implement tiling for winograd_filter_transform
 /// The input of winograd_filter_transform is (F, KH, KW, C).
 /// The output of winograd_filter_transform is (alphaH, alphaW, C, F)
@@ -3354,6 +3473,15 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
                       sizes[getOutputCDim()]});
 
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradInputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_input_transform
@@ -3549,6 +3677,15 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
   resultSizes.append(
       {sizes[getValueNDim()], sizeH, sizeW, sizes[getValueFDim()]});
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_output_transform
@@ -5055,15 +5192,14 @@ template SmallVector<int64_t>
     getPackedOuterShapeWithoutTransposition<UnPackOp>(UnPackOp);
 
 // Given the (potentially) updated packed type, `newPackedTy`, generates an
-// updated mixed-tile-sizes attribute. A tile size is updated only
-// when:
-//  * a dim from newPackedTy is static, and
-//  * the corresponding size from mixedTiles is still dynamic.
-// Otherwise, the original tile size is preserved.
+// updated mixed-tile-sizes list. For each inner packed dimension that is static
+// in `newPackedTy`, the tile is set to that static size (replacing SSA values
+// or mismatched constants). Dynamic packed dimensions preserve the original
+// tile. The folded tensor type is treated as authoritative for static extents.
 // Note - packed-type-dim and mixed-tile-size should always match!
 static SmallVector<OpFoldResult>
 getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
-                     SmallVector<OpFoldResult> mixedTiles) {
+                     ArrayRef<OpFoldResult> mixedTiles) {
   SmallVector<OpFoldResult> newMixedTileSizes;
   for (auto it : llvm::zip(cast<ShapedType>(newPackedTy)
                                .getShape()
@@ -5074,19 +5210,7 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
       newMixedTileSizes.push_back(std::get<1>(it));
       continue;
     }
-
-    // If the current result dim is static, update the dynamic mixed-size
-    // (provided the original value is dynamic).
-    OpFoldResult tile = std::get<1>(it);
-    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(tile)) {
-      // Already a constant
-      newMixedTileSizes.push_back(tile);
-    } else {
-      assert(getConstantIntValue(tile).value() == dimSize &&
-             "tile size and dim size don't match!");
-      newMixedTileSizes.push_back(
-          (rewriter.getIntegerAttr(rewriter.getIndexType(), dimSize)));
-    }
+    newMixedTileSizes.push_back(rewriter.getIndexAttr(dimSize));
   }
 
   return newMixedTileSizes;
@@ -5870,11 +5994,14 @@ static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
 /// Returns true if the pack op does not need a padding value.
 static bool paddingIsNotNeeded(PackOp op) {
   auto srcType = op.getSourceType();
-  if (llvm::any_of(op.getInnerDimsPos(),
-                   [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
+  auto innerDimsPos = op.getInnerDimsPos();
+  auto innerTiles = op.getStaticInnerTiles();
+  if (ShapedType::isDynamicShape(innerTiles))
     return false;
-  if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
-    return false;
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (srcType.isDynamicDim(pos) && tileSize != 1)
+      return false;
+  }
   return !PackOp::requirePaddingValue(
       srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
       op.getOuterDimsPerm(), op.getMixedTiles());

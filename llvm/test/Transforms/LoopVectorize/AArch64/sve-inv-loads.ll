@@ -1,5 +1,5 @@
 ; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
 define void @invariant_load(i64 %n, ptr noalias nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @invariant_load
@@ -34,4 +34,4 @@ for.end:
 !1 = distinct !{!1, !2, !3, !4}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = !{!"llvm.loop.interleave.count", i32 1}
-!4 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.scalable.enable"}

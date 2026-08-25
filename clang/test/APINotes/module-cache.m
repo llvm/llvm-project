@@ -4,7 +4,7 @@
 // RUN: mkdir -p %t/APINotes
 // RUN: cp %S/Inputs/APINotes/SomeOtherKit.apinotes %t/APINotes/SomeOtherKit.apinotes
 // RUN: mkdir -p %t/Frameworks
-// RUN: cp -r %S/Inputs/Frameworks/SomeOtherKit.framework %t/Frameworks
+// RUN: cp -R %S/Inputs/Frameworks/SomeOtherKit.framework %t/Frameworks
 
 // First build: check that 'methodB' is unavailable but 'methodA' is available.
 // RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -Rmodule-build -fmodules-cache-path=%t/ModulesCache -iapinotes-modules %t/APINotes  -F %t/Frameworks %s > %t/before.log 2>&1
