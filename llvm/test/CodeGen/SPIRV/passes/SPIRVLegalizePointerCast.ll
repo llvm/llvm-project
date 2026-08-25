@@ -82,14 +82,8 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 declare target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32, i32, i32, i32, ptr)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0), i32)
 
-; Byte-addressable buffer tests model Clang's SPIR-V resource layout for HLSL
-; ByteAddressBuffer/RWByteAddressBuffer: the handle carries [0 x i8] as the
-; OpTypeRuntimeArray element type for storage-buffer blocks. That i8 names
-; byte-addressable layout in LLVM IR; it is not an HLSL surface type. Typed
-; HLSL accesses (e.g. Store(offset, uint)) lower to i32 load/store at a byte
-; offset in getpointer's index operand. emit-intrinsics tags getpointer as i8
-; from the layout, then inserts i8->T spv_ptrcast for the typed access;
-; legalize-pointer-cast removes the ptrcast and keeps the typed access.
+; Byte-addressable buffer tests model HLSL ByteAddressBuffer layout ([0 x i8] handles,
+; typed load/store via getpointer byte offset). emit-intrinsics adds ptrcast; legalize-pointer-cast removes it.
 
 define void @byteBufferStore() {
 ; CHECK-LABEL: define void @byteBufferStore(
@@ -118,9 +112,6 @@ entry:
 }
 
 @slot = internal global target("spirv.VulkanBuffer", [0 x i8], 12, 0) poison, align 8
-
-; Regression for issue #192523: handle flows through memory before getpointer
-; (as in local RWByteAddressBuffer arrays), then typed store hits i8->i32 ptrcast.
 
 define void @byteBufferStoreViaLoadedHandle() {
 ; CHECK-LABEL: define void @byteBufferStoreViaLoadedHandle(

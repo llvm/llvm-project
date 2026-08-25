@@ -233,29 +233,29 @@ class SPIRVLegalizePointerCastImpl {
     if (ByteOffset == 0)
       return BasePtr;
 
-    IntrinsicInst *ResourcePtr = getResourceGetPointer(BasePtr);
-    assert(ResourcePtr &&
-           "byte layout pointer must come from spv.resource.getpointer");
-
-    Value *Handle = ResourcePtr->getOperand(0);
-    Value *BaseOffset = ResourcePtr->getOperand(1);
-    Value *NewOffset;
-    if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
-      NewOffset =
-          ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
-    else
-      NewOffset = B.CreateAdd(
-          BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
-    SmallVector<OperandBundleDef> OpBundles;
-    ResourcePtr->getOperandBundlesAsDefs(OpBundles);
-    CallInst *ResourcePtrAtOffset = B.CreateCall(
-        ResourcePtr->getFunctionType(), ResourcePtr->getCalledOperand(),
-        {Handle, NewOffset}, OpBundles);
-    ResourcePtrAtOffset->setAttributes(ResourcePtr->getAttributes());
-    ResourcePtrAtOffset->setCallingConv(ResourcePtr->getCallingConv());
-    Type *I8Ty = Type::getInt8Ty(B.getContext());
-    GR->buildAssignPtr(B, I8Ty, ResourcePtrAtOffset);
-    return ResourcePtrAtOffset;
+    if (IntrinsicInst *ResourcePtr = getResourceGetPointer(BasePtr)) {
+      Value *Handle = ResourcePtr->getOperand(0);
+      Value *BaseOffset = ResourcePtr->getOperand(1);
+      Value *NewOffset;
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+        NewOffset =
+            ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
+      else
+        NewOffset = B.CreateAdd(
+            BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+      SmallVector<OperandBundleDef> OpBundles;
+      ResourcePtr->getOperandBundlesAsDefs(OpBundles);
+      CallInst *ResourcePtrAtOffset = B.CreateCall(
+          ResourcePtr->getFunctionType(), ResourcePtr->getCalledOperand(),
+          {Handle, NewOffset}, OpBundles);
+      ResourcePtrAtOffset->setAttributes(ResourcePtr->getAttributes());
+      ResourcePtrAtOffset->setCallingConv(ResourcePtr->getCallingConv());
+      Type *I8Ty = Type::getInt8Ty(B.getContext());
+      GR->buildAssignPtr(B, I8Ty, ResourcePtrAtOffset);
+      return ResourcePtrAtOffset;
+    }
+    llvm_unreachable(
+        "byte layout pointer must come from spv.resource.getpointer");
   }
 
   Value *scalarToStoreInt(IRBuilder<> &B, Value *Scalar) {
@@ -286,16 +286,21 @@ class SPIRVLegalizePointerCastImpl {
     Value *IntVal = scalarToStoreInt(B, Src);
     unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
 
-    for (unsigned I = 0; I < NumBytes; ++I) {
-      Value *Shifted =
-          I == 0 ? IntVal
-                 : B.CreateLShr(IntVal,
-                                ConstantInt::get(IntVal->getType(), 8 * I));
+    auto StoreByte = [&](unsigned I, Value *Shifted) {
       Value *Byte = B.CreateTrunc(Shifted, I8Ty);
       buildAssignType(B, I8Ty, Byte);
       Value *Ptr = gepByteOffset(B, Dst, I);
       StoreInst *SI = B.CreateStore(Byte, Ptr);
       SI->setAlignment(commonAlignment(Alignment, I));
+    };
+
+    if (NumBytes > 0)
+      StoreByte(0, IntVal);
+
+    for (unsigned I = 1; I < NumBytes; ++I) {
+      Value *Shifted =
+          B.CreateLShr(IntVal, ConstantInt::get(IntVal->getType(), 8 * I));
+      StoreByte(I, Shifted);
     }
   }
 
@@ -315,12 +320,14 @@ class SPIRVLegalizePointerCastImpl {
       buildAssignType(B, I8Ty, LI);
       Value *Extended = B.CreateZExt(LI, IntTy);
       buildAssignType(B, IntTy, Extended);
-      Value *Shifted =
-          I == 0 ? Extended
-                 : B.CreateShl(Extended, ConstantInt::get(IntTy, 8 * I));
-      if (I != 0)
+
+      if (I == 0) {
+        IntVal = Extended;
+      } else {
+        Value *Shifted = B.CreateShl(Extended, ConstantInt::get(IntTy, 8 * I));
         buildAssignType(B, IntTy, Shifted);
-      IntVal = I == 0 ? Shifted : B.CreateOr(IntVal, Shifted);
+        IntVal = B.CreateOr(IntVal, Shifted);
+      }
       buildAssignType(B, IntTy, IntVal);
     }
 
