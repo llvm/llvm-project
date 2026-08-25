@@ -244,6 +244,33 @@ private:
   bool NoOpt;
 };
 
+// Whether \p I becomes a call the object would have to survive.
+//
+// An object in the VGPR address space occupies caller-saved registers and
+// cannot be spilled, so one live across a call has nowhere to be and
+// AMDGPUPrivateObjectVGPRs refuses it. Promotion has to predict that refusal
+// exactly: too lax and a working program becomes a failed compile.
+//
+// Nearly every intrinsic lowers to instructions rather than to a call, and
+// counting those would refuse promotion almost everywhere. The two that really
+// do become one have to count - see the switch in
+// AMDGPUCallLowering::lowerCall and the matching cases in SelectionDAGBuilder.
+static bool isCallForLiveness(const Instruction &I) {
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (!CB)
+    return false;
+  if (const auto *II = dyn_cast<IntrinsicInst>(CB)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_call_whole_wave:
+    case Intrinsic::amdgcn_cs_chain:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
                             const Function &F) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
@@ -425,16 +452,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
   // in analyzePromoteToVGPR. Collected once here because the answer is a
   // property of the function, not of the object.
   //
-  // Intrinsics do not count: on this target they lower to instructions rather
-  // than to calls. Were one ever to lower to a call, the result would be the
-  // backend's diagnostic rather than a wrong answer.
   CallBlocks.clear();
   if (PromoteToVGPR) {
-    for (const Instruction &I : instructions(F)) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (CB && !isa<IntrinsicInst>(CB))
+    for (const Instruction &I : instructions(F))
+      if (isCallForLiveness(I))
         CallBlocks.insert(I.getParent());
-    }
   }
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -1448,11 +1470,10 @@ bool AMDGPUPromoteAllocaImpl::isLiveAcrossCall(const AllocaInst *AI) const {
           Live = ID == Intrinsic::lifetime_start;
           continue;
         }
-        continue;
       }
       if (!HaveStart && &I == static_cast<const Instruction *>(AI))
         Live = true;
-      if (Live && SawCall && isa<CallBase>(&I))
+      if (Live && SawCall && isCallForLiveness(I))
         *SawCall = true;
     }
     return Live;
