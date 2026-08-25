@@ -60,6 +60,18 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
+std::string GetPlatformSetupValue(const std::string &Output) {
+  std::string Key = "Custom platform-setup function: ";
+  size_t Start = Output.find(Key);
+
+  if (Start == std::string::npos)
+    return "<Line not found>";
+
+  Start += Key.length();
+  size_t End = Output.find_first_of("\r\n", Start);
+  return Output.substr(Start, End - Start);
+}
+
 TEST_F(InterpreterTest, Sanity) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
@@ -571,6 +583,29 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
 
   EXPECT_EQ(TU,
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
+TEST_F(InterpreterTest, NativePlatformSupport) {
+#ifndef NDEBUG
+  std::string OrcRuntimePath = "path/liborc_rt";
+  auto IEB = std::make_unique<IncrementalExecutorBuilder>();
+  IEB->OrcRuntimePath = OrcRuntimePath;
+  llvm::orc::ThreadSafeContext TSC;
+  auto CB = IncrementalCompilerBuilder();
+  auto CI = llvm::cantFail(CB.CreateCpp());
+
+  bool DebugFlagPrev = llvm::DebugFlag;
+  llvm::DebugFlag = true;
+  llvm::setCurrentDebugType("orc");
+  testing::internal::CaptureStderr();
+  auto ExecutorOrErr = IEB->create(TSC, CI->getTarget());
+  llvm::setCurrentDebugType("");
+  llvm::DebugFlag = DebugFlagPrev;
+  std::string output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(GetPlatformSetupValue(output), "Yes");
+#else
+  GTEST_SKIP() << "Assertions must be enabled";
+#endif
 }
 
 } // end anonymous namespace
