@@ -301,7 +301,12 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
+    // For always-inline functions we can ignore the SME attributes as we should
+    // be able to assume that the user knows what they're doing and that the
+    // front-end has given sufficient warning or error diagnostics to guard the
+    // user.
+    if (!Callee->hasFnAttribute(Attribute::AlwaysInline) &&
+        hasPossibleIncompatibleOps(Callee, *getTLI()))
       return false;
   }
 
