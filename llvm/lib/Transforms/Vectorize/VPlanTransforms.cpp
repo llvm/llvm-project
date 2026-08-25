@@ -5459,10 +5459,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  // Widen unit-stride consecutive accesses, matching the legacy CM. Both
-  // forward (stride +1) and reverse (stride -1) accesses are handled.
+  // Widen unit-stride consecutive accesses, matching the legacy CM. Consecutive
+  // forward (stride +1) and reverse (stride -1) accesses, as well as
+  // non-consecutive accesses (gather/scatter) are handled.
   VPlanTransforms::runPass(
-      "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+      "widenMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
         bool IsLoad = VPI->getOpcode() == Instruction::Load;
         VPValue *Ptr = VPI->getOperand(!IsLoad);
@@ -5470,8 +5471,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
         std::optional<int64_t> Stride =
             getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
-        if (Stride != 1 && Stride != -1)
+        if (!Stride)
           return false;
+        bool Consecutive = Stride == 1 || Stride == -1;
         bool Reverse = Stride == -1;
 
         // A predicated access can only be widened (rather than scalarized) if
@@ -5482,10 +5484,20 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                 IsLoad, ScalarTy, getLoadStoreAlignment(I),
                                 getLoadStoreAddressSpace(I)))
           return false;
+        if (!Consecutive && !LoopVectorizationPlanner::getDecisionAndClampRange(
+                                [&](ElementCount VF) {
+                                  return CostCtx.willGatherScatter(I, VF) &&
+                                         CostCtx.Config.isLegalGatherOrScatter(
+                                             IsLoad, ScalarTy,
+                                             getLoadStoreAlignment(I), VF);
+                                },
+                                Range))
+          return false;
 
         VPBuilder Builder(VPI);
-        VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
-            Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
+        if (Consecutive)
+          Ptr = Builder.createConsecutiveVectorPointer(Ptr, ScalarTy, Reverse,
+                                                       VPI->getDebugLoc());
 
         VPValue *Mask = IsPredicated ? VPI->getMask() : nullptr;
         // Reverse the mask so it matches the reversed access order.
@@ -5494,9 +5506,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                       VPI->getDebugLoc());
 
         if (IsLoad) {
-          VPSingleDefRecipe *Load = Builder.createWidenLoad(
-              *cast<LoadInst>(I), VectorPtr, Mask,
-              /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+          VPSingleDefRecipe *Load =
+              Builder.createWidenLoad(*cast<LoadInst>(I), Ptr, Mask,
+                                      Consecutive, *VPI, VPI->getDebugLoc());
           // Reverse the loaded values back into program order.
           if (Reverse)
             Load = Builder.createNaryOp(VPInstruction::Reverse, Load,
@@ -5510,9 +5522,9 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                            VPI->getDebugLoc());
 
-        auto *StoreR = Builder.createWidenStore(
-            *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
-            /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        auto *StoreR =
+            Builder.createWidenStore(*cast<StoreInst>(I), Ptr, StoredVal, Mask,
+                                     Consecutive, *VPI, VPI->getDebugLoc());
         return ReplaceWith(VPI, StoreR);
       });
 

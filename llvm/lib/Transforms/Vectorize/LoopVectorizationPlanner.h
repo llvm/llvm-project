@@ -806,9 +806,11 @@ public:
   bool isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy, Align Alignment,
                                 unsigned AddressSpace) const;
 
-  /// Returns true if the target machine can represent \p V as a masked gather
-  /// or scatter operation.
-  bool isLegalGatherOrScatter(Value *V, ElementCount VF) const;
+  /// Returns true if the target machine supports a gather (if \p IsLoad)
+  /// or scatter of scalar type \p ScalarTy with \p Alignment for vectorization
+  /// factor \p VF.
+  bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy, Align Alignment,
+                              ElementCount VF) const;
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.

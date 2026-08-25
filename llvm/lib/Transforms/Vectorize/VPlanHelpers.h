@@ -363,6 +363,10 @@ struct VPCostContext {
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;
 
+  /// Returns true if \p I is known to be profitable to gather-scatter, as
+  /// opposed to scalarizing or interleaving, for \p VF.
+  bool willGatherScatter(Instruction *I, ElementCount VF) const;
+
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;
 
