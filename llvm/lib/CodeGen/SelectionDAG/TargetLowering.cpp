@@ -13547,10 +13547,11 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
+  SDValue Op = Node->getOperand(0);
+  ElementCount EC = Op.getValueType().getVectorElementCount();
 
   bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
-  auto [Mask, StepVec] =
-      getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
+  auto [Mask, StepVec] = getLegalMaskAndStepVector(Op, ZeroIsPoison, DL, DAG);
 
   // No legal step vector: split mask in half and recombine results.
   // LoNumElts uses the non-poison CTTZ_ELTS so its result is well-defined
@@ -13558,7 +13559,7 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   // Result: (ResLo != LoNumElts) ? ResLo : (LoNumElts + ResHi)
   if (!StepVec) {
     EVT ResVT = Node->getValueType(0);
-    auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
+    auto [MaskLo, MaskHi] = DAG.SplitVector(Op, DL);
     SDValue LoNumElts = DAG.getElementCount(
         DL, ResVT, MaskLo.getValueType().getVectorElementCount());
     SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, MaskLo);
@@ -13581,8 +13582,7 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   if (getTypeAction(StepVT.getSimpleVT()) == TypePromoteInteger)
     StepVT = getTypeToTransformTo(*DAG.getContext(), StepVT);
 
-  SDValue VL =
-      DAG.getElementCount(DL, StepVT, StepVecVT.getVectorElementCount());
+  SDValue VL = DAG.getElementCount(DL, StepVT, EC);
   SDValue SplatVL = DAG.getSplat(StepVecVT, DL, VL);
   StepVec = DAG.getNode(ISD::SUB, DL, StepVecVT, SplatVL, StepVec);
   SDValue Zeroes = DAG.getConstant(0, DL, StepVecVT);

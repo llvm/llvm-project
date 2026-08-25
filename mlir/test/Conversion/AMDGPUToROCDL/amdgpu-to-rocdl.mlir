@@ -170,7 +170,7 @@ func.func @gpu_gcn_raw_buffer_load_scalar_i32(%buf: memref<i32>) -> i32 {
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[] : memref<i32> -> i32
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[] : memref<i32> -> i32
   func.return %0 : i32
 }
 
@@ -186,7 +186,7 @@ func.func @gpu_gcn_raw_buffer_load_i32(%buf: memref<64xi32>, %idx: i32) -> i32 {
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi32>, i32 -> i32
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi32>, i32 -> i32
   func.return %0 : i32
 }
 
@@ -225,7 +225,7 @@ func.func @gpu_gcn_raw_buffer_load_i32_strided(%buf: memref<16x16xi32, strided<[
     // CHECK: %[[sgpr_off:.*]] = llvm.mul %[[zero_0]], %[[elem_size]] : i32
     // CHECK: %[[v:.*]] = rocdl.raw.ptr.buffer.load %[[rsrc]], %[[vgpr_off]], %[[sgpr_off]], 0 : i32
     // CHECK: return %[[v]] : i32
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%i, %j] :  memref<16x16xi32, strided<[?, ?], offset: ?>>, i32, i32 -> i32
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%i, %j] : memref<16x16xi32, strided<[?, ?], offset: ?>>, i32, i32 -> i32
   func.return %0 : i32
 }
 
@@ -241,7 +241,7 @@ func.func @gpu_gcn_raw_buffer_load_i32_oob_off(%buf: memref<64xi32>, %idx: i32) 
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = false} %buf[%idx] : memref<64xi32>, i32 -> i32
+  %0 = amdgpu.raw_buffer_load boundsCheck(false) %buf[%idx] : memref<64xi32>, i32 -> i32
   func.return %0 : i32
 }
 
@@ -250,7 +250,7 @@ func.func @gpu_gcn_raw_buffer_load_1xi32(%buf: memref<64xi32>, %idx: i32) -> vec
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: %[[cast:.*]] = llvm.bitcast %[[ret]] : i32 to vector<1xi32>
   // CHECK: return %[[cast]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi32>, i32 -> vector<1xi32>
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi32>, i32 -> vector<1xi32>
   func.return %0 : vector<1xi32>
 }
 
@@ -258,7 +258,7 @@ func.func @gpu_gcn_raw_buffer_load_1xi32(%buf: memref<64xi32>, %idx: i32) -> vec
 func.func @gpu_gcn_raw_buffer_load_2xi32(%buf: memref<64xi32>, %idx: i32) -> vector<2xi32> {
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}}, %{{.*}}, 0 : vector<2xi32>
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi32>, i32 -> vector<2xi32>
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi32>, i32 -> vector<2xi32>
   func.return %0 : vector<2xi32>
 }
 
@@ -270,7 +270,7 @@ func.func @gpu_gcn_raw_buffer_load_i8(%buf: memref<64xi8>, %idx: i32) -> i8 {
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %{{.*}} : !llvm.ptr, i64 to <8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i8
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi8>, i32 -> i8
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi8>, i32 -> i8
   func.return %0 : i8
 }
 
@@ -283,7 +283,7 @@ func.func @gpu_gcn_raw_buffer_load_2xi8(%buf: memref<64xi8>, %idx: i32) -> vecto
   // CHECK: %[[loaded:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i16
   // CHECK: %[[ret:.*]] = llvm.bitcast %[[loaded]] : i16 to vector<2xi8>
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi8>, i32 -> vector<2xi8>
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi8>, i32 -> vector<2xi8>
   func.return %0 : vector<2xi8>
 }
 
@@ -292,7 +292,7 @@ func.func @gpu_gcn_raw_buffer_load_16xi8(%buf: memref<64xi8>, %idx: i32) -> vect
   // CHECK: %[[loaded:.*]] = rocdl.raw.ptr.buffer.load %{{.*}}, %{{.*}}, %{{.*}}, 0 : vector<4xi32>
   // CHECK: %[[ret:.*]] = llvm.bitcast %[[loaded]] : vector<4xi32> to vector<16xi8>
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi8>, i32 -> vector<16xi8>
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xi8>, i32 -> vector<16xi8>
   func.return %0 : vector<16xi8>
 }
 
@@ -305,7 +305,7 @@ func.func @gpu_gcn_raw_buffer_load_f8E5M2FNUZ(%buf: memref<64xf8E5M2FNUZ>, %idx:
   // CHECK: %[[loaded:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, 0 : i8
   // CHECK: %[[ret:.*]] = builtin.unrealized_conversion_cast %[[loaded]] : i8 to f8E5M2FNUZ
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xf8E5M2FNUZ>, i32 -> f8E5M2FNUZ
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xf8E5M2FNUZ>, i32 -> f8E5M2FNUZ
   func.return %0 : f8E5M2FNUZ
 }
 
@@ -319,7 +319,7 @@ func.func @gpu_gcn_raw_buffer_load_4xf8E4M3FNUZ(%buf: memref<64xf8E4M3FNUZ>, %id
   // CHECK: %[[cast:.*]] = llvm.bitcast %[[loaded]] : i32 to vector<4xi8>
   // CHECK: %[[ret:.*]] = builtin.unrealized_conversion_cast %[[cast]] : vector<4xi8> to vector<4xf8E4M3FNUZ>
   // CHECK: return %[[ret]]
-  %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xf8E4M3FNUZ>, i32 -> vector<4xf8E4M3FNUZ>
+  %0 = amdgpu.raw_buffer_load boundsCheck(true) %buf[%idx] : memref<64xf8E4M3FNUZ>, i32 -> vector<4xf8E4M3FNUZ>
   func.return %0 : vector<4xf8E4M3FNUZ>
 }
 
@@ -334,7 +334,7 @@ func.func @gpu_gcn_raw_buffer_store_scalar_i32(%value: i32, %buf: memref<i32>) {
   // RECORDS32: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords32]], %[[flags]] : !llvm.ptr, i32 to <8>
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
-  amdgpu.raw_buffer_store {boundsCheck = true} %value -> %buf[] : i32 -> memref<i32>
+  amdgpu.raw_buffer_store boundsCheck(true) %value -> %buf[] : i32 -> memref<i32>
   func.return
 }
 
@@ -348,7 +348,7 @@ func.func @gpu_gcn_raw_buffer_store_i32(%value: i32, %buf: memref<64xi32>, %idx:
   // RECORDS32: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords32]], %[[flags]] : !llvm.ptr, i32 to <8>
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: rocdl.raw.ptr.buffer.store %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
-  amdgpu.raw_buffer_store {boundsCheck = true} %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
+  amdgpu.raw_buffer_store boundsCheck(true) %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
   func.return
 }
 
@@ -356,7 +356,7 @@ func.func @gpu_gcn_raw_buffer_store_i32(%value: i32, %buf: memref<64xi32>, %idx:
 func.func @gpu_gcn_raw_buffer_store_1xf32(%value: vector<1xf32>, %buf: memref<64xf32>, %idx: i32) {
   // CHECK: %[[cast:.*]] = llvm.bitcast %{{.*}} : vector<1xf32> to f32
   // CHECK: rocdl.raw.ptr.buffer.store %[[cast]], %{{.*}}, %{{.*}}, %{{.*}}, 0 : f32
-  amdgpu.raw_buffer_store {boundsCheck = true} %value -> %buf[%idx] : vector<1xf32> -> memref<64xf32>, i32
+  amdgpu.raw_buffer_store boundsCheck(true) %value -> %buf[%idx] : vector<1xf32> -> memref<64xf32>, i32
   func.return
 }
 
@@ -364,7 +364,7 @@ func.func @gpu_gcn_raw_buffer_store_1xf32(%value: vector<1xf32>, %buf: memref<64
 func.func @gpu_gcn_raw_buffer_store_2xi8(%value: vector<2xi8>, %buf: memref<64xi8>, %idx: i32) {
   // CHECK: %[[cast:.*]] = llvm.bitcast %{{.*}} : vector<2xi8> to i16
   // CHECK: rocdl.raw.ptr.buffer.store %[[cast]], %{{.*}}, %{{.*}}, %{{.*}}, 0 : i16
-  amdgpu.raw_buffer_store {boundsCheck = true} %value -> %buf[%idx] : vector<2xi8> -> memref<64xi8>, i32
+  amdgpu.raw_buffer_store boundsCheck(true) %value -> %buf[%idx] : vector<2xi8> -> memref<64xi8>, i32
   func.return
 }
 
@@ -372,7 +372,7 @@ func.func @gpu_gcn_raw_buffer_store_2xi8(%value: vector<2xi8>, %buf: memref<64xi
 func.func @gpu_gcn_raw_buffer_store_16xi8(%value: vector<16xi8>, %buf: memref<64xi8>, %idx: i32) {
   // CHECK: %[[cast:.*]] = llvm.bitcast %{{.*}} : vector<16xi8> to vector<4xi32>
   // CHECK: rocdl.raw.ptr.buffer.store %[[cast]], %{{.*}}, %{{.*}}, %{{.*}}, 0 : vector<4xi32>
-  amdgpu.raw_buffer_store {boundsCheck = true} %value -> %buf[%idx] : vector<16xi8> -> memref<64xi8>, i32
+  amdgpu.raw_buffer_store boundsCheck(true) %value -> %buf[%idx] : vector<16xi8> -> memref<64xi8>, i32
   func.return
 }
 
@@ -388,7 +388,7 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_f32(%value: f32, %buf: memref<64xf32>,
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : f32
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
   func.return %old : f32
 }
 
@@ -403,7 +403,7 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_v2f16(%value: vector<2xf16>, %buf: mem
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : vector<2xf16>
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %value -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
   func.return %old : vector<2xf16>
 }
 
@@ -418,7 +418,7 @@ func.func @gpu_gcn_raw_buffer_atomic_fadd_v2bf16(%value: vector<2xbf16>, %buf: m
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.fadd %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : vector<2xbf16>
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %value -> %buf[%idx] : vector<2xbf16> -> memref<64xbf16>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd boundsCheck(true) %value -> %buf[%idx] : vector<2xbf16> -> memref<64xbf16>, i32
   func.return %old : vector<2xbf16>
 }
 
@@ -433,7 +433,7 @@ func.func @gpu_gcn_raw_buffer_atomic_fmax_f32(%value: f32, %buf: memref<64xf32>,
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.fmax %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : f32
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_fmax {boundsCheck = true} %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
+  %old = amdgpu.raw_buffer_atomic_fmax boundsCheck(true) %value -> %buf[%idx] : f32 -> memref<64xf32>, i32
   func.return %old : f32
 }
 
@@ -448,7 +448,7 @@ func.func @gpu_gcn_raw_buffer_atomic_smax_i32(%value: i32, %buf: memref<64xi32>,
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.smax %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_smax {boundsCheck = true} %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
+  %old = amdgpu.raw_buffer_atomic_smax boundsCheck(true) %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
   func.return %old : i32
 }
 
@@ -463,7 +463,7 @@ func.func @gpu_gcn_raw_buffer_atomic_umin_i32(%value: i32, %buf: memref<64xi32>,
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[old:.*]] = rocdl.raw.ptr.buffer.atomic.umin %{{.*}}, %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: return %[[old]]
-  %old = amdgpu.raw_buffer_atomic_umin {boundsCheck = true} %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
+  %old = amdgpu.raw_buffer_atomic_umin boundsCheck(true) %value -> %buf[%idx] : i32 -> memref<64xi32>, i32
   func.return %old : i32
 }
 
@@ -482,7 +482,7 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_f32(%src : f32, %cmp : f32, %buf : m
   // CHECK: %[[dst:.*]] = rocdl.raw.ptr.buffer.atomic.cmpswap %[[srcCast]], %[[cmpCast]], %[[resource]], %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: %[[dstCast:.*]] = llvm.bitcast %[[dst]] : i32 to f32
   // CHECK: return %[[dstCast]]
-  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : f32 -> memref<64xf32>, i32
+  %dst = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) %src, %cmp -> %buf[%idx] : f32 -> memref<64xf32>, i32
   func.return %dst : f32
 }
 
@@ -498,7 +498,7 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_i64(%src : i64, %cmp : i64, %buf : m
   // RECORDS45: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]] : !llvm.ptr, i64 to <8>
   // CHECK: %[[dst:.*]] = rocdl.raw.ptr.buffer.atomic.cmpswap %[[src]], %[[cmp]], %[[resource]], %{{.*}}, %{{.*}}, 0 : i64
   // CHECK: return %[[dst]]
-  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : i64 -> memref<64xi64>, i32
+  %dst = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) %src, %cmp -> %buf[%idx] : i64 -> memref<64xi64>, i32
   func.return %dst : i64
 }
 
@@ -510,7 +510,7 @@ func.func @amdgpu_raw_buffer_atomic_cmpswap_v2f16(%src : vector<2xf16>, %cmp : v
   // CHECK: %[[dstBits:.+]] = rocdl.raw.ptr.buffer.atomic.cmpswap %[[srcBits]], %[[cmpBits]], %{{.*}}, %{{.*}}, %{{.*}}, 0 : i32
   // CHECK: %[[dst:.+]] = llvm.bitcast %[[dstBits]] : i32 to vector<2xf16>
   // CHECK: return %[[dst]]
-  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
+  %dst = amdgpu.raw_buffer_atomic_cmpswap boundsCheck(true) %src, %cmp -> %buf[%idx] : vector<2xf16> -> memref<64xf16>, i32
   func.return %dst : vector<2xf16>
 }
 
