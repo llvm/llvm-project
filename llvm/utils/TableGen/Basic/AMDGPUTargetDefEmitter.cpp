@@ -64,14 +64,34 @@ static void emitSubArchForName(raw_ostream &OS, StringRef Name) {
   emitSubArchSuffix(OS, Name);
 }
 
+// The explicit subarch spelling for a GPU whose subarch is not derivable from
+// its name, or empty. Optional so test stubs may omit it.
+static std::optional<StringRef> getSubArchSpelling(const Record *Rec) {
+  return Rec->getValueAsOptionalString("SubArchSpelling");
+}
+
+// Emit a subarch enumerator suffix for a spelling, converting '.' to '_' and
+// upcasing, e.g. "4.67q" -> "4_67Q".
+static void emitSpellingSuffix(raw_ostream &OS, StringRef Spelling) {
+  for (char C : Spelling)
+    OS << static_cast<char>((C == '.') ? '_' : toUpper(C));
+}
+
 // Derive the Triple::SubArchType for a canonical GPU record. A pseudo target
-// represents no hardware and maps to Triple::NoSubArch; otherwise the subarch
-// is derived from the name.
+// maps to Triple::NoSubArch; an explicit SubArchSpelling maps to that (e.g.
+// "4.67q" -> AMDGPUSubArch4_67Q); otherwise it is derived from the name.
 static void emitSubArch(raw_ostream &OS, const Record *Rec) {
   if (Rec->getValueAsBit("IsPseudoTarget")) {
     OS << "Triple::NoSubArch";
     return;
   }
+
+  if (std::optional<StringRef> Spelling = getSubArchSpelling(Rec)) {
+    OS << "Triple::AMDGPUSubArch";
+    emitSpellingSuffix(OS, *Spelling);
+    return;
+  }
+
   emitSubArchForName(OS, Rec->getValueAsString("Name"));
 }
 
@@ -82,17 +102,21 @@ static bool isGenericTarget(const Record *Rec) {
   return !Rec->getValueAsListOfDefs("CoveredGPUs").empty();
 }
 
-// The gfx family for a canonical GPU record: the "-generic" family prefix (e.g.
-// "gfx9-4-generic" -> "gfx9"), or the name with its last two chars dropped for
-// a concrete GPU (e.g. "gfx90a" -> "gfx9", "gfx1030" -> "gfx10"). Empty for a
-// pseudo target.
-static StringRef getArchFamily(const Record *Rec) {
+// Emit the gfx family for a canonical GPU record: "gfx" + the ISA major version
+// (e.g. "gfx90a"/[9,0,10] -> "gfx9", "gfx1250"/[12,5,0] -> "gfx12").
+// Nothing for a pseudo target.
+static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   if (Rec->getValueAsBit("IsPseudoTarget"))
-    return "";
-  StringRef Name = Rec->getValueAsString("Name");
-  if (isGenericTarget(Rec))
-    return Name.take_front(Name.find('-'));
-  return Name.drop_back(2);
+    return;
+  OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
+}
+
+// Emit the canonical GPU name for a variant (empty for a non-variant GPU).
+static void emitBaseName(raw_ostream &OS, const Record *Rec) {
+  if (!getSubArchSpelling(Rec))
+    return;
+  std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
+  OS << "gfx" << V[0] << V[1] << hexdigit(V[2], /*LowerCase=*/true);
 }
 
 // Emit the ISA version tuple as "major, minor, stepping" wrapped in \p Open and
@@ -534,7 +558,14 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     emitFeatureBitset(OS, R, FeatureIdx);
     OS << ", ";
     emitIsaVersion(OS, R, '{', '}');
-    OS << ", " << Names.GetOrAddStringOffset(getArchFamily(R)) << "},\n";
+    SmallString<16> Family;
+    raw_svector_ostream FamilyOS(Family);
+    emitArchFamily(FamilyOS, R);
+    OS << ", " << Names.GetOrAddStringOffset(Family) << ", ";
+    SmallString<16> BaseName;
+    raw_svector_ostream BaseNameOS(BaseName);
+    emitBaseName(BaseNameOS, R);
+    OS << Names.GetOrAddStringOffset(BaseName) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
@@ -612,19 +643,29 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
       continue;
     SubArchEntry Entry;
     Entry.GPUName = E.Rec->getValueAsString("Name");
-    {
-      raw_svector_ostream SubArchOS(Entry.Suffix);
-      emitSubArchSuffix(SubArchOS, Entry.GPUName);
-    }
 
-    // A "gfxN-generic" target maps to the major-family subarch, so it takes the
-    // family triple name; a concrete GPU derives it from the ISA version.
     SmallString<16> TripleName;
     raw_svector_ostream TripleOS(TripleName);
-    if (isGenericTarget(E.Rec))
-      emitFamilySubArchTripleName(TripleOS, Entry.Suffix);
-    else
-      emitConcreteSubArchTripleName(TripleOS, E.Rec);
+
+    // An explicit subarch spelling supplies the enumerator suffix and triple
+    // name, rather than the name/ISA version.
+    if (std::optional<StringRef> Spelling = getSubArchSpelling(E.Rec)) {
+      raw_svector_ostream SubArchOS(Entry.Suffix);
+      emitSpellingSuffix(SubArchOS, *Spelling);
+      TripleOS << "amdgpu" << *Spelling;
+    } else {
+      {
+        raw_svector_ostream SubArchOS(Entry.Suffix);
+        emitSubArchSuffix(SubArchOS, Entry.GPUName);
+      }
+
+      // A "gfxN-generic" target maps to the major-family subarch, so it takes
+      // the family triple name; a concrete GPU derives it from the ISA version.
+      if (isGenericTarget(E.Rec))
+        emitFamilySubArchTripleName(TripleOS, Entry.Suffix);
+      else
+        emitConcreteSubArchTripleName(TripleOS, E.Rec);
+    }
     Entry.TripleNameOffset = Names.GetOrAddStringOffset(TripleName);
 
     Entries.push_back(std::move(Entry));

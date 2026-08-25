@@ -5844,30 +5844,41 @@ let Predicates = [SM90] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
+multiclass TCGEN05_ALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar prefix = "tcgen05.alloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned";
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
+
+  let isConvergent = true, Predicates = Pred in {
+    def _GENERIC : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".b32",
+        [(IntrinsicInAS<Intr, AddrSpaceGeneric> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+    def _SHARED : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".shared::cta.b32",
+        [(IntrinsicInAS<Intr, AddrSpaceShared> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+  }
+}
+defm TCGEN05_ALLOC_CG1           : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2           : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG1 : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1, 1>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG2 : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2, 1>;
+
+multiclass TCGEN05_DEALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
+
+  let isConvergent = true, Predicates = Pred in
+    def "" : BasicNVPTXInst<(outs), (ins B32:$tmem_addr, B32:$ncols),
+        "tcgen05.dealloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
+        [(Intr B32:$tmem_addr, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+}
+defm TCGEN05_DEALLOC_CG1           : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2           : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG1 : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1, 1>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG2 : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2, 1>;
+
 let isConvergent = true in {
 let Predicates = [hasTcgen05InstSupport] in {
-multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$dst, B32:$ncols),
-             "tcgen05.alloc.cta_group::" # num # ".sync.aligned" # AS # ".b32",
-             [(Intr addr:$dst, B32:$ncols)]>;
-}
-
-defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<"", "1", int_nvvm_tcgen05_alloc_cg1>;
-defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<"", "2", int_nvvm_tcgen05_alloc_cg2>;
-
-defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
-defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
-
-multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins B32:$tmem_addr, B32:$ncols),
-             "tcgen05.dealloc.cta_group::" # num # ".sync.aligned.b32",
-             [(Intr B32:$tmem_addr, B32:$ncols)]>;
-}
-defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
-defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
-
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
   def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }
@@ -6355,6 +6366,8 @@ foreach dim = ["x", "y", "z"] in {
 // tcgen05.mma Helpers
 //
 
+defvar CollectorUsages = ["discard", "lastuse", "fill", "use"];
+
 class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                      string CollectorUsage, string CollectorUsageB = "discard"> :
         NVPTXInst<(outs), (ins), "?", []>,
@@ -6467,11 +6480,11 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
+        foreach collector_usage_a = CollectorUsages in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = CollectorUsages in {
                 def : Tcgen05MMAInst<sparse, space, kind, cta_group,
                                     collector_usage_a, collector_usage_b,
                                     scale_input_d, ashift>;
@@ -6489,7 +6502,8 @@ foreach sparse = [0, 1] in {
 //
 
 class Tcgen05MMADisableOutputLaneTypeProfile<bit IsSparse, string ASpace,
-                                             int CtaGroup, bit IsScaleInputD>:
+                                             int CtaGroup, bit IsScaleInputD,
+                                             bit IsDecompressB>:
         SDTypeProfile<0, 0, []> {
   int DisableOutputLaneVecSize = !mul(4, CtaGroup);
 
@@ -6499,8 +6513,9 @@ class Tcgen05MMADisableOutputLaneTypeProfile<bit IsSparse, string ASpace,
     [i64, i32, i1],                             // b, idesc, enable_inp_d
     !if(IsSparse, [i32], []),                   // spmetadata
     !if(IsScaleInputD, [i64], []),              // scale_input_d
+    !if(IsDecompressB, [i32], []),              // decompress_b
     !listsplat(i32, DisableOutputLaneVecSize),  // disable_output_lane
-    [i32],                                      // kind
+    !if(IsDecompressB, [], [i32]),              // kind
     [i32],                                      // collector_usage_a
     [i32]                                       // collector_usage_b
   );
@@ -6510,14 +6525,16 @@ class Tcgen05MMADisableOutputLaneTypeProfile<bit IsSparse, string ASpace,
 
 class Tcgen05MMADisableOutputLaneSDNode<bit IsSparse, string ASpace,
                                         int CtaGroup, bit IsScaleInput,
-                                        bit IsAShift>:
+                                        bit IsAShift, bit IsDecompressB = 0>:
         SDNode<"NVPTXISD::TCGEN05_MMA"
                 # !if(IsSparse, "_SP", "")
                 # "_" # !toupper(ASpace)
                 # !if(IsScaleInput, "_SCALE_D", "")
                 # "_DISABLE_OUTPUT_LANE_CG" # CtaGroup
-                # !if(IsAShift, "_ASHIFT", ""),
-        Tcgen05MMADisableOutputLaneTypeProfile<IsSparse, ASpace, CtaGroup, IsScaleInput>,
+                # !if(IsAShift, "_ASHIFT", "")
+                # !if(IsDecompressB, "_DECOMPRESS_B", ""),
+        Tcgen05MMADisableOutputLaneTypeProfile<IsSparse, ASpace, CtaGroup,
+                                               IsScaleInput, IsDecompressB>,
                     [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 
 //
@@ -6600,11 +6617,11 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
+        foreach collector_usage_a = CollectorUsages in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = CollectorUsages in {
                 def :
                   Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
                                                   collector_usage_a, collector_usage_b,
@@ -6677,8 +6694,8 @@ foreach sparse = [0, 1] in {
     foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
       foreach scale_vec_size = ["", ".block16", ".block32"] in {
         foreach cta_group = [1, 2] in {
-          foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
-            foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+          foreach collector_usage_a = CollectorUsages in {
+            foreach collector_usage_b = CollectorUsages in {
               if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
                 def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
                                                scale_vec_size, collector_usage_a,
@@ -6742,7 +6759,7 @@ foreach sparse = [0, 1] in {
   foreach space = ["shared", "tensor"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach collector_buffer_b = [0, 1, 2, 3] in {
-        foreach collector_usage_op = ["discard", "fill", "use", "lastuse"] in {
+        foreach collector_usage_op = CollectorUsages in {
           foreach zero_col_mask = [0, 1] in {
               def : Tcgen05MMAWSInst<sparse, space, kind, collector_buffer_b,
                                      collector_usage_op, zero_col_mask>;
@@ -6752,6 +6769,146 @@ foreach sparse = [0, 1] in {
     } // kind
   } // space
 } // sparse
+
+class Tcgen05MMADecompressBase<string ASpace, string Kind, int CtaGroup,
+                               string CollectorUsageA, string CollectorUsageB> :
+        Tcgen05MMABase</*IsSparse=*/ 0, ASpace, Kind, CtaGroup,
+                       CollectorUsageA, CollectorUsageB> {
+  let Predicates = [hasRubinFamilySupport];
+  let KindVal = !cond(!eq(Kind, "f8f6f4") : 0);
+
+  dag DecompressBaseInOperandList = !con(BaseInOperandList,
+                                         (ins B32:$decompress_b));
+  dag DecompressBasePatternArgs = !con(BasePatternArgs, (ins i32:$decompress_b));
+
+  string DecompressBaseOperandsStr = BaseOperandsCommonStr
+                                     # ", [$decompress_b]"
+                                     # IDescStr;
+  string DecompressPrefix = Prefix # SpCtaKindStr;
+  string DecompressLutStr = ".decompress::lut::b";
+  string DecompressCollectorStr = ".collector::a::" # CollectorUsageA
+                                  # ".collector::b::" # CollectorUsageB;
+}
+
+class Tcgen05MMADecompressInst<string ASpace, string Kind, int CtaGroup,
+                               string CollectorUsageA,
+                               string CollectorUsageB> :
+    Tcgen05MMADecompressBase<ASpace, Kind, CtaGroup, CollectorUsageA,
+                             CollectorUsageB> {
+  Intrinsic Intrin = !cast<Intrinsic>(
+                        NVVM_TCGEN05_MMA_DECOMPRESS<ASpace, Kind>.record_name);
+
+  let InOperandList = DecompressBaseInOperandList;
+  let AsmString = DecompressPrefix
+                  # DecompressLutStr
+                  # DecompressCollectorStr
+                  # DecompressBaseOperandsStr
+                  # InputDStr
+                  # ";";
+
+  dag IntrinsicPattern = !foreach(tmp, DecompressBasePatternArgs, !subst(ins, Intrin, tmp));
+  dag FlagOperands = (Intrin (i32 CtaGroup), (i32 CollectorUsageAVal),
+                             (i32 CollectorUsageBVal));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+class Tcgen05MMADecompressDisableOutputLaneInst<string ASpace, string Kind,
+                                                int CtaGroup,
+                                                string CollectorUsageA,
+                                                string CollectorUsageB> :
+    Tcgen05MMADecompressBase<ASpace, Kind, CtaGroup, CollectorUsageA,
+                             CollectorUsageB> {
+  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode</*IsSparse=*/ 0,
+                                                    ASpace, CtaGroup,
+                                                    /*IsScaleInputD=*/ 0,
+                                                    /*IsAShift=*/ 0,
+                                                    /*IsDecompressB=*/ 1>;
+
+  // disable output lane
+  int DisableOutputLaneVecSize = !mul(4, CtaGroup);
+  list<string> DisableOutputLaneNames =
+      !foreach(x, !range(DisableOutputLaneVecSize),
+               "disable_output_lane" # x);
+
+  dag DisableOutputLaneIns = !dag(ins,
+                                  !listsplat(B32, DisableOutputLaneVecSize),
+                                  DisableOutputLaneNames);
+  dag DisableOutputLaneInput = !dag(Opcode,
+                                    !listsplat(i32, DisableOutputLaneVecSize),
+                                    DisableOutputLaneNames);
+
+  string DisableOutputLaneStr = "{{$"
+                                # !interleave(DisableOutputLaneNames, ", $")
+                                # "}}";
+
+  let InOperandList = !con(DecompressBaseInOperandList, DisableOutputLaneIns);
+  let AsmString = DecompressPrefix
+                  # DecompressLutStr
+                  # DecompressCollectorStr
+                  # DecompressBaseOperandsStr
+                  # ", " # DisableOutputLaneStr
+                  # InputDStr
+                  # ";";
+
+  dag IntrinsicPattern = !con(!foreach(tmp, DecompressBasePatternArgs, !subst(ins, Opcode, tmp)),
+                              DisableOutputLaneInput);
+  dag FlagOperands = (Opcode (i32 CollectorUsageAVal),
+                             (i32 CollectorUsageBVal));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+class Tcgen05MMADecompressBlockScaleInst<string ASpace, string Kind,
+                                         int CtaGroup, string CollectorUsageA,
+                                         string CollectorUsageB,
+                                         string ScaleVecSize> :
+    Tcgen05MMADecompressBase<ASpace, Kind, CtaGroup, CollectorUsageA,
+                             CollectorUsageB> {
+  Intrinsic Intrin = !cast<Intrinsic>(
+                        NVVM_TCGEN05_MMA_DECOMPRESS_BLOCKSCALE<
+                            ASpace, Kind, ScaleVecSize>.record_name);
+
+  let KindVal = !cond(!eq(Kind, "mxf8f6f4") : 0);
+  let InOperandList = !con(BaseInOperandList,
+                           (ins B32:$scale_a, B32:$scale_b,
+                                B32:$decompress_b));
+  let AsmString = DecompressPrefix
+                  # ".block_scale"
+                  # DecompressLutStr
+                  # ScaleVecSize
+                  # DecompressCollectorStr
+                  # DecompressBaseOperandsStr
+                  # ", [$scale_a], [$scale_b]"
+                  # InputDStr
+                  # ";";
+
+  dag IntrinsicPattern = !con(!foreach(tmp, BasePatternArgs, !subst(ins, Intrin, tmp)),
+                              (Intrin i32:$scale_a, i32:$scale_b, i32:$decompress_b));
+  dag FlagOperands = (Intrin (i32 CtaGroup),
+                             (i32 CollectorUsageAVal),
+                             (i32 CollectorUsageBVal));
+
+  let Pattern = [!con(IntrinsicPattern, FlagOperands)];
+}
+
+// tcgen05.mma decompress variants
+foreach space = ["tensor", "shared"] in {
+  foreach cta_group = [1, 2] in {
+    foreach collector_usage_a = CollectorUsages in {
+      foreach collector_usage_b = CollectorUsages in {
+        def : Tcgen05MMADecompressInst<space, "f8f6f4", cta_group,
+                                       collector_usage_a, collector_usage_b>;
+        def : Tcgen05MMADecompressDisableOutputLaneInst<
+                  space, "f8f6f4", cta_group, collector_usage_a,
+                  collector_usage_b>;
+        def : Tcgen05MMADecompressBlockScaleInst<
+                  space, "mxf8f6f4", cta_group, collector_usage_a,
+                  collector_usage_b, ".block32">;
+      } // collector_usage_b
+    } // collector_usage_a
+  } // cta_group
+} // space
 
 //
 // tensormap.replace Instructions

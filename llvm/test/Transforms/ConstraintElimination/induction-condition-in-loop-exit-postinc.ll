@@ -395,12 +395,10 @@ define void @latch_postinc_nuw_unsigned_lower_bound_folds(ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[IV]], 100
-; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[LT]] to i8
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 false to i8
 ; CHECK-NEXT:    store i8 [[Z]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -642,8 +640,7 @@ define void @header_postdec_negative_step_folds() {
 ; CHECK-NEXT:    call void @use(i1 [[ULE]])
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -687,8 +684,7 @@ define void @latch_postdec_negative_step_folds() {
 ; CHECK-NEXT:    call void @use(i1 [[ULE]])
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[SLE:%.*]] = icmp sle i8 [[IV]], 5
-; CHECK-NEXT:    call void @use(i1 [[SLE]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1

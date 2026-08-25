@@ -119,6 +119,23 @@ add_libc_test(
 )
 
 add_libc_test(
+  clock_getcpuclockid_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_getcpuclockid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_getcpuclockid
+    libc.src.time.clock_gettime
+    libc.src.unistd.getpid
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   clock_getres_test
   SUITE
     libc_time_unittests
@@ -141,6 +158,26 @@ add_libc_test(
     libc.hdr.time_macros
     libc.hdr.errno_macros
     libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  timer_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    timer_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_sigevent
+    libc.hdr.types.timer_t
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
+    libc.src.unistd.gettid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
