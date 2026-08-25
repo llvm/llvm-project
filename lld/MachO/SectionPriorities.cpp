@@ -24,6 +24,7 @@
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -398,24 +399,30 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   if (priorities.empty())
     return sectionPriorities;
 
-  auto addSym = [&](const Defined *sym) {
-    std::optional<int> symbolPriority = getSymbolPriority(sym);
-    if (!symbolPriority)
-      return;
-    auto *isec = sym->isec();
-    int &priority = sectionPriorities[isec];
-    priority = std::min(priority, *symbolPriority);
-    // Order file takes precedence over cold partitioning.
-    isec->isCold = false;
-  };
+  // getSymbolPriority() is expensive, and there are many object files and
+  // symbols, so parallelize getSymbolPriority() over object files.
+  std::vector<const ObjFile *> objFiles;
+  for (const InputFile *file : inputFiles)
+    if (auto *obj = dyn_cast<ObjFile>(file))
+      objFiles.push_back(obj);
+
+  std::vector<std::vector<std::pair<InputSection *, int>>> matches(
+      objFiles.size());
+  parallelFor(0, objFiles.size(), [&](size_t i) {
+    for (Symbol *sym : objFiles[i]->symbols)
+      if (auto *d = dyn_cast_or_null<Defined>(sym))
+        if (std::optional<int> priority = getSymbolPriority(d))
+          matches[i].emplace_back(d->isec(), *priority);
+  });
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(d);
-  }
+  for (const auto &fileMatches : matches)
+    for (auto [isec, symbolPriority] : fileMatches) {
+      int &priority = sectionPriorities[isec];
+      priority = std::min(priority, symbolPriority);
+      // Order file takes precedence over cold partitioning.
+      isec->isCold = false;
+    }
 
   return sectionPriorities;
 }
