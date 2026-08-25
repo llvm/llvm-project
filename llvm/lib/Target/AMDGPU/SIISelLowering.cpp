@@ -20945,9 +20945,10 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
            AS == AMDGPUAS::VGPR;
   }
-  // As above, after the pre-ISel combine. Without this a uniform index would
+  // As above, after the pre-ISel combine. Without these a uniform index would
   // make the loaded value look uniform and consumers would v_readfirstlane it.
   case AMDGPUISD::REG_LOAD:
+  case AMDGPUISD::REG_LOAD_BITS:
     return true;
   case ISD::CALLSEQ_END:
     return true;
