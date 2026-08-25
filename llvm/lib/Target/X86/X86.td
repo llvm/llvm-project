@@ -1012,7 +1012,6 @@ def ProcessorFeatures {
     TuningFastScalarFSQRT,
     TuningFastVectorFSQRT,
     TuningFast15ByteNOP,
-    TuningFastVariableCrossLaneShuffle,
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
