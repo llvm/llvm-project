@@ -7191,33 +7191,46 @@ defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
 // This thing just allows us to change the type of the node produced. The imm
 // value we want is already in V from SelectCVTFixedPointVec.
-def fixedpoint_vec_xform : SDNodeXForm<timm, [{
+def fixedpoint_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
-def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
-  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
+def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+                              GISDNodeXFormEquiv<fixedpoint_xform>;
+
+def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f16_i32>;
+def gi_fixedpoint_f16_i64 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f16_i64>;
+def gi_fixedpoint_f32_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f32_i32>;
+def gi_fixedpoint_f32_i64 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f32_i64>;
+def gi_fixedpoint_f64_i32 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f64_i32>;
+def gi_fixedpoint_f64_i64 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f64_i64>;
 
 multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWHri) $Rn, fixedpoint_f16_i32:$scale)>;
   def : Pat<(i64 (round (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXHri) $Rn, fixedpoint_f16_i64:$scale)>;
   }
   def : Pat<(i32 (round (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWSri) $Rn, fixedpoint_f32_i32:$scale)>;
   def : Pat<(i64 (round (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXSri) $Rn, fixedpoint_f32_i64:$scale)>;
   def : Pat<(i32 (round (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWDri) $Rn, fixedpoint_f64_i32:$scale)>;
   def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 
   def : Pat<(f32 (bitconvert (i32 (round (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
-      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
+      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
   def : Pat<(f64 (bitconvert (i64 (round (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
-      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
+      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
 }
 
 defm : FPToIntegerFmulPats<any_fp_to_sint, "FCVTZS">;
@@ -7282,23 +7295,23 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
 
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (to_int_sat (fmul f16:$Rn, fixedpoint_f16_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWHri) $Rn, fixedpoint_f16_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f16:$Rn, fixedpoint_f16_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXHri) $Rn, fixedpoint_f16_i64:$scale)>;
   }
   def : Pat<(i32 (to_int_sat (fmul f32:$Rn, fixedpoint_f32_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWSri) $Rn, fixedpoint_f32_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f32:$Rn, fixedpoint_f32_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXSri) $Rn, fixedpoint_f32_i64:$scale)>;
   def : Pat<(i32 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWDri) $Rn, fixedpoint_f64_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXDri) $Rn, fixedpoint_f64_i64:$scale)>;
   
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale), i32)))),
-            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale), i64)))),
-            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
 }
 
 defm : FPToIntegerSatPats<fp_to_sint_sat, "FCVTZS">;
@@ -9827,15 +9840,15 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
 
   // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
   def : Pat<(IVT (fp_to_sint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 }
 
 let Predicates = [HasNEON] in {
