@@ -1,0 +1,26 @@
+{
+  "O1": {
+    "opt_passes": "",
+    "opt_args": ["-O1"],
+    "llc_args": ["-O1"],
+    "replay_args": ["--repetitions", "20"]
+  },
+  "O2": {
+    "opt_passes": "",
+    "opt_args": ["-O2"],
+    "llc_args": ["-O2"],
+    "replay_args": ["--repetitions", "20"]
+  },
+  "O3": {
+    "opt_passes": "",
+    "opt_args": ["-O3"],
+    "llc_args": ["-O3"],
+    "replay_args": ["--repetitions", "20"]
+  },
+  "opt-custom-pipeline": {
+    "opt_passes": "no-op-module,cgscc(no-op-cgscc,function(no-op-function,loop(no-op-loop))),function(no-op-function,loop(no-op-loop))",
+    "opt_args": ["--debug-pass-manager"],
+    "llc_args": [],
+    "replay_args": ["--repetitions", "20"]
+  }
+}
