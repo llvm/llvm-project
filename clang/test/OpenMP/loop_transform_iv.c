@@ -224,3 +224,13 @@ void test_pointer_fuse(void) {
   // CHECK: store ptr [[Q_FINAL]], ptr %q
   // After fuse: p should point to arr1 + 10, q should point to arr2 + 15
 }
+
+void test_split(void) {
+  // CHECK-LABEL: define {{.*}} @test_split
+  int i;
+  #pragma omp split counts(5, omp_fill)
+  for (i = 0; i < 20; i++) {
+  }
+  // CHECK: store i32 20, ptr %i
+  // After loop: i should be 20 (loop-exit value per OpenMP 6.0 spec)
+}

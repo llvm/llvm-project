@@ -173,6 +173,8 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK1:       for.end11:
+// CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK1-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -228,6 +230,7 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP8:![0-9]+]]
 // CHECK1:       for.end8:
+// CHECK1-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -296,6 +299,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK1:       for.end11:
+// CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB12:%.*]] = sub nsw i32 [[TMP13]], 0
+// CHECK1-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
+// CHECK1-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
+// CHECK1-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
+// CHECK1-NEXT:    store i32 [[ADD15]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -393,6 +402,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK1:       for.end23:
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB24:%.*]] = sub nsw i32 [[TMP20]], 0
+// CHECK1-NEXT:    [[DIV25:%.*]] = sdiv i32 [[SUB24]], 1
+// CHECK1-NEXT:    [[MUL26:%.*]] = mul nsw i32 [[DIV25]], 1
+// CHECK1-NEXT:    [[ADD27:%.*]] = add nsw i32 0, [[MUL26]]
+// CHECK1-NEXT:    store i32 [[ADD27]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -467,6 +482,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK1:       for.end15:
+// CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB16:%.*]] = sub nsw i32 [[TMP15]], 0
+// CHECK1-NEXT:    [[DIV17:%.*]] = sdiv i32 [[SUB16]], 1
+// CHECK1-NEXT:    [[MUL18:%.*]] = mul nsw i32 [[DIV17]], 1
+// CHECK1-NEXT:    [[ADD19:%.*]] = add nsw i32 0, [[MUL18]]
+// CHECK1-NEXT:    store i32 [[ADD19]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -512,6 +533,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[DOTSPLIT_IV_0_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 // CHECK1:       for.end:
+// CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[TMP8]], 0
+// CHECK1-NEXT:    [[DIV5:%.*]] = sdiv i32 [[SUB4]], 1
+// CHECK1-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[DIV5]], 1
+// CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 0, [[MUL6]]
+// CHECK1-NEXT:    store i32 [[ADD7]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -609,6 +636,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK1:       for.end23:
+// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB24:%.*]] = sub i32 [[TMP20]], -2
+// CHECK1-NEXT:    [[DIV25:%.*]] = udiv i32 [[SUB24]], 1
+// CHECK1-NEXT:    [[MUL26:%.*]] = mul i32 [[DIV25]], 1
+// CHECK1-NEXT:    [[ADD27:%.*]] = add i32 -1, [[MUL26]]
+// CHECK1-NEXT:    store i32 [[ADD27]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -664,6 +697,7 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK1:       for.end8:
+// CHECK1-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -755,6 +789,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC18]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND11]], !llvm.loop [[LOOP24:![0-9]+]]
 // CHECK1:       for.end19:
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB20:%.*]] = sub nsw i32 [[TMP18]], 0
+// CHECK1-NEXT:    [[DIV21:%.*]] = sdiv i32 [[SUB20]], 1
+// CHECK1-NEXT:    [[MUL22:%.*]] = mul nsw i32 [[DIV21]], 1
+// CHECK1-NEXT:    [[ADD23:%.*]] = add nsw i32 0, [[MUL22]]
+// CHECK1-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -823,6 +863,12 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP26:![0-9]+]]
 // CHECK1:       for.end11:
+// CHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB12:%.*]] = sub i32 [[TMP13]], -1
+// CHECK1-NEXT:    [[DIV13:%.*]] = udiv i32 [[SUB12]], 2
+// CHECK1-NEXT:    [[MUL14:%.*]] = mul i32 [[DIV13]], 2
+// CHECK1-NEXT:    [[ADD15:%.*]] = add i32 0, [[MUL14]]
+// CHECK1-NEXT:    store i32 [[ADD15]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -900,6 +946,13 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP28:![0-9]+]]
 // CHECK1:       for.end15:
+// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK1-NEXT:    [[SUB16:%.*]] = sub nsw i32 [[TMP19]], 0
+// CHECK1-NEXT:    [[DIV17:%.*]] = sdiv i32 [[SUB16]], 1
+// CHECK1-NEXT:    [[MUL18:%.*]] = mul nsw i32 [[DIV17]], 1
+// CHECK1-NEXT:    [[SUB19:%.*]] = sub nsw i32 [[TMP18]], [[MUL18]]
+// CHECK1-NEXT:    store i32 [[SUB19]], ptr [[I]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1085,6 +1138,8 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK2:       for.end11:
+// CHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK2-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1264,6 +1319,13 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK2:       for.end15:
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB16:%.*]] = sub nsw i32 [[TMP19]], 0
+// CHECK2-NEXT:    [[DIV17:%.*]] = sdiv i32 [[SUB16]], 1
+// CHECK2-NEXT:    [[MUL18:%.*]] = mul nsw i32 [[DIV17]], 1
+// CHECK2-NEXT:    [[SUB19:%.*]] = sub nsw i32 [[TMP18]], [[MUL18]]
+// CHECK2-NEXT:    store i32 [[SUB19]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1338,6 +1400,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC14]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND7]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK2:       for.end15:
+// CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB16:%.*]] = sub nsw i32 [[TMP15]], 0
+// CHECK2-NEXT:    [[DIV17:%.*]] = sdiv i32 [[SUB16]], 1
+// CHECK2-NEXT:    [[MUL18:%.*]] = mul nsw i32 [[DIV17]], 1
+// CHECK2-NEXT:    [[ADD19:%.*]] = add nsw i32 0, [[MUL18]]
+// CHECK2-NEXT:    store i32 [[ADD19]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1435,6 +1503,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK2:       for.end23:
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB24:%.*]] = sub nsw i32 [[TMP20]], 0
+// CHECK2-NEXT:    [[DIV25:%.*]] = sdiv i32 [[SUB24]], 1
+// CHECK2-NEXT:    [[MUL26:%.*]] = mul nsw i32 [[DIV25]], 1
+// CHECK2-NEXT:    [[ADD27:%.*]] = add nsw i32 0, [[MUL26]]
+// CHECK2-NEXT:    store i32 [[ADD27]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1532,6 +1606,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC22]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND15]], !llvm.loop [[LOOP18:![0-9]+]]
 // CHECK2:       for.end23:
+// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB24:%.*]] = sub i32 [[TMP20]], -2
+// CHECK2-NEXT:    [[DIV25:%.*]] = udiv i32 [[SUB24]], 1
+// CHECK2-NEXT:    [[MUL26:%.*]] = mul i32 [[DIV25]], 1
+// CHECK2-NEXT:    [[ADD27:%.*]] = add i32 -1, [[MUL26]]
+// CHECK2-NEXT:    store i32 [[ADD27]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1577,6 +1657,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[DOTSPLIT_IV_0_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK2:       for.end:
+// CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB4:%.*]] = sub nsw i32 [[TMP8]], 0
+// CHECK2-NEXT:    [[DIV5:%.*]] = sdiv i32 [[SUB4]], 1
+// CHECK2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[DIV5]], 1
+// CHECK2-NEXT:    [[ADD7:%.*]] = add nsw i32 0, [[MUL6]]
+// CHECK2-NEXT:    store i32 [[ADD7]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1645,6 +1731,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK2:       for.end11:
+// CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB12:%.*]] = sub i32 [[TMP13]], -1
+// CHECK2-NEXT:    [[DIV13:%.*]] = udiv i32 [[SUB12]], 2
+// CHECK2-NEXT:    [[MUL14:%.*]] = mul i32 [[DIV13]], 2
+// CHECK2-NEXT:    [[ADD15:%.*]] = add i32 0, [[MUL14]]
+// CHECK2-NEXT:    store i32 [[ADD15]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1736,6 +1828,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC18]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND11]], !llvm.loop [[LOOP24:![0-9]+]]
 // CHECK2:       for.end19:
+// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB20:%.*]] = sub nsw i32 [[TMP18]], 0
+// CHECK2-NEXT:    [[DIV21:%.*]] = sdiv i32 [[SUB20]], 1
+// CHECK2-NEXT:    [[MUL22:%.*]] = mul nsw i32 [[DIV21]], 1
+// CHECK2-NEXT:    [[ADD23:%.*]] = add nsw i32 0, [[MUL22]]
+// CHECK2-NEXT:    store i32 [[ADD23]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1791,6 +1889,7 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP26:![0-9]+]]
 // CHECK2:       for.end8:
+// CHECK2-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1859,6 +1958,12 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND3]], !llvm.loop [[LOOP28:![0-9]+]]
 // CHECK2:       for.end11:
+// CHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK2-NEXT:    [[SUB12:%.*]] = sub nsw i32 [[TMP13]], 0
+// CHECK2-NEXT:    [[DIV13:%.*]] = sdiv i32 [[SUB12]], 1
+// CHECK2-NEXT:    [[MUL14:%.*]] = mul nsw i32 [[DIV13]], 1
+// CHECK2-NEXT:    [[ADD15:%.*]] = add nsw i32 0, [[MUL14]]
+// CHECK2-NEXT:    store i32 [[ADD15]], ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1914,6 +2019,7 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC7]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP30:![0-9]+]]
 // CHECK2:       for.end8:
+// CHECK2-NEXT:    store i32 10, ptr [[I]], align 4
 // CHECK2-NEXT:    ret void
 //
 //

@@ -3255,6 +3255,11 @@ void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
   // Emit the de-sugared statement (the split loops).
   OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
+
+  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
+  // original loop variable values after the loop-transformation construct.
+  if (auto *Finals = S.getFinals())
+    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPInterchangeDirective(

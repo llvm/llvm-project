@@ -6173,6 +6173,7 @@ class OMPSplitDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPSplitDirective(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -6189,6 +6190,8 @@ class OMPSplitDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *Finals) { Data->getChildren()[FinalsOffset] = Finals; }
+
 public:
   /// Create a new AST node representation for '#pragma omp split'.
   ///
@@ -6202,11 +6205,11 @@ public:
   /// \param TransformedStmt The loop nest after splitting, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
-  static OMPSplitDirective *Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation EndLoc,
-                                   ArrayRef<OMPClause *> Clauses,
-                                   unsigned NumLoops, Stmt *AssociatedStmt,
-                                   Stmt *TransformedStmt, Stmt *PreInits);
+  /// \param Finals     Loop variable finalization statements.
+  static OMPSplitDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp split' AST node for deserialization.
   ///
@@ -6224,6 +6227,9 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return finals statement (loop variable finalization).
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPSplitDirectiveClass;

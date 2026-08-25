@@ -144,3 +144,18 @@ void test_iterator_tile_nested(void) {
   // CHECK: call {{.*}} @_ZNK8IteratorplEl
   // CHECK: call void @llvm.memcpy{{.*}}(ptr align {{.*}} %j
 }
+
+void test_iterator_split(void) {
+  // CHECK-LABEL: define {{.*}} @_Z{{.*}}test_iterator_split
+  Container cont;
+  Iterator it = cont.begin();
+  #pragma omp split counts(3, omp_fill)
+  for (it = cont.begin(); it != cont.end(); ++it) {
+    *it = 42;
+  }
+  // CHECK: for.end{{.*}}:
+  // Iterator should be finalized to cont.end() (loop-exit value)
+  // CHECK: call {{.*}} @_ZNK8IteratormiERKS_
+  // CHECK: call {{.*}} @_ZNK8IteratorplEl
+  // CHECK: call void @llvm.memcpy{{.*}}(ptr align {{.*}} %it
+}
