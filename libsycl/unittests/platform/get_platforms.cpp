@@ -17,7 +17,7 @@
 
 #include <array>
 #include <cstdint>
-// #include <tuple>
+#include <tuple>
 
 using namespace sycl;
 using namespace ::testing;
@@ -83,8 +83,6 @@ protected:
   }
 
   void TearDown() override {
-    detail::getPlatformCache().clear();
-    detail::getOffloadTopologies() = {};
     mock::releaseDummyHandles(Devices[0], Devices[1], Devices[2], Platform);
   }
 
@@ -116,9 +114,7 @@ TEST_F(PlatformContextGroupTest, CreatesPlatformForEachContextGroup) {
         for (size_t I = 1; I < NumDevices; ++I)
           EXPECT_EQ(getContextGroup(ContextDevices[I]), ContextGroup);
 
-        *Context = mock::createDummyHandleWithData<ol_context_handle_t>(
-            reinterpret_cast<unsigned char *>(&ContextDevices[0]),
-            sizeof(ContextDevices[0]));
+        *Context = mock::createDummyHandle<ol_context_handle_t>();
         return OL_SUCCESS;
       });
 
