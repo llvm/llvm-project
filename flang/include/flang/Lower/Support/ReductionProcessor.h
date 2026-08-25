@@ -94,8 +94,9 @@ public:
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
-  /// Find a user-defined reduction that shadows a supported intrinsic
-  /// procedure reduction for \p type in \p scope.
+  /// Return the user-defined reduction that processReductionArguments would
+  /// bind instead of \p reductionIntrinsic for \p type in \p scope, or null if
+  /// it would bind the supported intrinsic.
   static const semantics::Symbol *findUserDefinedReductionForIntrinsic(
       const semantics::Scope &scope,
       const omp::clause::ProcedureDesignator &reductionIntrinsic,
