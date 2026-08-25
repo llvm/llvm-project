@@ -17,12 +17,10 @@
     !cir.struct<"NamedPlusZeroWidth" {bitfield !u8i, pad !cir.array<!u8i x 3>,
                                       bitfield !cir.array<!s32i x 0>,
                                       data !s32i, pad !cir.array<!u8i x 8>}>
-!rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
 !rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_UEmptyOnly = !cir.union<"UEmptyOnly" {data !rec_E}>
-!rec_UEmptyOver = !cir.union<"UEmptyOver" {data !rec_EOver, data !s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_UBitEmpty = !cir.union<"UBitEmpty" {data !cir.array<!rec_E x 4>, bitfield !u8i}>
+!rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_BitPad = !cir.struct<"BitPad" {bitfield !u8i, pad !cir.array<!u8i x 15>}>
@@ -123,27 +121,25 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UPadByte"
 
-  // A union with an empty member coerces wider than classic, so it is left NYI
-  // rather than accepted along with the empty class itself.
-  cir.func @take_union_empty_over(%arg0: !rec_UEmptyOver) {
+  // A bit-field access unit's width can understate the bit-fields it holds.
+  // Here the only member that spans the union (the empty-record array)
+  // supplies no bytes, so the unit alone would coerce to i8 where classic
+  // gives i32.
+  cir.func @take_bitfield_empty_span(%arg0: !rec_UBitEmpty) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UEmptyOver"
+  // CHECK: not yet implemented for type '!cir.union<"UBitEmpty"
 
-  // Deferred with it, though this one holds no data at all.
-  cir.func @take_union_empty_only(%arg0: !rec_UEmptyOnly) {
+  // An empty member does not exempt a union from the spanning rule above:
+  // as with take_short_storage_union, neither member reaches the union's
+  // 4 declared bytes.
+  cir.func @take_empty_narrow_union(%arg0: !rec_UEmptyNarrow) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UEmptyOnly"
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
 
-  // An array of empty records supplies no bytes the union coercion can read.
-  cir.func @take_union_arr_empty(%arg0: !rec_UArrEmpty) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UArrEmpty"
   // A bit-field access unit is narrower than the declaration it holds, so
   // classifying around this record's padding would coerce to i8 where classic
   // CodeGen widens to i64.

@@ -79,7 +79,8 @@ namespace {
 // vectors, a padded record reached through a named bit-field access unit, a
 // record holding an empty-for-ABI member that occupies bytes or a zero-sized
 // one off its own alignment, a union no member of which spans its declared
-// size, and a union with an empty-record member are reported NYI by
+// size, and a union whose only spanning member is a bit-field access unit
+// are reported NYI by
 // classifyX86_64Function so an unsupported signature fails the pass instead of
 // being misclassified.
 //===----------------------------------------------------------------------===//
@@ -227,12 +228,15 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
-        // Classic sizes a union's coercion from the bytes that hold data, so an
-        // empty member contributes none.  The library instead reduces the union
-        // to one member, picked by alignment and then by size, and coerces from
-        // that member: an empty one can win either comparison and widen the
-        // coercion past what classic emits.
-        if (llvm::any_of(members, memberIsEmptyRecord))
+        // A bit-field access unit's width can understate the bit-fields it
+        // holds.  When the union has such a unit, a spanning member is not
+        // enough on its own: it must also supply data, either the unit
+        // itself or another member.
+        llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
+        if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
+            !llvm::any_of(members, [&](mlir::Type m) {
+              return spansRecord(m) && !memberIsEmptyRecord(m);
+            }))
           return false;
       }
     } else if (recTy.getPadded() && reachesNamedBitFieldUnit(recTy)) {
@@ -384,9 +388,14 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // the whole union rather than just the member the classifier reduces
         // it to.
         if (recTy.isUnion()) {
-          for (mlir::Type fieldTy : recTy.getMembers())
-            fields.push_back(llvm::abi::FieldInfo(
-                mapCIRType(fieldTy, typeMapper, dl, modOp)));
+          // Only data members are classified.  An unnamed bit-field's storage
+          // is a member here but contributes no class in classic CodeGen, so
+          // mapping it would pass an argument classic drops.
+          for (auto [fieldTy, kind] :
+               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
+            if (cir::holdsDataForABI(fieldTy, kind))
+              fields.push_back(llvm::abi::FieldInfo(
+                  mapCIRType(fieldTy, typeMapper, dl, modOp)));
           return tb.getUnionType(fields, sizeBits, align,
                                  llvm::abi::StructPacking::Default, flags);
         }
