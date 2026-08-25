@@ -3752,6 +3752,58 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
 
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  // Attach a range return attribute describing the result of vsetvli/vsetvlimax
+  // so generic value analyses can reason about it. The verifier guarantees an
+  // XLen result and constant VSEW/VLMUL encoding a valid vtype, so no defensive
+  // validation is needed here.
+  if (II.getIntrinsicID() == Intrinsic::riscv_vsetvli ||
+      II.getIntrinsicID() == Intrinsic::riscv_vsetvlimax) {
+    bool HasAVL = II.getIntrinsicID() == Intrinsic::riscv_vsetvli;
+    unsigned Offset = HasAVL ? 1 : 0;
+    unsigned Width = II.getType()->getScalarSizeInBits();
+    ConstantRange VLenRange(APInt(Width, ST->getRealMinVLen()),
+                            APInt(Width, ST->getRealMaxVLen()) + 1);
+
+    uint64_t VSEW = cast<ConstantInt>(II.getArgOperand(Offset))->getZExtValue();
+    auto VLMUL = static_cast<RISCVVType::VLMUL>(
+        cast<ConstantInt>(II.getArgOperand(Offset + 1))->getZExtValue());
+    unsigned SEW = RISCVVType::decodeVSEW(VSEW);
+    unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
+
+    // VLMAX = VLEN / (SEW / LMUL), clamped to >= 1 for any usable vtype.
+    ConstantRange VLMAXRange =
+        VLenRange.udiv(ConstantRange(APInt(Width, Ratio)))
+            .umax(ConstantRange(APInt(Width, 1)));
+
+    // vsetvlimax returns exactly VLMAX; vsetvli returns vl with
+    // 0 <= vl <= min(AVL, VLMAX). vl == AVL only when AVL <= the smallest
+    // possible VLMAX; otherwise vl can shrink below VLMAX (to 0 at runtime), so
+    // only the VLMAX upper bound is sound.
+    ConstantRange VLRange = VLMAXRange;
+    if (HasAVL) {
+      APInt MaxVL = VLMAXRange.getUnsignedMax();
+      if (auto *AVL = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+        const APInt &C = AVL->getValue();
+        if (C.ule(VLMAXRange.getUnsignedMin()))
+          VLRange = ConstantRange(C);
+        else
+          VLRange = ConstantRange::getNonEmpty(APInt::getZero(Width),
+                                               (C.ult(MaxVL) ? C : MaxVL) + 1);
+      } else {
+        VLRange = ConstantRange::getNonEmpty(APInt::getZero(Width), MaxVL + 1);
+      }
+    }
+
+    ConstantRange OldRange =
+        II.getRange().value_or(ConstantRange::getFull(Width));
+    ConstantRange NewRange = VLRange.intersectWith(OldRange);
+    if (NewRange != OldRange) {
+      II.addRangeRetAttr(NewRange);
+      return &II;
+    }
+    return {};
+  }
+
   // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale
   // the vmv.v.x, enabling removal of the bitcast. The transform helps avoid
   // creating redundant masks.
