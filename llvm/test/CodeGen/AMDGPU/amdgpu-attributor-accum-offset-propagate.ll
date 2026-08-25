@@ -3,30 +3,32 @@
 
 ; Consolidated tests for AGPR/VGPR split propagation by the AMDGPU attributor.
 ; The AGPR demand is propagated *up* the call graph (callee -> caller) via
-; AAAMDGPUMinAGPRAlloc and emitted as "amdgpu-agpr-alloc". The register budget
-; is propagated *down* (caller -> callee) via AAAMDGPURegisterBudget and
-; emitted as "amdgpu-register-budget", which caps a callee's registers so the
-; split the caller was compiled with is runnable with all callees. The
-; attribute is always a "VGPRs,AGPRs" pair of absolute ceilings, and a function
-; reachable from several callers takes the smallest ceiling on each axis
-; independently. The total budget is 128 here (the default flatblocksize/wavesperEU give 128 for 512 register file), so an unknown/indirect caller,
-; having itself been pessimised to a half split, contributes 64,64.
+; AAAMDGPUMinAGPRAlloc and emitted as "amdgpu-agpr-alloc". The accum_offset a
+; kernel was compiled with is propagated *down* (caller -> callee) via
+; AAAMDGPUAccumOffset and emitted as "amdgpu-accum-offset", which caps a
+; callee's architectural VGPRs so the boundary the caller was compiled with is
+; runnable with all callees.
+;
+; The total budget is 128 here (the default flat-work-group-size and
+; waves-per-eu give 128 out of a 512 register file), so an unknown or indirect
+; caller, having itself been pessimised to a half split, contributes 64.
 ;
 ; Each scenario below is an independent call-graph component (its own copy of
 ; the @*_use_most sink) so the scenarios converge independently.
 
 ;; ===========================================================================
 ;; Scenario 1 (direct): a kernel directly calls an AGPR-hungry leaf and an
-;; all-VGPR leaf. The all-VGPR leaf must be pulled down to the kernel's split
-;; (78,50) so the register allocator cannot grab the whole VGPR file.
+;; all-VGPR leaf. The all-VGPR leaf must be pulled down to the kernel's boundary
+;; (78) so the register allocator cannot grab the whole VGPR file.
 ;;
 ;;       A
 ;;     /   \
 ;;    B     C
 ;;
-;;   A = k_direct           : actual agpr - 0, agpr attribute - 50 register-budget 78,50
-;;   B = direct_leaf_hivgpr : actual agpr - 0, agpr attribute - 0 register-budget 78,50
-;;   C = direct_leaf_agpr   : actual agpr - 50, agpr attribute - 50 register -budget 78,50
+;;   A = k_direct           : actual agpr 0,  agpr attribute 50, accum-offset 78
+;;   B = direct_leaf_hivgpr : actual agpr 0,  agpr attribute 0,  accum-offset 78
+;;   C = direct_leaf_agpr   : actual agpr 50, agpr attribute 50, accum-offset 78
+;;
 ;; ===========================================================================
 
 ; Shrink result attribute list by preventing use of most attributes.
@@ -89,7 +91,7 @@ define internal void @direct_leaf_agpr() {
 }
 
 ; An all-VGPR leaf with no AGPR references of its own. It must be pulled to the
-; caller's split (78,50) via downward propagation rather than staying unbounded.
+; caller's boundary (78) by downward propagation rather than staying unbounded.
 define internal void @direct_leaf_hivgpr(ptr %p) {
 ; CHECK-LABEL: define internal void @direct_leaf_hivgpr(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
@@ -122,17 +124,18 @@ define amdgpu_kernel void @k_direct(ptr %p) {
 ;; Scenario 2 (indirect): the only kernel makes an unknown indirect call, so its
 ;; AGPR demand is unbounded and it ends up with no attributes at all.
 ;; With "amdgpu-agpr-alloc" absent the consumer falls back to the same half split.
-;; The indirectly-reachable leaves are externally callable, so not all of their
-;; callers are known and they inherit the half-split budget an unknown caller
-;; would impose Upward real demand is still annotated 
+;; The indirectly-reachable leaves are externally callable, so no known caller
+;; contributes a boundary and they are left without the attribute. Its absence
+;; means the same half split an unknown caller would impose. Upward real demand
+;; is still annotated.
 ;;
 ;;       A
 ;;     /   \
 ;;    B     C
 ;;
-;;   C = indirect_leaf_agpr                       : real agpr 50, no register-budget attribute -> 64,64
-;;   B = indirect_leaf_hivgpr                     : real agpr 0, no register-budget attribute -> 64,64
-;;   A = k_indirect                               : no attributes -> 64,64
+;;   C = indirect_leaf_agpr   : real agpr 50, no accum-offset attribute -> 64
+;;   B = indirect_leaf_hivgpr : real agpr 0,  no accum-offset attribute -> 64
+;;   A = k_indirect           : no attributes                           -> 64
 ;; ===========================================================================
 
 define internal void @indirect_use_most() {
@@ -221,12 +224,11 @@ define amdgpu_kernel void @k_indirect() {
 }
 
 ;; ===========================================================================
-;; Scenario 3 (cycle): This scenario show how a cycle affects the up then 
-;; down propogation
-;;   use_most_hi            : real 0,  register-budget 78,50
-;;   ping / pong / k_mutual : real 50, register-budget 78,50
-;;   use_most_lo            : real 0,  register-budget 96,32
-;;   self_rec / k_self      : real 32, register-budget 96,32
+;; Scenario 3 (cycle): shows how a cycle affects the up-then-down propagation.
+;;   use_most_hi            : real 0,  accum-offset 78
+;;   ping / pong / k_mutual : real 50, accum-offset 78
+;;   use_most_lo            : real 0,  accum-offset 96
+;;   self_rec / k_self      : real 32, accum-offset 96
 ;; ===========================================================================
 
 define internal void @use_most_hi() {
@@ -403,22 +405,25 @@ define amdgpu_kernel void @k_self(i1 %c) {
 ;;   shared_k2 -> shared_f2 (requires no AGPRs)
 ;; Only real AGPR demand propagates *up*, so shared_k2 (which reaches only
 ;; shared_f2) must NOT inherit an AGPR reservation from shared_k1 just because
-;; they share shared_f2. shared_f2 still gets a downward budget
-;; (amdgpu-register-budget) without claiming a real demand that leaks to k2.
+;; they share shared_f2. shared_f2 still gets a downward boundary
+;; (amdgpu-accum-offset) without claiming a real demand that leaks to k2.
 ;;
-;;      A   B   
-;;     / \ /  
-;;    C   D   
-;;   A = shared_k1  : real 0, register-budget 78,50
-;;   B = shared_k2  : real 0, register-budget 128,0
-;;   C = shared_f1  : real 50, register-budget 78,50
-;;   D = shared_f2  : real 0, register-budget 78,0
-;;   
+;;      A   B
+;;     / \ /
+;;    C   D
+;;   A = shared_k1 : real 0,  accum-offset 78
+;;   B = shared_k2 : real 0,  accum-offset 128
+;;   C = shared_f1 : real 50, accum-offset 78
+;;   D = shared_f2 : real 0,  accum-offset 78
+;;
+;; D takes the lower of its two callers' boundaries. Its AGPR ceiling is pinned
+;; to its own requirement of 0 by getMaxNumVectorRegs, so B stays within budget
+;; (128 arch + 0 AGPR) even though D runs under B's higher boundary.
 ;; ===========================================================================
 
 define internal void @shared_use_most() {
 ; CHECK-LABEL: define internal void @shared_use_most(
-; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -474,7 +479,7 @@ define internal void @shared_f1() {
 ; shared_f2: shared between shared_k1 and shared_k2, needs no AGPRs of its own.
 define internal void @shared_f2(ptr %p) {
 ; CHECK-LABEL: define internal void @shared_f2(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
 ; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
 ; CHECK-NEXT:    call void @shared_use_most()
@@ -502,7 +507,7 @@ define amdgpu_kernel void @shared_k1(ptr %p) {
 ; shared_k2 reaches only shared_f2 and must not inherit shared_k1's split.
 define amdgpu_kernel void @shared_k2(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @shared_k2(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @shared_f2(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -518,17 +523,17 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
 ;;      \ /
 ;;       C
 ;;
-;;   A = @noroom_kernel_agpr16 : agpr 16 vgpr 128 - 16 -> 112,16
-;;   B = @noroom_kernel_noagpr : agpr 0  vgpr 128 - 0  -> 128,0
-;;   C = @noroom_shared          112,16 | 128,0        -> 112,0
+;;   A = @noroom_kernel_agpr16 : agpr 16, boundary 128 - 16 -> 112
+;;   B = @noroom_kernel_noagpr : agpr 0,  boundary 128 - 0  -> 128
+;;   C = @noroom_shared          min(112, 128)             -> 112
 ;;
-;; C may use 112 VGPRs and 128 - 128 = 0 AGPRs: any AGPR use would push it past
-;; the 128-register limit when it runs under B's accum_offset.
+;; C may use 112 arch VGPRs and 0 AGPRs: any AGPR use would push it past the
+;; 128-register limit when it runs under B's accum_offset.
 ;; ===========================================================================
 
 define internal void @noroom_use_most() {
 ; CHECK-LABEL: define internal void @noroom_use_most(
-; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -572,7 +577,7 @@ define internal void @noroom_use_most() {
 ; ceiling from B.
 define internal void @noroom_shared() {
 ; CHECK-LABEL: define internal void @noroom_shared(
-; CHECK-SAME: ) #[[ATTR8]] {
+; CHECK-SAME: ) #[[ATTR7]] {
 ; CHECK-NEXT:    call void @noroom_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -582,7 +587,7 @@ define internal void @noroom_shared() {
 
 define amdgpu_kernel void @noroom_kernel_agpr16() {
 ; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_agpr16(
-; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @noroom_shared()
 ; CHECK-NEXT:    ret void
@@ -594,7 +599,7 @@ define amdgpu_kernel void @noroom_kernel_agpr16() {
 
 define amdgpu_kernel void @noroom_kernel_noagpr() {
 ; CHECK-LABEL: define amdgpu_kernel void @noroom_kernel_noagpr(
-; CHECK-SAME: ) #[[ATTR7]] {
+; CHECK-SAME: ) #[[ATTR6]] {
 ; CHECK-NEXT:    call void @noroom_shared()
 ; CHECK-NEXT:    ret void
 ;
@@ -603,24 +608,27 @@ define amdgpu_kernel void @noroom_kernel_noagpr() {
 }
 
 ;; ;; ===========================================================================
-;; Scenario 6: both kernels reserve some AGPRs, so the shared callee keeps the
-;; headroom common to both.
+;; Scenario 6: both kernels reserve some AGPRs, so both boundaries are below the
+;; budget and the shared callee takes the lower one.
 ;;
 ;;     A   B
 ;;      \ /
 ;;       C
 ;;
-;;   A = @room_kernel_agpr16 : 16 AGPRs 128 - 16 -> 112,16
-;;   B = @room_kernel_agpr12 : 12 AGPRs 128 - 12 -> 116,12
-;;   C = @room_shared          112,16 | 116,12 -> 112,12
+;;   A = @room_kernel_agpr16 : 16 AGPRs, boundary 128 - 16 -> 112
+;;   B = @room_kernel_agpr12 : 12 AGPRs, boundary 128 - 12 -> 116
+;;   C = @room_shared          min(112, 116)              -> 112
 ;;
-;; C may use 112 VGPRs and 128 - 116 = 12 AGPRs, which it could spill into.
-;; Note this is the smaller of the two kernels' reservations, not the larger.
+;; C may use 112 arch VGPRs. Its AGPR ceiling is its own requirement of 0 rather
+;; than the 12 AGPRs both kernels happen to have headroom for, so it cannot use
+;; AGPRs as spill space. That headroom is only recoverable by propagating a
+;; second, independent AGPR ceiling, which this attribute deliberately does not
+;; carry.
 ;; ===========================================================================
 
 define internal void @room_use_most() {
 ; CHECK-LABEL: define internal void @room_use_most(
-; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR7]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -662,7 +670,7 @@ define internal void @room_use_most() {
 
 define internal void @room_shared() {
 ; CHECK-LABEL: define internal void @room_shared(
-; CHECK-SAME: ) #[[ATTR10]] {
+; CHECK-SAME: ) #[[ATTR7]] {
 ; CHECK-NEXT:    call void @room_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -672,7 +680,7 @@ define internal void @room_shared() {
 
 define amdgpu_kernel void @room_kernel_agpr16() {
 ; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr16(
-; CHECK-SAME: ) #[[ATTR9]] {
+; CHECK-SAME: ) #[[ATTR8]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @room_shared()
 ; CHECK-NEXT:    ret void
@@ -684,7 +692,7 @@ define amdgpu_kernel void @room_kernel_agpr16() {
 
 define amdgpu_kernel void @room_kernel_agpr12() {
 ; CHECK-LABEL: define amdgpu_kernel void @room_kernel_agpr12(
-; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @room_shared()
 ; CHECK-NEXT:    ret void
@@ -700,15 +708,15 @@ define amdgpu_kernel void @room_kernel_agpr12() {
 ;;       A
 ;;     /   \
 ;;    B     C
-;;   A = @fanout_kernel : agpr 16 | vgpr 128 - 16 = 112,16
+;;   A = @fanout_kernel : agpr 16, boundary 128 - 16 -> 112
 ;;   B = @fanout_agpr   : clobbers a15, so 16 flows up into A
-;;   C = @fanout_noagpr : uses no AGPRs of its own, but inheriets 112,16
+;;   C = @fanout_noagpr : uses no AGPRs of its own, but inherits the boundary 112
 ;;
 ;; ===========================================================================
 
 define internal void @fanout_use_most() {
 ; CHECK-LABEL: define internal void @fanout_use_most(
-; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR7]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [256 x i8], align 1, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -750,7 +758,7 @@ define internal void @fanout_use_most() {
 
 define internal void @fanout_sink() {
 ; CHECK-LABEL: define internal void @fanout_sink(
-; CHECK-SAME: ) #[[ATTR12]] {
+; CHECK-SAME: ) #[[ATTR7]] {
 ; CHECK-NEXT:    call void @fanout_use_most()
 ; CHECK-NEXT:    ret void
 ;
@@ -760,7 +768,7 @@ define internal void @fanout_sink() {
 
 define internal void @fanout_agpr() {
 ; CHECK-LABEL: define internal void @fanout_agpr(
-; CHECK-SAME: ) #[[ATTR9]] {
+; CHECK-SAME: ) #[[ATTR8]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @fanout_sink()
 ; CHECK-NEXT:    ret void
@@ -772,7 +780,7 @@ define internal void @fanout_agpr() {
 
 define internal void @fanout_noagpr(ptr %p) {
 ; CHECK-LABEL: define internal void @fanout_noagpr(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR12]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR7]] {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile <128 x i32>, ptr [[P]], align 512
 ; CHECK-NEXT:    store volatile <128 x i32> [[V]], ptr [[P]], align 512
 ; CHECK-NEXT:    call void @fanout_sink()
@@ -786,7 +794,7 @@ define internal void @fanout_noagpr(ptr %p) {
 
 define amdgpu_kernel void @fanout_kernel(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @fanout_kernel(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR9]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    call void @fanout_agpr()
 ; CHECK-NEXT:    call void @fanout_noagpr(ptr [[P]])
 ; CHECK-NEXT:    ret void
@@ -796,19 +804,16 @@ define amdgpu_kernel void @fanout_kernel(ptr %p) {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="76,52" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" "amdgpu-register-budget"="76,52" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="78" "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
 ; CHECK: attributes #[[ATTR3]] = { "amdgpu-agpr-alloc"="50" "amdgpu-no-wwm" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="96,32" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="32" "amdgpu-no-wwm" "amdgpu-register-budget"="96,32" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="76,0" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,0" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-agpr-alloc"="16" "amdgpu-no-wwm" "amdgpu-register-budget"="112,16" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,12" }
-; CHECK: attributes #[[ATTR11]] = { "amdgpu-agpr-alloc"="12" "amdgpu-no-wwm" "amdgpu-register-budget"="116,12" }
-; CHECK: attributes #[[ATTR12]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="112,16" }
-; CHECK: attributes #[[ATTR13:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR14:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-accum-offset"="96" "amdgpu-agpr-alloc"="32" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-accum-offset"="112" "amdgpu-agpr-alloc"="16" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-accum-offset"="116" "amdgpu-agpr-alloc"="12" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR10:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.

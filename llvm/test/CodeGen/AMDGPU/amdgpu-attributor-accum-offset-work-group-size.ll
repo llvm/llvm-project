@@ -2,7 +2,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=amdgpu-attributor %s | FileCheck -check-prefixes=CHECK,GFX90A %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=amdgpu-attributor %s | FileCheck -check-prefixes=CHECK,GFX942 %s
 
-; Why the downward propagation carries a VGPR budget rather than an AGPR count.
+; Why the downward propagation carries an accum_offset rather than an AGPR count.
 ;
 ; The size of the vector register file a wave may use is not a constant: it
 ; falls out of the occupancy needed to satisfy the kernel's launch bounds. On
@@ -14,10 +14,10 @@
 ; range, so no attribute is emitted on the callee).
 ;
 ; An AGPR count alone cannot be propagated across that difference, because the
-; same count means different things under different totals. Folding the work
-; group size and the AGPR requirement together into a single VGPR budget per
-; kernel makes the number self-contained, so it can be safely merged in the
-; callee.
+; same count means different things under different totals. An accum_offset is
+; an absolute position in the register file, so folding the work group size and
+; the AGPR requirement together into one boundary per kernel makes the number
+; self-contained and safe to merge in the callee.
 ;
 ;     A   B
 ;      \ /
@@ -25,14 +25,14 @@
 
 ;; ===========================================================================
 ;; Scenario 1: the AGPR-hungry kernel is the one with the *larger* register
-;; file, so its budget is still tighter than the other kernel's.
+;; file, so its boundary is still lower than the other kernel's.
 ;;
 ;;   A = @wgs_kernel_512_agpr130 : [1,512],  agpr 130 -> 256 - 130 = 126
 ;;   B = @wgs_kernel_1024_noagpr : [1,1024], agpr 0   -> 128 -   0 = 128
-;;   C = @wgs_shared                                  -> 126,128
+;;   C = @wgs_shared               min(126, 128)      -> 126
 ;;
-;; C decodes to a ceiling of 126 VGPRs, and 0 AGPRs because its own total is
-;; 128 and the largest budget it must fit under is already 128.
+;; C is held to 126 arch VGPRs even though its own total is 128, because it has
+;; to leave A's 130 AGPRs untouched in A's 256-register file.
 ;; ===========================================================================
 
 ; C. Also serves as the sink that keeps the inferred attribute list short by
@@ -105,16 +105,16 @@ define amdgpu_kernel void @wgs_kernel_1024_noagpr() #1 {
 }
 
 ;; ===========================================================================
-;; Scenario 2: the wide-launch kernel's budget exceeds the narrow-launch
-;; kernel's *total*, so decoding the AGPR ceiling has to saturate.
+;; Scenario 2: the boundary of the kernel with the larger register file sits
+;; above the other kernel's whole total, so it constrains nothing.
 ;;
 ;;   A = @sat_kernel_512_agpr56 : [1,512],  agpr 56 -> 256 - 56 = 200
 ;;   B = @sat_kernel_1024_noagpr: [1,1024], agpr 0  -> 128 -  0 = 128
-;;   C = @sat_shared                                -> 128,200
+;;   C = @sat_shared              min(200, 128)     -> 128
 ;;
-;; C decodes to a ceiling of 128 VGPRs. Its own total is 128 and the largest
-;; budget it must fit under is 200, so the AGPR ceiling saturates at 0 rather
-;; than going negative.
+;; C keeps a ceiling of 128 arch VGPRs, which is its own total anyway, so A's
+;; boundary of 200 is inert. The 56 AGPRs A reserves are still safe: C uses no
+;; AGPRs of its own, so under A the pair peaks at 128 + 56 <= 256.
 ;; ===========================================================================
 
 define internal void @sat_shared() {
@@ -184,19 +184,19 @@ define amdgpu_kernel void @sat_kernel_1024_noagpr() #1 {
 attributes #0 = { "amdgpu-flat-work-group-size"="1,512" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,1024" }
 ;.
-; GFX90A: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="124,0" "target-cpu"="gfx90a" }
-; GFX90A: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="130" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "amdgpu-register-budget"="124,132" "target-cpu"="gfx90a" }
-; GFX90A: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" "target-cpu"="gfx90a" }
-; GFX90A: attributes #[[ATTR3]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" "target-cpu"="gfx90a" }
-; GFX90A: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="56" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "amdgpu-register-budget"="200,56" "target-cpu"="gfx90a" }
+; GFX90A: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; GFX90A: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="130" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; GFX90A: attributes #[[ATTR2]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; GFX90A: attributes #[[ATTR3]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; GFX90A: attributes #[[ATTR4]] = { "amdgpu-accum-offset"="200" "amdgpu-agpr-alloc"="56" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
 ; GFX90A: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx90a" }
 ; GFX90A: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx90a" }
 ;.
-; GFX942: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="124,0" "target-cpu"="gfx942" }
-; GFX942: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="130" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "amdgpu-register-budget"="124,132" "target-cpu"="gfx942" }
-; GFX942: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" "target-cpu"="gfx942" }
-; GFX942: attributes #[[ATTR3]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "amdgpu-register-budget"="128,0" "target-cpu"="gfx942" }
-; GFX942: attributes #[[ATTR4]] = { "amdgpu-agpr-alloc"="56" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "amdgpu-register-budget"="200,56" "target-cpu"="gfx942" }
+; GFX942: attributes #[[ATTR0]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "target-cpu"="gfx942" }
+; GFX942: attributes #[[ATTR1]] = { "amdgpu-accum-offset"="126" "amdgpu-agpr-alloc"="130" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "target-cpu"="gfx942" }
+; GFX942: attributes #[[ATTR2]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-wwm" "target-cpu"="gfx942" }
+; GFX942: attributes #[[ATTR3]] = { "amdgpu-accum-offset"="128" "amdgpu-agpr-alloc"="0" "amdgpu-no-wwm" "target-cpu"="gfx942" }
+; GFX942: attributes #[[ATTR4]] = { "amdgpu-accum-offset"="200" "amdgpu-agpr-alloc"="56" "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-wwm" "target-cpu"="gfx942" }
 ; GFX942: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) "target-cpu"="gfx942" }
 ; GFX942: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "target-cpu"="gfx942" }
 ;.
