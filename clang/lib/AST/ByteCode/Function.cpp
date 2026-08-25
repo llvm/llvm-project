@@ -66,3 +66,14 @@ SourceInfo Function::getSource(CodePtr PC) const {
   unsigned Offset = PC - getCodeBegin();
   return SrcMap.findSourceForOffset(Offset);
 }
+
+std::optional<ExceptionTableEntry>
+Function::findCatchHandler(unsigned CodeOffset, const Type *Ty,
+                           const ASTContext &ASTCtx) const {
+  for (const auto &E : ExceptionTable) {
+    if (CodeOffset >= E.CodeStart && CodeOffset <= E.CodeEnd &&
+        E.canCatch(Ty, ASTCtx))
+      return E;
+  }
+  return std::nullopt;
+}

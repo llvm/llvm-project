@@ -57,6 +57,8 @@ public:
     }
     shrink(aligned_size<T>());
   }
+
+  /// Like discard(), but not type-aware. Avoid using this.
   void discardSlow();
 
   /// Returns a reference to the value on the top of the stack.

@@ -87,6 +87,8 @@ bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
                            const Block *B, Lifetime LT = Lifetime::Started,
                            AccessKinds AK = AK_Read);
 
+bool diagnoseUncaughtException(InterpState &S, CodePtr OpPC);
+
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -152,6 +154,9 @@ bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
                             uint32_t FPOI);
 bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
                              uint32_t FPOI);
+
+bool Throw(InterpState &S, CodePtr OpPC);
+bool ReThrow(InterpState &S, CodePtr OpPC);
 
 enum class ShiftDir { Left, Right };
 
@@ -325,6 +330,83 @@ PRESERVE_NONE inline bool RetVoid(InterpState &S) {
   S.PC = S.Current->getRetPC();
   InterpFrame::free(S.Current);
   S.Current = Caller;
+  return true;
+}
+
+// Inserted at the very end of functions that can throw, if exceptions are
+// enabled. We rewind the stack to the start of the function frame and return
+// nothing. If we arrive at an AfterRet op, we must have thrown an exception.
+PRESERVE_NONE inline bool AfterRet(InterpState &S) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+
+  while (S.Stk.size() != S.Current->getFrameOffset())
+    S.Stk.discardSlow();
+
+  return RetVoid(S);
+}
+
+bool SaveException(InterpState &S, CodePtr OpPC, const Type *Ty, OptPrimType T);
+
+inline bool ThrowTrap(InterpState &S) {
+  assert(S.getContext().ExceptionsEnabled);
+  S.ThrowTrapStackSize = S.Stk.size();
+  return true;
+}
+
+/// Allocate memory to store an exception object.
+inline bool AllocException(InterpState &S, const Descriptor *Desc) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(Desc);
+  char *Memory = (char *)S.allocate(sizeof(Block) + Desc->getAllocSize());
+  Block *B = new (Memory) Block(~0u, Desc);
+  B->invokeCtor();
+  S.Stk.push<Pointer>(B);
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetExceptionValue(InterpState &S) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+  assert(S.ThrownValue->T && "Thrown value must be primitive");
+
+  // The catch handler might require a cast of the thrown value.
+  // The actual cast happens in catchException(), here we apply
+  // the offset to the pointer (also in GetPtrExceptionValue).
+  if constexpr (std::is_same_v<T, Pointer>) {
+    if (S.ThrownValue->CastOffset != 0)
+      S.Stk.push<Pointer>(S.ThrownValue->B->deref<Pointer>().atField(
+          S.ThrownValue->CastOffset));
+    else
+      S.Stk.push<Pointer>(S.ThrownValue->B->deref<Pointer>());
+    return true;
+  }
+
+  if constexpr (std::is_same_v<T, MemberPointer>) {
+    PrimType BlockPrimT = S.ThrownValue->B->getDescriptor()->getPrimType();
+    if (BlockPrimT == PT_Ptr) {
+      // This should only happen for null pointers.
+      S.Stk.push<T>();
+      return true;
+    } else if (BlockPrimT != PT_MemberPtr)
+      return false;
+  }
+
+  assert(S.ThrownValue->B->getDescriptor()->getPrimType() == Name);
+  S.Stk.push<T>(S.ThrownValue->B->deref<T>());
+  return true;
+}
+
+inline bool GetPtrExceptionValue(InterpState &S) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+
+  Pointer P = Pointer(S.ThrownValue->B);
+  if (S.ThrownValue->CastOffset != 0)
+    S.Stk.push<Pointer>(P.atField(S.ThrownValue->CastOffset));
+  else
+    S.Stk.push<Pointer>(P);
   return true;
 }
 
@@ -2381,7 +2463,8 @@ bool Init(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }
@@ -2392,7 +2475,8 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }

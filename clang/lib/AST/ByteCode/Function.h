@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
 #include "Descriptor.h"
+#include "Exceptions.h"
 #include "Source.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -252,6 +253,10 @@ public:
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
   }
 
+  std::optional<ExceptionTableEntry>
+  findCatchHandler(unsigned CodeOffset, const Type *Ty,
+                   const ASTContext &ASTCtx) const;
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
@@ -261,13 +266,15 @@ private:
   /// Sets the code of a function.
   void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
                llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
-               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody,
-               bool NewIsValid) {
+               llvm::SmallVector<Scope, 2> &&NewScopes,
+               llvm::SmallVector<ExceptionTableEntry> &&ExceptionTable,
+               bool NewHasBody, bool NewIsValid) {
     this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
     Scopes = std::move(NewScopes);
+    this->ExceptionTable = std::move(ExceptionTable);
     IsValid = NewIsValid;
     HasBody = NewHasBody;
   }
@@ -298,6 +305,7 @@ private:
   llvm::SmallVector<Scope, 2> Scopes;
   /// List of all parameters, including RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
+  llvm::SmallVector<ExceptionTableEntry> ExceptionTable;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;

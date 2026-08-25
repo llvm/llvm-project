@@ -414,6 +414,11 @@ def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
 def note_constexpr_infer_alloc_token_stateful_mode
     : Note<"stateful alloc token mode not supported in constexpr">;
+def note_constexpr_uncaught_exception : Note<"uncaught exception of type %0: '%1'">;
+def note_constexpr_exception_in_noexcept_func : Note<"uncaught exception in noexcept function">;
+def note_constexpr_no_active_exception : Note<"rethrow with no active exception">;
+def note_constexpr_throw_with_active_exception : Note<"throw while another exception is already active">;
+def note_previous_throw : Note<"currently active exception thrown here">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,

@@ -234,6 +234,25 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 namespace clang {
 namespace interp {
+
+bool diagnoseUncaughtException(InterpState &S, CodePtr OpPC) {
+  assert(S.ThrownValue);
+  QualType UncaughtType = QualType(S.ThrownValue->Ty, 0);
+  std::string ValString;
+
+  if (S.ThrownValue->T) {
+    TYPE_SWITCH(*S.ThrownValue->T, {
+      ValString =
+          S.ThrownValue->B->deref<T>().toDiagnosticString(S.getASTContext());
+    });
+  } else {
+    ValString = Pointer(S.ThrownValue->B).toDiagnosticString(S.getASTContext());
+  }
+  S.FFDiag(S.ThrownValue->Loc, diag::note_constexpr_uncaught_exception)
+      << UncaughtType << ValString;
+  return false;
+}
+
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
                               PrimType PT);
 
@@ -1863,6 +1882,142 @@ static void compileFunction(InterpState &S, const Function *Func) {
       .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
+// We have a saved thrown value in InterpState.
+// Now try to catch that value in the current function.
+// If no corresponding catch handler is found, jump to the
+// AfterRet op at the end of the function.
+static bool catchException(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+  assert(!S.ThrownValue->Caught);
+
+  // We've reached the bottom frame. We can't go any higher, so diagnose
+  // an uncaught exception.
+  const Function *CurrFunction = S.Current->getFunction();
+  if (!CurrFunction) {
+    assert(S.Current->isBottomFrame());
+    if (!S.checkingPotentialConstantExpression())
+      return diagnoseUncaughtException(S, OpPC);
+    return false;
+  }
+
+  unsigned CodeOffset = S.PC - CurrFunction->getCodeBegin();
+  std::optional<ExceptionTableEntry> CatchEntry =
+      CurrFunction->findCatchHandler(CodeOffset, S.ThrownValue->Ty,
+                                     S.getASTContext());
+
+  if (!CatchEntry) {
+    // We didn't find an appropriate catch handler in the current function.
+    // Skip to the end of the function.
+    bool CanThrow = S.Current->getFunction()
+                        ->getDecl()
+                        ->getType()
+                        ->getAs<FunctionProtoType>()
+                        ->canThrow();
+    if (!CanThrow) {
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_exception_in_noexcept_func);
+      return false;
+    }
+    // Jump to the end of the function. The calling function will handle
+    // catching the exception.
+    S.PC = S.Current->getFunction()->getCodeEnd() - align(sizeof(Opcode));
+#ifndef NDEBUG
+    CodePtr PCCopy = S.PC;
+    Opcode Op = PCCopy.read<Opcode>();
+    assert(Op == OP_AfterRet);
+#endif
+    return true;
+  }
+
+  // We *did* find a catch handler. We now need to cast the thrown value to
+  // the correct type, if necessary.
+
+  // NB: CaughtType may be null (for catch-all handlers).
+  const Type *CaughtType = CatchEntry->CatchType;
+  const Type *ThrownType = S.ThrownValue->Ty;
+  assert(ThrownType);
+
+  // There might be some values left on the stack that have been added in
+  // between entering the try{} block and the throw statement. We need to
+  // remove all of those so the stack is in a proper state after the catch
+  // handler finishes.
+  while (S.Stk.size() != S.ThrowTrapStackSize) {
+    S.Stk.discardSlow();
+  }
+
+  if (CaughtType && CaughtType->isPointerOrReferenceType())
+    CaughtType = CaughtType->getPointeeType().getTypePtr();
+  if (ThrownType->isPointerOrReferenceType())
+    ThrownType = ThrownType->getPointeeType().getTypePtr();
+
+  bool NeedsCast = CaughtType &&
+                   !ASTContext::hasSameType(CaughtType, ThrownType) &&
+                   CaughtType->isRecordType() && ThrownType->isRecordType();
+
+  if (!NeedsCast) {
+    // We dont need to change the value at all. Just jump to the exception table
+    // entry.
+    S.PC = CurrFunction->getCodeBegin() + CatchEntry->Target;
+    S.ThrownValue->Caught = true;
+    return true;
+  }
+
+  unsigned BaseOffset = S.getContext().collectBaseOffset(
+      CaughtType->getAsRecordDecl(), ThrownType->getAsRecordDecl());
+
+  S.ThrownValue->CastOffset = BaseOffset;
+  S.ThrownValue->Caught = true;
+  // Jump to the catch handler in this function.
+  S.PC = CurrFunction->getCodeBegin() + CatchEntry->Target;
+
+  return true;
+}
+
+bool Throw(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  return catchException(S, OpPC);
+}
+
+bool ReThrow(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+
+  if (!S.ThrownValue) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_no_active_exception);
+    return false;
+  }
+
+  assert(S.ThrownValue);
+  S.ThrownValue->Caught = false;
+  return catchException(S, OpPC);
+}
+
+bool SaveException(InterpState &S, CodePtr OpPC, const Type *Ty,
+                   OptPrimType T) {
+  assert(S.getContext().ExceptionsEnabled);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  // Must've been allocated via AllocException
+  assert(Ptr.block()->getEvalID() == ~0u);
+  assert(Ptr.block()->isInitialized());
+
+  // If we already have a thrown exception, it must be caught already,
+  // in which case we simply override it below.
+  // If it isn't caught, we need to diagnose.
+  if (S.ThrownValue && !S.ThrownValue->Caught) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_throw_with_active_exception, 1);
+    S.Note(S.ThrownValue->Loc, diag::note_previous_throw);
+    return false;
+  }
+
+  SourceLocation Loc = S.Current->getLocation(OpPC);
+  S.ThrownValue = std::make_unique<ThrowValue>(
+      Ty, Loc, const_cast<Block *>(Ptr.block()), T);
+  return true;
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1902,6 +2057,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   if (Interpret(S)) {
+    if (S.ThrownValue && !S.ThrownValue->Caught)
+      return catchException(S, OpPC);
+
     assert(S.Current == FrameBefore);
     return true;
   }
@@ -1912,6 +2070,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
+
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
 
@@ -2006,6 +2165,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.Current = FrameBefore;
     return false;
   }
+
+  if (S.ThrownValue && !S.ThrownValue->Caught)
+    return catchException(S, OpPC);
 
   assert(S.Current == FrameBefore);
   return true;
@@ -3247,7 +3409,7 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
          Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
          Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
          Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
-         Op == OP_EndSpeculation;
+         Op == OP_EndSpeculation || Op == OP_AfterRet;
 }
 
 #if USE_TAILCALLS
