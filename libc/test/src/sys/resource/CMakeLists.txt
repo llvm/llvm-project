@@ -32,4 +32,5 @@ add_libc_test(
     libc.hdr.types.struct_rusage
     libc.src.sys.resource.getrusage
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
