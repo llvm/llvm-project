@@ -34,6 +34,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -2676,7 +2677,7 @@ ChangeStatus Attributor::cleanupIR() {
   // make `norecurse` false for every function in it.
   if (!SpecializedIndirectCallers.empty()) {
     CallGraph CG(*SpecializedIndirectCallers.front()->getParent());
-    SmallPtrSet<Function *, 8> Handled;
+    SmallPtrSet<Function *, 8> Handled, Recursive;
     for (Function *Caller : SpecializedIndirectCallers) {
       if (!Handled.insert(Caller).second)
         continue;
@@ -2695,16 +2696,25 @@ ChangeStatus Attributor::cleanupIR() {
           if (!Fn->hasFnAttribute(Attribute::NoRecurse))
             continue;
           Fn->removeFnAttr(Attribute::NoRecurse);
-          for (User *U : Fn->users())
-            if (auto *CB = dyn_cast<CallBase>(U))
-              if (CB->getCalledFunction() == Fn &&
-                  Functions.count(CB->getFunction()))
-                CB->removeFnAttr(Attribute::NoRecurse);
+          Recursive.insert(Fn);
           ManifestChange = ChangeStatus::CHANGED;
         }
         break;
       }
     }
+    // A call site carries `norecurse` of its own, and its callee operand can be
+    // a constant expression rather than the function, so match through it.
+    if (!Recursive.empty())
+      for (Function *Fn : Functions) {
+        if (ToBeDeletedFunctions.count(Fn))
+          continue;
+        for (Instruction &I : instructions(*Fn))
+          if (auto *CB = dyn_cast<CallBase>(&I))
+            if (auto *Callee = dyn_cast<Function>(
+                    CB->getCalledOperand()->stripPointerCasts()))
+              if (Recursive.count(Callee))
+                CB->removeFnAttr(Attribute::NoRecurse);
+      }
   }
 
   if (!ToBeChangedUses.empty())
