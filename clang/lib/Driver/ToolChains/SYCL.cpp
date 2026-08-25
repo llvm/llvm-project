@@ -223,7 +223,7 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
     const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
     const Action::OffloadKind /*DeviceOffloadingKind*/) const {
-  if (!getTriple().isSPIRV() || !getTriple().isArch64Bit())
+  if (getTriple().getArch() != llvm::Triple::spirv64)
     return {};
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
