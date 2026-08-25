@@ -4287,7 +4287,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_maybe_transpose_matrix: {
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
                             SemaRef.getASTContext().IntTy))

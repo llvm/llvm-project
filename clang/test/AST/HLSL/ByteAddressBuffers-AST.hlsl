@@ -300,7 +300,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: ReturnStmt
 // CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_maybe_transpose_matrix' 'void (...) noexcept'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
 // CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
@@ -416,7 +416,7 @@ RESOURCE Buffer;
 // CHECK-STORE-NEXT: CXXScalarValueInitExpr {{.*}} 'element_type *'
 // CHECK-STORE-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
 // CHECK-STORE-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_maybe_transpose_matrix' 'void (...) noexcept'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue ParmVar {{.*}} 'Value' 'element_type'
 // CHECK-STORE-NEXT: IntegerLiteral {{.*}} 'int' 0
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline

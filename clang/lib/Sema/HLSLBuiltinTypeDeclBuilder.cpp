@@ -2512,7 +2512,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
 
   MMB.dereference(PH::LastStmt);
   if (TransposeResult)
-    MMB.callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ElemTy,
+    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ElemTy,
                     PH::LastStmt, getConstantIntExpr(1));
   return MMB.finalize();
 }
@@ -2534,7 +2534,7 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
 
   MMB.addParam("Index", AST.UnsignedIntTy).addParam("Value", ValueTy);
   if (TransposeArg)
-    MMB.callBuiltin("__builtin_hlsl_maybe_transpose_matrix", ValueTy, PH::_1,
+    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ValueTy, PH::_1,
                     getConstantIntExpr(0));
   MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
                   PH::Handle, PH::_0, ValueTy)

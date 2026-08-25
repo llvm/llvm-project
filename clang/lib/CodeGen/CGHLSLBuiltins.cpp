@@ -665,7 +665,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     CI->setCallingConv(IntrFn->getCallingConv());
     return CI;
   }
-  case Builtin::BI__builtin_hlsl_maybe_transpose_matrix: {
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
     const Expr *ValueExpr = E->getArg(0);
     if (hasAggregateEvaluationKind(ValueExpr->getType())) {
       EmitAnyExprToMem(ValueExpr, ReturnValue.getAddress(),
@@ -675,7 +675,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     Value *ValueOp = EmitScalarExpr(ValueExpr);
     const auto *MatTy = ValueExpr->getType()->getAs<ConstantMatrixType>();
-    if (!MatTy || !CGM.getTriple().isSPIRV() ||
+    if (!MatTy ||
         !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
       return ValueOp;
 

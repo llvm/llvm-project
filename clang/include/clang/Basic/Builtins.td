@@ -5318,7 +5318,7 @@ def HLSLResourceGetPointerTyped : Builtin {
 }
 
 def HLSLMaybeTransposeMatrix : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_maybe_transpose_matrix"];
+  let Spellings = ["__builtin_hlsl_transpose_if_memory_is_row_major"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
