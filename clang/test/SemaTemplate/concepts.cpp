@@ -1547,6 +1547,9 @@ concept C = sizeof(T) == 42;
 
 static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+// expected-note@-2 {{because 'void' does not satisfy 'C'}}
+// expected-note@-5 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+
 }
 
 namespace invalid_expression_in_instantiation {

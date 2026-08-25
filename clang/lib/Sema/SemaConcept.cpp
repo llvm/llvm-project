@@ -2005,18 +2005,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
       break;
     }
   } else if (auto *RE = dyn_cast<RequiresExpr>(SubstExpr)) {
-    // FIXME: RequiresExpr should store dependent diagnostics.
-    for (concepts::Requirement *Req : RE->getRequirements())
-      if (!Req->isDependent() && !Req->isSatisfied()) {
-        if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
-          diagnoseUnsatisfiedRequirement(S, E, First);
-        else if (auto *T = dyn_cast<concepts::TypeRequirement>(Req))
-          diagnoseUnsatisfiedRequirement(S, T, First);
-        else
-          diagnoseUnsatisfiedRequirement(
-              S, cast<concepts::NestedRequirement>(Req), First);
-        break;
-      }
+    S.DiagnoseUnsatisfiedRequiresExpr(RE);
     return;
   } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(SubstExpr)) {
     // Drill down concept ids treated as atomic constraints
@@ -2059,6 +2048,21 @@ static void diagnoseUnsatisfiedConstraintExpr(
   }
   diagnoseWellFormedUnsatisfiedConstraintExpr(
       S, cast<const class Expr *>(Record), First);
+}
+
+void Sema::DiagnoseUnsatisfiedRequiresExpr(const RequiresExpr *RE, bool First) {
+  // FIXME: RequiresExpr should store dependent diagnostics.
+  for (concepts::Requirement *Req : RE->getRequirements())
+    if (!Req->isDependent() && !Req->isSatisfied()) {
+      if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
+        diagnoseUnsatisfiedRequirement(*this, E, First);
+      else if (auto *T = dyn_cast<concepts::TypeRequirement>(Req))
+        diagnoseUnsatisfiedRequirement(*this, T, First);
+      else
+        diagnoseUnsatisfiedRequirement(
+            *this, cast<concepts::NestedRequirement>(Req), First);
+      break;
+    }
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(
