@@ -50687,7 +50687,11 @@ combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
     // raise flags.
     unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
     MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
+    // Only an f64 quotient of i64 operands needs the qq convert to come back
+    // whole. Everything else fits i32 lanes.
     MVT WideIScl = MVT::i32;
+    if (VT.getScalarSizeInBits() == 64 && FPSclVT == MVT::f64)
+      WideIScl = MVT::i64;
     MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
     SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT, DL,
                                        MVT::i32); // {rn-sae}

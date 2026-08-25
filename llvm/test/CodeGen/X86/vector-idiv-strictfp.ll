@@ -432,8 +432,7 @@ define <8 x i64> @test_divv_8i64_narrow_strictfp(<8 x i64> %a, <8 x i64> %b) nou
 ; DQ-NEXT:    vcvtqq2pd %zmm1, %zmm1
 ; DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
 ; DQ-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
-; DQ-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
-; DQ-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; DQ-NEXT:    vcvttpd2uqq {sae}, %zmm0, %zmm0
 ; DQ-NEXT:    retq
   %aa = lshr <8 x i64> %a, splat (i64 12)
   %bb = lshr <8 x i64> %b, splat (i64 12)
