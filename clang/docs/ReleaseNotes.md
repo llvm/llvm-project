@@ -238,6 +238,11 @@ features cannot lower the translation-unit ABI level;
 
 - More consistent rendering of Unicode characters in diagnostic messages.
 
+- Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
+  considered during allocation function lookup or promise object
+  initialization, while not diagnosing parameters passed to the selected
+  allocation function or promise constructor. (#GH217501)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -581,6 +586,8 @@ features cannot lower the translation-unit ABI level;
   option.
 
 #### Android Support
+
+- Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
 
