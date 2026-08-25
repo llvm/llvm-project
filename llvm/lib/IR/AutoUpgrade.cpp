@@ -1424,7 +1424,7 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
 getNVVMFAddUpgrade(StringRef Name) {
   auto [Modifiers, Type] = Name.rsplit('.');
-  if (Type != "f" && Type != "d" && Type != "f16" && Type != "v2f16")
+  if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
     return std::nullopt;
 
   std::optional<llvm::RoundingMode> RoundingMode =
