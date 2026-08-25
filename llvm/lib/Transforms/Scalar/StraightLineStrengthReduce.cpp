@@ -112,6 +112,7 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "slsr"
 #define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp", X)
+#define DEBUG_SLSR_RP_DETAIL(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp-detail", X)
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -128,6 +129,9 @@ static cl::opt<int> SLSRBasisDistanceThreshold(
     "slsr-basis-distance-threshold", cl::init(96), cl::Hidden,
     cl::desc("SLSR: skip rewrite if in-block distance from Basis's last "
              "same-block use to the candidate Inst exceeds this"));
+
+static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
+                                 cl::desc("Use TTI to compute RP for SLSR-RP"));
 
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
@@ -1550,15 +1554,17 @@ public:
   using Candidate = StraightLineStrengthReduce::Candidate;
 
   RPFilter(const Function *F,
-           DenseMap<Instruction *, Candidate *> &PickedCandidateMap)
-      //, const TargetTransformInfo *TTI)
-      : F(F), PickedCandidateMap(PickedCandidateMap) {} //, TTI(TTI) {}
+           DenseMap<Instruction *, Candidate *> &PickedCandidateMap,
+           const TargetTransformInfo *TTI)
+      : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
+
   void run() {
     buildBBToNumCandsAndBasises(PickedCandidateMap);
     // TODO: 16 is an arbitrary threshold.
     if (MaxNumBasisesInBB > 16)
       buildBBToLiveness(*F); // Do liveness analysis.
 
+    DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
     for (auto &BB : *F) {
 #if 0
       unsigned RP = maxPressureInBlock(BB, BBToLiveness[&BB].LiveIn,
@@ -1569,10 +1575,10 @@ public:
         dbgs() << "MaxRP:" << BB.getName() << ":" << RP << "," << RPBackward << "\n";
       });
 #else
-      unsigned RPBackward = maxPressureInBlockBackward(
+      auto [MaxRP, MaxRPWithSLSR] = maxPressureInBlockBackward(
           BB, BBToLiveness[&BB].LiveIn, BBToLiveness[&BB].LiveOut);
-      DEBUG_SLSR_RP(dbgs() << "MaxRPBackward:" << BB.getName() << ":"
-                           << RPBackward << "\n");
+      DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
+                           << MaxRPWithSLSR << ")" << "\n");
 #endif
     }
   }
@@ -1580,7 +1586,7 @@ public:
 private:
   const Function *F;
   DenseMap<Instruction *, Candidate *> &PickedCandidateMap;
-  // const TargetTransformInfo *TTI;
+  const TargetTransformInfo *TTI;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>>
       BBToNumCandsAndBasises;
@@ -1609,7 +1615,7 @@ private:
     }
     MaxNumBasisesInBB = std::max(MaxNumBasisesInBB, UniqueBasises.size());
     DEBUG_WITH_TYPE("slsr-rp", {
-      dbgs() << "BB: " << BB->getName() << " NumCands: " << NumCands
+      dbgs() << "BB: " << BB->getName() << " - NumCands: " << NumCands
              << " UniqueBasises: " << UniqueBasises.size() << "\n";
     });
     return {NumCands, UniqueBasises.size()};
@@ -1634,20 +1640,30 @@ private:
     Type *Ty = V->getType();
     if (Ty->isVoidTy() || Ty->isTokenTy())
       return 0;
+    if (UseTTIForRP) {
+      // Aggregates legalize to a flat sequence of scalars; approximate rather
+      // than calling getRegUsageForType, which is llvm_unreachable on them.
+      if (!VectorType::isValidElementType(Ty->getScalarType()))
+        return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+
+      // TTI's getRegUsageForType can be used for types that are
+      // validElementType(Ty->getScalarType()). However, even the valid vector
+      // type should be multiplited by get{Min}NumElements() to handle
+      // {ScalarVectorType}, FixedVectorType. Overall, getTypeSizeInBits(Ty)
+      // handing all those cases should be sufficient for heuristic.
+      unsigned RegUsage = TTI->getRegUsageForType(Ty);
 #if 0
-    // Aggregates legalize to a flat sequence of scalars; approximate rather
-    // than calling getRegUsageForType, which is llvm_unreachable on them.
-    if (!VectorType::isValidElementType(Ty->getScalarType()))
-      return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
-    return TTI->getRegUsageForType(Ty);
-#else
-    // TTI's getRegUsageForType can be used for types that are
-    // validElementType(Ty->getScalarType()). However, even the valid vector
-    // type should be multiplited by get{Min}NumElements() to handle
-    // {ScalarVectorType}, FixedVectorType. Overall, getTypeSizeInBits(Ty)
-    // handing all those cases should be sufficient for heuristic.
-    return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+      if (FixedVectorType *FVT = dyn_cast<FixedVectorType>(Ty))
+        RegUsage *= FVT->getNumElements();
+      else if (ScalableVectorType *SVT = dyn_cast<ScalableVectorType>(Ty))
+        RegUsage *= SVT->getMinNumElements();
 #endif
+      return RegUsage;
+
+    } else {
+      // Default logic to compute RP.
+      return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+    }
   }
 
   void buildBBToLiveness(const Function &F) {
@@ -1675,7 +1691,7 @@ private:
         if (!I.getType()->isVoidTy())
           D.insert(&I);
       }
-      DEBUG_WITH_TYPE("slsr-rp", {
+      DEBUG_SLSR_RP_DETAIL({
         dbgs() << "BB-fill: " << BB.getName()
                << " UpExposed: " << UpExposed[&BB].size();
         dbgs() << " Defs: " << Defs[&BB].size() << "\n";
@@ -1708,7 +1724,7 @@ private:
             Out.size() != BBToLiveness[BB].LiveOut.size())
           Changed = true;
 
-        DEBUG_WITH_TYPE("slsr-rp", {
+        DEBUG_SLSR_RP_DETAIL({
           dbgs() << "BB-update: " << BB->getName() << " In: " << In.size()
                  << " Out: " << Out.size() << "\n";
         });
@@ -1719,7 +1735,7 @@ private:
     }
 
     DEBUG_WITH_TYPE("slsr-rp", {
-      dbgs() << "-- Liveness of BBs -- \n";
+      dbgs() << "-- Live Ins/Outs of BBs -- \n";
       for (const BasicBlock &BB : F) {
         dbgs() << BB.getName() << ": ";
         dbgs() << BBToLiveness[&BB].LiveIn.size() << ", ";
@@ -1837,9 +1853,9 @@ private:
       LiveSetWithSLSR.erase(Op);
   }
 
-  unsigned maxPressureInBlockBackward(const BasicBlock &BB,
-                                      const ValueSet &LiveIn,
-                                      const ValueSet &LiveOut) const {
+  std::pair<unsigned, unsigned>
+  maxPressureInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
+                             const ValueSet &LiveOut) const {
 
     // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
     //       Could be a better-fitting data structure.
@@ -1882,19 +1898,20 @@ private:
         if (isRegisterLike(Op)) {
           LiveSet.insert(Op);
           if (IsCand && !SeenLastUse.contains(Op)) {
-            // Op is the last use. It will be replaced by Basis, so it isremoved
-            // from LiveSetWithSLSR. As a heuristic, we don't dicern which Op of
-            // I is replaced by Basis. When IsCand is true, there is only
-            // reg-like one Op in practice.
+            // Op is the last use. It will be replaced by Basis, so it is
+            // removed from LiveSetWithSLSR. As a heuristic, we don't dicern
+            // which Op of I is replaced by Basis. When IsCand is true, there is
+            // only one reg-like Op in practice.
             // TODO: Can further restrict by Candidate's type and DeltaKind.
             LiveSetWithSLSR.erase(Op);
-            DEBUG_SLSR_RP(dbgs() << "Removed Op from LiveSetWithSLSR: " << *Op
-                                 << " in inst " << I << "\n");
+            DEBUG_SLSR_RP_DETAIL(dbgs() << "Removed Op from LiveSetWithSLSR: "
+                                        << *Op << " in inst " << I << "\n");
           } else {
             LiveSetWithSLSR.insert(Op);
           }
           // Op's insertion happens only if Op was not there before.
-          // This logic works as BB is scanned backward.
+          // Therefore, SeenLastUse keeps the last use of Op as
+          // BB is scanned backward.
           SeenLastUse.insert(Op);
         }
 
@@ -1922,9 +1939,7 @@ private:
       }
     }
 
-    DEBUG_SLSR_RP(dbgs() << "MaxWWithSLSR: " << MaxWWithSLSR << "\n");
-
-    return MaxW;
+    return {MaxW, MaxWWithSLSR};
   }
 };
 } // end of anonymous namespace
@@ -1951,8 +1966,7 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     if (Candidate *C = pickRewriteCandidate(I))
       PickedCandidateMap[I] = C;
 
-  // RPFilter RPFilter(&F, PickedCandidateMap, TTI);
-  RPFilter RPFilter(&F, PickedCandidateMap);
+  RPFilter RPFilter(&F, PickedCandidateMap, TTI);
   RPFilter.run();
 
 #if 0
