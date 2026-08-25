@@ -20780,11 +20780,13 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
     return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
            AS == AMDGPUAS::VGPR;
   }
-  // The lowered form of the above. Without this the DAG takes the node's
+  // The lowered forms of the above: a whole-dword access becomes REG_LOAD, a
+  // sub-dword one REG_LOAD_BITS. Without these the DAG takes a node's
   // divergence to be that of its operands, so a uniform index makes the loaded
   // value look uniform, and a consumer that requires a uniform operand gets a
   // v_readfirstlane - broadcasting one lane's value to the whole wave.
   case AMDGPUISD::REG_LOAD:
+  case AMDGPUISD::REG_LOAD_BITS:
     return true;
   case ISD::CALLSEQ_END:
     return true;
