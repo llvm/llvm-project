@@ -71,9 +71,10 @@ static bool xmlStringsEqual(const unsigned char *A, const unsigned char *B) {
 }
 
 static bool isMergeableElement(const unsigned char *ElementName) {
-  for (StringRef S : {"application", "assembly", "assemblyIdentity",
-                      "compatibility", "noInherit", "requestedExecutionLevel",
-                      "requestedPrivileges", "security", "trustInfo"}) {
+  for (StringRef S :
+       {"application", "assembly", "assemblyIdentity", "compatibility",
+        "noInherit", "requestedExecutionLevel", "requestedPrivileges",
+        "security", "trustInfo", "windowsSettings"}) {
     if (S == FROM_XML_CHAR(ElementName)) {
       return true;
     }
@@ -81,10 +82,22 @@ static bool isMergeableElement(const unsigned char *ElementName) {
   return false;
 }
 
-static xmlNodePtr getChildWithName(xmlNodePtr Parent,
-                                   const unsigned char *ElementName) {
+// Check if two namespaces refer to the same href.  A node without a namespace
+// only matches another node without one.
+static bool namespacesMatch(xmlNsPtr Ns1, xmlNsPtr Ns2) {
+  if (!Ns1 || !Ns2)
+    return Ns1 == Ns2;
+  return xmlStringsEqual(Ns1->href, Ns2->href);
+}
+
+// Find a child of Parent matching Reference by element name AND namespace.
+// Matching by name alone would incorrectly fuse same-named elements living in
+// different namespaces (e.g. asm.v1 <application> with asm.v3 <application>),
+// producing manifests the SxS loader rejects.
+static xmlNodePtr getChildWithName(xmlNodePtr Parent, xmlNodePtr Reference) {
   for (xmlNodePtr Child = Parent->children; Child; Child = Child->next) {
-    if (xmlStringsEqual(Child->name, ElementName)) {
+    if (xmlStringsEqual(Child->name, Reference->name) &&
+        namespacesMatch(Child->ns, Reference->ns)) {
       return Child;
     }
   }
@@ -131,27 +144,44 @@ static xmlNsPtr search(const unsigned char *HRef, xmlNodePtr Node) {
   return nullptr;
 }
 
-// Return the prefix that corresponds to the HRef.  If HRef is not a recognized
-// URI, then just return the HRef itself to use as the prefix.
+// Return the canonical prefix that corresponds to the HRef, or nullptr if
+// HRef is not a recognized URI.  (Returning the HRef itself as the prefix,
+// as this once did, produces invalid XML of the form xmlns:http://...=...)
 static const unsigned char *getPrefixForHref(const unsigned char *HRef) {
   for (auto &Ns : MtNsHrefsPrefixes) {
     if (xmlStringsEqual(HRef, TO_XML_CHAR(Ns.first.data()))) {
       return TO_XML_CHAR(Ns.second.data());
     }
   }
-  return HRef;
+  return nullptr;
 }
 
 // Search for prefix-defined namespace specified by HRef, starting on Node and
 // continuing recursively upwards.  If it is found, then return it.  If it is
 // not found, then prefix-define that namespace on the node and return a
-// reference to it.
-static Expected<xmlNsPtr> searchOrDefine(const unsigned char *HRef,
-                                         xmlNodePtr Node) {
+// reference to it.  The prefix is chosen as: the canonical prefix for
+// recognized URIs, otherwise the original prefix the namespace had in its
+// source document (OldPrefix), otherwise a synthesized unique one.
+static Expected<xmlNsPtr>
+searchOrDefine(const unsigned char *HRef, xmlNodePtr Node,
+               const unsigned char *OldPrefix = nullptr) {
   if (xmlNsPtr Def = search(HRef, Node))
     return Def;
-  if (xmlNsPtr Def = xmlNewNs(Node, HRef, getPrefixForHref(HRef)))
-    return Def;
+  const unsigned char *Prefix = getPrefixForHref(HRef);
+  if (!Prefix)
+    Prefix = OldPrefix;
+  if (Prefix) {
+    if (xmlNsPtr Def = xmlNewNs(Node, HRef, Prefix))
+      return Def;
+    // The prefix is already bound to a different href on this node; fall
+    // through and synthesize a fresh one.
+  }
+  char Buf[32];
+  for (unsigned Suffix = 0; Suffix < 1000; ++Suffix) {
+    snprintf(Buf, sizeof(Buf), "ns%u", Suffix);
+    if (xmlNsPtr Def = xmlNewNs(Node, HRef, TO_XML_CHAR(Buf)))
+      return Def;
+  }
   return make_error<WindowsManifestError>("failed to create new namespace");
 }
 
@@ -162,7 +192,8 @@ static Error copyAttributeNamespace(xmlAttrPtr OriginalAttribute,
                                     xmlAttrPtr AdditionalAttribute) {
 
   Expected<xmlNsPtr> ExplicitOrError =
-      searchOrDefine(AdditionalAttribute->ns->href, OriginalNode);
+      searchOrDefine(AdditionalAttribute->ns->href, OriginalNode,
+                     AdditionalAttribute->ns->prefix);
   if (!ExplicitOrError)
     return ExplicitOrError.takeError();
   OriginalAttribute->ns = std::move(ExplicitOrError.get());
@@ -261,8 +292,8 @@ static Error mergeAttributes(xmlNodePtr OriginalNode,
     // namespace that doesn't use the attribute.
     xmlAttrPtr NewProp =
         xmlNewProp(OriginalNode, Attribute->name, Attribute->children->content);
-    Expected<xmlNsPtr> ExplicitOrError =
-        searchOrDefine(Attribute->ns->href, OriginalNode);
+    Expected<xmlNsPtr> ExplicitOrError = searchOrDefine(
+        Attribute->ns->href, OriginalNode, Attribute->ns->prefix);
     if (!ExplicitOrError)
       return ExplicitOrError.takeError();
     NewProp->ns = std::move(ExplicitOrError.get());
@@ -415,8 +446,8 @@ static Error mergeNamespaces(xmlNodePtr OriginalNode,
       // namespace, or an inherited default namespace.  Since the namespace
       // may not yet be defined in the original tree we do a searchOrDefine
       // for it, and then set the namespace equal to it.
-      Expected<xmlNsPtr> EC =
-          searchOrDefine(DominantNode->ns->href, NonDominantNode);
+      Expected<xmlNsPtr> EC = searchOrDefine(
+          DominantNode->ns->href, NonDominantNode, DominantNode->ns->prefix);
       if (!EC) {
         return EC.takeError();
       }
@@ -479,6 +510,69 @@ static bool hasRecognizedNamespace(xmlNodePtr Node) {
   return isRecognizedNamespace(Node->ns->href);
 }
 
+// Skip nodes that carry no semantic weight for equality comparison:
+// comments and whitespace-only text.
+static xmlNodePtr nextRelevantNode(xmlNodePtr Node) {
+  while (Node && (Node->type == XML_COMMENT_NODE ||
+                  (Node->type == XML_TEXT_NODE && xmlIsBlankNode(Node)))) {
+    Node = Node->next;
+  }
+  return Node;
+}
+
+static bool attributesEqual(xmlNodePtr A, xmlNodePtr B) {
+  int CountA = 0;
+  for (xmlAttrPtr Attr = A->properties; Attr; Attr = Attr->next, ++CountA) {
+    xmlAttrPtr Other = getAttribute(B, Attr->name);
+    if (!Other || !namespacesMatch(Attr->ns, Other->ns) ||
+        !xmlStringsEqual(Attr->children ? Attr->children->content : nullptr,
+                         Other->children ? Other->children->content : nullptr))
+      return false;
+  }
+  int CountB = 0;
+  for (xmlAttrPtr Attr = B->properties; Attr; Attr = Attr->next)
+    ++CountB;
+  return CountA == CountB;
+}
+
+// Structural equality: same element name and namespace href, equal attribute
+// sets, and recursively equal children (ignoring comments and whitespace).
+static bool nodesDeepEqual(xmlNodePtr A, xmlNodePtr B) {
+  if (A->type != B->type)
+    return false;
+  if (A->type == XML_TEXT_NODE)
+    return xmlStringsEqual(A->content, B->content);
+  if (A->type != XML_ELEMENT_NODE)
+    return false;
+  if (!xmlStringsEqual(A->name, B->name) || !namespacesMatch(A->ns, B->ns) ||
+      !attributesEqual(A, B))
+    return false;
+  xmlNodePtr ChildA = nextRelevantNode(A->children);
+  xmlNodePtr ChildB = nextRelevantNode(B->children);
+  while (ChildA && ChildB) {
+    if (!nodesDeepEqual(ChildA, ChildB))
+      return false;
+    ChildA = nextRelevantNode(ChildA->next);
+    ChildB = nextRelevantNode(ChildB->next);
+  }
+  return !ChildA && !ChildB;
+}
+
+// Check if Parent already contains an element structurally identical to
+// Reference.  Used to drop duplicates during merging: two inputs commonly
+// supply the same windows setting (e.g. <dpiAware>true</dpiAware> from both a
+// user manifest and a build-system-generated fragment), and duplicated
+// settings make the SxS loader reject the manifest.  mt.exe deduplicates
+// these as well.
+static bool hasEqualChild(xmlNodePtr Parent, xmlNodePtr Reference) {
+  for (xmlNodePtr Child = Parent->children; Child; Child = Child->next) {
+    if (Child->type == XML_ELEMENT_NODE && nodesDeepEqual(Child, Reference)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Ensure a node's inherited namespace is actually defined in the tree it
 // resides in.
 static Error reconcileNamespaces(xmlNodePtr Node) {
@@ -486,7 +580,8 @@ static Error reconcileNamespaces(xmlNodePtr Node) {
     return Error::success();
   }
   if (hasInheritedNs(Node)) {
-    Expected<xmlNsPtr> ExplicitOrError = searchOrDefine(Node->ns->href, Node);
+    Expected<xmlNsPtr> ExplicitOrError =
+        searchOrDefine(Node->ns->href, Node, Node->ns->prefix);
     if (!ExplicitOrError) {
       return ExplicitOrError.takeError();
     }
@@ -514,9 +609,17 @@ static Error treeMerge(xmlNodePtr OriginalRoot, xmlNodePtr AdditionalRoot) {
   for (xmlNodePtr Child = AdditionalFirstChild; Child; Child = Child->next) {
     xmlNodePtr OriginalChildWithName;
     if (!isMergeableElement(Child->name) ||
-        !(OriginalChildWithName =
-              getChildWithName(OriginalRoot, Child->name)) ||
+        !(OriginalChildWithName = getChildWithName(OriginalRoot, Child)) ||
         !hasRecognizedNamespace(Child)) {
+      if (Child->type == XML_ELEMENT_NODE &&
+          hasEqualChild(OriginalRoot, Child)) {
+        // An identical element is already present; drop the duplicate.
+        StoreNext.next = Child->next;
+        xmlUnlinkNode(Child);
+        xmlFreeNode(Child);
+        Child = &StoreNext;
+        continue;
+      }
       StoreNext.next = Child->next;
       xmlUnlinkNode(Child);
       if (!xmlAddChild(OriginalRoot, Child)) {
@@ -587,7 +690,7 @@ static void checkAndStripPrefixes(xmlNodePtr Node,
       if (ClosestDefault &&
           xmlStringsEqual(ClosestDefault->href, Attribute->ns->href)) {
         Attribute->ns = ClosestDefault;
-      } else if (!llvm::is_contained(RequiredPrefixes, Node->ns)) {
+      } else if (!llvm::is_contained(RequiredPrefixes, Attribute->ns)) {
         RequiredPrefixes.push_back(Attribute->ns);
       }
     }

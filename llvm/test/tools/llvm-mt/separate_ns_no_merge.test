@@ -1,0 +1,27 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+RUN: llvm-mt /manifest %p/Inputs/default_trust_info.manifest \
+RUN:   /manifest %p/Inputs/separate_ns_settings.manifest /out:%t
+RUN: FileCheck %s -input-file=%t
+
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <assembly xmlns:win2019="http://schemas.microsoft.com/SMI/2019/WindowsSettings" xmlns:win2005="http://schemas.microsoft.com/SMI/2005/WindowsSettings" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+CHECK-NEXT:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+CHECK-NEXT:     <security>
+CHECK-NEXT:       <requestedPrivileges>
+CHECK-NEXT:         <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+CHECK-NEXT:       </requestedPrivileges>
+CHECK-NEXT:     </security>
+CHECK-NEXT:   </trustInfo>
+CHECK-NEXT:   <application>
+CHECK-NEXT:     <windowsSettings>
+CHECK-NEXT:       <win2019:activeCodePage>UTF-8</win2019:activeCodePage>
+CHECK-NEXT:     </windowsSettings>
+CHECK-NEXT:   </application>
+CHECK-NEXT:   <asmv3:application>
+CHECK-NEXT:     <asmv3:windowsSettings>
+CHECK-NEXT:       <win2005:dpiAware>true</win2005:dpiAware>
+CHECK-NEXT:     </asmv3:windowsSettings>
+CHECK-NEXT:   </asmv3:application>
+CHECK-NEXT: </assembly>

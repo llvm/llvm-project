@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<asmv1:assembly xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns:win2005="http://schemas.microsoft.com/SMI/2005/WindowsSettings" xmlns:win2016="http://schemas.microsoft.com/SMI/2016/WindowsSettings" manifestVersion="1.0">
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <win2005:dpiAware>true</win2005:dpiAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <win2016:longPathAware>true</win2016:longPathAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+</asmv1:assembly>
