@@ -1619,11 +1619,10 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const bool is_dsym = (m_header.filetype == MH_DSYM);
   bool add_section = true;
   bool add_to_unified = true;
-  llvm::StringRef segname(
-      load_cmd.segname, strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
+  llvm::StringRef segname(load_cmd.segname,
+                          strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
 
-  SectionSP unified_section_sp(
-      context.UnifiedList.FindSectionByName(segname));
+  SectionSP unified_section_sp(context.UnifiedList.FindSectionByName(segname));
   if (is_dsym && unified_section_sp) {
     if (segname == GetSegmentNameLINKEDIT()) {
       // We need to keep the __LINKEDIT segment private to this object file
