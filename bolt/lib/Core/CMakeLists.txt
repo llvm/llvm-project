@@ -37,6 +37,9 @@ add_llvm_library(LLVMBOLTCore
   MCPlusBuilder.cpp
   ParallelUtilities.cpp
   Relocation.cpp
+  ../Target/AArch64/AArch64RelocationHandler.cpp
+  ../Target/RISCV/RISCVRelocationHandler.cpp
+  ../Target/X86/X86RelocationHandler.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB

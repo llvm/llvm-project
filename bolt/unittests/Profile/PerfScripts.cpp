@@ -62,7 +62,6 @@ protected:
   }
 
   void initializeBOLT() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
         ObjFile->getFileName(), nullptr, /*IsPIC*/ false,

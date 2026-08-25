@@ -71,7 +71,6 @@ MachORewriteInstance::MachORewriteInstance(object::MachOObjectFile *InputFile,
                                            StringRef ToolPath, Error &Err)
     : InputFile(InputFile), ToolPath(ToolPath) {
   ErrorAsOutParameter EAO(&Err);
-  Relocation::Arch = InputFile->makeTriple().getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       InputFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
       InputFile->getFileName(), nullptr,
