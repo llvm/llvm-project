@@ -139,7 +139,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
     %comm = mpi.comm_world : !mpi.comm
     // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0]
     // CHECK: llvm.mul
-    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: [[v3:%.*]] = llvm.trunc [[v2]] : i64 to i32
     // CHECK: [[v4:%.*]] = llvm.mul [[v3]], [[v1]] : i32
@@ -300,7 +300,7 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
     %comm = mpi.comm_world : !mpi.comm
     // CHECK: [[v0:%.*]] = llvm.insertvalue {{.*}}[4, 0]
     // CHECK: llvm.mul
-    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: [[v1:%.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: [[v2:%.*]] = llvm.extractvalue [[v0]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: [[v3:%.*]] = llvm.trunc [[v2]] : i64 to i32
     // CHECK: [[v4:%.*]] = llvm.mul [[v3]], [[v1]] : i32
