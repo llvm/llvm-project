@@ -593,6 +593,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Improvements to Clang's diagnostics
 
+- Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
+  considered during allocation function lookup or promise object
+  initialization, while not diagnosing parameters passed to the selected
+  allocation function or promise constructor. (#GH217501)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
