@@ -129,10 +129,17 @@ void SYCLToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
-  // Only link device libraries for actual SYCL device IR compilation.
-  // Preprocessing and syntax-only actions do not produce device IR, so
-  // requiring the builtins bitcode there would be a spurious fatal error.
-  if (DeviceOffloadingKind == Action::OFK_SYCL) {
+  // Only link device libraries when actually emitting device IR.
+  // Preprocessing (-E) and syntax-only (-fsyntax-only) actions do not produce
+  // IR so -mlink-builtin-bitcode would be unused, and requiring the builtins
+  // bitcode to exist would be a spurious fatal error on those code paths.
+  auto IsNonIRAction = [](const llvm::opt::ArgStringList &Args) {
+    for (const char *A : Args)
+      if (llvm::StringRef(A) == "-E" || llvm::StringRef(A) == "-fsyntax-only")
+        return true;
+    return false;
+  };
+  if (!IsNonIRAction(CC1Args)) {
     for (const auto &BCFile :
          getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
       CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
