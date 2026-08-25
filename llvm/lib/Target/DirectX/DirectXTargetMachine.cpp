@@ -48,6 +48,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
@@ -129,9 +130,12 @@ public:
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    ScalarizerPassOptions DxilScalarOptions;
-    DxilScalarOptions.ScalarizeLoadStore = true;
-    addPass(createScalarizerPass(DxilScalarOptions));
+    if (getDirectXTargetMachine().getTargetTriple().getOSVersion() <
+        VersionTuple(6, 9)) {
+      ScalarizerPassOptions DxilScalarOptions;
+      DxilScalarOptions.ScalarizeLoadStore = true;
+      addPass(createScalarizerPass(DxilScalarOptions));
+    }
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
     if (OptLevel != CodeGenOptLevel::None) {
