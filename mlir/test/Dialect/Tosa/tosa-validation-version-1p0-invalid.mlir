@@ -303,7 +303,7 @@ func.func @test_block_scaled_dim(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK
 
 func.func @test_block_scaled_tile(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<39x21x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>> {
   %multiples = tosa.const_shape {values = dense<[3, 1, 2]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.tile' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp6e3m2, shape] profiles/extensions to be specified in the target environment}}
+  // expected-error@+1 {{'tosa.tile' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp6e3m2] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %multiples : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, !tosa.shape<3>) -> tensor<39x21x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
   return %0 : tensor<39x21x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
 }
