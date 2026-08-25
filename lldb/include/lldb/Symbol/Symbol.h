@@ -53,10 +53,7 @@ public:
 
   Symbol(const Symbol &rhs);
 
-  ~Symbol() {
-    if (m_type != lldb::eSymbolTypeReExported)
-      m_addr_or_reexport.GetAddressRange(*this).Clear();
-  }
+  ~Symbol() { m_addr_or_reexport.Clear(*this); }
 
   const Symbol &operator=(const Symbol &rhs);
 
@@ -417,6 +414,13 @@ protected:
     // Proper destruction is handled by Symbol's dtor; supply a no-op
     // impl to let the compiler know it's handled.
     ~AddrRangeOrReExport() {}
+
+    void Clear(const Symbol &sym) {
+      if (sym.GetType() == lldb::eSymbolTypeReExported)
+        m_reexport_info.Clear();
+      else
+        m_addr_range.Clear();
+    }
 
   private:
     union {
