@@ -8,6 +8,7 @@
 
 #include "NSSet.h"
 #include "CFBasicHash.h"
+#include "GNUstepFormatters.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -229,6 +230,10 @@ bool lldb_private::formatters::NSSetSummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSSetSummaryProvider(valobj, stream, options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
@@ -312,6 +317,10 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
   if (!runtime)
     return nullptr;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSSetSyntheticFrontEndCreator(synth, valobj_sp);
 
   CompilerType valobj_type(valobj_sp->GetCompilerType());
   Flags flags(valobj_type.GetTypeInfo());

@@ -231,6 +231,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLDB
 
+* Debugging Objective-C with the GNUstep libobjc2 runtime is now supported on
+  Linux and Windows: dynamic types, tagged pointers, printing objects with
+  `po`, stepping through message dispatch, evaluating expressions that send
+  messages, and data formatters for the gnustep-base Foundation classes.
+
 #### SBAPI
 
 * A [bug](https://github.com/llvm/llvm-project/issues/211787) involving SBValues

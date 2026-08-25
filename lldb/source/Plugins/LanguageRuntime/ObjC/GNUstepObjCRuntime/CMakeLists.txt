@@ -1,5 +1,9 @@
 add_lldb_library(lldbPluginGNUstepObjCRuntime PLUGIN
+  GNUstepObjCClassDescriptor.cpp
+  GNUstepObjCDeclVendor.cpp
+  GNUstepObjCTypeEncodingParser.cpp
   GNUstepObjCRuntime.cpp
+  GNUstepThreadPlanStepThroughObjCTrampoline.cpp
 
   LINK_COMPONENTS
     Support

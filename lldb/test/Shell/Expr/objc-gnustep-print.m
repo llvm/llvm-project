@@ -1,7 +1,6 @@
 // REQUIRES: objc-gnustep
-// XFAIL: system-windows
 //
-// RUN: %build %s --compiler=clang --objc-gnustep --output=%t
+// RUN: %build %inferior_target %s --compiler=clang --objc-gnustep --output=%t
 
 #import "objc/runtime.h"
 
@@ -52,9 +51,9 @@ __attribute__((objc_root_class))
 }
 @end
 
-// RUN: %lldb -b -o "b objc-gnustep-print.m:43" -o "run" -o "p self" -o "p *self" -- %t | FileCheck %s --check-prefix=SELF
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:42" -o "run" -o "p self" -o "p *self" -- %t | FileCheck %s --check-prefix=SELF
 //
-// SELF: (lldb) b objc-gnustep-print.m:43
+// SELF: (lldb) b objc-gnustep-print.m:42
 // SELF: Breakpoint {{.*}} at objc-gnustep-print.m
 //
 // SELF: (lldb) run
@@ -78,7 +77,7 @@ __attribute__((objc_root_class))
 // SELF:   _id_objc = nil
 // SELF: }
 
-// RUN: %lldb -b -o "b objc-gnustep-print.m:106" -o "run" -o "p t->_int" -o "p t->_float" -o "p t->_char" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:105" -o "run" -o "p t->_int" -o "p t->_float" -o "p t->_char" \
 // RUN:          -o "p t->_ptr_void" -o "p t->_ptr_nsobject" -o "p t->_id_objc" -- %t | FileCheck %s --check-prefix=IVARS_SET
 //
 // IVARS_SET: (lldb) p t->_int
@@ -105,3 +104,67 @@ int main() {
   [t set_ivars];
   return 0;
 }
+
+// `po` sends -description then -UTF8String, built from libobjc2's exported
+// API rather than resolving gnustep-base's _NSPrintForDebugger. Nothing here
+// needs Foundation, so this covers `po` against a bare runtime too.
+@interface Str : NSObject {
+  const char *_bytes;
+}
++ (id)withBytes:(const char *)bytes;
+- (const char *)UTF8String;
+@end
+@implementation Str
++ (id)withBytes:(const char *)bytes {
+  Str *str = [Str new];
+  str->_bytes = bytes;
+  return str;
+}
+- (const char *)UTF8String {
+  return _bytes;
+}
+@end
+
+@interface TestObj (Description)
+- (id)description;
+@end
+@implementation TestObj (Description)
+- (id)description {
+  return [Str withBytes:"<TestObj: described>"];
+}
+@end
+
+// A selector's name cannot be read from memory: __objc_load overwrites the
+// name field with a dispatch index, so the only source is the symbol clang
+// emits for it. Without a GNUstep-aware summary, Apple's SEL provider prints
+// that index as a few garbage bytes in every Objective-C frame line.
+//
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:42" -o "run" -o "frame variable _cmd" \
+// RUN:     -o "p _cmd" -o "expr -- (SEL *)&_cmd" -- %t | FileCheck %s --check-prefix=SEL
+//
+// SEL: (lldb) run
+// SEL: -[TestObj check_ivars_zeroed](self={{.*}}, _cmd="check_ivars_zeroed") at objc-gnustep-print.m
+//
+// SEL: (lldb) frame variable _cmd
+// SEL: (SEL) _cmd = 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+//
+// SEL: (lldb) p _cmd
+// SEL: (SEL) 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+//
+// SEL: (lldb) expr -- (SEL *)&_cmd
+// SEL: (SEL *) $0 = 0x{{[0-9a-f]+}} "check_ivars_zeroed"
+
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:105" -o "run" -o "po t" \
+// RUN:     -- %t | FileCheck %s --check-prefix=PO
+//
+// PO: (lldb) po t
+// PO: <TestObj: described>
+// PO-NOT: warning: `po` was unsuccessful
+
+//
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:103" -o "run" -o "step" \
+// RUN:     -- %t | FileCheck %s --check-prefix=STEP
+//
+// STEP: (lldb) step
+// STEP: stop reason = step in
+// STEP: check_ivars_zeroed

@@ -20,6 +20,7 @@ config.has_libcxx = @LLDB_HAS_LIBCXX@
 config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
 config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.test_triple = "@LLDB_TEST_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.python_root_dir = "@Python3_ROOT_DIR@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@

@@ -22,6 +22,7 @@ public:
   enum DeclVendorKind {
     eClangModuleDeclVendor,
     eAppleObjCDeclVendor,
+    eGNUstepObjCDeclVendor,
     eLastClangDeclVendor,
   };
   // Constructors and Destructors

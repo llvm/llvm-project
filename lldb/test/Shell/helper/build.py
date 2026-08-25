@@ -114,6 +114,14 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--no-debug-info",
+    dest="no_debug_info",
+    action="store_true",
+    default=False,
+    help="Compile without debug information.  Useful for testing behaviour that has to work from something other than debug info, such as a language runtime's own metadata.",
+)
+
+parser.add_argument(
     "--opt",
     dest="opt",
     default="none",
@@ -167,6 +175,14 @@ parser.add_argument(
     dest="std",
     required=False,
     help="Specify the C/C++ standard.",
+)
+
+parser.add_argument(
+    "--target",
+    metavar="target",
+    dest="target",
+    required=False,
+    help="Specify the target triple to build for. Defaults to the host.",
 )
 
 
@@ -242,15 +258,36 @@ def find_executable(binary_name, search_paths):
     return binary_path
 
 
-def find_toolchain(compiler, tools_dir):
+def targets_windows(target):
+    """Whether target (None means the host) runs on Windows."""
+    if target is None:
+        return sys.platform == "win32"
+    return any(name in target for name in ("windows", "mingw", "cygwin"))
+
+
+def targets_msvc(target):
+    """Whether target uses the MSVC environment: link.exe syntax, PDBs."""
+    if not targets_windows(target):
+        return False
+    if target is None:
+        return True
+    return not any(env in target for env in ("gnu", "mingw", "cygnus", "cygwin"))
+
+
+def find_toolchain(compiler, tools_dir, target=None):
     if compiler == "any":
         priorities = []
-        if sys.platform == "win32":
+        if targets_msvc(target):
             priorities = ["clang-cl", "msvc", "clang", "gcc"]
+        elif target:
+            # clang-cl cannot target a non-MSVC environment.
+            priorities = ["clang", "gcc"]
         else:
             priorities = ["clang", "gcc", "clang-cl"]
         for toolchain in priorities:
-            (type, c_compiler, cxx_compiler) = find_toolchain(toolchain, tools_dir)
+            type, c_compiler, cxx_compiler = find_toolchain(
+                toolchain, tools_dir, target
+            )
             if type and c_compiler and cxx_compiler:
                 return (type, c_compiler, cxx_compiler)
         # Could not find a toolchain.
@@ -307,6 +344,7 @@ class Builder(object):
         self.output = args.output
         self.mode = args.mode
         self.nodefaultlib = args.nodefaultlib
+        self.no_debug_info = args.no_debug_info
         self.verbose = args.verbose
         self.obj_ext = obj_ext
         self.lib_paths = args.libs_dir
@@ -314,17 +352,18 @@ class Builder(object):
         assert (
             not args.objc_gnustep or args.objc_gnustep_dir
         ), "--objc-gnustep specified without path to libobjc2"
+        # lit passes --objc-gnustep-dir to every %build, so gate on
+        # --objc-gnustep: the path alone would put ObjC flags (and shadow
+        # --sysroot) on every test.
+        use_gnustep = args.objc_gnustep and args.objc_gnustep_dir
         self.objc_gnustep_inc = (
-            os.path.join(args.objc_gnustep_dir, "include")
-            if args.objc_gnustep_dir
-            else None
+            os.path.join(args.objc_gnustep_dir, "include") if use_gnustep else None
         )
         self.objc_gnustep_lib = (
-            os.path.join(args.objc_gnustep_dir, "lib")
-            if args.objc_gnustep_dir
-            else None
+            os.path.join(args.objc_gnustep_dir, "lib") if use_gnustep else None
         )
         self.sysroot = args.sysroot
+        self.target = args.target
 
     def _exe_file_name(self):
         assert self.mode != "compile"
@@ -374,6 +413,8 @@ class Builder(object):
 class MsvcBuilder(Builder):
     def __init__(self, toolchain_type, args):
         Builder.__init__(self, toolchain_type, args, ".obj")
+        if self.target:
+            raise ValueError("--target is not supported with " + toolchain_type)
 
         if platform.uname().machine.lower() == "arm64":
             self.msvc_arch_str = "arm" if self.arch == "32" else "arm64"
@@ -694,7 +735,8 @@ class MsvcBuilder(Builder):
         if self.nodefaultlib:
             args.append("/GS-")
             args.append("/GR-")
-        args.append("/Z7")
+        if not self.no_debug_info:
+            args.append("/Z7")
         if self.toolchain_type == "clang-cl":
             args.append("-Xclang")
             args.append("-fkeep-static-consts")
@@ -764,7 +806,7 @@ class GccBuilder(Builder):
         args = [self.compiler_for_file(source)]
         args = self._add_m_option_if_needed(args)
 
-        args.append("-g")
+        args.append("-g0" if self.no_debug_info else "-g")
         if self.opt == "none":
             args.append("-O0")
         elif self.opt == "basic":
@@ -776,17 +818,26 @@ class GccBuilder(Builder):
             args.append("-static")
         args.append("-c")
 
+        if self.target:
+            args.append("--target=" + self.target)
+
         if sys.platform == "darwin":
             args.extend(["-isysroot", self.apple_sdk])
-        elif self.objc_gnustep_inc:
-            if source.endswith(".m") or source.endswith(".mm"):
+        else:
+            if self.objc_gnustep_inc and (
+                source.endswith(".m") or source.endswith(".mm")
+            ):
                 args.extend(["-fobjc-runtime=gnustep-2.0", "-I", self.objc_gnustep_inc])
-                if sys.platform == "win32":
-                    args.extend(
-                        ["-Xclang", "-gcodeview", "-Xclang", "--dependent-lib=msvcrtd"]
-                    )
-        elif self.sysroot:
-            args.extend(["--sysroot", self.sysroot])
+                if targets_msvc(self.target):
+                    # CodeView cannot represent Objective-C types, so force
+                    # DWARF even though the target is MSVC. The debugger needs
+                    # it to recognize classes and resolve dynamic types.
+                    if not self.no_debug_info:
+                        args.append("-gdwarf")
+                    args.extend(["-Xclang", "--dependent-lib=msvcrtd"])
+            if self.sysroot:
+                # Not exclusive with the ObjC flags: a cross build needs both.
+                args.extend(["--sysroot", self.sysroot])
 
         if self.std:
             args.append("-std={0}".format(self.std))
@@ -799,6 +850,14 @@ class GccBuilder(Builder):
     def _get_link_command(self):
         args = [self.linker]
         args = self._add_m_option_if_needed(args)
+
+        if self.target:
+            # The target also picks the linker and the runtime libraries.
+            args.append("--target=" + self.target)
+            if targets_windows(self.target) and not targets_msvc(self.target):
+                # The MinGW driver looks for its linker in the target sysroot,
+                # which need hold nothing the host can execute.
+                args.append("-fuse-ld=lld")
 
         if self.nodefaultlib:
             args.append("-nostdlib")
@@ -827,16 +886,19 @@ class GccBuilder(Builder):
             args.extend(["-isysroot", self.apple_sdk])
             args.extend(["-Wl,-lto_library", "-Wl," + system_liblto])
 
-        elif self.objc_gnustep_lib:
-            args.extend(["-L", self.objc_gnustep_lib, "-lobjc"])
-            if sys.platform == "linux":
-                args.extend(["-Wl,-rpath," + self.objc_gnustep_lib])
-            elif sys.platform == "win32":
-                args.extend(
-                    ["-fuse-ld=lld-link", "-g", "-Xclang", "--dependent-lib=msvcrtd"]
-                )
-        elif self.sysroot:
-            args.extend(["--sysroot", self.sysroot])
+        else:
+            if self.objc_gnustep_lib:
+                args.extend(["-L", self.objc_gnustep_lib, "-lobjc"])
+                if targets_msvc(self.target):
+                    # /debug:dwarf keeps the DWARF sections in the image and,
+                    # unlike the PDB route, writes a COFF symbol table, which
+                    # the debugger needs to find the runtime metadata symbols
+                    # ($_OBJC_CLASS_...).
+                    args.extend(["-fuse-ld=lld-link", "-Wl,/debug:dwarf"])
+                elif not targets_windows(self.target):
+                    args.extend(["-Wl,-rpath," + self.objc_gnustep_lib])
+            if self.sysroot:
+                args.extend(["--sysroot", self.sysroot])
 
         return ("linking", self._obj_file_names(), self._exe_file_name(), None, args)
 
@@ -945,7 +1007,7 @@ def fix_arguments(args):
 fix_arguments(args)
 
 (toolchain_type, c_compiler, cxx_compiler) = find_toolchain(
-    args.compiler, args.tools_dir
+    args.compiler, args.tools_dir, args.target
 )
 if not toolchain_type:
     print(f"Unable to find toolchain {args.compiler}")

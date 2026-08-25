@@ -166,6 +166,13 @@ Reach for `require*` when the test is tied to a platform-specific file format,
 API, or OS feature. If the test is merely untested or broken somewhere, keep
 `skipIf*` so nobody mistakes a bug for a design decision.
 
+Some tests instead depend on something the build was pointed at rather than on
+the platform. Objective-C tests are an example: on Linux and Windows there is
+no system runtime, so tests that need one go in the `objc-gnustep` category
+(by adding a `categories` file next to them) and only run when the build was
+configured with `LLDB_TEST_OBJC_GNUSTEP_DIR`. The Darwin-only `objc` category
+is unaffected.
+
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own `Makefile`, most of them only a

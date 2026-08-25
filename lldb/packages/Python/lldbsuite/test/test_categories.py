@@ -43,6 +43,8 @@ all_categories = {
     "pdb": "Tests that can be run with PDB debug information",
     "pexpect": "Tests requiring the pexpect library to be available",
     "objc": "Tests related to the Objective-C programming language support",
+    "objc-gnustep": "Tests requiring the GNUstep libobjc2 Objective-C runtime",
+    "objc-gnustep-base": "Tests requiring GNUstep's gnustep-base Foundation library",
     "pyapi": "Tests related to the Python API",
     "std-module": "Tests related to importing the std module",
     "stresstest": "Tests related to stressing lldb limits",

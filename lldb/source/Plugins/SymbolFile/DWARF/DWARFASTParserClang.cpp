@@ -2239,8 +2239,14 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
   clang::CXXRecordDecl *record_decl =
       m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
-  if (record_decl)
-    GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
+  // Objective-C interfaces are completed through this path as well, but are
+  // not CXXRecordDecls. Nothing that follows applies to them: they have no
+  // record layout to hand to the importer, no pointer-to-member
+  // representation to infer, and no nested types to resolve.
+  if (!record_decl)
+    return clang_type.IsValid();
+
+  GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
 
   // DWARF doesn't have the attribute, but we can infer the value the same way
   // as Clang Sema does. It's required to calculate the size of pointers to

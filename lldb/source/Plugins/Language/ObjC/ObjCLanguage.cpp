@@ -30,6 +30,7 @@
 #include "CF.h"
 #include "Cocoa.h"
 #include "CoreMedia.h"
+#include "GNUstepFormatters.h"
 #include "NSDictionary.h"
 #include "NSSet.h"
 #include "NSString.h"
@@ -876,6 +877,7 @@ lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
     if (g_category) {
       LoadCoreMediaFormatters(g_category);
       LoadObjCFormatters(g_category);
+      lldb_private::formatters::LoadGNUstepFormatters(g_category);
     }
   });
   return g_category;

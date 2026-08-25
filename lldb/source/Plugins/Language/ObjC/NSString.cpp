@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NSString.h"
+#include "GNUstepFormatters.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -43,6 +44,10 @@ bool lldb_private::formatters::NSStringSummaryProvider(
 
   if (!runtime)
     return false;
+  // gnustep-base lays its classes out differently and names them
+  // differently; hand those over.
+  if (llvm::isa<GNUstepObjCRuntime>(runtime))
+    return GNUstepNSStringSummaryProvider(valobj, stream, summary_options);
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
       runtime->GetClassDescriptor(valobj));
