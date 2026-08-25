@@ -85,6 +85,56 @@ static ABIArgInfo getDirectX86Hva(llvm::Type* T = nullptr) {
 // X86-32 ABI Implementation
 //===----------------------------------------------------------------------===//
 
+/// Returns the natural alignment (16, 32, or 64) of the X86 vector-register
+/// type \p Ty is, or (if CheckRecordFields) recursively contains; else 0.
+/// Matches GCC's varargs realignment rule on Linux/mingw, which applies only
+/// to vector/__float128 types, using their own fixed size rather than any
+/// attribute-inflated alignment (so an over-aligned typedef of a 16-byte
+/// vector still only gets 16-byte realignment, matching GCC).
+static unsigned getX86VectorRegisterVarArgAlign(ASTContext &Context,
+                                                QualType Ty,
+                                                bool CheckRecordFields) {
+  if (Ty->isFloat128Type())
+    return 16;
+
+  if (Ty->isVectorType()) {
+    uint64_t Bytes = Context.getTypeSizeInChars(Ty).getQuantity();
+    return (Bytes == 16 || Bytes == 32 || Bytes == 64) ? Bytes : 0;
+  }
+
+  // Only variadic arguments recurse into struct/class fields and bases: GCC
+  // does not extend this realignment to byval parameters of the same
+  // type (see the "misaligns parameters on stack" comment on
+  // CodeGen/X86/x86_32-arguments-linux.c).
+  if (!CheckRecordFields)
+    return 0;
+
+  if (Ty->isArrayType())
+    return getX86VectorRegisterVarArgAlign(
+        Context, Context.getBaseElementType(Ty), CheckRecordFields);
+
+  const auto *RD = Ty->getAsRecordDecl();
+  if (!RD)
+    return 0;
+
+  // Use the widest member's own alignment, not the record's (which may be
+  // further over-aligned by attribute); GCC's handling of that case is
+  // itself version-dependent, so we don't chase it here.
+  unsigned Result = 0;
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (const auto &Base : CXXRD->bases())
+      Result =
+          std::max(Result, getX86VectorRegisterVarArgAlign(
+                               Context, Base.getType(), CheckRecordFields));
+
+  for (const auto *Field : RD->fields())
+    Result =
+        std::max(Result, getX86VectorRegisterVarArgAlign(
+                             Context, Field->getType(), CheckRecordFields));
+
+  return Result;
+}
+
 /// Similar to llvm::CCState, but for Clang.
 struct CCState {
   CCState(CGFunctionInfo &FI)
@@ -139,8 +189,11 @@ class X86_32ABIInfo : public ABIInfo {
 
   ABIArgInfo getIndirectReturnResult(QualType Ty, CCState &State) const;
 
-  /// Return the alignment to use for the given type on the stack.
-  unsigned getTypeStackAlignInBytes(QualType Ty, unsigned Align) const;
+  /// Return the alignment to use for the given type on the stack. \p
+  /// IsVarArg distinguishes a "..." (va_arg) argument from an ordinary
+  /// (possibly byval) parameter; see getX86VectorRegisterVarArgAlign().
+  unsigned getTypeStackAlignInBytes(QualType Ty, unsigned Align,
+                                    bool IsVarArg) const;
 
   Class classify(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy, CCState &State) const;
@@ -572,24 +625,36 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
                                                : ABIArgInfo::getDirect());
 }
 
-unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
-                                                 unsigned Align) const {
+unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty, unsigned Align,
+                                                 bool IsVarArg) const {
   // Otherwise, if the alignment is less than or equal to the minimum ABI
   // alignment, just use the default; the backend will handle this.
   if (Align <= MinABIStackAlignInBytes)
     return 0; // Use default alignment.
 
+  // Linux and the GNU-flavored Windows targets (MinGW, Cygwin) are the
+  // platforms where GCC, not Clang, defines this part of the ABI, so match
+  // it: realign "..." arguments to their natural alignment, but only for
+  // vector-register types (see getX86VectorRegisterVarArgAlign()).
+  if (IsLinuxABI) {
+    if (unsigned VecAlign = getX86VectorRegisterVarArgAlign(
+            getContext(), Ty, /*CheckRecordFields=*/IsVarArg))
+      return VecAlign;
+  }
+
+  // Real (non-GNU) Windows never honors over-alignment for "..." arguments,
+  // for any type: MSVC packs them all at the platform default (4 bytes),
+  // unlike a named parameter of the same type, which it passes indirectly
+  // by pointer once its alignment exceeds 4 bytes.
+  if (IsWin32StructABI)
+    return MinABIStackAlignInBytes;
+
+  // FreeBSD/NetBSD/OpenBSD/PS4 and Darwin keep their own narrower,
+  // long-standing behavior below: Clang isn't tracking a reference
+  // compiler's ABI for these, so don't widen what gets realigned here.
   if (Ty->isFloat128Type())
     return 16;
 
-  if (IsLinuxABI) {
-    // Exclude other System V OS (e.g Darwin, PS4 and FreeBSD) since we don't
-    // want to spend any effort dealing with the ramifications of ABI breaks.
-    //
-    // If the vector type is __m128/__m256/__m512, return the default alignment.
-    if (Ty->isVectorType() && (Align == 16 || Align == 32 || Align == 64))
-      return Align;
-  }
   // On non-Darwin, the stack type alignment is always 4.
   if (!IsDarwinVectorABI) {
     // Set explicit alignment, since we may need to realign the top.
@@ -618,7 +683,8 @@ ABIArgInfo X86_32ABIInfo::getIndirectResult(QualType Ty, bool ByVal,
 
   // Compute the byval alignment.
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
-  unsigned StackAlign = getTypeStackAlignInBytes(Ty, TypeAlign);
+  unsigned StackAlign =
+      getTypeStackAlignInBytes(Ty, TypeAlign, /*IsVarArg=*/false);
   if (StackAlign == 0)
     return ABIArgInfo::getIndirect(
         CharUnits::fromQuantity(4),
@@ -1092,8 +1158,8 @@ RValue X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   //
   // Just messing with TypeInfo like this works because we never pass
   // anything indirectly.
-  TypeInfo.Align = CharUnits::fromQuantity(
-                getTypeStackAlignInBytes(Ty, TypeInfo.Align.getQuantity()));
+  TypeInfo.Align = CharUnits::fromQuantity(getTypeStackAlignInBytes(
+      Ty, TypeInfo.Align.getQuantity(), /*IsVarArg=*/true));
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
                           CharUnits::fromQuantity(4),
