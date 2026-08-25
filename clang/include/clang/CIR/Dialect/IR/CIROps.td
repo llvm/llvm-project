@@ -4166,7 +4166,8 @@ def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
   I32EnumAttrCase<"PTXKernel", 1, "ptx_kernel">,
   I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
   I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
-  I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
+  I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">,
+  I32EnumAttrCase<"X86WinCall", 5, "x86_wincall">
 ]>;
 
 def CIR_FuncOp : CIR_Op<"func", [

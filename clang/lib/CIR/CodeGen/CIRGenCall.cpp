@@ -319,7 +319,19 @@ void CIRGenModule::constructAttributeList(
     llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
-  assert(!cir::MissingFeatures::opCallCallConv());
+  // Compute the calling convention based on the function type.
+  // The calling convention is stored on the function type, not the declaration.
+  callingConv = cir::CallingConv::C;
+  if (const Decl *decl = calleeInfo.getCalleeDecl().getDecl()) {
+    if (const FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
+      clang::CallingConv cc =
+          fd->getType()->castAs<clang::FunctionType>()->getCallConv();
+      if (cc == clang::CallingConv::CC_WinCall) {
+        callingConv = cir::CallingConv::X86WinCall;
+      }
+    }
+  }
+
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {

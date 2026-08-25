@@ -336,6 +336,8 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
     return LLVM::PTX_Kernel;
   case CIR::AMDGPUKernel:
     return LLVM::AMDGPU_KERNEL;
+  case CIR::X86WinCall:
+    return LLVM::X86_WinCall;
   }
   llvm_unreachable("Unknown calling convention");
 }
