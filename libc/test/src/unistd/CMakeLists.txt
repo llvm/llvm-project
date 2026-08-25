@@ -651,6 +651,7 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.src.unistd.confstr
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 

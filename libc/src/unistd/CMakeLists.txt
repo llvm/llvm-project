@@ -60,6 +60,7 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

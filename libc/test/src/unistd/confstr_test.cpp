@@ -15,12 +15,13 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/Test.h"
 
+using LlvmLibcConfStrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
-TEST(LlvmLibcConfStrTest, InvalidName) {
+TEST_F(LlvmLibcConfStrTest, InvalidName) {
   char buf[64] = "initial";
   EXPECT_THAT(LIBC_NAMESPACE::confstr(0, buf, sizeof(buf)),
               Fails(EINVAL, size_t(0)));
