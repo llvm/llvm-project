@@ -4945,13 +4945,24 @@ bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts) {
     return false;
 
   do {
-    // Let the caller deal with inrange.
     if (Lex.getKind() == lltok::kw_inrange)
       return false;
 
     Constant *C;
-    if (parseGlobalTypeAndValue(C))
-      return true;
+    if (InConstantVector) {
+      Type *Ty = nullptr;
+      bool Saved = InConstantVector;
+      if (parseType(Ty))
+        return true;
+      InConstantVector = false;
+      bool Res = parseGlobalValue(Ty, C);
+      InConstantVector = Saved;
+      if (Res)
+        return true;
+    } else {
+      if (parseGlobalTypeAndValue(C))
+        return true;
+    }
     Elts.push_back(C);
   } while (EatIfPresent(lltok::comma));
 
