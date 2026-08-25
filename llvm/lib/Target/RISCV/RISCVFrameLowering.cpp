@@ -2864,6 +2864,7 @@ void RISCVFrameLowering::orderFrameObjects(
   // non-default-stack-ID or other special objects to ObjectsToAllocate, so
   // the objects seen here are safe to reorder.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
 
   DenseMap<int, unsigned> Index;
   SmallVector<RISCVFrameSortingObject> Sorting;
@@ -2917,7 +2918,7 @@ void RISCVFrameLowering::orderFrameObjects(
   // Ordinary local objects in a non-realigned FP frame are addressed from the
   // opposite end of the allocation order. Reverse the SP/BP-oriented order so
   // high-density objects are close to FP instead.
-  if (!STI.getRegisterInfo()->hasStackRealignment(MF) && hasFP(MF))
+  if (!RI->hasStackRealignment(MF) && hasFP(MF))
     std::reverse(ObjectsToAllocate.begin(), ObjectsToAllocate.end());
 }
 
