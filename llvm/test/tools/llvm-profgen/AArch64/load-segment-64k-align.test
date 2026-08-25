@@ -6,15 +6,20 @@
 # RUN:   --perfscript=%t/perfscript --skip-symbolization --format=text \
 # RUN:   --use-offset=0 --output=%t/profile
 # RUN: FileCheck %s --input-file=%t/profile
+# RUN: llvm-profgen --binary=%t/load-segment-64k-align.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --format=text \
+# RUN:   --use-offset=1 --output=%t/offset-profile
+# RUN: FileCheck %s --check-prefix=OFFSET --input-file=%t/offset-profile
 
-## Test a runtime mmap using 0x10000 page alignment instead of the 0x1000
-## baseline used by setPreferredTextSegmentAddresses(). The text segment offset
-## is recorded as 0x13000, while perf reports a 0x10000-aligned mmap starting
-## at file offset 0x10000. Verify that llvm-profgen finds the text segment at
-## offset 0x3000 within that mmap and derives its correct runtime address.
+## Test a 0x10000-aligned runtime mmap containing a PT_LOAD that begins at file
+## offset 0x13de0. Verify that llvm-profgen derives the runtime base address from
+## the mmap address and offset without assuming a fixed page size.
 # CHECK:      0
 # CHECK-NEXT: 1
 # CHECK-NEXT: 143de4->143de0:1
+# OFFSET:      0
+# OFFSET-NEXT: 1
+# OFFSET-NEXT: 13de4->13de0:1
 
 #--- binary.yaml
 --- !ELF

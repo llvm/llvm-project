@@ -362,26 +362,18 @@ template <class ELFT>
 void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
-  // The page size of the profiling system cannot be determined from the ELF
-  // binary alone, and using the page size of the post-processing system would
-  // be incorrect. Use 4 KiB when rounding down PT_LOAD virtual addresses and
-  // file offsets. PerfScriptReader accounts for mmap events aligned to larger
-  // runtime pages.
-  uint64_t PageSize = 0x1000;
   bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!SeenFirstLoadableSegment) {
-        FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+        FirstLoadableAddress = Phdr.p_vaddr - Phdr.p_offset;
         SeenFirstLoadableSegment = true;
       }
       if (Phdr.p_flags & ELF::PF_X) {
-        // Segments will always be loaded at a page boundary.
-        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
-                                                ~(PageSize - 1U));
-        TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+        PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
+        TextSegmentOffsets.push_back(Phdr.p_offset);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;

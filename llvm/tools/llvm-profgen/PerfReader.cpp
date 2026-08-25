@@ -594,46 +594,45 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
-  // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary->getBaseAddress()) {
+  auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
+    return Event.Offset == FileOffset ||
+           (Event.MemProtectionFlag.contains("x") &&
+            Event.Offset < FileOffset &&
+            FileOffset - Event.Offset < Event.Size);
+  };
+  const bool MMapContainsTextSegment =
+      MMapContainsFileOffset(Binary->getTextSegmentOffset());
+  const uint64_t RuntimeBaseAddress = IsKernel || Binary->isCOFF()
+                                          ? Event.Address
+                                          : Event.Address - Event.Offset;
+
+  // Drop the event if its image has the same base address.
+  if ((IsKernel || MMapContainsTextSegment) &&
+      RuntimeBaseAddress == Binary->getBaseAddress()) {
     Binary->setIsLoadedByMMap(true);
     return;
   }
 
-  if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
+  if (IsKernel || MMapContainsTextSegment) {
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    Binary->setBaseAddress(Event.Address);
+    Binary->setBaseAddress(RuntimeBaseAddress);
     Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
-    auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
-      return Event.Offset <= FileOffset &&
-             FileOffset - Event.Offset < Event.Size;
-    };
     auto It = llvm::lower_bound(Offsets, Event.Offset);
     if (It != Offsets.end() && MMapContainsFileOffset(*It)) {
-      // setPreferredTextSegmentAddresses() rounds text segment offsets down to
-      // 4 KiB boundaries. On systems with larger OS page sizes (e.g., 64 KiB on
-      // AArch64), the kernel rounds down the mmap offset to the page boundary.
-      // Thus, the mmap region will start before and fully encompass the
-      // expected 4 KiB-aligned offset. Translate the segment start to its
-      // runtime address using its offset within the mmap.
+      // The event is for loading a separate executable segment.
       auto I = std::distance(Offsets.begin(), It);
-      uint64_t SegmentLoadAddress = Event.Address + (*It - Event.Offset);
-      if (It == Offsets.begin()) {
-        Binary->setBaseAddress(SegmentLoadAddress);
-        Binary->setIsLoadedByMMap(true);
-      } else {
-        const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
-        if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-            SegmentLoadAddress - Binary->getBaseAddress())
-          exitWithError("Executable segments not loaded consecutively");
-      }
+      const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+      uint64_t RuntimeSegmentAddress = Event.Address + (*It - Event.Offset);
+      if (PreferredAddrs[I] !=
+          Binary->canonicalizeVirtualAddress(RuntimeSegmentAddress))
+        exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
         exitWithError("File offset not found");
@@ -642,7 +641,10 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
+        auto I = std::distance(Offsets.begin(), It);
+        const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
+        if (PreferredAddrs[I] + (Event.Offset - *It) !=
+            Binary->canonicalizeVirtualAddress(Event.Address))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
