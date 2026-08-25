@@ -88,4 +88,15 @@ extern "C" void tile_on_flatten() {
       body(i, j);
 }
 
+// Two empty loops: clamped trip counts are 0, so the flattened bound is 0
+// (not (-1)*(-1) = 1).
+// CHECK-LABEL: define {{.*}}void @both_neg(
+// CHECK:   icmp slt i32 %{{.+}}, 0
+extern "C" void both_neg() {
+#pragma omp flatten
+  for (int i = 0; i < -1; ++i)
+    for (int j = 0; j < -1; ++j)
+      body(i, j);
+}
+
 #endif

@@ -47,6 +47,7 @@
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Assumptions.h"
+#include <limits>
 #include <optional>
 
 using namespace clang;
@@ -16558,7 +16559,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
     } else if (DepthExpr) {
       Expr::EvalResult EvalResult;
       if (DepthExpr->EvaluateAsInt(EvalResult, Context))
-        NumLoops = EvalResult.Val.getInt().getLimitedValue();
+        NumLoops = EvalResult.Val.getInt().getLimitedValue(
+            std::numeric_limits<unsigned>::max());
     }
   }
 
@@ -16642,12 +16644,39 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation OrigVarLocEnd = OutermostCntVar->getEndLoc();
   SourceLocation CondLoc = OutermostHelper.Cond->getExprLoc();
 
+  // Canonical empty loops have a negative computed trip count (e.g. i < -1
+  // yields -1). Clamp each count to max(0, N) before multiplying; otherwise two
+  // empty loops give a positive product and the flattened body runs.
+  auto ClampNonNegative = [&](Expr *Cmp, Expr *Val) -> ExprResult {
+    QualType Ty = Val->getType();
+    ExprResult ZeroLT = SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(CondLoc, 0).get(), Ty,
+        AssignmentAction::Converting, /*AllowExplicit=*/true);
+    ExprResult ZeroVal = SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(CondLoc, 0).get(), Ty,
+        AssignmentAction::Converting, /*AllowExplicit=*/true);
+    if (!ZeroLT.isUsable() || !ZeroVal.isUsable())
+      return ExprError();
+    ExprResult IsNeg =
+        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, Cmp, ZeroLT.get());
+    if (!IsNeg.isUsable())
+      return ExprError();
+    return SemaRef.ActOnConditionalOp(CondLoc, CondLoc, IsNeg.get(),
+                                      ZeroVal.get(), Val);
+  };
+
   // Product of trip counts; mirror 'collapse' IV-width selection to avoid
   // overflow when several counts are multiplied.
   auto BuildTripCount = [&](unsigned Bits) -> ExprResult {
     ExprResult Product;
     for (unsigned I = 0; I < NumLoops; ++I) {
-      ExprResult N = widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
+      ExprResult NCmp =
+          widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
+      ExprResult NVal =
+          widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
+      if (!NCmp.isUsable() || !NVal.isUsable())
+        return ExprError();
+      ExprResult N = ClampNonNegative(NCmp.get(), NVal.get());
       if (!N.isUsable())
         return ExprError();
       if (I == 0)
