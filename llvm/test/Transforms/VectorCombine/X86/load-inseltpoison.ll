@@ -4,6 +4,8 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
+declare void @may_free()
+
 define float @matching_fp_scalar(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @matching_fp_scalar(
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[P:%.*]], align 16
@@ -167,6 +169,19 @@ define <4 x float> @load_f32_insert_v4f32(ptr align 16 dereferenceable(16) %p) {
   ret <4 x float> %r
 }
 
+define <4 x float> @load_f32_insert_v4f32_may_free(ptr align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32_may_free(
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    [[S:%.*]] = load float, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  call void @may_free()
+  %s = load float, ptr %p, align 4
+  %r = insertelement <4 x float> poison, float %s, i32 0
+  ret <4 x float> %r
+}
+
 define <4 x float> @casted_load_f32_insert_v4f32(ptr align 4 dereferenceable(16) %p) {
 ; CHECK-LABEL: @casted_load_f32_insert_v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P:%.*]], align 4
@@ -270,6 +285,21 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref(ptr align 16 dereferenceable
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
+  %s = load i16, ptr %gep, align 2
+  %r = insertelement <8 x i16> poison, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @gep01_load_i16_insert_v8i16_deref_may_free(ptr align 16 dereferenceable(17) %p) {
+; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref_may_free(
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  call void @may_free()
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
   %s = load i16, ptr %gep, align 2
   %r = insertelement <8 x i16> poison, i16 %s, i64 0
@@ -571,6 +601,21 @@ define <4 x float> @load_v2f32_extract_insert_v4f32(ptr align 16 dereferenceable
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
+  %l = load <2 x float>, ptr %p, align 4
+  %s = extractelement <2 x float> %l, i32 0
+  %r = insertelement <4 x float> poison, float %s, i32 0
+  ret <4 x float> %r
+}
+
+define <4 x float> @load_v2f32_extract_insert_v4f32_may_free(ptr align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2f32_extract_insert_v4f32_may_free(
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[S:%.*]] = extractelement <2 x float> [[L]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> poison, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  call void @may_free()
   %l = load <2 x float>, ptr %p, align 4
   %s = extractelement <2 x float> %l, i32 0
   %r = insertelement <4 x float> poison, float %s, i32 0
