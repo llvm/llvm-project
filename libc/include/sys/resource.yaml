@@ -4,9 +4,18 @@ standards:
 macros:
   - macro_name: RLIMIT_CPU
     macro_header: sys-resource-macros.h
+  - macro_name: RUSAGE_SELF
+    macro_header: sys-resource-macros.h
+  - macro_name: RUSAGE_CHILDREN
+    macro_header: sys-resource-macros.h
+  - macro_name: RUSAGE_THREAD
+    macro_header: sys-resource-macros.h
+    standards:
+      - gnu
 types:
   - type_name: struct_rlimit
   - type_name: rlim_t
+  - type_name: struct_rusage
 enums: []
 objects: []
 functions:
@@ -19,8 +28,7 @@ functions:
       - type: struct rlimit *
   - name: getrusage
     standards:
-      # GNU because we support RUSAGE_THREAD, which is not in POSIX.
-      - gnu
+      - posix
     return_type: int
     arguments:
       - type: int
