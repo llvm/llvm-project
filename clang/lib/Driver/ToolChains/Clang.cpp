@@ -9749,13 +9749,11 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
-    // TODO: We need to pass in the full target-id and handle it properly in the
-    // linker wrapper.
-    llvm::Triple EffectiveTriple(TC->ComputeEffectiveClangTriple(TCArgs, Arch));
     // Ensure SPIRV SYCL device images are tagged with the canonical
     // three-component triple (e.g. "spirv64-unknown-unknown") so that the SYCL
     // runtime's exact-string image compatibility check succeeds.  An arch-only
     // spelling like "spirv64" is accepted by the driver but does not match.
+    llvm::Triple EffectiveTriple(TC->ComputeEffectiveClangTriple(TCArgs, Arch));
     if (EffectiveTriple.isSPIRV() &&
         OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL) {
       if (EffectiveTriple.getVendor() == llvm::Triple::UnknownVendor)
@@ -9763,6 +9761,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       if (EffectiveTriple.getOS() == llvm::Triple::UnknownOS)
         EffectiveTriple.setOS(llvm::Triple::UnknownOS);
     }
+    // TODO: We need to pass in the full target-id and handle it properly in the
+    // linker wrapper.
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + EffectiveTriple.getTriple(),
