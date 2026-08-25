@@ -1784,13 +1784,15 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 
 void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
-  Record.skipInts(1); // Skip kind.
+  Record.skipInts(2); // Skip kind and whether there is an expansion size.
   S->LParenLoc = readSourceLocation();
   S->ColonLoc = readSourceLocation();
   S->RParenLoc = readSourceLocation();
   S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
   for (Stmt *&SubStmt : S->children())
     SubStmt = Record.readSubStmt();
+  if (S->CXXExpansionStmtPatternBits.HasExpansionSize)
+    S->setExpansionSize(Record.readInt());
 }
 
 void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
@@ -3685,7 +3687,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = CXXExpansionStmtPattern::CreateEmpty(
           Context, Empty,
           static_cast<CXXExpansionStmtPattern::ExpansionStmtKind>(
-              Record[ASTStmtReader::NumStmtFields]));
+              Record[ASTStmtReader::NumStmtFields]),
+          Record[ASTStmtReader::NumStmtFields + 1]);
       break;
 
     case STMT_CXX_EXPANSION_INSTANTIATION:

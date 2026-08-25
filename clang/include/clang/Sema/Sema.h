@@ -15839,11 +15839,9 @@ public:
 
   StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
 
-  StmtResult BuildCXXEnumeratingExpansionStmtPattern(Decl *ESD, Stmt *Init,
-                                                     Stmt *ExpansionVar,
-                                                     SourceLocation LParenLoc,
-                                                     SourceLocation ColonLoc,
-                                                     SourceLocation RParenLoc);
+  CXXExpansionStmtPattern *BuildCXXEnumeratingExpansionStmtPattern(
+      Decl *ESD, Stmt *Init, Stmt *ExpansionVar, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc);
 
   StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
       CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
@@ -15853,8 +15851,9 @@ public:
 
   ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
 
-  std::optional<uint64_t>
-  ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
+  /// Compute the expansion size of an iterating expansion statement.
+  CXXExpansionStmtPattern::ExpansionSize
+  ComputeIteratingExpansionSize(VarDecl *RangeVar, SourceLocation ColonLoc);
   ///@}
 };
 

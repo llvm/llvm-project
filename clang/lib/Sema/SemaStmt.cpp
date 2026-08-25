@@ -3651,6 +3651,20 @@ static bool hasDeducedReturnType(FunctionDecl *FD) {
   return FPT->getReturnType()->isUndeducedType();
 }
 
+/// Build a return statement that is in a discarded context.
+static StmtResult BuildDiscardedReturnStmt(Sema &S, Expr *RetValExp,
+                                           SourceLocation ReturnLoc) {
+  if (RetValExp) {
+    ExprResult ER =
+        S.ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue=*/false);
+    if (ER.isInvalid())
+      return StmtError();
+    RetValExp = ER.get();
+  }
+  return ReturnStmt::Create(S.Context, ReturnLoc, RetValExp,
+                            /* NRVOCandidate=*/nullptr);
+}
+
 StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
                                          Expr *RetValExp,
                                          NamedReturnInfo &NRInfo,
@@ -3666,17 +3680,8 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
       CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
   if (ExprEvalContexts.back().isDiscardedStatementContext() &&
-      (HasDeducedReturnType || CurCap->HasImplicitReturnType)) {
-    if (RetValExp) {
-      ExprResult ER =
-          ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue*/ false);
-      if (ER.isInvalid())
-        return StmtError();
-      RetValExp = ER.get();
-    }
-    return ReturnStmt::Create(Context, ReturnLoc, RetValExp,
-                              /* NRVOCandidate=*/nullptr);
-  }
+      (HasDeducedReturnType || CurCap->HasImplicitReturnType))
+    return BuildDiscardedReturnStmt(*this, RetValExp, ReturnLoc);
 
   if (HasDeducedReturnType) {
     FunctionDecl *FD = CurLambda->CallOperator;
@@ -4125,17 +4130,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // C++1z: discarded return statements are not considered when deducing a
   // return type.
   if (ExprEvalContexts.back().isDiscardedStatementContext() &&
-      FnRetType->getContainedAutoType()) {
-    if (RetValExp) {
-      ExprResult ER =
-          ActOnFinishFullExpr(RetValExp, ReturnLoc, /*DiscardedValue*/ false);
-      if (ER.isInvalid())
-        return StmtError();
-      RetValExp = ER.get();
-    }
-    return ReturnStmt::Create(Context, ReturnLoc, RetValExp,
-                              /* NRVOCandidate=*/nullptr);
-  }
+      FnRetType->getContainedAutoType())
+    return BuildDiscardedReturnStmt(*this, RetValExp, ReturnLoc);
 
   // FIXME: Add a flag to the ScopeInfo to indicate whether we're performing
   // deduction.

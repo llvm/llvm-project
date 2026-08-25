@@ -23,6 +23,7 @@
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
+using ExpansionSize = CXXExpansionStmtPattern::ExpansionSize;
 
 namespace {
 struct IterableExpansionStmtData {
@@ -74,32 +75,6 @@ static bool FinalizeExpansionVar(Sema &S, VarDecl *ExpansionVar,
 static auto InitListContainsPack(const InitListExpr *ILE) {
   return llvm::any_of(ILE->inits(),
                       [](const Expr *E) { return isa<PackExpansionExpr>(E); });
-}
-
-static bool HasDependentSize(const DeclContext *CurContext,
-                             const CXXExpansionStmtPattern *Pattern) {
-  switch (Pattern->getKind()) {
-  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating: {
-    auto *SelectExpr = cast<CXXExpansionSelectExpr>(
-        Pattern->getExpansionVariable()->getInit());
-    return InitListContainsPack(SelectExpr->getRangeExpr());
-  }
-
-  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
-    // Even if the size isn't technically dependent, delay expansion until
-    // we're no longer in a template since evaluating a lambda declared in
-    // a template doesn't work too well.
-    assert(CurContext->isExpansionStmt());
-    return CurContext->getParent()->isDependentContext();
-
-  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
-    return true;
-
-  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
-    return false;
-  }
-
-  llvm_unreachable("invalid pattern kind");
 }
 
 static IterableExpansionStmtData TryBuildIterableExpansionStmtInitializer(
@@ -359,12 +334,21 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
       LifetimeExtendTemps);
 }
 
-StmtResult Sema::BuildCXXEnumeratingExpansionStmtPattern(
+CXXExpansionStmtPattern *Sema::BuildCXXEnumeratingExpansionStmtPattern(
     Decl *ESD, Stmt *Init, Stmt *ExpansionVar, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc) {
+  // The expansion size is known if the expansion-initializer contains no
+  // pack expansions.
+  auto *VD = cast<VarDecl>(cast<DeclStmt>(ExpansionVar)->getSingleDecl());
+  auto *SelectExpr = cast<CXXExpansionSelectExpr>(VD->getInit());
+  bool SizeIsKnown = !InitListContainsPack(SelectExpr->getRangeExpr());
+  ExpansionSize Size =
+      SizeIsKnown ? ExpansionSize(SelectExpr->getRangeExpr()->getNumInits())
+                  : std::nullopt;
+
   return CXXExpansionStmtPattern::CreateEnumerating(
       Context, cast<CXXExpansionStmtDecl>(ESD), Init,
-      cast<DeclStmt>(ExpansionVar), LParenLoc, ColonLoc, RParenLoc);
+      cast<DeclStmt>(ExpansionVar), LParenLoc, ColonLoc, RParenLoc, Size);
 }
 
 StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
@@ -426,9 +410,11 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
     if (FinalizeExpansionVar(*this, ExpansionVar, Deref.get()))
       return StmtError();
 
+    auto *RangeVar = cast<VarDecl>(Data.RangeDecl->getSingleDecl());
+    ExpansionSize Size = ComputeIteratingExpansionSize(RangeVar, ColonLoc);
     return CXXExpansionStmtPattern::CreateIterating(
         Context, ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
-        Data.IterDecl, LParenLoc, ColonLoc, RParenLoc);
+        Data.IterDecl, LParenLoc, ColonLoc, RParenLoc, Size);
   }
 
   // If not, try destructuring.
@@ -489,8 +475,12 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (FinalizeExpansionVar(*this, ExpansionVar, Select))
     return StmtError();
 
+  // We only build a destructuring expansion statement once the initializer
+  // is no longer dependent; thus, the expansion size is always known.
+  ExpansionSize Size = DD->bindings().size();
   return CXXExpansionStmtPattern::CreateDestructuring(
-      Context, ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
+      Context, ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc,
+      Size);
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
@@ -502,18 +492,14 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
          "should not rebuild expansion statement after instantiation");
 
   Expansion->setBody(Body);
-  if (HasDependentSize(CurContext, Expansion))
+  ExpansionSize NumInstantiations = Expansion->getExpansionSize();
+  if (!NumInstantiations.has_value())
     return Expansion;
 
   // Now that we're expanding this, exit the context of the expansion stmt
   // so that we no longer treat this as dependent.
   ContextRAII CtxGuard(*this, CurContext->getParent(),
                        /*NewThis=*/false);
-
-  // This can fail if this is an iterating expansion statement.
-  std::optional<uint64_t> NumInstantiations = ComputeExpansionSize(Expansion);
-  if (!NumInstantiations)
-    return StmtError();
 
   // Collect preamble statements.
   //
@@ -598,13 +584,19 @@ ExprResult Sema::BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx) {
   return Range->getInit(I);
 }
 
-std::optional<uint64_t>
-Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
-  if (Expansion->isEnumerating())
-    return cast<CXXExpansionSelectExpr>(
-               Expansion->getExpansionVariable()->getInit())
-        ->getRangeExpr()
-        ->getNumInits();
+CXXExpansionStmtPattern::ExpansionSize
+Sema::ComputeIteratingExpansionSize(VarDecl *RangeVar, SourceLocation Loc) {
+  // Even if the size isn't technically dependent, delay expansion until
+  // we're no longer in a template since evaluating a lambda declared in
+  // a template doesn't work too well.
+  assert(CurContext->isExpansionStmt());
+  if (CurContext->getParent()->isDependentContext())
+    return std::nullopt;
+
+  // Computing the expansion size should happen outside the dependent
+  // expansion statement context.
+  ContextRAII CtxGuard(*this, CurContext->getParent(),
+                       /*NewThis=*/false);
 
   // [stmt.expand]p5.2 (CWG3131): N is the result of evaluating the expression
   //
@@ -615,14 +607,12 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   //    for (; b != e; ++b) ++result;
   //    return result;
   // }()
-  if (Expansion->isIterating()) {
-    SourceLocation Loc = Expansion->getColonLoc();
-    EnterExpressionEvaluationContext ExprEvalCtx(
-        *this, ExpressionEvaluationContext::ConstantEvaluated);
+  EnterExpressionEvaluationContext ExprEvalCtx(
+      *this, ExpressionEvaluationContext::ConstantEvaluated);
 
-    // TODO: Build the lambda and evaluate it.
-    Diag(Loc, diag::err_iterating_expansion_stmt_unsupported);
-    return std::nullopt;
+  // TODO: Build the lambda and evaluate it.
+  Diag(Loc, diag::err_iterating_expansion_stmt_unsupported);
+  return std::nullopt;
 
 #if 0 // This will be used once we support iterating expansion statements.
     Expr::EvalResult ER;
@@ -640,8 +630,4 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     assert(ER.Val.getInt().isNonNegative());
     return ER.Val.getInt().getZExtValue();
 #endif
-  }
-
-  assert(Expansion->isDestructuring());
-  return Expansion->getDecompositionDecl()->bindings().size();
 }
