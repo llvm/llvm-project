@@ -81,6 +81,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -123,6 +124,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -4794,7 +4796,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -7665,7 +7667,7 @@ ConceptReference *ASTRecordReader::readConceptReference() {
   auto TemplateKWLoc = readSourceLocation();
   auto ConceptNameLoc = readDeclarationNameInfo();
   auto FoundDecl = readDeclAs<NamedDecl>();
-  auto NamedConcept = readDeclAs<ConceptDecl>();
+  auto NamedConcept = readTemplateName();
   auto *CR = ConceptReference::Create(
       getContext(), NNS, TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       (readBool() ? readASTTemplateArgumentListInfo() : nullptr));

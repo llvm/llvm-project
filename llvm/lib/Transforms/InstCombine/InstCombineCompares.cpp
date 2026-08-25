@@ -115,6 +115,11 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 ///
 /// If AndCst is non-null, then the loaded value is masked with that constant
 /// before doing the comparison. This handles cases like "A[i]&4 == 0".
+///
+/// We allow multi-use cases in this fold, even though it can increase
+/// instruction count, because it appears to be mostly beneficial in practice.
+/// Even if there are multiple uses, they can often be sunk into the block
+/// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, CmpInst &ICI, ConstantInt *AndCst) {
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));
@@ -7098,6 +7103,22 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
 
     if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, Q))
       return &I;
+  }
+
+  // If an unsigned samesign comparison is not poison, both operands have the
+  // same sign bit. Propagate a known sign bit between the temporary KnownBits
+  // values so the existing range folds can use that constraint.
+  if (I.hasSameSign() && I.isUnsigned()) {
+    auto PropagateSignBit = [](const KnownBits &From, KnownBits &To) {
+      if (To.isNegative() || To.isNonNegative())
+        return;
+      if (From.isNegative())
+        To.makeNegative();
+      else if (From.isNonNegative())
+        To.makeNonNegative();
+    };
+    PropagateSignBit(Op0Known, Op1Known);
+    PropagateSignBit(Op1Known, Op0Known);
   }
 
   if (!isa<Constant>(Op0) && Op0Known.isConstant())

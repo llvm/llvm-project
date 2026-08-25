@@ -12,8 +12,10 @@
 #include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
@@ -664,8 +666,9 @@ Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
   CallInt32VoidProxy CallInitializer;
-  if (auto Err = buildProxies(
-          ES, proxyInit<sps::CallInt32VoidProxySpec>(&CallInitializer)))
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInitializer)}))
     return Err;
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
@@ -680,22 +683,19 @@ Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
 Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
   // Lookup of runtime symbols causes the collection of initializers if
   // it's static linking setting.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-          {
-              {ES.intern("__orc_rt_coff_platform_bootstrap"),
-               &orc_rt_coff_platform_bootstrap},
-              {ES.intern("__orc_rt_coff_platform_shutdown"),
-               &orc_rt_coff_platform_shutdown},
-              {ES.intern("__orc_rt_coff_register_jitdylib"),
-               &orc_rt_coff_register_jitdylib},
-              {ES.intern("__orc_rt_coff_deregister_jitdylib"),
-               &orc_rt_coff_deregister_jitdylib},
-              {ES.intern("__orc_rt_coff_register_object_sections"),
-               &orc_rt_coff_register_object_sections},
-              {ES.intern("__orc_rt_coff_deregister_object_sections"),
-               &orc_rt_coff_deregister_object_sections},
-          }))
+  if (auto Err = lookupAndApply(
+          PlatformJD, {recordAddr("__orc_rt_coff_platform_bootstrap",
+                                  &orc_rt_coff_platform_bootstrap),
+                       recordAddr("__orc_rt_coff_platform_shutdown",
+                                  &orc_rt_coff_platform_shutdown),
+                       recordAddr("__orc_rt_coff_register_jitdylib",
+                                  &orc_rt_coff_register_jitdylib),
+                       recordAddr("__orc_rt_coff_deregister_jitdylib",
+                                  &orc_rt_coff_deregister_jitdylib),
+                       recordAddr("__orc_rt_coff_register_object_sections",
+                                  &orc_rt_coff_register_object_sections),
+                       recordAddr("__orc_rt_coff_deregister_object_sections",
+                                  &orc_rt_coff_deregister_object_sections)}))
     return Err;
 
   // Call bootstrap functions
@@ -731,24 +731,21 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
 
 Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
                                       StringRef SymbolName) {
-  ExecutorAddr jit_function;
-  auto AfterCLookupErr = lookupAndRecordAddrs(
-      ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-      {{ES.intern(SymbolName), &jit_function}});
-  if (!AfterCLookupErr) {
-    CallInt32VoidProxy CallFn;
-    if (auto Err =
-            buildProxies(ES, proxyInit<sps::CallInt32VoidProxySpec>(&CallFn)))
-      return Err;
-    auto Res = CallFn(ES, jit_function);
-    if (!Res)
-      return Res.takeError();
-    return Error::success();
-  }
-  if (!AfterCLookupErr.isA<SymbolsNotFound>())
-    return AfterCLookupErr;
-  consumeError(std::move(AfterCLookupErr));
-  return Error::success();
+  ExecutorAddr TargetFn;
+  if (auto Err = lookupAndApply(
+          PlatformJD, {recordAddr(SymbolName, &TargetFn,
+                                  SymbolLookupFlags::WeaklyReferencedSymbol)}))
+    return Err;
+  if (!TargetFn)
+    return Error::success(); // No target function.
+
+  CallInt32VoidProxy CallFn;
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
+    return Err;
+
+  return CallFn(ES, TargetFn).takeError();
 }
 
 void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(

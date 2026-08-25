@@ -470,6 +470,41 @@ public:
     return submitWithHandler(cgf);
   }
 
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes) {
+    return prefetch(ptr, numBytes, std::vector<event>{});
+  }
+
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \param depEvent is an event that specifies the kernel dependencies.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes, event depEvent) {
+    return prefetch(ptr, numBytes, std::vector<event>{depEvent});
+  }
+
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \param depEvents is a vector of events that specify the kernel
+  /// dependencies.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes,
+                 const std::vector<event> &depEvents);
+
 private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>

@@ -60,3 +60,10 @@ float3 test_f32_ddy_coarse3(float3 val) {
 float4 test_f32_ddy_coarse4(float4 val) {
     return ddy_coarse(val);
 }
+
+// CHECK-LABEL: <5 x float> @{{.*}}test_f32_ddy_coarse5
+// CHECK: %hlsl.ddy.coarse = call {{.*}} <5 x float> @llvm.[[TGT]].ddy.coarse.v5f32(<5 x float> %{{.*}})
+// CHECK: ret <5 x float> %hlsl.ddy.coarse
+vector<float, 5> test_f32_ddy_coarse5(vector<float, 5> val) {
+    return ddy_coarse(val);
+}

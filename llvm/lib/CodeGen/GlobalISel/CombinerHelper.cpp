@@ -1000,15 +1000,16 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   Register SrcReg = MI.getOperand(1).getReg();
   // Don't use getOpcodeDef() here since intermediate instructions may have
   // multiple users.
-  GAnyLoad *LoadMI = dyn_cast<GAnyLoad>(MRI.getVRegDef(SrcReg));
-  if (!LoadMI)
+  GAnyLoad *LoadMI;
+  Register PtrReg;
+  const MachineMemOperand *MMO;
+  if (!mi_match(SrcReg, MRI, m_GAnyLoad(LoadMI, m_Reg(PtrReg), m_MMO(MMO))))
     return false;
 
   Register LoadReg = LoadMI->getDstReg();
   LLT RegTy = MRI.getType(LoadReg);
-  Register PtrReg = LoadMI->getPointerReg();
   unsigned RegSize = RegTy.getSizeInBits();
-  unsigned LoadSizeBits = LoadMI->getMemSizeInBits().getValue();
+  unsigned LoadSizeBits = MMO->getSizeInBits().getValue();
   unsigned MaskSizeBits = MaskVal.countr_one();
 
   if ((isa<GSExtLoad>(LoadMI) || MaskSizeBits < LoadSizeBits) &&
@@ -1030,12 +1031,11 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   if (MaskSizeBits < 8 || !isPowerOf2_32(MaskSizeBits))
     return false;
 
-  const MachineMemOperand &MMO = LoadMI->getMMO();
-  LegalityQuery::MemDesc MemDesc(MMO);
+  LegalityQuery::MemDesc MemDesc(*MMO);
 
   // Don't modify the memory access size if this is atomic/volatile, but we can
   // still adjust the opcode to indicate the high bit behavior.
-  if (LoadMI->isSimple())
+  if (!MMO->isAtomic() && !MMO->isVolatile())
     MemDesc.MemoryTy = LLT::scalar(MaskSizeBits);
   else if (LoadSizeBits > MaskSizeBits || LoadSizeBits == RegSize)
     return false;
@@ -1048,8 +1048,8 @@ bool CombinerHelper::matchCombineLoadWithAndMask(MachineInstr &MI,
   MatchInfo = [=](MachineIRBuilder &B) {
     B.setInstrAndDebugLoc(*LoadMI);
     auto &MF = B.getMF();
-    auto PtrInfo = MMO.getPointerInfo();
-    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, MemDesc.MemoryTy);
+    auto PtrInfo = MMO->getPointerInfo();
+    auto *NewMMO = MF.getMachineMemOperand(MMO, PtrInfo, MemDesc.MemoryTy);
     B.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, Dst, PtrReg, *NewMMO);
     replaceRegWith(MRI, LoadReg, Dst);
     LoadMI->eraseFromParent();
@@ -1130,11 +1130,12 @@ bool CombinerHelper::matchSextInRegOfLoad(
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  auto *LoadDef = dyn_cast<GLoad>(MRI.getVRegDef(SrcReg));
-  if (!LoadDef)
+  Register PtrReg;
+  const MachineMemOperand *MMO;
+  if (!mi_match(SrcReg, MRI, m_GLoad(m_Reg(PtrReg), m_MMO(MMO))))
     return false;
 
-  uint64_t MemBits = LoadDef->getMemSizeInBits().getValue();
+  uint64_t MemBits = MMO->getSizeInBits().getValue();
   uint64_t ExtFrom = MI.getOperand(2).getImm();
 
   if (MemBits > ExtFrom && !MRI.hasOneNonDBGUse(SrcReg))
@@ -1153,24 +1154,21 @@ bool CombinerHelper::matchSextInRegOfLoad(
   if (!isPowerOf2_32(NewSizeBits))
     return false;
 
-  const MachineMemOperand &MMO = LoadDef->getMMO();
-  LegalityQuery::MemDesc MMDesc(MMO);
+  LegalityQuery::MemDesc MMDesc(*MMO);
 
   // Don't modify the memory access size if this is atomic/volatile, but we can
   // still adjust the opcode to indicate the high bit behavior.
-  if (LoadDef->isSimple())
+  if (!MMO->isAtomic() && !MMO->isVolatile())
     MMDesc.MemoryTy = LLT::scalar(NewSizeBits);
   else if (MemBits > NewSizeBits || MemBits == RegTy.getSizeInBits())
     return false;
 
   // TODO: Could check if it's legal with the reduced or original memory size.
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SEXTLOAD,
-                                 {MRI.getType(LoadDef->getDstReg()),
-                                  MRI.getType(LoadDef->getPointerReg())},
-                                 {MMDesc}}))
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SEXTLOAD, {RegTy, MRI.getType(PtrReg)}, {MMDesc}}))
     return false;
 
-  MatchInfo = std::make_tuple(LoadDef->getDstReg(), NewSizeBits);
+  MatchInfo = std::make_tuple(SrcReg, NewSizeBits);
   return true;
 }
 
@@ -6640,14 +6638,6 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
-  // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
-      std::swap(LHS, RHS);
-  }
-
   MachineInstr *FMA = nullptr;
   Register Z;
   // fold (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
@@ -6857,7 +6847,7 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   DefinitionAndSourceRegister RHS = {Op2Def, Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // If we have two choices trying to fold (fsub (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
   int FirstMulHasFewerUses = true;
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&

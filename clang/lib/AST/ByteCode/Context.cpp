@@ -284,6 +284,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
     if (!Ptr.isConst())
       return false;
 
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
+      return false;
+
     unsigned N = Ptr.getNumElems();
 
     if (Ptr.elemSize() == 1 /* bytes */) {
@@ -463,8 +466,9 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
 }
 
 OptPrimType Context::classify(QualType T) const {
+  T = T.getCanonicalType();
 
-  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+  if (const auto *BT = dyn_cast<BuiltinType>(T)) {
     auto Kind = BT->getKind();
     if (Kind == BuiltinType::Bool)
       return PT_Bool;
@@ -528,10 +532,7 @@ OptPrimType Context::classify(QualType T) const {
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
-  if (const auto *DT = dyn_cast<DecltypeType>(T))
-    return classify(DT->getUnderlyingType());
-
-  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>())
     return classify(OBT->getUnderlyingType());
 
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
@@ -687,8 +688,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     unsigned PrimTSize = align(primSize(PT));
     ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
@@ -718,8 +719,8 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));

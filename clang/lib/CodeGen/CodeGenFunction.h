@@ -20,6 +20,7 @@
 #include "EHScopeStack.h"
 #include "SanitizerHandler.h"
 #include "VarBypassDetector.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/ExprCXX.h"
@@ -4651,6 +4652,9 @@ public:
                                     ArrayRef<llvm::Type *> Types,
                                     ArrayRef<llvm::Value *> Args,
                                     const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Value *> Args,
+                                    llvm::Type *RetTy, const Twine &Name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,

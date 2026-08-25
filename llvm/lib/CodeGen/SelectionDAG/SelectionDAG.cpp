@@ -1661,25 +1661,6 @@ SDValue SelectionDAG::getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getNode(ISD::AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT));
 }
 
-SDValue SelectionDAG::getVPZeroExtendInReg(SDValue Op, SDValue Mask,
-                                           SDValue EVL, const SDLoc &DL,
-                                           EVT VT) {
-  EVT OpVT = Op.getValueType();
-  assert(VT.isInteger() && OpVT.isInteger() &&
-         "Cannot getVPZeroExtendInReg FP types");
-  assert(VT.isVector() && OpVT.isVector() &&
-         "getVPZeroExtendInReg type and operand type should be vector!");
-  assert(VT.getVectorElementCount() == OpVT.getVectorElementCount() &&
-         "Vector element counts must match in getZeroExtendInReg");
-  assert(VT.getScalarType().bitsLE(OpVT.getScalarType()) && "Not extending!");
-  if (OpVT == VT)
-    return Op;
-  APInt Imm = APInt::getLowBitsSet(OpVT.getScalarSizeInBits(),
-                                   VT.getScalarSizeInBits());
-  return getNode(ISD::VP_AND, DL, OpVT, Op, getConstant(Imm, DL, OpVT), Mask,
-                 EVL);
-}
-
 SDValue SelectionDAG::getPtrExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT) {
   // Only unsigned pointer semantics are supported right now. In the future this
   // might delegate to TLI to check pointer signedness.
@@ -1704,26 +1685,6 @@ SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
 SDValue SelectionDAG::getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
   return getNode(ISD::XOR, DL, VT, Val, TrueValue);
-}
-
-SDValue SelectionDAG::getVPLogicalNOT(const SDLoc &DL, SDValue Val,
-                                      SDValue Mask, SDValue EVL, EVT VT) {
-  SDValue TrueValue = getBoolConstant(true, DL, VT, VT);
-  return getNode(ISD::VP_XOR, DL, VT, Val, TrueValue, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                         SDValue Mask, SDValue EVL) {
-  return getVPZExtOrTrunc(DL, VT, Op, Mask, EVL);
-}
-
-SDValue SelectionDAG::getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                       SDValue Mask, SDValue EVL) {
-  if (VT.bitsGT(Op.getValueType()))
-    return getNode(ISD::VP_ZERO_EXTEND, DL, VT, Op, Mask, EVL);
-  if (VT.bitsLT(Op.getValueType()))
-    return getNode(ISD::VP_TRUNCATE, DL, VT, Op, Mask, EVL);
-  return Op;
 }
 
 SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
@@ -3407,6 +3368,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::FREEZE: {
+    if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
+                                         UndefPoisonKind::UndefOrPoison))
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    break;
+  }
   case ISD::MERGE_VALUES:
     return computeKnownBits(Op.getOperand(Op.getResNo()), DemandedElts,
                             Depth + 1);
@@ -9188,13 +9155,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
-  case ISD::VP_TRUNCATE:
-  case ISD::VP_SIGN_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
-    // Don't create noop casts.
-    if (N1.getValueType() == VT)
-      return N1;
-    break;
   case ISD::VECTOR_COMPRESS: {
     [[maybe_unused]] EVT VecVT = N1.getValueType();
     [[maybe_unused]] EVT MaskVT = N2.getValueType();
@@ -12006,17 +11966,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(NumOps == 5 && "BR_CC takes 5 operands!");
     assert(Ops[2].getValueType() == Ops[3].getValueType() &&
            "LHS/RHS of comparison should match types!");
-    break;
-  case ISD::VP_ADD:
-  case ISD::VP_SUB:
-    // If it is VP_ADD/VP_SUB mask operation then turn it to VP_XOR
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_XOR;
-    break;
-  case ISD::VP_MUL:
-    // If it is VP_MUL mask operation then turn it to VP_AND
-    if (VT.getScalarType() == MVT::i1)
-      Opcode = ISD::VP_AND;
     break;
   case ISD::VP_REDUCE_MUL:
     // If it is VP_REDUCE_MUL mask operation then turn it to VP_REDUCE_AND
