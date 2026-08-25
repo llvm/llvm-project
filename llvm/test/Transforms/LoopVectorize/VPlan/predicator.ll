@@ -1219,7 +1219,7 @@ define void @diamond_phi2_look_thru_phi(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = not ir<%c2>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP10]]>
-; CHECK-NEXT:      BLEND ir<%phi5> = ir<3>/vp<[[VP11]]> ir<2>/vp<[[VP9]]> ir<1>/vp<[[VP7]]> ir<0>/vp<[[VP7]]>
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<3>/vp<[[VP11]]> ir<2>/vp<[[VP9]]> ir<1>/vp<[[VP5]]> ir<0>/vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>

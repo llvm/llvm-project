@@ -105,6 +105,11 @@ class VPPredicator {
   /// incoming value of \p Phi.
   MapVector<EdgeTy, VPValue *> computeBlendEdges(VPPhi *Phi);
 
+  /// Given a set of \p Edges that each can reach \p VPBB, try to see if there
+  /// is a block in-mask that can be used for its blend mask. Only valid when
+  /// there's exactly one unique incoming value on the paths from Edges to VPBB.
+  VPValue *tryFindBlockInMask(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
+
   /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
   /// edges, or an equivalent block in-mask.
   VPValue *createBlendMaskForEdges(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
@@ -343,8 +348,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   return Edges;
 }
 
-VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
-                                               VPBasicBlock *VPBB) {
+VPValue *VPPredicator::tryFindBlockInMask(ArrayRef<EdgeTy> Edges,
+                                          VPBasicBlock *VPBB) {
   // If the nearest common postdominator to all of Edges destinations isn't VPBB
   // then we can use its block in-mask. E.g:
   //
@@ -357,16 +362,20 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
   //     VPBB
   //
   // If the edges are A->D and B->C, PostDom will be D. We can reuse Ds block
-  // in-mask.
+  // in-mask. Only valid when there is only one unique incoming value flowing
+  // from the edges to VPBB.
   const VPBasicBlock *PostDom = Edges[0].second;
   for (auto [_, DstVPBB] : drop_begin(Edges))
     PostDom =
         cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, DstVPBB));
   assert(VPPDT.dominates(VPBB, PostDom) && "VPBB doesn't postdominate edges");
-  if (PostDom != VPBB)
-    return getBlockInMask(PostDom);
+  if (PostDom == VPBB)
+    return nullptr;
+  return getBlockInMask(PostDom);
+}
 
-  // Otherwise, compute the disjunction of edges.
+VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
+                                               VPBasicBlock *VPBB) {
   VPValue *Mask = nullptr;
   for (auto [Src, ConstDst] : Edges) {
     auto *Dst = const_cast<VPBasicBlock *>(ConstDst);
@@ -407,6 +416,11 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     MapVector<VPValue *, SmallVector<EdgeTy>> InValEdgesMap;
     for (auto [Edge, Val] : computeBlendEdges(PhiR))
       InValEdgesMap[Val].push_back(Edge);
+    bool IncomingEdgesUnique =
+        all_of(PhiR->incoming_values(), [&](VPValue *InV) {
+          return is_contained(InValEdgesMap.keys(), InV);
+        });
+
     auto InValEdges = InValEdgesMap.takeVector();
 
     if (InValEdges.size() == 1) {
@@ -425,6 +439,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, Edges] : InValEdges) {
       OperandsWithMask.push_back(InVPV);
+      if (IncomingEdgesUnique) {
+        if (auto *Mask = tryFindBlockInMask(Edges, VPBB)) {
+          OperandsWithMask.push_back(Mask);
+          continue;
+        }
+      }
       OperandsWithMask.push_back(createBlendMaskForEdges(Edges, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());

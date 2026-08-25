@@ -517,11 +517,10 @@ define void @diamond_phi2_look_thru_phi(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i64> splat (i64 2), <4 x i64> splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> splat (i64 1), <4 x i64> [[PREDPHI]]
-; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> zeroinitializer, <4 x i64> [[PREDPHI3]]
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP3]], <4 x i64> splat (i64 1), <4 x i64> [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> zeroinitializer, <4 x i64> [[PREDPHI3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[PREDPHI4]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
