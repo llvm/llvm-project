@@ -19398,7 +19398,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     // We can fold chains of FADD's of the same value into multiplications.
     // This transform is not safe in general because we are reducing the number
     // of rounding steps.
-    if (TLI.isOperationLegalOrCustom(ISD::FMUL, VT) && !N0CFP && !N1CFP) {
+    if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMUL, VT)) &&
+        !N0CFP && !N1CFP) {
       if (N0.getOpcode() == ISD::FMUL) {
         bool CFP00 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(0));
         bool CFP01 = DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1));

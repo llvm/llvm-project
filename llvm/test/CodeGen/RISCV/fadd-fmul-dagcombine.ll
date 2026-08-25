@@ -13,14 +13,9 @@ define float @fadd_chain_to_fmul(float %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    call __addsf3
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    lui a1, 263168
+; RV32I-NEXT:    call __mulsf3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -42,14 +37,9 @@ define float @fmul_fadd_to_fmul(float %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    lui a1, 263168
+; RV32I-NEXT:    lui a1, 264192
 ; RV32I-NEXT:    call __mulsf3
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __addsf3
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
