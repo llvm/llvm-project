@@ -48,6 +48,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  confstr
+  SRCS
+    confstr.cpp
+  HDRS
+    confstr.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.unistd_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   close
   ALIAS
   DEPENDS

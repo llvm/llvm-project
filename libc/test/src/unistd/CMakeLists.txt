@@ -642,6 +642,17 @@ add_libc_test(
 
 
 add_libc_test(
+  confstr_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    confstr_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.unistd.confstr
+)
+
+add_libc_test(
   sysconf_test
   SUITE
     libc_unistd_unittests

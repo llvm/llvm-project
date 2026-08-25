@@ -661,6 +661,11 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
 )
 
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # unistd.h entrypoints
+    libc.src.unistd.confstr
+  )
+
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # regex.h entrypoints
