@@ -14,6 +14,16 @@ struct Owner {
   void use() const {}
 };
 
+struct ByValueOwner {
+  ByValueOwner() = default;
+  ByValueOwner(const ByValueOwner &) {}
+  ByValueOwner(ByValueOwner &&) {}
+
+  void operator=(this ByValueOwner self, ByValueOwner &&other) {}
+
+  void use() const {}
+};
+
 void moveAssignmentMarksTheSource() {
   Owner target;
   Owner source;
@@ -44,4 +54,12 @@ void selfMoveAssignmentDoesNotMarkTheObject() {
   Owner object;
   object = std::move(object);
   object.use();
+}
+
+// The by-value object parameter is a copy, so this is not a self-move.
+void byValueObjectParameterIsNotSelfMove() {
+  ByValueOwner object;
+  object = std::move(object); // expected-note {{Object 'object' is moved}}
+  object.use(); // expected-warning {{Method called on moved-from object 'object'}}
+                // expected-note@-1 {{Method called on moved-from object 'object'}}
 }
