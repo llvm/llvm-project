@@ -49,20 +49,44 @@ protected:
   const ABIType *U32;
   const ABIType *I64;
   const ABIType *U64;
+  const ABIType *I128;
   const ABIType *F16;
   const ABIType *F32;
   const ABIType *F64;
   const ABIType *Ptr;
   const ABIType *Void;
   const ABIType *Matrix;
+  const ABIType *V2F32;
+  const ABIType *V4F32;
+  const ABIType *V8F32;
+  const ABIType *V16I8;
+  const ABIType *V17I8;
+  const ABIType *V2I8;
+  const ABIType *V3I8;
+  const ABIType *V4I8;
+  const ABIType *V3F32;
+  const ABIType *V5I8;
+  const ABIType *V1I128;
+  const llvm::abi::VectorType *SVInt32;
+  const llvm::abi::VectorType *SVBool;
+  const llvm::abi::VectorType *SVCount;
+  const llvm::abi::VectorType *SVFloat64;
+  const llvm::abi::VectorType *FixedSVInt8;
+  const llvm::abi::VectorType *FixedSVInt32;
+  const llvm::abi::VectorType *FixedSVInt32VL512;
+  const llvm::abi::VectorType *FixedSVUint32;
+  const llvm::abi::VectorType *FixedSVFloat64;
+  const llvm::abi::VectorType *FixedSVBool;
+  const ABIType *SVInt32x2;
   const ABIType *BitInt7;
   const ABIType *UBitInt7;
   const ABIType *BitInt65;
   const ABIType *BitInt128;
   const ABIType *BitInt129;
+  const ABIType *BitInt2;
+  const ABIType *V4BitInt2;
+  const ABIType *V8BitInt2;
   const ABIType *ComplexFloat;
-  const ABIType *V2F32;
-  const ABIType *V4F32;
 
   AArch64TargetInfoTest()
       : TB(Alloc), Bool(TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false)),
@@ -74,12 +98,64 @@ protected:
         U32(TB.getIntegerType(32, llvm::Align(4), /*Signed=*/false)),
         I64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/true)),
         U64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/false)),
+        I128(TB.getIntegerType(128, llvm::Align(16), /*Signed=*/false)),
         F16(TB.getFloatType(llvm::APFloat::IEEEhalf(), llvm::Align(2))),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         Ptr(TB.getPointerType(64, llvm::Align(8))), Void(TB.getVoidType()),
         Matrix(TB.getArrayType(F32, /*NumElements=*/4, /*SizeInBits=*/128,
                                /*IsMatrixType=*/true)),
+        V2F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(2),
+                               llvm::Align(8))),
+        V4F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(4),
+                               llvm::Align(16))),
+        V8F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(8),
+                               llvm::Align(16))),
+        V16I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(16),
+                               llvm::Align(16))),
+        V17I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(17),
+                               llvm::Align(16))),
+        V2I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(2),
+                              llvm::Align(2))),
+        V3I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(3),
+                              llvm::Align(4))),
+        V4I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(4),
+                              llvm::Align(4))),
+        V3F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(3),
+                               llvm::Align(16))),
+        V5I8(TB.getVectorType(I8, llvm::ElementCount::getFixed(5),
+                              llvm::Align(8))),
+        V1I128(TB.getVectorType(I128, llvm::ElementCount::getFixed(1),
+                                llvm::Align(16))),
+        SVInt32(TB.getVectorType(I32, llvm::ElementCount::getScalable(4),
+                                 llvm::Align(16),
+                                 llvm::abi::VectorKind::SVEData)),
+        SVBool(TB.getVectorType(Bool, llvm::ElementCount::getScalable(16),
+                                llvm::Align(2),
+                                llvm::abi::VectorKind::SVEPredicate)),
+        SVCount(TB.getSVECountType(llvm::Align(2))),
+        SVFloat64(TB.getVectorType(F64, llvm::ElementCount::getScalable(2),
+                                   llvm::Align(16),
+                                   llvm::abi::VectorKind::SVEData)),
+        FixedSVInt8(TB.getVectorType(I8, llvm::ElementCount::getFixed(32),
+                                     llvm::Align(16),
+                                     llvm::abi::VectorKind::SVEData)),
+        FixedSVInt32(TB.getVectorType(I32, llvm::ElementCount::getFixed(8),
+                                      llvm::Align(16),
+                                      llvm::abi::VectorKind::SVEData)),
+        FixedSVInt32VL512(
+            TB.getVectorType(I32, llvm::ElementCount::getFixed(16),
+                             llvm::Align(16), llvm::abi::VectorKind::SVEData)),
+        FixedSVUint32(TB.getVectorType(U32, llvm::ElementCount::getFixed(8),
+                                       llvm::Align(16),
+                                       llvm::abi::VectorKind::SVEData)),
+        FixedSVFloat64(TB.getVectorType(F64, llvm::ElementCount::getFixed(4),
+                                        llvm::Align(16),
+                                        llvm::abi::VectorKind::SVEData)),
+        FixedSVBool(TB.getVectorType(U8, llvm::ElementCount::getFixed(32),
+                                     llvm::Align(2),
+                                     llvm::abi::VectorKind::SVEPredicate)),
+        SVInt32x2(TB.getTupleType(SVInt32, /*NumVectors=*/2)),
         BitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/true,
                                   /*IsBitInt=*/true)),
         UBitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/false,
@@ -90,11 +166,13 @@ protected:
                                     /*IsBitInt=*/true)),
         BitInt129(TB.getIntegerType(129, llvm::Align(16), /*Signed=*/true,
                                     /*IsBitInt=*/true)),
-        ComplexFloat(TB.getComplexType(F32, llvm::Align(4))),
-        V2F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(2),
-                               llvm::Align(8))),
-        V4F32(TB.getVectorType(F32, llvm::ElementCount::getFixed(4),
-                               llvm::Align(16))) {}
+        BitInt2(TB.getIntegerType(2, llvm::Align(1), /*Signed=*/true,
+                                  /*IsBitInt=*/true)),
+        V4BitInt2(TB.getVectorType(BitInt2, llvm::ElementCount::getFixed(4),
+                                   llvm::Align(4))),
+        V8BitInt2(TB.getVectorType(BitInt2, llvm::ElementCount::getFixed(8),
+                                   llvm::Align(8))),
+        ComplexFloat(TB.getComplexType(F32, llvm::Align(4))) {}
 
   static RecordFlags passableRecordFlags(bool IsCXX = false) {
     unsigned Flags = RecordFlags::CanPassInRegisters;
@@ -124,6 +202,51 @@ static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
   EXPECT_TRUE(Info.isExtend());
   EXPECT_EQ(Info.isSignExt(), IsSigned);
   EXPECT_EQ(Info.getCoerceToType(), Ty);
+}
+
+static void expectDirectCoercedInteger(const ArgInfo &Info, uint64_t BitWidth) {
+  EXPECT_TRUE(Info.isDirect());
+  const llvm::abi::IntegerType *IT =
+      llvm::dyn_cast<llvm::abi::IntegerType>(Info.getCoerceToType());
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), BitWidth);
+}
+
+static void expectDirectCoercedI32Vector(const ArgInfo &Info,
+                                         unsigned NumElts) {
+  EXPECT_TRUE(Info.isDirect());
+  const llvm::abi::VectorType *VT =
+      llvm::dyn_cast<llvm::abi::VectorType>(Info.getCoerceToType());
+  ASSERT_NE(VT, nullptr);
+  EXPECT_EQ(VT->getNumElements().getKnownMinValue(), NumElts);
+  EXPECT_EQ(VT->getElementType()->getSizeInBits().getFixedValue(), 32u);
+}
+
+// Checks that \p Info is Direct with a coercion to a scalable SVE data
+// vector of \p MinElts copies of \p EltTy.
+static void expectDirectCoercedSVEData(const ArgInfo &Info,
+                                       const ABIType *EltTy, unsigned MinElts) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *VT =
+      llvm::dyn_cast<llvm::abi::VectorType>(Info.getCoerceToType());
+  ASSERT_NE(VT, nullptr);
+  EXPECT_TRUE(VT->isSVEData());
+  EXPECT_TRUE(VT->isScalable());
+  EXPECT_EQ(VT->getNumElements().getKnownMinValue(), MinElts);
+  // The element type is carried over unchanged, so signedness survives.
+  EXPECT_EQ(VT->getElementType(), EltTy);
+}
+
+// Checks that \p Info is Direct with a coercion to svbool_t.
+static void expectDirectCoercedSVEPredicate(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *VT =
+      llvm::dyn_cast<llvm::abi::VectorType>(Info.getCoerceToType());
+  ASSERT_NE(VT, nullptr);
+  EXPECT_TRUE(VT->isSVEPredicate());
+  EXPECT_TRUE(VT->isScalable());
+  EXPECT_EQ(VT->getNumElements().getKnownMinValue(), 16u);
+  EXPECT_EQ(VT->getElementType()->getSizeInBits().getFixedValue(), 1u);
 }
 
 static void expectAlignedIndirect(const ArgInfo &Info, llvm::Align Align,
@@ -276,6 +399,259 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectWin64) {
     TI->computeInfo(*FI);
     expectUncoercedDirect(FI->getReturnInfo());
   }
+}
+
+// Non-SVE vector types no wider than 128 bits are returned directly. Larger
+// vector types are returned indirectly.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnNonSVEVectors) {
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    for (const ABIType *RetTy : {V2F32, V4F32, V16I8}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+      FI->getReturnInfo() = ArgInfo::getIgnore();
+      TI->computeInfo(*FI);
+      expectUncoercedDirect(FI->getReturnInfo());
+    }
+
+    for (const ABIType *RetTy : {V8F32, V17I8}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+      FI->getReturnInfo() = ArgInfo::getIgnore();
+      TI->computeInfo(*FI);
+      expectAlignedIndirect(FI->getReturnInfo(), llvm::Align(16),
+                            /*ByVal=*/true);
+    }
+  }
+}
+
+// Legal 64- and 128-bit non-SVE vectors are passed directly. Illegal vectors
+// are coerced, or passed indirectly if larger than 128 bits.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentNonSVEVectors) {
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    for (const ABIType *ArgTy : {V2F32, V4F32, V16I8}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+      TI->computeInfo(*FI);
+      expectUncoercedDirect(FI->getArgInfo(0).Info);
+    }
+
+    for (const ABIType *ArgTy : {V3I8, V4I8}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+      TI->computeInfo(*FI);
+      expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+    }
+
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V2I8});
+      TI->computeInfo(*FI);
+      expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+    }
+
+    // A vector whose element count is not a power of 2 is coerced based on
+    // its ABI size, which rounds the payload width up to a power of 2. So
+    // 5 x i8 is coerced as 64 bits and 3 x float as 128 bits.
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V5I8});
+      TI->computeInfo(*FI);
+      expectDirectCoercedI32Vector(FI->getArgInfo(0).Info, 2);
+    }
+
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V3F32});
+      TI->computeInfo(*FI);
+      expectDirectCoercedI32Vector(FI->getArgInfo(0).Info, 4);
+    }
+
+    // A sub-byte _BitInt element counts as 8 bits towards the size of the
+    // vector, so 4 x _BitInt(2) is an illegal 32-bit vector while
+    // 8 x _BitInt(2) is a legal 64-bit one.
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V4BitInt2});
+      TI->computeInfo(*FI);
+      expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+    }
+
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V8BitInt2});
+      TI->computeInfo(*FI);
+      expectUncoercedDirect(FI->getArgInfo(0).Info);
+    }
+
+    {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {V1I128});
+      TI->computeInfo(*FI);
+      expectDirectCoercedI32Vector(FI->getArgInfo(0).Info, 4);
+    }
+
+    for (const ABIType *ArgTy : {V8F32, V17I8}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+      TI->computeInfo(*FI);
+      expectAlignedIndirect(FI->getArgInfo(0).Info, llvm::Align(16),
+                            /*ByVal=*/false);
+    }
+  }
+}
+
+// Android and OHOS coerce illegal vectors of at most 16 bits to i16 rather
+// than i32.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentIllegalVectorAndroid) {
+  AArch64ABIOptions Opts(AArch64ABIKind::AAPCS);
+  Opts.IsAndroidOrOHOS = true;
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, Void, {V2I8});
+  TI->computeInfo(*FI);
+  expectDirectCoercedInteger(FI->getArgInfo(0).Info, 16);
+
+  FI = FunctionInfo::create(llvm::CallingConv::C, Void, {V4I8});
+  TI->computeInfo(*FI);
+  expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+}
+
+// arm64_32 MachO treats vectors larger than 32 bits as legal, including
+// sizes that other AArch64 ABIs pass indirectly. Non-power-of-2 element
+// counts are still illegal.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentVectorILP32MachO) {
+  AArch64ABIOptions Opts(AArch64ABIKind::DarwinPCS);
+  Opts.IsILP32 = true;
+  Opts.IsMachO = true;
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+
+  for (const ABIType *ArgTy : {V2F32, V4F32, V16I8, V8F32, V1I128}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {V4I8});
+    TI->computeInfo(*FI);
+    expectDirectCoercedInteger(FI->getArgInfo(0).Info, 32);
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {V17I8});
+    TI->computeInfo(*FI);
+    expectAlignedIndirect(FI->getArgInfo(0).Info, llvm::Align(16),
+                          /*ByVal=*/false);
+  }
+}
+
+// The sizeless SVE types occupy a register of their own, so they are passed
+// and returned directly, without coercion, under every ABI kind.
+TEST_F(AArch64TargetInfoTest, ClassifySizelessSVETypesDirect) {
+  const ABIType *SVETypes[] = {SVInt32, SVFloat64, SVBool, SVCount};
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    for (const ABIType *Ty : SVETypes) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Ty, {Ty});
+      FI->getReturnInfo() = ArgInfo::getIgnore();
+      TI->computeInfo(*FI);
+      expectUncoercedDirect(FI->getReturnInfo());
+      expectUncoercedDirect(FI->getArgInfo(0).Info);
+    }
+  }
+}
+
+// Fixed-length SVE data vectors are coerced to the scalable vector that
+// occupies the same register. The scalable element count depends only on the
+// element size, so the two vector lengths of the same element type coerce to
+// the same scalable type.
+TEST_F(AArch64TargetInfoTest, ClassifyFixedLengthSVEDataCoerced) {
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    struct {
+      const ABIType *Ty;
+      const ABIType *EltTy;
+      unsigned MinElts;
+    } Cases[] = {
+        {FixedSVInt8, I8, 16},       {FixedSVInt32, I32, 4},
+        {FixedSVInt32VL512, I32, 4}, {FixedSVUint32, U32, 4},
+        {FixedSVFloat64, F64, 2},
+    };
+
+    for (const auto &Case : Cases) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Case.Ty, {Case.Ty});
+      FI->getReturnInfo() = ArgInfo::getIgnore();
+      TI->computeInfo(*FI);
+      expectDirectCoercedSVEData(FI->getReturnInfo(), Case.EltTy, Case.MinElts);
+      expectDirectCoercedSVEData(FI->getArgInfo(0).Info, Case.EltTy,
+                                 Case.MinElts);
+    }
+  }
+}
+
+// Fixed-length SVE predicates are described with 8-bit elements, but they are
+// coerced to svbool_t, which has one-bit elements.
+TEST_F(AArch64TargetInfoTest, ClassifyFixedLengthSVEPredicateCoerced) {
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, FixedSVBool, {FixedSVBool});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectDirectCoercedSVEPredicate(FI->getReturnInfo());
+    expectDirectCoercedSVEPredicate(FI->getArgInfo(0).Info);
+  }
+}
+
+// Arm64EC variadic functions classify their arguments with the x86-64 rules,
+// which are not implemented yet. Every argument is deferred, including the
+// named ones. Non-variadic functions are unaffected.
+TEST_F(AArch64TargetInfoTest,
+       ClassifyArgumentArm64ECVariadicNotYetImplemented) {
+  AArch64ABIOptions Opts(AArch64ABIKind::Win64);
+  Opts.IsWindowsArm64EC = true;
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+
+  std::unique_ptr<FunctionInfo> FI = FunctionInfo::create(
+      llvm::CallingConv::C, Void, {I32, F64}, RequiredArgs(1));
+  TI->computeInfo(*FI);
+  EXPECT_TRUE(FI->getArgInfo(0).Info.isIgnore());
+  EXPECT_TRUE(FI->getArgInfo(1).Info.isIgnore());
+
+  FI = FunctionInfo::create(llvm::CallingConv::C, Void, {I32, F64},
+                            RequiredArgs::All);
+  TI->computeInfo(*FI);
+  expectUncoercedDirect(FI->getArgInfo(0).Info);
+  expectUncoercedDirect(FI->getArgInfo(1).Info);
 }
 
 // Non-aggregate scalars, matrix types, and promotable integers take the Direct
