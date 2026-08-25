@@ -3757,19 +3757,39 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       for (auto insertOp : insertOnRangeOps) {
         if (insertOp.isFullRange()) {
           auto seqTyAttr = convertType(insertOp.getType());
+          // The dense attribute must use the converted element type of the
+          // array, not the type of whatever constant feeds the insertion.
+          mlir::Type elementType = convertType(insertOp.getType().getEleTy());
           auto *op = insertOp.getVal().getDefiningOp();
           auto constant = mlir::dyn_cast<mlir::arith::ConstantOp>(op);
+          fir::ConvertOp convertOp;
           if (!constant) {
-            auto convertOp = mlir::dyn_cast<fir::ConvertOp>(op);
+            convertOp = mlir::dyn_cast<fir::ConvertOp>(op);
             if (!convertOp)
               continue;
-            constant = mlir::cast<mlir::arith::ConstantOp>(
+            constant = mlir::dyn_cast<mlir::arith::ConstantOp>(
                 convertOp.getValue().getDefiningOp());
+            if (!constant)
+              continue;
           }
-          mlir::Type vecType = mlir::VectorType::get(
-              insertOp.getType().getShape(), constant.getType());
+          mlir::TypedAttr valueAttr = constant.getValue();
+          if (valueAttr.getType() != elementType) {
+            // Reaching through a `fir.convert` leaves the constant with the
+            // source type. Only a logical conversion is folded here, and it
+            // normalizes the value to a canonical 0/1, see ConvertOpConversion.
+            auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
+            auto intType = mlir::dyn_cast<mlir::IntegerType>(elementType);
+            if (!intAttr || !intType || !convertOp ||
+                (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
+                 !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
+              continue;
+            valueAttr = mlir::IntegerAttr::get(
+                intType, intAttr.getValue().isZero() ? 0 : 1);
+          }
+          mlir::Type vecType =
+              mlir::VectorType::get(insertOp.getType().getShape(), elementType);
           auto denseAttr = mlir::DenseElementsAttr::get(
-              mlir::cast<mlir::ShapedType>(vecType), constant.getValue());
+              mlir::cast<mlir::ShapedType>(vecType), valueAttr);
           rewriter.setInsertionPointAfter(insertOp);
           rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
               insertOp, seqTyAttr, denseAttr);
