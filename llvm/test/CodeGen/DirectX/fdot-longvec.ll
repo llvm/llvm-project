@@ -4,14 +4,12 @@
 ; CHECK-LABEL: dot_half3
 define noundef half @dot_half3(<3 x half> noundef %a, <3 x half> noundef %b) {
 entry:
-; CHECK: [[A:%.*]] = shufflevector <3 x half> %a, <3 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK: [[B:%.*]] = shufflevector <3 x half> %b, <3 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK: extractelement <3 x half> [[A]], i32 0
-; CHECK: extractelement <3 x half> [[A]], i32 1
-; CHECK: extractelement <3 x half> [[A]], i32 2
-; CHECK: extractelement <3 x half> [[B]], i32 0
-; CHECK: extractelement <3 x half> [[B]], i32 1
-; CHECK: extractelement <3 x half> [[B]], i32 2
+; CHECK: extractelement <3 x half> %a, i32 0
+; CHECK: extractelement <3 x half> %a, i32 1
+; CHECK: extractelement <3 x half> %a, i32 2
+; CHECK: extractelement <3 x half> %b, i32 0
+; CHECK: extractelement <3 x half> %b, i32 1
+; CHECK: extractelement <3 x half> %b, i32 2
 ; CHECK: call half @llvm.dx.dot3.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}}, half %{{.*}})
   %dx.dot = call half @llvm.dx.fdot.v3f16(<3 x half> %a, <3 x half> %b)
   ret half %dx.dot
@@ -20,16 +18,14 @@ entry:
 ; CHECK-LABEL: dot_float4
 define noundef float @dot_float4(<4 x float> noundef %a, <4 x float> noundef %b) {
 entry:
-; CHECK: [[A:%.*]] = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK: [[B:%.*]] = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK: extractelement <4 x float> [[A]], i32 0
-; CHECK: extractelement <4 x float> [[A]], i32 1
-; CHECK: extractelement <4 x float> [[A]], i32 2
-; CHECK: extractelement <4 x float> [[A]], i32 3
-; CHECK: extractelement <4 x float> [[B]], i32 0
-; CHECK: extractelement <4 x float> [[B]], i32 1
-; CHECK: extractelement <4 x float> [[B]], i32 2
-; CHECK: extractelement <4 x float> [[B]], i32 3
+; CHECK: extractelement <4 x float> %a, i32 0
+; CHECK: extractelement <4 x float> %a, i32 1
+; CHECK: extractelement <4 x float> %a, i32 2
+; CHECK: extractelement <4 x float> %a, i32 3
+; CHECK: extractelement <4 x float> %b, i32 0
+; CHECK: extractelement <4 x float> %b, i32 1
+; CHECK: extractelement <4 x float> %b, i32 2
+; CHECK: extractelement <4 x float> %b, i32 3
 ; CHECK: call float @llvm.dx.dot4.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})
   %dx.dot = call float @llvm.dx.fdot.v4f32(<4 x float> %a, <4 x float> %b)
   ret float %dx.dot
