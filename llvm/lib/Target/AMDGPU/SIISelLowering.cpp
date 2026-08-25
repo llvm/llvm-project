@@ -17812,10 +17812,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return Folded;
   }
 
-  // The dot4 result is 32-bit, so a wider VT would need upper bits from
-  // elsewhere. Narrower VTs are fine because truncation is exact mod 2^n.
-  if (!VT.isVector() && VT.getSizeInBits() <= 32 &&
-      (isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
+  if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
     std::optional<bool> IsSigned;
