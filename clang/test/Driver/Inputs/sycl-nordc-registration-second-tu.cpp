@@ -1,6 +1,6 @@
 // Second translation unit for sycl-nordc-registration.cpp. It contributes a
 // kernel of its own so that a non-RDC build has to finalize and register two
-// independent device images.
+// independent device binaries.
 
 template <typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}

@@ -1,4 +1,4 @@
-/// Verify which section carries the SYCL device image in the host object.
+/// Verify which section carries the SYCL device binary in the host object.
 // REQUIRES: spirv-registered-target, x86-registered-target
 
 // RUN: %clangxx --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \

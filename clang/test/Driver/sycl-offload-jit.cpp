@@ -79,7 +79,7 @@
 // CHK-PHASES-NORDC-NEXT: 12: assembler, {11}, object, (host-sycl)
 // CHK-PHASES-NORDC-NEXT: 13: clang-linker-wrapper, {12}, image, (host-sycl)
 
-/// With more than one architecture the packaged image holds an entry per
+/// With multiple architectures the packaged binary holds an entry per
 /// architecture, and a single fat binary is expected to reach the host.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic --offload-arch=bmg_g21 \
@@ -89,15 +89,15 @@
 // CHK-PHASES-NORDC-ARCHS-NEXT: 13: llvm-offload-binary, {7, 12}, image, (device-sycl)
 // CHK-PHASES-NORDC-ARCHS-NEXT: 14: clang-linker-wrapper, {13}, sycl-fatbin, (device-sycl)
 
-/// More than one device triple is not supported today.
+/// Multiple device triples are not supported today.
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
 // RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NORDC-MULTI-TRIPLE %s
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-gpu-rdc \
 // RUN:   --offload-targets=spirv64-unknown-unknown,spirv32-unknown-unknown -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NORDC-MULTI-TRIPLE-GPU %s
-// CHK-NORDC-MULTI-TRIPLE: error: '-fno-sycl-rdc' is not supported with more than one SYCL offloading target
-// CHK-NORDC-MULTI-TRIPLE-GPU: error: '-fno-gpu-rdc' is not supported with more than one SYCL offloading target
+// CHK-NORDC-MULTI-TRIPLE: error: '-fno-sycl-rdc' is not supported with multiple SYCL offloading targets
+// CHK-NORDC-MULTI-TRIPLE-GPU: error: '-fno-gpu-rdc' is not supported with multiple SYCL offloading targets
 
 /// A single target repeated is one target.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
@@ -133,7 +133,7 @@
 /// -flto on a SYCL command line requests *host* LTO. It must not divert the
 /// per-TU device finalize to llvm-lto, which would write bitcode where a
 /// finalized device image is expected; the device link is unaffected and the
-/// image is still included at compile time.
+/// binary is still included at compile time.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc \
 // RUN:   -flto -c %s 2>&1 | FileCheck -check-prefix=CHK-NORDC-LTO %s \
 // RUN:     --implicit-check-not=llvm-lto
