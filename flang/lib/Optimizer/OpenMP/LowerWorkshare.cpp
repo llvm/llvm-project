@@ -18,9 +18,6 @@
 
 #include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
-#include <flang/Optimizer/Builder/MutableBox.h>
-#include <flang/Optimizer/Builder/Runtime/Assign.h>
-#include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
 #include <flang/Optimizer/HLFIR/HLFIROps.h>
@@ -45,7 +42,6 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
-#include <functional>
 #include <variant>
 
 namespace flangomp {
@@ -159,11 +155,6 @@ static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
   // to find the underlying source of the memory reference.
   fir::AliasAnalysis aliasAnalysis;
   fir::AliasAnalysis::Source source = aliasAnalysis.getSource(mem);
-
-  // With firstprivate(P) where P is a pointer, each thread gets its own copy
-  // of the descriptor, but P(i) accesses shared target data.
-  if (source.accessPath.hasPointerDeref())
-    return false;
 
   // Check if the source is a Value (not a global symbol).
   mlir::Value sourceValue =
@@ -305,52 +296,6 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   return funcOp;
 }
 
-/// Creates a copy function for box types that copies the array DATA
-/// (not just the descriptor) using the Fortran runtime's Assign function.
-/// This is needed for copyprivate of dynamically-sized arrays where each
-/// thread has its own allocation and needs the data copied from the
-/// single-executing thread.
-static mlir::func::FuncOp createBoxDataCopyFunc(mlir::Location loc,
-                                                mlir::Type varType,
-                                                fir::FirOpBuilder builder) {
-  mlir::ModuleOp module = builder.getModule();
-  auto rt = cast<fir::ReferenceType>(varType);
-  mlir::Type eleTy = rt.getEleTy();
-  std::string copyFuncName =
-      fir::getTypeAsString(eleTy, builder.getKindMap(), "_workshare_copy_data");
-
-  if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
-    return decl;
-
-  // Create the copy function.
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  mlir::OpBuilder modBuilder(module.getBodyRegion());
-  llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
-  auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
-  mlir::func::FuncOp funcOp =
-      mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
-  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-  fir::factory::setInternalLinkage(funcOp);
-  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
-                      {loc, loc});
-  builder.setInsertionPointToStart(&funcOp.getRegion().back());
-
-  // Load the source box and use the runtime helper to generate the assign.
-  Value srcBox =
-      fir::LoadOp::create(builder, loc, eleTy, funcOp.getArgument(1));
-
-  auto boxNoneTy = fir::BoxType::get(builder.getNoneType());
-  auto refBoxNoneTy = fir::ReferenceType::get(boxNoneTy);
-  Value dstConv =
-      fir::ConvertOp::create(builder, loc, refBoxNoneTy, funcOp.getArgument(0));
-  Value srcConv = fir::ConvertOp::create(builder, loc, boxNoneTy, srcBox);
-
-  fir::runtime::genAssign(builder, loc, dstConv, srcConv);
-
-  mlir::func::ReturnOp::create(builder, loc);
-  return funcOp;
-}
-
 static bool isUserOutsideSR(Operation *user, Operation *parentOp,
                             SingleRegion sr) {
   while (user->getParentOp() != parentOp)
@@ -411,82 +356,24 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     if (auto reloaded = rootMapping.lookupOrNull(v))
       return nullptr;
     Type ty = v.getType();
-    // Broadcasting a reference-typed value would need a !fir.ref<!fir.ref<...>>
-    // slot, which FIR forbids. Rather than work around this with a
-    // !fir.ref<!fir.ptr<...>> slot, bail out: no Fortran lowering produces a
-    // reference-typed value here (ops yielding a !fir.ref are pure and are
-    // parallelized directly). Test ty directly; constructing the slot type for
-    // a reference ty would itself trip fir::ReferenceType::verify.
-    if (mlir::isa<fir::ReferenceType>(ty))
-      TODO(loc,
-           "unsupported value in OpenMP workshare region: a reference used "
-           "across the region cannot be made available to all threads");
     Value alloc = fir::AllocaOp::create(allocaBuilder, loc, ty);
-    Value singleVal = singleMapping.lookup(v);
-    fir::StoreOp::create(singleBuilder, loc, singleVal, alloc);
+    fir::StoreOp::create(singleBuilder, loc, singleMapping.lookup(v), alloc);
     Value reloaded = fir::LoadOp::create(parallelBuilder, loc, ty, alloc);
     rootMapping.map(v, reloaded);
     return alloc;
   };
 
-  auto moveToSingle = [&](SingleRegion sr, OpBuilder allocaBuilder,
-                          OpBuilder singleBuilder, OpBuilder parallelBuilder)
-      -> std::tuple<bool, SmallVector<Value>, SmallPtrSet<Value, 4>> {
+  auto moveToSingle =
+      [&](SingleRegion sr, OpBuilder allocaBuilder, OpBuilder singleBuilder,
+          OpBuilder parallelBuilder) -> std::pair<bool, SmallVector<Value>> {
     IRMapping singleMapping = rootMapping;
     SmallVector<Value> copyPrivate;
-    SmallPtrSet<Value, 4> boxDataCopyVars;
     bool allParallelized = true;
-
-    // "firstprivate" pointer initialization creates: (1) alloca, (2) store
-    // null box, (3) copy original. If step (2) is duplicated into the
-    // parallel block, it runs after initialization of the private copy and
-    // overwrites the pointer descriptor with null, causing a segfault on
-    // dereference.
-    SmallPtrSet<Value, 4> hoistedCopyprivateAllocas;
-
-    // Look through trivial wrappers (fir.declare/hlfir.declare/fir.convert) so
-    // a write to a wrapped value still counts as a write to the hoisted alloca.
-    auto writesHoistedCopyprivateAlloca = [&](Value v) -> bool {
-      while (v) {
-        if (hoistedCopyprivateAllocas.contains(v))
-          return true;
-        Operation *def = v.getDefiningOp();
-        if (auto declare = dyn_cast_or_null<fir::DeclareOp>(def))
-          v = declare.getMemref();
-        else if (auto declare = dyn_cast_or_null<hlfir::DeclareOp>(def))
-          v = declare.getMemref();
-        else if (auto convert = dyn_cast_or_null<fir::ConvertOp>(def))
-          v = convert.getValue();
-        else
-          break;
-      }
-      return false;
-    };
 
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
       if (isSafeToParallelize(&op)) {
         singleBuilder.clone(op, singleMapping);
-        // Check if this operation writes to a hoisted copyprivate alloca.
-        // Such stores must stay only in the single block; the copyprivate
-        // mechanism handles broadcasting the final value to all threads.
-        bool writesToCopyprivateAlloca = false;
-        if (!hoistedCopyprivateAllocas.empty()) {
-          if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(&op)) {
-            SmallVector<MemoryEffects::EffectInstance> effects;
-            memEffects.getEffects(effects);
-            writesToCopyprivateAlloca =
-                llvm::any_of(effects, [&](const auto &eff) {
-                  return isa<MemoryEffects::Write>(eff.getEffect()) &&
-                         (!eff.getValue() ||
-                          writesHoistedCopyprivateAlloca(eff.getValue()));
-                });
-          } else {
-            // No memory-effects interface: conservatively assume it writes.
-            writesToCopyprivateAlloca = true;
-          }
-        }
-        if (!writesToCopyprivateAlloca &&
-            llvm::all_of(op.getOperands(), [&](Value opr) {
+        if (llvm::all_of(op.getOperands(), [&](Value opr) {
               // Either we have already remapped it
               bool remapped = rootMapping.contains(opr);
               // Or it is available because it dominates `sr`
@@ -507,91 +394,12 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           allParallelized = false;
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
-        if (alloca.isDynamic()) {
-          // Clone the extent/length operands (e.g. fir.box_dims) into the
-          // alloca block first so they are defined before the hoisted alloca
-          // that uses them as its size.
-          IRMapping allocaMapping;
-          std::function<void(Value)> ensureAvailable = [&](Value v) {
-            if (di.properlyDominates(v, &*sr.begin) ||
-                allocaMapping.contains(v))
-              return;
-            if (Operation *def = v.getDefiningOp()) {
-              for (Value opnd : def->getOperands())
-                ensureAvailable(opnd);
-              allocaBuilder.clone(*def, allocaMapping);
-            }
-          };
-          // Hoist dynamic allocas so each thread gets its own allocation
-          // (data broadcast via a copyprivate box using _FortranAAssign).
-          for (Value opnd : alloca->getOperands())
-            ensureAvailable(opnd);
-          auto hoisted =
-              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, allocaMapping));
-          rootMapping.map(&*alloca, &*hoisted);
-          rootMapping.map(alloca.getResult(), hoisted.getResult());
-          // Users cloned into the single block must also see the hoisted
-          // alloca rather than the (soon to be erased) original.
-          singleMapping.map(&*alloca, &*hoisted);
-          singleMapping.map(alloca.getResult(), hoisted.getResult());
-
-          if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            // Create a box slot for copyprivate to broadcast the data.
-            Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
-            if (fir::isPolymorphicType(eleTy))
-              TODO(loc, "copyprivate broadcast of a polymorphic firstprivate "
-                        "variable in an OpenMP workshare region");
-            auto boxTy = fir::BoxType::get(eleTy);
-            Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
-
-            // Embox the per-thread allocation. Dynamic arrays need shape
-            // information; dynamic characters need typeparams (length).
-            Value shape;
-            if (hoisted.hasShapeOperands())
-              shape =
-                  fir::ShapeOp::create(allocaBuilder, loc, hoisted.getShape());
-            Value box = fir::EmboxOp::create(
-                allocaBuilder, loc, boxTy, hoisted.getResult(), shape,
-                /*slice=*/{}, hoisted.getTypeparams());
-            fir::StoreOp::create(allocaBuilder, loc, box, boxAlloc);
-
-            copyPrivate.push_back(boxAlloc);
-            boxDataCopyVars.insert(boxAlloc);
-          }
-
-          hoistedCopyprivateAllocas.insert(alloca.getResult());
-          allParallelized = false;
-        } else {
-          auto hoisted =
-              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
-          rootMapping.map(&*alloca, &*hoisted);
-          rootMapping.map(alloca.getResult(), hoisted.getResult());
-
-          // Non-dynamic box alloca (e.g. an allocatable): shallow-copying the
-          // descriptor makes threads share storage, so deep-copy the data.
-          Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
-          if (fir::isPolymorphicType(eleTy) &&
-              isTransitivelyUsedOutside(alloca.getResult(), sr))
-            TODO(loc, "copyprivate broadcast of a polymorphic firstprivate "
-                      "variable in an OpenMP workshare region");
-          if (fir::isAllocatableType(eleTy) &&
-              isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            // Unallocated descriptor so the runtime assignment allocates
-            // fresh per-thread storage and sets any dynamic length, hence
-            // empty nonDeferredParams.
-            fir::FirOpBuilder firAllocaBuilder(allocaBuilder, m);
-            Value emptyBox = fir::factory::createUnallocatedBox(
-                firAllocaBuilder, loc, eleTy, /*nonDeferredParams=*/{});
-            fir::StoreOp::create(firAllocaBuilder, loc, emptyBox,
-                                 hoisted.getResult());
-            copyPrivate.push_back(hoisted.getResult());
-            boxDataCopyVars.insert(hoisted.getResult());
-          } else {
-            copyPrivate.push_back(hoisted);
-          }
-          hoistedCopyprivateAllocas.insert(alloca.getResult());
-          allParallelized = false;
-        }
+        auto hoisted =
+            cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
+        rootMapping.map(&*alloca, &*hoisted);
+        rootMapping.map(alloca.getResult(), hoisted.getResult());
+        copyPrivate.push_back(hoisted);
+        allParallelized = false;
       } else {
         singleBuilder.clone(op, singleMapping);
         // Prepare reloaded values for results of operations that cannot be
@@ -608,7 +416,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       }
     }
     omp::TerminatorOp::create(singleBuilder, loc);
-    return {allParallelized, copyPrivate, boxDataCopyVars};
+    return {allParallelized, copyPrivate};
   };
 
   for (Block &block : sourceRegion) {
@@ -669,7 +477,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         Block *parallelBlock = new Block();
         parallelBuilder.setInsertionPointToStart(parallelBlock);
 
-        auto [allParallelized, copyprivateVars, boxDataCopyVars] =
+        auto [allParallelized, copyprivateVars] =
             moveToSingle(std::get<SingleRegion>(opOrSingle), allocaBuilder,
                          singleBuilder, parallelBuilder);
         if (allParallelized) {
@@ -686,10 +494,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           cleanupBlock(singleBlock);
           for (auto var : singleOperands.copyprivateVars) {
             mlir::func::FuncOp funcOp =
-                boxDataCopyVars.contains(var)
-                    ? createBoxDataCopyFunc(loc, var.getType(),
-                                            firCopyFuncBuilder)
-                    : createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
+                createCopyFunc(loc, var.getType(), firCopyFuncBuilder);
             singleOperands.copyprivateSyms.push_back(
                 SymbolRefAttr::get(funcOp));
           }

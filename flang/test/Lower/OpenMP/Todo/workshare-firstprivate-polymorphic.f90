@@ -1,8 +1,7 @@
 ! Tests that firstprivate of a polymorphic variable in a parallel workshare
-! region is not yet supported. The elementwise use puts p in the parallel loop,
-! triggering the copyprivate broadcast that emits the TODO.
+! region is not yet supported.
 
-! RUN: %not_todo_cmd %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 module shapes
   type :: shape
@@ -17,7 +16,7 @@ subroutine poly_workshare_firstprivate(p, a, n)
   class(shape), allocatable :: p(:)
   real :: a(n)
 
-  !CHECK: not yet implemented: copyprivate broadcast of a polymorphic firstprivate variable in an OpenMP workshare region
+  !CHECK: not yet implemented: create polymorphic host associated copy
   !$omp parallel workshare firstprivate(p)
     a = p%area + 1.0
   !$omp end parallel workshare
