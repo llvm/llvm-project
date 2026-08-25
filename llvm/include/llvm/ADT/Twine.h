@@ -174,7 +174,8 @@ class Twine {
   }
 
   /// Construct a binary twine.
-  explicit Twine(const Twine &LHS, const Twine &RHS)
+  explicit Twine(const Twine &LHS LLVM_LIFETIME_BOUND,
+                 const Twine &RHS LLVM_LIFETIME_BOUND)
       : LHSKind(TwineKind), RHSKind(TwineKind) {
     this->LHS.twine = &LHS;
     this->RHS.twine = &RHS;
@@ -182,7 +183,8 @@ class Twine {
   }
 
   /// Construct a twine from explicit values.
-  explicit Twine(Child LHS, NodeKind LHSKind, Child RHS, NodeKind RHSKind)
+  explicit Twine(Child LHS LLVM_LIFETIME_BOUND, NodeKind LHSKind,
+                 Child RHS LLVM_LIFETIME_BOUND, NodeKind RHSKind)
       : LHS(LHS), RHS(RHS), LHSKind(LHSKind), RHSKind(RHSKind) {
     assert(isValid() && "Invalid twine!");
   }
@@ -254,7 +256,7 @@ public:
   /// We take care here to optimize "" into the empty twine -- this will be
   /// optimized out for string constants. This allows Twine arguments have
   /// default "" values, without introducing unnecessary string constants.
-  /*implicit*/ Twine(const char *Str) {
+  /*implicit*/ Twine(const char *Str LLVM_LIFETIME_BOUND) {
     if (Str[0] != '\0') {
       LHS.cString = Str;
       LHSKind = CStringKind;
@@ -269,7 +271,8 @@ public:
   /*implicit*/ Twine(std::nullptr_t) = delete;
 
   /// Construct from an std::string.
-  /*implicit*/ Twine(const std::string &Str) : LHSKind(StdStringKind) {
+  /*implicit*/ Twine(const std::string &Str LLVM_LIFETIME_BOUND)
+      : LHSKind(StdStringKind) {
     LHS.stdString = &Str;
     assert(isValid() && "Invalid twine!");
   }
@@ -278,14 +281,16 @@ public:
   /// length.  This handles string_views on a pure API basis, and avoids
   /// storing one (or a pointer to one) inside a Twine, which avoids problems
   /// when mixing code compiled under various C++ standards.
-  /*implicit*/ Twine(const std::string_view &Str) : LHSKind(PtrAndLengthKind) {
+  /*implicit*/ Twine(const std::string_view &Str LLVM_LIFETIME_BOUND)
+      : LHSKind(PtrAndLengthKind) {
     LHS.ptrAndLength.ptr = Str.data();
     LHS.ptrAndLength.length = Str.length();
     assert(isValid() && "Invalid twine!");
   }
 
   /// Construct from a StringRef.
-  /*implicit*/ Twine(StringRef Str) : LHSKind(PtrAndLengthKind) {
+  /*implicit*/ Twine(StringRef Str LLVM_LIFETIME_BOUND)
+      : LHSKind(PtrAndLengthKind) {
     LHS.ptrAndLength.ptr = Str.data();
     LHS.ptrAndLength.length = Str.size();
     assert(isValid() && "Invalid twine!");
@@ -299,7 +304,7 @@ public:
   }
 
   /// Construct from a SmallString.
-  /*implicit*/ Twine(const SmallVectorImpl<char> &Str)
+  /*implicit*/ Twine(const SmallVectorImpl<char> &Str LLVM_LIFETIME_BOUND)
       : LHSKind(PtrAndLengthKind) {
     LHS.ptrAndLength.ptr = Str.data();
     LHS.ptrAndLength.length = Str.size();
@@ -307,7 +312,7 @@ public:
   }
 
   /// Construct from a formatv_object_base.
-  /*implicit*/ Twine(const formatv_object_base &Fmt)
+  /*implicit*/ Twine(const formatv_object_base &Fmt LLVM_LIFETIME_BOUND)
       : LHSKind(FormatvObjectKind) {
     LHS.formatvObject = &Fmt;
     assert(isValid() && "Invalid twine!");
@@ -352,7 +357,8 @@ public:
   // right thing. Yet.
 
   /// Construct as the concatenation of a C string and a StringRef.
-  /*implicit*/ Twine(const char *LHS, StringRef RHS)
+  /*implicit*/ Twine(const char *LHS LLVM_LIFETIME_BOUND,
+                     StringRef RHS LLVM_LIFETIME_BOUND)
       : LHSKind(CStringKind), RHSKind(PtrAndLengthKind) {
     this->LHS.cString = LHS;
     this->RHS.ptrAndLength.ptr = RHS.data();
@@ -361,7 +367,8 @@ public:
   }
 
   /// Construct as the concatenation of a StringRef and a C string.
-  /*implicit*/ Twine(StringRef LHS, const char *RHS)
+  /*implicit*/ Twine(StringRef LHS LLVM_LIFETIME_BOUND,
+                     const char *RHS LLVM_LIFETIME_BOUND)
       : LHSKind(PtrAndLengthKind), RHSKind(CStringKind) {
     this->LHS.ptrAndLength.ptr = LHS.data();
     this->LHS.ptrAndLength.length = LHS.size();
@@ -424,7 +431,8 @@ public:
   /// @name String Operations
   /// @{
 
-  Twine concat(const Twine &Suffix) const;
+  Twine
+  concat(const Twine &Suffix LLVM_LIFETIME_BOUND) const LLVM_LIFETIME_BOUND;
 
   /// @}
   /// @name Output & Conversion.
@@ -458,7 +466,7 @@ public:
   /// This returns the twine as a single StringRef if it can be
   /// represented as such. Otherwise the twine is written into the given
   /// SmallVector and a StringRef to the SmallVector's data is returned.
-  StringRef toStringRef(SmallVectorImpl<char> &Out) const {
+  StringRef toStringRef(SmallVectorImpl<char> &Out) const LLVM_LIFETIME_BOUND {
     if (isSingleStringRef())
       return getSingleStringRef();
     toVector(Out);
@@ -470,8 +478,8 @@ public:
   /// given SmallVector and a StringRef to the SmallVector's data is returned.
   ///
   /// The returned StringRef's size does not include the null terminator.
-  LLVM_ABI StringRef
-  toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const;
+  LLVM_ABI StringRef toNullTerminatedStringRef(SmallVectorImpl<char> &Out) const
+      LLVM_LIFETIME_BOUND;
 
   /// Write the concatenated string represented by this twine to the
   /// stream \p OS.
@@ -523,21 +531,24 @@ inline Twine Twine::concat(const Twine &Suffix) const {
   return Twine(NewLHS, NewLHSKind, NewRHS, NewRHSKind);
 }
 
-inline Twine operator+(const Twine &LHS, const Twine &RHS) {
+inline Twine operator+(const Twine &LHS LLVM_LIFETIME_BOUND,
+                       const Twine &RHS LLVM_LIFETIME_BOUND) {
   return LHS.concat(RHS);
 }
 
 /// Additional overload to guarantee simplified codegen; this is equivalent to
 /// concat().
 
-inline Twine operator+(const char *LHS, StringRef RHS) {
+inline Twine operator+(const char *LHS LLVM_LIFETIME_BOUND,
+                       StringRef RHS LLVM_LIFETIME_BOUND) {
   return Twine(LHS, RHS);
 }
 
 /// Additional overload to guarantee simplified codegen; this is equivalent to
 /// concat().
 
-inline Twine operator+(StringRef LHS, const char *RHS) {
+inline Twine operator+(StringRef LHS LLVM_LIFETIME_BOUND,
+                       const char *RHS LLVM_LIFETIME_BOUND) {
   return Twine(LHS, RHS);
 }
 
