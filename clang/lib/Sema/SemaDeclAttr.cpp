@@ -5465,15 +5465,23 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
-    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
-  else
-    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_DeviceKernel:
+    if (!D->hasAttr<DeviceKernelAttr>())
+      D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
+    break;
+  case ParsedAttr::AT_CUDAGlobal:
+    if (!D->hasAttr<CUDAGlobalAttr>())
+      D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute kind");
+  }
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
   // debug info for the stub function to avoid confusing the debugger.
-  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice)
+  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice && !D->hasAttr<NoDebugAttr>())
     D->addAttr(NoDebugAttr::CreateImplicit(S.Context));
 }
 

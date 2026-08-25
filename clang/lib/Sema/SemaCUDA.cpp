@@ -1182,6 +1182,8 @@ void SemaCUDA::checkTargetOverload(FunctionDecl *NewFD,
 template <typename AttrTy>
 static void copyAttrIfPresent(Sema &S, FunctionDecl *FD,
                               const FunctionDecl &TemplateFD) {
+  if (FD->hasAttr<AttrTy>())
+    return;
   if (AttrTy *Attribute = TemplateFD.getAttr<AttrTy>()) {
     AttrTy *Clone = Attribute->clone(S.Context);
     Clone->setInherited(true);
