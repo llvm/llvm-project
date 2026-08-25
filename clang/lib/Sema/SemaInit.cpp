@@ -563,7 +563,8 @@ class InitListChecker {
     // Reference just one if we're initializing a single scalar.
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
-    if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+    if (Entity.getKind() == InitializedEntity::EK_ArrayElement &&
+        Entity.getType()->isScalarType()) {
       unsigned ArrIndex = Entity.getElementIndex();
       auto *AType =
           SemaRef.Context.getAsArrayType(Entity.getParent()->getType());

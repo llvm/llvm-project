@@ -6,6 +6,10 @@ struct S {
   int a, b;
 };
 
+struct A {
+  A(char);
+};
+
 // CHECK-LABEL: define {{.*}}void @_Z2f1i(
 // CHECK: icmp ult i64 %{{.*}}, 4
 // CHECK: %[[A1:.*]] = call {{.*}}ptr @_Znam(i64 {{.*}})
@@ -189,5 +193,17 @@ void f10() {
 void f11(int x) {
   float *p = new float[x]{
 #embed <embed-data.txt> limit(4)
+  };
+}
+
+// Class elements are constructed from one data element each.
+// CHECK-LABEL: define {{.*}}void @_Z3f12v(
+// CHECK: %[[A12:.*]] = call {{.*}}ptr @_Znam(i64 noundef 2)
+// CHECK: call void @_ZN1AC1Ec(ptr {{.*}}%[[A12]], i8 noundef signext 48)
+// CHECK: %[[F12E1:.*]] = getelementptr inbounds %struct.A, ptr %[[A12]], i64 1
+// CHECK: call void @_ZN1AC1Ec(ptr {{.*}}%[[F12E1]], i8 noundef signext 49)
+void f12() {
+  A *p = new A[]{
+#embed <embed-data.txt> limit(2)
   };
 }

@@ -4,6 +4,10 @@ struct S {
   int a, b;
 };
 
+struct A {
+  A(char);
+};
+
 void f(int x) {
   int *a = new int[2]{
 #embed __FILE__ limit(4)
@@ -34,5 +38,13 @@ void f(int x) {
 
   S *t = new S[x]{
 #embed __FILE__ limit(3)
+  };
+
+  A *u = new A[]{1, 2, 3,
+#embed __FILE__ limit(10)
+  };
+
+  A v[] = {1, 2, 3,
+#embed __FILE__ limit(10)
   };
 }
