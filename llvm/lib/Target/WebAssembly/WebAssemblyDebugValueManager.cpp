@@ -110,8 +110,8 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
   SmallVector<MachineInstr *, 8> DbgValuesInBetween;
 
   if (Def->getParent() == Insert->getParent()) {
-    // When Def and Insert are within the same BB, check if Insert comes after
-    // Def, because we only support sinking.
+    // Search both ways to quickly determine whether Insert follows Def.
+    // Only the forward scan collects DBG_VALUEs.
     MachineBasicBlock::iterator Down = std::next(Def->getIterator()),
                                 DownEnd = Def->getParent()->end(),
                                 Up = Def->getIterator(),
