@@ -2054,7 +2054,7 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_f32 $a, NoFTZ)>;
 // Fma
 //
 
-defvar FPRoundingModes = ["_rn", "_rz", "_rm", "_rp"];
+defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
 
 class FMA_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
                 list<Predicate> Preds = []> {
@@ -2130,21 +2130,18 @@ multiclass FMA_INST {
 
 defm INT_NVVM_FMA : FMA_INST;
 
-foreach rnd = FPRoundingModes in {
-  foreach sat = ["", "_sat"] in {
-    foreach type = [f16, bf16] in {
-      def INT_NVVM_MIXED_FMA # rnd # sat # _f32_ # type : 
+foreach rnd = FPRoundingModes in
+  foreach sat = ["", "sat"] in
+    foreach type = [f16, bf16] in
+      def INT_NVVM_MIXED_FMA_ # StrJoin<"_", [rnd, sat]>.ret # _f32_ # type :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
-          !subst("_", ".", "fma" # rnd # sat # "_f32_" # type),
-          [(set f32:$dst, 
-           (!cast<Intrinsic>("int_nvvm_fma" # rnd # sat # "_f") 
+          StrJoin<".", ["fma", rnd, sat, "f32", type.LLVMName]>.ret,
+          [(set f32:$dst,
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", rnd, sat, "f"]>.ret)
              (f32 (fpextend type:$a)),
              (f32 (fpextend type:$b)),
              f32:$c))]>,
         Requires<[SM100]>;
-    }
-  }
-}
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
 let Predicates = [SM100, doNoF32FTZ] in {
@@ -2293,41 +2290,41 @@ foreach t = [BF16RT, BF16X2RT] in
                     BF16ArithPreds>;
 
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
+  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
-  foreach ftz = ["", "_ftz"] in {
-    foreach sat = ["", "_sat"] in
-      def INT_NVVM_ADD # !toupper(rnd # ftz # sat) # _F :
-        F_MATH_2_RND_TY<!subst("_", ".", "add" # rnd # ftz # sat # "_f32"),
-                        F32RT, !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat),
+  foreach ftz = ["", "ftz"] in {
+    foreach sat = ["", "sat"] in
+      def INT_NVVM_ADD_ # !toupper(StrJoin<"_", [rnd, ftz, sat]>.ret) # _F :
+        F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, ftz, sat, "f32"]>.ret, F32RT,
+                        !cast<Intrinsic>(
+                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
                         rnd_imm>;
 
-    def INT_NVVM_ADD # !toupper(rnd # ftz) # _F32X2 :
-      F_MATH_2_RND_TY<!subst("_", ".", "add" # rnd # ftz # "_f32x2"), F32X2RT,
-                      !cast<Intrinsic>("int_nvvm_fadd" # ftz), rnd_imm,
-                      [hasF32x2Instructions]>;
+    def INT_NVVM_ADD_ # !toupper(StrJoin<"_", [rnd, ftz]>.ret) # _F32X2 :
+      F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, ftz, "f32x2"]>.ret, F32X2RT,
+                      !cast<Intrinsic>(
+                          StrJoin<"_", ["int_nvvm_fadd", ftz]>.ret),
+                      rnd_imm, [hasF32x2Instructions]>;
   }
 
-  def INT_NVVM_ADD # !toupper(rnd) # _D :
-    F_MATH_2_RND_TY<!subst("_", ".", "add" # rnd # "_f64"), F64RT,
-                    int_nvvm_fadd, rnd_imm>;
+  def INT_NVVM_ADD_ # !toupper(rnd) # _D :
+    F_MATH_2_RND_TY<StrJoin<".", ["add", rnd, "f64"]>.ret, F64RT, int_nvvm_fadd,
+                    rnd_imm>;
 }
 
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
+  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
-  foreach sat = ["", "_sat"] in {
-    foreach type = [f16, bf16] in {
-      def INT_NVVM_MIXED_ADD # rnd # sat # _f32_ # type : 
+  foreach sat = ["", "sat"] in
+    foreach type = [f16, bf16] in
+      def INT_NVVM_MIXED_ADD_ # StrJoin<"_", [rnd, sat]>.ret # _f32_ # type :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
-          !subst("_", ".", "add" # rnd # sat # "_f32_" # type),
-          [(set f32:$dst, 
-           (!cast<Intrinsic>("int_nvvm_fadd" # sat) 
+          StrJoin<".", ["add", rnd, sat, "f32", type.LLVMName]>.ret,
+          [(set f32:$dst,
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", sat]>.ret)
              (f32 (fpextend type:$a)),
              f32:$b, rnd_imm))]>,
         Requires<[SM100]>;
-    }
-  }
 }
 
 // Pattern for fadd when there is no FTZ flag
@@ -2348,67 +2345,70 @@ def sub_rn_ftz_sat :
   SDNode<"NVPTXISD::SUB_RN_FTZ_SAT", SDTFPBinOp>;
 
 foreach rnd = FPRoundingModes in
-  foreach ftz = ["", "_ftz"] in
-    def sub # rnd # ftz :
-      SDNode<"NVPTXISD::SUB" # !toupper(rnd # ftz), SDTFPBinOp>;
+  foreach ftz = ["", "ftz"] in {
+    defvar variant = StrJoin<"_", [rnd, ftz]>.ret;
+    def sub_ # variant :
+      SDNode<"NVPTXISD::SUB_" # !toupper(variant), SDTFPBinOp>;
+  }
 
-class INT_NVVM_SUB<RegTyInfo TyInfo, string variant> :
+class INT_NVVM_SUB<RegTyInfo TyInfo, list<string> variant> :
   BasicNVPTXInst<(outs TyInfo.RC:$dst), (ins TyInfo.RC:$a, TyInfo.RC:$b),
-    !subst("_", ".", "sub" # variant # "." # TyInfo.PtxType),
-    [(set TyInfo.Ty:$dst, 
-     (!cast<SDNode>("sub" # variant) TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
+    StrJoin<".", !listconcat(["sub"], variant, [TyInfo.PtxType])>.ret,
+    [(set TyInfo.Ty:$dst,
+     (!cast<SDNode>(StrJoin<"_", !listconcat(["sub"], variant)>.ret)
+      TyInfo.Ty:$a, TyInfo.Ty:$b))]>;
 
 foreach t = [F16RT, F16X2RT] in
-  foreach ftz = ["", "_ftz"] in
-    foreach sat = ["", "_sat"] in
-      def INT_NVVM_SUB_RN # !toupper(ftz # sat # "_" # t.PtxType) :
-        INT_NVVM_SUB<t, "_rn" # ftz # sat>;
+  foreach ftz = ["", "ftz"] in
+    foreach sat = ["", "sat"] in
+      def INT_NVVM_SUB_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        INT_NVVM_SUB<t, ["rn", ftz, sat]>;
 
 let Predicates = BF16ArithPreds in
   foreach t = [BF16RT, BF16X2RT] in
-    def INT_NVVM_SUB_RN_ # !toupper(t.PtxType) : INT_NVVM_SUB<t, "_rn">;
+    def INT_NVVM_SUB_RN_ # !toupper(t.PtxType) : INT_NVVM_SUB<t, ["rn"]>;
 
 let Predicates = [hasF32x2Instructions] in
   foreach rnd = FPRoundingModes in
-    foreach ftz = ["", "_ftz"] in
-      def INT_NVVM_SUB # rnd # ftz # _F32X2 : INT_NVVM_SUB<F32X2RT, rnd # ftz>;
+    foreach ftz = ["", "ftz"] in
+      def INT_NVVM_SUB_ # StrJoin<"_", [rnd, ftz]>.ret # _F32X2 :
+        INT_NVVM_SUB<F32X2RT, [rnd, ftz]>;
 
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
+  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
-  foreach ftz = ["", "_ftz"] in {
-    foreach sat = ["", "_sat"] in {
-      defvar add_intrin = !cast<Intrinsic>("int_nvvm_fadd" # ftz # sat);
-      def INT_NVVM_SUB # rnd # ftz # sat # _F : 
+  foreach ftz = ["", "ftz"] in {
+    foreach sat = ["", "sat"] in {
+      defvar add_intrin =
+        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret);
+      def INT_NVVM_SUB_ # StrJoin<"_", [rnd, ftz, sat]>.ret # _F :
         BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-          !subst("_", ".", "sub" # rnd # ftz # sat # "_f32"),
+          StrJoin<".", ["sub", rnd, ftz, sat, "f32"]>.ret,
           [(set f32:$dst,
             (add_intrin f32:$a, (f32 (fneg f32:$b)), rnd_imm))]>;
     }
   }
 
-  def INT_NVVM_SUB # rnd # _D : 
+  def INT_NVVM_SUB_ # rnd # _D :
     BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
-      !subst("_", ".", "sub" # rnd # "_f64"),
+      StrJoin<".", ["sub", rnd, "f64"]>.ret,
       [(set f64:$dst,
         (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), rnd_imm))]>;
 }
 
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd" # rnd # "_imm");
+  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
-  foreach sat = ["", "_sat"] in {
-    foreach type = [f16, bf16] in {
-      def INT_NVVM_MIXED_SUB # rnd # sat # _f32_ # type : 
+  foreach sat = ["", "sat"] in
+    foreach type = [f16, bf16] in
+      def INT_NVVM_MIXED_SUB_ # StrJoin<"_", [rnd, sat]>.ret # _f32_ # type :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
-          !subst("_", ".", "sub" # rnd # sat # "_f32_" # type),
-          [(set f32:$dst, 
-           (!cast<Intrinsic>("int_nvvm_fadd" # sat) 
+          StrJoin<".", ["sub", rnd, sat, "f32", type.LLVMName]>.ret,
+          [(set f32:$dst,
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", sat]>.ret)
              (f32 (fpextend type:$a)),
              (f32 (fneg f32:$b)), rnd_imm))]>,
         Requires<[SM100]>;
-    }
-  }
 }
 
 // Pattern for fsub when there is no FTZ flag
