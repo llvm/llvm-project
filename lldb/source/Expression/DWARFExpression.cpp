@@ -1380,6 +1380,15 @@ static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
   return llvm::Error::success();
 }
 
+// Scalar does not preserve DWARF's generic type identifier. Since generic
+// values are address-sized integers, use the scalar kind and width as an
+// approximation.
+static bool IsPotentiallyGenericIntegerOperand(const Scalar &operand,
+                                               size_t address_size) {
+  return address_size != 0 && operand.GetType() == Scalar::e_int &&
+         operand.GetByteSize() == address_size;
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1745,6 +1754,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() >= tmp.GetScalar());
       break;
@@ -1756,6 +1771,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() > tmp.GetScalar());
       break;
@@ -1767,6 +1788,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() <= tmp.GetScalar());
       break;
@@ -1778,6 +1805,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeSigned();
+        stack.back().GetScalar().MakeSigned();
+      }
       stack.back().GetScalar() =
           to_generic(stack.back().GetScalar() < tmp.GetScalar());
       break;
