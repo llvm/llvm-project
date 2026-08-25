@@ -3050,13 +3050,16 @@ class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                 list<LLVMType> param_types,
                 list<LLVMType> flags,
                 list<IntrinsicProperty> intr_properties,
-                string name = "">
+                string name = "",
+                DefaultValue last_flag_default = NoDefault>
   : DefaultAttrsIntrinsic<
         ret_types,
         !listconcat(param_types, flags),
         !listconcat(intr_properties,
                     !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
+                        ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                               !if(!eq(i, !sub(!size(flags), 1)),
+                                   last_flag_default, NoDefault)>)),
         name>;
 
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
@@ -3691,7 +3694,7 @@ foreach sparse = [0, 1] in {
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
-                mma.intr_name>;
+                mma.intr_name, DefaultValue<0>>;
       } // ashift
     } // scale_d
   } // space
@@ -3735,7 +3738,8 @@ foreach sparse = [0, 1] in {
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
-                                  intrinsic_properties, mma.intr_name>;
+                                  intrinsic_properties, mma.intr_name,
+                                  DefaultValue<0>>;
         } // ashift
       } // scale_d
     } // cta_group
