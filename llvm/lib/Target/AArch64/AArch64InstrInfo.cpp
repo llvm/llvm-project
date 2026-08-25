@@ -5743,14 +5743,6 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   return MIB.addReg(Reg, State, SubIdx);
 }
 
-static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
-                                        unsigned NumRegs, bool IsPred) {
-  // We really want the positive remainder mod 16/32 here, that happens to be
-  // easily obtainable with a mask.
-  unsigned MaxRegs = IsPred ? 0xf : 0x1f;
-  return ((DestReg - SrcReg) & MaxRegs) < NumRegs;
-}
-
 void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         const DebugLoc &DL, MCRegister DestReg,
@@ -5761,18 +5753,21 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned NumRegs = Indices.size();
-  bool IsPred =
-      AArch64::PPRRegClass.contains(TRI->getSubReg(DestReg, Indices[0]));
+  MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[0]);
+  assert(!AArch64::PNRRegClass.contains(DestSubReg) &&
+         "Unexpected predicate tuple copy");
+  unsigned MaxRegs = AArch64::PPRRegClass.contains(DestSubReg) ? 15 : 31;
 
   int SubReg = 0, End = NumRegs, Incr = 1;
-  if (forwardCopyWillClobberTuple(DestEncoding, SrcEncoding, NumRegs, IsPred)) {
+  // Copy in reverse if a forward copy will clobber the tuple
+  if (((DestEncoding - SrcEncoding) & MaxRegs) < NumRegs) {
     SubReg = NumRegs - 1;
     End = -1;
     Incr = -1;
   }
 
   for (; SubReg != End; SubReg += Incr) {
-    MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
+    DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
     MCRegister SrcSubReg = TRI->getSubReg(SrcReg, Indices[SubReg]);
     copyPhysRegImpl(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
   }
