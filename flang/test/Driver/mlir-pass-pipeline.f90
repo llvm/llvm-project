@@ -127,6 +127,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   CudaHeapAllocPromotion
 ! ALL-NEXT:   MemoryAllocationOpt
 
 ! ALL-NEXT: Inliner
@@ -136,6 +137,8 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT: SelectOpsConversion
 ! ALL-NEXT: AssumedRankOpConversion
 ! O2-NEXT:  'func.func' Pipeline
 ! O2-NEXT:    OptimizeArrayRepacking

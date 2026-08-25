@@ -132,32 +132,42 @@ static bool canRemat(const MachineInstr &MI) {
 static std::tuple<unsigned, unsigned, unsigned>
 splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
                              const MachineOperand &SrcOp) {
-  unsigned SrcFlags = SrcOp.getTargetFlags();
+  const unsigned BaseFlags = SrcOp.getTargetFlags() & ~SIInstrInfo::MO_MASK;
+  const unsigned Reloc = SrcOp.getTargetFlags() & SIInstrInfo::MO_MASK;
 
   // Infer the relocation type from the existing flags on the global operand.
   // The relocation type should have been determined earlier in the pipeline.
-  unsigned LoReloc = SIInstrInfo::MO_ABS32_LO;
-  unsigned HiReloc = SIInstrInfo::MO_ABS32_HI;
-
-  if (SrcFlags & SIInstrInfo::MO_REL32) {
+  unsigned LoReloc, HiReloc;
+  switch (Reloc) {
+  case SIInstrInfo::MO_REL32_LO:
+  case SIInstrInfo::MO_REL32_HI:
+  case SIInstrInfo::MO_REL64:
     LoReloc = SIInstrInfo::MO_REL32_LO;
     HiReloc = SIInstrInfo::MO_REL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL32_LO) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL32_LO:
+  case SIInstrInfo::MO_GOTPCREL32_HI:
     LoReloc = SIInstrInfo::MO_GOTPCREL32_LO;
     HiReloc = SIInstrInfo::MO_GOTPCREL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL64) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL:
+  case SIInstrInfo::MO_GOTPCREL64:
     // For 64-bit GOT-relative, use the 64-bit relocation.
     LoReloc = SIInstrInfo::MO_GOTPCREL64;
     HiReloc = SIInstrInfo::MO_GOTPCREL64;
+    break;
+  case SIInstrInfo::MO_ABS32_LO:
+  case SIInstrInfo::MO_ABS32_HI:
+  case SIInstrInfo::MO_ABS64:
+    LoReloc = SIInstrInfo::MO_ABS32_LO;
+    HiReloc = SIInstrInfo::MO_ABS32_HI;
+    break;
+  default:
+    llvm_unreachable("unknown relocation type for global address");
+    break;
   }
 
-  unsigned BaseFlags =
-      SrcFlags & ~(SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI |
-                   SIInstrInfo::MO_REL32_LO | SIInstrInfo::MO_REL32_HI |
-                   SIInstrInfo::MO_GOTPCREL32_LO |
-                   SIInstrInfo::MO_GOTPCREL32_HI | SIInstrInfo::MO_GOTPCREL64);
-
-  return std::make_tuple(BaseFlags, LoReloc, HiReloc);
+  return {BaseFlags, LoReloc, HiReloc};
 }
 
 bool SIInstrInfo::isReMaterializableImpl(
@@ -181,7 +191,72 @@ bool SIInstrInfo::isReMaterializableImpl(
       return true;
   }
 
-  return TargetInstrInfo::isReMaterializableImpl(MI);
+  // Everything below copied from TargetInstrInfo::isReMaterializableImpl. The
+  // only difference is that we allow operations that perform read-modify-write
+  // on sub-registers.
+
+  // Remat clients assume operand 0 is the defined register.
+  if (!MI.getNumOperands() || !MI.getOperand(0).isReg())
+    return false;
+  Register DefReg = MI.getOperand(0).getReg();
+
+  const MachineFunction &MF = *MI.getMF();
+
+  // A load from a fixed stack slot can be rematerialized. This may be
+  // redundant with subsequent checks, but it's target-independent,
+  // simple, and a common case.
+  int FrameIdx = 0;
+  if (isLoadFromStackSlot(MI, FrameIdx) &&
+      MF.getFrameInfo().isImmutableObjectIndex(FrameIdx))
+    return true;
+
+  // Avoid instructions obviously unsafe for remat.
+  if (MI.isNotDuplicable() || MI.mayStore() || MI.mayRaiseFPException() ||
+      MI.hasUnmodeledSideEffects())
+    return false;
+
+  // Don't remat inline asm. We have no idea how expensive it is
+  // even if it's side effect free.
+  if (MI.isInlineAsm())
+    return false;
+
+  // Avoid instructions which load from potentially varying memory.
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad())
+    return false;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  // If any of the registers accessed are non-constant, conservatively assume
+  // the instruction is not rematerializable.
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg == 0)
+      continue;
+
+    // Check for a well-behaved physical register.
+    if (Reg.isPhysical()) {
+      if (MO.isUse()) {
+        // If the physreg has no defs anywhere, it's just an ambient register
+        // and we can freely move its uses. Alternatively, if it's allocatable,
+        // it could get allocated to something with a def during allocation.
+        if (!MRI.isConstantPhysReg(Reg))
+          return false;
+      } else {
+        // A physreg def. We can't remat it.
+        return false;
+      }
+      continue;
+    }
+
+    // Only allow one virtual-register def.  There may be multiple defs of the
+    // same virtual register, though.
+    if (MO.isDef() && Reg != DefReg)
+      return false;
+  }
+
+  return true;
 }
 
 // Returns true if the result of a VALU instruction depends on exec.
@@ -226,6 +301,8 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
     if (Op.isReg() && Op.getReg().isVirtual() &&
         RI.isSGPRClass(MRI.getRegClass(Op.getReg()))) {
       MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
+      if (!SgprDef)
+        continue;
 
       // SgprDef defined inside cycle
       CycleRef FromCycle = CI->getCycle(SgprDef->getParent());
@@ -4847,6 +4924,14 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
         OpNo == (unsigned)AMDGPU::getNamedOperandIdx(InstDesc.getOpcode(),
                                                      AMDGPU::OpName::src2))
       return false;
+
+    if (ST.hasBF16InlineConstFromUpperFP32() && isVOP1(Opc)) {
+      if ((OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+           OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16) &&
+          isInlineConstant(ImmVal, OpInfo.OperandType))
+        return false;
+    }
+
     return RI.opCanUseInlineConstant(OpInfo.OperandType);
   }
 
@@ -4942,14 +5027,22 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
                hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
     return false;
 
-  // We don't need to check src0, all input types are legal, so just make sure
-  // src0 isn't using any modifiers.
+  // Make sure src0 isn't using any modifiers.
   if (hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers))
     return false;
 
   // Can it be shrunk to a valid 32 bit opcode?
   if (!hasVALU32BitEncoding(MI.getOpcode()))
     return false;
+
+  const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
+  if (Src0 && Src0->isImm()) {
+    unsigned Op32 = AMDGPU::getVOPe32(MI.getOpcode());
+    if (!isImmOperandLegal(
+            get(Op32), AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src0),
+            *Src0))
+      return false;
+  }
 
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
@@ -5853,20 +5946,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (Data && !Data->isReg())
       Data = nullptr;
 
-    if (ST.hasGFX90AInsts()) {
-      if (Dst && Data && !Dst->isTied() && !Data->isTied() &&
-          (RI.isAGPR(MRI, Dst->getReg()) != RI.isAGPR(MRI, Data->getReg()))) {
-        ErrInfo = "Invalid register class: "
-                  "vdata and vdst should be both VGPR or AGPR";
-        return false;
-      }
-      if (Data && Data2 &&
-          (RI.isAGPR(MRI, Data->getReg()) != RI.isAGPR(MRI, Data2->getReg()))) {
-        ErrInfo = "Invalid register class: "
-                  "both data operands should be VGPR or AGPR";
-        return false;
-      }
-    } else {
+    if (!ST.hasGFX90AInsts()) {
       if ((Dst && RI.isAGPR(MRI, Dst->getReg())) ||
           (Data && RI.isAGPR(MRI, Data->getReg())) ||
           (Data2 && RI.isAGPR(MRI, Data2->getReg()))) {
@@ -5940,7 +6020,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // See SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isSingleSGPRReadInst(Opcode)) {
+  if (AMDGPU::isSingleSGPRReadInst(Opcode)) {
     for (unsigned I = 0; I < 3; ++I) {
       if (!isLegalSingleSGPRReadInstOperand(MRI, MI, I))
         return false;
@@ -6299,7 +6379,7 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
   Register Reg = MRI.createVirtualRegister(VRC);
   DebugLoc DL = MBB->findDebugLoc(I);
 
-  if (Size == 128 && AMDGPU::isPacked64BitInst(MI.getOpcode()) &&
+  if (Size == 128 && AMDGPU::isPackedSingleSGPR64BitInst(MI.getOpcode()) &&
       isLegalSingleSGPRReadInstOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx))) {
     // Special case for V_PK_*64 instructions: these do not have OPSEL but SGPR
     // sources behave like OPSEL is set replicating low 64-bits into high. VGPR
@@ -6403,7 +6483,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   unsigned Opc = MI.getOpcode();
 
   // See SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
+  if (MO.isReg() && RI.isSGPRReg(MRI, MO.getReg()) &&
       AMDGPU::isSingleSGPRReadInst(MI.getOpcode()) &&
       !isLegalSingleSGPRReadInstOperand(MRI, MI, VOP3OpIdxToSrcN(MI, OpIdx),
                                         &MO))
@@ -6895,7 +6975,7 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
 
   // Fix the register class of single-sgpr-read instructions on gfx12+. See
   // SIInstrInfo::isLegalSingleSGPRReadInstOperand for more information.
-  if (AMDGPU::isGFX12Plus(ST) && AMDGPU::isSingleSGPRReadInst(Opc)) {
+  if (AMDGPU::isSingleSGPRReadInst(Opc)) {
     for (unsigned I = 0; I < 3; ++I) {
       if (!isLegalSingleSGPRReadInstOperand(MRI, MI, /*SrcN=*/I))
         legalizeOpWithMove(MI, VOP3Idx[I]);
@@ -7087,9 +7167,10 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
     return;
 
   Register DstReg = MRI.createVirtualRegister(DstRC);
-  auto Copy =
-      BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg).addReg(OpReg);
+  auto Copy = BuildMI(InsertMBB, I, DL, get(AMDGPU::COPY), DstReg)
+                  .addReg(OpReg, {}, OpSubReg);
   Op.setReg(DstReg);
+  Op.setSubReg(AMDGPU::NoSubRegister);
 
   MachineInstr *Def = MRI.getVRegDef(OpReg);
   if (!Def)
@@ -8579,11 +8660,14 @@ void SIInstrInfo::moveToVALUImpl(
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
+        bool IsUndef = Inst.getOperand(1).isUndef();
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
           UseMO.setSubReg(
               RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
           UseMO.setReg(NewDstReg);
+          if (IsUndef)
+            UseMO.setIsUndef();
         }
         MRI.clearKillFlags(NewDstReg);
 
@@ -9820,7 +9904,7 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
       if (!NewDstRC)
         return nullptr;
     } else {
-      if (RI.isVGPRClass(NewDstRC) || NewDstRC == &AMDGPU::VReg_1RegClass)
+      if (!RI.isSGPRClass(NewDstRC) || NewDstRC == &AMDGPU::VReg_1RegClass)
         return nullptr;
 
       NewDstRC = RI.getEquivalentVGPRClass(NewDstRC);
@@ -10184,7 +10268,8 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
                                                 MachineLoopInfo *MLI) const {
-  return new GCNHazardRecognizer(MF, MLI);
+  return new GCNHazardRecognizer(
+      MF, GCNHazardRecognizer::OperatingMode::HazardRecognizerMode, MLI);
 }
 
 // Called during:
@@ -11615,6 +11700,24 @@ void SIInstrInfo::enforceOperandRCAlignment(MachineInstr &MI,
   Op.setReg(NewVR);
   Op.setSubReg(AMDGPU::sub0);
   MI.addOperand(MachineOperand::CreateReg(NewVR, false, true));
+}
+
+unsigned SIInstrInfo::getRepeatRate(const MachineInstr &MI) const {
+  if (!SchedModel.hasInstrSchedModel())
+    return 0;
+
+  // The repeat rate is the throughput-limiting resource occupancy: the largest
+  // number of cycles any written processor resource is held.
+  const MCSchedClassDesc *SCDesc = SchedModel.resolveSchedClass(&MI);
+  unsigned RepeatRate = 0;
+  for (TargetSchedModel::ProcResIter
+           PI = SchedModel.getWriteProcResBegin(SCDesc),
+           PE = SchedModel.getWriteProcResEnd(SCDesc);
+       PI != PE; ++PI) {
+    RepeatRate = std::max(RepeatRate, (unsigned)PI->ReleaseAtCycle);
+  }
+
+  return RepeatRate;
 }
 
 bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {

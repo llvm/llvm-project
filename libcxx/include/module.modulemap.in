@@ -19,6 +19,11 @@ module std_config {
 }
 
 module std_core {
+  module cmath {
+    module lerp              { header "__cmath/lerp.h" }
+    module special_functions { header "__cmath/special_functions.h" }
+  }
+
   module cstddef {
     module byte         { header "__cstddef/byte.h" }
     module max_align_t  {
@@ -65,7 +70,6 @@ module std_core {
     module remainder                        { header "__math/remainder.h" }
     module roots                            { header "__math/roots.h" }
     module rounding_functions               { header "__math/rounding_functions.h" }
-    module special_functions                { header "__math/special_functions.h" }
     module traits                           { header "__math/traits.h" }
     module trigonometric_functions          { header "__math/trigonometric_functions.h" }
   }
@@ -263,6 +267,10 @@ module std_core {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
+    module is_relocatable {
+      header "__type_traits/is_relocatable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -309,10 +317,6 @@ module std_core {
     }
     module is_trivially_lexicographically_comparable {
       header "__type_traits/is_trivially_lexicographically_comparable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_trivially_relocatable {
-      header "__type_traits/is_trivially_relocatable.h"
       export std_core.type_traits.integral_constant
     }
     module is_union {
@@ -409,7 +413,10 @@ module std {
     module find_if_not                            { header "__algorithm/find_if_not.h" }
     module find_if                                { header "__algorithm/find_if.h" }
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
-    module find                                   { header "__algorithm/find.h" }
+    module find                                   {
+      header "__algorithm/find.h"
+      export std.algorithm.simd_utils // TODO: Workaround for https://llvm.org/PR120108
+    }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
@@ -1391,7 +1398,11 @@ module std {
     module formatter_tuple                    { header "__format/formatter_tuple.h" }
     module fwd                                { header "__fwd/format.h" }
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
-    module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
+    module parser_std_format_spec             {
+      header "__format/parser_std_format_spec.h"
+      export std.format.parser_std_format_spec_data
+    }
+    module parser_std_format_spec_data        { header "__format/parser_std_format_spec_data.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
     module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
@@ -1564,7 +1575,10 @@ module std {
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
-    module reverse_access             { header "__iterator/reverse_access.h" }
+    module reverse_access {
+      header "__iterator/reverse_access.h"
+      export std.iterator.reverse_iterator
+    }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
@@ -1632,9 +1646,16 @@ module std {
     export *
   }
 
-  // TODO: Understand why this needs to live in its own module
+  // These headers can't be submodules of std.locale: they are used by <ios> and <streambuf>,
+  // which are in turn used by the facet headers that make up std.locale, so making them part
+  // of std.locale would create a cycle.
   module locale_base {
-    header "__locale"
+    module codecvt          { header "__locale_dir/codecvt.h"          export * }
+    module collate          { header "__locale_dir/collate.h"          export * }
+    module ctype            { header "__locale_dir/ctype.h"            export * }
+    module ctype_base       { header "__locale_dir/ctype_base.h"       export * }
+    module locale           { header "__locale_dir/locale.h"           export * }
+    module utf8_conversions { header "__locale_dir/utf8_conversions.h" export * }
     export *
   }
 
@@ -1687,6 +1708,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -1807,6 +1829,33 @@ module std {
   }
 
   module optional {
+    module fwd { header "__fwd/optional.h" }
+    module hash {
+      header "__optional/hash.h"
+      export std.functional.hash
+    }
+    module common {
+      header "__optional/common.h"
+      export std.format.fwd
+    }
+
+    module comparison { header "__optional/comparison.h" }
+    module make_optional { header "__optional/make_optional.h" }
+    module nullopt_t { header "__optional/nullopt_t.h" }
+    module optional {
+      header "__optional/optional.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module optional_ref {
+      header "__optional/optional_ref.h"
+      export std.iterator.bounded_iter
+      export std.iterator.capacity_aware_iterator
+      export std.utility.swap
+    }
+    module swap { header "__optional/swap.h" }
+
     header "optional"
     export *
   }
@@ -2391,6 +2440,15 @@ module std {
       }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
+      }
+      module reverse {
+        header "__pstl/cpu_algos/reverse.h"
+      }
+      module search {
+        header "__pstl/cpu_algos/search.h"
+      }
+      module search_n {
+        header "__pstl/cpu_algos/search_n.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"

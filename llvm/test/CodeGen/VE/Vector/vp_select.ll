@@ -6,7 +6,7 @@ declare <256 x i32> @llvm.vp.select.v256i32(<256 x i1>, <256 x i32>, <256 x i32>
 define fastcc <256 x i32> @test_vp_select_v256i32_vv(<256 x i32> %i0, <256 x i32> %i1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256i32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s0, 256
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
@@ -20,12 +20,10 @@ define fastcc <256 x i32> @test_vp_select_v256i32_vv(<256 x i32> %i0, <256 x i32
 define fastcc <256 x i32> @test_vp_select_v256i32_vr(<256 x i32> %i0, i32 %s1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256i32_vr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea %s2, 256
-; CHECK-NEXT:    lvl %s2
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vbrd %v1, %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
@@ -42,7 +40,7 @@ declare <256 x float> @llvm.vp.select.v256f32(<256 x i1>, <256 x float>, <256 x 
 define fastcc <256 x float> @test_vp_select_v256f32_vv(<256 x float> %i0, <256 x float> %i1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s0, 256
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
@@ -56,11 +54,9 @@ define fastcc <256 x float> @test_vp_select_v256f32_vv(<256 x float> %i0, <256 x
 define fastcc <256 x float> @test_vp_select_v256f32_vr(<256 x float> %i0, float %s1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256f32_vr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea %s2, 256
-; CHECK-NEXT:    lvl %s2
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vbrd %v1, %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
@@ -77,7 +73,7 @@ declare <256 x double> @llvm.vp.select.v256f64(<256 x i1>, <256 x double>, <256 
 define fastcc <256 x double> @test_vp_select_v256f64_vv(<256 x double> %i0, <256 x double> %i1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256f64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s0, 256
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
@@ -91,11 +87,9 @@ define fastcc <256 x double> @test_vp_select_v256f64_vv(<256 x double> %i0, <256
 define fastcc <256 x double> @test_vp_select_v256f64_vr(<256 x double> %i0, double %s1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256f64_vr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea %s2, 256
-; CHECK-NEXT:    lvl %s2
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vbrd %v1, %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
@@ -112,7 +106,7 @@ declare <256 x i64> @llvm.vp.select.v256i64(<256 x i1>, <256 x i64>, <256 x i64>
 define fastcc <256 x i64> @test_vp_select_v256i64_vv(<256 x i64> %i0, <256 x i64> %i1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256i64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s0, 256
 ; CHECK-NEXT:    lvl %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
@@ -126,11 +120,9 @@ define fastcc <256 x i64> @test_vp_select_v256i64_vv(<256 x i64> %i0, <256 x i64
 define fastcc <256 x i64> @test_vp_select_v256i64_vr(<256 x i64> %i0, i64 %s1, <256 x i1> %m, i32 %pivot) {
 ; CHECK-LABEL: test_vp_select_v256i64_vr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:    lea %s2, 256
-; CHECK-NEXT:    lvl %s2
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lea %s1, 256
 ; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vbrd %v1, %s0
 ; CHECK-NEXT:    vmrg %v1, %v1, %v0, %vm1
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16

@@ -395,10 +395,10 @@ def SP : GPRRegisterClass<(add X2)> {
   let DiagnosticString = "register must be sp (x2)";
 }
 
-// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
+// Callee-saved Registers from s0 to s7, used by instructions in Zcmp and Xqccmp.
+def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))> {
-  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticType = "InvalidRegClassGPRS07";
   let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
 }
 
@@ -546,21 +546,43 @@ class FPRCRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H">;
+def FPR16 : FPRRegisterClass<[f16, bf16], 16, "H"> {
+  let DiagnosticType   = "InvalidRegClassFPR16";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H">;
+def FPR16C : FPRCRegisterClass<[f16, bf16], 16, "H"> {
+  let DiagnosticType   = "InvalidRegClassFPR16C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
 
-def FPR32 : FPRRegisterClass<[f32], 32, "F">;
+def FPR32 : FPRRegisterClass<[f32], 32, "F"> {
+  let DiagnosticType   = "InvalidRegClassFPR32";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR32C : FPRCRegisterClass<[f32], 32, "F">;
+def FPR32C : FPRCRegisterClass<[f32], 32, "F"> {
+  let DiagnosticType   = "InvalidRegClassFPR32C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
+
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR64 : FPRRegisterClass<[f64], 64, "D">;
+def FPR64 : FPRRegisterClass<[f64], 64, "D"> {
+  let DiagnosticType   = "InvalidRegClassFPR64";
+  let DiagnosticString = "register must be a FPR";
+}
 
-def FPR64C : FPRCRegisterClass<[f64], 64, "D">;
+def FPR64C : FPRCRegisterClass<[f64], 64, "D"> {
+  let DiagnosticType   = "InvalidRegClassFPR64C";
+  let DiagnosticString = "register must be a FPR from f8 to f15 (fs0-fs1, fa0-fa5)";
+}
 
-def FPR128 : FPRRegisterClass<[f128], 128, "Q">;
+def FPR128 : FPRRegisterClass<[f128], 128, "Q"> {
+  let DiagnosticType   = "InvalidRegClassFPR128";
+  let DiagnosticString = "register must be a FPR";
+}
 
 //===----------------------------------------------------------------------===//
 // GPR Classes for "H/F/D in X"
@@ -1016,7 +1038,10 @@ let RegAltNameIndices = [ABIRegAltName] in
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2">;
+def FPR256 : FPRRegisterClass<[v8i32, v8f32], 256, "Q2"> {
+  let DiagnosticType   = "InvalidRegClassFPR256";
+  let DiagnosticString = "register must be a FPR";
+}
 
 // Mask registers m0 to m7
 foreach Index = 0-7 in

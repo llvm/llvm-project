@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
+#include <optional>
 
 namespace {
 class GeneratedRTChecks;
@@ -97,13 +98,44 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
-  VPBasicBlock *BB = nullptr;
-  VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
+private:
+  class VPInsertPoint {
+    VPBasicBlock *Block = nullptr;
+    VPBasicBlock::iterator Point;
+
+  public:
+    /// Creates a new insertion point which doesn't point to anything.
+    VPInsertPoint() = default;
+
+    /// Creates a new insertion point to insert at \p Point in \p Block.
+    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
+        : Block(Block), Point(Point) {}
+
+    /// Creates a new insertion point to insert before \p R.
+    VPInsertPoint(VPRecipeBase *R)
+        : Block(R->getParent()), Point(R->getIterator()) {}
+
+    /// Creates a new insertion point to insert at the end of \p Block.
+    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+
+    /// Returns true if this insert point is set.
+    operator bool() const { return Block; }
+
+    VPBasicBlock *getBlock() const { return Block; }
+
+    operator VPRecipeBase *() const {
+      return Point == Block->end() ? nullptr : &*Point;
+    }
+
+    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
+  };
+
+  VPInsertPoint InsertPt;
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
-    if (BB)
-      BB->insert(R, InsertPt);
+    if (InsertPt)
+      InsertPt.insert(R);
     return R;
   }
 
@@ -117,87 +149,40 @@ class VPBuilder {
 
 public:
   VPlan &getPlan() const {
-    assert(getInsertBlock() && "Insert block must be set");
-    return *getInsertBlock()->getPlan();
+    assert(InsertPt && "Insert block must be set");
+    return *InsertPt.getBlock()->getPlan();
   }
 
   VPBuilder() = default;
-  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
-  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    setInsertPoint(TheBB, IP);
-  }
+  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
+      : InsertPt(TheBB, IP) {}
 
-  /// Clear the insertion point: created instructions will not be inserted into
-  /// a block.
-  void clearInsertionPoint() {
-    BB = nullptr;
-    InsertPt = VPBasicBlock::iterator();
-  }
-
-  VPBasicBlock *getInsertBlock() const { return BB; }
-  VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+  /// Get the recipe at the current insert point or nullptr if the insert point
+  /// is the end of the block.
+  VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
   static VPBuilder getToInsertAfter(VPRecipeBase *R) {
-    VPBuilder B;
-    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
-    return B;
+    return {R->getParent(), std::next(R->getIterator())};
   }
-
-  /// InsertPoint - A saved insertion point.
-  class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    VPInsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    VPInsertPoint(VPBasicBlock *InsertBlock, VPBasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return Block != nullptr; }
-
-    VPBasicBlock *getBlock() const { return Block; }
-    VPBasicBlock::iterator getPoint() const { return Point; }
-  };
 
   /// Sets the current insert point to a previously-saved location.
-  void restoreIP(VPInsertPoint IP) {
-    if (IP.isSet())
-      setInsertPoint(IP.getBlock(), IP.getPoint());
-    else
-      clearInsertionPoint();
-  }
+  void restoreIP(VPInsertPoint IP) { InsertPt = IP; }
 
-  /// This specifies that created VPInstructions should be appended to the end
-  /// of the specified block.
-  void setInsertPoint(VPBasicBlock *TheBB) {
-    assert(TheBB && "Attempting to set a null insert point");
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    BB = TheBB;
+  /// Set the current insert point.
+  void setInsertPoint(const VPInsertPoint &IP) {
+    assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPRecipeBase *IP) {
-    BB = IP->getParent();
-    InsertPt = IP->getIterator();
+  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    assert(TheBB && "Attempting to set a null insert point");
+    InsertPt = VPInsertPoint(TheBB, IP);
   }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    BB->insert(R, InsertPt);
+    InsertPt.insert(R);
     return R;
   }
 
@@ -315,13 +300,18 @@ public:
     return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
   }
 
+  /// Create a select of \p TrueVal and \p FalseVal based on \p Cond, using the
+  /// default flags for the result type, unless \p Flags is set.
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "",
-                              const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
+                              std::optional<VPIRFlags> Flags = std::nullopt) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
+                          Flags.value_or(VPIRFlags::getDefaultFlags(
+                              Instruction::Select, TrueVal->getScalarType())),
+                          {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -375,12 +365,18 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
+  /// Create a phi with \p IncomingValues, using the default flags for the
+  /// result type, unless \p Flags is set.
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         const Twine &Name = "",
+                         std::optional<VPIRFlags> Flags = std::nullopt,
                          Type *ResultTy = nullptr) {
-    return tryInsertInstruction(
-        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
+    Type *ScalarTy = ResultTy ? ResultTy : IncomingValues[0]->getScalarType();
+    return tryInsertInstruction(new VPPhi(
+        IncomingValues,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Instruction::PHI, ScalarTy)),
+        DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -390,16 +386,23 @@ public:
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
-    VPlan &Plan = *getInsertBlock()->getPlan();
-    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
+    VPlan &Plan = getPlan();
+    unsigned MinEC = EC.getKnownMinValue();
     if (EC.isScalable()) {
       VPValue *VScale = createVScale(Ty);
-      RuntimeEC = EC.getKnownMinValue() == 1
-                      ? VScale
-                      : createOverflowingOp(Instruction::Mul,
-                                            {VScale, RuntimeEC}, {true, false});
+      if (MinEC == 1)
+        return VScale;
+      // TODO: Move this optimization into createOverflowingOp directly.
+      if (isPowerOf2_32(MinEC)) {
+        VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
+        return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
+                                   {true, false});
+      }
+      VPValue *MulAmt = Plan.getConstantInt(Ty, MinEC);
+      return createOverflowingOp(Instruction::Mul, {VScale, MulAmt},
+                                 {true, false});
     }
-    return RuntimeEC;
+    return Plan.getConstantInt(Ty, MinEC);
   }
 
   /// Convert \p Current to \p Start + \p Current * \p Step.
@@ -420,18 +423,11 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
+                                  std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
-        DL));
-  }
-
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+        Opcode, Op, ResultTy,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -474,7 +470,7 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
     return tryInsertInstruction(
         new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
@@ -564,17 +560,15 @@ public:
   /// the object is destroyed.
   class InsertPointGuard {
     VPBuilder &Builder;
-    VPBasicBlock *Block;
-    VPBasicBlock::iterator Point;
+    VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B)
-        : Builder(B), Block(B.getInsertBlock()), Point(B.getInsertPoint()) {}
+    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
-    ~InsertPointGuard() { Builder.restoreIP(VPInsertPoint(Block, Point)); }
+    ~InsertPointGuard() { Builder.restoreIP(InsertPt); }
   };
 };
 
@@ -758,6 +752,13 @@ public:
   /// \return The loop being analyzed.
   const Loop *getLoop() const { return TheLoop; }
 
+  /// \return The vectorization hints for the loop being analyzed.
+  const LoopVectorizeHints &getHints() const { return *Hints; }
+
+  /// Returns true if epilogue vectorization is considered profitable for a
+  /// main loop with vectorization factor \p VF and interleave count \p IC.
+  bool isEpilogueVectorizationProfitable(ElementCount VF, unsigned IC) const;
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
@@ -882,8 +883,6 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
-  const LoopVectorizeHints &Hints;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -916,9 +915,9 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, VFSelectionContext &Config,
       InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
+      OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -994,10 +993,6 @@ public:
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
 
-  /// Returns true if \p Plan requires a scalar epilogue after the vector
-  /// loop. Asserts that the VPlan decision matches the legacy cost model.
-  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
-
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
                            bool HasBranchWeights) const;
@@ -1009,13 +1004,14 @@ public:
   /// the average trip count and invocation weight of the original loop (\p
   /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively). They
   /// cannot be retrieved after the plan has been executed, as the original loop
-  /// may have been removed.
+  /// may have been removed. \p UnrollVectorizedLoop indicates whether the
+  /// target wants the vector loop left eligible for runtime unrolling.
   void updateLoopMetadataAndProfileInfo(
       Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
       bool VectorizingEpilogue, MDNode *OrigLoopID,
       std::optional<unsigned> OrigAverageTripCount,
       unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
-      bool DisableRuntimeUnroll);
+      bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and

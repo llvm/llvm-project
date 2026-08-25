@@ -123,7 +123,13 @@ def CIR_ArgPassingKind : CIR_I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
-def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
+def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
+    // record_align is consumed as an llvm::Align, whose constructor asserts a
+    // non-zero power of two.
+    PredAttrTrait<"record_align must be a non-zero power of two",
+                  CPred<"$record_align != 0 && "
+                        "::llvm::isPowerOf2_64($record_align)">>
+  ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
     Holds AST-derived ABI metadata for a named record type.  These
@@ -798,6 +804,107 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FenvAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FPDynamicRoundingMode : CIR_I32EnumAttr<
+    "FPDynamicRoundingMode", "floating-point dynamic rounding mode", [
+  I32EnumAttrCase<"ToNearest", 0, "tonearest">,
+  I32EnumAttrCase<"Downward", 1, "downward">,
+  I32EnumAttrCase<"Upward", 2, "upward">,
+  I32EnumAttrCase<"UpwardZero", 3, "upwardzero">,
+  I32EnumAttrCase<"ToNearestAway", 4, "tonearestaway">,
+  I32EnumAttrCase<"Unknown", 7, "unknown">
+]> {
+  let description = [{
+    The known dynamic rounding mode at the point the instruction is executed.
+    If the actual dynamic rounding mode differs from this value, the behavior
+    is undefined.
+  }];
+  let genSpecializedAttr = 0;
+}
+
+def CIR_FPExceptionMode : CIR_I32EnumAttr<
+    "FPExceptionMode", "floating-point exception mode", [
+  I32EnumAttrCase<"Unknown", 0, "unknown">,
+  I32EnumAttrCase<"Masked", 1, "masked">,
+  I32EnumAttrCase<"Unmasked", 2, "unmasked">
+]> {
+  let description = [{
+    The known floating-point exception mode at the point the instruction is
+    executed. If the actual exception mode differs from this value, the
+    behavior is undefined.
+  }];
+  let genSpecializedAttr = 0;
+}
+
+def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
+  let summary = "Describes floating-point environment constraints";
+  let description = [{
+    The `#cir.fenv` attribute describes constraints on the floating-point
+    handling of a floating-point operation. It is attached to floating-point
+    operations to capture rounding and exception behavior. All of its
+    parameters are optional.
+
+    - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
+      instruction is executed. Otherwise the behavior is undefined.
+    - `except_mode`: the known exception mode at the point the instruction is
+      executed. Otherwise the behavior is undefined.
+    - `strict_except`: if `false`, any case that would produce an FP exception
+      produces it non-deterministically instead (i.e. it may or may not occur).
+      This means the FP status is written non-deterministically, and, if
+      exceptions are unmasked, the instruction traps non-deterministically.
+
+    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
+    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
+    to `false`.
+
+    Example:
+    ```
+    #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown,
+              strict_except = true>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<
+        "std::optional<cir::FPDynamicRoundingMode>">:$dynamic_rounding_mode,
+    OptionalParameter<"std::optional<cir::FPExceptionMode>">:$except_mode,
+    OptionalParameter<"mlir::BoolAttr">:$strict_except);
+
+  let assemblyFormat = [{
+    `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
+  }];
+
+  let extraClassDeclaration = [{
+    static constexpr cir::FPDynamicRoundingMode
+    getDefaultDynamicRoundingMode() {
+      return cir::FPDynamicRoundingMode::Unknown;
+    }
+
+    static constexpr cir::FPExceptionMode getDefaultExceptionMode() {
+      return cir::FPExceptionMode::Masked;
+    }
+
+    cir::FPDynamicRoundingMode getDynamicRoundingModeOrDefault() const {
+      return getDynamicRoundingMode().value_or(
+          getDefaultDynamicRoundingMode());
+    }
+
+    cir::FPExceptionMode getExceptionModeOrDefault() const {
+      return getExceptMode().value_or(getDefaultExceptionMode());
+    }
+
+    bool getStrictExceptOrDefault() const {
+      mlir::BoolAttr strictExcept = getStrictExcept();
+      return strictExcept && strictExcept.getValue();
+    }
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1084,6 +1191,52 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
 
   let parameters = (ins "unsigned":$value);
   let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// PtrSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
+  let summary = "!cir.ptr data layout spec";
+  let description = [{
+    Pointer data layout for `!cir.ptr`: `size`, `abi` and `preferred` are
+    required bitwidths; `index` is the optional bitwidth for index
+    computations, defaulting to `size`. All present values must be divisible
+    by 8, with `preferred` >= `abi`.
+
+    This is the CIR-native analogue of the ptr dialect's `#ptr.spec`; a
+    native attribute keeps CIR's data-layout queries free of any ptr-dialect
+    dependency.
+
+    Used as the value of the `!cir.ptr<!cir.void>`-keyed data-layout entry:
+
+    ```mlir
+    #dlti.dl_spec<!cir.ptr<!cir.void> =
+        #cir.ptr_spec<size = 64, abi = 64, preferred = 64>>
+    ```
+  }];
+  let parameters = (ins
+    "uint32_t":$size,
+    "uint32_t":$abi,
+    "uint32_t":$preferred,
+    DefaultValuedParameter<"uint32_t", "kOptionalSpecValue">:$index
+  );
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins "uint32_t":$size, "uint32_t":$abi, "uint32_t":$preferred,
+                     CArg<"uint32_t", "kOptionalSpecValue">:$index), [{
+      return $_get($_ctxt, size, abi, preferred, index);
+    }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Sentinel value marking the optional `index` parameter as unset.
+    static constexpr uint32_t kOptionalSpecValue =
+        std::numeric_limits<uint32_t>::max();
+  }];
+  let genVerifyDecl = 1;
   let canHaveIllegalCXXABIType = 0;
 }
 
@@ -1410,8 +1563,8 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
 
       The CIR representation of the struct `S` might look like:
       ```
-        !rec_S = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                                                       !cir.array<!u8i x 2>}>
+        !rec_S = !cir.struct<"S" packed {!u64i, !u16i,
+                                         pad !cir.array<!u8i x 2>}>
       ```
       And the bitfield info attribute for member `a` would be:
       ```
@@ -1484,6 +1637,35 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OffsetPairAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OffsetPairAttr : CIR_Attr<"OffsetPair", "offset_pair"> {
+  let summary = "Offset Pair attribute";
+
+  let description = [{
+    An attribute that specifies a pair of positive integral values that
+    represent a bit-offset range in an existing structure.  The range
+    represented by this is [start, end).
+
+    Example:
+    ```
+    cir.clear_padding(align(1) %1,
+                      [#cir.offset_pair<0, 2>, #cir.offset_pair<6, 8>])
+                      : <rec_Type> -> ()
+    ```
+  }];
+
+  let parameters = (ins "uint64_t":$start,
+                        "uint64_t":$end);
+
+  let assemblyFormat = [{
+    `<` $start`,` $end `>`
+  }];
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -1535,14 +1717,23 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
   }];
 }
 //===----------------------------------------------------------------------===//
-// InlineAttr
+// InlineKindAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
   I32EnumAttrCase<"NoInline", 1, "no_inline">,
   I32EnumAttrCase<"AlwaysInline", 2, "always_inline">,
   I32EnumAttrCase<"InlineHint", 3, "inline_hint">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InlineKindAttr: CIR_EnumAttr<CIR_InlineKind, "inline_kind"> {
+  let summary = "Inline kind attribute";
+  let description = [{ Inline Kind attributes.  `no_inline` and `always_inline`
+    spellings correspond to the attributes of the same name, and `inline_hint`
+      is the `inline` keyword in the language.}];
+}
 
 //===----------------------------------------------------------------------===//
 // CatchAllAttr & UnwindAttr
@@ -1588,6 +1779,53 @@ def CIR_BlockAddrInfoAttr
                    cir::PointerType::get(cir::VoidType::get($_ctxt)),
                    mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
                    mlir::StringAttr::get($_ctxt, label_name));
+    }]>
+  ];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// CIR_BlockAddrDiffAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddrDiffAttr
+    : CIR_ValueLikeAttr<"BlockAddrDiff", "block_addr_diff"> {
+  let summary = "Difference between two block addresses";
+  let description = [{
+    This attribute represents the constant difference between the addresses of
+    two basic blocks within the same function. It is produced for GCC's "labels
+    as values" extension when the difference of two label addresses appears in a
+    constant context, e.g. `&&lhs - &&rhs`.
+
+    Both labels belong to the function referenced by `func`. The value is the
+    address of `lhs_label` minus the address of `rhs_label`, truncated to the
+    attribute's integer type.
+
+    Example:
+    ```
+    cir.global "private" internal @b.ar =
+        #cir.block_addr_diff<@b, "l2", "l1"> : !s32i
+    ```
+  }];
+
+  let parameters = (ins
+      AttributeSelfTypeParameter<"", "cir::IntType">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$lhs_label,
+      "mlir::StringAttr":$rhs_label);
+
+  let assemblyFormat = "`<` $func `,` $lhs_label `,` $rhs_label `>`";
+
+  let builders = [
+    AttrBuilder<(ins "cir::IntType":$type,
+                     "llvm::StringRef":$func_name,
+                     "llvm::StringRef":$lhs_label_name,
+                     "llvm::StringRef":$rhs_label_name), [{
+      return $_get($_ctxt, type,
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                   mlir::StringAttr::get($_ctxt, lhs_label_name),
+                   mlir::StringAttr::get($_ctxt, rhs_label_name));
     }]>
   ];
 
@@ -1721,7 +1959,7 @@ def CIR_UsualDeleteParamsAttr
 
   let parameters = (ins
     DefaultValuedParameter<"bool", "false">:$size,
-    DefaultValuedParameter<"bool", "false">:$alignment,
+    OptionalParameter<"std::optional<uint64_t>">:$alignment,
     DefaultValuedParameter<"bool", "false">:$type_aware_delete,
     DefaultValuedParameter<"bool", "false">:$destroying_delete
   );

@@ -612,6 +612,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::MASK_BEFOREFIRST:
     return "mask_beforefirst";
 
+  case ISD::VECTOR_MATCH:
+    return "vector_match";
+
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";
   case ISD::PARTIAL_REDUCE_SMLA:

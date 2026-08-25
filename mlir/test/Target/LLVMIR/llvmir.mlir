@@ -99,6 +99,9 @@ llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 // CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
 llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 
+// CHECK: @f8E5M3FNU_global_as_i8 = internal global i8 120
+llvm.mlir.global internal @f8E5M3FNU_global_as_i8(1.0 : f8E5M3FNU) : i8
+
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
@@ -211,6 +214,18 @@ llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
 
 llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 // CHECK: @has_thr_local = thread_local global i64 42
+
+llvm.mlir.global thread_local(generaldynamic) @has_thr_local_gd(42 : i64) : i64
+// CHECK: @has_thr_local_gd = thread_local global i64 42
+
+llvm.mlir.global thread_local(localdynamic) @has_thr_local_ld(42 : i64) : i64
+// CHECK: @has_thr_local_ld = thread_local(localdynamic) global i64 42
+
+llvm.mlir.global thread_local(initialexec) @has_thr_local_ie(42 : i64) : i64
+// CHECK: @has_thr_local_ie = thread_local(initialexec) global i64 42
+
+llvm.mlir.global thread_local(localexec) @has_thr_local_le(42 : i64) : i64
+// CHECK: @has_thr_local_le = thread_local(localexec) global i64 42
 
 //
 // Section attribute.

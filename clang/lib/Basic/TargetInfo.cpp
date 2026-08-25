@@ -19,8 +19,10 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 using namespace clang;
 
@@ -55,6 +57,7 @@ static constexpr LangASMap FakeAddrSpaceMap = {
     {LangAS::hlsl_output, 18},
     {LangAS::hlsl_push_constant, 19},
     {LangAS::wasm_funcref, 20},
+    {LangAS::amdgpu_barrier, 21},
 };
 
 // TargetInfo Constructor.
@@ -167,6 +170,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasBuiltinZOSVaList = false;
   HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
+  HasAMDGPUTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
   HasUnalignedAccess = false;
   ARMCDECoprocMask = 0;
@@ -199,6 +203,20 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
+
+size_t TargetInfo::getMaxBitIntWidth() const {
+  // Consider -fexperimental-max-bitint-width= first.
+  if (MaxBitIntWidth)
+    return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
+
+  // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
+  // maximum bit width that LLVM claims its IR can support. However, most
+  // backends currently have a bug where they only support float to int
+  // conversion (and vice versa) on types that are <= 128 bits and crash
+  // otherwise. We're setting the max supported value to 128 to be
+  // conservative.
+  return 128;
+}
 
 void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
 

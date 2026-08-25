@@ -236,15 +236,6 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
 
 // Predicated operations with the result of inactive lanes being unspecified.
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
-def AArch64fadd_p : SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
-def AArch64fdiv_p : SDNode<"AArch64ISD::FDIV_PRED", SDT_AArch64Arith>;
-def AArch64fma_p  : SDNode<"AArch64ISD::FMA_PRED",  SDT_AArch64FMA>;
-def AArch64fmax_p : SDNode<"AArch64ISD::FMAX_PRED", SDT_AArch64Arith>;
-def AArch64fmaxnm_p : SDNode<"AArch64ISD::FMAXNM_PRED", SDT_AArch64Arith>;
-def AArch64fmin_p : SDNode<"AArch64ISD::FMIN_PRED", SDT_AArch64Arith>;
-def AArch64fminnm_p : SDNode<"AArch64ISD::FMINNM_PRED", SDT_AArch64Arith>;
-def AArch64fmul_p : SDNode<"AArch64ISD::FMUL_PRED", SDT_AArch64Arith>;
-def AArch64fsub_p : SDNode<"AArch64ISD::FSUB_PRED", SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
 def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
@@ -260,6 +251,37 @@ def AArch64urhadd_p : SDNode<"AArch64ISD::RHADDU_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
+
+multiclass def_strict_fp_op<string short_opcode, SDTypeProfile typeprof> {
+  def _nonstrict : SDNode<"AArch64ISD::" # short_opcode,        typeprof>;
+  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]>;
+}
+
+multiclass def_strict_fp_3op<string short_opcode, SDTypeProfile typeprof>
+: def_strict_fp_op<short_opcode, typeprof> {
+  def NAME : PatFrags<
+    (ops node:$op1, node:$op2, node:$op3),
+    [(!cast<SDPatternOperator>(NAME # "_nonstrict") node:$op1, node:$op2, node:$op3),
+     (!cast<SDPatternOperator>(NAME # "_strict")    node:$op1, node:$op2, node:$op3)]>;
+}
+
+multiclass def_strict_fp_4op<string short_opcode, SDTypeProfile typeprof>
+: def_strict_fp_op<short_opcode, typeprof> {
+  def NAME : PatFrags<
+    (ops node:$op1, node:$op2, node:$op3, node:$op4),
+    [(!cast<SDPatternOperator>(NAME # "_nonstrict") node:$op1, node:$op2, node:$op3, node:$op4),
+     (!cast<SDPatternOperator>(NAME # "_strict")    node:$op1, node:$op2, node:$op3, node:$op4)]>;
+}
+
+defm AArch64fadd_p   : def_strict_fp_3op<"FADD_PRED",   SDT_AArch64Arith>;
+defm AArch64fdiv_p   : def_strict_fp_3op<"FDIV_PRED",   SDT_AArch64Arith>;
+defm AArch64fma_p    : def_strict_fp_4op<"FMA_PRED",    SDT_AArch64FMA>;
+defm AArch64fmax_p   : def_strict_fp_3op<"FMAX_PRED",   SDT_AArch64Arith>;
+defm AArch64fmaxnm_p : def_strict_fp_3op<"FMAXNM_PRED", SDT_AArch64Arith>;
+defm AArch64fmin_p   : def_strict_fp_3op<"FMIN_PRED",   SDT_AArch64Arith>;
+defm AArch64fminnm_p : def_strict_fp_3op<"FMINNM_PRED", SDT_AArch64Arith>;
+defm AArch64fmul_p   : def_strict_fp_3op<"FMUL_PRED",   SDT_AArch64Arith>;
+defm AArch64fsub_p   : def_strict_fp_3op<"FSUB_PRED",   SDT_AArch64Arith>;
 
 def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                      (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
@@ -313,24 +335,25 @@ def AArch64abs_mt    : SDNode<"AArch64ISD::ABS_MERGE_PASSTHRU", SDT_AArch64Arith
 def AArch64neg_mt    : SDNode<"AArch64ISD::NEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64sxt_mt    : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 def AArch64uxt_mt    : SDNode<"AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
-def AArch64frintp_mt : SDNode<"AArch64ISD::FCEIL_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintm_mt : SDNode<"AArch64ISD::FFLOOR_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frinti_mt : SDNode<"AArch64ISD::FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frintx_mt : SDNode<"AArch64ISD::FRINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32x_mt : SDNode<"AArch64ISD::FRINT32_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint64x_mt : SDNode<"AArch64ISD::FRINT64_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frinta_mt : SDNode<"AArch64ISD::FROUND_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintn_mt : SDNode<"AArch64ISD::FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64frintz_mt : SDNode<"AArch64ISD::FTRUNC_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32z_mt : SDNode<"AArch64ISD::FTRUNC32_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint64z_mt : SDNode<"AArch64ISD::FTRUNC64_MERGE_PASSTHRU", SDT_AArch64Arith>;
-def AArch64fsqrt_mt  : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frecpx_mt : SDNode<"AArch64ISD::FRECPX_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64rbit_mt   : SDNode<"AArch64ISD::BITREVERSE_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revb_mt   : SDNode<"AArch64ISD::BSWAP_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revh_mt   : SDNode<"AArch64ISD::REVH_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revw_mt   : SDNode<"AArch64ISD::REVW_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revd_mt   : SDNode<"AArch64ISD::REVD_MERGE_PASSTHRU", SDT_AArch64Arith>;
+
+defm AArch64frintp_mt : def_strict_fp_3op<"FCEIL_MERGE_PASSTHRU",      SDT_AArch64Arith>;
+defm AArch64frintm_mt : def_strict_fp_3op<"FFLOOR_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64frinti_mt : def_strict_fp_3op<"FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
+defm AArch64frinta_mt : def_strict_fp_3op<"FROUND_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64frintn_mt : def_strict_fp_3op<"FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
+defm AArch64frintz_mt : def_strict_fp_3op<"FTRUNC_MERGE_PASSTHRU",     SDT_AArch64Arith>;
+defm AArch64fsqrt_mt  : def_strict_fp_3op<"FSQRT_MERGE_PASSTHRU",      SDT_AArch64Arith>;
 
 def AArch64fneg_mt_nsz : PatFrag<(ops node:$pred, node:$op, node:$pt),
                                  (AArch64fneg_mt node:$pred, node:$op, node:$pt), [{
@@ -519,14 +542,6 @@ def SDT_AArch64Arith_Unpred : SDTypeProfile<1, 2, [
 
 // Unpredicated vector instructions
 def AArch64bic_node : SDNode<"AArch64ISD::BIC",  SDT_AArch64Arith_Unpred>;
-
-def SDT_AArch64addw : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>]>;
-
-// Wide adds
-def AArch64saddwt : SDNode<"AArch64ISD::SADDWT", SDT_AArch64addw>;
-def AArch64saddwb : SDNode<"AArch64ISD::SADDWB", SDT_AArch64addw>;
-def AArch64uaddwt : SDNode<"AArch64ISD::UADDWT", SDT_AArch64addw>;
-def AArch64uaddwb : SDNode<"AArch64ISD::UADDWB", SDT_AArch64addw>;
 
 def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                           [(and node:$op1, (xor node:$op2, (splat_vector (i32 -1)))),
@@ -915,7 +930,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax", "FMAX_ZPZZ", AArch64fmax_m1, DestructiveBinaryComm>;
   defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin", "FMIN_ZPZZ", AArch64fmin_m1, DestructiveBinaryComm>;
   defm FABD_ZPmZ   : sve_fp_2op_p_zds<0b1000, "fabd", "FABD_ZPZZ", int_aarch64_sve_fabd, DestructiveBinaryComm>;
-  defm FSCALE_ZPmZ : sve_fp_2op_p_zds_fscale<0b1001, "fscale", int_aarch64_sve_fscale>;
+  defm FSCALE_ZPmZ : sve_fp_2op_p_zds<0b1001, "fscale", "FSCALE_ZPZZ", int_aarch64_sve_fscale, DestructiveBinary>;
   defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx", "FMULX_ZPZZ", int_aarch64_sve_fmulx, DestructiveBinaryComm>;
   defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr", "FDIVR_ZPZZ", int_aarch64_sve_fdivr, DestructiveBinaryCommWithRev, "FDIV_ZPmZ", /*isReverseInstr*/ 1>;
   defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv", "FDIV_ZPZZ", int_aarch64_sve_fdiv, DestructiveBinaryCommWithRev, "FDIVR_ZPmZ">;
@@ -928,6 +943,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm FMAX_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmax_p>;
   defm FMIN_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmin_p>;
   defm FABD_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fabd_p>;
+  defm FSCALE_ZPZZ : sve_fp_bin_pred_hfd_fscale<null_frag>;
   defm FMULX_ZPZZ  : sve_fp_bin_pred_hfd<int_aarch64_sve_fmulx_u>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fdiv_p>;
 } // End HasSVE_or_SME
@@ -4057,6 +4073,20 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp", int_aarch64_sve_sadalp>;
   defm UADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<1, "uadalp", int_aarch64_sve_uadalp>;
 
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_H (PTRUE_H 31), $Acc, $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_S (PTRUE_S 31), $Acc, $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_D (PTRUE_D 31), $Acc, $Input)>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_H (PTRUE_H 31), $Acc, $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_S (PTRUE_S 31), $Acc, $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_D (PTRUE_D 31), $Acc, $Input)>;
+
   // SVE2 integer pairwise arithmetic
   defm ADDP_ZPmZ  : sve2_int_arith_pred<0b100011, "addp",  int_aarch64_sve_addp>;
   defm SMAXP_ZPmZ : sve2_int_arith_pred<0b101001, "smaxp", int_aarch64_sve_smaxp>;
@@ -4136,27 +4166,42 @@ let Predicates = [HasSVE2_or_SME] in {
   defm UABDLT_ZZZ : sve2_wide_int_arith_long<0b01111, "uabdlt", int_aarch64_sve_uabdlt>;
 
   // SVE2 integer add/subtract wide
-  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb", AArch64saddwb>;
-  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt", AArch64saddwt>;
-  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb", AArch64uaddwb>;
-  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt", AArch64uaddwt>;
+  defm SADDWB_ZZZ : sve2_wide_int_arith_wide<0b000, "saddwb", int_aarch64_sve_saddwb>;
+  defm SADDWT_ZZZ : sve2_wide_int_arith_wide<0b001, "saddwt", int_aarch64_sve_saddwt>;
+  defm UADDWB_ZZZ : sve2_wide_int_arith_wide<0b010, "uaddwb", int_aarch64_sve_uaddwb>;
+  defm UADDWT_ZZZ : sve2_wide_int_arith_wide<0b011, "uaddwt", int_aarch64_sve_uaddwt>;
   defm SSUBWB_ZZZ : sve2_wide_int_arith_wide<0b100, "ssubwb", int_aarch64_sve_ssubwb>;
   defm SSUBWT_ZZZ : sve2_wide_int_arith_wide<0b101, "ssubwt", int_aarch64_sve_ssubwt>;
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
 
-  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_D (UADDWB_ZZZ_D $Acc, $Input), $Input)>;
-  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_D (SADDWB_ZZZ_D $Acc, $Input), $Input)>;
-  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_S (UADDWB_ZZZ_S $Acc, $Input), $Input)>;
-  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_S (SADDWB_ZZZ_S $Acc, $Input), $Input)>;
-  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_H (UADDWB_ZZZ_H $Acc, $Input), $Input)>;
-  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_H (SADDWB_ZZZ_H $Acc, $Input), $Input)>;
+  def : Pat<(add nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SSUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SSUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SSUBWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(add nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (UADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (UADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (UADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (USUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (USUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (USUBWB_ZZZ_D $Acc, $Input)>;
 
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
@@ -4597,36 +4642,36 @@ def ST1B_2Z        : sve2p1_mem_cst_ss_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r, GPR64sh
 def ST1H_2Z        : sve2p1_mem_cst_ss_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r, GPR64shifted16>;
 def ST1W_2Z        : sve2p1_mem_cst_ss_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r, GPR64shifted32>;
 def ST1D_2Z        : sve2p1_mem_cst_ss_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r, GPR64shifted64>;
-defm ST1B_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r>;
-defm ST1H_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r>;
-defm ST1W_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r>;
-defm ST1D_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r>;
+defm ST1B_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r, ZZ_b_strided_and_contiguous>;
+defm ST1H_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r, ZZ_h_strided_and_contiguous>;
+defm ST1W_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r, ZZ_s_strided_and_contiguous>;
+defm ST1D_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r, ZZ_d_strided_and_contiguous>;
 def STNT1B_2Z      : sve2p1_mem_cst_ss_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r, GPR64shifted8>;
 def STNT1H_2Z      : sve2p1_mem_cst_ss_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r, GPR64shifted16>;
 def STNT1W_2Z      : sve2p1_mem_cst_ss_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r, GPR64shifted32>;
 def STNT1D_2Z      : sve2p1_mem_cst_ss_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r, GPR64shifted64>;
-defm STNT1B_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r>;
-defm STNT1H_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r>;
-defm STNT1W_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r>;
-defm STNT1D_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r>;
+defm STNT1B_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r, ZZ_b_strided_and_contiguous>;
+defm STNT1H_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r, ZZ_h_strided_and_contiguous>;
+defm STNT1W_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r, ZZ_s_strided_and_contiguous>;
+defm STNT1D_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r, ZZ_d_strided_and_contiguous>;
 
 // Stores of four registers
 def ST1B_4Z        : sve2p1_mem_cst_ss_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r, GPR64shifted8>;
 def ST1H_4Z        : sve2p1_mem_cst_ss_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r, GPR64shifted16>;
 def ST1W_4Z        : sve2p1_mem_cst_ss_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r, GPR64shifted32>;
 def ST1D_4Z        : sve2p1_mem_cst_ss_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r, GPR64shifted64>;
-defm ST1B_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r>;
-defm ST1H_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r>;
-defm ST1W_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r>;
-defm ST1D_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r>;
+defm ST1B_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r, ZZZZ_b_strided_and_contiguous>;
+defm ST1H_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r, ZZZZ_h_strided_and_contiguous>;
+defm ST1W_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r, ZZZZ_s_strided_and_contiguous>;
+defm ST1D_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r, ZZZZ_d_strided_and_contiguous>;
 def STNT1B_4Z      : sve2p1_mem_cst_ss_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r, GPR64shifted8>;
 def STNT1H_4Z      : sve2p1_mem_cst_ss_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r, GPR64shifted16>;
 def STNT1W_4Z      : sve2p1_mem_cst_ss_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r, GPR64shifted32>;
 def STNT1D_4Z      : sve2p1_mem_cst_ss_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r, GPR64shifted64>;
-defm STNT1B_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r>;
-defm STNT1H_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r>;
-defm STNT1W_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r>;
-defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
+defm STNT1B_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r, ZZZZ_b_strided_and_contiguous>;
+defm STNT1H_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r, ZZZZ_h_strided_and_contiguous>;
+defm STNT1W_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r, ZZZZ_s_strided_and_contiguous>;
+defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r, ZZZZ_d_strided_and_contiguous>;
 
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
@@ -4708,6 +4753,88 @@ defm WHILELO_CXX : sve2p1_int_while_rr_pn<"whilelo", 0b110, AArch64whilelo_pn_fl
 defm WHILELS_CXX : sve2p1_int_while_rr_pn<"whilels", 0b111, AArch64whilels_pn_flag>;
 } // End HasSVE2p1_or_StreamingSME2
 
+// Override the default contiguous-only patterns when SME2 is available,
+// allow register allocation to choose a strided or contiguous tuple.
+multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
+                             Instruction RegImmPseudo> {
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg,
+              (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR2StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+
+  let AddedComplexity = 1 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg, GPR64:$base),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR2StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                PNR:$PNg, GPR64:$base, (i64 0))>;
+}
+
+multiclass store_pn_x4_sme2<ValueType Ty, SDPatternOperator Store,
+                             Instruction RegImmPseudo> {
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
+              aarch64svcount:$PNg,
+              (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR4StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                              Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+
+  let AddedComplexity = 1 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
+                  aarch64svcount:$PNg, GPR64:$base),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR4StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                              Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                PNR:$PNg, GPR64:$base, (i64 0))>;
+}
+
+let Predicates = [HasSME2] in {
+// Stores of 2 strided or contiguous vectors
+defm : store_pn_x2_sme2<nxv16i8, int_aarch64_sve_st1_pn_x2, ST1B_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8i16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4i32, int_aarch64_sve_st1_pn_x2, ST1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2i64, int_aarch64_sve_st1_pn_x2, ST1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv16i8, int_aarch64_sve_stnt1_pn_x2, STNT1B_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8i16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4i32, int_aarch64_sve_stnt1_pn_x2, STNT1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2i64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8f16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8bf16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4f32, int_aarch64_sve_st1_pn_x2, ST1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2f64, int_aarch64_sve_st1_pn_x2, ST1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8f16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8bf16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4f32, int_aarch64_sve_stnt1_pn_x2, STNT1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM_PSEUDO>;
+
+// Stores of 4 strided or contiguous vectors
+defm : store_pn_x4_sme2<nxv16i8, int_aarch64_sve_st1_pn_x4, ST1B_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8i16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4i32, int_aarch64_sve_st1_pn_x4, ST1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2i64, int_aarch64_sve_st1_pn_x4, ST1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv16i8, int_aarch64_sve_stnt1_pn_x4, STNT1B_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8i16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4i32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2i64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8f16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8bf16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4f32, int_aarch64_sve_st1_pn_x4, ST1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2f64, int_aarch64_sve_st1_pn_x4, ST1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8f16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8bf16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4f32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2f64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM_PSEUDO>;
+}
+
 let Predicates = [HasSVE_or_SME] in {
 
 // Aliases for existing SVE instructions for which predicate-as-counter are
@@ -4788,13 +4915,13 @@ defm BFADD_ZZZ : sve_fp_3op_u_zd_bfloat<0b000, "bfadd", AArch64fadd>;
 defm BFSUB_ZZZ : sve_fp_3op_u_zd_bfloat<0b001, "bfsub", AArch64fsub>;
 defm BFMUL_ZZZ : sve_fp_3op_u_zd_bfloat<0b010, "bfmul", AArch64fmul>;
 
-defm BFADD_ZPmZZ   : sve_fp_2op_p_zds_bfloat<0b0000, "bfadd", "BFADD_ZPZZ", AArch64fadd_m1, DestructiveBinaryComm>;
-defm BFSUB_ZPmZZ   : sve_fp_2op_p_zds_bfloat<0b0001, "bfsub", "BFSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryComm>;
-defm BFMUL_ZPmZZ   : sve_fp_2op_p_zds_bfloat<0b0010, "bfmul", "BFMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
-defm BFMAXNM_ZPmZZ : sve_fp_2op_p_zds_bfloat<0b0100, "bfmaxnm", "BFMAXNM_ZPZZ", int_aarch64_sve_fmaxnm, DestructiveBinaryComm>;
-defm BFMINNM_ZPmZZ : sve_fp_2op_p_zds_bfloat<0b0101, "bfminnm", "BFMINNM_ZPZZ", int_aarch64_sve_fminnm, DestructiveBinaryComm>;
-defm BFMAX_ZPmZZ   : sve_fp_2op_p_zds_bfloat<0b0110, "bfmax", "BFMAX_ZPZZ", int_aarch64_sve_fmax, DestructiveBinaryComm>;
-defm BFMIN_ZPmZZ   : sve_fp_2op_p_zds_bfloat<0b0111, "bfmin", "BFMIN_ZPZZ", int_aarch64_sve_fmin, DestructiveBinaryComm>;
+defm BFADD_ZPmZ   : sve_fp_2op_p_zds_bfloat<0b0000, "bfadd", "BFADD_ZPZZ", AArch64fadd_m1, DestructiveBinaryComm>;
+defm BFSUB_ZPmZ   : sve_fp_2op_p_zds_bfloat<0b0001, "bfsub", "BFSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryComm>;
+defm BFMUL_ZPmZ   : sve_fp_2op_p_zds_bfloat<0b0010, "bfmul", "BFMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
+defm BFMAXNM_ZPmZ : sve_fp_2op_p_zds_bfloat<0b0100, "bfmaxnm", "BFMAXNM_ZPZZ", int_aarch64_sve_fmaxnm, DestructiveBinaryComm>;
+defm BFMINNM_ZPmZ : sve_fp_2op_p_zds_bfloat<0b0101, "bfminnm", "BFMINNM_ZPZZ", int_aarch64_sve_fminnm, DestructiveBinaryComm>;
+defm BFMAX_ZPmZ   : sve_fp_2op_p_zds_bfloat<0b0110, "bfmax", "BFMAX_ZPZZ", int_aarch64_sve_fmax, DestructiveBinaryComm>;
+defm BFMIN_ZPmZ   : sve_fp_2op_p_zds_bfloat<0b0111, "bfmin", "BFMIN_ZPZZ", int_aarch64_sve_fmin, DestructiveBinaryComm>;
 
 defm BFADD_ZPZZ   : sve_fp_bin_pred_bfloat<AArch64fadd_p>;
 defm BFSUB_ZPZZ   : sve_fp_bin_pred_bfloat<AArch64fsub_p>;
@@ -4829,8 +4956,11 @@ defm BFMAX_ZPZZ   : sve_fp_2op_p_zds_zeroing_bfloat<int_aarch64_sve_fmax>;
 } // HasSVEB16B16, HasNonStreamingSVE_or_SME2, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEBFSCALE] in {
-  defm BFSCALE_ZPZZ : sve_fp_2op_p_zds_bfscale<0b1001, "bfscale", int_aarch64_sve_fscale, DestructiveBinary>;
+  defm BFSCALE_ZPmZ : sve_fp_2op_p_zds_bfloat<0b1001, "bfscale", "BFSCALE_ZPZZ", int_aarch64_sve_fscale, DestructiveBinary>;
+
+  defm BFSCALE_ZPZZ : sve_fp_bin_pred_bfscale<null_frag>;
 } // HasSVEBFSCALE
+
 //===----------------------------------------------------------------------===//
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
@@ -4973,6 +5103,20 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   // SVE2 integer absolute difference and accumulate long
   defm SABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b0, "sabal", int_aarch64_sve_sabal>;
   defm UABAL_ZZZ : sve2_int_two_way_absdiff_accum_long<0b1, "uabal", int_aarch64_sve_uabal>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_BtoH $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_HtoS $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64sabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (SABAL_ZZZ_StoD $Acc, $Op1, $Op2)>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv16i8:$Op1, nxv16i8:$Op2), (nxv16i8 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_BtoH $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv8i16:$Op1, nxv8i16:$Op2), (nxv8i16 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_HtoS $Acc, $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, (AArch64uabd_p (SVEAnyPredicate), nxv4i32:$Op1, nxv4i32:$Op2), (nxv4i32 (splat_vector (i32 1))))),
+            (UABAL_ZZZ_StoD $Acc, $Op1, $Op2)>;
 
   // SVE2 integer dot product
   defm SDOT_ZZZ_BtoH : sve2p3_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;

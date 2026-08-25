@@ -752,14 +752,14 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  // During wwm-regalloc, reserve the registers for perlane VGPR allocation. The
-  // MFI->getNonWWMRegMask() field will have a valid bitmask only during
+  // During wwm-regalloc, reserve the registers for per-lane VGPR allocation.
+  // The MFI->getPerLaneVGPRMask() field will have a valid bitmask only during
   // wwm-regalloc and it would be empty otherwise.
-  BitVector NonWWMRegMask = MFI->getNonWWMRegMask();
-  if (!NonWWMRegMask.empty()) {
+  BitVector PerLaneVGPRMask = MFI->getPerLaneVGPRMask();
+  if (!PerLaneVGPRMask.empty()) {
     for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
          RegI < RegE; ++RegI) {
-      if (NonWWMRegMask.test(RegI))
+      if (PerLaneVGPRMask.test(RegI))
         reserveRegisterTuples(Reserved, RegI);
     }
   }
@@ -1623,7 +1623,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   // SPILL_SCRATCH_DWORDx4 $vgpr2_vgpr3_vgpr4_vgpr5
   // SPILL_SCRATCH_DWORDx2 $vgpr6_vgpr7
   bool IsRegMisaligned = false;
-  if (!IsBlock && !IsAGPR && RegWidth > 4) {
+  if (!IsBlock && !IsAGPR && RegWidth > 4 && IsFlat) {
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
     int VDataIdx =
@@ -3138,13 +3138,14 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         assert(Offset == 0);
         MI->removeOperand(3);
         MI->removeOperand(OtherOpIdx);
-        MI->setDesc(TII->get(FIOp->isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+        MachineOperand &Src = MI->getOperand(1);
+        MI->setDesc(TII->get(Src.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
       } else if (DeadSCC && FIOp->isImm() && FIOp->getImm() == 0) {
         assert(Offset == 0);
         MI->removeOperand(3);
         MI->removeOperand(FIOperandNum);
-        MI->setDesc(
-            TII->get(OtherOp.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+        MachineOperand &Src = MI->getOperand(1);
+        MI->setDesc(TII->get(Src.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
       }
 
       assert(!FIOp->isFI());
@@ -3259,10 +3260,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                   MI, false, 0, !UseSGPR);
 
-      if (!TmpSReg || (!TmpReg && !UseSGPR)) {
-        assert(!FrameReg && "there is a frame register!");
+      // If no SGPR was scavenged but a frame register is available, fall
+      // through to reuse it as the temporary (computed in place, restored
+      // after). Only bail out when there is no frame register, or a VGPR
+      // operand is needed but none could be scavenged.
+      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
         int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
+          // SV form encodes only the offset in vaddr; an SS-form scratch op
+          // keeps its FI in the SGPR saddr, so this is only reached with no
+          // frame register.
+          assert(!FrameReg &&
+                 "SV-form fallback cannot encode a frame register");
           Register TmpVGPR = RS->scavengeRegisterBackwards(
               AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
 
@@ -3363,6 +3372,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                  : RS->scavengeRegisterBackwards(*RC, MI, false, 0);
 
       int64_t Offset = FrameInfo.getObjectOffset(Index);
+
+      // The carry-out lane of Add is unused, so it is safe to write with
+      // S_MOV_B32 even into a VGPR.
+      auto MaterializeCarryOutOffset = [&](MachineInstrBuilder &Add) {
+        Register ConstOffsetReg =
+            isWave32 ? Add.getReg(1)
+                     : Register(getSubReg(Add.getReg(1), AMDGPU::sub0));
+        BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32), ConstOffsetReg)
+            .addImm(Offset);
+        return ConstOffsetReg;
+      };
+
       if (Offset == 0) {
         unsigned OpCode =
             IsSALU && !LiveSCC ? AMDGPU::S_LSHR_B32 : AMDGPU::V_LSHRREV_B32_e64;
@@ -3421,17 +3442,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
               assert(MIB->getOpcode() == AMDGPU::V_ADD_CO_U32_e64 &&
                      "Need to reuse carry out register");
 
-              // Use scavenged unused carry out as offset register.
-              Register ConstOffsetReg;
-              if (!isWave32)
-                ConstOffsetReg = getSubReg(MIB.getReg(1), AMDGPU::sub0);
-              else
-                ConstOffsetReg = MIB.getReg(1);
-
-              BuildMI(*MBB, *MIB, DL, TII->get(AMDGPU::S_MOV_B32),
-                      ConstOffsetReg)
-                  .addImm(Offset);
-              MIB.addReg(ConstOffsetReg, RegState::Kill);
+              MIB.addReg(MaterializeCarryOutOffset(MIB), RegState::Kill);
               MIB.addReg(ScaledReg, RegState::Kill);
               MIB.addImm(0); // clamp bit
             }
@@ -3470,9 +3481,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addImm(ST.getWavefrontSizeLog2())
                   .addReg(FrameReg);
               if (Add->getOpcode() == AMDGPU::V_ADD_CO_U32_e64) {
-                BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32), ResultReg)
-                    .addImm(Offset);
-                Add.addReg(ResultReg, RegState::Kill)
+                Add.addReg(MaterializeCarryOutOffset(Add), RegState::Kill)
                     .addReg(TmpResultReg, RegState::Kill)
                     .addImm(0);
               } else

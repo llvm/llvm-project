@@ -43,6 +43,14 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   // should be used for a "gfxN-generic" targets only, and empty for
   // individual GPUs.
   list<Processor> CoveredGPUs = [];
+
+  // A pseudo target ("generic"/"generic-hsa") that represents no
+  // hardware.
+  bit IsPseudoTarget = false;
+
+  // An explicit triple subarch spelling (e.g. "12.50"). If unset,
+  // this will be guessed from the device name.
+  string SubArchSpelling;
 }
 
 // An R600 processor that is also a canonical TargetParser GPU.
@@ -55,3 +63,11 @@ class R600ProcessorModel<string n, ProcessorItineraries pi,
 class AMDGPUProcessorModel<string n, SchedMachineModel m,
                            list<SubtargetFeature> f, list<int> isa>
     : ProcessorModel<n, m, f>, AMDGPUGPUInfo<isa>;
+
+// A major-subarch family that has no "gfxN-generic" target of its own
+// (gfx6, gfx7, gfx8). \p major is the bare subarch suffix (e.g. "6");
+// \p members are the GPUs mapped to Triple::AMDGPUSubArch<major>
+class AMDGPUFamily<string major, list<Processor> members> {
+  string MajorSubArch = major;
+  list<Processor> Members = members;
+}

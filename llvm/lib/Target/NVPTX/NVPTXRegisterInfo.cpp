@@ -14,7 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
-#include "NVPTXTargetMachine.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -24,22 +24,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reg-info"
-
-StringRef llvm::getNVPTXRegClassStr(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::B128RegClass)
-    return "%rq";
-  if (RC == &NVPTX::B64RegClass)
-    return "%rd";
-  if (RC == &NVPTX::B32RegClass)
-    return "%r";
-  if (RC == &NVPTX::B16RegClass)
-    return "%rs";
-  if (RC == &NVPTX::B1RegClass)
-    return "%p";
-  if (RC == &NVPTX::SpecialRegsRegClass)
-    return "!Special!";
-  return "INTERNAL";
-}
 
 NVPTXRegisterInfo::NVPTXRegisterInfo() : NVPTXGenRegisterInfo(0) {}
 
@@ -96,9 +80,9 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  const NVPTXTargetMachine &TM =
-      static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrame64 : NVPTX::VRFrame32;
+  return MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_GENERIC) == 64
+             ? NVPTX::VRFrame64
+             : NVPTX::VRFrame32;
 }
 
 Register
@@ -109,7 +93,7 @@ NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
 }
 
 void NVPTXRegisterInfo::clearDebugRegisterMap() const {
-  debugRegisterMap.clear();
+  DebugRegisterMap.clear();
 }
 
 static uint64_t encodeRegisterForDwarf(StringRef RegisterName) {
@@ -123,18 +107,16 @@ static uint64_t encodeRegisterForDwarf(StringRef RegisterName) {
   // IE the bytes of the string are concatenated in reverse into a single
   // number, which is stored in ULEB128, but in practice must be no more than 8
   // bytes (excluding null terminator, which is not included).
-  uint64_t result = 0;
-  for (unsigned char c : RegisterName)
-    result = (result << 8) | c;
-  return result;
+  uint64_t Result = 0;
+  for (unsigned char C : RegisterName)
+    Result = (Result << 8) | C;
+  return Result;
 }
 
-void NVPTXRegisterInfo::addToDebugRegisterMap(
-    uint64_t preEncodedVirtualRegister, StringRef RegisterName) const {
-  uint64_t mapped = encodeRegisterForDwarf(RegisterName);
-  if (mapped == 0)
-    return;
-  debugRegisterMap.insert({preEncodedVirtualRegister, mapped});
+void NVPTXRegisterInfo::addToDebugRegisterMap(Register VirtReg,
+                                              StringRef RegisterName) const {
+  if (const uint64_t Encoded = encodeRegisterForDwarf(RegisterName))
+    DebugRegisterMap.insert({VirtReg, Encoded});
 }
 
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
@@ -150,8 +132,7 @@ int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
 int64_t NVPTXRegisterInfo::getDwarfRegNumForVirtReg(Register RegNum,
                                                     bool isEH) const {
   assert(RegNum.isVirtual());
-  uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
-  if (lookup)
-    return lookup;
+  if (const uint64_t Encoded = DebugRegisterMap.lookup(RegNum))
+    return Encoded;
   return -1;
 }

@@ -133,7 +133,7 @@ class ROCDL_MbcntOp<string mnemonic> :
   let arguments = !con(args, baseArgs);
   let results = (outs I32:$res);
   let assemblyFormat = [{
-    $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
+    $in0 `,` $in1  prop-dict attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
    }];
   let description = [{
     Masked bit count of threads below the current lane in a wavefront.
@@ -765,6 +765,10 @@ def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],
     intrinsic's documented mask values and the AMDGPU backend's
     `SchedGroupMask` enum.
 
+    `all_vmem` and `all_ds` are supersets that also include LDSDMA
+    instructions, while `vmem_read`, `vmem_write`, `ds_read`, and `ds_write`
+    do not.
+
     Example:
     ```mlir
     // Scheduling barrier with no instructions allowed to cross.
@@ -1056,7 +1060,7 @@ class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$opsel)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Wave Matrix Multiply-Accumulate (WMMA) with output operand selection.
@@ -1064,7 +1068,7 @@ class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
     Example:
     ```mlir
     // WMMA f16 with opsel control.
-    %r = rocdl.wmma.f16.16x16x16.f16 %a, %b, %c {opsel = false} :
+    %r = rocdl.wmma.f16.16x16x16.f16 %a, %b, %c :
       (vector<16xf16>, vector<16xf16>, vector<16xf16>) -> vector<16xf16>
     ```
   }];
@@ -1081,7 +1085,7 @@ class ROCDL_WMMA_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mne
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Wave Matrix Multiply-Accumulate (WMMA) for integer types with
@@ -1111,7 +1115,7 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1138,7 +1142,7 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1165,7 +1169,7 @@ class ROCDL_WMMA_ModsC_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : R
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1193,7 +1197,7 @@ class ROCDL_WMMA_ModsABClamp_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_I
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Wave Matrix Multiply-Accumulate (WMMA) for integer types with
@@ -1244,7 +1248,7 @@ class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy
     `modC` `=` $modC `,`
     `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
     `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
-    attr-dict `:` functional-type(operands, $res)
+    prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Scaled Wave Matrix Multiply-Accumulate (WMMA) with per-operand scaling.
@@ -1288,7 +1292,7 @@ class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleEx
     `modC` `=` $modC `,`
     `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
     `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
-    attr-dict `:` functional-type(operands, $res)
+    prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Scaled Wave Matrix Multiply-Accumulate (WMMA) for F4 format inputs.
@@ -1358,7 +1362,7 @@ class ROCDL_Dot_IntrOp<string mnemonic, ROCDL_NamedType A, ROCDL_NamedType B,
                  DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs C:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Packed intra-lane dot-product with optional result clamping (`clamp`).
@@ -1408,7 +1412,7 @@ class ROCDL_Sudot_IntrOp<string mnemonic> :
                  DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs I32:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
     Mixed-signedness packed dot-product with per-operand sign controls.
@@ -1508,7 +1512,7 @@ class ROCDL_SWMMAC_V1_Reuse_IntrOp<string mnemonic, Type A, Type B, Type CD> : R
              )> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $index prop-dict attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -1524,7 +1528,7 @@ class ROCDL_SWMMAC_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<m
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $index prop-dict attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -1541,7 +1545,7 @@ class ROCDL_SWMMAC_ModsAB_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROC
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $index prop-dict attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -1559,7 +1563,7 @@ class ROCDL_SWMMAC_ModsABClamp_IntrOp<string mnemonic, Type AB, Type C, Type D> 
              DefaultValuedAttr<I1Attr, "0">:$clamp)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $index prop-dict attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -1600,7 +1604,7 @@ class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
   dag args = (ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
+  let assemblyFormat = "$ptr prop-dict attr-dict `:` type($ptr) `->` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getPtr()};
@@ -1662,7 +1666,7 @@ class ROCDL_TrLoadOp<ROCDL_TrLoadOpMeta meta> :
     %3 = rocdl.ds.load.tr16.b128 %ptr : !llvm.ptr<3> -> vector<8xbf16>
     ```
   }];
-  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr)) `->` type($res)";
+  let assemblyFormat = "$ptr prop-dict attr-dict `:` qualified(type($ptr)) `->` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getPtr()};
@@ -1695,7 +1699,7 @@ def ROCDL_LoadToLDSOp :
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
     custom<CachePolicy>($aux)
-    attr-dict `:` type($globalPtr)
+    prop-dict attr-dict `:` type($globalPtr)
   }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -1715,7 +1719,7 @@ def ROCDL_LoadAsyncToLDSOp :
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
     custom<CachePolicy>($aux)
-    attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+    prop-dict attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
   }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -1762,7 +1766,7 @@ def ROCDL_GlobalLoadLDSOp :
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
     custom<CachePolicy>($aux)
-    attr-dict
+    prop-dict attr-dict
   }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -1782,7 +1786,7 @@ def ROCDL_GlobalLoadAsyncLDSOp :
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
     custom<CachePolicy>($aux)
-    attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+    prop-dict attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
   }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
@@ -1824,7 +1828,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,`
       custom<CachePolicy>($aux)
-      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+      prop-dict attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
     }];
     let description = [{
       Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer
@@ -1863,7 +1867,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,`
       custom<CachePolicy>($aux)
-      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+      prop-dict attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
     }];
     let description = [{
       Asynchronously stores }] # !cast<string>(bitsVal) # [{ bits of data from a Local Data Share (LDS)
@@ -1899,7 +1903,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,`
       custom<CachePolicy>($cpol) `,` $mask
-      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+      prop-dict attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
     }];
     let description = [{
       Broadcasts memory load of }] # !cast<string>(bitsVal) # [{ bits of data for a cluster of workgroups.
@@ -1953,7 +1957,7 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
   }];
   let assemblyFormat = [{
     $dgroup0 `,` $dgroup1 `,` $dgroup2 `,` $dgroup3 `,` $dgroup4 `,`
-    custom<CachePolicy>($cachePolicy) attr-dict
+    custom<CachePolicy>($cachePolicy) prop-dict attr-dict
     `:` type($dgroup0) `,` type($dgroup1)
   }];
   let extraClassDefinition = [{
@@ -1975,13 +1979,13 @@ def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
-  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
+  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0, 2], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I64:$numRecords,
+                 AnySignlessInteger:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
-  let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
+  let assemblyFormat = "operands attr-dict `:` type($base) `,` type($numRecords) `to` type($res)";
 }
 
 def ROCDL_RawPtrBufferLoadOp :
@@ -1991,7 +1995,25 @@ def ROCDL_RawPtrBufferLoadOp :
                   I32:$soffset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($res)";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_PtrSBufferLoadOp :
+  ROCDL_IntrOp<"ptr.s.buffer.load", [0], [], [], 1, 0, 1, 0, [2], ["aux"]> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = "$rsrc `,` $offset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($res)";
+  string llvmBuilder = baseLlvmBuilder # [{
+    llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+    inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+  }] # setAliasAnalysisMetadataCode # baseLlvmBuilderCoda;
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2009,7 +2031,7 @@ def ROCDL_RawPtrBufferLoadLdsOp :
                   I32:$offset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) attr-dict";
+  let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) prop-dict attr-dict";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc(), getLdsPtr()};
@@ -2027,7 +2049,7 @@ def ROCDL_RawPtrBufferLoadAsyncLdsOp :
                   I32:$offset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) attr-dict";
+  let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) prop-dict attr-dict";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc(), getLdsPtr()};
@@ -2059,7 +2081,7 @@ def ROCDL_RawPtrBufferStoreOp :
                   I32:$soffset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2078,7 +2100,7 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   I32:$soffset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2095,7 +2117,7 @@ class ROCDL_RawPtrBufferAtomicRet<string op> :
                   I32:$soffset,
                   ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
+  let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) prop-dict attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2165,7 +2187,7 @@ def ROCDL_GlobalPrefetchOp :
     ```
   }];
   let results = (outs);
-  let assemblyFormat = "$ptr `,` custom<CachePolicy>($cachePolicy) attr-dict `:` qualified(type($ptr))";
+  let assemblyFormat = "$ptr `,` custom<CachePolicy>($cachePolicy) prop-dict attr-dict `:` qualified(type($ptr))";
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
       return {getPtr()};
@@ -2189,7 +2211,7 @@ def ROCDL_FlatPrefetchOp :
     ```
   }];
   let results = (outs);
-  let assemblyFormat = "$ptr `,` custom<CachePolicy>($cachePolicy) attr-dict `:` qualified(type($ptr))";
+  let assemblyFormat = "$ptr `,` custom<CachePolicy>($cachePolicy) prop-dict attr-dict `:` qualified(type($ptr))";
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
       return {getPtr()};
@@ -2219,7 +2241,7 @@ def ROCDL_DsAtomicBarrierArriveRtnOp :
     ```
   }];
   let results = (outs I64:$res);
-  let assemblyFormat = "$barrierPtr `,` $val attr-dict `:` qualified(type($barrierPtr)) `,` type($val) `->` type($res)";
+  let assemblyFormat = "$barrierPtr `,` $val prop-dict attr-dict `:` qualified(type($barrierPtr)) `,` type($val) `->` type($res)";
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
       return {getBarrierPtr()};
@@ -2243,7 +2265,7 @@ def ROCDL_DsAtomicAsyncBarrierArriveOp :
     ```
   }];
   let results = (outs);
-  let assemblyFormat = "$barrierPtr attr-dict `:` qualified(type($barrierPtr))";
+  let assemblyFormat = "$barrierPtr prop-dict attr-dict `:` qualified(type($barrierPtr))";
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
       return {getBarrierPtr()};

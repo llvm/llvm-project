@@ -44,7 +44,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
       }
 
       if (!filteredAttrs.empty()) {
-        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
+        p << " <" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
       }
     }
 
@@ -74,20 +74,20 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Arguments:
     - `source`: an object representing (starting address/pointer of) a memory region.
        It can be either a memref object, or simply a pointer represented by uint64_t type.
-       For the case of dynamic memrefs or pointer, the shape and layout information of the
-       memory region should be explicitly passed via `shape` and `strides` parameters.
+       For a memref source (static or dynamic shape) the shape and strides are taken from
+       the memref itself and must not be passed explicitly; only a pointer source requires
+       the `shape` and `strides` parameters.
 
-    - `shape`: the shape information of the memory region pointed by the "source". It is
-         typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
-        But if "source" is simply a pointer represented as uint64_t type, or a memref
-        type without shape information e.g., memref<?x?xf16>, the shape information has
-        to be explicitly passed via the "shape" and "const_shape" arguments.
+    - `shape`: the shape information of the memory region pointed by the "source". For a
+        memref source it is encoded via the MemRefType, e.g., memref<4096x4096xf16> or a
+        dynamic memref<?x?xf16> (whose dynamic dims are recovered at lowering time). Only
+        when "source" is a pointer represented as uint64_t type must the shape be passed
+        explicitly via the "shape" and "const_shape" arguments.
 
     - `strides`: the strides of the memory region pointed by the "source". Similar to shape,
-        it is typically encoded via the MemRefType of the source too. But if "source" is
-        simply a pointer represented as uint64_t type, or a memref type without shape
-        information e.g., memref<?x?xf16>, the strides information has to be explicitly
-        passed via the "strides" and "const_strides" argument.
+        for a memref source it is encoded via the MemRefType, including a dynamic
+        memref<?x?xf16>. Only when "source" is a pointer represented as uint64_t type must
+        the strides be passed explicitly via the "strides" and "const_strides" arguments.
 
     Results:
     - `res`: nd tensor descriptor
@@ -98,14 +98,14 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     %1 = xegpu.create_nd_tdesc %0 : memref<1024x1024xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 2 (dynamic memref; shape/strides are inferred from the memref, not
+    passed explicitly):
     ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
-    %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0 : memref<?x?xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 3 (a pointer source must supply shape/strides explicitly):
     ```mlir
     %0 = ... : ui64
     %c1 = arith.constant 1 : index
@@ -1306,7 +1306,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
   }];
   let arguments = (ins StaticSharedMemRefOf<[XeGPU_ScalarType]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` qualified(type($mem_desc))";
   let hasVerifier = 1;
 }
 
@@ -1321,7 +1321,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+    prop-dict attr-dict `:` type(operands) `->` type(results)
   }];
 
   let description = [{
@@ -1399,7 +1399,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-                          prop-dict attr-dict `` `:` type(operands)}];
+                          prop-dict attr-dict `:` type(operands)}];
   let description = [{
     This operation stores a `data` fragment into the shared local memory region
     specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
@@ -1498,6 +1498,78 @@ def XeGPU_TruncfOp
   }];
 
   let hasVerifier = 1;
+}
+
+def XeGPU_LaneShuffleOp
+    : XeGPU_Op<"lane_shuffle", [Pure, AllTypesMatch<["source", "result"]>]> {
+  let summary = "Re-distributes a subgroup's fragments across its lanes.";
+
+  let description = [{
+    `xegpu.lane_shuffle` is a lane-level operation. The `source` operand is the
+    fragment (a 1D vector) held by one lane, and the `result` is the fragment
+    that lane holds afterwards. It re-distributes the elements across the lanes
+    of the subgroup without changing their type, so `source` and `result` have
+    the same type.
+
+    Let `S` be the subgroup size and `N` the number of elements per lane, so the
+    subgroup collectively holds `S * N` elements. Number these elements by their
+    logical position `0 .. S*N-1`. The `mode` selects which of the two
+    orientations of the `S x N` (lane, element) index grid the operation maps
+    between:
+
+    * `pack`: element `j` of lane `i` holds logical position `j * S + i` before
+      the operation and `i * N + j` after it. A lane's elements end up at
+      consecutive logical positions.
+    * `unpack`: the reverse mapping. A lane's elements end up strided by `S`.
+
+    The two modes are exact inverses, so shuffling one way and then the other
+    yields the original fragments.
+
+    For example, consider `vector<2xi16>` with a subgroup size of 8, denoting a
+    lane's fragment as `<a,b>`. In `pack` mode:
+
+    ```
+    lane:       0      1      2      3      4      5      6      7
+    source:   <0,8>  <1,9>  <2,10> <3,11> <4,12> <5,13> <6,14> <7,15>
+    result:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
+    ```
+
+    In general each lane's result elements come from `N` different lanes'
+    `source` fragments -- that is the cross-lane shuffle.
+
+    This operation implements the `xegpu.convert_layout` semantics at the lane
+    level, for the case where the `lane_layout` is the same but the `lane_data`
+    is different.
+
+    The operation assumes a full subgroup (the subgroup size equals the maximum
+    subgroup size) and that all lanes execute the same dynamic instance of the
+    operation; otherwise the behavior is undefined.
+
+    Arguments:
+    - `source`: The 1D vector fragment held by one lane.
+    - `mode`: The direction of the shuffle, either `pack` or `unpack`.
+  }];
+
+  let arguments = (ins XeGPU_LaneShuffleType:$source,
+                       XeGPU_LaneShuffleModeAttr:$mode);
+  let results = (outs XeGPU_LaneShuffleType:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getSourceType() {
+      return llvm::cast<VectorType>(getSource().getType());
+    }
+
+    VectorType getResultType() {
+      return llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source $mode attr-dict `:` type($source)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,

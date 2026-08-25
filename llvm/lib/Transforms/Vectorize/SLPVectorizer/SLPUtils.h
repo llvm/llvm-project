@@ -16,10 +16,12 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include <optional>
@@ -30,7 +32,6 @@ class Constant;
 class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
@@ -44,6 +45,22 @@ inline constexpr int UsesLimit = 64;
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
 bool isConstant(Value *V);
+
+/// \returns True if \p V is the integer identity constant for binary \p Opcode
+/// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
+/// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
+/// returns for FAdd/FMul, whose identity fast-math may break anyway.
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
+/// \returns the opcode of the combines emitted for a reassociated node:
+/// subtract chains regroup their positive and negative operand columns with
+/// plain adds.
+unsigned getReassocCombineOpcode(unsigned Opcode);
+
+/// \returns True if \p I can be a link of a flattenable binary chain:
+/// subtracts flatten as adds of a negated leaf, float subtracts need reassoc
+/// to allow the regrouping.
+bool isReassocChainLink(const Instruction *I);
 
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
@@ -301,6 +318,52 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
 /// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
 /// unlike the plain opcode.
 Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
+
+/// Returns true if \p I forms a vectorizable bundle on its own and its single
+/// user does not tear the vector apart. Loads and addresses are excluded: the
+/// tree is built without the users, so it does not pay off the extracts. A
+/// cast, feeding a multi-used cast, is excluded for the same reason, such a
+/// user stays scalar. The fp-to-int conversions move the result to the other
+/// register domain, so the extracts are paid on top of the repacking. The
+/// values, feeding the inserts, are vectorized together with them by the
+/// dedicated attempt.
+bool isOnceUsedSeed(const Instruction *I);
+
+/// If \p V is a single-use fpext of a single-use fptrunc forming a round-trip
+/// back to the type of \p V, returns the fptrunc; the round-trip source is its
+/// operand, always an instruction of the same type as \p V. If
+/// \p MustBeElidable, matches only when the intermediate rounding may be
+/// removed: both casts must allow contraction and the widening cast cannot
+/// produce nan/inf.
+Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
+
+/// Narrow reduction leaf: the value, the shift applied after widening and
+/// the mask applied in the narrow type before widening, clearing the bits
+/// the absorbed narrow shls shift out and applying the absorbed narrow
+/// and-masks. Lossless narrow shls contribute their known-zero bits to the
+/// mask so matching lanes can form a splat. All-ones mask means nothing
+/// was absorbed and no 'and' is needed.
+struct NarrowedLeafInfo {
+  NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
+      : V(V), Shift(Shift), Mask(std::move(Mask)) {}
+
+  Value *V;
+  unsigned Shift;
+  APInt Mask;
+};
+
+/// Recursively collects the narrow leaves of the widened reduction value
+/// \p V. zext is looked through directly, same-kind binops per operand,
+/// shl of a zext - only if no bits are shifted out in the current type,
+/// shls in narrower types fold into the shift and ands with a constant into
+/// the mask applied in the narrow type. Also collects the looked-through
+/// instructions into \p ChainInsts.
+void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
+                           unsigned MaxDepth,
+                           SmallVectorImpl<NarrowedLeafInfo> &Leaves,
+                           SmallVectorImpl<Instruction *> &ChainInsts);
+
+TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
 
 } // namespace llvm::slpvectorizer
 

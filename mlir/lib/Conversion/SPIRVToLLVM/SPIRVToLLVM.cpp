@@ -303,6 +303,15 @@ static Type convertStructType(spirv::StructType type,
 
 namespace {
 
+template <typename OpTy>
+static NamedAttrList collectAttrsForConversion(OpTy op) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary());
+  if (auto properties =
+          dyn_cast_or_null<DictionaryAttr>(op->getPropertiesAsAttribute()))
+    attrs.append(properties.getValue());
+  return attrs;
+}
+
 class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
 public:
   using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
@@ -434,7 +443,8 @@ public:
       return success();
     }
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
-        constOp, dstType, adaptor.getOperands(), constOp->getAttrs());
+        constOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(constOp));
     return success();
   }
 };
@@ -644,7 +654,7 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     rewriter.template replaceOpWithNewOp<LLVMOp>(
-        op, dstType, adaptor.getOperands(), op->getAttrs());
+        op, dstType, adaptor.getOperands(), collectAttrsForConversion(op));
     return success();
   }
 };
@@ -828,7 +838,7 @@ public:
 
     // Attach location attribute if applicable
     if (locationAttr)
-      newGlobalOp->setAttr(locationAttrName, locationAttr);
+      newGlobalOp->setDiscardableAttr(locationAttrName, locationAttr);
 
     return success();
   }
@@ -879,7 +889,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
+          callOp, TypeRange(), adaptor.getOperands(),
+          collectAttrsForConversion(callOp));
       newOp.getProperties().operandSegmentSizes = {
           static_cast<int32_t>(adaptor.getOperands().size()), 0};
       newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -891,7 +902,8 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(callOp, "type conversion failed");
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        callOp, dstType, adaptor.getOperands(), callOp->getAttrs());
+        callOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(callOp));
     newOp.getProperties().operandSegmentSizes = {
         static_cast<int32_t>(adaptor.getOperands().size()), 0};
     newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -1028,6 +1040,79 @@ public:
                                   adaptor.getY());
     rewriter.template replaceOpWithNewOp<LLVMMinOp>(op, dstType, max,
                                                     adaptor.getZ());
+    return success();
+  }
+};
+
+/// Converts `spirv.FMod` to `x - y * floor(x / y)`. The SPIR-V op requires the
+/// result to take the sign of the divisor, whereas `llvm.frem` keeps the sign
+/// of the dividend, so `frem` cannot be used directly.
+class FModPattern : public SPIRVToLLVMConversion<spirv::FModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::FModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::FModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Value div = LLVM::FDivOp::create(rewriter, loc, dstType, lhs, rhs);
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, div);
+    Value scaled = LLVM::FMulOp::create(rewriter, loc, dstType, rhs, floored);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, lhs, scaled);
+    return success();
+  }
+};
+
+/// Converts `spirv.SMod` to a signed remainder corrected to take the sign of
+/// the divisor. `llvm.srem` keeps the sign of the dividend, so the result is
+/// adjusted by adding the divisor when the remainder is non-zero and its sign
+/// differs from the divisor's.
+class SModPattern : public SPIRVToLLVMConversion<spirv::SModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Type i1Type = rewriter.getI1Type();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+
+    Value rem = LLVM::SRemOp::create(rewriter, loc, dstType, lhs, rhs);
+    IntegerAttr zeroAttr = rewriter.getIntegerAttr(
+        cast<IntegerType>(getElementTypeOrSelf(srcType)), 0);
+    Value zero =
+        createIntegerConstant(loc, srcType, dstType, rewriter, zeroAttr);
+
+    Value remNonZero = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                            LLVM::ICmpPredicate::ne, rem, zero);
+    Value remNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rem, zero);
+    Value rhsNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rhs, zero);
+    Value signMismatch =
+        LLVM::XOrOp::create(rewriter, loc, cmpType, remNeg, rhsNeg);
+    Value needsAdjust =
+        LLVM::AndOp::create(rewriter, loc, cmpType, remNonZero, signMismatch);
+
+    Value adjusted = LLVM::AddOp::create(rewriter, loc, dstType, rem, rhs);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, needsAdjust,
+                                                adjusted, rem);
     return success();
   }
 };
@@ -1752,6 +1837,59 @@ private:
   double scale;
 };
 
+/// Converts `spirv.GL.FSign`/`spirv.GL.SSign` to a sign(x) sequence that maps
+/// the operand to -1/0/1 using two comparisons and two selects. The `isFloat`
+/// flag selects between floating-point and integer comparisons/constants.
+template <typename SPIRVOp, bool isFloat>
+class SignPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = this->getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type i1Type = rewriter.getI1Type();
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+
+    Value zero, one, minusOne, gt, lt;
+    if constexpr (isFloat) {
+      zero = createFPConstant(loc, srcType, dstType, rewriter, 0.0);
+      one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
+      minusOne = createFPConstant(loc, srcType, dstType, rewriter, -1.0);
+      gt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::ogt, operand, zero);
+      lt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::olt, operand, zero);
+    } else {
+      auto intElemType = cast<IntegerType>(getElementTypeOrSelf(srcType));
+      zero = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                   rewriter.getIntegerAttr(intElemType, 0));
+      one = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                  rewriter.getIntegerAttr(intElemType, 1));
+      minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
+      gt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::sgt, operand, zero);
+      lt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::slt, operand, zero);
+    }
+
+    Value negOrZero =
+        LLVM::SelectOp::create(rewriter, loc, dstType, lt, minusOne, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, gt, one,
+                                                negOrZero);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1814,7 +1952,8 @@ public:
     }
 
     rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        bitcastOp, dstType, adaptor.getOperands(), bitcastOp->getAttrs());
+        bitcastOp, dstType, adaptor.getOperands(),
+        collectAttrsForConversion(bitcastOp));
     return success();
   }
 };
@@ -1860,7 +1999,8 @@ public:
 
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
-    newFuncOp->setAttr("passthrough", ArrayAttr::get(context, {llvmAttr}));    \
+    newFuncOp->setDiscardableAttr("passthrough",                               \
+                                  ArrayAttr::get(context, {llvmAttr}));        \
     break;
 
       DISPATCH(spirv::FunctionControl::Pure,
@@ -2012,8 +2152,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
-      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
-      VectorTimesScalarPattern, SNegatePattern,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, FModPattern,
+      SModPattern, VectorTimesScalarPattern, SNegatePattern,
       ArithmeticWithOverflowPattern<spirv::IAddCarryOp,
                                     LLVM::UAddWithOverflowOp>,
       ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
@@ -2116,7 +2256,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       DirectConversionPattern<spirv::GLTanOp, LLVM::TanOp>,
       DirectConversionPattern<spirv::GLTanhOp, LLVM::TanhOp>,
-      InverseSqrtPattern, SAbsPattern, FractPattern, GLFMixPattern,
+      InverseSqrtPattern, SAbsPattern, FractPattern,
+      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, GLFMixPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
@@ -2254,15 +2396,12 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 //===----------------------------------------------------------------------===//
 
 /// Hook for descriptor set and binding number encoding.
-static constexpr StringRef kBinding = "binding";
-static constexpr StringRef kDescriptorSet = "descriptor_set";
 void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
-      IntegerAttr descriptorSet =
-          op->getAttrOfType<IntegerAttr>(kDescriptorSet);
-      IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
+      IntegerAttr descriptorSet = op.getDescriptorSetAttr();
+      IntegerAttr binding = op.getBindingAttr();
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {
@@ -2283,8 +2422,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         if (failed(SymbolTable::replaceAllSymbolUses(op, nameAttr, spvModule)))
           op.emitError("unable to replace all symbol uses for ") << name;
         SymbolTable::setSymbolName(op, nameAttr);
-        op->removeAttr(kDescriptorSet);
-        op->removeAttr(kBinding);
+        op.removeDescriptorSetAttr();
+        op.removeBindingAttr();
       }
     });
   }

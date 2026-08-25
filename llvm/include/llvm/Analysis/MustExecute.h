@@ -61,6 +61,10 @@ class LoopSafetyInfo {
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
 
+  // Cache whether (the start of) this block is guaranteed to execute if the
+  // loop is entered.
+  mutable DenseMap<const BasicBlock *, bool> GuaranteedToExecute;
+
 protected:
   /// Computes block colors.
   LLVM_ABI void computeBlockColors(const Loop *CurLoop);
@@ -85,6 +89,10 @@ public:
   LLVM_ABI bool allLoopPathsLeadToBlock(const Loop *CurLoop,
                                         const BasicBlock *BB,
                                         const DominatorTree *DT) const;
+
+  LLVM_ABI bool allLoopPathsLeadToBlockImpl(const Loop *CurLoop,
+                                            const BasicBlock *BB,
+                                            const DominatorTree *DT) const;
 
   /// Computes safety information for a loop checks loop body & header for
   /// the possibility of may throw exception, it takes LoopSafetyInfo and loop

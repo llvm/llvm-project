@@ -2,6 +2,7 @@
 myst:
   enable_extensions:
     - attrs_block
+    - colon_fence
     - substitution
 ---
 
@@ -18,14 +19,14 @@ myst:
 
 Written by the [LLVM Team](https://llvm.org/)
 
-````{only} PreRelease
+::::{only} PreRelease
 
-```{warning}
+:::{warning}
 These are in-progress notes for the upcoming Clang {{env.config.version}} release.
 Release notes for previous releases can be found on
 [the Releases Page](https://llvm.org/releases/).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -53,6 +54,13 @@ in a future version of Clang.
 
 ### C++ Specific Potentially Breaking Changes
 
+### Objective-C Specific Potentially Breaking Changes
+
+- Fixed an issue where AST consumers based on `RecursiveASTVisitor` would bypass
+  the exception parameter declaration inside Objective-C `@catch` blocks. This
+  could cause tooling that previously ignored the parameter declaration to now
+  find valid issues. (#GH212564)
+
 ### ABI Changes in This Version
 
 - Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
@@ -61,6 +69,32 @@ target features. Features and `arch=` CPUs that imply AVX or AVX512F are
 honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
+
+- On SPARC, a `_Complex` value with an integer element type is now passed and
+  returned packed into the one or two integer registers it fits in, matching GCC.
+  Clang previously passed such a value indirectly and returned it with one part
+  per register. 
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
+- On SPARC64, a `_Complex char` or `_Complex short` is now
+  right-justified in its slot in the parameter array, like every other scalar
+  narrower than a slot, rather than left-justified the way a small struct is.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH212340)
+
+- On MIPS, a `_Complex` value with an integer element type is now returned packed
+  into a single integer register when it fits in one, matching GCC. A `_Complex char` or
+  `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
+  with one part per register. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
+- On MIPS N32/N64, a `_Complex float` or `_Complex double` argument is now packed
+  into integer registers, or onto the stack, once there is no longer room to give
+  each of its parts a floating-point register, matching GCC. Clang previously
+  always passed the parts separately. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
+- On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
+  or 16-byte aligned stack slot, matching GCC.
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -92,6 +126,9 @@ features cannot lower the translation-unit ABI level;
 ## What's New in Clang {{env.config.release}}?
 
 ### C++ Language Changes
+- Clang now supports friend declarations with a dependent nested name specifier. (#GH104057)
+
+- ``auto()`` casts are accepted as an extension pre-C++23.
 
 #### C++2d Feature Support
 
@@ -100,6 +137,9 @@ features cannot lower the translation-unit ABI level;
   modes.
 
 #### C++2c Feature Support
+
+- Added `__builtin_type_order` for compatibility with GCC as part of the
+  implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
 
@@ -110,6 +150,9 @@ features cannot lower the translation-unit ABI level;
 #### C++17 Feature Support
 
 #### Resolutions to C++ Defect Reports
+
+- Clang now falls back to alignment-aware allocation functions for
+  non-overaligned types, implementing [CWG2282](https://wg21.link/cwg2282).
 
 ### C Language Changes
 
@@ -140,11 +183,23 @@ features cannot lower the translation-unit ABI level;
   }
 ```
 
+- Clang now diagnoses the use of the same identifier with both internal and
+  external linkage within a translation unit, as made ill-formed by
+  [N3410](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3410.pdf).
+  This is also diagnosed in older C language modes as the behavior was
+  undefined prior to C2y. (#GH54215)
+
 #### C23 Feature Support
 
 ### Objective-C Language Changes
 
 ### Non-comprehensive list of changes in this release
+
+- Clang tools now resolve tool names without a path in compilation databases
+  through `PATH`.
+
+- Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
+  `constexpr` function body rules introduced in C++23.
 
 ### New Compiler Flags
 
@@ -154,6 +209,18 @@ features cannot lower the translation-unit ABI level;
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.
+
+- Added `-mscs-reg=<reg>` on Hexagon to select which callee-saved register
+  (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
+  `-fsanitize=shadow-call-stack`. The selected register must also be reserved
+  with the matching `-ffixed-<reg>`.
+
+- Added `-fmodules-ignore-search-path=<path>`, the search-path counterpart to
+  `-fmodules-ignore-macro=<macro>`: the path is dropped from the context hash of
+  every module and physically removed from every module build, and kept only for
+  the translation unit itself. This lets builds that differ only in a search
+  path share one module cache, and is only sound when no module needs the path
+  -- a lookup that would have resolved through an ignored path simply fails.
 
 ### Deprecated Compiler Flags
 
@@ -171,6 +238,11 @@ features cannot lower the translation-unit ABI level;
 
 - More consistent rendering of Unicode characters in diagnostic messages.
 
+- Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
+  considered during allocation function lookup or promise object
+  initialization, while not diagnosing parameters passed to the selected
+  allocation function or promise constructor. (#GH217501)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -182,11 +254,6 @@ features cannot lower the translation-unit ABI level;
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
-
-- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
-  It diagnoses unused function and variable templates with internal linkage,
-  which in a header is a latent ODR hazard. It can be disabled with
-  `-Wno-unused-template`. (#GH202945)
 
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
@@ -339,6 +406,17 @@ features cannot lower the translation-unit ABI level;
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
 
+- `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
+  `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
+
+- `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
+  for pointer arithmetic on statically-sized arrays when the offset is a
+  non-negative constant within the array bounds.
+
+- `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
+  later, matching the behavior in C++11 through C++17. (#GH161689)
+
+- Clang now diagnoses more details when a constraint evaluates to false.
 
 ### Improvements to Clang's time-trace
 
@@ -346,19 +424,36 @@ features cannot lower the translation-unit ABI level;
 
 ### Bug Fixes in This Version
 
+- Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed an assertion on omp taskloop transparent (#GH197162)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
+- Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
+- Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
+- Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
+- Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
+- Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
+- Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
+- Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
+- Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
+- Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 
 #### Bug Fixes to Compiler Builtins
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
+  format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
+
+- Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -366,6 +461,10 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+
+- Fixed a crash when an `address_space` attribute with a dependent argument was
+  written after the declarator-id, where it appertains to the declared entity
+  rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
 
@@ -384,6 +483,9 @@ features cannot lower the translation-unit ABI level;
   template was instantiated after the global module fragment was closed,
   producing a spurious "no matching function" error with no candidate notes.
   (#GH210822)
+
+- Fixed a crash when module directive export module foo not following a 
+  semicolon and there are no rest pp-tokens in current module file. (#GH187771)
   
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
@@ -398,6 +500,42 @@ features cannot lower the translation-unit ABI level;
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
 
+- A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
+  libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
+  compilation step would result in the fix not being applied. (#GH160314)
+
+- A defaulted copy or move assignment operator for a union was left with an
+  empty body and copied nothing when the operator was actually called, for
+  example through a pointer to member. Clang now synthesizes a whole-object
+  copy so the union's object representation is copied, matching the defaulted
+  union copy constructor.
+
+- Compute value dependence correctly for structured bindings. This mostly
+  affect C++26 constexpr structured bindings and expansion statements, but
+  also affects some uses of plain structured bindings. (#GH211930)
+
+- Fixed friend declarations sometimes making non-visible default arguments
+  incorrectly visible to default argument redefinition checks across modules.
+
+- Fixed handling of SFINAE failures for expressions which depend on in-class
+  member initializers of templates which are not yet parsed. An example is
+  using ``__is_constructible`` on a nested class template inside the definition
+  of the containing class. (#GH215166)
+
+- Fixed merging of lambdas across modules in the case where neither lambda is
+  imported from an AST file. (#GH214560)
+
+- Fixed a crash when a non-type template parameter of reference type is bound
+  to a subobject and is used in a context that requires an implicit conversion.
+  (#GH215900)
+
+- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
+
+- Fixed an assertion when a redeclaration of a function template or an out-of-line
+  definition of a member of a class template added a default argument to a
+  parameter that follows a parameter pack (e.g.
+  `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -407,6 +545,8 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
@@ -439,7 +579,13 @@ features cannot lower the translation-unit ABI level;
 
 #### Arm and AArch64 Support
 
+- Added support for pointer authentication discrimination of C++ virtual table
+  pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`
+  option.
+
 #### Android Support
+
+- Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
 
@@ -453,9 +599,32 @@ features cannot lower the translation-unit ABI level;
 
 #### RISC-V Support
 
+- Fixed a bug where the `interrupt` attribute did not accept `machine` together
+  with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
+
+- Added a new warning when the same interrupt type is specified more than
+  once in a RISC-V `interrupt` attribute.
+
+- SiFive CLIC preemptible interrupt handlers now diagnose unsupported frame
+  pointers instead of producing a backend fatal error.
+
+- Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
+  option will be treated like `-mcpu=native` if `-mcpu` is not present. If
+  `-mcpu` is present, the ISA will be selected from the host CPU and the tune
+  CPU will be selected from `-mcpu`.
+
 #### CUDA/HIP Language Changes
 
+- HIP compilations now add the `include/libhipcxx` directory from the selected
+  ROCm installation to the header search path when it exists. This allows
+  libhipcxx headers to be included with paths such as `<cuda/std/atomic>`.
+  The `-nogpuinc` option disables this path together with the other HIP include
+  paths.
+
 #### CUDA Support
+
+- Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
+  (`__cudaRegisterLinkedBinary`).
 
 #### AIX Support
 
@@ -476,6 +645,13 @@ features cannot lower the translation-unit ABI level;
 ### AST Matchers
 
 ### clang-format
+
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
+
+- `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
+  `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
+  and `explicit` declaration specifiers.
 
 ### libclang
 
@@ -517,6 +693,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
+- Map-type-modifying modifiers applied to a list item with a user-defined mapper
+  are now propagated onto the maps the mapper expands to.
+- Mapping of expressions with base-pointers through a user-defined mapper (e.g.
+  `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
+  matching the behavior of such maps outside a mapper.
 
 ### SYCL Support
 

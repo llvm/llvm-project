@@ -1895,10 +1895,9 @@ public:
 
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
                        ArrayRef<AnyValue> CalleeArgs) {
-    LibFunc LF;
+    LibFunc LF = CurrentFrame->TLI.getLibFunc(*ResolvedCallee);
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() ||
-        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() || LF == NotLibFunc) {
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
       return AnyValue();
@@ -2674,11 +2673,12 @@ public:
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
-      return V.asPointer().address();
+      return V.asPointer().address().zextOrTrunc(BitWidth);
     });
   }
 
