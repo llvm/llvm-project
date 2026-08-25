@@ -1488,33 +1488,39 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
-  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
+static bool getDefaultArgUpgradeInfo(Function *F, Intrinsic::ID IID,
+                                     SmallVectorImpl<Type *> &OverloadTys,
+                                     unsigned &FullArgCount) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
     return false;
 
-  // Overloaded intrinsics are out of scope for the default-arg feature
-  // and will be supported in a follow-up.
-  if (Intrinsic::isOverloaded(IID))
+  FullArgCount = FirstDefault + Defaults.size();
+
+  // Only trailing default arguments can be missing.
+  if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
     return false;
 
-  // Get the canonical full declaration for this intrinsic.
-  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-
-  // If the existing declaration already has all args, nothing to upgrade
-  if (F->arg_size() >= FullDecl->arg_size())
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
     return false;
 
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
-  if (F->arg_size() < FirstDefault)
+  return true;
+}
+
+static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = F->getIntrinsicID();
+
+  unsigned FullArgCount;
+  SmallVector<Type *, 4> OverloadTys;
+  if (!getDefaultArgUpgradeInfo(F, IID, OverloadTys, FullArgCount))
     return false;
 
-  NewFn = FullDecl;
+  rename(F);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
+  assert(NewFn->arg_size() == FullArgCount &&
+         "default argument table does not match intrinsic signature");
   return true;
 }
 
@@ -2209,12 +2215,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     return true;
   }
 
+  if (upgradeIntrinsicWithDefaultArgs(F, NewFn))
+    return true;
+
   //  This may not belong here. This function is effectively being overloaded
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
-  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
-    return true;
 
   return false;
 }
@@ -5426,20 +5433,26 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
   unsigned OldArgCount = CI->arg_size();
   unsigned NewArgCount = NewFn->arg_size();
 
-  // If the caller already supplied all arguments (or more), nothing to do.
-  // This mirrors C++ semantics: an explicitly-passed value is never overridden.
-  if (OldArgCount >= NewArgCount)
-    return false;
-
-  // Start with the existing arguments from the old call.
-  SmallVector<Value *, 8> NewArgs(CI->args());
-
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
   if (OldArgCount < FirstDefault)
     return false;
 
-  // Fill in each missing trailing argument from the table.
+  // More arguments than the new intrinsic accepts, cannot upgrade.
+  if (OldArgCount > NewArgCount)
+    return false;
+
+  // The call already passes the defaulted arguments explicitly; only the
+  // callee is still the old, shorter declaration, so retarget it.
+  if (OldArgCount == NewArgCount) {
+    if (CI->getFunctionType() != NewFn->getFunctionType())
+      return false;
+    CI->setCalledFunction(NewFn);
+    return true;
+  }
+
+  // OldArgCount < NewArgCount: Fill in each missing trailing default
+  // argument from the table.
+  SmallVector<Value *, 8> NewArgs(CI->args());
+
   FunctionType *NewFT = NewFn->getFunctionType();
   for (unsigned Idx = OldArgCount; Idx < NewArgCount; ++Idx) {
     assert(Idx >= FirstDefault && Idx - FirstDefault < Defaults.size() &&
@@ -5578,9 +5591,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   CallInst *NewCall = nullptr;
   switch (NewFn->getIntrinsicID()) {
   default: {
-    // Last resort: try the data-driven default-arg upgrade.
-    // Handles any intrinsic annotated with ImmArg<..., DefaultValue<...>>
-    // in its .td definition, without needing a dedicated case.
     if (upgradeIntrinsicCallWithDefaultArgs(CI, NewFn, Builder))
       return;
     DefaultCase();

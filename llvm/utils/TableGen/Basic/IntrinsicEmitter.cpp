@@ -933,21 +933,10 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
 
 void IntrinsicEmitter::EmitDefaultArgValuesTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  // Build the per-intrinsic default-value sequences:
-  //   [Header = (NumDefaults << 32) | FirstDefault, val0, val1, ...]
-  // Each value is the (non-negative) default for one parameter, stored as a
-  // uint64_t bit pattern.
-  //
-  // Offset 0 of the values table is reserved as the "no defaults" sentinel
-  // (a single 0 word, decoding to NumDefaults = 0). Intrinsics without
-  // defaults point to offset 0; real sequences are emitted after it.
-  // SequenceToOffsetTable deduplicates the real sequences.
-
+  // Sequences are [NumDefaults << 32 | FirstDefault, values...].
   using Sequence = SmallVector<uint64_t, 8>;
 
   SequenceToOffsetTable<Sequence> Table;
-  // An empty Sequence means "no defaults" (maps to the reserved offset 0);
-  // otherwise it holds the intrinsic's value sequence.
   SmallVector<Sequence> PerIntrinsic;
   PerIntrinsic.reserve(Ints.size());
 
@@ -957,7 +946,6 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
       continue;
     }
 
-    // Find the first parameter with a default.
     unsigned FirstDefault = 0;
     for (size_t j = 0U, N = Int.ParamDefaultValues.size(); j < N; ++j) {
       if (Int.ParamDefaultValues[j].has_value()) {
@@ -984,17 +972,11 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
 
   IfDefEmitter IfDef(OS, "GET_INTRINSIC_DEFAULT_ARG_VALUES");
 
-  // Emit the flat values table. Offset 0 is the reserved "no defaults"
-  // sentinel; the deduplicated real sequences follow it.
   OS << "static constexpr uint64_t DefaultArgValuesTable[] = {\n";
   OS << "  0, // offset 0: sentinel for intrinsics without defaults\n";
   Table.emit(OS, [](raw_ostream &OS, uint64_t Val) { OS << "  " << Val; });
   OS << "};\n\n";
 
-  // Emit the per-intrinsic offset table. Entry #0 is for the invalid
-  // Intrinsic::not_intrinsic (IID 0); it and every intrinsic without defaults
-  // point to the reserved sentinel at offset 0. Real sequences are shifted by
-  // +1 to skip past the sentinel slot.
   OS << "static constexpr uint32_t DefaultArgValuesTableOffset[] = {\n";
   OS << "  0, // not_intrinsic\n";
   for (const Sequence &Seq : PerIntrinsic) {
@@ -1005,7 +987,6 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
   }
   OS << "};\n\n";
 
-  // Emit the lookup function body.
   OS << R"(
 std::pair<unsigned, ArrayRef<uint64_t>>
 Intrinsic::getAllDefaultArgValues(ID IID) {
