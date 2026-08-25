@@ -944,6 +944,16 @@ uint64_t ObjCStubsSection::getSize() const {
   return stubSize * symbols.size();
 }
 
+void ObjCStubsSection::reorderSymbols(ArrayRef<Defined *> newOrder) {
+  assert(newOrder.size() == symbols.size() && "must be a permutation");
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
+  symbols.assign(newOrder.begin(), newOrder.end());
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
+}
+
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
   for (Defined *sym : symbols) {

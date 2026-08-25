@@ -729,8 +729,12 @@ void Writer::scanRelocations() {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
-        if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
+        if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r)) {
+          if (target->hasAttr(r.type, RelocAttrBits::BRANCH) &&
+              ObjCStubsSection::isObjCStubSymbol(sym))
+            priorityBuilder.objcStubCallers[sym].insert(isec);
           prepareSymbolRelocation(sym, isec, r);
+        }
       } else {
         if (!r.pcrel) {
           if (config->emitChainedFixups)
@@ -974,12 +978,51 @@ template <class LP> void Writer::createLoadCommands() {
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
+static void orderObjCStubsByCallerPriority(
+    const DenseMap<const InputSection *, int> &prios) {
+  if (prios.empty() || !in.objcStubs->isNeeded())
+    return;
+
+  DenseMap<const Symbol *, int> stubPriority;
+  for (const auto &[stub, callers] : priorityBuilder.objcStubCallers) {
+    for (const InputSection *caller : callers) {
+      if (!caller->isLive(0))
+        continue;
+      auto prio = prios.find(caller);
+      if (prio == prios.end())
+        continue;
+      auto existing = stubPriority.find(stub);
+      if (existing == stubPriority.end() || prio->second < existing->second)
+        stubPriority[stub] = prio->second;
+    }
+  }
+  if (stubPriority.empty())
+    return;
+
+  ArrayRef<Defined *> symbols = in.objcStubs->getSymbols();
+  SmallVector<Defined *> order(symbols.begin(), symbols.end());
+  llvm::stable_sort(order, [&](const Defined *a, const Defined *b) {
+    auto ia = stubPriority.find(a);
+    auto ib = stubPriority.find(b);
+    bool hasA = ia != stubPriority.end();
+    bool hasB = ib != stubPriority.end();
+    if (hasA != hasB)
+      return hasA;
+    if (!hasA)
+      return false;
+    return ia->second < ib->second;
+  });
+  in.objcStubs->reorderSymbols(order);
+}
+
 static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
   sortOutputSegments();
 
   DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
+
+  orderObjCStubsByCallerPriority(isecPriorities);
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {

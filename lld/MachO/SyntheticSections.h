@@ -346,6 +346,9 @@ public:
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
+  ArrayRef<Defined *> getSymbols() const { return symbols; }
+  void reorderSymbols(ArrayRef<Defined *> newOrder);
+
 private:
   std::vector<Defined *> symbols;
   Symbol *objcMsgSend = nullptr;
