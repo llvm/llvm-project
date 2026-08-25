@@ -9751,9 +9751,21 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
 
     // TODO: We need to pass in the full target-id and handle it properly in the
     // linker wrapper.
+    llvm::Triple EffectiveTriple(TC->ComputeEffectiveClangTriple(TCArgs, Arch));
+    // Ensure SPIRV SYCL device images are tagged with the canonical
+    // three-component triple (e.g. "spirv64-unknown-unknown") so that the SYCL
+    // runtime's exact-string image compatibility check succeeds.  An arch-only
+    // spelling like "spirv64" is accepted by the driver but does not match.
+    if (EffectiveTriple.isSPIRV() &&
+        OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL) {
+      if (EffectiveTriple.getVendor() == llvm::Triple::UnknownVendor)
+        EffectiveTriple.setVendor(llvm::Triple::UnknownVendor);
+      if (EffectiveTriple.getOS() == llvm::Triple::UnknownOS)
+        EffectiveTriple.setOS(llvm::Triple::UnknownOS);
+    }
     SmallVector<std::string> Parts{
         "file=" + File.str(),
-        "triple=" + TC->ComputeEffectiveClangTriple(TCArgs, Arch),
+        "triple=" + EffectiveTriple.getTriple(),
         "arch=" + (Arch.empty() ? "generic" : Arch.ArchName.str()),
         "kind=" + Kind.str(),
     };
