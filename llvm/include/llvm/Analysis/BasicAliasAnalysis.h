@@ -126,9 +126,9 @@ private:
   /// Try to determine the range of values for VarIndex such that
   /// VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex, thus
   /// establishing a minimum absolute value of the variable offset.
-  std::optional<APInt> computeMinAbsVarIndexHeuristic(const DecomposedGEP &GEP,
-                                                      DominatorTree *DT,
-                                                      const AAQueryInfo &AAQI);
+  std::optional<APInt> computeMinAbsVarOffset(const DecomposedGEP &GEP,
+                                              DominatorTree *DT,
+                                              const AAQueryInfo &AAQI);
 
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.

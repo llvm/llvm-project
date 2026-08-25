@@ -1329,8 +1329,7 @@ AliasResult BasicAAResult::aliasGEP(
 
   // If a minimum absolute variable offset can be established, employ it to
   // prove that the two accesses are far enough apart.
-  if (auto MinAbsVarIndex =
-          computeMinAbsVarIndexHeuristic(DecompGEP1, DT, AAQI)) {
+  if (auto MinAbsVarIndex = computeMinAbsVarOffset(DecompGEP1, DT, AAQI)) {
     // The constant offset will have added at least +/-MinAbsVarIndex to it.
     APInt OffsetLo = DecompGEP1.Offset - *MinAbsVarIndex;
     APInt OffsetHi = DecompGEP1.Offset + *MinAbsVarIndex;
@@ -1977,7 +1976,7 @@ BasicAAResult::analyzeVariableOffsets(const DecomposedGEP &GEP,
   return {GCD, OffsetRange};
 }
 
-std::optional<APInt> BasicAAResult::computeMinAbsVarIndexHeuristic(
+std::optional<APInt> BasicAAResult::computeMinAbsVarOffset(
     const DecomposedGEP &GEP, DominatorTree *DT, const AAQueryInfo &AAQI) {
   // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
   // potentially wrapping math.
