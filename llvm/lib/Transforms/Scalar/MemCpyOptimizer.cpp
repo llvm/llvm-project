@@ -930,8 +930,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     // trap anyway if the pointer was not dereferenceable, we can forward the
     // pointer to the call. Perform optimization only for non-memcpy/memset
     // calls, as those are special cased later.
-    if (isa<AnyMemCpyInst>(C) || isa<AnyMemSetInst>(C) ||
-        !isGuaranteedToTransferExecutionToSuccessor(C->getIterator(),
+    if (!isGuaranteedToTransferExecutionToSuccessor(C->getIterator(),
                                                     cpyStore->getIterator())) {
       LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
       return false;

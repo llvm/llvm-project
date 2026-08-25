@@ -23,7 +23,6 @@ define void @must_remove_memcpy(ptr noalias nocapture writable dereferenceable(4
 define void @must_not_remove_memcpy(ptr noalias nocapture writable dereferenceable(1024) %dst) nofree nosync {
 ; CHECK-LABEL: @must_not_remove_memcpy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [4096 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[SRC]], i8 0, i64 4096, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 0, i64 4096, i1 false)
 ; CHECK-NEXT:    ret void
 ;

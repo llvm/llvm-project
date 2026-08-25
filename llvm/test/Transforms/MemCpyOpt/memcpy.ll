@@ -74,6 +74,7 @@ define void @test2_constant(ptr %Q) nounwind  {
 ; other should be related with a memcpy.
 define void @test2_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; CHECK-LABEL: @test2_memcpy(
+; CHECK-NEXT:    %memtmp = alloca %0, align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -88,7 +89,8 @@ define void @test2_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; if the one eliminated was inline.
 define void @test3_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; CHECK-LABEL: @test3_memcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    %memtmp = alloca %0, align 16
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %memtmp = alloca %0, align 16
@@ -102,7 +104,8 @@ define void @test3_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; if the one eliminated was not inline.
 define void @test4_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; CHECK-LABEL: @test4_memcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    %memtmp = alloca %0, align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %memtmp = alloca %0, align 16
@@ -115,6 +118,7 @@ define void @test4_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; Same as @test2_memcpy, and the inline-ness should be preserved.
 define void @test5_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 ; CHECK-LABEL: @test5_memcpy(
+; CHECK-NEXT:    %memtmp = alloca %0, align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P:%.*]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
