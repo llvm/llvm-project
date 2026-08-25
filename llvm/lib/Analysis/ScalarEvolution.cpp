@@ -279,52 +279,8 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
     return;
   }
 
-  auto *NAry = dyn_cast<SCEVNAryExpr>(this);
-  SCEV::NoWrapFlags Flags = NAry ? NAry->getNoWrapFlags() : SCEV::FlagAnyWrap;
-  switch (getSCEVType()) {
-  case scPtrToAddr:
-    CanonicalSCEV = SE.getPtrToAddrExpr(CanonOps[0]);
-    return;
-  case scTruncate:
-    CanonicalSCEV = SE.getTruncateExpr(CanonOps[0], getType());
-    return;
-  case scZeroExtend:
-    CanonicalSCEV = SE.getZeroExtendExpr(CanonOps[0], getType());
-    return;
-  case scSignExtend:
-    CanonicalSCEV = SE.getSignExtendExpr(CanonOps[0], getType());
-    return;
-  case scUDivExpr:
-    CanonicalSCEV = SE.getUDivExpr(CanonOps[0], CanonOps[1]);
-    return;
-  case scAddExpr:
-    CanonicalSCEV = SE.getAddExpr(CanonOps, Flags);
-    return;
-  case scMulExpr:
-    CanonicalSCEV = SE.getMulExpr(CanonOps, Flags);
-    return;
-  case scAddRecExpr:
-    CanonicalSCEV = SE.getAddRecExpr(
-        CanonOps, cast<SCEVAddRecExpr>(this)->getLoop(), Flags);
-    return;
-  case scSMaxExpr:
-    CanonicalSCEV = SE.getSMaxExpr(CanonOps);
-    return;
-  case scUMaxExpr:
-    CanonicalSCEV = SE.getUMaxExpr(CanonOps);
-    return;
-  case scSMinExpr:
-    CanonicalSCEV = SE.getSMinExpr(CanonOps);
-    return;
-  case scUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps);
-    return;
-  case scSequentialUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps, /*Sequential=*/true);
-    return;
-  default:
-    llvm_unreachable("Unknown SCEV type");
-  }
+  // Rebuild the expression from the canonical operands, stripping use flags.
+  CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
 
 //===----------------------------------------------------------------------===//
