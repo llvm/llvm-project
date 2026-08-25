@@ -3,11 +3,265 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; Tests the codegen for the following code.
-; The D register resulting 'ld2/3/4' instruction implicitly zeroes the upper bits so we can return straight after it.
+; The D register resulting 'ld1/2/3/4' instruction implicitly
+; zeroes the upper bits so we can return straight after it,
+; avoiding an extra FMOV.
+
+; Tests the codegen for the following code:
 ;   uint8x16_t foo(uint8_t *a) {
 ;      return vcombine_u8(vld2_u8(a).val[0], vdup_n_u8(0));
 ;   }
+
+; Tests for vcombine(vld1_x2(p).val[0], dup(0))
+
+define <16 x i8> @ld1_two_v8b(ptr %p) {
+; CHECK-LABEL: ld1_two_v8b:
+; CHECK:         ld1 { v0.8b, v1.8b }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x2 = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x2.v8i8.p0(ptr %p)
+  %vld1x2.extract = extractvalue { <8 x i8>, <8 x i8> } %vld1x2, 0
+  %shuffle.i = shufflevector <8 x i8> %vld1x2.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <16 x i8> @ld1_two_v8b_post(ptr %p) {
+; CHECK-LABEL: ld1_two_v8b_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.8b, v1.8b }, [x8], #16
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x2 = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x2.v8i8.p0(ptr %0)
+  %vld1x2.extract = extractvalue { <8 x i8>, <8 x i8> } %vld1x2, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 16
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <8 x i8> %vld1x2.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <8 x i16> @ld1_two_v4h(ptr %p) {
+; CHECK-LABEL: ld1_two_v4h:
+; CHECK:         ld1 { v0.4h, v1.4h }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x2 = call { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x2.v4i16.p0(ptr %p)
+  %vld1x2.extract = extractvalue { <4 x i16>, <4 x i16> } %vld1x2, 0
+  %shuffle.i = shufflevector <4 x i16> %vld1x2.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <8 x i16> @ld1_two_v4h_post(ptr %p) {
+; CHECK-LABEL: ld1_two_v4h_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.4h, v1.4h }, [x8], #16
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x2 = call { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x2.v4i16.p0(ptr %0)
+  %vld1x2.extract = extractvalue { <4 x i16>, <4 x i16> } %vld1x2, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 16
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <4 x i16> %vld1x2.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <4 x i32> @ld1_two_v2s(ptr %p) {
+; CHECK-LABEL: ld1_two_v2s:
+; CHECK:         ld1 { v0.2s, v1.2s }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x2 = call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x2.v2i32.p0(ptr %p)
+  %vld1x2.extract = extractvalue { <2 x i32>, <2 x i32> } %vld1x2, 0
+  %shuffle.i = shufflevector <2 x i32> %vld1x2.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+define <4 x i32> @ld1_two_v2s_post(ptr %p) {
+; CHECK-LABEL: ld1_two_v2s_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.2s, v1.2s }, [x8], #16
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x2 = call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x2.v2i32.p0(ptr %0)
+  %vld1x2.extract = extractvalue { <2 x i32>, <2 x i32> } %vld1x2, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 16
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <2 x i32> %vld1x2.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+; Tests for vcombine(vld1_x3(p).val[0], dup(0))
+
+define <16 x i8> @ld1_three_v8b(ptr %p) {
+; CHECK-LABEL: ld1_three_v8b:
+; CHECK:         ld1 { v0.8b, v1.8b, v2.8b }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x3 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x3.v8i8.p0(ptr %p)
+  %vld1x3.extract = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } %vld1x3, 0
+  %shuffle.i = shufflevector <8 x i8> %vld1x3.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <16 x i8> @ld1_three_v8b_post(ptr %p) {
+; CHECK-LABEL: ld1_three_v8b_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.8b, v1.8b, v2.8b }, [x8], #24
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x3 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x3.v8i8.p0(ptr %0)
+  %vld1x3.extract = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } %vld1x3, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 24
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <8 x i8> %vld1x3.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <8 x i16> @ld1_three_v4h(ptr %p) {
+; CHECK-LABEL: ld1_three_v4h:
+; CHECK:         ld1 { v0.4h, v1.4h, v2.4h }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x3 = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x3.v4i16.p0(ptr %p)
+  %vld1x3.extract = extractvalue { <4 x i16>, <4 x i16>, <4 x i16> } %vld1x3, 0
+  %shuffle.i = shufflevector <4 x i16> %vld1x3.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <8 x i16> @ld1_three_v4h_post(ptr %p) {
+; CHECK-LABEL: ld1_three_v4h_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.4h, v1.4h, v2.4h }, [x8], #24
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x3 = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x3.v4i16.p0(ptr %0)
+  %vld1x3.extract = extractvalue { <4 x i16>, <4 x i16>, <4 x i16> } %vld1x3, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 24
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <4 x i16> %vld1x3.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <4 x i32> @ld1_three_v2s(ptr %p) {
+; CHECK-LABEL: ld1_three_v2s:
+; CHECK:         ld1 { v0.2s, v1.2s, v2.2s }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x3 = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x3.v2i32.p0(ptr %p)
+  %vld1x3.extract = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } %vld1x3, 0
+  %shuffle.i = shufflevector <2 x i32> %vld1x3.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+define <4 x i32> @ld1_three_v2s_post(ptr %p) {
+; CHECK-LABEL: ld1_three_v2s_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.2s, v1.2s, v2.2s }, [x8], #24
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x3 = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x3.v2i32.p0(ptr %0)
+  %vld1x3.extract = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } %vld1x3, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 24
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <2 x i32> %vld1x3.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+; Tests for vcombine(vld1_x4(p).val[0], dup(0))
+
+define <16 x i8> @ld1_four_v8b(ptr %p) {
+; CHECK-LABEL: ld1_four_v8b:
+; CHECK:         ld1 { v0.8b, v1.8b, v2.8b, v3.8b }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x4 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x4.v8i8.p0(ptr %p)
+  %vld1x4.extract = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %vld1x4, 0
+  %shuffle.i = shufflevector <8 x i8> %vld1x4.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <16 x i8> @ld1_four_v8b_post(ptr %p) {
+; CHECK-LABEL: ld1_four_v8b_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.8b, v1.8b, v2.8b, v3.8b }, [x8], #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x4 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x4.v8i8.p0(ptr %0)
+  %vld1x4.extract = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %vld1x4, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 32
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <8 x i8> %vld1x4.extract, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i
+}
+
+define <8 x i16> @ld1_four_v4h(ptr %p) {
+; CHECK-LABEL: ld1_four_v4h:
+; CHECK:         ld1 { v0.4h, v1.4h, v2.4h, v3.4h }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x4 = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x4.v4i16.p0(ptr %p)
+  %vld1x4.extract = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %vld1x4, 0
+  %shuffle.i = shufflevector <4 x i16> %vld1x4.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <8 x i16> @ld1_four_v4h_post(ptr %p) {
+; CHECK-LABEL: ld1_four_v4h_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.4h, v1.4h, v2.4h, v3.4h }, [x8], #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x4 = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x4.v4i16.p0(ptr %0)
+  %vld1x4.extract = extractvalue { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } %vld1x4, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 32
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <4 x i16> %vld1x4.extract, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i
+}
+
+define <4 x i32> @ld1_four_v2s(ptr %p) {
+; CHECK-LABEL: ld1_four_v2s:
+; CHECK:         ld1 { v0.2s, v1.2s, v2.2s, v3.2s }, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %vld1x4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x4.v2i32.p0(ptr %p)
+  %vld1x4.extract = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %vld1x4, 0
+  %shuffle.i = shufflevector <2 x i32> %vld1x4.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+define <4 x i32> @ld1_four_v2s_post(ptr %p) {
+; CHECK-LABEL: ld1_four_v2s_post:
+; CHECK:         ldr x8, [x0]
+; CHECK-NEXT:    ld1 { v0.2s, v1.2s, v2.2s, v3.2s }, [x8], #32
+; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load ptr, ptr %p, align 8
+  %vld1x4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x4.v2i32.p0(ptr %0)
+  %vld1x4.extract = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %vld1x4, 0
+  %add.ptr = getelementptr inbounds nuw i8, ptr %0, i64 32
+  store ptr %add.ptr, ptr %p, align 8
+  %shuffle.i = shufflevector <2 x i32> %vld1x4.extract, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i
+}
+
+; Tests for vcombine(vld2(p).val[0], dup(0))
 
 define <16 x i8> @ld2_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld2_u8_val0:
@@ -47,7 +301,6 @@ entry:
   ret <8 x i16> %shuffle.i
 }
 
-
 define <8 x i16> @ld2_u16_val0_post(ptr %a) {
 ; CHECK-LABEL: ld2_u16_val0_post:
 ; CHECK:         ldr x8, [x0]
@@ -75,7 +328,6 @@ entry:
   ret <4 x i32> %shuffle.i
 }
 
-
 define <4 x i32> @ld2_u32_val0_post(ptr %a) {
 ; CHECK-LABEL: ld2_u32_val0_post:
 ; CHECK:         ldr x8, [x0]
@@ -93,7 +345,6 @@ entry:
 }
 
 define <2 x i64> @ld2_u64_val0(ptr %a) {
-;
 ; CHECK-LABEL: ld2_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d }, [x0]
 ; CHECK-NEXT:    ret
@@ -104,9 +355,7 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
-
 define <2 x i64> @ld2_u64_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld2_u64_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d }, [x8], #16
@@ -122,6 +371,8 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+; Tests for vcombine(vld3(p).val[0], dup(0))
+
 define <16 x i8> @ld3_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld3_u8_val0:
 ; CHECK:         ld3 { v0.8b, v1.8b, v2.8b }, [x0]
@@ -133,9 +384,7 @@ entry:
   ret <16 x i8> %shuffle.i
 }
 
-
 define <16 x i8> @ld3_u8_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld3_u8_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.8b, v1.8b, v2.8b }, [x8], #24
@@ -162,9 +411,7 @@ entry:
   ret <8 x i16> %shuffle.i
 }
 
-
 define <8 x i16> @ld3_u16_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld3_u16_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.4h, v1.4h, v2.4h }, [x8], #24
@@ -191,9 +438,7 @@ entry:
   ret <4 x i32> %shuffle.i
 }
 
-
 define <4 x i32> @ld3_u32_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld3_u32_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld3 { v0.2s, v1.2s, v2.2s }, [x8], #24
@@ -210,7 +455,6 @@ entry:
 }
 
 define <2 x i64> @ld3_u64_val0(ptr %a) {
-;
 ; CHECK-LABEL: ld3_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d, v2.1d }, [x0]
 ; CHECK-NEXT:    ret
@@ -221,9 +465,7 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
-
 define <2 x i64> @ld3_u64_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld3_u64_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d, v2.1d }, [x8], #24
@@ -239,6 +481,8 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+; Tests for vcombine(vld4(p).val[0], dup(0))
+
 define <16 x i8> @ld4_u8_val0(ptr %a) {
 ; CHECK-LABEL: ld4_u8_val0:
 ; CHECK:         ld4 { v0.8b, v1.8b, v2.8b, v3.8b }, [x0]
@@ -250,9 +494,7 @@ entry:
   ret <16 x i8> %shuffle.i
 }
 
-
 define <16 x i8> @ld4_u8_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld4_u8_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.8b, v1.8b, v2.8b, v3.8b }, [x8], #32
@@ -279,9 +521,7 @@ entry:
   ret <8 x i16> %shuffle.i
 }
 
-
 define <8 x i16> @ld4_u16_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld4_u16_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.4h, v1.4h, v2.4h, v3.4h }, [x8], #32
@@ -308,9 +548,7 @@ entry:
   ret <4 x i32> %shuffle.i
 }
 
-
 define <4 x i32> @ld4_u32_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld4_u32_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld4 { v0.2s, v1.2s, v2.2s, v3.2s }, [x8], #32
@@ -327,7 +565,6 @@ entry:
 }
 
 define <2 x i64> @ld4_u64_val0(ptr %a) {
-;
 ; CHECK-LABEL: ld4_u64_val0:
 ; CHECK:         ld1 { v0.1d, v1.1d, v2.1d, v3.1d }, [x0]
 ; CHECK-NEXT:    ret
@@ -338,9 +575,7 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
-
 define <2 x i64> @ld4_u64_val0_post(ptr %a) {
-;
 ; CHECK-LABEL: ld4_u64_val0_post:
 ; CHECK:         ldr x8, [x0]
 ; CHECK-NEXT:    ld1 { v0.1d, v1.1d, v2.1d, v3.1d }, [x8], #32
@@ -380,7 +615,6 @@ entry:
   ret <4 x i32> %shuffle.i
 }
 
-
 define <4 x i32> @ld4_u32_val3(ptr %a) {
 ; CHECK-LABEL: ld4_u32_val3:
 ; CHECK:         ld4 { v29.2s, v30.2s, v31.2s, v0.2s }, [x0]
@@ -392,6 +626,15 @@ entry:
   ret <4 x i32> %shuffle.i
 }
 
+declare { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x2.v8i8.p0(ptr)
+declare { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x2.v4i16.p0(ptr)
+declare { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x2.v2i32.p0(ptr)
+declare { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x3.v8i8.p0(ptr)
+declare { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x3.v4i16.p0(ptr)
+declare { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x3.v2i32.p0(ptr)
+declare { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x4.v8i8.p0(ptr)
+declare { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld1x4.v4i16.p0(ptr)
+declare { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld1x4.v2i32.p0(ptr)
 declare { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr)
 declare { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld2.v4i16.p0(ptr)
 declare { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0(ptr)
@@ -404,4 +647,3 @@ declare { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4.v8i8.p
 declare { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0(ptr)
 declare { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4.v2i32.p0(ptr)
 declare { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4.v1i64.p0(ptr)
-
