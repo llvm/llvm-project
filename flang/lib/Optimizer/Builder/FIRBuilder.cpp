@@ -278,36 +278,43 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 }
 
 /// Get the block for adding Allocas.
+mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
+  // Find the closest parent operation that knows where its allocas belong.
+  for (mlir::Region *current = &region; current;
+       current = current->getParentRegion()) {
+    mlir::Operation *parent = current->getParentOp();
+    if (!parent)
+      break;
+
+    if (auto accComputeRegionIface =
+            mlir::dyn_cast<mlir::acc::ComputeRegionOpInterface>(parent))
+      return accComputeRegionIface.getAllocaBlock();
+
+    if (auto ompOutlineableIface =
+            mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(parent))
+      return ompOutlineableIface.getAllocaBlock();
+
+    if (auto recipeIface =
+            mlir::dyn_cast<mlir::accomp::RecipeInterface>(parent))
+      return recipeIface.getAllocaBlock(*current);
+
+    if (auto cufKernelOp = mlir::dyn_cast<cuf::KernelOp>(parent))
+      return &cufKernelOp.getRegion().front();
+
+    if (auto doConcurentOp = mlir::dyn_cast<fir::DoConcurrentOp>(parent))
+      return doConcurentOp.getBody();
+
+    if (mlir::isa<fir::LocalitySpecifierOp, fir::DeclareReductionOp>(parent))
+      return &current->front();
+  }
+
+  auto func = region.getParentOfType<mlir::func::FuncOp>();
+  assert(func && "region must be inside a function");
+  return &func.front();
+}
+
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  if (auto accComputeRegionIface =
-          getRegion().getParentOfType<mlir::acc::ComputeRegionOpInterface>()) {
-    return accComputeRegionIface.getAllocaBlock();
-  }
-
-  if (auto ompOutlineableIface =
-          getRegion()
-              .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
-    return ompOutlineableIface.getAllocaBlock();
-  }
-
-  if (auto recipeIface =
-          getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
-    return recipeIface.getAllocaBlock(getRegion());
-  }
-
-  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
-    return &cufKernelOp.getRegion().front();
-
-  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
-    return doConcurentOp.getBody();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
-    return &getRegion().front();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::DeclareReductionOp>())
-    return &getRegion().front();
-
-  return getEntryBlock();
+  return fir::getAllocaBlock(getRegion());
 }
 
 static mlir::ArrayAttr makeI64ArrayAttr(llvm::ArrayRef<int64_t> values,
