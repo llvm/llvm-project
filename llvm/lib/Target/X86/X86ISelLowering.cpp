@@ -22995,18 +22995,8 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
     Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide, DAG.getConstant(16, DL, MVT::i32));
     Res = DAG.getBitcast(MVT::f32, Wide);
   } else {
-    // Peek through to bf16's underlying f16 register
-    MVT VecVT = MVT::v8i16;
-    SDValue VecSrc = Src;
-    if (Src.getOpcode() == ISD::BITCAST &&
-        Src.getOperand(0).getValueType() == MVT::f16) {
-      VecSrc = Src.getOperand(0);
-      VecVT = MVT::v8f16;
-    }
-
     // Shift the bf16 bits into the high half of the f32.
-    SDValue Vec = DAG.getBitcast(
-        MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, VecSrc));
+    SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
     Vec = DAG.getBitcast(MVT::v4i32, Vec);
     Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
     Vec = DAG.getBitcast(MVT::v4f32, Vec);
@@ -62511,6 +62501,15 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
     if (VT == MVT::v2i64 && SrcOp.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
+    // Combine (v8i16 (scalar_to_vector (i16 (bitcast (f16/bf16))))) to VMOVW.
+    if (Subtarget.hasFP16() && VT == MVT::v8i16) {
+      if (SrcOp.getValueType() == MVT::f16)
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, SrcOp));
+      if (SrcOp.getValueType() == MVT::bf16)
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8bf16, SrcOp));
+    }
   }
 
   if (VT == MVT::v4i32) {
