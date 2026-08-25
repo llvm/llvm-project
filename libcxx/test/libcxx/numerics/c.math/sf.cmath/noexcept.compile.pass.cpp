@@ -16,15 +16,12 @@
 
 #include <cmath>
 
-#include "test_macros.h"
-
 void test() {
   // assoc_laguerre
-  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0f));
-  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0));
-  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0l));
-  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0));
-
-  ASSERT_NOEXCEPT(std::assoc_laguerref(0, 0, 0.0f));
-  ASSERT_NOEXCEPT(std::assoc_laguerrel(0, 0, 0.0l));
+  static_assert(noexcept(std::assoc_laguerre(0, 0, 0.0f)));
+  static_assert(noexcept(std::assoc_laguerre(0, 0, 0.0)));
+  static_assert(noexcept(std::assoc_laguerre(0, 0, 0.0l)));
+  static_assert(noexcept(std::assoc_laguerre(0, 0, 0)));
+  static_assert(noexcept(std::assoc_laguerref(0, 0, 0.0f)));
+  static_assert(noexcept(std::assoc_laguerrel(0, 0, 0.0l)));
 }
