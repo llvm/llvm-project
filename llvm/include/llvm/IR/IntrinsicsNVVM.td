@@ -3774,7 +3774,7 @@ foreach sparse = [0, 1] in {
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
-            mma.intr_name>;
+            mma.intr_name, DefaultValue<0>>;
         }
       } // scale_vec_size
     } // kind
