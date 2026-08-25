@@ -146,12 +146,6 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
   auto lhs = ParseLogicalOrExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
-  // Check if it's a ternary operator.
-  // This is done to keep conditional_expression's precedence
-  // over assignment_expression.
-  if (CurToken().Is(Token::question))
-    return ParseConditionalBranches(std::move(lhs));
-
   // Check if it's an assignment expression.
   if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal})) {
     // That's an assignment!
@@ -163,6 +157,11 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
   }
+
+  // Check if it's a ternary operator.
+  if (CurToken().Is(Token::question))
+    return ParseConditionalBranches(std::move(lhs));
+
   return lhs;
 }
 
@@ -186,7 +185,7 @@ ASTNodeUP DILParser::ParseConditionalExpression() {
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   if (CurToken().Is(Token::question))
-    lhs = ParseConditionalBranches(std::move(lhs));
+    return ParseConditionalBranches(std::move(lhs));
 
   return lhs;
 }
