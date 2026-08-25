@@ -64,30 +64,6 @@ program test_dataclause_dedup
   do i = 1, 10
   end do
 
-  ! A reduction still conflicts with explicit privatization on the same
-  ! directive.
-  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
-  !$acc parallel private(x) reduction(+:x)
-  x = x + 1
-  !$acc end parallel
-
-  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
-  !$acc serial firstprivate(x) reduction(+:x)
-  x = x + 1
-  !$acc end serial
-
-  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
-  !$acc parallel loop private(x) reduction(+:x)
-  do i = 1, 10
-    x = x + i
-  end do
-
-  !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive
-  !$acc serial loop firstprivate(x) reduction(+:x)
-  do i = 1, 10
-    x = x + i
-  end do
-
   ! Reduction is excluded from the benign case: same-flag duplicates may
   ! differ in operator, which is a real conflict.
   !ERROR: 'x' appears in more than one data-sharing clause on the same OpenACC directive

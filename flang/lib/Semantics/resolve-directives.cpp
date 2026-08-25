@@ -459,6 +459,7 @@ private:
       Symbol::Flag, DesignatorPath,
       const parser::AccObject *occurrence = nullptr,
       bool warnSameKindDuplicate = true);
+  bool AllowsExplicitCopyReductionPair() const;
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -2259,8 +2260,9 @@ void AccAttributeVisitor::ResolveAccObject(
           },
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
-              if (!CheckClauseConsistencyInCurrentConstruct(name, accFlag,
-                      MakeBaseDesignatorPath(*symbol), &accObject)) {
+              if (!CheckClauseConsistencyInCurrentConstruct(name,
+                      Symbol::Flag::AccCommonBlock,
+                      MakeBaseDesignatorPath(*symbol))) {
                 return;
               }
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
@@ -2302,6 +2304,16 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
+bool AccAttributeVisitor::AllowsExplicitCopyReductionPair() const {
+  switch (GetContext().directive) {
+  case llvm::acc::Directive::ACCD_parallel:
+  case llvm::acc::Directive::ACCD_serial:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
     const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator,
     const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
@@ -2320,7 +2332,39 @@ bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
       continue;
     }
 
-    if (!(dataSharingAttributeFlags.test(entry.flag) &&
+    if (entry.flag == Symbol::Flag::AccCommonBlock ||
+        accFlag == Symbol::Flag::AccCommonBlock) {
+      auto &message{context_.Say(source,
+          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
+          displayName)};
+      if (entry.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.occurrence),
+            "previous data-sharing object appears here"_en_US);
+      }
+      return false;
+    }
+
+    const bool isExplicitCopyReductionPair{AllowsExplicitCopyReductionPair() &&
+        relation == DesignatorRelation::Equal &&
+        ((entry.flag == Symbol::Flag::AccCopy &&
+             accFlag == Symbol::Flag::AccReduction) ||
+            (entry.flag == Symbol::Flag::AccReduction &&
+                accFlag == Symbol::Flag::AccCopy))};
+    if (isExplicitCopyReductionPair) {
+      if (entry.flag == Symbol::Flag::AccCopy) {
+        if (entry.occurrence) {
+          context_.MarkAccObjectDuplicate(entry.occurrence);
+        }
+        iter = objectsWithDSA.erase(iter);
+        continue;
+      }
+      if (occurrence) {
+        context_.MarkAccObjectDuplicate(occurrence);
+      }
+      return false;
+    }
+
+    if (!(dataSharingAttributeFlags.test(entry.flag) ||
             dataSharingAttributeFlags.test(accFlag))) {
       ++iter;
       continue;
@@ -2328,7 +2372,8 @@ bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
 
     // TODO: Record the reduction operator in AccDataSharingEntry so compatible
     // reductions can use the ordinary same-kind duplicate handling. Also handle
-    // private/reduction interactions on loop constructs.
+    // copy/reduction pairs on combined constructs and private/reduction
+    // interactions on loop constructs.
     if (entry.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
       auto &message{context_.Say(source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
