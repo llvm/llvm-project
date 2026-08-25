@@ -9,8 +9,8 @@
 // Retained:
 //   f1  static inline
 //   f2  plain inline under -fgnu89-inline
-//   f5  C99 external definition with external linkage
-//       retained under both C99 and -fgnu89-inline
+//   f5  C99 external definition with external linkage;
+//       considered plain inline under -fgnu89-inline
 //
 // Not retained:
 //   f2  C99 inline definition

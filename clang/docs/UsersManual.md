@@ -2852,7 +2852,8 @@ or implicitly via constexpr or an in-class member-function definition),
 including template specializations whose definitions are generated in this
 translation unit. Inline functions with the gnu_inline attribute and
 specializations subject to C++ explicit instantiation declarations
-(extern template) are not kept.
+(extern template) are not kept. C++20 immediate functions (e.g., consteval)
+are never emitted.
 
 With C++20 named modules, the option applies to inline functions defined
 in the current module unit, including functions that are not exported.
