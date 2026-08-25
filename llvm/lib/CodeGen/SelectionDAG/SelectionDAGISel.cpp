@@ -793,12 +793,15 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   if (MF->useDebugInstrRef())
     MF->finalizeDebugInstrRefs();
 
-  // Determine if there are any calls in this machine function.
+  // Determine if there are any calls in this machine function, and which
+  // blocks directly contain inline asm (INLINEASM/INLINEASM_BR) -- the
+  // latter lets RegAllocFast skip its own per-block scan later. This can no
+  // longer bail out once MFI.hasCalls() && MF->hasInlineAsm() are both known
+  // true, unlike before: later blocks may still need their own
+  // MachineBasicBlock::HasInlineAsm bit set even after the function-wide
+  // aggregates are already satisfied.
   MachineFrameInfo &MFI = MF->getFrameInfo();
-  for (const auto &MBB : *MF) {
-    if (MFI.hasCalls() && MF->hasInlineAsm())
-      break;
-
+  for (auto &MBB : *MF) {
     for (const auto &MI : MBB) {
       const MCInstrDesc &MCID = TII->get(MI.getOpcode());
       if ((MCID.isCall() && !MCID.isReturn()) ||
@@ -807,6 +810,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       }
       if (MI.isInlineAsm()) {
         MF->setHasInlineAsm(true);
+        MBB.setHasInlineAsm(true);
       }
     }
   }

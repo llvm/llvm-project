@@ -53,6 +53,10 @@ using namespace llvm;
 STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
+STATISTIC(NumInlineAsmFoldedStores,
+          "Number of stores added by inline asm operand folding");
+STATISTIC(NumInlineAsmFoldedLoads,
+          "Number of loads added by inline asm operand folding");
 
 // FIXME: Remove this switch when all testcases are fixed!
 static cl::opt<bool> IgnoreMissingDefs("rafast-ignore-missing-defs",
@@ -397,6 +401,12 @@ private:
   bool mayLiveIn(Register VirtReg);
 
   bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
+
+  void selectInlineAsmOperandsToFold(MachineInstr &MI,
+                                     SmallSet<Register, 8> &ToFold);
+  void foldFoldableInlineAsmOperands(MachineBasicBlock &MBB);
+  void foldFoldableInlineAsmOperands(MachineInstr *&MI,
+                                     const SmallSet<Register, 8> &ToFold);
 
   void dumpState() const;
 };
@@ -1789,6 +1799,253 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
   }
 }
 
+/// Decide which of \p MI's foldable ("rm"-style) register operands actually
+/// need to be converted to memory, and record their registers in \p ToFold.
+///
+/// A foldable operand is one where SelectionDAG chose 'r' (registers give
+/// better code than always spilling to memory) but recorded, via
+/// InlineAsm::Flag::RegMayBeFolded, that 'm' is an available fallback -- see
+/// TargetLowering::ComputeConstraintToUse. The greedy allocator can leave
+/// this decision until it actually runs out of registers: InlineSpiller
+/// folds on demand, informed by real, global register pressure. RegAllocFast
+/// has no such on-demand spilling machinery, and restructuring its
+/// single-pass, iterate-MI's-live-operand-list design to support it safely
+/// is a larger change (folding an operand replaces MI with a new
+/// instruction, which can't happen mid-iteration of the def/use loops in
+/// allocateInstruction()). Folding every foldable operand unconditionally
+/// would sidestep that, but is strictly pessimistic -- verified against
+/// this file's own asm-constraints-torture.ll, it regresses cases with no
+/// real pressure at all from "uses a register, like greedy" to "always
+/// spills," which is worse than doing nothing.
+///
+/// This is the middle ground: estimate, from MI's own operand list alone,
+/// whether its simultaneous register demands -- defs, uses, and clobbers,
+/// all alive only for this one instruction -- fit in the relevant register
+/// class, and only fold as many foldable operands as needed to make them
+/// fit. Non-foldable operands get first claim on the available registers,
+/// since they have no fallback.
+///
+/// Three simplifications, all biased toward folding too little rather than
+/// too much (i.e. toward RegAllocFast's pre-existing "hard error if a
+/// register genuinely isn't available" behavior, never toward silently
+/// wrong codegen):
+///  - It only accounts for pressure local to this one instruction, not
+///    registers already committed to values live across other instructions
+///    in the block. RegAllocFast has no on-demand spilling for those either
+///    way, so this is a pre-existing limitation, not a regression.
+///  - It buckets demand by exact TargetRegisterClass rather than unifying
+///    classes that alias the same physical registers (e.g. GR32 and GR64),
+///    so it can undercount pressure when an instruction mixes classes of
+///    different widths. RegAllocFast's normal out-of-registers error path
+///    remains a backstop for any such case this estimate gets wrong.
+///  - It doesn't model early-clobber's stricter requirement that a def be
+///    disjoint from every input, not just other defs -- it counts an
+///    early-clobber def as ordinary same-class demand, the same as it would
+///    a non-early-clobber one. This is really a specific, easy-to-hit
+///    instance of the previous point (the disjointness early-clobber
+///    requires isn't scoped to one register class either), called out
+///    separately because "=&rm" early-clobber outputs are a common shape
+///    for this constraint in practice. Same backstop applies.
+void RegAllocFastImpl::selectInlineAsmOperandsToFold(
+    MachineInstr &MI, SmallSet<Register, 8> &ToFold) {
+  struct Demand {
+    unsigned NonFoldable = 0;
+    SmallVector<Register, 4> Foldable;
+  };
+  // SmallMapVector, not SmallDenseMap: each register class's bucket is
+  // resolved independently below with no state carried between iterations,
+  // so plain DenseMap's pointer-hash-ordered iteration wouldn't actually be
+  // wrong here -- but a reviewer shouldn't have to re-derive that from
+  // scratch every time this function is read, and it costs nothing to make
+  // the iteration order a non-question by construction (insertion order,
+  // i.e. the order classes are first seen scanning MI's operands).
+  SmallMapVector<const TargetRegisterClass *, Demand, 8> DemandByClass;
+  SmallVector<MCPhysReg, 8> Blocked;
+
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+       I != E; ++I) {
+    MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      Blocked.push_back(Reg.asMCReg());
+      continue;
+    }
+    // A tied "+rm" pair (def + matching input) is one memory location
+    // shared between two different virtual registers once folded (see
+    // foldFoldableInlineAsmOperands()'s TiedUse handling below), and the
+    // register allocator must assign them the same physical register
+    // either way -- it's one unit of demand, not two. Count it once, via
+    // the def side; skip the tied use here so it isn't double-counted
+    // against the same register class.
+    if (MO.isTied() && MO.isUse())
+      continue;
+    Demand &D = DemandByClass[MRI->getRegClass(Reg)];
+    if (MI.mayFoldInlineAsmRegOp(I))
+      D.Foldable.push_back(Reg);
+    else
+      ++D.NonFoldable;
+  }
+
+  for (auto &KV : DemandByClass) {
+    const TargetRegisterClass *RC = KV.first;
+    Demand &D = KV.second;
+    if (D.Foldable.empty())
+      continue;
+
+    unsigned Available = 0;
+    for (MCPhysReg PhysReg : RegClassInfo.getOrder(RC))
+      if (!llvm::any_of(Blocked, [&](MCPhysReg B) {
+            return TRI->regsOverlap(PhysReg, B);
+          }))
+        ++Available;
+
+    unsigned Spare = Available > D.NonFoldable ? Available - D.NonFoldable : 0;
+    unsigned NumToFold =
+        D.Foldable.size() > Spare ? D.Foldable.size() - Spare : 0;
+    for (unsigned I = 0; I < NumToFold; ++I)
+      ToFold.insert(D.Foldable[I]);
+  }
+}
+
+/// Convert one selected foldable register operand of an inline asm
+/// instruction to its memory ('m') form, in place. \p MI is replaced with
+/// the folded instruction on return, since folding creates a new
+/// instruction rather than mutating MI. Only operands whose register is in
+/// \p ToFold (computed by selectInlineAsmOperandsToFold()) are converted;
+/// the rest are left in register form.
+void RegAllocFastImpl::foldFoldableInlineAsmOperands(
+    MachineInstr *&MI, const SmallSet<Register, 8> &ToFold) {
+  assert(MI->isInlineAsm() && "should only be used on inline asm");
+
+  // Folding a register operand replaces it with a multi-operand frame-index
+  // reference (base/scale/index/disp/segment, on X86), which shifts the
+  // indices of every later operand. Re-read getNumOperands() each iteration
+  // rather than caching it, and never cache MI itself -- foldMemoryOperand()
+  // returns a new instruction rather than mutating in place. ToFold is keyed
+  // by register rather than operand index for exactly this reason: indices
+  // shift as earlier operands in this same loop are folded, but a register
+  // number stays meaningful throughout.
+  for (unsigned I = InlineAsm::MIOp_FirstOperand; I < MI->getNumOperands();
+       ++I) {
+    MachineOperand &MO = MI->getOperand(I);
+    if (!(MO.isReg() && MI->mayFoldInlineAsmRegOp(I) &&
+          ToFold.contains(MO.getReg())))
+      continue;
+
+    const bool IsDef = MO.isDef();
+
+    // A tied "+rm" operand (LLVM IR "=rm,0") is really one memory location
+    // shared between the def and its tied input: TargetInstrInfo already
+    // folds both halves together when given the def's operand index (see
+    // foldInlineAsmMemOperand()'s untie-then-recurse handling), matching how
+    // InlineSpiller.cpp only ever passes the def side to foldMemoryOperand.
+    //
+    // This branch is reached in practice -- TargetLowering::ParseConstraints()
+    // sets MayFoldRegister for a tied def's own "rm" codes the same as for
+    // any other exactly-{r,m} operand (see asm-constraints-torture.ll's
+    // test_tied_output_pressure and asm-reg-mem-constraints.c's
+    // test_tied_rm_output for the pressure and no-pressure cases
+    // respectively). TiedUse below is what makes that correct: without it,
+    // folding only the def's own operand would store back an undefined
+    // value instead of the tied input's.
+    const MachineOperand *TiedUse = nullptr;
+    if (MO.isTied()) {
+      MachineOperand &T = MI->getOperand(MI->findTiedOperandIdx(I));
+      if (T.isUse())
+        TiedUse = &T;
+    }
+
+    Register Reg = MO.getReg();
+    const bool IsVirt = Reg.isVirtual();
+    const TargetRegisterClass *RC =
+        IsVirt ? MRI->getRegClass(Reg) : TRI->getMinimalPhysRegClass(Reg);
+
+    // Reuse the same slot-assignment bookkeeping as ordinary spills for
+    // virtual registers, so a register that's folded here and also spilled
+    // elsewhere in the function shares one stack slot. Physical register
+    // operands (a fixed-register constraint that happens to also allow
+    // "rm") aren't tracked by StackSlotForVirtReg, so give them their own
+    // object.
+    int FrameIndex;
+    if (IsVirt) {
+      FrameIndex = getStackSpaceFor(Reg);
+    } else {
+      unsigned Size = TRI->getSpillSize(*RC);
+      Align Alignment = TRI->getSpillAlign(*RC);
+      FrameIndex = MFI->CreateSpillStackObject(Size, Alignment,
+                                               TRI->getSpillStackID(*RC));
+    }
+
+    // CopyMI is an out-parameter foldMemoryOperand() uses to report a copy
+    // instruction it had to synthesize as part of folding (see its own
+    // declaration for that general contract) -- but TargetInstrInfo.cpp's
+    // implementation early-returns via foldInlineAsmMemOperand() for the
+    // MI.isInlineAsm() case specifically, before CopyMI is ever touched, so
+    // it's guaranteed to stay null here. Asserted rather than silently
+    // ignored so that guarantee breaking -- e.g. a future change to how
+    // inline asm folding is implemented -- fails loudly instead of quietly
+    // dropping whatever CopyMI would have pointed to.
+    MachineInstr *CopyMI = nullptr;
+    MachineInstr *NewMI = TII->foldMemoryOperand(*MI, {I}, FrameIndex, CopyMI);
+    assert(NewMI && "operand was reported foldable but folding failed");
+    assert(!CopyMI &&
+           "inline asm folding shouldn't synthesize a copy instruction");
+    if (!NewMI)
+      continue;
+
+    // foldMemoryOperand() inserts NewMI immediately before MI and leaves MI
+    // in the instruction list. Move NewMI to where MI was, so the rest of
+    // this loop (and the caller's iteration over the block) sees
+    // instructions in program order once MI is erased below.
+    MI->getParent()->splice(std::next(MI->getIterator()), NewMI->getParent(),
+                            NewMI->getIterator());
+
+    if (IsDef) {
+      // The asm now writes the stack slot instead of Reg. Reload afterward
+      // so that Reg -- which may still have uses elsewhere -- is available
+      // in a register again immediately after the asm.
+      TII->loadRegFromStackSlot(*MBB, std::next(NewMI->getIterator()), Reg,
+                                FrameIndex, RC, Reg);
+      ++NumLoads;
+      ++NumInlineAsmFoldedLoads;
+    }
+
+    if (!IsDef || TiedUse) {
+      // Store this operand's pre-asm value into the slot: either the plain
+      // input's own value, or -- for a tied pair -- the tied input's value,
+      // deliberately reusing the def side's FrameIndex so the asm reads and
+      // writes the one memory location the tie requires.
+      Register StoreReg = TiedUse ? TiedUse->getReg() : Reg;
+      bool IsKill = TiedUse ? TiedUse->isKill() : MO.isKill();
+      TII->storeRegToStackSlot(*MBB, MI->getIterator(), StoreReg, IsKill,
+                               FrameIndex, RC, StoreReg);
+      ++NumStores;
+      ++NumInlineAsmFoldedStores;
+    }
+
+    MI->eraseFromParent();
+    MI = NewMI;
+  }
+}
+
+/// Fold whichever of \p MBB's inline asm operands
+/// selectInlineAsmOperandsToFold() determines are actually needed, before the
+/// main allocation loop runs.
+void RegAllocFastImpl::foldFoldableInlineAsmOperands(MachineBasicBlock &MBB) {
+  SmallVector<MachineInstr *, 4> InlineAsms;
+  for (MachineInstr &MI : MBB)
+    if (MI.isInlineAsm())
+      InlineAsms.push_back(&MI);
+  for (MachineInstr *MI : InlineAsms) {
+    SmallSet<Register, 8> ToFold;
+    selectInlineAsmOperandsToFold(*MI, ToFold);
+    if (!ToFold.empty())
+      foldFoldableInlineAsmOperands(MI, ToFold);
+  }
+}
+
 void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
   LLVM_DEBUG(dbgs() << "\nAllocating " << MBB);
@@ -1801,6 +2058,19 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
     setPhysRegState(LiveReg.PhysReg, regPreAssigned);
 
   Coalesced.clear();
+
+  // Fold operands that ISel flagged as foldable (rm-style constraints) to
+  // their memory form before the main allocation loop runs, so those
+  // operands never compete for a register at all -- see
+  // foldFoldableInlineAsmOperands() for why this can't be done lazily like
+  // greedy's on-demand InlineSpiller folding. Gated on
+  // MachineBasicBlock::hasInlineAsm(), which ISel (or the MIR parser, for
+  // directly-parsed .mir input) already populates for free as a byproduct of
+  // a scan it does anyway -- see its declaration for the staleness caveat.
+  // This means blocks that don't themselves contain inline asm pay only an
+  // O(1) check, even in functions where some other block does.
+  if (MBB.hasInlineAsm())
+    foldFoldableInlineAsmOperands(MBB);
 
   // Traverse block in reverse order allocating instructions one by one.
   for (MachineInstr &MI : reverse(MBB)) {

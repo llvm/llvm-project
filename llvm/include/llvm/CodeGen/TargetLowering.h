@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
@@ -5393,6 +5394,17 @@ public:
     /// The ValueType for the operand value.
     MVT ConstraintVT = MVT::Other;
 
+    /// True if this operand's constraint codes are exactly {"r", "m"} (the
+    /// "rm" constraint), or -- for the tied input half of a "+rm" pair,
+    /// whose own constraint codes are just the matching digit (e.g. "0") --
+    /// if the output operand it's tied to has this set (see
+    /// ParseConstraints()'s tied-operand hookup loop, which propagates it
+    /// there). getConstraintType preference selection uses this to opt for 'r'
+    /// while still allowing the register allocator to fall back to 'm' under
+    /// register pressure, instead of picking 'm' unconditionally as it would
+    /// for a generic multi-alternative constraint.
+    bool MayFoldRegister = false;
+
     /// Copy constructor for copying from a ConstraintInfo.
     AsmOperandInfo(InlineAsm::ConstraintInfo Info)
         : InlineAsm::ConstraintInfo(std::move(Info)) {}
@@ -5436,6 +5448,38 @@ public:
 
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
+
+  /// Returns true if this target can fold a register operand of an inline
+  /// asm instruction back to a memory operand (see
+  /// TargetInstrInfo::getFrameIndexOperands(), which a target must override
+  /// with its own addressing-mode encoding for this to work -- the base
+  /// TargetInstrInfo implementation is unreachable()). ParseConstraints()
+  /// only sets MayFoldRegister -- and so only ever prefers 'r' over 'm' for
+  /// an exact "rm"/"+rm" constraint -- when this returns true, so that
+  /// register-pressure fallback (RegAllocFast's inline asm folding, or
+  /// InlineSpiller for the greedy allocator) has an actual implementation to
+  /// fall back to instead of crashing. Defaults to false: without this,
+  /// preferring 'r' for "rm" and then genuinely running out of registers
+  /// would attempt to fold to memory and hit that unreachable() instead of
+  /// RegAllocFast's or InlineSpiller's normal "ran out of registers"
+  /// diagnostic.
+  virtual bool supportsRegMemInlineAsmFolding() const { return false; }
+
+  /// The diagnostic to report when a direct (non-indirect) inline asm
+  /// operand needed a memory constraint but has nowhere to spill to -- see
+  /// supportsRegMemInlineAsmFolding() above for when this can happen.
+  /// Shared between the SelectionDAG (SelectionDAGBuilder.cpp's
+  /// computeConstraintToUse()) and GlobalISel (InlineAsmLowering.cpp's
+  /// lowerInlineAsm()) constraint-selection paths, which are otherwise
+  /// entirely independent implementations, so the two can't drift apart by
+  /// having their own hand-written copies of the same message text.
+  static std::string
+  getRegMemInlineAsmUnsupportedDiag(StringRef ConstraintCode) {
+    return ("unsupported inline asm: constraint '" + ConstraintCode +
+            "' cannot be satisfied in a register and has no memory to fall "
+            "back to")
+        .str();
+  }
 
   using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
   using ConstraintGroup = SmallVector<ConstraintPair>;

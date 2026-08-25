@@ -237,6 +237,20 @@ public:
     return false;
   }
 
+  /// Returns true if this target's backend can fold a register-preferred
+  /// inline asm operand back to memory under register pressure (mirrors
+  /// llvm::TargetLowering::supportsRegMemInlineAsmFolding() -- see that
+  /// declaration for why this defaults to false everywhere except the one
+  /// target that's actually implemented the fold). CGStmt.cpp's
+  /// direct-vs-indirect output lowering decision must agree with the
+  /// backend's own MayFoldRegister gate: if this target's backend won't
+  /// prefer 'r' for an exact "rm"/"+rm" constraint, emitting the IR as if
+  /// it will (skipping the historical indirect/alloca form) leaves nothing
+  /// to fall back to, and inline asm that has always compiled -- an
+  /// ordinary "=rm" or "+rm" output with no exotic pressure at all -- would
+  /// start failing outright.
+  virtual bool supportsRegMemInlineAsmFolding() const { return false; }
+
   /// Adds constraints and types for result registers.
   virtual void addReturnRegisterOutputs(
       CodeGen::CodeGenFunction &CGF, CodeGen::LValue ReturnValue,
