@@ -6704,6 +6704,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
        Opcode != Instruction::FAdd && Opcode != Instruction::FSub))
     return Invalid;
 
+  // We don't support 128b or higher element types.
+  if (InputTypeA->getScalarSizeInBits() > 64 ||
+      (InputTypeB && InputTypeB->getScalarSizeInBits() > 64) ||
+      AccumType->getScalarSizeInBits() > 64)
+    return Invalid;
+
   // If none of the operands are extended and there's no extra BinOp, just
   // cost this as the equivalent arithmetic instruction.
   // TODO: Depending on VF and element type, we may be able to improve on this.
