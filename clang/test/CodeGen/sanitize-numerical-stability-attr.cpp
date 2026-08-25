@@ -29,6 +29,6 @@ int TemplateNoNSAN() { return i; }
 
 int force_instance = TemplateNSANOk<42>() + TemplateNoNSAN<42>();
 
-// WITHOUT: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
-// BL: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
-// NSAN: attributes [[WITH]] = { mustprogress noinline nounwind optnone sanitize_numerical_stability{{.*}} }
+// WITHOUT: attributes [[NOATTR]] = { mustprogress noipa noinline nounwind{{.*}} }
+// BL: attributes [[NOATTR]] = { mustprogress noipa noinline nounwind{{.*}} }
+// NSAN: attributes [[WITH]] = { mustprogress noipa noinline nounwind optnone sanitize_numerical_stability{{.*}} }

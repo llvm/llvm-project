@@ -163,4 +163,4 @@ long long bar_long_long(void) {
 // CHECK: extractvalue { i64, i64 } [[VAR8]], 1
 
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noipa noinline nounwind{{.*}} }

@@ -113,9 +113,9 @@ constexpr int __Four(void) { return 4; }
 int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 int Four_(void) __attribute__((alias("_Z6__Fourv")));
 //.
-// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// HOST: attributes #[[ATTR0]] = { mustprogress noipa noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
-// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
 // HOST: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 51}
 // HOST: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

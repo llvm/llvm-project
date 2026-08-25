@@ -3186,6 +3186,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     // OptimizeNone implies noinline; we should not be inlining such functions.
     B.addAttribute(llvm::Attribute::NoInline);
 
+    // OptimizeNone implies noipa; interprocedural analysis leads to
+    // interprocedural optimization, which can often look equivalent to inlining
+    // or other similar behavior that's undesirable.
+    B.addAttribute(llvm::Attribute::NoIPA);
+
     // We still need to handle naked functions even though optnone subsumes
     // much of their semantics.
     if (D->hasAttr<NakedAttr>())

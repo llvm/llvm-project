@@ -14,9 +14,9 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK: attributes [[OTHER]] = { noinline nounwind optnone
+// CHECK: attributes [[OTHER]] = { noipa noinline nounwind optnone
 // CHECK-NOT: "stackrealign"
 // CHECK: }
-// CHECK: attributes [[MAIN]] = { noinline nounwind optnone {{.*}}"stackrealign"{{.*}} }
+// CHECK: attributes [[MAIN]] = { noipa noinline nounwind optnone {{.*}}"stackrealign"{{.*}} }
 // CHECK: !{i32 1, !"override-stack-alignment", i32 64}
 // DEFAULT-NOT: "override-stack-alignment"

@@ -74,15 +74,15 @@ __attribute__((target("arch=la464, tune=la664")))
 void archLa464tuneLa664() {}
 
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+div32" }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+f,+ual" }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+lsx,+ual" }
-// CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+div32,+frecipe,+lam-bh,+lamcas,+ld-seq-sa,+lsx,+scq,+ual" }
-// CHECK: attributes #[[ATTR4]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la464" "target-features"="+64bit,+d,+f,+lasx,+lsx,+ual" }
-// CHECK: attributes #[[ATTR5]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la664" "target-features"="+64bit,+d,+div32,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+scq,+ual" }
-// CHECK: attributes #[[ATTR6]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la664" "target-features"="+64bit,+d,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+scq,+ual,-div32" }
-// CHECK: attributes #[[ATTR7]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit" "tune-cpu"="la464" }
-// CHECK: attributes #[[ATTR8]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la464" "target-features"="+64bit,+d,+f,+lasx,+lsx,+ual" "tune-cpu"="la664" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+div32" }
+// CHECK: attributes #[[ATTR1]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+f,+ual" }
+// CHECK: attributes #[[ATTR2]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+lsx,+ual" }
+// CHECK: attributes #[[ATTR3]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch64" "target-features"="+64bit,+d,+div32,+frecipe,+lam-bh,+lamcas,+ld-seq-sa,+lsx,+scq,+ual" }
+// CHECK: attributes #[[ATTR4]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la464" "target-features"="+64bit,+d,+f,+lasx,+lsx,+ual" }
+// CHECK: attributes #[[ATTR5]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la664" "target-features"="+64bit,+d,+div32,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+scq,+ual" }
+// CHECK: attributes #[[ATTR6]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la664" "target-features"="+64bit,+d,+f,+frecipe,+lam-bh,+lamcas,+lasx,+ld-seq-sa,+lsx,+scq,+ual,-div32" }
+// CHECK: attributes #[[ATTR7]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit" "tune-cpu"="la464" }
+// CHECK: attributes #[[ATTR8]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la464" "target-features"="+64bit,+d,+f,+lasx,+lsx,+ual" "tune-cpu"="la664" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

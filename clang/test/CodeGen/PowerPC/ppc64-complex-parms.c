@@ -214,4 +214,4 @@ void bar_long_long(void) {
 // CHECK: %[[VAR77:[A-Za-z0-9.]+]] = load i64, ptr %[[VAR76]], align 8
 // CHECK: %{{[A-Za-z0-9.]+}} = call i64 @foo_long_long(i64 noundef %[[VAR75]], i64 noundef %[[VAR77]])
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { noipa noinline nounwind{{.*}} }

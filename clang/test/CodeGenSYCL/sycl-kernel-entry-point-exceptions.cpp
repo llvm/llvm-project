@@ -28,7 +28,7 @@ namespace ns1 {
     k();
   }
 }
-// CHECK: ; Function Attrs: mustprogress noinline optnone
+// CHECK: ; Function Attrs: mustprogress noipa noinline optnone
 // CHECK: define dso_local void @_ZN3ns14skepE2KTILi1ELi0EE() #{{[0-9]+}} {
 // CHECK:   call void @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(ptr noundef @.str)
 // CHECK:   ret void
@@ -46,7 +46,7 @@ namespace ns2 {
     k();
   }
 }
-// CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
+// CHECK: ; Function Attrs: mustprogress noipa noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns24skepE2KTILi2ELi0EE() #{{[0-9]+}} personality ptr @__gxx_personality_v0 {
 // CHECK:   invoke void @_ZN3ns218sycl_kernel_launchI2KNILi2EEJ2KTILi2ELi0EEEEEvPKcDpT0_(ptr noundef @.str.1)
 // CHECK:           to label %invoke.cont unwind label %terminate.lpad
@@ -70,7 +70,7 @@ namespace ns3 {
     k();
   }
 }
-// CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
+// CHECK: ; Function Attrs: mustprogress noipa noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #{{[0-9]+}} {
 // CHECK:   call void @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(ptr noundef @.str.2)
 // CHECK:   ret void
@@ -88,7 +88,7 @@ namespace ns4 {
     k();
   }
 }
-// CHECK: ; Function Attrs: mustprogress noinline nounwind optnone
+// CHECK: ; Function Attrs: mustprogress noipa noinline nounwind optnone
 // CHECK: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #{{[0-9]+}} {
 // CHECK:   call void @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(ptr noundef @.str.3)
 // CHECK:   ret void

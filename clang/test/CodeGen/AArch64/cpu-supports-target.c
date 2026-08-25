@@ -4,7 +4,7 @@
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
 //.
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @check_all_features(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -152,7 +152,7 @@ int check_all_features() {
     return 0;
 }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @neon_code(
 // CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -160,7 +160,7 @@ int check_all_features() {
 //
 int __attribute__((target("simd"))) neon_code() { return 1; }
 
-// CHECK: Function Attrs: noinline nounwind optnone vscale_range(1,16)
+// CHECK: Function Attrs: noipa noinline nounwind optnone vscale_range(1,16)
 // CHECK-LABEL: define dso_local i32 @sve_code(
 // CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -168,7 +168,7 @@ int __attribute__((target("simd"))) neon_code() { return 1; }
 //
 int __attribute__((target("sve"))) sve_code() { return 2; }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @code(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -176,7 +176,7 @@ int __attribute__((target("sve"))) sve_code() { return 2; }
 //
 int code() { return 3; }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @test_versions(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -217,7 +217,7 @@ int test_versions() {
     return code();
 }
 
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define dso_local i32 @test_long(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -233,9 +233,15 @@ int test_long(void) {
 }
 
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR1]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR2]] = { noipa noinline nounwind optnone vscale_range(1,16) "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+sve" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

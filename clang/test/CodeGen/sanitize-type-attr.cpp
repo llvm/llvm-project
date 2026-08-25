@@ -72,7 +72,7 @@ void char_caller() {
 
 // BL: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// TYSAN: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
+// TYSAN: attributes [[NOATTR]] = { mustprogress noipa noinline nounwind{{.*}} }
 // TYSAN: attributes [[WITH]] = { noinline nounwind sanitize_type{{.*}} }
 
 // TYSAN-DAG: !llvm.tysan.globals = !{[[G1MD:![0-9]+]], [[G2MD:![0-9]+]], [[G3MD:![0-9]+]], [[SXMD:![0-9]+]]}

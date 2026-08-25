@@ -5,11 +5,11 @@
 int foo();
 
 // CHECK-LABEL: define dso_local spir_func void @_Z3barv(
-// CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(4)
-// CHECK-NEXT:    [[CALL:%.*]] = call spir_func noundef i32 @_Z3foov() #[[ATTR1:[0-9]+]]
+// CHECK-NEXT:    [[CALL:%.*]] = call spir_func noundef i32 @_Z3foov() #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[A_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -18,7 +18,7 @@ void bar() {
 }
 
 // CHECK-LABEL: define dso_local spir_func noundef i32 @_Z3foov(
-// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
@@ -39,6 +39,7 @@ int main() {
   return 0;
 }
 //.
-// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1]] = { convergent nounwind }
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { convergent mustprogress noipa noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "sycl-module-id"="{{.*}}clang/test/CodeGenSYCL/function-attrs.cpp" }
+// CHECK: attributes #[[ATTR1]] = { convergent mustprogress noipa noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2]] = { convergent nounwind }
 //.

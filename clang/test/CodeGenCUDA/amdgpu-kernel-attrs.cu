@@ -184,7 +184,7 @@ __device__ void launch_bounds_device_fn() {
 // amdgpu-flat-work-group-size / amdgpu-waves-per-eu attribute is present.
 // String attributes are sorted, so the amdgpu-* attributes would appear
 // immediately after "optnone"; check that "no-trapping-math" follows directly.
-// CHECK-DAG: attributes [[LAUNCH_BOUNDS_DEVICE]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"={{.*}}"uniform-work-group-size" }
+// CHECK-DAG: attributes [[LAUNCH_BOUNDS_DEVICE]] = { convergent mustprogress noipa noinline nounwind optnone "no-trapping-math"={{.*}}"uniform-work-group-size" }
 // CHECK-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_128]] = !{i32 128, i32 1, i32 1}
 // CHECK-SPIRV-DAG: [[MAX_WORK_GROUP_SIZE_32]] = !{i32 32, i32 1, i32 1}
 

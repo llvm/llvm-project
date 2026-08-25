@@ -71,8 +71,8 @@ __host__ __device__ void bar() {
 
 
 //.
-// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
-// DEVICE: attributes #[[ATTR1]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// DEVICE: attributes #[[ATTR1]] = { mustprogress noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // DEVICE: attributes #[[ATTR2:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // DEVICE: attributes #[[ATTR3:[0-9]+]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // DEVICE: attributes #[[ATTR4]] = { convergent nounwind "uniform-work-group-size" }
@@ -81,7 +81,7 @@ __host__ __device__ void bar() {
 // DEVICE: attributes #[[ATTR7]] = { nounwind }
 // DEVICE: attributes #[[ATTR8]] = { nounwind "uniform-work-group-size" }
 //.
-// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
+// HOST: attributes #[[ATTR0]] = { mustprogress noipa noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
 // HOST: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
 // HOST: attributes #[[ATTR2]] = { "uniform-work-group-size" }
 // HOST: attributes #[[ATTR3]] = { nounwind memory(none) }

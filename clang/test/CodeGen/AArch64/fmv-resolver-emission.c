@@ -86,14 +86,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK: @linkonce_func = weak_odr ifunc void (), ptr @linkonce_func.resolver
 // CHECK: @clones_with_default = weak_odr ifunc void (), ptr @clones_with_default.resolver
 //.
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_before_default_def._Maes
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_before_def
 // CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -101,28 +101,28 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_before_default_def.default
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_after_default_def._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_after_default_def.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_after_def
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -130,14 +130,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_before_default_decl._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_before_decl
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -145,14 +145,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_after_default_decl._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_after_decl
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -160,14 +160,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@used_no_default._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_no_default
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -175,42 +175,42 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@not_used_no_default._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@not_used_with_default._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@not_used_with_default.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@indirect_use._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@indirect_use.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_indirectly
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -221,7 +221,7 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_internal
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -229,7 +229,7 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@call_linkonce
 // CHECK-SAME: () #[[ATTR1]] {
 // CHECK-NEXT:  entry:
@@ -237,21 +237,21 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@clones_with_default.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@clones_with_default._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@clones_without_default._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -322,14 +322,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @indirect_use.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@internal_func._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@internal_func.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -352,14 +352,14 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @internal_func.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@linkonce_func._Maes
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK: Function Attrs: noipa noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@linkonce_func.default
 // CHECK-SAME: () #[[ATTR2]] {
 // CHECK-NEXT:  entry:
@@ -398,5 +398,11 @@ __attribute__((target_clones("aes"))) void clones_without_default(void) {}
 // CHECK-NEXT:    ret ptr @clones_with_default.default
 //
 //.
-// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"ptrauth-elf-got", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{i32 1, !"ptrauth-init-fini", i32 0}
+// CHECK: [[META2:![0-9]+]] = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+// CHECK: [[META3:![0-9]+]] = !{i32 1, !"ptrauth-sign-personality", i32 0}
+// CHECK: [[META4:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
+// CHECK: [[META5:![0-9]+]] = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+// CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -71,4 +71,4 @@ void test_volatile_load() {
 
 }
 
-// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noipa noinline nounwind{{.*}} }

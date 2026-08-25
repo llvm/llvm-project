@@ -59,7 +59,7 @@ public:
 } d = 0;
 
 //.
-// CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone sanitize_type "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// CHECK: attributes #[[ATTR0]] = { mustprogress noipa noinline nounwind optnone sanitize_type "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR1:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR2:[0-9]+]] = { noinline nounwind sanitize_type "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }

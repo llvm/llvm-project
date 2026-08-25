@@ -18,8 +18,8 @@ __attribute__((target("arch=la32rv1.0")))
 void testLa32rv10() {}
 
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit,+32s" }
-// CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit" }
+// CHECK: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit,+32s" }
+// CHECK: attributes #[[ATTR1]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="loongarch32" "target-features"="+32bit" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -30,4 +30,4 @@ void quux(int a1, int a2, int a3) {
 // M68K-LABEL: define{{.*}} m68k_rtdcc void @quux
 // CHECK: call void (i32, ...) @qux
 
-// X86: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// X86: attributes [[NUW]] = { noipa noinline nounwind{{.*}} }

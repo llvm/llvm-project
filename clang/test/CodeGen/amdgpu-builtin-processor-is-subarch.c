@@ -33,13 +33,13 @@ void gfx900_name() {
 }
 
 //.
-// AMDGPU900: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGPU900: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGPU900: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // AMDGPU900: attributes #[[ATTR2]] = { noreturn nounwind }
 //.
-// AMDGPU9_NOCPU: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGPU9_NOCPU: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// AMDGPU900_CPU: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" }
+// AMDGPU900_CPU: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" }
 // AMDGPU900_CPU: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // AMDGPU900_CPU: attributes #[[ATTR2]] = { noreturn nounwind }
 //.

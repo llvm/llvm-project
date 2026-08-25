@@ -62,13 +62,13 @@ void foo() {
         return __builtin_trap();
 }
 //.
-// AMDGCN-GFX900: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGCN-GFX900: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGCN-GFX900: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // AMDGCN-GFX900: attributes #[[ATTR2]] = { noreturn nounwind }
 //.
-// AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGCN-GFX1010: attributes #[[ATTR0]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// AMDGCNSPIRV: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// AMDGCNSPIRV: attributes #[[ATTR0]] = { noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGCNSPIRV: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 // AMDGCNSPIRV: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
 // AMDGCNSPIRV: attributes #[[ATTR3]] = { noreturn nounwind }

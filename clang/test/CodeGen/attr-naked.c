@@ -31,5 +31,5 @@ __attribute__((naked)) void t4(int len, char x[len]) {
   // CHECK: unreachable
 }
 
-// CHECK: attributes [[NAKED_OPTNONE]] = { naked noinline nounwind optnone{{.*}} }
+// CHECK: attributes [[NAKED_OPTNONE]] = { naked noipa noinline nounwind optnone{{.*}} }
 // CHECK: attributes [[NAKED]] = { naked noinline nounwind{{.*}} }

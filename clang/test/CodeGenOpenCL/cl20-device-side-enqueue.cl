@@ -445,7 +445,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
 // COMMON: define{{.*}} void [[INVGK10]](ptr addrspace(4){{.*}})
 // COMMON: define{{.*}} void [[INVGK11]](ptr addrspace(4){{.*}})
 
-// SPIR: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noipa noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // SPIR: attributes [[INVOKE_KERNEL_ATTR]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// X86: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="{{[^"]*}}" }
+// X86: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noipa noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="{{[^"]*}}" }
 // X86: attributes [[INVOKE_KERNEL_ATTR]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="{{[^"]*}}" }
