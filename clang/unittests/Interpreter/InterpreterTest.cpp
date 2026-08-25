@@ -599,6 +599,7 @@ TEST_F(InterpreterTest, NativePlatformSupport) {
   llvm::setCurrentDebugType("orc");
   testing::internal::CaptureStderr();
   auto ExecutorOrErr = IEB->create(TSC, CI->getTarget());
+  llvm::consumeError(ExecutorOrErr.takeError());
   llvm::setCurrentDebugType("");
   llvm::DebugFlag = DebugFlagPrev;
   std::string output = testing::internal::GetCapturedStderr();
