@@ -199,6 +199,7 @@ static Value *expand16BitIsNormal(CallInst *Orig) {
 }
 
 static bool shouldExpandFloatDotIntrinsic(Function &F) {
+  assert(F.getIntrinsicID() == Intrinsic::dx_fdot && "Function is not a dx.fdot intrinsic");
   auto *ParamTy = cast<FixedVectorType>(F.getFunctionType()->getParamType(0));
   return ParamTy->getNumElements() <= 4 ||
          F.getParent()->getTargetTriple().getOSVersion() < VersionTuple(6, 9);
@@ -456,10 +457,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig) {
   Value *A = Orig->getOperand(0);
   Value *B = Orig->getOperand(1);
   unsigned NumElts = cast<FixedVectorType>(A->getType())->getNumElements();
-  if (NumElts <= 4)
-    return expandFloatDotChunk(Orig, A, B);
 
-  assert(Orig->getModule()->getTargetTriple().getOSVersion() <
+  assert(NumElts <= 4 || Orig->getModule()->getTargetTriple().getOSVersion() <
              VersionTuple(6, 9) &&
          "long fdot must not be expanded for shader model 6.9 or later");
 
