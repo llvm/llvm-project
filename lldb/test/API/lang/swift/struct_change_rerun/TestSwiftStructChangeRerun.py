@@ -61,6 +61,10 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertFalse(var_a_c.IsValid(), "make sure a.c doesn't exist")
         process.Kill()
 
+        # The updated copied_main_swift might not get rebuilt by Make if it is
+        # changed within the same second, as they will have the same mtime.
+        # A clean build fixes this.
+        self.build(make_targets=["clean"])
         
         print('build with main2.swift')
         cleanup()
