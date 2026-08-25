@@ -1,3 +1,2 @@
-=====================================
-The PDB Global Symbol Stream
-=====================================
+# The PDB Global Symbol Stream
+

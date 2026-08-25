@@ -1,3 +1,2 @@
-=====================================
-The PDB Public Symbol Stream
-=====================================
+# The PDB Public Symbol Stream
+
