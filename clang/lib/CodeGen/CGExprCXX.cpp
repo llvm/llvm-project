@@ -1155,7 +1155,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
         Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
       }
       // An EmbedExpr can initialize more than one array element.
-      if (const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts())) {
+      const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts());
+      if (EmbedS && EmbedS->getDataElementCount() > 1) {
         const StringLiteral *SL = EmbedS->getDataStringLiteral();
         llvm::Type *DataTy = ConvertType(EmbedS->getType());
         for (unsigned I = EmbedS->getStartingElementPos(),

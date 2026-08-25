@@ -207,3 +207,16 @@ void f12() {
 #embed <embed-data.txt> limit(2)
   };
 }
+
+// Complex elements are converted from one data element each.
+// CHECK-LABEL: define {{.*}}void @_Z3f13v(
+// CHECK: call {{.*}}ptr @_Znam(i64 noundef 32)
+// CHECK: store double 4.800000e+01, ptr
+// CHECK: store double 0.000000e+00, ptr
+// CHECK: store double 4.900000e+01, ptr
+// CHECK: store double 0.000000e+00, ptr
+void f13() {
+  _Complex double *p = new _Complex double[]{
+#embed <embed-data.txt> limit(2)
+  };
+}

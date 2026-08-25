@@ -532,8 +532,8 @@ features cannot lower the translation-unit ABI level;
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
 
 - Fixed an assertion failure when `#embed` was used in the braced initializer
-  of an array new-expression; codegen now expands the embedded data into the
-  individual array elements. (#GH128985)
+  of an array new-expression, or of an array whose elements are of class type.
+  (#GH128985)
 
 #### Bug Fixes to AST Handling
 

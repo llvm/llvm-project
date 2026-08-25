@@ -564,7 +564,8 @@ class InitListChecker {
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
     if (Entity.getKind() == InitializedEntity::EK_ArrayElement &&
-        Entity.getType()->isScalarType()) {
+        (Entity.getType()->isIntegerType() ||
+         Entity.getType()->isRealFloatingType())) {
       unsigned ArrIndex = Entity.getElementIndex();
       auto *AType =
           SemaRef.Context.getAsArrayType(Entity.getParent()->getType());

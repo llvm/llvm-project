@@ -47,4 +47,8 @@ void f(int x) {
   A v[] = {1, 2, 3,
 #embed __FILE__ limit(10)
   };
+
+  _Complex double *w = new _Complex double[]{
+#embed __FILE__ limit(10)
+  };
 }
