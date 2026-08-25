@@ -29,6 +29,7 @@ namespace clang::ento::bounds {
 struct CheckFlags {
   unsigned CheckUnderflow : 1;
   unsigned OffsetObviouslyNonnegative : 1;
+  unsigned AlsoAcceptEquality : 1;
 };
 
 class CheckResult;
@@ -91,16 +92,30 @@ private:
   ProgramStateRef InBoundsState = nullptr;
 };
 
-// Evaluate the comparison Value < Threshold with the help of the custom
+enum class Comparison { LT, LE, EQ };
+
+inline BinaryOperator::Opcode asOpcode(Comparison C) {
+  switch (C) {
+  case Comparison::LT:
+    return BO_LT;
+  case Comparison::LE:
+    return BO_LE;
+  case Comparison::EQ:
+    return BO_EQ;
+  }
+  llvm_unreachable("unhandled Comparison kind");
+}
+
+// Evaluate the comparison \p Value < \p Threshold with the help of the custom
 // simplification algorithm. Return a pair of states, where the first one
 // corresponds to "value below threshold" and the second corresponds to "value
 // at or above threshold". Returns {nullptr, nullptr} in the case when the
 // evaluation fails.
-// If the optional argument CheckEquality is true, then use BO_EQ instead of
-// the default BO_LT after consistently applying the same simplification steps.
+// If the optional argument \p CmpKind is specified, then that comparison
+// operator is used (instead of the default '<') after the same simplification
 std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB, NonLoc Value,
-                        NonLoc Threshold, bool CheckEquality = false);
+                        NonLoc Threshold, Comparison CmpKind = Comparison::LT);
 } // namespace clang::ento::bounds
 
 #endif // LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H
