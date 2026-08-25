@@ -233,6 +233,6 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
 // CHECK: ![[M1]] = !{i32 1, ![[M2:[0-9]+]]}
-// CHECK: ![[M2]] = !{!"aarch64.atomic_hint", i32 0}
+// CHECK: ![[M2]] = !{!"aarch64.mem_hint", i32 0}
 // CHECK: ![[M3]] = !{i32 1, ![[M4:[0-9]+]]}
-// CHECK: ![[M4]] = !{!"aarch64.atomic_hint", i32 1}
+// CHECK: ![[M4]] = !{!"aarch64.mem_hint", i32 1}
