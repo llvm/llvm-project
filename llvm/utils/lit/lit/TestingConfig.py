@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 
@@ -243,6 +244,18 @@ class TestingConfig:
             # FIXME: This should really only be suite in test suite config
             # files. Should we distinguish them?
             self.test_exec_root = str(self.test_exec_root)
+        # Optionally relocate this suite's writable output tree under a
+        # caller-specified root, so %t/Output/.lit_test_times.txt/etc. resolve
+        # under <root>/<suite-name> instead of the build tree.
+        if litConfig.test_output_root and not getattr(
+            self, "_test_output_root_applied", False
+        ):
+            # Sanitize the suite name into a single safe path component.
+            suite_dir = re.sub(r"[^\w.-]", "_", self.name)
+            self.test_exec_root = os.path.join(
+                os.path.abspath(litConfig.test_output_root), suite_dir
+            )
+            self._test_output_root_applied = True
         if self.test_source_root is not None:
             # FIXME: This should really only be suite in test suite config
             # files. Should we distinguish them?

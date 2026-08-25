@@ -383,6 +383,14 @@ def parse_args():
         help="Enable individual test case coverage",
     )
     execution_group.add_argument(
+        "--test-output-root",
+        dest="test_output_root",
+        metavar="DIR",
+        default=None,
+        help="Write all test output under DIR instead of each test suite's "
+        "default test_exec_root.",
+    )
+    execution_group.add_argument(
         "--ignore-fail",
         dest="ignoreFail",
         action="store_true",
