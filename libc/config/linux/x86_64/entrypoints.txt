@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
     libc.src.sys.resource.setrlimit
 
     # sys/sem.h entrypoints

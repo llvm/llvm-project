@@ -886,21 +886,27 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
   if (!NumRecordsIfKnown->second)
     return Result;
   const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
-  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
-  // on arcihtecture) no bounds check.
-  if (NumRecords->isAllOnesValue())
+
+  // We'll normalize all bounds to the num_records width on the hardware.
+  std::optional<unsigned> MaybeNumRecordsWidth =
+      ST->getBufferResourceNumRecordsWidth();
+  if (!MaybeNumRecordsWidth)
+    return Result;
+  unsigned NumRecordsWidth = *MaybeNumRecordsWidth;
+  Type *NumRecordsTy = IRB.getIntNTy(NumRecordsWidth);
+  // Compare in i64 so wraparound is visible as a negative.
+  Type *CompareTy = IRB.getInt64Ty();
+  const SCEV *Bound = SE->getNoopOrZeroExtend(
+      SE->getTruncateOrZeroExtend(NumRecords, NumRecordsTy), CompareTy);
+
+  // All-1s is (per ISA or as a consequence of the bounds check rules, depending
+  // on architecture) no bounds check.
+  if (Bound == SE->getConstant(APInt::getMaxValue(NumRecordsWidth)
+                                   .zext(CompareTy->getIntegerBitWidth())))
     Result.NoPartialOOB = true;
 
-  const SCEV *BoundsDiff;
-  if (ST->getBufferResourceNumRecordsWidth() == 45) {
-    const SCEV *PtrDiffExt =
-        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
-    BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
-  } else {
-    const SCEV *NumRecordsI32 =
-        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
-    BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
-  }
+  const SCEV *BoundsDiff =
+      SE->getMinusSCEV(Bound, SE->getNoopOrZeroExtend(PtrDiff, CompareTy));
 
   if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
       SE->isKnownNonPositive(BoundsDiff))
