@@ -32,7 +32,21 @@ int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
 int __attribute__((target("arch=diamondrapids"))) foo(void) {return 27;}
 int __attribute__((target("arch=wildcatlake"))) foo(void) {return 28;}
 int __attribute__((target("arch=novalake"))) foo(void) {return 29;}
-int __attribute__((target("apxf"))) foo(void) {return 30;}
+int __attribute__((target("arch=corei7"))) foo(void) {return 30;}
+int __attribute__((target("arch=bonnell"))) foo(void) {return 31;}
+int __attribute__((target("arch=atom"))) foo(void) {return 32;}
+int __attribute__((target("arch=silvermont"))) foo(void) {return 33;}
+int __attribute__((target("arch=slm"))) foo(void) {return 34;}
+int __attribute__((target("arch=knl"))) foo(void) {return 35;}
+int __attribute__((target("arch=knm"))) foo(void) {return 36;}
+int __attribute__((target("arch=nehalem"))) foo(void) {return 37;}
+int __attribute__((target("arch=westmere"))) foo(void) {return 38;}
+int __attribute__((target("arch=haswell"))) foo(void) {return 39;}
+int __attribute__((target("arch=broadwell"))) foo(void) {return 40;}
+int __attribute__((target("arch=skylake"))) foo(void) {return 41;}
+int __attribute__((target("arch=skylake-avx512"))) foo(void) {return 42;}
+int __attribute__((target("arch=cannonlake"))) foo(void) {return 43;}
+int __attribute__((target("arch=cascadelake"))) foo(void) {return 44;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -210,8 +224,36 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret i32 28
 // ITANIUM: define{{.*}} i32 @foo.arch_novalake()
 // ITANIUM: ret i32 29
-// ITANIUM: define{{.*}} i32 @foo.apxf()
+// ITANIUM: define{{.*}} i32 @foo.arch_corei7()
 // ITANIUM: ret i32 30
+// ITANIUM: define{{.*}} i32 @foo.arch_bonnell()
+// ITANIUM: ret i32 31
+// ITANIUM: define{{.*}} i32 @foo.arch_atom()
+// ITANIUM: ret i32 32
+// ITANIUM: define{{.*}} i32 @foo.arch_silvermont()
+// ITANIUM: ret i32 33
+// ITANIUM: define{{.*}} i32 @foo.arch_slm()
+// ITANIUM: ret i32 34
+// ITANIUM: define{{.*}} i32 @foo.arch_knl()
+// ITANIUM: ret i32 35
+// ITANIUM: define{{.*}} i32 @foo.arch_knm()
+// ITANIUM: ret i32 36
+// ITANIUM: define{{.*}} i32 @foo.arch_nehalem()
+// ITANIUM: ret i32 37
+// ITANIUM: define{{.*}} i32 @foo.arch_westmere()
+// ITANIUM: ret i32 38
+// ITANIUM: define{{.*}} i32 @foo.arch_haswell()
+// ITANIUM: ret i32 39
+// ITANIUM: define{{.*}} i32 @foo.arch_broadwell()
+// ITANIUM: ret i32 40
+// ITANIUM: define{{.*}} i32 @foo.arch_skylake()
+// ITANIUM: ret i32 41
+// ITANIUM: define{{.*}} i32 @foo.arch_skylake-avx512()
+// ITANIUM: ret i32 42
+// ITANIUM: define{{.*}} i32 @foo.arch_cannonlake()
+// ITANIUM: ret i32 43
+// ITANIUM: define{{.*}} i32 @foo.arch_cascadelake()
+// ITANIUM: ret i32 44
 // ITANIUM: define{{.*}} i32 @foo()
 // ITANIUM: ret i32 2
 // ITANIUM: define{{.*}} i32 @bar()
@@ -275,8 +317,36 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 28
 // WINDOWS: define dso_local i32 @foo.arch_novalake()
 // WINDOWS: ret i32 29
-// WINDOWS: define dso_local i32 @foo.apxf()
+// WINDOWS: define dso_local i32 @foo.arch_corei7()
 // WINDOWS: ret i32 30
+// WINDOWS: define dso_local i32 @foo.arch_bonnell()
+// WINDOWS: ret i32 31
+// WINDOWS: define dso_local i32 @foo.arch_atom()
+// WINDOWS: ret i32 32
+// WINDOWS: define dso_local i32 @foo.arch_silvermont()
+// WINDOWS: ret i32 33
+// WINDOWS: define dso_local i32 @foo.arch_slm()
+// WINDOWS: ret i32 34
+// WINDOWS: define dso_local i32 @foo.arch_knl()
+// WINDOWS: ret i32 35
+// WINDOWS: define dso_local i32 @foo.arch_knm()
+// WINDOWS: ret i32 36
+// WINDOWS: define dso_local i32 @foo.arch_nehalem()
+// WINDOWS: ret i32 37
+// WINDOWS: define dso_local i32 @foo.arch_westmere()
+// WINDOWS: ret i32 38
+// WINDOWS: define dso_local i32 @foo.arch_haswell()
+// WINDOWS: ret i32 39
+// WINDOWS: define dso_local i32 @foo.arch_broadwell()
+// WINDOWS: ret i32 40
+// WINDOWS: define dso_local i32 @foo.arch_skylake()
+// WINDOWS: ret i32 41
+// WINDOWS: define dso_local i32 @foo.arch_skylake-avx512()
+// WINDOWS: ret i32 42
+// WINDOWS: define dso_local i32 @foo.arch_cannonlake()
+// WINDOWS: ret i32 43
+// WINDOWS: define dso_local i32 @foo.arch_cascadelake()
+// WINDOWS: ret i32 44
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
@@ -285,18 +355,100 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: define weak_odr ptr @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] 
 // LINUX-SAME: comdat
 // ITANIUM: call void @__cpu_indicator_init()
-// ITANIUM: ret ptr @foo.apxf
+// ITANIUM: ret ptr @foo.arch_diamondrapids
+// ITANIUM: ret ptr @foo.arch_tigerlake
+// ITANIUM: ret ptr @foo.arch_cooperlake
+// ITANIUM: ret ptr @foo.arch_cascadelake
+// ITANIUM: ret ptr @foo.arch_icelake-client
+// ITANIUM: ret ptr @foo.arch_icelake-server
+// ITANIUM: ret ptr @foo.arch_rocketlake
+// ITANIUM: ret ptr @foo.arch_cannonlake
+// ITANIUM: ret ptr @foo.arch_knl
+// ITANIUM: ret ptr @foo.arch_skylake-avx512
+// ITANIUM: ret ptr @foo.arch_alderlake
+// ITANIUM: ret ptr @foo.arch_raptorlake
+// ITANIUM: ret ptr @foo.arch_meteorlake
+// ITANIUM: ret ptr @foo.arch_sierraforest
+// ITANIUM: ret ptr @foo.arch_grandridge
+// ITANIUM: ret ptr @foo.arch_arrowlake
+// ITANIUM: ret ptr @foo.arch_arrowlake-s
+// ITANIUM: ret ptr @foo.arch_lunarlake
+// ITANIUM: ret ptr @foo.arch_gracemont
+// ITANIUM: ret ptr @foo.arch_pantherlake
+// ITANIUM: ret ptr @foo.arch_clearwaterforest
+// ITANIUM: ret ptr @foo.arch_wildcatlake
+// ITANIUM: ret ptr @foo.arch_novalake
+// ITANIUM: ret ptr @foo.arch_haswell
+// ITANIUM: ret ptr @foo.arch_broadwell
+// ITANIUM: ret ptr @foo.arch_skylake
 // ITANIUM: ret ptr @foo.arch_sandybridge
 // ITANIUM: ret ptr @foo.arch_ivybridge
+// ITANIUM: ret ptr @foo.arch_westmere
+// ITANIUM: ret ptr @foo.arch_goldmont
+// ITANIUM: ret ptr @foo.arch_goldmont-plus
+// ITANIUM: ret ptr @foo.arch_tremont
+// ITANIUM: ret ptr @foo.arch_corei7
+// ITANIUM: ret ptr @foo.arch_silvermont
+// ITANIUM: ret ptr @foo.arch_slm
+// ITANIUM: ret ptr @foo.arch_nehalem
 // ITANIUM: ret ptr @foo.sse4.2
+// ITANIUM: ret ptr @foo.arch_core2
+// ITANIUM: ret ptr @foo.arch_bonnell
+// ITANIUM: ret ptr @foo.arch_atom
+// ITANIUM: ret ptr @foo.arch_sapphirerapids
+// ITANIUM: ret ptr @foo.arch_graniterapids
+// ITANIUM: ret ptr @foo.arch_emeraldrapids
+// ITANIUM: ret ptr @foo.arch_graniterapids-d
+// ITANIUM: ret ptr @foo.arch_knm
 // ITANIUM: ret ptr @foo
 
 // WINDOWS: define weak_odr dso_local i32 @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] comdat
 // WINDOWS: call void @__cpu_indicator_init()
-// WINDOWS: call i32 @foo.apxf
+// WINDOWS: call i32 @foo.arch_diamondrapids
+// WINDOWS: call i32 @foo.arch_tigerlake
+// WINDOWS: call i32 @foo.arch_cooperlake
+// WINDOWS: call i32 @foo.arch_cascadelake
+// WINDOWS: call i32 @foo.arch_icelake-client
+// WINDOWS: call i32 @foo.arch_icelake-server
+// WINDOWS: call i32 @foo.arch_rocketlake
+// WINDOWS: call i32 @foo.arch_cannonlake
+// WINDOWS: call i32 @foo.arch_knl
+// WINDOWS: call i32 @foo.arch_skylake-avx512
+// WINDOWS: call i32 @foo.arch_alderlake
+// WINDOWS: call i32 @foo.arch_raptorlake
+// WINDOWS: call i32 @foo.arch_meteorlake
+// WINDOWS: call i32 @foo.arch_sierraforest
+// WINDOWS: call i32 @foo.arch_grandridge
+// WINDOWS: call i32 @foo.arch_arrowlake
+// WINDOWS: call i32 @foo.arch_arrowlake-s
+// WINDOWS: call i32 @foo.arch_lunarlake
+// WINDOWS: call i32 @foo.arch_gracemont
+// WINDOWS: call i32 @foo.arch_pantherlake
+// WINDOWS: call i32 @foo.arch_clearwaterforest
+// WINDOWS: call i32 @foo.arch_wildcatlake
+// WINDOWS: call i32 @foo.arch_novalake
+// WINDOWS: call i32 @foo.arch_haswell
+// WINDOWS: call i32 @foo.arch_broadwell
+// WINDOWS: call i32 @foo.arch_skylake
 // WINDOWS: call i32 @foo.arch_sandybridge
 // WINDOWS: call i32 @foo.arch_ivybridge
+// WINDOWS: call i32 @foo.arch_westmere
+// WINDOWS: call i32 @foo.arch_goldmont
+// WINDOWS: call i32 @foo.arch_goldmont-plus
+// WINDOWS: call i32 @foo.arch_tremont
+// WINDOWS: call i32 @foo.arch_corei7
+// WINDOWS: call i32 @foo.arch_silvermont
+// WINDOWS: call i32 @foo.arch_slm
+// WINDOWS: call i32 @foo.arch_nehalem
 // WINDOWS: call i32 @foo.sse4.2
+// WINDOWS: call i32 @foo.arch_core2
+// WINDOWS: call i32 @foo.arch_bonnell
+// WINDOWS: call i32 @foo.arch_atom
+// WINDOWS: call i32 @foo.arch_sapphirerapids
+// WINDOWS: call i32 @foo.arch_graniterapids
+// WINDOWS: call i32 @foo.arch_emeraldrapids
+// WINDOWS: call i32 @foo.arch_graniterapids-d
+// WINDOWS: call i32 @foo.arch_knm
 // WINDOWS: call i32 @foo
 
 /// Internal linkage resolvers do not use comdat.

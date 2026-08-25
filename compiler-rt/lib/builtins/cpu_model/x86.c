@@ -148,7 +148,9 @@ enum ProcessorFeatures {
   FEATURE_AVX512CD,
   FEATURE_AVX512VBMI = 26,
   FEATURE_AVX512IFMA,
-  FEATURE_AVX512VPOPCNTDQ = 30,
+  FEATURE_AVX5124VNNIW,
+  FEATURE_AVX5124FMAPS,
+  FEATURE_AVX512VPOPCNTDQ,
   FEATURE_AVX512VBMI2,
   FEATURE_GFNI,
   FEATURE_VPCLMULQDQ,
@@ -1071,6 +1073,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((ECX >> 29) & 1))
     setFeature(FEATURE_ENQCMD);
 
+  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX5124VNNIW);
+  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 5) & 1))
     setFeature(FEATURE_UINTR);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
