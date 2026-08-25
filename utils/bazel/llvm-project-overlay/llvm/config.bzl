@@ -101,7 +101,7 @@ macos_defines = posix_defines + fenv_defines + [
     "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
     "HAVE_UNW_ADD_DYNAMIC_FDE=1",
 
-  # LLVM features
+    # LLVM features
     r'LTDL_SHLIB_EXT=\".dylib\"',
     r'LLVM_PLUGIN_EXT=\".dylib\"',
 ]
