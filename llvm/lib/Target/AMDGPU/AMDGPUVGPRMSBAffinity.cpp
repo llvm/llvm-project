@@ -391,16 +391,22 @@ void AMDGPUVGPRMSBAffinity::buildValueGroups(MachineFunction &MF) {
             UnionVGroup(MO.getReg(), Def.getReg());
         }
       }
-      // Coalesce the accumulator chain dst <- src2: across an unrolled K-loop
-      // this chains acc0->acc1->... into one value group so the footprint
-      // counts the accumulator once. Disjoint output tiles never merge.
+      // Coalesce the accumulator chain dst <- src2, but only when src2 is
+      // itself produced by a matrix op -- i.e. this instruction threads one
+      // accumulator through a sequence of them (an unrolled K-loop, acc0 ->
+      // acc1 -> ...), so the footprint counts that accumulator once. A lone
+      // matrix op whose src2 comes from elsewhere keeps dst and src2 distinct.
       if (SIInstrInfo::isWMMA(MI) || TII->isMAI(MI)) {
         const MachineOperand *D =
             TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
         const MachineOperand *S2 =
             TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-        if (D && D->isReg() && S2 && S2->isReg())
-          UnionVGroup(D->getReg(), S2->getReg());
+        if (D && D->isReg() && S2 && S2->isReg() && S2->getReg().isVirtual()) {
+          MachineInstr *Src2Def = MRI->getUniqueVRegDef(S2->getReg());
+          if (Src2Def &&
+              (SIInstrInfo::isWMMA(*Src2Def) || TII->isMAI(*Src2Def)))
+            UnionVGroup(D->getReg(), S2->getReg());
+        }
       }
     }
   }
