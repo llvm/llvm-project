@@ -8466,10 +8466,11 @@ indicates that, each time execution reaches the peeled iterations, execution is
 estimated to exit them without reaching the remaining loop's header.
 
 Even if the probability of reaching a loop's header is low, if it is reached, it
-is the start of an iteration.  Consequently, some passes historically assume
-that `llvm::getLoopEstimatedTripCount` always returns a positive count or
-`std::nullopt`.  Thus, it returns `std::nullopt` when
-`llvm.loop.estimated_trip_count` is 0.
+is the start of an iteration.  Some passes therefore need a positive trip count.
+Even so, `llvm::getLoopEstimatedTripCount` returns 0 when
+`llvm.loop.estimated_trip_count` is 0, so that a zero estimate can be told apart
+from a missing estimate, for which it returns `std::nullopt`.  Passes that need a
+positive trip count must check for zero.
 
 #### '`llvm.licm.disable`' Metadata
 
@@ -12887,9 +12888,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptoui double 123.0 to i32      ; yields i32:123
-%Y = fptoui float 1.0E+300 to i1     ; yields i1:poison
-%Z = fptoui float 1.04E+17 to i8     ; yields i8:poison
+%X  = fptoui double 123.0 to i32     ; yields i32:123
+%Y  = fptoui float 1.0E-24 to i1     ; yields i1:false
+%Z  = fptoui float -1.04E+17 to i8   ; yields i8:poison
+%W1 = fptoui double -0.999 to i32    ; yields i32:0
+%W2 = fptoui double -1.0 to i32      ; yields i32:poison
 ```
 
 #### '`fptosi .. to`' Instruction
@@ -12922,9 +12925,11 @@ is a {ref}`poison value <poisonvalues>`.
 ##### Example:
 
 ```llvm
-%X = fptosi double -123.0 to i32      ; yields i32:-123
-%Y = fptosi float 1.0E-247 to i1      ; yields i1:poison
-%Z = fptosi float 1.04E+17 to i8      ; yields i8:poison
+%X  = fptosi double -123.0 to i32     ; yields i32:-123
+%Y  = fptosi float 1.0E-24 to i1      ; yields i1:false
+%Z  = fptosi float 1.04E+17 to i8     ; yields i8:poison
+%W1 = fptosi double -128.9 to i8      ; yields i8:-128
+%W2 = fptosi double -129.0 to i8      ; yields i8:poison
 ```
 
 (i_uitofp)=

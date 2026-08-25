@@ -224,15 +224,19 @@ private:
 };
 
 /// This class represents a group of order-independent optional clauses. Each
-/// clause starts with a literal element and has a coressponding parsing
-/// element. A parsing element is a continous sequence of format elements.
-/// Each clause can appear 0 or 1 time.
+/// clause starts with a literal element and has a corresponding parsing
+/// element. A parsing element is a continuous sequence of format elements.
+/// Each clause can appear 0 or 1 time. An optional literal separates clauses.
 class OIListElement : public DirectiveElementBase<DirectiveElement::OIList> {
 public:
-  OIListElement(std::vector<FormatElement *> &&literalElements,
+  OIListElement(LiteralElement *separator,
+                std::vector<FormatElement *> &&literalElements,
                 std::vector<std::vector<FormatElement *>> &&parsingElements)
-      : literalElements(std::move(literalElements)),
+      : separator(separator), literalElements(std::move(literalElements)),
         parsingElements(std::move(parsingElements)) {}
+
+  /// Returns the optional separator between clauses.
+  LiteralElement *getSeparator() const { return separator; }
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
@@ -265,6 +269,9 @@ public:
   }
 
 private:
+  /// An optional literal printed and parsed between clauses.
+  LiteralElement *separator;
+
   /// A vector of `LiteralElement` objects. Each element stores the keyword
   /// for one case of oilist element. For example, an oilist element along with
   /// the `literalElements` vector:
@@ -1633,11 +1640,41 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
     /// OIList Directive
   } else if (OIListElement *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+    }
+
     for (LiteralElement *le : oilist->getLiteralElements())
       body << "  bool " << le->getSpelling() << "Clause = false;\n";
+    if (oilist->getSeparator())
+      body << "  bool oilistClauseParsed = false;\n";
 
     // Generate the parsing loop
     body << "  while(true) {\n";
+    if (LiteralElement *separator = oilist->getSeparator()) {
+      body << "    auto oilistSeparatorLoc = parser.getCurrentLocation();\n";
+      body << "    if (oilistClauseParsed) {\n";
+      body << "      if (failed(parser.parseOptional";
+      genLiteralParser(separator->getSpelling(), body);
+      body << ")) {\n";
+      body << "        if (";
+      llvm::interleave(
+          oilist->getLiteralElements(),
+          [&](LiteralElement *literal) {
+            body << "succeeded(parser.parseOptional";
+            genLiteralParser(literal->getSpelling(), body);
+            body << ")";
+          },
+          [&] { body << " || "; });
+      body << ")\n";
+      body << "          return parser.emitError(oilistSeparatorLoc,\n"
+              "              \"expected '"
+           << separator->getSpelling() << "' between oilist clauses\");\n";
+      body << "        break;\n";
+      body << "      }\n";
+      body << "    }\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -1646,6 +1683,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << ")) {\n";
       StringRef lelementName = lelement->getSpelling();
       body << formatv(oilistParserCode, lelementName);
+      if (oilist->getSeparator())
+        body << "    oilistClauseParsed = true;\n";
       if (AttributeLikeVariable *unitVarElem =
               oilist->getUnitVariableParsingElement(pelement)) {
         if (isa<PropertyVariable>(unitVarElem)) {
@@ -1665,9 +1704,16 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << "    } else ";
     }
     body << " {\n";
+    if (oilist->getSeparator()) {
+      body << "    if (oilistClauseParsed)\n";
+      body << "      return parser.emitError(oilistSeparatorLoc,\n"
+              "          \"expected oilist clause after separator\");\n";
+    }
     body << "    break;\n";
     body << "  }\n";
     body << "}\n";
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -2565,6 +2611,11 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+      body << "  bool oilistClausePrinted = false;\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2607,6 +2658,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
 
       body << ") {\n";
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        body << "    if (oilistClausePrinted) {\n";
+        genLiteralPrinter(separator->getSpelling(), body, shouldEmitSpace,
+                          lastWasPunctuation);
+        body << "    }\n";
+        body << "    oilistClausePrinted = true;\n";
+      }
       genLiteralPrinter(lelement->getSpelling(), body, shouldEmitSpace,
                         lastWasPunctuation);
       if (oilist->getUnitVariableParsingElement(pelement) == nullptr) {
@@ -2616,6 +2674,8 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
       body << "  }\n";
     }
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
     return;
   }
 
@@ -3344,10 +3404,20 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 LogicalResult
 OpFormatParser::verifyOIListElements(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {
-  // Check that all of the successors are within the format.
+  // Check for ambiguous literals in and around oilist elements.
   SmallVector<StringRef> prohibitedLiterals;
   for (FormatElement *it : elements) {
     if (auto *oilist = dyn_cast<OIListElement>(it)) {
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        for (LiteralElement *literal : oilist->getLiteralElements()) {
+          if (literal->getSpelling() == separator->getSpelling()) {
+            return emitError(
+                loc, "format ambiguity because " + separator->getSpelling() +
+                         " is used as both an oilist separator and clause "
+                         "keyword.");
+          }
+        }
+      }
       if (!prohibitedLiterals.empty()) {
         // We just saw an oilist element in last iteration. Literals should not
         // match.
@@ -3362,6 +3432,8 @@ OpFormatParser::verifyOIListElements(SMLoc loc,
       }
       for (LiteralElement *literal : oilist->getLiteralElements())
         prohibitedLiterals.push_back(literal->getSpelling());
+      if (LiteralElement *separator = oilist->getSeparator())
+        prohibitedLiterals.push_back(separator->getSpelling());
     } else if (auto *literal = dyn_cast<LiteralElement>(it)) {
       if (find(prohibitedLiterals, literal->getSpelling()) !=
           prohibitedLiterals.end()) {
@@ -3718,6 +3790,21 @@ OpFormatParser::parseSuccessorsDirective(SMLoc loc, Context context) {
 
 FailureOr<FormatElement *>
 OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
+  LiteralElement *separator = nullptr;
+  if (peekToken().is(FormatToken::less)) {
+    consumeToken();
+    SMLoc separatorLoc = peekToken().getLoc();
+    FailureOr<FormatElement *> separatorElement = parseLiteral(context);
+    if (failed(separatorElement))
+      return failure();
+    separator = dyn_cast<LiteralElement>(*separatorElement);
+    if (!separator)
+      return emitError(separatorLoc,
+                       "oilist separator must be a non-whitespace literal");
+    if (failed(parseToken(FormatToken::greater,
+                          "expected '>' after oilist separator")))
+      return failure();
+  }
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before oilist argument list")))
     return failure();
@@ -3748,7 +3835,7 @@ OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
     }
   } while (true);
 
-  return create<OIListElement>(std::move(literalElements),
+  return create<OIListElement>(separator, std::move(literalElements),
                                std::move(parsingElements));
 }
 
