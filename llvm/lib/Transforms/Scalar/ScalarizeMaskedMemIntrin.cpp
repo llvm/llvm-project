@@ -124,12 +124,11 @@ static void copyMemCacheHint(Instruction &Dest, const Instruction &Source,
   if (OperandNo->getZExtValue() != SourcePtrOperand)
     return;
 
-  Metadata *DestOperandNo = ConstantAsMetadata::get(ConstantInt::get(
-      Type::getInt32Ty(Dest.getContext()), DestPtrOperand));
-  Dest.setMetadata(
-      LLVMContext::MD_mem_cache_hint,
-      MDNode::get(Dest.getContext(),
-                  {DestOperandNo, CacheHint->getOperand(1)}));
+  Metadata *DestOperandNo = ConstantAsMetadata::get(
+      ConstantInt::get(Type::getInt32Ty(Dest.getContext()), DestPtrOperand));
+  Dest.setMetadata(LLVMContext::MD_mem_cache_hint,
+                   MDNode::get(Dest.getContext(),
+                               {DestOperandNo, CacheHint->getOperand(1)}));
 }
 
 static void copyMetadataForMemoryAccess(Instruction &Dest,
@@ -139,13 +138,13 @@ static void copyMetadataForMemoryAccess(Instruction &Dest,
   // Only propagate metadata that is valid on each constituent memory access.
   // In particular, do not copy metadata whose meaning is tied to the call,
   // such as !prof or !callsite.
-  Dest.copyMetadata(
-      Source,
-      {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-       LLVMContext::MD_noalias, LLVMContext::MD_nontemporal,
-       LLVMContext::MD_mem_parallel_loop_access, LLVMContext::MD_access_group,
-       LLVMContext::MD_annotation, LLVMContext::MD_nosanitize,
-       LLVMContext::MD_mmra, LLVMContext::MD_noalias_addrspace});
+  Dest.copyMetadata(Source,
+                    {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
+                     LLVMContext::MD_noalias, LLVMContext::MD_nontemporal,
+                     LLVMContext::MD_mem_parallel_loop_access,
+                     LLVMContext::MD_access_group, LLVMContext::MD_annotation,
+                     LLVMContext::MD_nosanitize, LLVMContext::MD_mmra,
+                     LLVMContext::MD_noalias_addrspace});
   copyMemCacheHint(Dest, Source, SourcePtrOperand, DestPtrOperand);
 }
 
@@ -157,9 +156,8 @@ static void copyMetadataForScalarizedLoad(LoadInst &Dest,
 
   // !range applies element-wise to vectors, so the same range describes each
   // scalar result. The other metadata here also describes the loaded result.
-  Dest.copyMetadata(Source,
-                    {LLVMContext::MD_fpmath, LLVMContext::MD_range,
-                     LLVMContext::MD_invariant_load});
+  Dest.copyMetadata(Source, {LLVMContext::MD_fpmath, LLVMContext::MD_range,
+                             LLVMContext::MD_invariant_load});
 }
 
 static void copyMetadataForScalarizedStore(StoreInst &Dest,
@@ -168,7 +166,6 @@ static void copyMetadataForScalarizedStore(StoreInst &Dest,
   copyMetadataForMemoryAccess(Dest, Source, SourcePtrOperand,
                               Dest.getPointerOperandIndex());
 }
-
 
 // Translate a masked load intrinsic like
 // <16 x i32 > @llvm.masked.load( <16 x i32>* %addr,
