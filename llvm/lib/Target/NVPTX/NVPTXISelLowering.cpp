@@ -7186,8 +7186,10 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
 
 static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
                                      APFloat::roundingMode RoundingMode) {
-  const bool IsFTZ = nvvm::FAddShouldFTZ(IID);
-  const bool IsSat = nvvm::FAddShouldSaturate(IID);
+  const bool IsFTZ =
+      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsSat =
+      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16: {
     static constexpr unsigned SubRNOpcodes[2][2] = {
@@ -7246,8 +7248,10 @@ static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
     return false;
 
   const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ = nvvm::FAddShouldFTZ(IID);
-  const bool IsSat = nvvm::FAddShouldSaturate(IID);
+  const bool IsFTZ =
+      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsSat =
+      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return IsRN;

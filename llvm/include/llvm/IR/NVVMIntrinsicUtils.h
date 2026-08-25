@@ -15,7 +15,6 @@
 #ifndef LLVM_IR_NVVMINTRINSICUTILS_H
 #define LLVM_IR_NVVMINTRINSICUTILS_H
 
-#include <cassert>
 #include <stdint.h>
 
 #include "llvm/ADT/APFloat.h"
@@ -179,7 +178,7 @@ LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
                                              const Constant *ImmArgVal);
 LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
                                      const Constant *ImmArgVal);
-LLVM_ABI void printFAddRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printFPRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
@@ -612,33 +611,7 @@ inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
   return DenormalMode::getIEEE();
 }
 
-inline bool IsFAddIntrinsic(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_fadd:
-  case Intrinsic::nvvm_fadd_ftz:
-  case Intrinsic::nvvm_fadd_sat:
-  case Intrinsic::nvvm_fadd_ftz_sat:
-    return true;
-  default:
-    return false;
-  }
-}
-
-inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
-  assert(IsFAddIntrinsic(IntrinsicID) &&
-         "Checking FTZ flag for invalid NVVM add intrinsic");
-  return IntrinsicID == Intrinsic::nvvm_fadd_ftz ||
-         IntrinsicID == Intrinsic::nvvm_fadd_ftz_sat;
-}
-
-inline bool FAddShouldSaturate(Intrinsic::ID IntrinsicID) {
-  assert(IsFAddIntrinsic(IntrinsicID) &&
-         "Checking sat flag for invalid NVVM add intrinsic");
-  return IntrinsicID == Intrinsic::nvvm_fadd_sat ||
-         IntrinsicID == Intrinsic::nvvm_fadd_ftz_sat;
-}
-
-inline APFloat::roundingMode GetFAddRoundingMode(const Value *ImmArgVal) {
+inline APFloat::roundingMode GetRoundingModeFromImmArg(const Value *ImmArgVal) {
   return static_cast<APFloat::roundingMode>(
       cast<ConstantInt>(ImmArgVal)->getSExtValue());
 }
