@@ -1055,6 +1055,10 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     E = R.get();
   }
 
+  if (E && !isa<InitListExpr>(E) && E->isTypeDependent())
+    return new (Context)
+        CoreturnStmt(Loc, E, /*PromiseCall=*/nullptr, IsImplicit);
+
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
   if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
