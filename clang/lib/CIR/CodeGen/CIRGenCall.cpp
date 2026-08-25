@@ -17,7 +17,9 @@
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/CIR/ABIArgInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringSet.h"
@@ -663,6 +665,16 @@ void CIRGenModule::constructFunctionReturnAttributes(
   }
 }
 
+static bool hasConstQualifiedPointee(QualType type) {
+  if (const auto *ptrTy = type->getAs<PointerType>())
+    return ptrTy->getPointeeType().isConstQualified();
+
+  if (const auto *refTy = type->getAs<ReferenceType>())
+    return refTy->getPointeeType().isConstQualified();
+
+  return false;
+}
+
 void CIRGenModule::constructFunctionArgumentAttributes(
     const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
     bool attrOnCallSite, llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs) {
@@ -769,6 +781,11 @@ void CIRGenModule::constructFunctionArgumentAttributes(
     if (!attrOnCallSite && pvd && pvd->getType()->isPointerType() &&
         pvd->getType().isRestrictQualified() && !fd->getBuiltinID())
       argAttrList.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                      mlir::UnitAttr::get(&getMLIRContext()));
+
+    // const pointer handling
+    if (pvd && hasConstQualifiedPointee(pvd->getType()))
+      argAttrList.set(cir::CIRDialect::getConstPointeeAttrName(),
                       mlir::UnitAttr::get(&getMLIRContext()));
 
     // __attribute__((nonnull)) on pointer parameters.  Checks both

@@ -55,7 +55,7 @@ unsigned long test_strlen(const char *s) { return strlen(s); }
 // FINAL: %[[S_ADDR:.*]] = cir.alloca "s"
 // FINAL: %[[S:.*]] = cir.load{{.*}} %[[S_ADDR]] :
 // FINAL: cir.call @strlen(%[[S]]) nothrow
-// FINAL-SAME: (!cir.ptr<!s8i> {llvm.noundef})
+// FINAL-SAME: (!cir.ptr<!s8i> {cir.const_pointee, llvm.noundef})
 // FINAL-SAME: -> !u64i
 // NO-BUILTIN-MEMCPY: cir.call @strlen
 // NO-BUILTIN-MEMCPY-SAME: nobuiltins = ["memcpy"]
