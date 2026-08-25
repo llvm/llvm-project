@@ -2,6 +2,7 @@
 // two translation unit program, check that each object holds its own finalized
 // device binary, then link and run the program to verify that both binaries
 // reach the SYCL runtime.
+// The second translation unit is this same source compiled with -DSECOND_TU.
 // The program provides its own __sycl_register_lib/__sycl_unregister_lib, so
 // -nolibsycl is used and no SYCL runtime or offload device is needed.
 
@@ -9,8 +10,7 @@
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clangxx -fsycl -fno-sycl-rdc -c %s -o %t/main.o
-// RUN: %clangxx -fsycl -fno-sycl-rdc -c \
-// RUN:   %S/Inputs/sycl-nordc-registration-second-tu.cpp -o %t/second.o
+// RUN: %clangxx -fsycl -fno-sycl-rdc -DSECOND_TU -c %s -o %t/second.o
 
 // The section holds an offload binary (magic 0x10FF10AD) whose image is a
 // finalized SPIR-V module (magic 0x07230203), both shown little endian by the
@@ -71,8 +71,7 @@
 // An RDC build of the same sources links the device code together, so a single
 // binary is registered instead of one per translation unit.
 // RUN: %clangxx -fsycl -fsycl-rdc -c %s -o %t/main.rdc.o
-// RUN: %clangxx -fsycl -fsycl-rdc -c \
-// RUN:   %S/Inputs/sycl-nordc-registration-second-tu.cpp -o %t/second.rdc.o
+// RUN: %clangxx -fsycl -fsycl-rdc -DSECOND_TU -c %s -o %t/second.rdc.o
 // RUN: %clangxx -fsycl -nolibsycl %t/main.rdc.o %t/second.rdc.o -o %t/rdc
 // RUN: %t/rdc | FileCheck %s --check-prefix=RDC-OUT
 // RDC-OUT: registered binary 1
@@ -80,12 +79,31 @@
 // RDC-OUT-NEXT: main sees 1
 // RDC-OUT-NEXT: unregistered binary 1
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 template <typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
+
+#ifdef SECOND_TU
+
+// The second translation unit contributes a kernel of its own, so that a
+// non-RDC build has to finalize and register two independent device binaries.
+struct second_tu_kernel_name;
+struct second_tu_kernel {
+  void operator()() const {}
+};
+
+[[clang::sycl_kernel_entry_point(second_tu_kernel_name)]]
+void launch_second_tu_kernel(second_tu_kernel KernelFunc) {
+  KernelFunc();
+}
+
+void call_second_tu() { launch_second_tu_kernel(second_tu_kernel{}); }
+
+#else
 
 struct main_tu_kernel_name;
 struct main_tu_kernel {
@@ -147,3 +165,5 @@ int main() {
   std::printf("main sees %d\n", Registered);
   return 0;
 }
+
+#endif
