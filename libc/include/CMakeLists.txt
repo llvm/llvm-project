@@ -228,6 +228,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  syslog
+  ../libc/include/syslog.yaml
+  syslog.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.syslog_macros
+)
+
+add_header_macro(
   alloca
   ../libc/include/alloca.yaml
   alloca.h
@@ -359,6 +368,7 @@ add_header_macro(
     .llvm-libc-types.clock_t
     .llvm-libc-types.errno_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.timer_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
@@ -367,6 +377,8 @@ add_header_macro(
     .llvm-libc-types.tm_gmtoff_t
     .llvm-libc-types.locale_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sigevent
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(
@@ -404,11 +416,13 @@ add_header_macro(
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.pid_t
     .llvm-libc-types.sig_atomic_t
+    .llvm-libc-types.sig_t
     .llvm-libc-types.sighandler_t
     .llvm-libc-types.siginfo_t
     .llvm-libc-types.sigset_t
     .llvm-libc-types.stack_t
     .llvm-libc-types.struct_sigaction
+    .llvm-libc-types.struct_sigevent
     .llvm-libc-types.union_sigval
 )
 
@@ -587,6 +601,19 @@ add_header_macro(
 )
 
 add_header_macro(
+  semaphore
+  ../libc/include/semaphore.yaml
+  semaphore.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.semaphore_macros
+    .llvm-libc-types.clockid_t
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.sem_t
+    .llvm-libc-types.struct_timespec
+)
+
+add_header_macro(
   spawn
   ../libc/include/spawn.yaml
   spawn.h
@@ -606,6 +633,8 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-macros.link_macros
     .llvm-libc-types.struct_dl_phdr_info
+    .llvm-libc-types.struct_link_map
+    .llvm-libc-types.struct_r_debug
     .llvm-libc-types.__dl_iterate_phdr_callback_t
 )
 
@@ -850,6 +879,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_sysmacros
+  ../libc/include/sys/sysmacros.yaml
+  sys/sysmacros.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sysmacros_macros
+    .llvm-libc-types.dev_t
+)
+
+add_header_macro(
   sys_syscall
   ../libc/include/sys/syscall.yaml
   sys/syscall.h
@@ -906,6 +945,7 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.timer_t
     .llvm-libc-types.u_char
     .llvm-libc-types.u_int
     .llvm-libc-types.u_int16_t
@@ -918,6 +958,15 @@ add_header_macro(
     .llvm-libc-types.ulong
     .llvm-libc-types.useconds_t
     .llvm-libc-types.ushort
+)
+
+add_header_macro(
+  sys_sysinfo
+  ../libc/include/sys/sysinfo.yaml
+  sys/sysinfo.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sysinfo
 )
 
 add_header_macro(
@@ -1110,7 +1159,7 @@ add_header_macro(
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
-  )
+)
 
 add_header_macro(
   sys_poll
@@ -1127,7 +1176,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.nl_types_macros
     .llvm-libc-types.nl_catd
-  )
+)
 
 add_header_macro(
   langinfo
@@ -1138,7 +1187,7 @@ add_header_macro(
     .llvm-libc-macros.langinfo_macros
     .llvm-libc-types.nl_item
     .llvm-libc-types.locale_t
-  )
+)
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility
 add_header_macro(
@@ -1170,7 +1219,7 @@ function(get_all_install_header_targets out_var)
   endforeach()
   list(REMOVE_DUPLICATES all_deps)
   set(${out_var} ${all_deps} PARENT_SCOPE)
-endfunction(get_all_install_header_targets)
+endfunction()
 
 get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADERS})
 add_custom_target(generate-libc-headers DEPENDS ${all_install_header_targets})
@@ -1182,13 +1231,13 @@ foreach(target IN LISTS all_install_header_targets)
   get_target_property(header_file ${target} HEADER_FILE_PATH)
   if(NOT header_file)
     message(FATAL_ERROR "Installable header file '${target}' does not have the "
-                        "HEADER_FILE_PATH property set.")
+      "HEADER_FILE_PATH property set.")
   endif()
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${header_file})
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
   install(FILES ${header_file}
-          DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
-          COMPONENT libc-headers)
+    DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
+    COMPONENT libc-headers)
   # The GPU optionally provides the supported declarations externally so
   # offloading languages like CUDA and OpenMP know what is supported by libc. We
   # install these in the compiler's resource directory at a preset location.
@@ -1201,19 +1250,19 @@ foreach(target IN LISTS all_install_header_targets)
     file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_DIR} ${decls_file})
     get_filename_component(nested_dir ${relative_path} DIRECTORY)
     set(install_dir
-        ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
+      ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
     install(FILES ${decls_file}
-            DESTINATION ${install_dir}
-            COMPONENT libc-headers)
+      DESTINATION ${install_dir}
+      COMPONENT libc-headers)
   endif()
 endforeach()
 
 if(LLVM_LIBC_FULL_BUILD)
   add_custom_target(install-libc-headers
-                    DEPENDS libc-headers
-                    COMMAND "${CMAKE_COMMAND}"
-                            -DCMAKE_INSTALL_COMPONENT=libc-headers
-                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    DEPENDS libc-headers
+    COMMAND "${CMAKE_COMMAND}"
+      -DCMAKE_INSTALL_COMPONENT=libc-headers
+      -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
   # Stripping is a no-op for headers
   add_custom_target(install-libc-headers-stripped DEPENDS install-libc-headers)
 endif()

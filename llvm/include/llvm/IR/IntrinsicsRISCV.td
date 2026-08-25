@@ -2109,6 +2109,22 @@ class RVPBinaryIntrinsic
   def int_riscv_pzext_b : RVPExtIntrinsic;
   def int_riscv_pzext_h : RVPExtIntrinsic;
 
+  // Packed Multiply High.
+  def int_riscv_pmulh    : RVPBinaryIntrinsic;
+  def int_riscv_pmulhr   : RVPBinaryIntrinsic;
+  def int_riscv_pmulhu   : RVPBinaryIntrinsic;
+  def int_riscv_pmulhru  : RVPBinaryIntrinsic;
+  def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
+  def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
+
+  // Packed Multiply High Accumulate.
+  def int_riscv_pmhacc    : RVPTernaryIntrinsic;
+  def int_riscv_pmhracc   : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccu   : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -2126,6 +2142,14 @@ class RVPBinaryIntrinsic
                               [LLVMMatchType<0>],
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_psabs : RVPUnaryIntrinsic;
+
+  // Packed Narrowing Clip Pair
+  class RVPNarrowingClipIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_any_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnclipp  : RVPNarrowingClipIntrinsic;
+  def int_riscv_pnclipup : RVPNarrowingClipIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

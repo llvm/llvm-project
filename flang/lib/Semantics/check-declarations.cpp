@@ -769,6 +769,13 @@ void CheckHelper::CheckObjectEntity(
   CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
+  // Validate bounds of a zero-size explicit-shape bounds array (F2023).  The
+  // entity is scalar, so these bounds were dropped from its shape; they were
+  // stashed during name resolution and are checked here, where the scope is
+  // final.
+  for (const Bound &bound : details.droppedBoundsToCheck()) {
+    Check(bound);
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
@@ -1318,6 +1325,12 @@ void CheckHelper::CheckObjectEntity(
       SayWithDeclaration(symbol,
           "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
+    } else if (IsPointer(symbol)) {
+      SayWithDeclaration(
+          symbol, "Pointer to %s type is not supported"_err_en_US, typeName);
+    } else if (IsAllocatable(symbol)) {
+      SayWithDeclaration(symbol,
+          "Allocatable entity of %s type is not supported"_err_en_US, typeName);
     }
   }
 }
@@ -3675,6 +3688,12 @@ void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
     if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+      if (derivedType->IsVectorType()) {
+        messages_.Say(arg.name(),
+            "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,
+            arg.name());
+        return;
+      }
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {

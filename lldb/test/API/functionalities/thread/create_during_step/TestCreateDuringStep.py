@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class CreateDuringStepTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],

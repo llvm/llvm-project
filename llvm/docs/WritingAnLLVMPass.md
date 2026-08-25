@@ -6,13 +6,13 @@
 
 ## Introduction --- What is a pass?
 
-```{warning}
+:::{warning}
 This document deals with the legacy pass manager. LLVM uses the new pass
 manager for the optimization pipeline (the codegen pipeline
 still uses the legacy pass manager), which has its own way of defining
 passes. For more details, see {doc}`WritingAnLLVMNewPMPass` and
 {doc}`NewPassManager`.
-```
+:::
 
 The LLVM Pass Framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist.  Passes

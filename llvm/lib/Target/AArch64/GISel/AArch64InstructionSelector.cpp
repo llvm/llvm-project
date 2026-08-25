@@ -488,11 +488,12 @@ private:
   ComplexRendererFns
   selectCVTFixedPointVecBase(const MachineOperand &Root,
                              bool isReciprocal = false) const;
+  void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
+                                   const MachineInstr &MI, int OpIdx) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
-
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -2119,6 +2120,33 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setType(DstReg, LLT::scalar(64));
     return true;
   }
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    // Imported patterns require an FPR result. For a GPR, use a temporary FPR
+    // and insert a cross-bank copy.
+    Register DstReg = I.getOperand(0).getReg();
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    if (DstRB.getID() != AArch64::GPRRegBankID)
+      return false;
+
+    LLT DstTy = MRI.getType(DstReg);
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, /*GetAllRegSet=*/true);
+    if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+      return false;
+
+    Register FPRDst = MRI.createGenericVirtualRegister(DstTy);
+    MRI.setRegBank(FPRDst, RBI.getRegBank(AArch64::FPRRegBankID));
+    I.getOperand(0).setReg(FPRDst);
+
+    BuildMI(MBB, std::next(I.getIterator()), MIMetadata(I),
+            TII.get(TargetOpcode::COPY), DstReg)
+        .addReg(FPRDst);
+    return true;
+  }
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -2949,7 +2977,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
-    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits &&
+        RB.getID() == AArch64::FPRRegBankID) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
@@ -4027,22 +4056,44 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   assert(I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "unexpected opcode");
 
-  // TODO: Handle unmerging into GPRs and from scalars to scalars.
-  if (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID ||
-      RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
-                         "currently unsupported.\n");
-    return false;
-  }
-
   // The last operand is the vector source register, and every other operand is
   // a register to unpack into.
   unsigned NumElts = I.getNumOperands() - 1;
   Register SrcReg = I.getOperand(NumElts).getReg();
-  const LLT NarrowTy = MRI.getType(I.getOperand(0).getReg());
+  Register LoReg = I.getOperand(0).getReg();
+  Register HiReg = I.getOperand(1).getReg();
+  const LLT NarrowTy = MRI.getType(LoReg);
   const LLT WideTy = MRI.getType(SrcReg);
+  const RegisterBank &LoRB = *RBI.getRegBank(LoReg, MRI, TRI);
+  const RegisterBank &HiRB = *RBI.getRegBank(HiReg, MRI, TRI);
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+  // Handle unmerging a 128-bit FPR value into two 64-bit GPR values.
+  if (NarrowTy == LLT::scalar(64) && WideTy == LLT::scalar(128) &&
+      LoRB.getID() == AArch64::GPRRegBankID &&
+      HiRB.getID() == AArch64::GPRRegBankID &&
+      SrcRB.getID() == AArch64::FPRRegBankID) {
+    MachineInstr &Lo = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), LoReg)
+                            .addUse(SrcReg)
+                            .addImm(0);
+    MachineInstr &Hi = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), HiReg)
+                            .addUse(SrcReg)
+                            .addImm(1);
+    constrainSelectedInstRegOperands(Lo, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Hi, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  // TODO: Handle other unmerges into GPRs and from scalars to scalars.
+  if (LoRB.getID() != AArch64::FPRRegBankID ||
+      HiRB.getID() != AArch64::FPRRegBankID) {
+    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
+                         "currently unsupported.\n");
+    return false;
+  }
 
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");
@@ -4475,8 +4526,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
-  const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
-  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  bool ShouldUseImm = mi_match(RHS, MRI, m_PosZeroFP());
 
   auto IsEqualityPred = [](CmpInst::Predicate P) {
     return P == CmpInst::FCMP_OEQ || P == CmpInst::FCMP_ONE ||
@@ -4484,8 +4534,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   };
   if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
     // Try commuting the operands.
-    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
-    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+    if (mi_match(LHS, MRI, m_PosZeroFP())) {
       ShouldUseImm = true;
       std::swap(LHS, RHS);
     }
@@ -7367,23 +7416,19 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
 
   // We need a GEP.
-  MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  Register Base, Offset;
+  if (!mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Offset))))
     return std::nullopt;
 
   // If this is used more than once, let's not bother folding.
   // TODO: Check if they are memory ops. If they are, then we can still fold
   // without having to recompute anything.
-  if (!MRI.hasOneNonDBGUse(Gep->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(Root.getReg()))
     return std::nullopt;
 
   // Base is the GEP's LHS, offset is its RHS.
-  return {{[=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(1).getReg());
-           },
-           [=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(2).getReg());
-           },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(Offset); },
            [=](MachineInstrBuilder &MIB) {
              // Need to add both immediates here to make sure that they are both
              // added to the instruction.
@@ -7962,6 +8007,13 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
   return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+}
+
+void AArch64InstructionSelector::renderFixedPointScalarXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx == 3 && MI.getOperand(OpIdx).isImm() &&
+         "Expected vecshift immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,

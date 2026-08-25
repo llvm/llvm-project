@@ -4,19 +4,34 @@
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_UPacked = !cir.union<"UPacked" packed {!s32i, !cir.array<!s8i x 5>}, padding = {!u8i}>
-!rec_ULongDouble = !cir.union<"ULongDouble" {!cir.long_double<!cir.f80>, !s32i}>
-!rec_UFloats = !cir.union<"UFloats" {!cir.array<!cir.float x 2>, !cir.array<!cir.float x 2>}>
-!rec_UOverAligned = !cir.union<"UOverAligned" {!s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UShortStorage = !cir.union<"UShortStorage" {!s16i, !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
-!rec_UByteBlobs = !cir.union<"UByteBlobs" {!u8i, !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {!cir.double, !rec_UOverAligned}>
+!u32i = !cir.int<u, 32>
+!rec_UPacked = !cir.union<"UPacked" packed {data !s32i, data !cir.array<!s8i x 5>}, padding = {!u8i}>
+!rec_UOverAligned = !cir.union<"UOverAligned" {data !s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UShortStorage = !cir.union<"UShortStorage" {data !s16i, data !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
+!rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
-!rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
-!rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
-!rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
+!rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
+!rec_NamedPlusZeroWidth =
+    !cir.struct<"NamedPlusZeroWidth" {bitfield !u8i, pad !cir.array<!u8i x 3>,
+                                      bitfield !cir.array<!s32i x 0>,
+                                      data !s32i, pad !cir.array<!u8i x 8>}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
+!rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_UEmptyOnly = !cir.union<"UEmptyOnly" {data !rec_E}>
+!rec_UEmptyOver = !cir.union<"UEmptyOver" {data !rec_EOver, data !s32i}, padding = {!cir.array<!u8i x 12>}>
+!rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
+!rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
+!rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
+!rec_BitPad = !cir.struct<"BitPad" {bitfield !u8i, pad !cir.array<!u8i x 15>}>
+!rec_InnerBits = !cir.struct<"InnerBits" {bitfield !u32i}>
+!rec_OuterBitPad = !cir.struct<"OuterBitPad" {data !rec_InnerBits, pad !cir.array<!u8i x 12>}>
+!rec_ArrBitPad = !cir.struct<"ArrBitPad" {data !cir.array<!rec_InnerBits x 2>, pad !cir.array<!u8i x 8>}>
+!rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
+!rec_EBits = !cir.struct<"EBits" {empty !u32i}>
+!rec_HoldsEmptyBits = !cir.struct<"HoldsEmptyBits" {empty !rec_EBits, data !s32i}>
+!rec_LeadPad = !cir.struct<"LeadPad" {pad !cir.array<!u8i x 8>, data !s32i}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -33,22 +48,6 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UPacked" packed
-
-  // A union member the bridge does not map keeps the whole union unsupported.
-  cir.func @take_union_long_double(%arg0: !rec_ULongDouble) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"ULongDouble"
-
-  // A union whose highest-aligned member is an all-float array classifies to
-  // an SSE vector coerce this bridge does not represent, so it is reported NYI
-  // rather than passed unchanged.
-  cir.func @take_union_float_arrays(%arg0: !rec_UFloats) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.union<"UFloats"
 
   // No member of this union spans its 16-byte declared size, so the bytes past
   // the int cannot be told apart from the rest of a wider storage unit, and the
@@ -67,12 +66,9 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UShortStorage"
 
-  // This is the shape CIRGen produces for a union of narrow bitfields, where
-  // the byte-sized members understate a wider storage unit that is all user
-  // data.  It is also the shape of a union of two `unsigned char` members
-  // carrying an alignment attribute, where the same bytes really are padding.
-  // The two coerce differently in classic CodeGen and are identical here, which
-  // is why neither is accepted.
+  // A union of narrow bit-fields and a union of two aligned `unsigned char`
+  // members produce this same shape, and classic CodeGen coerces them
+  // differently, so neither can be accepted.
   cir.func @take_byte_blob_union(%arg0: !rec_UByteBlobs) {
     cir.return
   }
@@ -88,10 +84,9 @@ module attributes {
   // CHECK: not yet implemented for type '!cir.struct<"SWrapsOverAligned"
 
   // A member-less union past two eightbytes still classifies Indirect in
-  // classic CodeGen (SysV's MEMORY rule applies unconditionally above that
-  // size, regardless of content), but this bridge has no member to build an
-  // Indirect coercion from.  Below the threshold the same shape is accepted
-  // and classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  // classic CodeGen, but this bridge has no member to build an Indirect
+  // coercion from.  Below the threshold the same shape is accepted and
+  // classifies Ignore, matching classic; see x86_64-union.cir take_empty.
   cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }
@@ -105,51 +100,136 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.struct<"P" packed
 
-  // A padded (over-aligned) struct is rejected: it needs pad-aware
-  // classification.
-  cir.func @take_padded(%arg0: !rec_Ov) {
+  // A union holds padding in a slot of its own, so its lone byte member is
+  // data.  Rejected by the union rule (no member spans the declared size), not
+  // the empty-class one.
+  cir.func @take_padded_byte_union(%arg0: !rec_UPadByte) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"Ov" padded
+  // CHECK: not yet implemented for type '!cir.union<"UPadByte"
 
-  // An empty C++ class is laid out as a single padded byte, so it is rejected
-  // by the padded check; its Ignore classification is deferred.
-  cir.func @take_empty(%arg0: !rec_E) {
+  // A union with an empty member coerces wider than classic, so it is left NYI
+  // rather than accepted along with the empty class itself.
+  cir.func @take_union_empty_over(%arg0: !rec_UEmptyOver) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"E" padded
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyOver"
 
-  // An all-float struct classifies to an SSE vector coerce this bridge does
-  // not represent, so it is reported NYI rather than passed unchanged.
-  cir.func @take_ff(%arg0: !rec_FF) {
+  // Deferred with it, though this one holds no data at all.
+  cir.func @take_union_empty_only(%arg0: !rec_UEmptyOnly) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"FF"
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyOnly"
 
-  // The same holds for an all-float array.
-  cir.func @take_farr(%arg0: !cir.array<!cir.float x 2>) {
+  // An array of empty records supplies no bytes the union coercion can read.
+  cir.func @take_union_arr_empty(%arg0: !rec_UArrEmpty) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.array<!cir.float x 2>
-
-  // A three-float struct coerces to a record with a vector field; the
-  // unmappable field propagates out as NYI too.
-  cir.func @take_f3(%arg0: !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>) {
+  // CHECK: not yet implemented for type '!cir.union<"UArrEmpty"
+  // A bit-field access unit is narrower than the declaration it holds, so
+  // classifying around this record's padding would coerce to i8 where classic
+  // CodeGen widens to i64.
+  cir.func @take_bit_pad(%arg0: !rec_BitPad) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"F3"
+  // CHECK: not yet implemented for type '!cir.struct<"BitPad" {bitfield
 
-  // The unmappable-coercion check also covers the return value.
-  cir.func @ret_ff() -> !rec_RetFF {
-    %0 = cir.alloca "r" align(4) : !cir.ptr<!rec_RetFF>
-    %1 = cir.load %0 : !cir.ptr<!rec_RetFF>, !rec_RetFF
-    cir.return %1 : !rec_RetFF
+  // The reject reaches through a member record.  Classic coerces this one to
+  // i32, so the rejection is conservative rather than a divergence avoided.
+  cir.func @take_outer_bit_pad(%arg0: !rec_OuterBitPad) {
+    cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"RetFF"
+  // CHECK: not yet implemented for type '!cir.struct<"OuterBitPad" {data
+
+  // And through an array element.
+  cir.func @take_arr_bit_pad(%arg0: !rec_ArrBitPad) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"ArrBitPad" {data
+
+  // The all-pad reject also has to hold when the record is reached as a member,
+  // which is the shape a C++ empty class produces.
+  cir.func @take_holds_all_pad(%arg0: !rec_HoldsAllPad) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
+
+  // An empty-for-ABI member can occupy bytes without a pad member, by holding
+  // an unnamed access unit of its own.  Classic CodeGen reaches those bytes
+  // through the member's own fields, so this is refused.  An empty base or a
+  // [[no_unique_address]] member of `struct { unsigned : 32; }` produces it.
+  cir.func @take_holds_empty_bits(%arg0: !rec_HoldsEmptyBits) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"HoldsEmptyBits" {empty
+
+  // With no field in the low eightbyte the classifier coerces the high one and
+  // names an offset of 8 into the record, which the rewriter cannot express: it
+  // reads a coercion from offset 0, so the argument would land in the padding.
+  cir.func @take_lead_pad(%arg0: !rec_LeadPad) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"LeadPad"
+
+  // A scalable vector has no size the eightbyte rules can read.
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
+
+  // Clang pads a vector's type width up to a power of two and the classifier
+  // branches on the exact width, so a three-byte vector would be classified at
+  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
+  // the padded width, so this is rejected rather than misclassified.
+  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
+
+  // A pointer element loses its pointee on the way back from the classifier,
+  // which would rewrite the signature to a vector of void pointers.  No C
+  // vector has a pointer element, so this is rejected instead.
+  cir.func @take_ptr_vector(%arg0: !cir.vector<2 x !cir.ptr<!s32i>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.ptr<!cir.int<s, 32>>>
+
+  // An element narrower than a byte is rounded up to its storage container by
+  // clang but not by the classifier, so the two would size the vector
+  // differently.  Classic passes this one in an xmm register from its 128-bit
+  // width, where the classifier would read 32 bits and coerce to an integer.
+  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
+
+  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
+  // two would size this vector differently for the same reason.
+  cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
+
+  // A zero-width bit-field no longer refuses a padded record, but a named
+  // access unit still does, and one record can carry both.
+  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"NamedPlusZeroWidth"
 }

@@ -240,6 +240,8 @@ bool Rematerializer::isRegIdenticalAtUses(Register Reg, LaneBitmask Mask,
     return true;
   const LiveInterval &LI = LIS.getInterval(Reg);
   const VNInfo *DefVN = LI.getVNInfoAt(RefSlot);
+  if (!DefVN)
+    return false;
   for (SlotIndex Use : Uses) {
     if (!isIdenticalAtUse(*DefVN, Mask, Use, LI))
       return false;
@@ -324,7 +326,7 @@ void Rematerializer::deleteReg(RegisterIdx RootIdx) {
         shrinkToUses(DepRegIdx);
       }
     }
-    for (const auto [Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
+    for (const auto &[Reg, Mask] : getUnrematableDeps(DeletedRegIdx)) {
       if (ShrinkUnrematRegs.insert(Reg).second)
         shrinkToUsesUnremat(Reg);
     }
@@ -842,6 +844,8 @@ void Rematerializer::extendToNewUsers(RegisterIdx RegIdx,
       LI.refineSubRanges(
           LIS.getVNInfoAllocator(), RegMask, [](LiveInterval::SubRange &SR) {},
           *LIS.getSlotIndexes(), TRI);
+      // Refining may have introduced empty sub-ranges, which are illegal.
+      LI.removeEmptySubRanges();
     }
     extendInterval(LI, RegMask, UseIdx);
   }
