@@ -5609,6 +5609,12 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       continue;
     }
 
+    // This should probably use a rewrite using a union between
+    // PSE/StridePredicates, but I can't a craft a test as we're bailing out
+    // earlied via `isa<SCEVUnknown>`.
+    if (SE->isKnownPredicate(CmpInst::ICMP_NE, ToMultiVersion, MVConst))
+      continue;
+
     Value *StrideVal = cast<SCEVUnknown>(ToMultiVersion)->getValue();
 
     const SCEVPredicate *NewPred =
