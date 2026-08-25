@@ -89,19 +89,18 @@ linux_defines = posix_defines + fenv_defines + [
 ]
 
 macos_defines = posix_defines + fenv_defines + [
+    "HAVE_CRASHREPORTER_INFO=1",
+    "HAVE_DECL_ARC4RANDOM=1",
     "HAVE_MACH_MACH_H=1",
     "HAVE_MALLOC_MALLOC_H=1",
     "HAVE_MALLOC_ZONE_STATISTICS=1",
     "HAVE_PROC_PID_RUSAGE=1",
+    "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
     "HAVE_UNW_ADD_DYNAMIC_FDE=1",
 ]
 
-macos_capability_defines = select({
-    "@platforms//os:macos": [
-        "HAVE_CRASHREPORTER_INFO=1",
-        "HAVE_DECL_ARC4RANDOM=1",
-        "HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC=1",
-    ],
+arc4random_defines = select({
+    "@platforms//os:macos": [],
     "//conditions:default": ["HAVE_DECL_ARC4RANDOM=0"],
 })
 
@@ -129,7 +128,7 @@ os_defines = select({
     "@platforms//os:macos": macos_defines,
     "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
-}) + macos_capability_defines + backtrace_defines + mallinfo_defines
+}) + arc4random_defines + backtrace_defines + mallinfo_defines
 
 # HAVE_BUILTIN_THREAD_POINTER is true for on Linux (outside of ppc64) for
 # all recent toolchains. Add it here by default on Linux as we can't perform a
