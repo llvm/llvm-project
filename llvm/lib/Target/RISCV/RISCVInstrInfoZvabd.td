@@ -14,20 +14,46 @@
 //===----------------------------------------------------------------------===//
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone in {
-  def VABD_VV  : VALUVV<0b010101, OPMVV, "vabd.vv">;
-  def VABD_VX  : VALUVX<0b010101, OPMVX, "vabd.vx">;
-  def VABDU_VV : VALUVV<0b010110, OPMVV, "vabdu.vv">;
-  def VABDU_VX : VALUVX<0b010110, OPMVX, "vabdu.vx">;
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+multiclass VABD_MV_V_X<string opcodestr, bits<6> funct6> {
+  def V : VALUVV<funct6, OPMVV, opcodestr # ".vv">,
+          SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV">;
+  def X : VALUVX<funct6, OPMVX, opcodestr # ".vx">,
+          SchedBinaryMC<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX">;
+}
 
-  let Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2,
-      VS1VS2Constraint = WidenV in {
-    def VWABDA_VV  : VALUVV<0b111101, OPIVV, "vwabda.vv">;
-    def VWABDA_VX  : VALUVX<0b111101, OPIVX, "vwabda.vx">;
-    def VWABDAU_VV : VALUVV<0b111110, OPIVV, "vwabdau.vv">;
-    def VWABDAU_VX : VALUVX<0b111110, OPIVX, "vwabdau.vx">;
-  } // Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2,
-    // VS1VS2Constraint = WidenV
+class VWABDAIVV<bits<6> funct6, string opcodestr>
+    : RVInstVV<funct6, OPIVV, (outs VR:$vd_wb),
+               (ins VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm),
+               opcodestr, "$vd, $vs2, $vs1$vm"> {
+  let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
+}
+
+class VWABDAIVX<bits<6> funct6, string opcodestr>
+    : RVInstVX<funct6, OPIVX, (outs VR:$vd_wb),
+               (ins VR:$vd, VR:$vs2, GPR:$rs1, VMaskOp:$vm),
+               opcodestr, "$vd, $vs2, $rs1$vm"> {
+  let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
+}
+
+multiclass VWABDA_IV_V_X<string opcodestr, bits<6> funct6> {
+  def V : VWABDAIVV<funct6, opcodestr # ".vv">,
+          SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV",
+                         "ReadVIWMulAddV", "ReadVIWMulAddV">;
+  def X : VWABDAIVX<funct6, opcodestr # ".vx">,
+          SchedTernaryMC<"WriteVIWMulAddX", "ReadVIWMulAddV",
+                         "ReadVIWMulAddV", "ReadVIWMulAddX">;
+}
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
+let Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone in {
+  defm VABD_V  : VABD_MV_V_X<"vabd", 0b010101>;
+  defm VABDU_V : VABD_MV_V_X<"vabdu", 0b010110>;
+
+  let DestEEW = EEWSEWx2, VS1VS2Constraint = WidenV in {
+    defm VWABDA_V  : VWABDA_IV_V_X<"vwabda", 0b111101>;
+    defm VWABDAU_V : VWABDA_IV_V_X<"vwabdau", 0b111110>;
+  } // DestEEW = EEWSEWx2, VS1VS2Constraint = WidenV
 } // Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone
 
 let Predicates = [HasStdExtZvabd] in {
