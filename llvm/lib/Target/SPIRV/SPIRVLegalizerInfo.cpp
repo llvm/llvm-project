@@ -523,6 +523,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FLOG2,
                                G_FLOG10,
                                G_FABS,
+                               G_FCANONICALIZE,
                                G_FMINNUM,
                                G_FMAXNUM,
                                G_FCEIL,
@@ -552,6 +553,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                    0, ElementCount::getFixed(MaxVectorSize)))
         .moreElementsToNextPow2(0);
   // clang-format on
+
+  // SPIR-V has no IEEE-754-2019 minimumNumber/maximumNumber instruction. Use
+  // the generic expansion, which quiets signaling NaN operands with
+  // G_FCANONICALIZE and then emits G_FMINNUM/G_FMAXNUM. Per LangRef those are
+  // the only operands for which the two families differ.
+  getActionDefinitionsBuilder({G_FMINIMUMNUM, G_FMAXIMUMNUM}).lower();
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,

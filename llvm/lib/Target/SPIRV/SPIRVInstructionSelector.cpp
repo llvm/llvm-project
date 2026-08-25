@@ -487,6 +487,10 @@ private:
                    MachineInstr &I) const;
   bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
+  bool selectSincospi(Register ResVReg, SPIRVTypeInst ResType,
+                      MachineInstr &I) const;
+  bool selectFCanonicalize(Register ResVReg, SPIRVTypeInst ResType,
+                           MachineInstr &I) const;
   bool selectExp10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
@@ -1190,6 +1194,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FMAXIMUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
+  case TargetOpcode::G_FCANONICALIZE:
+    return selectFCanonicalize(ResVReg, ResType, I);
+
   case TargetOpcode::G_FCOPYSIGN:
     return selectCopySign(ResVReg, ResType, I);
 
@@ -1778,6 +1785,55 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectSincospi(Register ResVReg,
+                                              SPIRVTypeInst ResType,
+                                              MachineInstr &I) const {
+  // OpenCL.std provides sinpi and cospi, which compute sin(pi * x) and
+  // cos(pi * x) without the argument reduction error a literal multiplication
+  // by pi would introduce. GLSL.std.450 has no equivalent, so the shader
+  // environment keeps reporting llvm.sincospi as unsupported.
+  if (!STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return diagnoseUnsupported(
+        I, "llvm.sincospi requires the OpenCL.std extended instruction set.");
+
+  Register CosResVReg = I.getOperand(1).getReg();
+  // Operands are the two results, the intrinsic ID, and then the argument.
+  const MachineOperand &Src = I.getOperand(I.getNumExplicitDefs() + 1);
+  Register ResTypeReg = GR.getSPIRVTypeID(ResType);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(ResTypeReg)
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
+      .addImm(CL::sinpi)
+      .add(Src)
+      .constrainAllUses(TII, TRI, RBI);
+  if (!MRI->use_nodbg_empty(CosResVReg))
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+        .addDef(CosResVReg)
+        .addUse(ResTypeReg)
+        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
+        .addImm(CL::cospi)
+        .add(Src)
+        .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectFCanonicalize(Register ResVReg,
+                                                   SPIRVTypeInst ResType,
+                                                   MachineInstr &I) const {
+  // Neither SPIR-V core nor the extended instruction sets have a canonicalize
+  // instruction. LangRef says llvm.canonicalize "should always be
+  // implementable as multiplication by 1.0, provided that the compiler does
+  // not constant fold the operation", and nothing that could fold the multiply
+  // away runs after instruction selection.
+  Register One = buildOnesValF(ResType, I);
+  return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(1).getReg(), One},
+                          ResType->getOpcode() == SPIRV::OpTypeVector
+                              ? SPIRV::OpFMulV
+                              : SPIRV::OpFMulS);
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
@@ -5822,6 +5878,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       return selectMaskedScatter(I);
     return diagnoseUnsupported(
         I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+  case Intrinsic::sincospi:
+    return selectSincospi(ResVReg, ResType, I);
   case Intrinsic::returnaddress:
   case Intrinsic::frameaddress: {
     // SPIR-V does not have a stack or return address. Lower to null.
