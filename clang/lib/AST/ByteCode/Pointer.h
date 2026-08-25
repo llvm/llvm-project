@@ -911,7 +911,7 @@ public:
     if (isIntegralPointer())
       return false;
     if (isStringPointer())
-      return Offset >= Str.getLiteral()->getLength();
+      return Offset >= (Str.getLiteral()->getLength() + 1);
 
     return !isZero() && Offset > BS.Pointee->getSize();
   }

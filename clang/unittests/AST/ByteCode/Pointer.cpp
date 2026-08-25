@@ -276,7 +276,8 @@ TEST(Pointer, TypesPrimitive) {
 TEST(Pointer, Strings) {
   constexpr char Code[] = "constexpr const char *str1 = \"foobar\";\n"
                           "constexpr const auto *str2 = L\"foobar\";\n"
-                          "constexpr const auto *c = &L\"foobar\"[5];\n";
+                          "constexpr const auto *c = &L\"foobar\"[5];\n"
+                          "constexpr const auto *str3 = \"\";\n";
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
   ASTContext &ASTCtx = AST->getASTContext();
@@ -336,4 +337,20 @@ TEST(Pointer, Strings) {
   const auto &Path = APV.getLValuePath();
   ASSERT_EQ(Path.size(), 1u);
   ASSERT_EQ(Path[0].getAsArrayIndex(), 5u);
+
+  D = match(varDecl(hasGlobalStorage(), hasName("str3")).bind("str3"),
+            ASTCtx)[0]
+          .getNodeAs<VarDecl>("str3");
+  ASSERT_NE(D, nullptr);
+  GlobalPtr = Prog.getPtrGlobal(*Prog.getGlobal(D));
+  ASSERT_TRUE(GlobalPtr.isBlockPointer());
+  ASSERT_TRUE(GlobalPtr.getFieldDesc()->getPrimType() == PT_Ptr);
+
+  Pointee = GlobalPtr.load<Pointer>();
+  ASSERT_EQ(Pointee.getNumElems(), 1u);
+  ASSERT_EQ(Pointee.atIndex(0).getIndex(), 0u);
+  ASSERT_FALSE(Pointee.atIndex(0).isOnePastEnd());
+  ASSERT_FALSE(Pointee.atIndex(0).isPastEnd());
+  ASSERT_TRUE(Pointee.atIndex(1).isOnePastEnd());
+  ASSERT_TRUE(Pointee.atIndex(1).isPastEnd());
 }
