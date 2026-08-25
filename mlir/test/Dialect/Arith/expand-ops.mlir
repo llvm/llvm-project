@@ -824,6 +824,9 @@ func.func @truncf_f32_to_f8E4M3FN(%arg0 : f32) -> f8E4M3FN {
 // CHECK: %[[SIGNBITS:.+]] = arith.andi %[[BITS]], %[[CSIGN]] : i32
 // CHECK: %[[ABSBITS:.+]] = arith.andi %[[BITS]], %[[CABS]] : i32
 // CHECK: %[[ABSF32:.+]] = arith.bitcast %[[ABSBITS]] : i32 to f32
+// F8E4M3FN has no infinity, so an overflowing/infinite magnitude maps to NaN.
+// CHECK: %[[COVF:.+]] = arith.constant 4.640000e+02 : f32
+// CHECK: %[[ISOVF:.+]] = arith.cmpf ogt, %[[ABSF32]], %[[COVF]] : f32
 // CHECK: %[[CMAX:.+]] = arith.constant 4.480000e+02 : f32
 // The clamp to the maximum magnitude is emitted as arith.minnumf, which the
 // include-min-max-f flag further lowers to cmpf/select.
@@ -846,15 +849,13 @@ func.func @truncf_f32_to_f8E4M3FN(%arg0 : f32) -> f8E4M3FN {
 // CHECK: %[[MAG8:.+]] = arith.trunci %[[SHIFTED]] : i16 to i8
 // CHECK: %[[C7F8:.+]] = arith.constant 127 : i8
 // CHECK: %[[MAGMASK:.+]] = arith.andi %[[MAG8]], %[[C7F8]] : i8
-// CHECK: %[[C7E:.+]] = arith.constant 126 : i8
-// CHECK: %[[OVF:.+]] = arith.cmpi ugt, %[[MAGMASK]], %[[C7E]] : i8
-// CHECK: %[[CLAMPMAG:.+]] = arith.select %[[OVF]], %[[C7E]], %[[MAGMASK]] : i8
 // CHECK: %[[C24:.+]] = arith.constant 24 : i32
 // CHECK: %[[SIGNSHR:.+]] = arith.shrui %[[SIGNBITS]], %[[C24]] : i32
 // CHECK: %[[SIGN8:.+]] = arith.trunci %[[SIGNSHR]] : i32 to i8
-// CHECK: %[[RES8:.+]] = arith.ori %[[CLAMPMAG]], %[[SIGN8]] : i8
+// CHECK: %[[RES8:.+]] = arith.ori %[[MAGMASK]], %[[SIGN8]] : i8
+// CHECK: %[[NANOVF:.+]] = arith.ori %[[ISNAN]], %[[ISOVF]] : i1
 // CHECK: %[[CNAN:.+]] = arith.constant 127 : i8
-// CHECK: %[[RES:.+]] = arith.select %[[ISNAN]], %[[CNAN]], %[[RES8]] : i8
+// CHECK: %[[RES:.+]] = arith.select %[[NANOVF]], %[[CNAN]], %[[RES8]] : i8
 // CHECK: %[[RESULT:.+]] = arith.bitcast %[[RES]] : i8 to f8E4M3FN
 // CHECK: return %[[RESULT]]
 

@@ -830,13 +830,13 @@ struct F8E4M3FNExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
   }
 };
 
-/// Expand a TruncF to F8E4M3FN. The input magnitude is clamped to the F8E4M3FN
-/// maximum (448), scaled by 2^-8, and reduced to F16 (undoing the bias
-/// difference so the F16 value equals the magnitude times 2^-8). The low 7
-/// bits of the F16 encoding are then dropped with round-to-nearest-even to
-/// recover the 7 magnitude bits. Overflow into the NaN encoding is prevented
-/// by clamping, the sign is re-applied, and a NaN input maps to the F8E4M3FN
-/// NaN encoding.
+/// Expand a TruncF to F8E4M3FN. The magnitude is scaled by 2^-8 and reduced to
+/// F16 (undoing the bias difference so the F16 value equals the magnitude times
+/// 2^-8). The low 7 bits of the F16 encoding are then dropped with
+/// round-to-nearest-even to recover the 7 magnitude bits. F8E4M3FN has no
+/// infinity, so any input that overflows the maximum representable magnitude
+/// (448), as well as infinities and NaNs, maps to the F8E4M3FN NaN encoding to
+/// match the LLVM APFloat NanOnly overflow behavior.
 struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
@@ -877,7 +877,14 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value signBits = arith::AndIOp::create(b, f32Bits, cSignMask);
     Value absBits = arith::AndIOp::create(b, f32Bits, cAbsMask);
     Value absF32 = arith::BitcastOp::create(b, f32Ty, absBits);
-    // Clamp to the F8E4M3FN maximum magnitude (448) then scale by 2^-8.
+    // F8E4M3FN has no infinity: a magnitude above the round-to-nearest-even
+    // overflow boundary (464 = 448 + half an ulp) or an infinity maps to NaN.
+    Value cOverflow =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(464.0f), rewriter);
+    Value isOverflow =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, absF32, cOverflow);
+    // Clamp to the F8E4M3FN maximum magnitude (448) so the finite path stays
+    // well-defined; overflowing inputs are replaced by NaN below.
     Value cMax =
         createFloatConst(op.getLoc(), f32Ty, APFloat(448.0f), rewriter);
     absF32 = arith::MinNumFOp::create(b, absF32, cMax);
@@ -899,18 +906,15 @@ struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Value mag8 = arith::TruncIOp::create(b, i8Ty, shifted);
     Value c7F8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
     mag8 = arith::AndIOp::create(b, mag8, c7F8);
-    // Never emit the NaN encoding (0x7f) for a finite input.
-    Value c7E8 = createConst(op.getLoc(), i8Ty, 0x7e, rewriter);
-    Value isOverflow =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::ugt, mag8, c7E8);
-    mag8 = arith::SelectOp::create(b, isOverflow, c7E8, mag8);
     // Re-apply the sign.
     Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
     Value sign8 = arith::TruncIOp::create(
         b, i8Ty, arith::ShRUIOp::create(b, signBits, c24));
     Value res8 = arith::OrIOp::create(b, mag8, sign8);
+    // NaN input or an overflowing/infinite magnitude maps to the NaN encoding.
+    Value isNanOrOverflow = arith::OrIOp::create(b, isNan, isOverflow);
     Value cNan8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
-    Value res = arith::SelectOp::create(b, isNan, cNan8, res8);
+    Value res = arith::SelectOp::create(b, isNanOrOverflow, cNan8, res8);
     Value result = arith::BitcastOp::create(b, resultTy, res);
     rewriter.replaceOp(op, result);
     return success();
