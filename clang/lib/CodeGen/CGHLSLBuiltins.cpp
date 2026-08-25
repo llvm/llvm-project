@@ -675,8 +675,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     Value *ValueOp = EmitScalarExpr(ValueExpr);
     const auto *MatTy = ValueExpr->getType()->getAs<ConstantMatrixType>();
-    if (!MatTy ||
-        !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
+    if (!MatTy || !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
       return ValueOp;
 
     bool IsLoad =

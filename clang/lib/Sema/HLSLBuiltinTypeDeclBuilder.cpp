@@ -2470,7 +2470,7 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
     DeclarationName &Name, bool IsConstReturn, bool IsRef, QualType IndexTy,
-  QualType ElemTy, bool TransposeResult) {
+    QualType ElemTy, bool TransposeResult) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -2534,8 +2534,8 @@ BuiltinTypeDeclBuilder::addStoreFunction(DeclarationName &Name, bool IsConst,
 
   MMB.addParam("Index", AST.UnsignedIntTy).addParam("Value", ValueTy);
   if (TransposeArg)
-    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ValueTy, PH::_1,
-                    getConstantIntExpr(0));
+    MMB.callBuiltin("__builtin_hlsl_transpose_if_memory_is_row_major", ValueTy,
+                    PH::_1, getConstantIntExpr(0));
   MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
                   PH::Handle, PH::_0, ValueTy)
       .dereference(PH::LastStmt)
