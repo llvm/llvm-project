@@ -6904,26 +6904,75 @@ private:
 };
 } // namespace
 
+static bool isSupportedMetadirectiveLoopCompilerDirective(
+    const parser::CompilerDirective &directive) {
+  // Only directives known not to emit executable operations may be processed
+  // before runtime selection. New variants remain unsupported until classified.
+  using SupportedDirectives = std::tuple<
+      std::list<parser::CompilerDirective::IgnoreTKR>,
+      parser::CompilerDirective::LoopCount,
+      std::list<parser::CompilerDirective::AssumeAligned>,
+      parser::CompilerDirective::VectorAlways,
+      parser::CompilerDirective::VectorLength,
+      std::list<parser::CompilerDirective::NameValue>,
+      parser::CompilerDirective::Unroll,
+      parser::CompilerDirective::UnrollAndJam,
+      parser::CompilerDirective::Unrecognized,
+      parser::CompilerDirective::NoVector, parser::CompilerDirective::NoUnroll,
+      parser::CompilerDirective::NoUnrollAndJam,
+      parser::CompilerDirective::ForceInline, parser::CompilerDirective::Inline,
+      parser::CompilerDirective::NoInline,
+      parser::CompilerDirective::InlineAlways, parser::CompilerDirective::IVDep,
+      parser::CompilerDirective::Simd>;
+
+  return common::visit(
+      [](const auto &value) {
+        using T = std::decay_t<decltype(value)>;
+        return common::HasMember<T, SupportedDirectives>;
+      },
+      directive.u);
+}
+
+static bool
+isIgnorableMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
+  const auto *directive = eval.getIf<parser::CompilerDirective>();
+  return eval.isEndStmt() ||
+         (directive &&
+          isSupportedMetadirectiveLoopCompilerDirective(*directive));
+}
+
+static bool
+isUnsupportedMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
+  if (const auto *directive = eval.getIf<parser::CompilerDirective>())
+    return !isSupportedMetadirectiveLoopCompilerDirective(*directive);
+  return eval.isOtherStmt() ||
+         (eval.isDirective() && !eval.isExecutableDirective());
+}
+
 /// A loop-associated metadirective is lowered like a real loop construct, but
 /// the PFT leaves its associated loop nest as the following sibling instead of
 /// nesting it underneath. Splice that sibling into the metadirective's own
 /// nested evaluations so the shared loop-lowering path can find it. Return
 /// nullptr if no associated DO loop follows.
-static bool
-isIgnorableMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
-  return eval.isEndStmt() || eval.getIf<parser::CompilerDirective>();
-}
-
 static lower::pft::Evaluation *spliceAssociatedDoEval(
     lower::pft::Evaluation &eval,
-    SplicedAssociatedEvaluations *splicedEvaluations = nullptr) {
+    SplicedAssociatedEvaluations *splicedEvaluations = nullptr,
+    lower::pft::Evaluation **unsupportedInterveningEval = nullptr) {
+  if (unsupportedInterveningEval)
+    *unsupportedInterveningEval = nullptr;
+
   if (eval.hasNestedEvaluations()) {
     auto nestedIt =
         llvm::find_if(eval.getNestedEvaluations(), [](auto &nested) {
           return !isIgnorableMetadirectiveLoopAssociationEval(nested);
         });
-    if (nestedIt != eval.getNestedEvaluations().end())
-      return nestedIt->getIf<parser::DoConstruct>() ? &*nestedIt : nullptr;
+    if (nestedIt != eval.getNestedEvaluations().end()) {
+      if (nestedIt->getIf<parser::DoConstruct>())
+        return &*nestedIt;
+      if (unsupportedInterveningEval &&
+          isUnsupportedMetadirectiveLoopAssociationEval(*nestedIt))
+        *unsupportedInterveningEval = &*nestedIt;
+    }
     return nullptr;
   }
 
@@ -6953,8 +7002,14 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
          isIgnorableMetadirectiveLoopAssociationEval(*loopIt))
     ++loopIt;
 
-  if (loopIt == parentList->end() || !loopIt->getIf<parser::DoConstruct>())
+  if (loopIt == parentList->end())
     return nullptr;
+  if (!loopIt->getIf<parser::DoConstruct>()) {
+    if (unsupportedInterveningEval &&
+        isUnsupportedMetadirectiveLoopAssociationEval(*loopIt))
+      *unsupportedInterveningEval = &*loopIt;
+    return nullptr;
+  }
 
   if (splicedEvaluations) {
     auto entryIt =
@@ -7266,8 +7321,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
       splicedAssociatedEvaluations.restore(eval.getNestedEvaluations());
   });
   if (hasLoopAssociatedCandidate) {
-    if (lower::pft::Evaluation *loopEval =
-            spliceAssociatedDoEval(eval, &splicedAssociatedEvaluations)) {
+    lower::pft::Evaluation *unsupportedInterveningEval = nullptr;
+    if (lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(
+            eval, &splicedAssociatedEvaluations, &unsupportedInterveningEval)) {
       associatedLoopEval = loopEval;
       if (lower::pft::FunctionLikeUnit *owningProc =
               eval.getOwningProcedure()) {
@@ -7294,6 +7350,46 @@ static void genMetadirective(lower::AbstractConverter &converter,
       for (auto it = nested.begin(); it != loopIt; ++it)
         if (it->getIf<parser::CompilerDirective>())
           converter.genEval(*it);
+    } else if (unsupportedInterveningEval) {
+      std::string evalName;
+      if (unsupportedInterveningEval->getIf<parser::EntryStmt>())
+        evalName = "ENTRY statement";
+      else if (unsupportedInterveningEval->getIf<parser::FormatStmt>())
+        evalName = "FORMAT statement";
+      else if (const auto *directive =
+                   unsupportedInterveningEval
+                       ->getIf<parser::CompilerDirective>()) {
+        assert(!isSupportedMetadirectiveLoopCompilerDirective(*directive) &&
+               "unexpected compiler directive");
+        evalName = std::holds_alternative<parser::CompilerDirective::Prefetch>(
+                       directive->u)
+                       ? "PREFETCH compiler directive"
+                       : "unsupported compiler directive";
+      } else if (const auto *omp =
+                     unsupportedInterveningEval
+                         ->getIf<parser::OpenMPDeclarativeConstruct>()) {
+        evalName =
+            parser::omp::GetUpperName(parser::omp::GetOmpDirectiveName(*omp).v,
+                                      semaCtx.langOptions().getOpenMPVersion());
+        evalName += " directive";
+      } else if (const auto *acc =
+                     unsupportedInterveningEval
+                         ->getIf<parser::OpenACCDeclarativeConstruct>()) {
+        evalName = std::holds_alternative<
+                       parser::OpenACCStandaloneDeclarativeConstruct>(acc->u)
+                       ? "OpenACC DECLARE directive"
+                       : "OpenACC ROUTINE directive";
+      } else if (unsupportedInterveningEval
+                     ->getIf<parser::OpenACCRoutineConstruct>()) {
+        evalName = "OpenACC ROUTINE directive";
+      } else {
+        evalName = "non-executable directive";
+      }
+
+      TODO(converter.getCurrentLocation(),
+           llvm::Twine(evalName) +
+               " between loop-associated METADIRECTIVE and its associated "
+               "DO");
     }
   }
 

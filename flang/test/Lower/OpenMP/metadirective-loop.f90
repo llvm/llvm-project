@@ -7,7 +7,7 @@
 
 ! CHECK-LABEL: func.func @_QPtest_do(
 ! CHECK-NOT:     omp.parallel
-! CHECK:         omp.wsloop
+! CHECK:         omp.wsloop private({{.*}}Ei_private_i32
 ! CHECK:           omp.loop_nest
 ! CHECK:             hlfir.assign
 ! CHECK:             omp.yield
@@ -63,7 +63,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_begin_do(
 ! CHECK:         fir.if {{.*}} {
-! CHECK:           omp.wsloop
+! CHECK:           omp.wsloop private({{.*}}Ei_private_i32
 ! CHECK:             omp.loop_nest
 ! CHECK:               hlfir.assign
 ! CHECK:         } else {
@@ -71,6 +71,8 @@ end subroutine
 ! CHECK:           fir.do_loop
 ! CHECK:             hlfir.assign
 ! CHECK:         }
+! CHECK-NOT:     fir.do_loop
+! CHECK-NOT:     omp.
 ! CHECK:         return
 subroutine test_begin_do(flag, n, a)
   logical, intent(in) :: flag
@@ -412,6 +414,36 @@ subroutine test_dynamic_unroll_fallback(flag, n, a)
   !dir$ unroll 4
   do i = 1, n
     a(i) = i
+  end do
+end subroutine
+
+! Other compiler directives that do not emit executable operations may also
+! appear between the metadirective and its associated loop. Check a loop
+! annotation, an inlining annotation, and an unrecognized no-op directive.
+! CHECK-LABEL: func.func @_QPtest_dynamic_intervening_compiler_directives(
+! CHECK:         fir.if {{.*}} {
+! CHECK:           omp.wsloop
+! CHECK:             omp.loop_nest
+! CHECK:               fir.call @_QPconsume
+! CHECK:         } else {
+! CHECK:           fir.do_loop
+! CHECK-SAME:        attributes {loopAnnotation = #loop_annotation{{[0-9]*}}}
+! CHECK:             fir.call @_QPconsume
+! CHECK-SAME:          inline_attr = #fir.inline_attrs<always_inline>
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_intervening_compiler_directives(flag, n, a)
+  logical, intent(in) :: flag
+  integer :: n, a(n), i
+  external :: consume
+  !$omp metadirective &
+  !$omp & when(user={condition(flag)}: do) &
+  !$omp & otherwise(nothing)
+  !dir$ vector always
+  !dir$ forceinline
+  !dir$ unknown
+  do i = 1, n
+    call consume(a(i))
   end do
 end subroutine
 
