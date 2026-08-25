@@ -1063,6 +1063,9 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
     case SDDbgOperand::VREG:
       OS << "VREG=" << printReg(Op.getVReg());
       break;
+    case SDDbgOperand::GLOBALADDR:
+      OS << "GLOBALADDR=" << Op.getGlobal()->getName();
+      break;
     }
     Comma = true;
   }
