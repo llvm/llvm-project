@@ -6495,11 +6495,10 @@ getKmpcForStaticLoopForType(Type *Ty, OpenMPIRBuilder *OMPBuilder,
 
 // Inserts a call to proper OpenMP Device RTL function which handles
 // loop worksharing.
-static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
-                                          WorksharingLoopType LoopType,
-                                          BasicBlock *InsertBlock, Value *Ident,
-                                          Value *LoopBodyArg, Value *TripCount,
-                                          Function &LoopBodyFn, bool NoLoop) {
+static void createTargetLoopWorkshareCall(
+    OpenMPIRBuilder *OMPBuilder, WorksharingLoopType LoopType,
+    BasicBlock *InsertBlock, Value *Ident, Value *LoopBodyArg, Value *TripCount,
+    Function &LoopBodyFn, bool NoLoop, Value *ThreadChunk, Value *BlockChunk) {
   Type *TripCountTy = TripCount->getType();
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
@@ -6524,11 +6523,16 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
 
   RealArgs.push_back(
       Builder.CreateZExtOrTrunc(NumThreads, TripCountTy, "num.threads.cast"));
-  RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
   if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
-    RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
+    auto Chunk = [&](Value *C) -> Value * {
+      return C ? Builder.CreateZExtOrTrunc(C, TripCountTy, "chunk.cast")
+               : ConstantInt::get(TripCountTy, 0);
+    };
+    RealArgs.push_back(Chunk(BlockChunk));
+    RealArgs.push_back(Chunk(ThreadChunk));
     RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), NoLoop));
   } else {
+    RealArgs.push_back(ConstantInt::get(TripCountTy, 0));
     RealArgs.push_back(ConstantInt::get(Builder.getInt8Ty(), 0));
   }
 
@@ -6538,7 +6542,8 @@ static void createTargetLoopWorkshareCall(OpenMPIRBuilder *OMPBuilder,
 static void workshareLoopTargetCallback(
     OpenMPIRBuilder *OMPIRBuilder, CanonicalLoopInfo *CLI, Value *Ident,
     Function &OutlinedFn, const SmallVector<Instruction *, 4> &ToBeDeleted,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NoLoop, Value *ThreadChunk,
+    Value *BlockChunk) {
   IRBuilder<> &Builder = OMPIRBuilder->Builder;
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
@@ -6585,7 +6590,8 @@ static void workshareLoopTargetCallback(
   OutlinedFnCallInstruction->eraseFromParent();
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
-                                LoopBodyArg, TripCount, OutlinedFn, NoLoop);
+                                LoopBodyArg, TripCount, OutlinedFn, NoLoop,
+                                ThreadChunk, BlockChunk);
 
   for (auto &ToBeDeletedItem : ToBeDeleted)
     ToBeDeletedItem->eraseFromParent();
@@ -6594,7 +6600,8 @@ static void workshareLoopTargetCallback(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NoLoop, Value *ThreadChunk,
+    Value *BlockChunk) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   IdentFlag Flag = IdentFlag(0);
@@ -6690,7 +6697,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
   OI->PostOutlineCB = [=, ToBeDeletedVec =
                               std::move(ToBeDeleted)](Function &OutlinedFn) {
     workshareLoopTargetCallback(this, CLI, Ident, OutlinedFn, ToBeDeletedVec,
-                                LoopType, NoLoop);
+                                LoopType, NoLoop, ThreadChunk, BlockChunk);
   };
   addOutlineInfo(std::move(OI));
   return CLI->getAfterIP();
@@ -6703,8 +6710,23 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
     Value *DistScheduleChunkSize) {
-  if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
+  if (Config.isTargetDevice()) {
+    // Only a static schedule prescribes which thread runs which iteration, and
+    // only the distribute-for entry supplies a usable block chunk. A chunk and
+    // one-iteration-per-thread contradict each other, so drop the latter.
+    bool IsStatic = SchedKind == omp::OMP_SCHEDULE_Static ||
+                    SchedKind == omp::OMP_SCHEDULE_Default;
+    Value *ThreadChunk =
+        IsStatic && LoopType == WorksharingLoopType::DistributeForStaticLoop
+            ? ChunkSize
+            : nullptr;
+    // The block chunk is deliberately left unset: the runtime then defaults it
+    // to cover one thread chunk per thread, which is what the schedule asks
+    // for. Forwarding a dist_schedule chunk here is separate and untested.
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType,
+                                    NoLoop && !ThreadChunk, ThreadChunk,
+                                    /*BlockChunk=*/nullptr);
+  }
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
