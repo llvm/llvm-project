@@ -21,7 +21,6 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include <algorithm>
-#include <iostream>
 #include <map>
 #include <ostream>
 #include <string>
@@ -3144,7 +3143,6 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
 
 // 19.2 p2
 void CheckHelper::CheckGlobalName(const Symbol &symbol) {
-  // std::cout << symbol.name().ToString() << " " << symbol.GetParentComponent()->name().ToString()<< "\n";
   if (auto global{DefinesGlobalName(symbol)}) {
     auto pair{globalNames_.emplace(std::move(*global), symbol)};
     if (!pair.second) {
