@@ -80,6 +80,7 @@ define i64 @func1() {
 ; CHECK-LINUX-NEXT:    add x0, sp, #8
 ; CHECK-LINUX-NEXT:    ldr x8, [x8, :got_lo12:f]
 ; CHECK-LINUX-NEXT:    movk w9, #54815, lsl #16
+; CHECK-LINUX-NEXT:    add x1, sp, #20
 ; CHECK-LINUX-NEXT:    str w9, [sp, #16]
 ; CHECK-LINUX-NEXT:    add x9, sp, #56
 ; CHECK-LINUX-NEXT:    stp x9, x8, [sp, #24]
@@ -88,8 +89,6 @@ define i64 @func1() {
 ; CHECK-LINUX-NEXT:    movk x8, #177, lsl #32
 ; CHECK-LINUX-NEXT:    movk x8, #22528, lsl #48
 ; CHECK-LINUX-NEXT:    str x8, [sp, #8]
-; CHECK-LINUX-NEXT:    add x8, sp, #8
-; CHECK-LINUX-NEXT:    add x1, x8, #12
 ; CHECK-LINUX-NEXT:    bl __clear_cache
 ; CHECK-LINUX-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-LINUX-NEXT:    mov x0, xzr
@@ -111,14 +110,13 @@ define i64 @func1() {
 ; CHECK-PC-NEXT:    mov w8, #544 // =0x220
 ; CHECK-PC-NEXT:    add x0, sp, #8
 ; CHECK-PC-NEXT:    movk w8, #54815, lsl #16
+; CHECK-PC-NEXT:    add x1, sp, #20
 ; CHECK-PC-NEXT:    str w8, [sp, #16]
 ; CHECK-PC-NEXT:    mov x8, #143 // =0x8f
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-PC-NEXT:    movk x8, #177, lsl #32
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #48
 ; CHECK-PC-NEXT:    str x8, [sp, #8]
-; CHECK-PC-NEXT:    add x8, sp, #8
-; CHECK-PC-NEXT:    add x1, x8, #12
 ; CHECK-PC-NEXT:    bl __clear_cache
 ; CHECK-PC-NEXT:    mov x0, xzr
 ; CHECK-PC-NEXT:    .seh_startepilogue
@@ -147,14 +145,13 @@ define i64 @func1() {
 ; CHECK-APPLE-NEXT:    mov w8, #544 ; =0x220
 ; CHECK-APPLE-NEXT:    mov x0, sp
 ; CHECK-APPLE-NEXT:    movk w8, #54815, lsl #16
+; CHECK-APPLE-NEXT:    add x1, sp, #12
 ; CHECK-APPLE-NEXT:    str w8, [sp, #8]
 ; CHECK-APPLE-NEXT:    mov x8, #143 ; =0x8f
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-APPLE-NEXT:    movk x8, #177, lsl #32
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #48
 ; CHECK-APPLE-NEXT:    str x8, [sp]
-; CHECK-APPLE-NEXT:    mov x8, sp
-; CHECK-APPLE-NEXT:    add x1, x8, #12
 ; CHECK-APPLE-NEXT:    bl ___clear_cache
 ; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    mov x0, xzr

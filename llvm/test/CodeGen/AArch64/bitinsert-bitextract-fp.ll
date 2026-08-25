@@ -273,23 +273,21 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    sub sp, sp, #128
 ; AARCH64-NEXT:    .cfi_def_cfa_offset 128
-; AARCH64-NEXT:    mov w8, w4
 ; AARCH64-NEXT:    movi v1.2d, #0000000000000000
+; AARCH64-NEXT:    mov w8, w4
 ; AARCH64-NEXT:    mov x9, #-1 // =0xffffffffffffffff
-; AARCH64-NEXT:    lsr x11, x8, #3
-; AARCH64-NEXT:    mov x10, sp
+; AARCH64-NEXT:    lsr x10, x8, #3
 ; AARCH64-NEXT:    str x9, [sp, #96]
-; AARCH64-NEXT:    add x10, x10, #32
+; AARCH64-NEXT:    add x11, sp, #96
 ; AARCH64-NEXT:    str xzr, [sp, #56]
 ; AARCH64-NEXT:    and x15, x8, #0x3f
-; AARCH64-NEXT:    and x9, x11, #0x18
-; AARCH64-NEXT:    add x11, sp, #64
+; AARCH64-NEXT:    and x9, x10, #0x18
+; AARCH64-NEXT:    add x10, sp, #32
 ; AARCH64-NEXT:    str d0, [sp, #32]
-; AARCH64-NEXT:    add x11, x11, #32
 ; AARCH64-NEXT:    stur q1, [sp, #40]
 ; AARCH64-NEXT:    sub x10, x10, x9
-; AARCH64-NEXT:    stp q1, q1, [sp]
 ; AARCH64-NEXT:    sub x9, x11, x9
+; AARCH64-NEXT:    stp q1, q1, [sp]
 ; AARCH64-NEXT:    eor x15, x15, #0x3f
 ; AARCH64-NEXT:    str xzr, [sp, #120]
 ; AARCH64-NEXT:    stur q1, [sp, #104]

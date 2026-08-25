@@ -204,8 +204,7 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; ALL-NEXT:    ldr q1, [x0]
 ; ALL-NEXT:    stp x9, x8, [sp, #48]
 ; ALL-NEXT:    lsr x8, x10, #3
-; ALL-NEXT:    mov x9, sp
-; ALL-NEXT:    add x9, x9, #32
+; ALL-NEXT:    add x9, sp, #32
 ; ALL-NEXT:    stp q0, q1, [sp, #16]
 ; ALL-NEXT:    and x12, x10, #0x3f
 ; ALL-NEXT:    and x8, x8, #0x18

@@ -22,15 +22,12 @@ define dso_local void @test_simple(i32 %n, ...) {
 ; ... omit middle ones ...
 ; CHECK-DAG: stp q6, q7, [sp, #
 
-; CHECK: str [[STACK_TOP]], [x[[VA_LIST]]]
+; __gr_top is [[GR_BASE]] + 56, which is the same address as __stack, so the
+; two share a register and store as a pair.
+; CHECK: stp [[STACK_TOP]], [[STACK_TOP]], [x[[VA_LIST]]]
 
-; CHECK: add [[GR_TOPTMP:x[0-9]+]], sp, #[[GR_BASE]]
-; CHECK: add [[GR_TOP:x[0-9]+]], [[GR_TOPTMP]], #56
-
-
-; CHECK: mov [[VR_TOPTMP:x[0-9]+]], sp
-; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
-; CHECK: stp [[GR_TOP]], [[VR_TOP]], [x[[VA_LIST]], #8]
+; CHECK: add [[VR_TOP:x[0-9]+]], sp, #128
+; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
 ; CHECK: mov     [[GRVR:x[0-9]+]], #-56
 ; CHECK: movk    [[GRVR]], #65408, lsl #32
@@ -57,14 +54,12 @@ define dso_local void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 ; ... omit middle ones ...
 ; CHECK-DAG: str q1, [sp]
 
-; CHECK: str [[STACK_TOP]], [x[[VA_LIST]]]
+; __gr_top is [[GR_BASE]] + 40, which is the same address as __stack, so the
+; two share a register and store as a pair.
+; CHECK: stp [[STACK_TOP]], [[STACK_TOP]], [x[[VA_LIST]]]
 
-; CHECK: add [[GR_TOPTMP:x[0-9]+]], sp, #[[GR_BASE]]
-; CHECK: add [[GR_TOP:x[0-9]+]], [[GR_TOPTMP]], #40
-
-; CHECK: mov [[VR_TOPTMP:x[0-9]+]], sp
-; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #112
-; CHECK: stp [[GR_TOP]], [[VR_TOP]], [x[[VA_LIST]], #8]
+; CHECK: add [[VR_TOP:x[0-9]+]], sp, #112
+; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
 ; CHECK: mov  [[GRVR_OFFS:x[0-9]+]], #-40
 ; CHECK: movk [[GRVR_OFFS]], #65424, lsl #32
