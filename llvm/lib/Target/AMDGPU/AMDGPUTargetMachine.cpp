@@ -2716,7 +2716,7 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   Base::addPostRegAlloc(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
+void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
   // Break false anti-dependencies on load-address chains before the post-RA
   // scheduler so its load-clustering mutation can burst the loads.
   if (TM.getOptLevel() > CodeGenOptLevel::None)

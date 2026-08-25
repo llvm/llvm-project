@@ -241,16 +241,15 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   if (!DefToRename || !KillerIns || (MIMustBeKiller && KillerIns != &MI))
     return false;
 
-  // Conservative tied-operand guard.  The rename moves a value from OldReg to a
-  // fresh register across the whole window [DefToRename, KillerIns], but a tied
-  // def/use pair is pinned to a single physical register.  If a tied operand
-  // overlapping OldReg couples something we must rename (a def, or a use that
-  // reads the renamed value) with something we must not (a use whose incoming
-  // value is defined before the window), no single register satisfies both and
-  // renaming would silently corrupt the untouched side.  We don't distinguish
-  // those cases here, so bail whenever any operand overlapping OldReg in the
-  // window is tied.  Upgrade path: only bail when the tied partner falls on the
-  // opposite side of the RedefinedRegs predicate used in the rename loops below.
+  // Pre-mutation guards over the window [DefToRename, KillerIns].  Bail before
+  // changing anything if the rename can't be done correctly.
+
+  // Tied guard (conservative, whole footprint): a tied def/use pair is pinned to
+  // a single physical register.  If it couples something we must rename (a def,
+  // or a use reading the renamed value) with something we must not (a use whose
+  // incoming value is defined before the window), no single register satisfies
+  // both and renaming would silently corrupt the untouched side.  We don't
+  // distinguish those cases, so bail on any tied operand overlapping OldReg.
   for (MachineBasicBlock::iterator It = DefToRename->getIterator(),
                                    End = std::next(KillerIns->getIterator());
        It != End; ++It)
@@ -289,39 +288,62 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   if (I == DefinedRegClass.getRegisters().size())
     return false;
 
-  bitset<AMDGPU::NUM_TARGET_REGS> RedefinedRegs;
-  // Actually rename the register
-  for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
-    if (DefToRename->getOperand(Op).isReg() &&
-        DefToRename->getOperand(Op).isDef() &&
-        TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg)) {
-      DefToRename->getOperand(Op).setReg(
-          renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                         DefToRename->getOperand(Op).getReg()));
-      RedefinedRegs |= getVGPR32Lanes(DefToRename->getOperand(Op).getReg());
-    }
-  for (MachineBasicBlock::iterator RenameIt =
-         std::next(DefToRename->getIterator());
-       RenameIt != KillerIns; ++RenameIt)
-    for (unsigned Op = 0; Op < RenameIt->getNumExplicitOperands(); Op++)
-      if (RenameIt->getOperand(Op).isReg() &&
-          TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
-          (RenameIt->getOperand(Op).isDef() ||
-           (RedefinedRegs & getVGPR32Lanes(RenameIt->getOperand(Op).getReg()))
-               .any())) {
-        RenameIt->getOperand(Op).setReg(
+  auto renameRegisters = [&](bool DryRun) {
+    bitset<AMDGPU::NUM_TARGET_REGS> RedefinedRegs;
+    // Actually rename the register
+    for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
+      if (DefToRename->getOperand(Op).isReg() &&
+          DefToRename->getOperand(Op).isDef() &&
+          TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg)) {
+        Register NewDef =
             renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                           RenameIt->getOperand(Op).getReg()));
-        if (RenameIt->getOperand(Op).isDef())
-          RedefinedRegs |= getVGPR32Lanes(RenameIt->getOperand(Op).getReg());
+                           DefToRename->getOperand(Op).getReg());
+        if(!DryRun)
+          DefToRename->getOperand(Op).setReg(NewDef);
+        else if (!DefToRename->getOperand(Op).isRenamable())
+          return false;
+        RedefinedRegs |= getVGPR32Lanes(NewDef);
       }
-  for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
-    if (KillerIns->getOperand(Op).isReg() &&
-        KillerIns->getOperand(Op).isUse() &&
-        TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
-      KillerIns->getOperand(Op).setReg(
-        renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                       KillerIns->getOperand(Op).getReg()));
+    for (MachineBasicBlock::iterator RenameIt =
+             std::next(DefToRename->getIterator());
+         RenameIt != KillerIns; ++RenameIt)
+      for (int Op = RenameIt->getNumExplicitOperands() - 1; Op >= 0; Op--)
+        if (RenameIt->getOperand(Op).isReg() &&
+            TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
+            (RenameIt->getOperand(Op).isDef() ||
+             (RedefinedRegs & getVGPR32Lanes(renameRegister(
+                                  OldReg, DefinedRegClass.getRegisters()[I],
+                                  RenameIt->getOperand(Op).getReg())))
+                 .any())) {
+          Register NewReg =
+              renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                             RenameIt->getOperand(Op).getReg());
+          if(!DryRun)
+            RenameIt->getOperand(Op).setReg(NewReg);
+          else if (!RenameIt->getOperand(Op).isRenamable())
+            return false;
+          
+          if (RenameIt->getOperand(Op).isDef())
+            RedefinedRegs |= getVGPR32Lanes(NewReg);
+        }
+    for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
+      if (KillerIns->getOperand(Op).isReg() &&
+          KillerIns->getOperand(Op).isUse() &&
+          TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
+        if(!DryRun)
+          KillerIns->getOperand(Op).setReg(
+              renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                             KillerIns->getOperand(Op).getReg()));
+        else if (!KillerIns->getOperand(Op).isRenamable())
+          return false;
+
+    return true;
+  };
+
+  if (!renameRegisters(true))
+    return false;
+
+  renameRegisters(false);
   return true;
 }
 
@@ -447,10 +469,10 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   TRI = ST->getRegisterInfo();
   TII = ST->getInstrInfo();
   MRI = &MF.getRegInfo();
+  // getDynamicVGPRBlockSize() already returns 0 when dynamic VGPRs are
+  // disabled, so no need to guard on isDynamicVGPREnabled().
   unsigned DynamicBlockSize =
-      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled()
-          ? MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize()
-          : false;
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
   OccupancyBudget = ST->getMaxNumVGPRs(
       ST->getOccupancyWithNumVGPRs(
           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
