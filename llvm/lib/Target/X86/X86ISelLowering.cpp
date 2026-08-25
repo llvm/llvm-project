@@ -22982,8 +22982,6 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
   // Operand is usually already softened to i16 by type legalization.
   if (Src.getValueType() == MVT::bf16)
     Src = DAG.getBitcast(MVT::i16, Src);
-  else
-    Src = DAG.getAnyExtOrTrunc(Src, DL, MVT::i16);
 
   SDValue Res;
   if (!Subtarget.hasFP16() && ISD::isNormalLoad(Src.getNode())) {
