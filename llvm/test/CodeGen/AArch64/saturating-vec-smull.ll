@@ -2,8 +2,7 @@
 ; RUN: llc -mtriple=aarch64-none-elf < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for saturating_6xi16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extend_to_illegal_type
+; CHECK-GI:       warning: Instruction selection used fallback path for extend_to_illegal_type
 
 define <2 x i16> @saturating_2xi16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-SD-LABEL: saturating_2xi16:
@@ -171,15 +170,49 @@ define <2 x i64> @saturating_2xi32_2xi64(<2 x i32> %a, <2 x i32> %b) {
 }
 
 define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
-; CHECK-LABEL: saturating_6xi16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.4s, v1.8h, v0.8h
-; CHECK-NEXT:    movi v3.4s, #127, msl #8
-; CHECK-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    sshr v2.4s, v2.4s, #15
-; CHECK-NEXT:    smin v1.4s, v2.4s, v3.4s
-; CHECK-NEXT:    xtn2 v0.8h, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: saturating_6xi16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    smull2 v2.4s, v1.8h, v0.8h
+; CHECK-SD-NEXT:    movi v3.4s, #127, msl #8
+; CHECK-SD-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
+; CHECK-SD-NEXT:    sshr v2.4s, v2.4s, #15
+; CHECK-SD-NEXT:    smin v1.4s, v2.4s, v3.4s
+; CHECK-SD-NEXT:    xtn2 v0.8h, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: saturating_6xi16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    smov w8, v1.h[0]
+; CHECK-GI-NEXT:    smov w9, v0.h[0]
+; CHECK-GI-NEXT:    smov w10, v1.h[1]
+; CHECK-GI-NEXT:    smov w11, v0.h[1]
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    smov w8, v1.h[2]
+; CHECK-GI-NEXT:    smov w9, v0.h[2]
+; CHECK-GI-NEXT:    mov v2.s[1], w10
+; CHECK-GI-NEXT:    mov v3.s[1], w11
+; CHECK-GI-NEXT:    smov w10, v1.h[3]
+; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-GI-NEXT:    mov v2.s[2], w8
+; CHECK-GI-NEXT:    smov w8, v0.h[3]
+; CHECK-GI-NEXT:    mov v3.s[2], w9
+; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-GI-NEXT:    mov v2.s[3], w10
+; CHECK-GI-NEXT:    mov v3.s[3], w8
+; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
+; CHECK-GI-NEXT:    mul v2.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #15
+; CHECK-GI-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    sqshrn v3.4h, v2.4s, #15
+; CHECK-GI-NEXT:    mov v2.h[0], v3.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
+; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
+; CHECK-GI-NEXT:    mov v2.h[3], v3.h[3]
+; CHECK-GI-NEXT:    mov v2.h[4], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[5], v0.h[1]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
   %as = sext <6 x i16> %a to <6 x i32>
   %bs = sext <6 x i16> %b to <6 x i32>
   %m = mul nsw <6 x i32> %bs, %as

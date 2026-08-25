@@ -7074,7 +7074,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FPTOSI_SAT:
   case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_TRUNC_SSAT_S:
+  case TargetOpcode::G_TRUNC_SSAT_U:
+  case TargetOpcode::G_TRUNC_USAT_U: {
     Observer.changingInstr(MI);
     LLT SrcExtTy;
     LLT DstExtTy;
