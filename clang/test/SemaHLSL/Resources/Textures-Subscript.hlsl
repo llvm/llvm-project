@@ -39,8 +39,8 @@
 //   NARROW_INDEX_TYPE  an index with one component too few; only defined for
 //                      types whose index has more than one component
 //   NARROW_INDEX_ARG   a literal NARROW_INDEX_TYPE index
-//   HAS_STORE          defined for writable (UAV) textures, whose operator[]
-//                      returns a non-const reference
+//   HAS_STORE          defined for writable (UAV) textures, which can
+//                      additionally store through operator[]
 //
 // The diagnostics use `-re` directives so that neither the type name nor the
 // index width has to be spelled out per texture type.
@@ -81,9 +81,10 @@ void main() {
   float4 val5 = Tex[too_few];
 #endif
 
+  // Storing through the subscript is only possible on a writable texture,
+  // whose operator[] returns a non-const reference rather than a const one.
 #ifdef HAS_STORE
-  // A writable texture's operator[] returns a non-const reference, so a whole
-  // texel...
+  // A whole texel...
   Tex[valid_index] = float4(1, 2, 3, 4);
 
   // ...a single component...
@@ -99,8 +100,7 @@ void main() {
   Tex2[valid_index] = 8.0;
   Tex3[valid_index] = int3(9, 10, 11);
 #else
-  // A read-only texture's operator[] returns a const reference, so it cannot be
-  // assigned through.
+  // ...whereas every store through a read-only texture is rejected.
   // expected-note@*:* 3 {{function 'operator[]' which returns const-qualified type 'vector<float, 4> const hlsl_device &' declared here}}
 
   // expected-error@+1 {{cannot assign to return value because function 'operator[]' returns a const value}}
