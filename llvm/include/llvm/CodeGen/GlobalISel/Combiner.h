@@ -67,8 +67,6 @@ public:
 protected:
   virtual bool canMatchOpcode(unsigned Opc) const { return true; }
 
-  bool shouldDropRootPoisonGeneratingFlags() const override { return true; }
-
   const CombinerInfo &CInfo;
   GISelChangeObserver &Observer;
   MachineIRBuilder &B;

@@ -131,6 +131,11 @@ public:
     LRSplit = 1 << 23        // Instruction for live range split.
   };
 
+  static constexpr uint32_t getPoisonGeneratingFlags() {
+    return NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg |
+           FmNoNans | FmNoInfs | SameSign | InBounds;
+  }
+
 private:
   const MCInstrDesc *MCID;              // Instruction descriptor.
   MachineBasicBlock *Parent = nullptr;  // Pointer to the owning basic block.

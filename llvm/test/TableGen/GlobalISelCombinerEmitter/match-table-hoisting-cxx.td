@@ -39,9 +39,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:      /*   0 */ GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(198),
+// CHECK-NEXT:      /*   0 */ GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(222),
 // CHECK-NEXT:      /*   5 */   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
-// CHECK-NEXT:      /*   9 */   GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(103), // Rule ID 1 //
+// CHECK-NEXT:      /*   9 */   GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(115), // Rule ID 1 //
 // CHECK-NEXT:      /*  14 */     GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
 // CHECK-NEXT:      /*  17 */     // MIs[0] root
 // CHECK-NEXT:      /*  17 */     GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/255,
@@ -69,49 +69,53 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:      /*  75 */     GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:      /*  80 */     GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
 // CHECK-NEXT:      /*  83 */     GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // A
-// CHECK-NEXT:      /*  87 */     GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SMIN),
-// CHECK-NEXT:      /*  91 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // root
-// CHECK-NEXT:      /*  95 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // A
-// CHECK-NEXT:      /*  99 */     GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
-// CHECK-NEXT:      /* 102 */     GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:      /* 103 */   // Label 1: @103
-// CHECK-NEXT:      /* 103 */   GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(197), // Rule ID 0 //
-// CHECK-NEXT:      /* 108 */     GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
-// CHECK-NEXT:      /* 111 */     // MIs[0] root
-// CHECK-NEXT:      /* 111 */     GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/255,
-// CHECK-NEXT:      /* 115 */     // MIs[0] Operand 1
-// CHECK-NEXT:      /* 115 */     GIM_CheckConstantInt8, /*MI*/0, /*Op*/1, 0,
-// CHECK-NEXT:      /* 119 */     // MIs[0] max
-// CHECK-NEXT:      /* 119 */     GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2, // MIs[1]
-// CHECK-NEXT:      /* 123 */     GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_UMAX),
-// CHECK-NEXT:      /* 127 */     // MIs[1] A
-// CHECK-NEXT:      /* 127 */     // No operand predicates
-// CHECK-NEXT:      /* 127 */     // MIs[1] sub
-// CHECK-NEXT:      /* 127 */     GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:      /* 131 */     GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
-// CHECK-NEXT:      /* 135 */     // MIs[2] Operand 1
-// CHECK-NEXT:      /* 135 */     GIM_CheckConstantInt8, /*MI*/2, /*Op*/1, 0,
-// CHECK-NEXT:      /* 139 */     // MIs[2] A
-// CHECK-NEXT:      /* 139 */     GIM_CheckIsSameOperandIgnoreCopies, /*MI*/2, /*OpIdx*/2, /*OtherMI*/1, /*OtherOpIdx*/1,
-// CHECK-NEXT:      /* 144 */     GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner0),
-// CHECK-NEXT:      /* 148 */     GIM_CheckIsSafeToFold, /*NumInsns*/2,
-// CHECK-NEXT:      /* 150 */     GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/255,
-// CHECK-NEXT:      /* 153 */     GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
-// CHECK-NEXT:      /* 163 */     GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
-// CHECK-NEXT:      /* 166 */     // Combiner Rule #0: SharedCXXPred0
-// CHECK-NEXT:      /* 166 */     GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
-// CHECK-NEXT:      /* 169 */     GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
-// CHECK-NEXT:      /* 174 */     GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
-// CHECK-NEXT:      /* 177 */     GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // A
-// CHECK-NEXT:      /* 181 */     GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UMIN),
-// CHECK-NEXT:      /* 185 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // root
-// CHECK-NEXT:      /* 189 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // A
-// CHECK-NEXT:      /* 193 */     GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
-// CHECK-NEXT:      /* 196 */     GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:      /* 197 */   // Label 2: @197
-// CHECK-NEXT:      /* 197 */   GIM_Reject,
-// CHECK-NEXT:      /* 198 */ // Label 0: @198
-// CHECK-NEXT:      /* 198 */ GIM_Reject,
-// CHECK-NEXT:      /* 199 */ }; // Size: 199 bytes
+// CHECK-NEXT:      /*  87 */     GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      /*  93 */     GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SMIN),
+// CHECK-NEXT:      /*  97 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // root
+// CHECK-NEXT:      /* 101 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // A
+// CHECK-NEXT:      /* 105 */     GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:      /* 108 */     GIR_UnsetMIFlags, /*InsnID*/1, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      /* 114 */     GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:      /* 115 */   // Label 1: @115
+// CHECK-NEXT:      /* 115 */   GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(221), // Rule ID 0 //
+// CHECK-NEXT:      /* 120 */     GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:      /* 123 */     // MIs[0] root
+// CHECK-NEXT:      /* 123 */     GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/255,
+// CHECK-NEXT:      /* 127 */     // MIs[0] Operand 1
+// CHECK-NEXT:      /* 127 */     GIM_CheckConstantInt8, /*MI*/0, /*Op*/1, 0,
+// CHECK-NEXT:      /* 131 */     // MIs[0] max
+// CHECK-NEXT:      /* 131 */     GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2, // MIs[1]
+// CHECK-NEXT:      /* 135 */     GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_UMAX),
+// CHECK-NEXT:      /* 139 */     // MIs[1] A
+// CHECK-NEXT:      /* 139 */     // No operand predicates
+// CHECK-NEXT:      /* 139 */     // MIs[1] sub
+// CHECK-NEXT:      /* 139 */     GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/1, /*OpIdx*/2, // MIs[2]
+// CHECK-NEXT:      /* 143 */     GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:      /* 147 */     // MIs[2] Operand 1
+// CHECK-NEXT:      /* 147 */     GIM_CheckConstantInt8, /*MI*/2, /*Op*/1, 0,
+// CHECK-NEXT:      /* 151 */     // MIs[2] A
+// CHECK-NEXT:      /* 151 */     GIM_CheckIsSameOperandIgnoreCopies, /*MI*/2, /*OpIdx*/2, /*OtherMI*/1, /*OtherOpIdx*/1,
+// CHECK-NEXT:      /* 156 */     GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_GICombiner0),
+// CHECK-NEXT:      /* 160 */     GIM_CheckIsSafeToFold, /*NumInsns*/2,
+// CHECK-NEXT:      /* 162 */     GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/255,
+// CHECK-NEXT:      /* 165 */     GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
+// CHECK-NEXT:      /* 175 */     GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
+// CHECK-NEXT:      /* 178 */     // Combiner Rule #0: SharedCXXPred0
+// CHECK-NEXT:      /* 178 */     GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:      /* 181 */     GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
+// CHECK-NEXT:      /* 186 */     GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
+// CHECK-NEXT:      /* 189 */     GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // A
+// CHECK-NEXT:      /* 193 */     GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      /* 199 */     GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UMIN),
+// CHECK-NEXT:      /* 203 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // root
+// CHECK-NEXT:      /* 207 */     GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // A
+// CHECK-NEXT:      /* 211 */     GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:      /* 214 */     GIR_UnsetMIFlags, /*InsnID*/1, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
+// CHECK-NEXT:      /* 220 */     GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:      /* 221 */   // Label 2: @221
+// CHECK-NEXT:      /* 221 */   GIM_Reject,
+// CHECK-NEXT:      /* 222 */ // Label 0: @222
+// CHECK-NEXT:      /* 222 */ GIM_Reject,
+// CHECK-NEXT:      /* 223 */ }; // Size: 223 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }

@@ -305,6 +305,7 @@ protected:
   /// Combiners can sometimes just run C++ code to finish matching a rule &
   /// mutate instructions instead of relying on MatchActions. Empty if unused.
   std::string CustomCXXAction;
+  std::string CustomCXXActionRootFlagsToDrop = "0";
 
   using MutatableInsnSet = SmallPtrSet<InstructionMatcher *, 4>;
 
@@ -409,6 +410,9 @@ public:
 
   void setCustomCXXAction(StringRef FnEnumName) {
     CustomCXXAction = FnEnumName.str();
+  }
+  void setCustomCXXActionRootFlagsToDrop(StringRef Flags) {
+    CustomCXXActionRootFlagsToDrop = Flags.str();
   }
 
   // Emplaces an action of the specified Kind at the end of the action list.
@@ -2251,6 +2255,7 @@ private:
   SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
   std::vector<const InstructionMatcher *> CopiedFlags;
+  std::vector<StringRef> RootFlagsToDrop;
   std::vector<StringRef> SetFlags;
   std::vector<StringRef> UnsetFlags;
   std::vector<unsigned> MergeInsnIDs;
@@ -2283,6 +2288,7 @@ public:
   unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
 
+  void addRootMIFlagsToDrop(StringRef Flag) { RootFlagsToDrop.push_back(Flag); }
   void addSetMIFlags(StringRef Flag) { SetFlags.push_back(Flag); }
   void addUnsetMIFlags(StringRef Flag) { UnsetFlags.push_back(Flag); }
   void addCopiedMIFlags(const InstructionMatcher &IM) {

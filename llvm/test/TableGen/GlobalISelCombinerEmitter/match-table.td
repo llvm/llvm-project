@@ -171,7 +171,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:       // Combiner Rule #3: InstTest1
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2),
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner2), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:     // Label 7: @[[L7]]
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4([[L8:[0-9]+]]), // Rule ID 3 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
@@ -180,7 +180,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #2: InstTest0
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1),
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner1), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:     // Label 8: @[[L8]]
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 1: @[[L1]]
@@ -200,6 +200,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_TRUNC),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // dst
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // z
+// CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 9: @[[L9]]
 // CHECK-NEXT:     GIM_Reject,
@@ -219,6 +220,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // ext
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/1, // ptr
 // CHECK-NEXT:       GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
+// CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 10: @[[L10]]
 // CHECK-NEXT:     GIM_Reject,
@@ -226,19 +228,19 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 11*/ GIMT_Encode4([[L11:[0-9]+]]), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       // Combiner Rule #0: WipOpcodeTest0; wip_match_opcode 'G_TRUNC'
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:     // Label 11: @[[L11]]
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 12*/ GIMT_Encode4([[L12:[0-9]+]]), // Rule ID 1 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
 // CHECK-NEXT:       // Combiner Rule #1: WipOpcodeTest1; wip_match_opcode 'G_TRUNC'
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:     // Label 12: @[[L12]]
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 4: @[[L4]]
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4([[L13:[0-9]+]]), // Rule ID 2 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
 // CHECK-NEXT:       // Combiner Rule #1: WipOpcodeTest1; wip_match_opcode 'G_SEXT'
-// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0),
+// CHECK-NEXT:       GIR_DoneWithCustomAction, /*Fn*/GIMT_Encode2(GICXXCustomAction_GICombiner0), /*RootFlagsToDrop*/GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:     // Label 13: @[[L13]]
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     // Label 5: @[[L5]]
@@ -255,6 +257,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // dst
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
+// CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 14: @[[L14]]
 // CHECK-NEXT:     GIM_Reject,

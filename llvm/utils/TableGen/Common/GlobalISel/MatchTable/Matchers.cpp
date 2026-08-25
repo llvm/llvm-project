@@ -830,6 +830,8 @@ void RuleMatcher::emit(MatchTable &Table) {
     Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
           << MatchTable::Comment("Fn")
           << MatchTable::NamedValue(2, CustomCXXAction)
+          << MatchTable::Comment("RootFlagsToDrop")
+          << MatchTable::NamedValue(4, CustomCXXActionRootFlagsToDrop)
           << MatchTable::LineBreak;
   } else {
     // Emit all actions except the last one, then emit coverage and emit the
@@ -1956,6 +1958,13 @@ void BuildMIAction::chooseInsnToMutate(RuleMatcher &Rule) {
 
 void BuildMIAction::emitActionOpcodes(MatchTable &Table) const {
   const auto AddMIFlags = [&]() {
+    if (!RootFlagsToDrop.empty()) {
+      Table << MatchTable::Opcode("GIR_UnsetMIFlags")
+            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+            << MatchTable::NamedValue(4, join(RootFlagsToDrop, " | "))
+            << MatchTable::LineBreak;
+    }
+
     for (const InstructionMatcher *IM : CopiedFlags) {
       Table << MatchTable::Opcode("GIR_CopyMIFlags")
             << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)

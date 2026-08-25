@@ -83,6 +83,9 @@ constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
 constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
+constexpr StringLiteral PoisonGeneratingMIFlagsExpr =
+    "MachineInstr::getPoisonGeneratingFlags()";
+
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
 static void declareInstExpansion(CodeExpansions &CE,
@@ -1951,6 +1954,7 @@ bool CombineRuleBuilder::emitCXXMatchApply(CodeExpansions &CE, RuleMatcher &M,
 
   const auto &Code = CXXPredicateCode::getCustomActionCode(CodeStr);
   M.setCustomCXXAction(Code.getEnumNameWithPrefix(CXXCustomActionPrefix));
+  M.setCustomCXXActionRootFlagsToDrop(PoisonGeneratingMIFlagsExpr);
   return true;
 }
 
@@ -2103,6 +2107,9 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
   // cases.
   if (CGIP.isIntrinsic() && !HasEmittedIntrinsicID)
     EmitIntrinsicID();
+
+  // Poison-generating flags need to be explicitly preserved by the pattern.
+  DstMI.addRootMIFlagsToDrop(PoisonGeneratingMIFlagsExpr);
 
   // Render MIFlags
   if (const auto *FI = CGIP.getMIFlagsInfo()) {
