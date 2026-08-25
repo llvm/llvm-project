@@ -4118,7 +4118,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin___clear_cache: {
     Value *Begin = EmitScalarExpr(E->getArg(0));
     Value *End = EmitScalarExpr(E->getArg(1));
-    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    // The declaration of __builtin___clear_cache is rewritten to take the
+    // address spaces of the pointers it is called with, which need not be the
+    // target's default address space, so overload the intrinsic on the address
+    // space that is actually passed in. The two pointers delimit a single
+    // range, so bring the end pointer into the address space of the begin
+    // pointer if the rewritten declaration gave them different ones.
+    llvm::Type *PtrTy = Begin->getType();
+    End = Builder.CreatePointerBitCastOrAddrSpaceCast(End, PtrTy);
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {PtrTy});
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
   case Builtin::BI__builtin_trap:
