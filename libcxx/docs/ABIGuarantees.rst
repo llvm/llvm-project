@@ -224,7 +224,7 @@ This changes the ``iterator`` and ``const_iterator`` of ``array`` and ``string_v
 especially useful because enabling bounded iterators hardening requires code not to make these assumptions.
 
 ``_LIBCPP_ABI_BOUNDED_ITERATORS``, ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING``, ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR``, ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` and ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL``
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 These flags change the ``iterator`` member of various classes to reference hardened iterators instead. See the
 :ref:`hardening documentation <hardening>` for more details.
 
