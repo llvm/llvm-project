@@ -357,7 +357,7 @@ public:
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
   /// Return the width, in bits, of the num_records field of a buffer resource
-  /// (V#) on this subtarget, or std::nullopt if not yet knows.
+  /// (V#) on this subtarget, or std::nullopt if not yet known.
   std::optional<unsigned> getBufferResourceNumRecordsWidth() const {
     if (BufferResourceNumRecordsWidth == 0)
       return std::nullopt;
