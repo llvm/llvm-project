@@ -262,10 +262,11 @@ void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
   auto [FirstDefault, Defaults] =
       Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
   for (unsigned I = Args.size(), E = FTy->getNumParams(); I != E; ++I) {
-    if (I < FirstDefault || I - FirstDefault >= Defaults.size())
+    unsigned DefaultIdx = I - FirstDefault;
+    if (DefaultIdx < 0 || DefaultIdx >= Defaults.size())
       break;
-    Args.push_back(llvm::ConstantInt::get(FTy->getParamType(I),
-                                          Defaults[I - FirstDefault]));
+    Args.push_back(
+        llvm::ConstantInt::get(FTy->getParamType(I), Defaults[DefaultIdx]));
   }
 }
 

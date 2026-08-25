@@ -2473,6 +2473,12 @@ def : Pat<(int_nvvm_ui2f_rz i32:$a), (CVT_f32_u32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
+// Utility to look up base and satfinite variants of a conversion intrinsic
+class CvtIntrinsics<string suffix> {
+  Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
+  Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
+}
+
 foreach rnd = ["rn", "rz"] in {
   foreach relu = ["", "_relu"] in {
     defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # relu));
@@ -2483,39 +2489,30 @@ foreach rnd = ["rn", "rz"] in {
       defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
       defvar PZOPreds =
           !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>);
-
-      defvar FF2BF16X2 = !cast<Intrinsic>("int_nvvm_ff2bf16x2_" # rnd # relu);
-      defvar FF2F16X2 = !cast<Intrinsic>("int_nvvm_ff2f16x2_" # rnd # relu);
-      defvar F2BF16 = !cast<Intrinsic>("int_nvvm_f2bf16_" # rnd # relu);
-      defvar F2F16 = !cast<Intrinsic>("int_nvvm_f2f16_" # rnd # relu);
-
-      def : Pat<(FF2BF16X2 f32:$a, f32:$b, PZO),
-                (CVT_bf16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
-      def : Pat<(FF2F16X2 f32:$a, f32:$b, PZO),
-                (CVT_f16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
-      def : Pat<(F2BF16 f32:$a, PZO), (CVT_bf16_f32 $a, Mode)>,
-            Requires<PZOPreds>;
-      def : Pat<(F2F16 f32:$a, PZO), (CVT_f16_f32 $a, Mode)>,
-            Requires<PZOPreds>;
-
-      defvar FF2BF16X2_SF =
-          !cast<Intrinsic>("int_nvvm_ff2bf16x2_" # rnd # relu # "_satfinite");
-      defvar FF2F16X2_SF =
-          !cast<Intrinsic>("int_nvvm_ff2f16x2_" # rnd # relu # "_satfinite");
-      defvar F2BF16_SF =
-          !cast<Intrinsic>("int_nvvm_f2bf16_" # rnd # relu # "_satfinite");
-      defvar F2F16_SF =
-          !cast<Intrinsic>("int_nvvm_f2f16_" # rnd # relu # "_satfinite");
       defvar SFPreds = !if(pzo, [hasConvertWithPZOSupport]<Predicate>,
                                 [PTX81, SM80]<Predicate>);
 
-      def : Pat<(FF2BF16X2_SF f32:$a, f32:$b, PZO),
+      defvar FF2BF16X2 = CvtIntrinsics<"ff2bf16x2_" # rnd # relu>;
+      defvar FF2F16X2 = CvtIntrinsics<"ff2f16x2_" # rnd # relu>;
+      defvar F2BF16 = CvtIntrinsics<"f2bf16_" # rnd # relu>;
+      defvar F2F16 = CvtIntrinsics<"f2f16_" # rnd # relu>;
+
+      def : Pat<(FF2BF16X2.base f32:$a, f32:$b, PZO),
+                (CVT_bf16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(FF2F16X2.base f32:$a, f32:$b, PZO),
+                (CVT_f16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(F2BF16.base f32:$a, PZO), (CVT_bf16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+      def : Pat<(F2F16.base f32:$a, PZO), (CVT_f16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+
+      def : Pat<(FF2BF16X2.sf f32:$a, f32:$b, PZO),
                 (CVT_bf16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
-      def : Pat<(FF2F16X2_SF f32:$a, f32:$b, PZO),
+      def : Pat<(FF2F16X2.sf f32:$a, f32:$b, PZO),
                 (CVT_f16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
-      def : Pat<(F2BF16_SF f32:$a, PZO), (CVT_bf16_f32_sf $a, Mode)>,
+      def : Pat<(F2BF16.sf f32:$a, PZO), (CVT_bf16_f32_sf $a, Mode)>,
             Requires<SFPreds>;
-      def : Pat<(F2F16_SF f32:$a, PZO), (CVT_f16_f32_sf $a, Mode)>,
+      def : Pat<(F2F16.sf f32:$a, PZO), (CVT_f16_f32_sf $a, Mode)>,
             Requires<SFPreds>;
     }
   }
@@ -2532,20 +2529,16 @@ foreach relu = ["", "_relu"] in {
         [hasConvertWithStochasticRounding]<Predicate>, 
         !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
 
-    defvar BF16X2 = !cast<Intrinsic>("int_nvvm_ff2bf16x2_rs" # relu);
-    defvar BF16X2_SF =
-        !cast<Intrinsic>("int_nvvm_ff2bf16x2_rs" # relu # "_satfinite");
-    defvar F16X2 = !cast<Intrinsic>("int_nvvm_ff2f16x2_rs" # relu);
-    defvar F16X2_SF =
-        !cast<Intrinsic>("int_nvvm_ff2f16x2_rs" # relu # "_satfinite");
+    defvar BF16X2 = CvtIntrinsics<"ff2bf16x2_rs" # relu>;
+    defvar F16X2 = CvtIntrinsics<"ff2f16x2_rs" # relu>;
 
-    def : Pat<(BF16X2 f32:$a, f32:$b, i32:$c, PZO),
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
               (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(BF16X2_SF f32:$a, f32:$b, i32:$c, PZO),
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
               (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2 f32:$a, f32:$b, i32:$c, PZO),
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
               (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2_SF f32:$a, f32:$b, i32:$c, PZO),
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
               (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
   }
 }
