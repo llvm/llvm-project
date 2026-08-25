@@ -64,9 +64,6 @@ public:
 
   static RealValue Infinity(int kind, bool negative = false);
 
-  /// A signaling NaN, as opposed to the quiet NaN returned by NotANumber().
-  static RealValue SignalingNaN(int kind);
-
   void print(llvm::raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -34,21 +34,15 @@ public:
   constexpr Int128() {}
   // This means of definition provides some portability for
   // "size_t" operands.
-  constexpr Int128(unsigned n) : low_{n} {}
-  constexpr Int128(unsigned long n) : low_{n} {}
-  constexpr Int128(unsigned long long n) : low_{n} {}
-  constexpr Int128(int n) {
+  template <typename T,
+      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
+  constexpr Int128(T n) {
     low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
+    if constexpr (std::is_signed_v<T>) {
+      high_ = -static_cast<std::uint64_t>(n < 0);
+    }
   }
-  constexpr Int128(long n) {
-    low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
-  }
-  constexpr Int128(long long n) {
-    low_ = static_cast<std::uint64_t>(n);
-    high_ = -static_cast<std::uint64_t>(n < 0);
-  }
+
   constexpr Int128(const Int128 &) = default;
   constexpr Int128(Int128 &&) = default;
   constexpr Int128 &operator=(const Int128 &) = default;
@@ -64,25 +58,11 @@ public:
   constexpr Int128 operator-() const { return ~*this + 1; }
   constexpr bool operator!() const { return !low_ && !high_; }
   constexpr explicit operator bool() const { return low_ || high_; }
-  constexpr explicit operator std::uint64_t() const { return low_; }
-  constexpr explicit operator std::int64_t() const { return low_; }
-  constexpr explicit operator std::uint32_t() const {
-    return static_cast<std::uint32_t>(low_);
-  }
-  constexpr explicit operator std::int32_t() const {
-    return static_cast<std::int32_t>(low_);
-  }
-  constexpr explicit operator std::uint16_t() const {
-    return static_cast<std::uint16_t>(low_);
-  }
-  constexpr explicit operator std::int16_t() const {
-    return static_cast<std::int16_t>(low_);
-  }
-  constexpr explicit operator std::uint8_t() const {
-    return static_cast<std::uint8_t>(low_);
-  }
-  constexpr explicit operator std::int8_t() const {
-    return static_cast<std::int8_t>(low_);
+
+  template <typename T,
+      typename = std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>>
+  constexpr explicit operator T() const {
+    return static_cast<T>(low_);
   }
 
   constexpr std::uint64_t high() const { return high_; }
@@ -327,7 +307,8 @@ using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 } // namespace Fortran::common
 
 namespace std {
-
+// Specializing std::numeric_limits is an intended extension point for
+// user-defined type.
 template <> class numeric_limits<Fortran::common::UnsignedInt128> {
 public:
   using T = Fortran::common::UnsignedInt128;
@@ -388,6 +369,5 @@ public:
   }
 };
 #endif
-
 } // namespace std
 #endif

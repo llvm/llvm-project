@@ -30,7 +30,7 @@ inline constexpr std::size_t CharacterKindPos =
     type_index<Target, CharacterTypedKinds>::value;
 struct KindName {
   template <typename TP> static std::string GetName(int) {
-    return "CHARACTER(" + std::to_string(TP::kind) + ")";
+    return "CHARACTER_" + std::to_string(TP::kind);
   }
 };
 
@@ -41,7 +41,7 @@ class CharacterValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(CharacterValueKind, CharacterValueKind,
     testing::ValuesIn(CharacterKinds),
     [](const testing::TestParamInfo<int> &info) {
-      return "CHARACTER(" + std::to_string(info.param) + ")";
+      return "CHARACTER_" + std::to_string(info.param);
     });
 
 //===----------------------------------------------------------------------===//

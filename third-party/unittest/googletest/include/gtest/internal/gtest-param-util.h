@@ -659,14 +659,10 @@ class ParameterizedTestSuiteInfo : public ParameterizedTestSuiteInfoBase {
     // Check for empty string
     if (name.empty()) return false;
 
-// LLVM edit to allow parenthesis in test names, which is already allowed for
-// TYPED_TEST
-#if 0
     // Check for invalid characters
     for (std::string::size_type index = 0; index < name.size(); ++index) {
       if (!IsAlNum(name[index]) && name[index] != '_') return false;
     }
-#endif
 
     return true;
   }

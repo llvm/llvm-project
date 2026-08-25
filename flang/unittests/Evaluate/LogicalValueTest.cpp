@@ -23,7 +23,7 @@ class LogicalValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(LogicalValueKind, LogicalValueKind,
     testing::ValuesIn(LogicalKinds),
     [](const testing::TestParamInfo<int> &info) {
-      return "LOGICAL(" + std::to_string(info.param) + ")";
+      return "LOGICAL_" + std::to_string(info.param);
     });
 
 constexpr int KindPos(int kind) {

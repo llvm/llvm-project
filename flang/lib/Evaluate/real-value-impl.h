@@ -112,7 +112,6 @@ public:
   static RealValueImpl EPSILON(int kind);
   static RealValueImpl TINY(int kind);
   static RealValueImpl NotANumber(int kind);
-  static RealValueImpl SignalingNaN(int kind);
   static RealValueImpl Infinity(int kind, bool negative = false);
   static RealValueImpl NegativeZero(int kind);
 
