@@ -52,6 +52,7 @@ set(LIBCXX_MODULE_STD_SOURCES
   std/generator.inc
   std/hazard_pointer.inc
   std/initializer_list.inc
+  std/inplace_vector.inc
   std/iomanip.inc
   std/ios.inc
   std/iosfwd.inc

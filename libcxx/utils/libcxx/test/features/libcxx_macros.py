@@ -29,6 +29,7 @@ macros = {
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL": "libcpp-has-abi-bounded-iterators-in-optional",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY": "libcpp-has-abi-bounded-iterators-in-std-array",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_INPLACE_VECTOR": "libcpp-has-abi-bounded-iterators-in-inplace-vector",
     "_LIBCPP_ABI_BOUNDED_UNIQUE_PTR": "libcpp-has-abi-bounded-unique_ptr",
     "_LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE": "libcpp-has-abi-fix-unordered-container-size-type",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
