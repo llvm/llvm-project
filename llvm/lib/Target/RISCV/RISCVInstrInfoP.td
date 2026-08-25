@@ -1967,24 +1967,22 @@ def riscv_pnclipp_w  : RVSDNode<"PNCLIPP_W", SDT_RISCVPackedNarrowingClipW>;
 def riscv_pnclipup_w : RVSDNode<"PNCLIPUP_W", SDT_RISCVPackedNarrowingClipW>;
 
 // Packed "Q-format" multiply parts accumulate.
+// The scalar form merges the RV32 halfword (v2i16, was MQACC_H*) and RV64
+// word (v2i32, was MQACC_W*) variants via XLenVecQAccVT.
 def SDT_RISCVQFormatAccS
     : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>,
-                           SDTCisVT<2, v2i16>,
+                           SDTCisVT<2, XLenVecQAccVT>,
                            SDTCisSameAs<2, 3>]>;
 def SDT_RISCVQFormatAccP
     : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisVT<1, v2i32>,
                            SDTCisVT<2, v4i16>, SDTCisSameAs<2, 3>]>;
-def SDT_RISCVQFormatAccW
-    : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>,
-                           SDTCisVT<2, v2i32>,
-                           SDTCisSameAs<2, 3>]>;
 
-def riscv_mqacc_h00  : RVSDNode<"MQACC_H00",  SDT_RISCVQFormatAccS>;
-def riscv_mqacc_h01  : RVSDNode<"MQACC_H01",  SDT_RISCVQFormatAccS>;
-def riscv_mqacc_h11  : RVSDNode<"MQACC_H11",  SDT_RISCVQFormatAccS>;
-def riscv_mqracc_h00 : RVSDNode<"MQRACC_H00", SDT_RISCVQFormatAccS>;
-def riscv_mqracc_h01 : RVSDNode<"MQRACC_H01", SDT_RISCVQFormatAccS>;
-def riscv_mqracc_h11 : RVSDNode<"MQRACC_H11", SDT_RISCVQFormatAccS>;
+def riscv_mqacc_00  : RVSDNode<"MQACC_00",  SDT_RISCVQFormatAccS>;
+def riscv_mqacc_01  : RVSDNode<"MQACC_01",  SDT_RISCVQFormatAccS>;
+def riscv_mqacc_11  : RVSDNode<"MQACC_11",  SDT_RISCVQFormatAccS>;
+def riscv_mqracc_00 : RVSDNode<"MQRACC_00", SDT_RISCVQFormatAccS>;
+def riscv_mqracc_01 : RVSDNode<"MQRACC_01", SDT_RISCVQFormatAccS>;
+def riscv_mqracc_11 : RVSDNode<"MQRACC_11", SDT_RISCVQFormatAccS>;
 
 def riscv_pmqacc_h00  : RVSDNode<"PMQACC_W_H00",  SDT_RISCVQFormatAccP>;
 def riscv_pmqacc_h01  : RVSDNode<"PMQACC_W_H01",  SDT_RISCVQFormatAccP>;
@@ -1992,13 +1990,6 @@ def riscv_pmqacc_h11  : RVSDNode<"PMQACC_W_H11",  SDT_RISCVQFormatAccP>;
 def riscv_pmqracc_h00 : RVSDNode<"PMQRACC_W_H00", SDT_RISCVQFormatAccP>;
 def riscv_pmqracc_h01 : RVSDNode<"PMQRACC_W_H01", SDT_RISCVQFormatAccP>;
 def riscv_pmqracc_h11 : RVSDNode<"PMQRACC_W_H11", SDT_RISCVQFormatAccP>;
-
-def riscv_mqacc_w00  : RVSDNode<"MQACC_W00",  SDT_RISCVQFormatAccW>;
-def riscv_mqacc_w01  : RVSDNode<"MQACC_W01",  SDT_RISCVQFormatAccW>;
-def riscv_mqacc_w11  : RVSDNode<"MQACC_W11",  SDT_RISCVQFormatAccW>;
-def riscv_mqracc_w00 : RVSDNode<"MQRACC_W00", SDT_RISCVQFormatAccW>;
-def riscv_mqracc_w01 : RVSDNode<"MQRACC_W01", SDT_RISCVQFormatAccW>;
-def riscv_mqracc_w11 : RVSDNode<"MQRACC_W11", SDT_RISCVQFormatAccW>;
 
 def riscv_mqwacc  : RVSDNode<"MQWACC",  SDT_RISCVWideningAddSubAccumulate>;
 def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVWideningAddSubAccumulate>;
@@ -2768,22 +2759,22 @@ let append Predicates = [IsRV32] in {
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
 
   // Packed "Q-format" multiply parts accumulate, scalar halfword (RV32).
-  def : Pat<(XLenVT (riscv_mqacc_h00 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_00 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQACC_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqacc_h01 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_01 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQACC_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqacc_h11 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_11 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_h00 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_00 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQRACC_H00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_h01 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_01 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQRACC_H01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_h11 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_11 (XLenVT GPR:$rd),
                         (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MQRACC_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV32]
@@ -2828,22 +2819,22 @@ let append Predicates = [IsRV64] in {
                         (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PMQRACC_W_H11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
-  def : Pat<(XLenVT (riscv_mqacc_w00 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_00 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQACC_W00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqacc_w01 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_01 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQACC_W01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqacc_w11 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqacc_11 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_w00 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_00 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQRACC_W00 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_w01 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_01 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQRACC_W01 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVT (riscv_mqracc_w11 (XLenVT GPR:$rd),
+  def : Pat<(XLenVT (riscv_mqracc_11 (XLenVT GPR:$rd),
                         (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (MQRACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 

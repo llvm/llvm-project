@@ -12259,29 +12259,29 @@ static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
   case Intrinsic::riscv_mqacc_h00:
-    return RISCVISD::MQACC_H00;
-  case Intrinsic::riscv_mqacc_h01:
-    return RISCVISD::MQACC_H01;
-  case Intrinsic::riscv_mqacc_h11:
-    return RISCVISD::MQACC_H11;
-  case Intrinsic::riscv_mqracc_h00:
-    return RISCVISD::MQRACC_H00;
-  case Intrinsic::riscv_mqracc_h01:
-    return RISCVISD::MQRACC_H01;
-  case Intrinsic::riscv_mqracc_h11:
-    return RISCVISD::MQRACC_H11;
+  case Intrinsic::riscv_mqacc_w00:
   case Intrinsic::riscv_pmqacc_h00:
-    return RISCVISD::MQACC_H00;
+    return RISCVISD::MQACC_00;
+  case Intrinsic::riscv_mqacc_h01:
+  case Intrinsic::riscv_mqacc_w01:
   case Intrinsic::riscv_pmqacc_h01:
-    return RISCVISD::MQACC_H01;
+    return RISCVISD::MQACC_01;
+  case Intrinsic::riscv_mqacc_h11:
+  case Intrinsic::riscv_mqacc_w11:
   case Intrinsic::riscv_pmqacc_h11:
-    return RISCVISD::MQACC_H11;
+    return RISCVISD::MQACC_11;
+  case Intrinsic::riscv_mqracc_h00:
+  case Intrinsic::riscv_mqracc_w00:
   case Intrinsic::riscv_pmqracc_h00:
-    return RISCVISD::MQRACC_H00;
+    return RISCVISD::MQRACC_00;
+  case Intrinsic::riscv_mqracc_h01:
+  case Intrinsic::riscv_mqracc_w01:
   case Intrinsic::riscv_pmqracc_h01:
-    return RISCVISD::MQRACC_H01;
+    return RISCVISD::MQRACC_01;
+  case Intrinsic::riscv_mqracc_h11:
+  case Intrinsic::riscv_mqracc_w11:
   case Intrinsic::riscv_pmqracc_h11:
-    return RISCVISD::MQRACC_H11;
+    return RISCVISD::MQRACC_11;
   }
 }
 
@@ -12307,25 +12307,6 @@ static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   case Intrinsic::riscv_mqracc_h11:
   case Intrinsic::riscv_pmqracc_h11:
     return RISCVISD::PMQRACC_W_H11;
-  }
-}
-
-static unsigned getRVPQFormatAccWordOpcode(Intrinsic::ID IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_w00:
-    return RISCVISD::MQACC_W00;
-  case Intrinsic::riscv_mqacc_w01:
-    return RISCVISD::MQACC_W01;
-  case Intrinsic::riscv_mqacc_w11:
-    return RISCVISD::MQACC_W11;
-  case Intrinsic::riscv_mqracc_w00:
-    return RISCVISD::MQRACC_W00;
-  case Intrinsic::riscv_mqracc_w01:
-    return RISCVISD::MQRACC_W01;
-  case Intrinsic::riscv_mqracc_w11:
-    return RISCVISD::MQRACC_W11;
   }
 }
 
@@ -12422,24 +12403,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     switch (IntNo) {
     case Intrinsic::riscv_orc_b:      Opc = RISCVISD::ORC_B;      break;
     case Intrinsic::riscv_brev8:      Opc = RISCVISD::BREV8;      break;
-    case Intrinsic::riscv_sha256sig0:
-      Opc = RISCVISD::SHA256SIG0;
-      break;
-    case Intrinsic::riscv_sha256sig1:
-      Opc = RISCVISD::SHA256SIG1;
-      break;
-    case Intrinsic::riscv_sha256sum0:
-      Opc = RISCVISD::SHA256SUM0;
-      break;
-    case Intrinsic::riscv_sha256sum1:
-      Opc = RISCVISD::SHA256SUM1;
-      break;
-    case Intrinsic::riscv_sm3p0:
-      Opc = RISCVISD::SM3P0;
-      break;
-    case Intrinsic::riscv_sm3p1:
-      Opc = RISCVISD::SM3P1;
-      break;
+    case Intrinsic::riscv_sha256sig0: Opc = RISCVISD::SHA256SIG0; break;
+    case Intrinsic::riscv_sha256sig1: Opc = RISCVISD::SHA256SIG1; break;
+    case Intrinsic::riscv_sha256sum0: Opc = RISCVISD::SHA256SUM0; break;
+    case Intrinsic::riscv_sha256sum1: Opc = RISCVISD::SHA256SUM1; break;
+    case Intrinsic::riscv_sm3p0:      Opc = RISCVISD::SM3P0;      break;
+    case Intrinsic::riscv_sm3p1:      Opc = RISCVISD::SM3P1;      break;
     }
 
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
@@ -12609,7 +12578,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     if (VT == MVT::i64 && Subtarget.is64Bit()) {
-      unsigned Opc = getRVPQFormatAccWordOpcode(IntNo);
+      unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
       return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
 
