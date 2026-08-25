@@ -6398,7 +6398,7 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
 
   auto ExtStride = B.buildAnyExt(I32, Stride);
 
-  if (ST.has45BitNumRecordsBufferResource()) {
+  if (ST.getBufferResourceNumRecordsWidth() == 45) {
     NumRecords = B.buildZExtOrTrunc(I64, NumRecords).getReg(0);
     NumRecords =
         B.buildAnd(I64, NumRecords, B.buildConstant(I64, (1ULL << 45) - 1))
