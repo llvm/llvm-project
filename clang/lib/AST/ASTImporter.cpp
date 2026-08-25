@@ -4789,8 +4789,15 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   if (Error Err = ImportInitializer(D, ToVar))
     return std::move(Err);
 
-  if (D->isConstexpr())
+  if (D->isConstexpr()) {
     ToVar->setConstexpr(true);
+    // Tell the bytecode interpreter that a new constexpr variable has appeared.
+    if (ToVar->getASTContext().getLangOpts().EnableNewConstInterp) {
+      if (const Expr *Init = ToVar->getInit();
+          Init && !Init->isValueDependent())
+        ToVar->evaluateValue();
+    }
+  }
 
   addDeclToContexts(D, ToVar);
 
