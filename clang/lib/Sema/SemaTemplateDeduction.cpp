@@ -6858,12 +6858,14 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     return true;
   }
 
-  bool TraverseTemplateName(TemplateName Template) override {
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier) override {
     if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
-    DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+    DynamicRecursiveASTVisitor::TraverseTemplateName(Template,
+                                                     TraverseQualifier);
     return true;
   }
 

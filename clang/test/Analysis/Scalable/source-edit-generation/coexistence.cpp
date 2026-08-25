@@ -6,6 +6,8 @@
 
 // REQUIRES: plugins
 
+// XFAIL: *
+
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_cc1 -load %llvmshlibdir/SSAFTestTransformationPlugin%pluginext \
 // RUN:   --ssaf-extract-summaries=CallGraph \

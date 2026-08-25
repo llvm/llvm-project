@@ -766,6 +766,45 @@ TEST(DWARFExpression, RelationalOpsProduceGenericResult) {
   }
 }
 
+TEST(DWARFExpression, GenericRelationalOpsUseSignedComparison) {
+  struct TestCase {
+    uint8_t opcode;
+    uint8_t expected;
+  };
+  constexpr TestCase test_cases[] = {
+      {DW_OP_lt, 1}, {DW_OP_le, 1}, {DW_OP_gt, 0}, {DW_OP_ge, 0}};
+
+  for (const TestCase &test : test_cases) {
+    // Generic relational operands are compared as signed values, so the
+    // unsigned encoding of all-one bits below represents -1 for comparison.
+    const std::vector<uint8_t> expr = {
+        DW_OP_const8u,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        DW_OP_consts,
+        0x00,
+        test.opcode,
+        DW_OP_stack_value,
+    };
+    DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                            /*addr_size=*/8);
+
+    EXPECT_THAT_EXPECTED(
+        DWARFExpression::Evaluate(
+            /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{},
+            extractor, /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+            /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+        ExpectScalar(64, test.expected, false))
+        << "opcode 0x" << llvm::utohexstr(test.opcode);
+  }
+}
+
 TEST(DWARFExpression, DW_OP_stack_value) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_stack_value}), llvm::Failed());
 }

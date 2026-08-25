@@ -358,6 +358,23 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
   EXPECT_THAT(Set, SizeIs(0));
 }
 
+TEST(FoldingSetTest, SelfMoveAssignment) {
+  FoldingSet<TrivialPair> Set;
+  TrivialPair T1(10, 100);
+  Set.InsertNode(&T1);
+
+  // Route through a helper lambda to test self-move aliasing without triggering
+  // -Wself-move.
+  auto MoveAssign = [](FoldingSet<TrivialPair> &Dest,
+                       FoldingSet<TrivialPair> &&Src) {
+    Dest = std::move(Src);
+  };
+  MoveAssign(Set, std::move(Set));
+
+  EXPECT_EQ(1u, Set.size());
+  EXPECT_FALSE(Set.empty());
+}
+
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(FoldingSetTest, InsertInvalidatesIterators) {
   FoldingSet<TrivialPair> Set;
