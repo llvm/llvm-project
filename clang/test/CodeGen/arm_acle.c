@@ -1936,8 +1936,8 @@ void test_atomic_store_hint_double(double *ptr, double data) {
 }
 
 // AArch64: [[HINT1]] = !{i32 1, [[HINT2:![0-9]+]]}
-// AArch64-NEXT: [[HINT2]] = !{!"aarch64.atomic_hint", i32 0}
+// AArch64-NEXT: [[HINT2]] = !{!"aarch64.mem_hint", i32 0}
 
 // AArch64-NEXT: [[HINT3]] = !{i32 1, [[HINT4:![0-9]+]]}
-// AArch64-NEXT: [[HINT4]] = !{!"aarch64.atomic_hint", i32 1}
+// AArch64-NEXT: [[HINT4]] = !{!"aarch64.mem_hint", i32 1}
 #endif
