@@ -1466,8 +1466,8 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-`[[clang::no_specializations]]` can be applied to function, class, or variable
-templates which should not be explicitly specialized by users. This is primarily
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
 }
