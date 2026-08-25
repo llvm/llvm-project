@@ -1534,7 +1534,7 @@ public:
       if (MaxRPWithSLSR > MaxRP) {
         float IncRatio = static_cast<float>(MaxRPWithSLSR - MaxRP) / MaxRP;
         if (IncRatio > 0.15) {
-          DEBUG_SLSR_RP(dbgs() << "BB: " << BB.getName()
+          DEBUG_SLSR_RP(dbgs() << "Skipping BB from SLSR: " << BB.getName()
                                << " IncRatio: " << IncRatio << "\n");
 
           // Skip this BB from SLSR.
@@ -1830,7 +1830,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
-  ////////////////////////////////////////////////////
   DenseMap<const Instruction *, Candidate *> PickedCandidateMap;
   for (Instruction *I : SortedCandidateInsts)
     if (Candidate *C = pickRewriteCandidate(I))
@@ -1839,48 +1838,10 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   RPFilter RPFilter(&F, PickedCandidateMap);
   RPFilter.run();
 
-  // From SortedCandidateInsts, remove some candidates that are likely to
-  // increase register pressure. The candidate's Inst is the source of
-  // replacement. A candidate in the following criteria should be removed:
-  // 1. The candidate's Inst "has operands used in non-rewritable users in
-  // another block"
-  //    -- checked by hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst)
-  //    -- This means the candidate's Inst's original operands are live in
-  //    another block, so even if rewrite the Inst, the operands may be still
-  //    live out to another block.
-  //    -- Thus, rewriting the Inst based on Basis might add another long live
-  //    range from the Basis by increasing the live range of the Basis.
-  //    -- TODO: If needed, a refinement to check that "another block" is
-  //    properly dominated by the candidate's Inst's block can be added.
-  // 2. When the candidate's Basis's is only used in the the same block
-  // and its last use is before the candidate's Inst, the difference between the
-  // last use of Basis and the Inst is larger than a threshold.
-  //    -- This is also for avoiding increasing the live range of the Basis by
-  //    rewriting the Inst.
-  //
-  // A candidate satisfies both conditions 1 and 2 should be removed.
-
-  // Collect candidates likely to increase register pressure.
-  // Evaluate on the original IR, before any rewriteCandidate mutates it
-  // Done before rewriting: rewriting inserts instructions and does
-  // replaceAllUsesWith, which would invalidate both the in-block index map and
-  // operands' user sets.
-  DenseSet<Instruction *> ToSkipRewrite;
-  {
-    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>> IndexCache;
-    for (Instruction *I : SortedCandidateInsts)
-      if (Candidate *C = pickRewriteCandidate(I))
-        if (hasOperandsUsedInNonRewritableUsersInAnotherBlock(I) &&
-            basisTooFarInSameBlock(*C, IndexCache, I))
-          ToSkipRewrite.insert(I);
-  }
-
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
   for (Instruction *I : reverse(SortedCandidateInsts)) {
-    if (ToSkipRewrite.contains(I))
-      continue;
-    if (Candidate *C = pickRewriteCandidate(I))
+    if (Candidate *C = PickedCandidateMap[I])
       rewriteCandidate(*C);
   }
 
