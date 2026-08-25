@@ -34,8 +34,7 @@ void function() {
 // expected-note@#5 {{while substituting deduced template arguments into function template 'compare' [with IteratorL = Object *, IteratorR = Object *]}}
 
 // expected-note@#4 {{candidate template ignored: constraints not satisfied [with IteratorL = Object *, IteratorR = Object *]}}
-// We don't know exactly the substituted type for `lhs == rhs`, thus a placeholder 'expr-type' is emitted.
-// expected-note@#3 {{because 'convertible_to<expr-type, bool>' would be invalid}}
+// expected-note@#3 {{because 'convertible_to<bool, bool>' evaluated to false}}
 
 namespace GH131530 {
 
