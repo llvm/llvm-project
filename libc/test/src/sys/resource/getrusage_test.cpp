@@ -34,5 +34,6 @@ TEST_F(LlvmLibcGetrusageTest, TestWhoInvalid) {
 }
 
 TEST_F(LlvmLibcGetrusageTest, TestUsageBadPointer) {
-  ASSERT_THAT(LIBC_NAMESPACE::getrusage(RUSAGE_SELF, (struct rusage *)-1L), Fails(EFAULT, -1));
+  ASSERT_THAT(LIBC_NAMESPACE::getrusage(RUSAGE_SELF, (struct rusage *)-1L),
+              Fails(EFAULT, -1));
 }
