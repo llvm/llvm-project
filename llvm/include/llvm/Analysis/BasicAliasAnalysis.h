@@ -108,6 +108,7 @@ public:
 
 private:
   struct DecomposedGEP;
+  struct VariableGEPOffsetInfo;
 
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;
@@ -115,6 +116,19 @@ private:
   static DecomposedGEP
   DecomposeGEPExpression(const Value *V, const DataLayout &DL,
                          AssumptionCache *AC, DominatorTree *DT);
+
+  /// Analyze the variable indices of a decomposed GEP, computing the GCD
+  /// that each Scale*V term is a multiple of, and an approximate range of
+  /// possible total offsets.
+  VariableGEPOffsetInfo analyzeVariableOffsets(const DecomposedGEP &GEP,
+                                               DominatorTree *DT);
+
+  /// Try to determine the range of values for VarIndex such that
+  /// VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex, thus
+  /// establishing a minimum absolute value of the variable offset.
+  std::optional<APInt> computeMinAbsVarIndexHeuristic(const DecomposedGEP &GEP,
+                                                      DominatorTree *DT,
+                                                      const AAQueryInfo &AAQI);
 
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
@@ -124,9 +138,10 @@ private:
   /// will therefore conservatively refuse to decompose these expressions.
   /// However, we know that, for all %x, zext(%x) != zext(%x + 1), even if
   /// the addition overflows.
-  bool constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
-                               LocationSize V2Size, AssumptionCache *AC,
-                               DominatorTree *DT, const AAQueryInfo &AAQI);
+  bool computeConstantOffsetHeuristic(const DecomposedGEP &GEP,
+                                      LocationSize V1Size, LocationSize V2Size,
+                                      AssumptionCache *AC, DominatorTree *DT,
+                                      const AAQueryInfo &AAQI);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
                                      const AAQueryInfo &AAQI);
