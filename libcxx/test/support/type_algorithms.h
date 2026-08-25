@@ -99,29 +99,28 @@ using character_types =
 #endif
               >;
 
+using standard_signed_integer_types = type_list<signed char, short, int, long, long long>;
+
+using standard_unsigned_integer_types =
+    type_list<unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
+
+using standard_integer_types = concatenate_t<standard_signed_integer_types, standard_unsigned_integer_types>;
+
 using signed_integer_types =
-    type_list<signed char,
-              short,
-              int,
-              long,
-              long long
+    concatenate_t<standard_signed_integer_types
 #ifndef TEST_HAS_NO_INT128
-              ,
-              __int128_t
+                  ,
+                  type_list<__int128_t>
 #endif
-              >;
+                  >;
 
 using unsigned_integer_types =
-    type_list<unsigned char,
-              unsigned short,
-              unsigned int,
-              unsigned long,
-              unsigned long long
+    concatenate_t<standard_unsigned_integer_types
 #ifndef TEST_HAS_NO_INT128
-              ,
-              __uint128_t
+                  ,
+                  type_list<__uint128_t>
 #endif
-              >;
+                  >;
 
 using integer_types = concatenate_t<character_types, signed_integer_types, unsigned_integer_types>;
 
