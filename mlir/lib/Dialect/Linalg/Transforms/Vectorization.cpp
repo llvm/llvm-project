@@ -2069,11 +2069,12 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
     vecOperands.push_back(read);
   }
 
+  // When integer operands are narrower than the accumulator, vector.contract
+  // promotes them by sign extension. This matches cast_signed. To preserve
+  // cast_unsigned, zero-extend the operands explicitly before the contraction.
+  auto castAttr = linalgOp->getAttrOfType<TypeFnAttr>("cast");
   bool hasUnsignedCast =
-      TypeSwitch<Operation *, bool>(linalgOp.getOperation())
-          .Case<MatmulOp, BatchMatmulOp, BatchReduceMatmulOp, ContractOp>(
-              [](auto op) { return op.getCast() == TypeFn::cast_unsigned; })
-          .Default(false);
+      castAttr && castAttr.getValue() == TypeFn::cast_unsigned;
   if (hasUnsignedCast) {
     auto accType = dyn_cast<VectorType>(vecOperands[2].getType());
     auto accElementType =

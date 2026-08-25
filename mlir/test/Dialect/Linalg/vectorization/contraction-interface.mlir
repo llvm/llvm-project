@@ -372,6 +372,17 @@ func.func @matmul_mixed_precision_unsigned(
 // CHECK-SAME:   : vector<4x16xi32>, vector<16x4xi32> into vector<4x4xi32>
 //      CHECK: vector.transfer_write %[[CONTRACT]], %{{.*}} : vector<4x4xi32>, tensor<4x4xi32>
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 4, 16]
+      {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @matmul_mixed_precision_signed(
     %A: tensor<4x16xi8>, %B: tensor<16x4xi8>,
     %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
@@ -381,6 +392,8 @@ func.func @matmul_mixed_precision_signed(
   return %0 : tensor<4x4xi32>
 }
 
+// vector.contract sign-extends mixed-width integer operands by default, so no
+// explicit extension is needed for cast_signed.
 // CHECK-LABEL: func.func @matmul_mixed_precision_signed(
 //      CHECK: %[[SIGNED_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xi8>, vector<4x16xi8>
 //      CHECK: %[[SIGNED_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xi8>, vector<16x4xi8>
@@ -389,6 +402,17 @@ func.func @matmul_mixed_precision_signed(
 //      CHECK: vector.contract
 // CHECK-SAME:   %[[SIGNED_A]], %[[SIGNED_B]], %[[SIGNED_C]]
 // CHECK-SAME:   : vector<4x16xi8>, vector<16x4xi8> into vector<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 4, 16]
+      {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
 
 func.func @matmul_same_precision_unsigned(
     %A: tensor<4x16xi32>, %B: tensor<16x4xi32>,
@@ -406,6 +430,17 @@ func.func @matmul_same_precision_unsigned(
 //  CHECK-NOT: arith.extui
 //      CHECK: vector.contract
 // CHECK-SAME:   %[[SAME_A]], %[[SAME_B]], %[[SAME_C]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 4, 16]
+      {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
 
 func.func @matmul_mixed_precision_unsigned_dynamic(
     %A: tensor<?x?xi8>, %B: tensor<?x?xi8>,
