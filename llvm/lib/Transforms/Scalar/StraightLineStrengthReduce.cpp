@@ -1592,11 +1592,23 @@ private:
     return isa<Instruction>(V) || isa<Argument>(V);
   }
 
+  // The pressure scan asks for the weight of every live value at every
+  // instruction, so memoize on the type, which is all the weight depends on.
+  mutable DenseMap<Type *, unsigned> RegWeightCache;
+
   unsigned regWeight(const Value *V) const {
-    const DataLayout &DL = F->getDataLayout();
     Type *Ty = V->getType();
     if (Ty->isVoidTy() || Ty->isTokenTy())
       return 0;
+
+    auto [It, Inserted] = RegWeightCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeRegWeight(Ty);
+    return It->second;
+  }
+
+  unsigned computeRegWeight(Type *Ty) const {
+    const DataLayout &DL = F->getDataLayout();
     if (UseTTIForRP) {
       // Aggregates legalize to a flat sequence of scalars; approximate rather
       // than calling getRegUsageForType, which is llvm_unreachable on them.
@@ -1616,11 +1628,10 @@ private:
         RegUsage *= SVT->getMinNumElements();
 #endif
       return RegUsage;
-
-    } else {
-      // Default logic to compute RP.
-      return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
     }
+
+    // Default logic to compute RP.
+    return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
   }
 
   void buildBBToLiveness(const Function &F) {
@@ -1875,14 +1886,12 @@ private:
       // Compute RP reaching for this instruction.
       unsigned W = 0;
       for (const Value *V : LiveSet) {
-        // TODO: Cache regWeight(V)
         auto RW = regWeight(V);
         W += RW;
       }
       MaxW = std::max(MaxW, W);
       W = 0;
       for (const Value *V : LiveSetWithSLSR) {
-        // TODO: Cache regWeight(V)
         auto RW = regWeight(V);
         W += RW;
       }
@@ -1925,16 +1934,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
 
   RPFilter RPFilter(&F, PickedCandidateMap, TTI);
   RPFilter.run();
-
-#if 0
-  DenseMap<const BasicBlock*, unsigned> BBToNumCands;
-  for (auto &InstCand : PickedCandidateMap) {
-    const BasicBlock *BB= InstCand.first->getParent();
-    auto [It, Inserted] = BBToNumCands.try_emplace(BB);
-    if (Inserted)
-      It->second = countCandsInBB(It->first, PickedCandidateMap);
-  }
-#endif
 
   // From SortedCandidateInsts, remove some candidates that are likely to
   // increase register pressure. The candidate's Inst is the source of
