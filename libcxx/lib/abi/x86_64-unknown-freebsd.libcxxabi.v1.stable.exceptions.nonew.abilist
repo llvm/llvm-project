@@ -1351,9 +1351,6 @@
 {'is_defined': True, 'name': '_ZNSt3__15wcoutE', 'size': 160, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__16__math16__assoc_laguerreEjjd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__16__math16__assoc_laguerreEjje', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__16__math16__assoc_laguerreEjjf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIccEEPcEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIddEEPdEEvT0_S5_T_', 'type': 'FUNC'}
@@ -1422,6 +1419,9 @@
 {'is_defined': True, 'name': '_ZNSt3__16thread6detachEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cmath16__assoc_laguerreEjjd', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cmath16__assoc_laguerreEjje', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cmath16__assoc_laguerreEjjf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tE2idE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev', 'type': 'FUNC'}

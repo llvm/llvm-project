@@ -45,7 +45,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
-namespace __math {
+namespace __cmath {
 
 // Boost.Math computes; the per-function wrappers below add the standard's error rules.
 // Notes that apply to all of them:
@@ -154,7 +154,7 @@ long double __assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexce
   return __assoc_laguerre_impl(__n, __m, __x);
 }
 
-} // namespace __math
+} // namespace __cmath
 
 #endif
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

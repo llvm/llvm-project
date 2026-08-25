@@ -27,44 +27,44 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // assoc_laguerre
-namespace __math {
+namespace __cmath {
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_EXPORTED_FROM_ABI float
 __assoc_laguerre(unsigned, unsigned, float) noexcept;
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_EXPORTED_FROM_ABI double
 __assoc_laguerre(unsigned, unsigned, double) noexcept;
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_EXPORTED_FROM_ABI long double
 __assoc_laguerre(unsigned, unsigned, long double) noexcept;
-} // namespace __math
+} // namespace __cmath
 
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS inline _LIBCPP_HIDE_FROM_ABI float
 assoc_laguerre(unsigned __n, unsigned __m, float __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, __x);
+  return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS inline _LIBCPP_HIDE_FROM_ABI double
 assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, __x);
+  return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS inline _LIBCPP_HIDE_FROM_ABI long double
 assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, __x);
+  return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
 template <class _Int, std::enable_if_t<std::is_integral_v<_Int>, int> = 0>
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_HIDE_FROM_ABI double
 assoc_laguerre(unsigned __n, unsigned __m, _Int __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, static_cast<double>(__x));
+  return __cmath::__assoc_laguerre(__n, __m, static_cast<double>(__x));
 }
 
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS inline _LIBCPP_HIDE_FROM_ABI float
 assoc_laguerref(unsigned __n, unsigned __m, float __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, __x);
+  return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS inline _LIBCPP_HIDE_FROM_ABI long double
 assoc_laguerrel(unsigned __n, unsigned __m, long double __x) noexcept {
-  return __math::__assoc_laguerre(__n, __m, __x);
+  return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

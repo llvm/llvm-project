@@ -1339,9 +1339,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk16__clocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__itoa8__u32toaEjPc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__itoa8__u64toaEyPc', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk16__math16__assoc_laguerreEjjd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk16__math16__assoc_laguerreEjje', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk16__math16__assoc_laguerreEjjf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__sortIRNS_6__lessIccEEPcEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16__sortIRNS_6__lessIddEEPdEEvT0_S5_T_', 'type': 'FUNC'}
@@ -1410,6 +1407,9 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk16thread6detachEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16threadD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk16threadD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk17__cmath16__assoc_laguerreEjjd', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk17__cmath16__assoc_laguerreEjje', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk17__cmath16__assoc_laguerreEjjf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk17codecvtIDiDu9mbstate_tE2idE', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk17codecvtIDiDu9mbstate_tED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk17codecvtIDiDu9mbstate_tED1Ev', 'type': 'FUNC'}
