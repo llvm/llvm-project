@@ -84,6 +84,41 @@ private:
     llvm_unreachable("unhandled causing fact in PointerUnion");
   }
 
+  /// For an explicit specialization, returns the source-level specialization
+  /// declaration to target for attribute placement, if one exists. Skips
+  /// implicit specialization redeclarations that are backed by the template
+  /// pattern. In other cases, returns nullptr.
+  static const FunctionDecl *
+  getExplicitSpecializationDeclForAttr(const FunctionDecl *FDef) {
+    if (FDef->getTemplateSpecializationKindForInstantiation() !=
+        TSK_ExplicitSpecialization)
+      return nullptr;
+
+    // FIXME: Remove this source-location heuristic once
+    // https://github.com/llvm/llvm-project/issues/206790 is fixed.
+    auto IsImplicitTemplateSpecialization = [](const FunctionDecl *Redecl,
+                                               const FunctionDecl *Pattern) {
+      return Pattern && Redecl->getBeginLoc() == Pattern->getBeginLoc();
+    };
+
+    auto Redecls = llvm::to_vector(FDef->redecls());
+    for (const FunctionDecl *Redecl : llvm::reverse(Redecls)) {
+      if (Redecl == FDef)
+        continue;
+      if (auto *MSI = Redecl->getMemberSpecializationInfo();
+          MSI && MSI->isExplicitSpecialization())
+        if (!IsImplicitTemplateSpecialization(
+                Redecl, dyn_cast<FunctionDecl>(MSI->getInstantiatedFrom())))
+          return Redecl;
+      if (auto *FTSI = Redecl->getTemplateSpecializationInfo();
+          FTSI && FTSI->isExplicitSpecialization())
+        if (!IsImplicitTemplateSpecialization(
+                Redecl, FTSI->getTemplate()->getTemplatedDecl()))
+          return Redecl;
+    }
+    return nullptr;
+  }
+
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const MovedLoansAnalysis &MovedLoans,
@@ -363,17 +398,30 @@ public:
     };
 
     const FileID DefFile = GetFile(FDef);
-    const FunctionDecl *CanonicalDecl = FDef->getCanonicalDecl();
+    const FunctionDecl *TargetDecl = FDef->getCanonicalDecl();
+
+    // For explicit specializations, the canonical decl is the primary template.
+    // We should target the explicit specialization declaration instead.
+    if (const FunctionDecl *SpecDecl =
+            getExplicitSpecializationDeclForAttr(FDef))
+      TargetDecl = SpecDecl;
+
     llvm::SmallVector<std::pair<const FunctionDecl *, WarningScope>, 2> Targets{
-        {CanonicalDecl, GetFile(CanonicalDecl) == DefFile
-                            ? WarningScope::IntraTU
-                            : WarningScope::CrossTU}};
+        {TargetDecl, GetFile(TargetDecl) == DefFile ? WarningScope::IntraTU
+                                                    : WarningScope::CrossTU}};
 
     // Find the earliest redeclaration in each file other than the definition
     // file.
     auto AddCrossTUDecl = [&](const FunctionDecl *FD) {
       FileID File = GetFile(FD);
       if (File == DefFile)
+        return;
+      // For explicit specializations, skip redeclarations that do not belong to
+      // the same explicit-specialization instantiation path.
+      if (FDef->getTemplateSpecializationKindForInstantiation() ==
+              TSK_ExplicitSpecialization &&
+          FD->getTemplateSpecializationKindForInstantiation() !=
+              TSK_ExplicitSpecialization)
         return;
       for (auto [SeenFD, _] : Targets)
         if (GetFile(SeenFD) == File)
