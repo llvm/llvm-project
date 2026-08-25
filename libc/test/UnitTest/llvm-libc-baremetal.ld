@@ -75,9 +75,7 @@ SECTIONS {
   } > flash
 
   .ARM.exidx : ALIGN(4) {
-    PROVIDE(__exidx_start = .);
     *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    PROVIDE(__exidx_end = .);
   } > flash
 
   .data : ALIGN(8) {
@@ -87,54 +85,25 @@ SECTIONS {
     . = ALIGN(8);
   } > ram AT> flash
   PROVIDE(__data_source = LOADADDR(.data));
-
-  .tdata : ALIGN(8) {
-    PROVIDE(__tdata_start = .);
-    *(.tdata .tdata.* .gnu.linkonce.td.*)
-    . = ALIGN(8);
-    PROVIDE(__tdata_end = .);
-  } > ram AT> flash
-  PROVIDE(__tdata_source = LOADADDR(.tdata));
-  PROVIDE(__data_end = __tdata_end);
-  PROVIDE(__tdata_source_end = LOADADDR(.tdata) + SIZEOF(.tdata));
-  PROVIDE(__data_source_end =
-              SIZEOF(.tdata) ? __tdata_source_end : LOADADDR(.data) + SIZEOF(.data));
-  PROVIDE(__edata = __data_end);
-  PROVIDE(_edata = __data_end);
-  PROVIDE(edata = __data_end);
-  PROVIDE(__data_size = __data_end - __data_start);
-  PROVIDE(__tdata_size = __tdata_end - __tdata_start);
-  PROVIDE(__data_source_size = __data_source_end - __data_source);
-
-  .tbss (NOLOAD) : ALIGN(8) {
-    PROVIDE(__tbss_start = .);
-    *(.tbss .tbss.* .gnu.linkonce.tb.*)
-    *(.tcommon)
-    . = ALIGN(8);
-    PROVIDE(__tbss_end = .);
-  } > ram
+  PROVIDE(__data_size = SIZEOF(.data));
 
   .bss (NOLOAD) : ALIGN(8) {
+    PROVIDE(__bss_start = .);
     *(.sbss .sbss.* .gnu.linkonce.sb.*)
     *(.bss .bss.* .gnu.linkonce.b.*)
     *(COMMON)
     . = ALIGN(8);
-    PROVIDE(__bss_end = .);
+    PROVIDE(__bss_size = . - __bss_start);
   } > ram
-  PROVIDE(__bss_start = SIZEOF(.tbss) ? ADDR(.tbss) : ADDR(.bss));
-  PROVIDE(__bss_size = __bss_end - __bss_start);
 
   .noinit (NOLOAD) : ALIGN(8) {
     *(.noinit .noinit.*)
   } > ram
 
-  PROVIDE(__end = .);
   PROVIDE(_end = .);
-  PROVIDE(end = .);
 
-  PROVIDE(__heap_start = .);
-  PROVIDE(__heap_end = __stack - (DEFINED(__stack_size) ? __stack_size : 0));
-  PROVIDE(__llvm_libc_heap_limit = __heap_end);
+  PROVIDE(__llvm_libc_heap_limit =
+              __stack - (DEFINED(__stack_size) ? __stack_size : 0));
 
   .heap (NOLOAD) : {
     . += (DEFINED(__heap_size_min) ? __heap_size_min : 0);
@@ -143,9 +112,6 @@ SECTIONS {
   .stack (NOLOAD) : {
     . += (DEFINED(__stack_size) ? __stack_size : 0);
   } > ram
-
-  ASSERT(__data_size == __data_source_size,
-         "ERROR: .data/.tdata RAM size does not match flash load size")
 
   /DISCARD/ : {
     *(.note .note.*)
