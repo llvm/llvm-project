@@ -875,8 +875,7 @@ namespace gh68198 {
   // CIR: cir.store{{.*}} %[[EIGHT]], %[[ELT1_1]] : !s32i, !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT2:.*]] = cir.ptr_stride %[[ELT1]], %[[ONE]] : (!cir.ptr<!cir.array<!s32i x 2>>, !s32i) -> !cir.ptr<!cir.array<!s32i x 2>>
-  // CIR: %[[INIT_SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC_DIFF:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
+  // CIR: %[[ALLOC_DIFF:.*]] = cir.const #cir.int<16> : !u64i
   // CIR: %[[ELT2_DECAY:.*]] = cir.cast bitcast %[[ELT2]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
   // CIR: cir.libc.memset %[[ALLOC_DIFF]] bytes at %[[ELT2_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i

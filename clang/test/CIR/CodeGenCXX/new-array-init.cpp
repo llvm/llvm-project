@@ -202,8 +202,7 @@ void const_sufficient() {
   // CIR: cir.store {{.*}} %[[THREE]], %[[ELT2]] : !s32i, !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT3:.*]] = cir.ptr_stride %[[ELT2]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
-  // CIR: %[[INIT_SIZE:.*]] = cir.const #cir.int<12> : !u64i
-  // CIR: %[[REST_SIZE:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
+  // CIR: %[[REST_SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[REST_PTR_DECAY:.*]] = cir.cast bitcast %[[ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
   // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
@@ -239,8 +238,7 @@ void const_sufficient_paren() {
   // CIR: cir.store {{.*}} %[[THREE]], %[[ELT2]] : !s32i, !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: %[[ELT3:.*]] = cir.ptr_stride %[[ELT2]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
-  // CIR: %[[INIT_SIZE:.*]] = cir.const #cir.int<12> : !u64i
-  // CIR: %[[REST_SIZE:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
+  // CIR: %[[REST_SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[REST_PTR_DECAY:.*]] = cir.cast bitcast %[[ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
   // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
