@@ -153,6 +153,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
+  bool FirLICM = false; ///< Run FIR loop invariant code motion.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
