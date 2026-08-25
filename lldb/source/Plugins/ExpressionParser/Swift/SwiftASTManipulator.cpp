@@ -78,6 +78,9 @@ void SwiftASTManipulatorBase::VariableInfo::Print(
   if (llvm::isa<VariableMetadataError>(m_metadata.get()))
     stream.Printf(", is_error");
 
+  if (!m_is_available)
+    stream.Printf(", is_unavailable");
+
   stream.PutChar(']');
 }
 
@@ -1096,6 +1099,14 @@ bool SwiftASTManipulator::AddExternalVariables(
       injected_nodes;
 
   for (SwiftASTManipulator::VariableInfo &variable : variables) {
+    // A variable with no readable value would fail to materialize,
+    // resulting in a fatal error for the entire expression.
+    if (!variable.IsAvailable()) {
+      LLDB_LOG(log, "Variable {0} has no readable value, not injecting it.",
+               variable.GetName());
+      continue;
+    }
+
     swift::FuncDecl *containing_function =
         GetFunctionToInjectVariableInto(variable);
     assert(containing_function && "No function to inject variable into!");
