@@ -5118,7 +5118,8 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
           Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_KIMM64 ||
           (Desc.operands()[OpIdx].OperandType == AMDGPU::OPERAND_REG_IMM_FP64 &&
            HasMandatoryLiteral);
-      unsigned OpTy = Desc.operands()[OpIdx].OperandType;
+      AMDGPU::OperandType OpTy =
+          static_cast<AMDGPU::OperandType>(Desc.operands()[OpIdx].OperandType);
       bool IsFP64 =
           (IsForcedFP64 || (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
                             OpTy != AMDGPU::OPERAND_REG_IMM_V2INT64)) &&
@@ -5143,8 +5144,11 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
         return false;
       }
 
-      if (IsFP64 && IsValid32Op && !IsForcedFP64)
-        Value = Hi_32(Value);
+      // Compare values using the word encoded by a 32-bit literal.
+      if (IsValid32Op && !IsForcedFP64 && !IsForcedLit64) {
+        Value = static_cast<uint32_t>(
+            AMDGPU::encode32BitLiteral(Value, OpTy, IsForcedLit));
+      }
 
       IsAnotherLiteral = !LiteralValue || *LiteralValue != Value;
       LiteralValue = Value;
