@@ -811,7 +811,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
+        platform_sp->GetSharedModule(module_spec, target, m_module_sp, nullptr,
                                      nullptr);
       }
 
@@ -1054,11 +1054,11 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
              ->GetObjectFile()
              ->GetFileSpec()
              .GetFilename()
-             .IsEmpty()) {
-      kernel_name =
-          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename();
+             .empty()) {
+      kernel_name = ConstString(
+          m_kernel.GetModule()->GetObjectFile()->GetFileSpec().GetFilename());
     }
-    m_kernel.SetName(kernel_name.AsCString());
+    m_kernel.SetName(kernel_name.AsCString(nullptr));
 
     if (m_kernel.GetLoadAddress() == LLDB_INVALID_ADDRESS) {
       m_kernel.SetLoadAddress(m_kernel_load_address);

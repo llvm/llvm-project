@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
@@ -60,14 +61,16 @@ struct Session {
 
   struct LazyLinkingSupport {
     LazyLinkingSupport(
+        std::unique_ptr<orc::MemoryAccess> MemAccess,
         std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
         std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator,
         std::unique_ptr<orc::LazyReexportsManager> LRMgr,
         orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : RSMgr(std::move(RSMgr)), Speculator(std::move(Speculator)),
-          LRMgr(std::move(LRMgr)),
+        : MemAccess(std::move(MemAccess)), RSMgr(std::move(RSMgr)),
+          Speculator(std::move(Speculator)), LRMgr(std::move(LRMgr)),
           LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
+    std::unique_ptr<orc::MemoryAccess> MemAccess;
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
     std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator;
     std::unique_ptr<orc::LazyReexportsManager> LRMgr;
@@ -75,11 +78,12 @@ struct Session {
   };
 
   orc::ExecutionSession ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemoryMgr;
   std::unique_ptr<orc::DylibManager> DylibMgr;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;
   orc::JITDylib *PlatformJD = nullptr;
-  orc::ObjectLinkingLayer ObjLayer;
+  std::unique_ptr<orc::ObjectLinkingLayer> ObjLayer;
   std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
@@ -129,12 +133,15 @@ struct Session {
   Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
   Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
 
+  Expected<orc::JITDylib *> getOrLoadAutoImportDLL(StringRef LibPath);
+  Error loadAndLinkAutoImportDLL(orc::JITDylib &JD, StringRef LibPath);
+
   orc::ObjectLayer &getLinkLayer(bool Lazy) {
     assert((!Lazy || LazyLinking) &&
            "Lazy linking requested but not available");
     return Lazy ? static_cast<orc::ObjectLayer &>(
                       LazyLinking->LazyObjLinkingLayer)
-                : static_cast<orc::ObjectLayer &>(ObjLayer);
+                : static_cast<orc::ObjectLayer &>(*ObjLayer);
   }
 
   Expected<FileInfo &> findFileInfo(StringRef FileName);
@@ -151,6 +158,7 @@ struct Session {
                                               Twine ErrorMsgStem);
 
   DynLibJDMap DynLibJDs;
+  DynLibJDMap AutoImportJDs;
 
   std::mutex M;
   std::condition_variable ActiveLinksCV;

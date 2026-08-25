@@ -33,7 +33,6 @@ def isSEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDIW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 0>
                    ]>>>;
 
@@ -43,7 +42,6 @@ def isZEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADD_UW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
                      CheckRegOperand<2, X0>
                    ]>>>;
 
@@ -53,7 +51,6 @@ def isZEXT_B
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ANDI]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 255>
                    ]>>>;
 
@@ -173,6 +170,17 @@ def isVSlideInstr
                       !instances<Pseudo>("^PseudoVSLIDEUP_VI.*")
                      ])>>>;
 
+// Returns true if this is an integer or floating-point vector comparison.
+def isRVVCompare
+    : TIIPredicate<"isRVVCompare",
+                   MCReturnStatement<
+                     CheckOpcode<!listflatten([
+                      !instances<Pseudo>(
+                          "^PseudoVMS(EQ|NE|LTU?|LEU?|GTU?)_.*"),
+                      !instances<Pseudo>(
+                          "^PseudoVMF(EQ|NE|LT|LE|GT|GE)(_ALT)?_.*")
+                     ])>>>;
+
 def isFaultOnlyFirstLoad
     : TIIPredicate<"isFaultOnlyFirstLoad",
                     MCReturnStatement<
@@ -180,11 +188,18 @@ def isFaultOnlyFirstLoad
                        !instances<Pseudo>(
                           "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
 
+def isLoadImmediate
+    : TIIPredicate<"isLoadImmediate",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckRegOperand<1, X0>,
+                     CheckIsImmOperand<2>
+                   ]>>>;
+
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
@@ -194,7 +209,6 @@ def isLPAD
     : TIIPredicate<"isLPAD",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[AUIPC]>,
-                     CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
 
@@ -208,3 +222,50 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : TIIPredicate<"isBaseQCLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_LB,
+                       QC_E_LBU,
+                       QC_E_LH,
+                       QC_E_LHU,
+                       QC_E_LW
+                     ]>>>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : TIIPredicate<"isBaseQCStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_SB,
+                       QC_E_SH,
+                       QC_E_SW
+                     ]>>>;

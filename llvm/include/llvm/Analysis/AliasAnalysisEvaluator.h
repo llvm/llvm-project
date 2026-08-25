@@ -31,7 +31,7 @@ namespace llvm {
 class AAResults;
 class Function;
 
-class AAEvaluator : public PassInfoMixin<AAEvaluator> {
+class AAEvaluator : public OptionalPassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;
   int64_t NoAliasCount = 0, MayAliasCount = 0, PartialAliasCount = 0;
   int64_t MustAliasCount = 0;

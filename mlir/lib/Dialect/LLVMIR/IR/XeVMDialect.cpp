@@ -9,6 +9,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
@@ -360,23 +361,48 @@ LogicalResult MMAMxOp::verify() {
 LogicalResult TruncfOp::verify() {
   Type srcTy = getSrc().getType();
   Type dstTy = getDst().getType();
-  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
     return emitOpError("both src and dst should be vector types or both should "
                        "be scalar types");
-  if (isa<VectorType>(srcTy)) {
-    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
-    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
-    if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
-      return emitOpError(
-          "src and dst vector types should have the same number of elements");
-    if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
-      return emitError(
-          "dst element bitwidth should be less than src element bitwidth");
-  } else {
-    if (srcTy.getIntOrFloatBitWidth() <= dstTy.getIntOrFloatBitWidth())
-      return emitError(
-          "dst element bitwidth should be less than src element bitwidth");
-  }
+  if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() <=
+      getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
+    return emitError(
+        "dst element bitwidth should be less than src element bitwidth");
+  return success();
+}
+
+LogicalResult ExtfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() >=
+      getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
+    return emitError(
+        "dst element bitwidth should be greater than src element bitwidth");
+  return success();
+}
+
+LogicalResult BitcastShuffleOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type resTy = getRes().getType();
+  auto srcVecTy = dyn_cast<VectorType>(srcTy);
+  auto resVecTy = dyn_cast<VectorType>(resTy);
+  // Only a pack (vector -> scalar) and an unpack (scalar -> vector) are
+  // supported, so exactly one side is a vector.
+  if (static_cast<bool>(srcVecTy) == static_cast<bool>(resVecTy))
+    return emitOpError("expected exactly one of src and res to be a vector: a "
+                       "pack takes a vector and returns a scalar, an unpack "
+                       "takes a scalar and returns a vector");
+
+  auto getTotalBitWidth = [](Type ty) -> unsigned {
+    if (auto vecTy = dyn_cast<VectorType>(ty))
+      return vecTy.getNumElements() * vecTy.getElementTypeBitWidth();
+    return ty.getIntOrFloatBitWidth();
+  };
+  if (getTotalBitWidth(srcTy) != getTotalBitWidth(resTy))
+    return emitOpError("src and res types must have the same total bit width");
   return success();
 }
 

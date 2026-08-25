@@ -233,6 +233,12 @@ uint64_t SectionBase::getVA(uint64_t offset) const {
   return (out ? out->addr : 0) + getOffset(offset);
 }
 
+uint64_t SectionBase::getRelocVA(uint64_t offset) const {
+  if (auto *es = dyn_cast<EhInputSection>(this))
+    return es->getParent()->getVA(offset);
+  return getVA(offset);
+}
+
 OutputSection *SectionBase::getOutputSection() {
   InputSection *sec;
   if (auto *isec = dyn_cast<InputSection>(this))
@@ -837,18 +843,15 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
   case R_GOTPLT:
-  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
     return r.sym->getGotVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
-  case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
     return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
@@ -986,9 +989,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
   case R_TPREL:
     // It is not very clear what to return if the symbol is undefined. With
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
@@ -997,7 +997,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     if (r.sym->isUndefined())
       return a;
     return getTlsTpOffset(ctx, *r.sym) + a;
-  case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_TPREL_NEG:
     if (r.sym->isUndefined())
       return a;
@@ -1356,16 +1355,6 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
 void InputSection::replace(InputSection *other) {
   addralign = std::max(addralign, other->addralign);
 
-  // When a section is replaced with another section that was allocated to
-  // another partition, the replacement section (and its associated sections)
-  // need to be placed in the main partition so that both partitions will be
-  // able to access it.
-  if (partition != other->partition) {
-    partition = 1;
-    for (InputSection *isec : dependentSections)
-      isec->partition = 1;
-  }
-
   other->repl = repl;
   other->markDead();
 }
@@ -1548,13 +1537,26 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1];
   assert(offset < content().size());
+  // For non-string fixed-size records, piece index = offset / entsize.
+  if (!(flags & SHF_STRINGS))
+    return pieces[offset / entsize];
   return partition_point(
-      pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
+      pieces,
+      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
 }
 
 // Return the offset in an output section for a given input offset.
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1].outputOff +
+           (offset & llvm::maskTrailingOnes<uint64_t>(mergeValueShift));
   const SectionPiece &piece = getSectionPiece(offset);
   return piece.outputOff + (offset - piece.inputOff);
 }

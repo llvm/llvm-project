@@ -99,19 +99,10 @@ public:
         InProcessMemoryAccess(Triple(TT).isArch64Bit()) {
     this->TargetTriple = Triple(TT);
     this->PageSize = PageSize;
-    this->MemAccess = this;
   }
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
-    llvm_unreachable("Unsupported");
-  }
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
     llvm_unreachable("Unsupported");
   }
 
@@ -121,7 +112,16 @@ public:
     llvm_unreachable("Unsupported");
   }
 
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override {
+    llvm_unreachable("Unsupported");
+  }
+
   Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override {
     llvm_unreachable("Unsupported");
   }
 

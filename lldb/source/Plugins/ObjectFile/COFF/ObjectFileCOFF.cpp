@@ -87,7 +87,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   }
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file->GetFilename().GetStringRef()};
+                         file->GetFilename()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -113,9 +113,10 @@ lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-ModuleSpecList ObjectFileCOFF::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+ModuleSpecList
+ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
   if (!extractor_sp || !extractor_sp->HasData())
     return {};
 
@@ -130,7 +131,7 @@ ModuleSpecList ObjectFileCOFF::GetModuleSpecifications(
     return {};
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file.GetFilename().GetStringRef()};
+                         file.GetFilename()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
     Log *log = GetLog(LLDBLog::Object);

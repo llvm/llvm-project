@@ -31,27 +31,26 @@ class CheckerContext {
   bool Changed;
   /// The tagged location, which is used to generate all new nodes.
   const ProgramPoint Location;
-  NodeBuilder &NB;
+  /// At the end of the checker evaluation, the analysis will continue from the
+  /// nodes in this set. When the checker adds a transition, freshly created
+  /// non-sink nodes are added to the `Frontier` and the node that was the
+  /// source of the transition is unconditionally removed from the `Frontier`
+  /// (it is superseded, even if the node creation fails or produces a sink).
+  /// At the beginning, the `Frontier` usually contains `Pred`.
+  ExplodedNodeSet &Frontier;
 
 public:
   /// If we are post visiting a call, this flag will be set if the
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &builder,
-                 ExprEngine &eng,
-                 ExplodedNode *pred,
-                 const ProgramPoint &loc,
-                 bool wasInlined = false)
-    : Eng(eng),
-      Pred(pred),
-      Changed(false),
-      Location(loc),
-      NB(builder),
-      wasInlined(wasInlined) {
+  CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                 const ProgramPoint &Loc, bool WasInlined = false)
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), Frontier(Dst),
+        wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
-    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+    assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
                            "must be tagged with the active checker.");
   }
 
@@ -101,16 +100,15 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
+
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
   }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
-
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
@@ -149,7 +147,7 @@ public:
   }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.
@@ -168,9 +166,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
@@ -430,7 +426,7 @@ public:
   /// If AF_INET is a macro, the result should be treated as a source of taint.
   ///
   /// \sa clang::Lexer::getSpelling(), clang::Lexer::getImmediateMacroName().
-  StringRef getMacroNameOrSpelling(SourceLocation &Loc);
+  std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
   ExplodedNode *addTransitionImpl(ProgramStateRef State,
@@ -457,12 +453,13 @@ private:
     if (!P)
       P = Pred;
 
-    ExplodedNode *node;
-    if (MarkAsSink)
-      node = NB.generateSink(LocalLoc, State, P);
-    else
-      node = NB.generateNode(LocalLoc, State, P);
-    return node;
+    Frontier.erase(P);
+    ExplodedNode *N =
+        Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+
+    Frontier.insert(N);
+
+    return N;
   }
 };
 

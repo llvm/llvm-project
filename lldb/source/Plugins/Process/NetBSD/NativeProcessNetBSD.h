@@ -57,11 +57,11 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
 
@@ -97,7 +97,6 @@ private:
   ArchSpec m_arch;
   MainLoop& m_main_loop;
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
-  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   // Private Instance Methods
   NativeProcessNetBSD(::pid_t pid, int terminal_fd, NativeDelegate &delegate,

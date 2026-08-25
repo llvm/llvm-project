@@ -2,7 +2,7 @@ include_directories(..)
 
 add_custom_target(ScudoUnitTests)
 set_target_properties(ScudoUnitTests PROPERTIES
-  FOLDER "Compiler-RT Tests")
+  FOLDER "compiler-rt Tests")
 
 set(SCUDO_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
@@ -93,6 +93,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   combined_test.cpp
   common_test.cpp
   condition_variable_test.cpp
+  error_info_test.cpp
   flags_test.cpp
   list_test.cpp
   map_test.cpp

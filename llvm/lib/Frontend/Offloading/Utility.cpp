@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace llvm::offloading;
+using namespace llvm::offloading::sycl;
 
 StructType *offloading::getEntryTy(Module &M) {
   LLVMContext &C = M.getContext();
@@ -83,12 +84,29 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   return {EntryInitializer, Str};
 }
 
-GlobalVariable *
-offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
-                                Constant *Addr, StringRef Name, uint64_t Size,
-                                uint32_t Flags, uint64_t Data,
-                                Constant *AuxAddr, StringRef SectionName) {
+StringRef offloading::getOffloadEntrySection(Module &M) {
+  return M.getTargetTriple().isOSBinFormatMachO() ? "__LLVM,offload_entries"
+                                                  : "llvm_offload_entries";
+}
+
+/// Returns the start/end symbol names for iterating offloading entries in a
+/// given section. Mach-O uses \1section$start$/\1section$end$ convention;
+/// ELF/COFF use __start_/__stop_ prefixes.
+static std::pair<std::string, std::string>
+getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
+  if (T.isOSBinFormatMachO()) {
+    std::string SymSection = SectionName.str();
+    std::replace(SymSection.begin(), SymSection.end(), ',', '$');
+    return {"\1section$start$" + SymSection, "\1section$end$" + SymSection};
+  }
+  return {("__start_" + SectionName).str(), ("__stop_" + SectionName).str()};
+}
+
+GlobalVariable *offloading::emitOffloadingEntry(
+    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr) {
   const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
@@ -110,24 +128,28 @@ offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
   return Entry;
 }
 
-std::pair<GlobalVariable *, GlobalVariable *>
-offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
+std::pair<Constant *, Constant *> offloading::getOffloadEntryArray(Module &M) {
   const llvm::Triple &Triple = M.getTargetTriple();
+  StringRef SectionName = getOffloadEntrySection(M);
 
-  auto *ZeroInitilaizer =
-      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
-  auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitilaizer : nullptr;
-  auto *EntryType = ArrayType::get(getEntryTy(M), 0);
+  constexpr unsigned COFFSentinelEntryCount = 1;
+  unsigned EntryCount =
+      Triple.isOSBinFormatCOFF() ? COFFSentinelEntryCount : 0u;
+  auto *ZeroInitializer =
+      ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), EntryCount));
+  auto *EntryInit = Triple.isOSBinFormatCOFF() ? ZeroInitializer : nullptr;
+  auto *EntryType = ZeroInitializer->getType();
   auto Linkage = Triple.isOSBinFormatCOFF() ? GlobalValue::WeakODRLinkage
                                             : GlobalValue::ExternalLinkage;
 
-  auto *EntriesB =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__start_" + SectionName);
+  auto [StartName, StopName] =
+      getOffloadEntryBoundarySymbols(Triple, SectionName);
+
+  auto *EntriesB = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StartName);
   EntriesB->setVisibility(GlobalValue::HiddenVisibility);
-  auto *EntriesE =
-      new GlobalVariable(M, EntryType, /*isConstant=*/true, Linkage, EntryInit,
-                         "__stop_" + SectionName);
+  auto *EntriesE = new GlobalVariable(M, EntryType, /*isConstant=*/true,
+                                      Linkage, EntryInit, StopName);
   EntriesE->setVisibility(GlobalValue::HiddenVisibility);
 
   if (Triple.isOSBinFormatELF()) {
@@ -136,11 +158,21 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
     // valid C-identifier is present. We define a dummy variable here to force
     // the linker to always provide these symbols.
     auto *DummyEntry = new GlobalVariable(
-        M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
-        ZeroInitilaizer, "__dummy." + SectionName);
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
     DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
-    appendToCompilerUsed(M, DummyEntry);
+    appendToUsed(M, DummyEntry);
+  } else if (Triple.isOSBinFormatMachO()) {
+    // Mach-O needs a dummy variable in the section (like ELF) to ensure the
+    // linker provides the section boundary symbols. Mark it used so the
+    // section survives dead-stripping.
+    auto *DummyEntry = new GlobalVariable(
+        M, ZeroInitializer->getType(), true, GlobalVariable::InternalLinkage,
+        ZeroInitializer, "__dummy." + SectionName);
+    DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    appendToUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
     // single section. The order of entries in this section will be sorted
@@ -148,6 +180,20 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
     // sections here to ensure that the beginning and end symbols are sorted.
     EntriesB->setSection((SectionName + "$OA").str());
     EntriesE->setSection((SectionName + "$OZ").str());
+    EntriesB->setAlignment(Align(object::OffloadBinary::getAlignment()));
+    EntriesE->setAlignment(Align(object::OffloadBinary::getAlignment()));
+
+    // COFF lays out offload entries by sorted subsections: $OA is a synthetic
+    // begin sentinel, $OE contains real entries, and $OZ is a synthetic end
+    // sentinel. Keep the boundary sections non-empty so lld-link does not
+    // discard them under /opt:ref, but skip the begin sentinel for runtime
+    // users.
+    Type *Int32Ty = Type::getInt32Ty(M.getContext());
+    Constant *Indices[] = {ConstantInt::get(Int32Ty, 0),
+                           ConstantInt::get(Int32Ty, COFFSentinelEntryCount)};
+    Constant *BeginAfterSentinel = ConstantExpr::getInBoundsGetElementPtr(
+        EntriesB->getValueType(), EntriesB, Indices);
+    return std::make_pair(BeginAfterSentinel, EntriesE);
   }
 
   return std::make_pair(EntriesB, EntriesE);
@@ -286,6 +332,27 @@ private:
       KernelData.WavefrontSize = V.second.getUInt();
     } else if (IsKey(V.first, ".max_flat_workgroup_size")) {
       KernelData.MaxFlatWorkgroupSize = V.second.getUInt();
+    } else if (IsKey(V.first, ".args")) {
+      auto ArgsArray = V.second.getArray();
+      for (auto ArgIt = ArgsArray.begin(), ArgEnd = ArgsArray.end();
+           ArgIt != ArgEnd; ++ArgIt) {
+        auto ArgMap = ArgIt->getMap();
+
+        auto OffsetIt = ArgMap.find(".offset");
+        if (OffsetIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .offset key in kernel argument metadata map");
+
+        auto SizeIt = ArgMap.find(".size");
+        if (SizeIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .size key in kernel argument metadata map");
+
+        KernelData.ArgMDs.emplace_back(OffsetIt->second.getUInt(),
+                                       SizeIt->second.getUInt());
+      }
     }
 
     return Error::success();
@@ -423,4 +490,36 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
                            object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
                            MetaData);
+}
+
+void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
+  uint32_t Count = Names.size();
+
+  // Compute the byte offset where string data begins: right after the header
+  // and the entry array.
+  uint32_t StringDataOffset =
+      sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
+
+  // Compute total size and reserve to prevent reallocation while writing
+  // entries via pointer (append() could otherwise invalidate the pointer).
+  uint32_t TotalSize = StringDataOffset;
+  for (StringRef N : Names)
+    TotalSize += N.size() + 1;
+  Out.reserve(TotalSize);
+  Out.resize(StringDataOffset);
+
+  // Write the header.
+  auto *Header = reinterpret_cast<SymbolTableHeader *>(Out.data());
+  Header->Count = Count;
+
+  // Write each entry and append the corresponding null-terminated name.
+  auto *Entries = reinterpret_cast<SymbolTableEntry *>(Header + 1);
+  uint32_t CurrentOffset = StringDataOffset;
+  for (uint32_t I = 0; I < Count; ++I) {
+    Entries[I].OffsetToSymbol = CurrentOffset;
+    Entries[I].SymbolSize = Names[I].size();
+    Out.append(Names[I]);
+    Out.push_back('\0');
+    CurrentOffset += Names[I].size() + 1;
+  }
 }

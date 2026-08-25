@@ -13,6 +13,16 @@ define float @ldf16_32(ptr %p) {
   ret float %v
 }
 
+; CHECK-LABEL: load_f16_cast:
+; CHECK:       f32.load_f16 $push0=, 0($0)
+; CHECK-NEXT:  return $pop0
+define float @load_f16_cast(ptr %p) {
+  %1 = load half, ptr %p, align 2
+  %2 = fpext half %1 to float
+  ret float %2
+}
+
+
 ; CHECK-LABEL: stf16_32:
 ; CHECK:       f32.store_f16 0($1), $0
 ; CHECK-NEXT:  return
@@ -27,6 +37,25 @@ define void @stf16_32(float %v, ptr %p) {
 define <8 x half> @splat_v8f16(float %x) {
   %v = call <8 x half> @llvm.wasm.splat.f16x8(float %x)
   ret <8 x half> %v
+}
+
+; CHECK-LABEL: load_splat_v8f16:
+; CHECK:       v128.load16_splat $push0=, 0($0)
+; CHECK-NEXT:  return $pop0
+define <8 x half> @load_splat_v8f16(ptr %p) {
+  %1 = load half, ptr %p, align 2
+  %2 = fpext half %1 to float
+  %3 = call <8 x half> @llvm.wasm.splat.f16x8(float %2)
+  ret <8 x half> %3
+}
+
+; CHECK-LABEL: store_trunc_f16:
+; CHECK:       f32.store_f16 0($1), $0
+; CHECK-NEXT:  return
+define void @store_trunc_f16(float %v, ptr %p) {
+  %1 = fptrunc float %v to half
+  store half %1, ptr %p, align 2
+  ret void
 }
 
 ; CHECK-LABEL: const_splat_v8f16:
@@ -50,6 +79,47 @@ define float @extract_lane_v8f16(<8 x half> %v) {
 define <8 x half> @replace_lane_v8f16(<8 x half> %v, float %f) {
   %r = call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %v, i32 1, float %f)
   ret <8 x half> %r
+}
+
+; CHECK-LABEL: insert_lane_v8f16:
+; CHECK:       i16x8.replace_lane $push0=, $0, 3, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @insert_lane_v8f16(<8 x half> %v, half %x) {
+  %r = insertelement <8 x half> %v, half %x, i32 3
+  ret <8 x half> %r
+}
+
+; CHECK-LABEL: select_v8f16:
+; CHECK:       v128.select $push0=, $1, $2, $0
+; CHECK-NEXT:  return $pop0
+define <8 x half> @select_v8f16(i1 zeroext %cond, <8 x half> %a,
+                                 <8 x half> %b) {
+  %result = select i1 %cond, <8 x half> %a, <8 x half> %b
+  ret <8 x half> %result
+}
+
+; CHECK-LABEL: vselect_v8f16:
+; CHECK:       i32.const $push0=, 15
+; CHECK-NEXT:  i16x8.shl $push1=, $0, $pop0
+; CHECK-NEXT:  i32.const $push4=, 15
+; CHECK-NEXT:  i16x8.shr_s $push2=, $pop1, $pop4
+; CHECK-NEXT:  v128.bitselect $push3=, $1, $2, $pop2
+; CHECK-NEXT:  return $pop3
+define <8 x half> @vselect_v8f16(<8 x i1> %cond, <8 x half> %a,
+                                  <8 x half> %b) {
+  %result = select <8 x i1> %cond, <8 x half> %a, <8 x half> %b
+  ret <8 x half> %result
+}
+
+; CHECK-LABEL: vselect_cmp_v8f16:
+; CHECK:       f16x8.lt $push0=, $0, $1
+; CHECK-NEXT:  v128.bitselect $push1=, $2, $3, $pop0
+; CHECK-NEXT:  return $pop1
+define <8 x half> @vselect_cmp_v8f16(<8 x half> %a, <8 x half> %b,
+                                      <8 x half> %x, <8 x half> %y) {
+  %cond = fcmp olt <8 x half> %a, %b
+  %result = select <8 x i1> %cond, <8 x half> %x, <8 x half> %y
+  ret <8 x half> %result
 }
 
 ; CHECK-LABEL: add_v8f16:
@@ -370,4 +440,43 @@ define <8 x half> @shuffle_poison_v8f16(<8 x half> %x, <8 x half> %y) {
     <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison,
                i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x half> %res
+}
+
+define <4 x float> @promote_low_v4f32(<8 x half> %x) {
+; CHECK-LABEL: promote_low_v4f32:
+; CHECK: .functype promote_low_v4f32 (v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.promote_low_f16x8 $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+  %v = shufflevector <8 x half> %x, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = fpext <4 x half> %v to <4 x float>
+  ret <4 x float> %a
+}
+
+define <4 x float> @promote_low_v4f32_2(<8 x half> %x) {
+; CHECK-LABEL: promote_low_v4f32_2:
+; CHECK:         .functype promote_low_v4f32_2 (v128) -> (v128)
+; CHECK-NEXT:    f32x4.promote_low_f16x8 $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+  %v = fpext <8 x half> %x to <8 x float>
+  %a = shufflevector <8 x float> %v, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %a
+}
+
+define <8 x half> @demote_v4f32(<4 x float> %x) {
+; CHECK-LABEL: demote_v4f32:
+; CHECK:         .functype demote_v4f32 (v128) -> (v128)
+; CHECK-NEXT:    f16x8.demote_f32x4_zero $push0=, $0
+; CHECK-NEXT:    return $pop0
+  %v = fptrunc <4 x float> %x to <4 x half>
+  %a = shufflevector <4 x half> %v, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %a
+}
+
+define <4 x half> @demote_v4f32_no_padding(<4 x float> %x) {
+; CHECK-LABEL: demote_v4f32_no_padding:
+; CHECK:         .functype demote_v4f32_no_padding (v128) -> (v128)
+; CHECK-NEXT:    f16x8.demote_f32x4_zero $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT:    return $pop[[R]]
+  %v = fptrunc <4 x float> %x to <4 x half>
+  ret <4 x half> %v
 }

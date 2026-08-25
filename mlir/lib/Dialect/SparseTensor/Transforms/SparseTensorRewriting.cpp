@@ -1008,7 +1008,7 @@ public:
 
     Value buffer =
         AllocTensorOp::create(rewriter, loc, bufferTp, dstDynSizes, Value(),
-                              /*sizeHint=*/nnz, Attribute())
+                              /*size_hint=*/nnz, Attribute())
             .getResult();
 
     // Implement the sparse2sparse reshape as follows:
@@ -1340,6 +1340,8 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
     AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
                         ? op.getEncoder().getDimToLvl()
                         : op.getEncoder().getLvlToDim();
+    if (!map || map.getNumSymbols() != 0)
+      return failure();
 
     SmallVector<Value> outCrds;
     for (AffineExpr result : map.getResults()) {

@@ -82,7 +82,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
 
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     switch (Opcode) {
     case Instruction::LShr:
     case Instruction::AShr:
@@ -92,7 +92,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       // approximation.
       if (!Op2Info.isUniform())
         Cost =
-            cast<FixedVectorType>(VTy)->getNumElements() *
+            VTy->getNumElements() *
             (TargetTransformInfo::TCC_Basic +
              getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
              TargetTransformInfo::TCC_Basic);
@@ -167,6 +167,9 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
       {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
       {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // 6x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i8, 6},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i8, 6},
       // shuffle
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
@@ -201,7 +204,7 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
-      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
       /// trunc_sat, const, and, 3x narrow
       {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},
@@ -248,7 +251,9 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
     unsigned Opcode, Type *Ty, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
     const Instruction *I) const {
-  if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty)) {
+  // FIXME: Load latency isn't handled here
+  if (!ST->hasSIMD128() || !isa<FixedVectorType>(Ty) ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)) {
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
   }
@@ -296,7 +301,7 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
     VectorType *SubTp, ArrayRef<const Value *> Args,
     const Instruction *CxtI) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
@@ -309,7 +314,7 @@ InstructionCost WebAssemblyTTIImpl::getShuffleCost(
       isa<FixedVectorType>(SrcTy))
     return 1;
 
-  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
                                Args, CxtI);
 }
 
@@ -360,7 +365,7 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     // more expensive as it will likely require more shuffles. Using two
     // simd128 inputs is considered more expensive and we mainly account for
     // shuffling two inputs (32 bytes), but we do model 4 x v4i32 to enable
-    // arithmetic kernels.
+    // arithmetic kernels with smaller (i8/i16) inputs.
     static const CostTblEntry ShuffleCostTbl[] = {
         // One reg.
         {2, MVT::v2i8, 1},  // interleave 2 x 2i8 into 4i8
@@ -369,11 +374,13 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
         {2, MVT::v2i16, 1}, // interleave 2 x 2i16 into 4i16
         {2, MVT::v4i16, 1}, // interleave 2 x 4i16 into 8i16
         {2, MVT::v2i32, 1}, // interleave 2 x 2i32 into 4i32
+        {2, MVT::v2f32, 1}, // interleave 2 x 2f32 into 4f32
 
         // Two regs.
         {2, MVT::v16i8, 2}, // interleave 2 x 16i8 into 32i8
         {2, MVT::v8i16, 2}, // interleave 2 x 8i16 into 16i16
         {2, MVT::v4i32, 2}, // interleave 2 x 4i32 into 8i32
+        {2, MVT::v4f32, 2}, // interleave 2 x 4f32 into 8f32
 
         // One reg.
         {4, MVT::v2i8, 4},  // interleave 4 x 2i8 into 8i8
@@ -384,6 +391,7 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
         {4, MVT::v8i8, 16}, // interleave 4 x 8i8 into 32i8
         {4, MVT::v4i16, 8}, // interleave 4 x 4i16 into 16i16
         {4, MVT::v2i32, 4}, // interleave 4 x 2i32 into 8i32
+        {4, MVT::v2f32, 4}, // interleave 4 x 2f32 into 8f32
 
         // Four regs.
         {4, MVT::v4i32, 16}, // interleave 4 x 4i32 into 16i32

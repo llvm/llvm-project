@@ -792,12 +792,9 @@ bool CursorVisitor::VisitEnumConstantDecl(EnumConstantDecl *D) {
 }
 
 bool CursorVisitor::VisitDeclaratorDecl(DeclaratorDecl *DD) {
-  unsigned NumParamList = DD->getNumTemplateParameterLists();
-  for (unsigned i = 0; i < NumParamList; i++) {
-    TemplateParameterList *Params = DD->getTemplateParameterList(i);
-    if (VisitTemplateParameters(Params))
+  for (TemplateParameterList *TPL : DD->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
       return true;
-  }
 
   if (TypeSourceInfo *TSInfo = DD->getTypeSourceInfo())
     if (Visit(TSInfo->getTypeLoc()))
@@ -828,12 +825,9 @@ static int CompareCXXCtorInitializers(CXXCtorInitializer *const *X,
 }
 
 bool CursorVisitor::VisitFunctionDecl(FunctionDecl *ND) {
-  unsigned NumParamList = ND->getNumTemplateParameterLists();
-  for (unsigned i = 0; i < NumParamList; i++) {
-    TemplateParameterList *Params = ND->getTemplateParameterList(i);
-    if (VisitTemplateParameters(Params))
+  for (TemplateParameterList *TPL : ND->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
       return true;
-  }
 
   if (TypeSourceInfo *TSInfo = ND->getTypeSourceInfo()) {
     // Visit the function declaration's syntactic components in the order
@@ -1318,6 +1312,14 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
+      return true;
+
+  return VisitFriendDecl(D);
+}
+
 bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
   for (auto *B : D->bindings()) {
     if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
@@ -1342,9 +1344,8 @@ bool CursorVisitor::VisitTypeConstraint(const TypeConstraint &TC) {
     if (VisitNestedNameSpecifierLoc(TC.getNestedNameSpecifierLoc()))
       return true;
   }
-  if (TC.getNamedConcept()) {
-    if (Visit(MakeCursorTemplateRef(TC.getNamedConcept(),
-                                    TC.getConceptNameLoc(), TU)))
+  if (TemplateDecl *TD = TC.getNamedConcept().getAsTemplateDecl()) {
+    if (Visit(MakeCursorTemplateRef(TD, TC.getConceptNameLoc(), TU)))
       return true;
   }
   if (auto Args = TC.getTemplateArgsAsWritten()) {
@@ -1592,6 +1593,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -1744,6 +1747,10 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+bool CursorVisitor::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -1797,9 +1804,8 @@ bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
   if (TL.isConstrained()) {
     if (auto *CR = TL.getConceptReference()) {
-      if (CR->getNamedConcept()) {
-        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
-                                           CR->getConceptNameLoc(), TU));
+      if (TemplateDecl *TD = CR->getNamedConcept().getAsTemplateDecl()) {
+        return Visit(MakeCursorTemplateRef(TD, CR->getConceptNameLoc(), TU));
       }
     }
   }
@@ -2194,7 +2200,10 @@ public:
   void VisitOMPFlushDirective(const OMPFlushDirective *D);
   void VisitOMPDepobjDirective(const OMPDepobjDirective *D);
   void VisitOMPScanDirective(const OMPScanDirective *D);
-  void VisitOMPOrderedDirective(const OMPOrderedDirective *D);
+  void
+  VisitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective *D);
+  void
+  VisitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective *D);
   void VisitOMPAtomicDirective(const OMPAtomicDirective *D);
   void VisitOMPTargetDirective(const OMPTargetDirective *D);
   void VisitOMPTargetDataDirective(const OMPTargetDataDirective *D);
@@ -2362,6 +2371,11 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto E : C->getCountsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (auto E : C->getArgsRefs())
@@ -2418,6 +2432,9 @@ void OMPClauseEnqueue::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseEnqueue::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
@@ -2468,6 +2485,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {
@@ -2524,12 +2543,16 @@ void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
@@ -3460,7 +3483,13 @@ void EnqueueVisitor::VisitOMPScanDirective(const OMPScanDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
-void EnqueueVisitor::VisitOMPOrderedDirective(const OMPOrderedDirective *D) {
+void EnqueueVisitor::VisitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
@@ -3919,19 +3948,20 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
       for (LambdaExpr::capture_iterator C = E->explicit_capture_begin(),
                                         CEnd = E->explicit_capture_end();
            C != CEnd; ++C) {
+
         if (!C->capturesVariable())
           continue;
-        // TODO: handle structured bindings here ?
-        if (!isa<VarDecl>(C->getCapturedVar()))
-          continue;
-        if (Visit(MakeCursorVariableRef(cast<VarDecl>(C->getCapturedVar()),
-                                        C->getLocation(), TU)))
-          return true;
-      }
-      // Visit init captures
-      for (auto InitExpr : E->capture_inits()) {
-        if (InitExpr && Visit(InitExpr))
-          return true;
+
+        if (const auto *CV = dyn_cast_or_null<VarDecl>(C->getCapturedVar())) {
+          if (CV->isInitCapture()) {
+            // Init capture is a declaration, create VarDecl cursor
+            if (Visit(MakeCXCursor(CV, TU, RegionOfInterest)))
+              return true;
+          } else
+            // Non init capture is a VariableRef
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(), TU)))
+              return true;
+        }
       }
 
       TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
@@ -3961,8 +3991,8 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
           return true;
       }
 
-      if (E->getNamedConcept() &&
-          Visit(MakeCursorTemplateRef(E->getNamedConcept(),
+      if (E->getNamedConcept().getAsTemplateDecl() &&
+          Visit(MakeCursorTemplateRef(E->getConceptDecl(),
                                       E->getConceptNameLoc(), TU)))
         return true;
 
@@ -6326,6 +6356,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPInterchangeDirective");
   case CXCursor_OMPFuseDirective:
     return cxstring::createRef("OMPFuseDirective");
+  case CXCursor_OMPSplitDirective:
+    return cxstring::createRef("OMPSplitDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
@@ -6372,8 +6404,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPDepobjDirective");
   case CXCursor_OMPScanDirective:
     return cxstring::createRef("OMPScanDirective");
-  case CXCursor_OMPOrderedDirective:
-    return cxstring::createRef("OMPOrderedDirective");
+  case CXCursor_OMPOrderedStandaloneDirective:
+    return cxstring::createRef("OMPOrderedStandaloneDirective");
+  case CXCursor_OMPOrderedBlockAssocDirective:
+    return cxstring::createRef("OMPOrderedBlockAssocDirective");
   case CXCursor_OMPAtomicDirective:
     return cxstring::createRef("OMPAtomicDirective");
   case CXCursor_OMPTargetDirective:
@@ -7257,6 +7291,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::FileScopeAsm:
   case Decl::TopLevelStmt:
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
   case Decl::Block:
   case Decl::OutlinedFunction:
   case Decl::Captured:
@@ -7282,6 +7317,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
+  case Decl::CXXExpansionStmt:
     return C;
 
   // Declaration kinds that don't make any sense here, but are
@@ -8837,6 +8873,7 @@ static CXLanguageKind getDeclLanguage(const Decl *D) {
   case Decl::NamespaceAlias:
   case Decl::NonTypeTemplateParm:
   case Decl::StaticAssert:
+  case Decl::ExplicitInstantiation:
   case Decl::TemplateTemplateParm:
   case Decl::TemplateTypeParm:
   case Decl::UnresolvedUsingTypename:
@@ -8929,7 +8966,7 @@ static void getCursorPlatformAvailabilityForDecl(
     }
 
     if (AvailabilityAttr *Avail = dyn_cast<AvailabilityAttr>(A)) {
-      AvailabilityAttrs.push_back(Avail);
+      AvailabilityAttrs.push_back(Avail->getEffectiveAttr());
       HadAvailAttr = true;
     }
   }
@@ -9323,28 +9360,50 @@ CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
       static_cast<CXBinaryOperatorKind>(Op));
 }
 
-CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
-    return clang_getNullRange();
-
-  const Decl *D = getCursorDecl(C);
+static const RawComment *getCursorRawComment(CXCursor C) {
+  if (!clang_isDeclaration(C.kind) && C.kind != CXCursor_MacroDefinition)
+    return nullptr;
   ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
+  if (clang_isDeclaration(C.kind))
+    return Context.getRawCommentForAnyRedecl(getCursorDecl(C));
+  if (C.kind == CXCursor_MacroDefinition) {
+    const MacroDefinitionRecord *Def = getCursorMacroDefinition(C);
+    if (!Def)
+      return nullptr;
+    Preprocessor &PP = getCursorASTUnit(C)->getPreprocessor();
+    // Walk the macro directive history to find the specific MacroInfo for
+    // this cursor's definition. Looking up by name alone would always return
+    // the latest definition, which is wrong for redefined macros.
+    for (const MacroDirective *MD =
+             PP.getLocalMacroDirectiveHistory(Def->getName());
+         MD; MD = MD->getPrevious()) {
+      const auto *DMD = dyn_cast<DefMacroDirective>(MD);
+      if (!DMD)
+        continue;
+      const MacroInfo *MI = DMD->getInfo();
+      if (MI && MI->getDefinitionLoc() == Def->getLocation())
+        return Context.getRawCommentForAnyRedecl(MI);
+    }
+  }
+  return nullptr;
+}
+
+CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
+  const RawComment *RC = getCursorRawComment(C);
   if (!RC)
     return clang_getNullRange();
 
+  ASTContext &Context = getCursorContext(C);
   return cxloc::translateSourceRange(Context, RC->getSourceRange());
 }
 
 CXString clang_Cursor_getRawCommentText(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
+  const RawComment *RC = getCursorRawComment(C);
+  if (!RC)
     return cxstring::createNull();
 
-  const Decl *D = getCursorDecl(C);
   ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
-  StringRef RawText =
-      RC ? RC->getRawText(Context.getSourceManager()) : StringRef();
+  StringRef RawText = RC->getRawText(Context.getSourceManager());
 
   // Don't duplicate the string because RawText points directly into source
   // code.
@@ -9352,22 +9411,16 @@ CXString clang_Cursor_getRawCommentText(CXCursor C) {
 }
 
 CXString clang_Cursor_getBriefCommentText(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
+  const RawComment *RC = getCursorRawComment(C);
+  if (!RC)
     return cxstring::createNull();
 
-  const Decl *D = getCursorDecl(C);
   const ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
+  StringRef BriefText = RC->getBriefText(Context);
 
-  if (RC) {
-    StringRef BriefText = RC->getBriefText(Context);
-
-    // Don't duplicate the string because RawComment ensures that this memory
-    // will not go away.
-    return cxstring::createRef(BriefText);
-  }
-
-  return cxstring::createNull();
+  // Don't duplicate the string because RawComment ensures that this memory
+  // will not go away.
+  return cxstring::createRef(BriefText);
 }
 
 CXModule clang_Cursor_getModule(CXCursor C) {
@@ -10155,11 +10208,6 @@ Logger &cxindex::Logger::operator<<(CXSourceRange range) {
 
 Logger &cxindex::Logger::operator<<(CXString Str) {
   *this << clang_getCString(Str);
-  return *this;
-}
-
-Logger &cxindex::Logger::operator<<(const llvm::format_object_base &Fmt) {
-  LogOS << Fmt;
   return *this;
 }
 

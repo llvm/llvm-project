@@ -21,7 +21,9 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/DynamicAllocationArgumentsCXX.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
@@ -461,6 +463,12 @@ static ExprResult buildPromiseCall(Sema &S, VarDecl *Promise,
   return buildMemberCall(S, PromiseRef.get(), Loc, Name, Args);
 }
 
+static void markCoroutineParametersReferenced(FunctionDecl &FD) {
+  for (auto *PD : FD.parameters())
+    if (!PD->getType()->isDependentType())
+      PD->setReferenced();
+}
+
 VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
@@ -554,6 +562,10 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
         VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
         VD->setInitStyle(VarDecl::CallInit);
         CheckCompleteVariableDeclaration(VD);
+        // The constructor is selected with the coroutine parameter copies as
+        // arguments. Mark the original parameters as referenced for
+        // -Wunused-parameter.
+        markCoroutineParametersReferenced(*FD);
       }
     } else
       ActOnUninitializedDecl(VD);
@@ -693,6 +705,13 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
 
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
+
+  // Support for coroutines is not stable on 32 bits windows
+  // Warn about it.
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+      Context.getTargetInfo().getTriple().isX86_32())
+    Diag(KWLoc, diag::warn_coroutines_x86_windows);
+
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
 
@@ -1377,9 +1396,14 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
 
     // Build a reference to the parameter.
     auto PDLoc = PD->getLocation();
+    // Preserve the referenced state for unused parameter diagnostics.
+    bool DeclReferenced = PD->isReferenced();
     ExprResult PDRefExpr =
         S.BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
                            ExprValueKind::VK_LValue, PDLoc);
+
+    PD->setReferenced(DeclReferenced);
+
     if (PDRefExpr.isInvalid())
       return false;
 
@@ -1435,6 +1459,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
+  // Track whether PlacementArgs still refer to the coroutine parameters.
+  bool PlacementArgsFromCoroutine = false;
   DeclarationName NewName =
       S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
@@ -1470,21 +1496,29 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     IAP = ImplicitAllocationParameters(
         alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
 
-    FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(
+    auto FoundAllocations = S.FindAllocationFunctions(
         Loc, SourceRange(), NewScope,
         /*DeleteScope=*/AllocationFunctionScope::Both, PromiseType,
         /*isArray=*/false, IAP,
-        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
-        UnusedResult, /*Diagnose=*/false);
+        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs,
+        /*Diagnose=*/false);
+    if (FoundAllocations) {
+      IAP = FoundAllocations->IAP;
+      OperatorNew = FoundAllocations->OperatorNew;
+    } else {
+      OperatorNew = nullptr;
+    }
     assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we
   // shouldn't lookup placement arguments.
-  if (PromiseContainsNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
-    return false;
+  if (PromiseContainsNew) {
+    if (!collectPlacementArgs(S, FD, Loc, PlacementArgs))
+      return false;
+    PlacementArgsFromCoroutine = true;
+  }
 
   LookupAllocationFunction();
 
@@ -1550,6 +1584,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     if (!StdNoThrow)
       return false;
     PlacementArgs = {StdNoThrow};
+    PlacementArgsFromCoroutine = false;
     OperatorNew = nullptr;
     LookupAllocationFunction(AllocationFunctionScope::Global);
   }
@@ -1636,8 +1671,14 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       isAlignedAllocation(IAP.PassAlignment))
     NewArgs.push_back(FrameAlignment);
 
-  if (OperatorNew->getNumParams() > NewArgs.size())
+  // getNumParams() does not include an ellipsis, but a variadic allocation
+  // function still receives the coroutine parameters as placement arguments.
+  if (OperatorNew->isVariadic() ||
+      OperatorNew->getNumParams() > NewArgs.size()) {
     llvm::append_range(NewArgs, PlacementArgs);
+    if (PlacementArgsFromCoroutine)
+      markCoroutineParametersReferenced(FD);
+  }
 
   ExprResult NewExpr =
       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);

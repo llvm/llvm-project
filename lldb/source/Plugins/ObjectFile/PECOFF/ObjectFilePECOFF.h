@@ -81,7 +81,6 @@ public:
   static lldb_private::ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t length);
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,

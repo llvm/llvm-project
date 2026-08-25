@@ -24,7 +24,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbankselect"
+#define DEBUG_TYPE "amdgpu-reg-bank-select"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -111,7 +111,7 @@ public:
 
   const RegisterBank *getRegBankToAssign(Register Reg) {
     if (!isTemporalDivergenceCopy(Reg) &&
-        (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg)))
+        (MUI.isUniformAtDef(Reg) || ILMA.isS32S64LaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;

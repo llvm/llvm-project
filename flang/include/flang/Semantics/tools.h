@@ -13,6 +13,7 @@
 // canonically for use in semantic checking.
 
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/designator-path.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -23,7 +24,12 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <functional>
+
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
 
 namespace Fortran::semantics {
 
@@ -126,6 +132,9 @@ bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
 bool IsAutomaticallyDestroyed(const Symbol &);
 
+// Follow association until the first symbol without HostAssocDetails.
+const Symbol &FollowHostAssoc(const Symbol &);
+
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
     const std::function<bool(const Symbol &)> &predicate);
@@ -187,6 +196,8 @@ const Symbol *HasImpureFinal(
 bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have a pointer direct component?
+bool HasPointerDirectComponent(const DerivedTypeSpec &);
 // Does this type have any defined assignment at any level (or any polymorphic
 // allocatable)?
 bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
@@ -196,7 +207,22 @@ bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
+
+// Builds an evaluate::DesignatorPath (the structural prefix of a designator
+// used by OpenACC data-sharing analysis) from the parse tree. It uses the
+// already-resolved base symbol and component structure, and analyzes and folds
+// subscript expressions. Returns std::nullopt when the designator cannot be
+// represented (e.g. an unresolved name or a non-integer/erroneous subscript).
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::Designator &);
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::FunctionReference &);
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::ArrayElement &);
+
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
@@ -226,6 +252,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
@@ -293,6 +321,14 @@ SymbolVector OrderParameterNames(const Symbol &);
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
     DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
+
+// Clone a derived type's component scope for OpenACC use_device with CUDA
+// Fortran: each component named in `path` (e.g. a%b%c -> {b,c}) gets a
+// distinct component symbol with cudaDataAttr Device in a new DerivedTypeSpec.
+// Returns nullptr if `path` is empty or `origType` is not derived.
+const DeclTypeSpec *CloneDerivedTypeForUseDevice(Scope &containingScope,
+    SemanticsContext &, const DeclTypeSpec &origType,
+    llvm::ArrayRef<SourceName> path);
 
 // When a subprogram defined in a submodule defines a separate module
 // procedure whose interface is defined in an ancestor (sub)module,

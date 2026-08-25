@@ -517,3 +517,23 @@ TEST_F(IsPotentiallyReachableTest, UnreachableToReachable) {
                 "}");
   ExpectPath(true);
 }
+
+TEST_F(IsPotentiallyReachableTest, CycleExitBlocksSelfLoop) {
+  ParseAssembly("define void @test() {\n"
+                "entry:\n"
+                "  br label %loop.header\n"
+                "loop.header:\n"
+                "  %A = bitcast i32 0 to i32\n"
+                "  br i1 undef, label %loop.latch, label %loop.exit\n"
+                "loop.latch:\n"
+                "  br label %loop.header\n"
+                "loop.exit:\n"
+                "  br i1 undef, label %exit, label %loop.body\n"
+                "loop.body:\n"
+                "  br label %loop.body\n"
+                "exit:\n"
+                "  %B = bitcast i32 0 to i32\n"
+                "  ret void\n"
+                "}");
+  ExpectPath(true);
+}

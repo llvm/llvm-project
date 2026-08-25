@@ -82,8 +82,31 @@ void SymbolTable::compileBitcodeFiles() {
   // Prevent further LTO objects being included
   BitcodeFile::doneLTO = true;
 
+  // Collect the bitcode library functions that are not safe to call because
+  // they were not yet brought in the link. (Such symbols are lazy.)
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
+    // Triple must be captured before the bitcode is moved into the compiler.
+    // Note that the below assumes that the set of possible libfuncs is
+    // equivalent for all bitcode translation units.
+    llvm::Triple tt =
+        llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (StringRef libFunc : llvm::lto::LTO::getLibFuncSymbols(tt, saver)) {
+      if (Symbol *sym = find(libFunc)) {
+        if (auto *lazy = dyn_cast<LazySymbol>(sym)) {
+          if (isa<BitcodeFile>(lazy->getFile()))
+            bitcodeLibFuncs.push_back(libFunc);
+        }
+      }
+    }
+  }
+
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler);
+  lto->setBitcodeLibFuncs(bitcodeLibFuncs);
+
   for (BitcodeFile *f : ctx.bitcodeFiles)
     lto->add(*f);
 
@@ -142,6 +165,11 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
   return {s, wasInserted};
 }
 
+static bool isBitcodeSymbol(const Symbol *symbol) {
+  return symbol->getFile() &&
+         symbol->getFile()->kind() == InputFile::BitcodeKind;
+}
+
 static void reportTypeError(const Symbol *existing, const InputFile *file,
                             llvm::wasm::WasmSymbolType type) {
   error("symbol type mismatch: " + toString(*existing) + "\n>>> defined as " +
@@ -169,6 +197,8 @@ static bool signatureMatches(FunctionSymbol *existing,
 static void checkGlobalType(const Symbol *existing, const InputFile *file,
                             const WasmGlobalType *newType) {
   if (!isa<GlobalSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_GLOBAL);
     return;
   }
@@ -183,11 +213,14 @@ static void checkGlobalType(const Symbol *existing, const InputFile *file,
 
 static void checkTagType(const Symbol *existing, const InputFile *file,
                          const WasmSignature *newSig) {
-  const auto *existingTag = dyn_cast<TagSymbol>(existing);
   if (!isa<TagSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_TAG);
     return;
   }
+
+  const auto *existingTag = cast<TagSymbol>(existing);
 
   const WasmSignature *oldSig = existingTag->signature;
   if (*newSig != *oldSig)
@@ -200,6 +233,8 @@ static void checkTagType(const Symbol *existing, const InputFile *file,
 static void checkTableType(const Symbol *existing, const InputFile *file,
                            const WasmTableType *newType) {
   if (!isa<TableSymbol>(existing)) {
+    if (isBitcodeSymbol(existing))
+      return;
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_TABLE);
     return;
   }
@@ -214,7 +249,7 @@ static void checkTableType(const Symbol *existing, const InputFile *file,
 }
 
 static void checkDataType(const Symbol *existing, const InputFile *file) {
-  if (!isa<DataSymbol>(existing))
+  if (!isa<DataSymbol>(existing) && !isBitcodeSymbol(existing))
     reportTypeError(existing, file, WASM_SYMBOL_TYPE_DATA);
 }
 
@@ -300,6 +335,18 @@ static bool shouldReplace(const Symbol *existing, InputFile *newFile,
     return true;
   }
 
+  // If existing symbol is common, it can be overridden by a strong definition.
+  if (existing->isCommon()) {
+    if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
+      LLVM_DEBUG(dbgs() << "existing common symbol " << existing->getName()
+                        << " takes precedence over new weak\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "replacing existing common symbol "
+                      << existing->getName() << " with strong definition\n");
+    return true;
+  }
+
   // Now we have two defined symbols. If the new one is weak, we can ignore it.
   if ((newFlags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
     LLVM_DEBUG(dbgs() << "existing symbol takes precedence\n");
@@ -352,6 +399,44 @@ static void reportFunctionSignatureMismatch(StringRef symName,
                                   isError);
 }
 
+Symbol *SymbolTable::addSharedTag(StringRef name, uint32_t flags,
+                                  InputFile *file, const WasmSignature *sig) {
+  LLVM_DEBUG(dbgs() << "addSharedTag: " << name << " [" << toString(*sig)
+                    << "]\n");
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name, file);
+
+  auto replaceSym = [&](Symbol *sym) {
+    replaceSymbol<SharedTagSymbol>(sym, name, flags, file, sig);
+  };
+
+  // same as addSharedFunction, but this is in its own function
+  if (wasInserted || s->isLazy()) {
+    replaceSym(s);
+    return s;
+  }
+
+  auto *existingTag = dyn_cast<TagSymbol>(s);
+  if (!existingTag) {
+    reportTypeError(s, file, WASM_SYMBOL_TYPE_TAG);
+    return s;
+  }
+
+  // Shared symbols should never replace locally-defined ones
+  if (s->isDefined())
+    return s;
+
+  // undefined existing sym
+  const WasmSignature *oldSig = existingTag->signature;
+  if (oldSig && sig && *oldSig != *sig)
+    error("Tag signature mismatch: " + name + "\n>>> defined as " +
+          toString(*oldSig) + " in " + toString(existingTag->getFile()) +
+          "\n>>> defined as " + toString(*sig) + " in " + toString(file));
+  replaceSym(s);
+  return s;
+}
+
 Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
                                        InputFile *file,
                                        const WasmSignature *sig) {
@@ -377,9 +462,8 @@ Symbol *SymbolTable::addSharedFunction(StringRef name, uint32_t flags,
   }
 
   // Shared symbols should never replace locally-defined ones
-  if (s->isDefined()) {
+  if (s->isDefined())
     return s;
-  }
 
   LLVM_DEBUG(dbgs() << "resolving existing undefined symbol: " << s->getName()
                     << "\n");
@@ -416,12 +500,56 @@ Symbol *SymbolTable::addSharedData(StringRef name, uint32_t flags,
   }
 
   // Shared symbols should never replace locally-defined ones
-  if (s->isDefined()) {
+  if (s->isDefined())
+    return s;
+
+  checkDataType(s, file);
+  replaceSymbol<SharedData>(s, name, flags, file);
+  return s;
+}
+
+Symbol *SymbolTable::addCommon(StringRef name, uint32_t flags, InputFile *file,
+                               uint64_t size, uint32_t alignment) {
+  LLVM_DEBUG(dbgs() << "addCommon: " << name << " size:" << size
+                    << " align:" << alignment << "\n");
+  auto val = insert(name, file);
+  Symbol *s = val.first;
+  bool wasInserted = val.second;
+
+  auto replaceSym = [&]() {
+    replaceSymbol<CommonSymbol>(s, name, flags, file, size, alignment);
+  };
+
+  if (wasInserted || s->isLazy()) {
+    replaceSym();
     return s;
   }
 
   checkDataType(s, file);
-  replaceSymbol<SharedData>(s, name, flags, file);
+
+  if (auto *existingCommon = dyn_cast<CommonSymbol>(s)) {
+    uint64_t newSize = std::max(existingCommon->getSize(), size);
+    uint32_t newAlign = std::max(existingCommon->getAlignment(), alignment);
+    existingCommon->setCommon(newSize, newAlign);
+    existingCommon->flags |= flags & WASM_SYMBOL_NO_STRIP;
+    return s;
+  }
+
+  if (s->isDefined()) {
+    if (s->isWeak()) {
+      LLVM_DEBUG(
+          dbgs() << "replacing existing weak defined symbol with common\n");
+      replaceSym();
+    } else {
+      LLVM_DEBUG(
+          dbgs()
+          << "existing strong defined symbol takes precedence over common\n");
+    }
+    return s;
+  }
+
+  LLVM_DEBUG(dbgs() << "resolving existing undefined symbol with common\n");
+  replaceSym();
   return s;
 }
 
@@ -452,6 +580,10 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
 
   auto existingFunction = dyn_cast<FunctionSymbol>(s);
   if (!existingFunction) {
+    if (isBitcodeSymbol(s)) {
+      replaceSym(s);
+      return s;
+    }
     reportTypeError(s, file, WASM_SYMBOL_TYPE_FUNCTION);
     return s;
   }

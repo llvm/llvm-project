@@ -15,6 +15,7 @@
 //
 
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "LoopVectorizationPlanner.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -33,6 +34,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace LoopVectorizationUtils;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -51,17 +53,6 @@ static cl::opt<bool>
                          cl::desc("Allow enabling loop hints to reorder "
                                   "FP operations during vectorization."));
 
-// TODO: Move size-based thresholds out of legality checking, make cost based
-// decisions instead of hard thresholds.
-static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
-    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed."));
-
-static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
-    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed with a "
-             "vectorize(enable) pragma"));
-
 static cl::opt<LoopVectorizeHints::ScalableForceKind>
     ForceScalableVectorization(
         "scalable-vectorization", cl::init(LoopVectorizeHints::SK_Unspecified),
@@ -78,7 +69,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
             clEnumValN(
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
-                "cost is inconclusive.")));
+                "cost is inconclusive."),
+            clEnumValN(
+                LoopVectorizeHints::SK_AlwaysScalable, "always",
+                "Scalable vectorization is available and always favored when "
+                "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
@@ -95,11 +90,7 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
     return isPowerOf2_32(Val) && Val <= VectorizerParams::MaxVectorWidth;
   case HK_INTERLEAVE:
     return isPowerOf2_32(Val) && Val <= MaxInterleaveFactor;
-  case HK_FORCE:
-    return (Val <= 1);
   case HK_ISVECTORIZED:
-  case HK_PREDICATE:
-  case HK_SCALABLE:
     return (Val == 0 || Val == 1);
   }
   return false;
@@ -109,13 +100,11 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
                                        bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE,
                                        const TargetTransformInfo *TTI)
-    : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
+    : Width("vectorize.width",
+            VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
-      Force("vectorize.enable", FK_Undefined, HK_FORCE),
-      IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
-      Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
-      TheLoop(L), ORE(ORE) {
+      Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
+      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -129,27 +118,31 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   //  - Target default
   //  - Metadata width
   //  - Force option (always overrides)
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified) {
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified) {
     if (TTI)
-      Scalable.Value = TTI->enableScalableVectorization() ? SK_PreferScalable
-                                                          : SK_FixedWidthOnly;
+      Scalable = TTI->enableScalableVectorization() ? SK_PreferScalable
+                                                    : SK_FixedWidthOnly;
 
     if (Width.Value)
       // If the width is set, but the metadata says nothing about the scalable
       // property, then assume it concerns only a fixed-width UserVF.
       // If width is not set, the flag takes precedence.
-      Scalable.Value = SK_FixedWidthOnly;
+      Scalable = SK_FixedWidthOnly;
   }
 
   // If the flag is set to force any use of scalable vectors, override the loop
   // hints.
   if (ForceScalableVectorization.getValue() !=
       LoopVectorizeHints::SK_Unspecified)
-    Scalable.Value = ForceScalableVectorization.getValue();
+    Scalable = ForceScalableVectorization.getValue();
+
+  // If force-vector-width is scalable, force scalable vectorization.
+  if (VectorizerParams::VectorizationFactor.isScalable())
+    Scalable = SK_AlwaysScalable;
 
   // Scalable vectorization is disabled if no preference is specified.
-  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
-    Scalable.Value = SK_FixedWidthOnly;
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified)
+    Scalable = SK_FixedWidthOnly;
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then
@@ -162,19 +155,9 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
 }
 
 void LoopVectorizeHints::setAlreadyVectorized() {
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-
-  MDNode *IsVectorizedMD = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.isvectorized"),
-       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
-  MDNode *LoopID = TheLoop->getLoopID();
-  MDNode *NewLoopID =
-      makePostTransformationMetadata(Context, LoopID,
-                                     {Twine(Prefix(), "vectorize.").str(),
-                                      Twine(Prefix(), "interleave.").str()},
-                                     {IsVectorizedMD});
-  TheLoop->setLoopID(NewLoopID);
+  TheLoop->addIntLoopAttribute("llvm.loop.isvectorized", 1,
+                               {Twine(Prefix(), "vectorize.").str(),
+                                Twine(Prefix(), "interleave.").str()});
 
   // Update internal cache.
   IsVectorized.Value = 1;
@@ -192,7 +175,7 @@ void LoopVectorizeHints::reportDisallowedVectorization(
 bool LoopVectorizeHints::allowVectorization(
     Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
-    if (Force.Value == LoopVectorizeHints::FK_Disabled) {
+    if (Force == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
                                     "MissedExplicitlyDisabled",
                                     "vectorization is explicitly disabled", L);
@@ -220,9 +203,8 @@ bool LoopVectorizeHints::allowVectorization(
     // vectorize.disable to be used without disabling the pass and errors
     // to differentiate between disabled vectorization and a width of 1.
     ORE.emit([&]() {
-      return OptimizationRemarkAnalysis(vectorizeAnalysisPassName(),
-                                        "AllDisabled", L->getStartLoc(),
-                                        L->getHeader())
+      return OptimizationRemarkAnalysis(LV_NAME, "AllDisabled",
+                                        L->getStartLoc(), L->getHeader())
              << "loop not vectorized: vectorization and interleaving are "
                 "explicitly disabled, or the loop has already been "
                 "vectorized";
@@ -237,7 +219,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
   using namespace ore;
 
   ORE.emit([&]() {
-    if (Force.Value == LoopVectorizeHints::FK_Disabled)
+    if (Force == LoopVectorizeHints::FK_Disabled)
       return OptimizationRemarkMissed(LV_NAME, "MissedExplicitlyDisabled",
                                       TheLoop->getStartLoc(),
                                       TheLoop->getHeader())
@@ -246,7 +228,7 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     OptimizationRemarkMissed R(LV_NAME, "MissedDetails", TheLoop->getStartLoc(),
                                TheLoop->getHeader());
     R << "loop not vectorized";
-    if (Force.Value == LoopVectorizeHints::FK_Enabled) {
+    if (Force == LoopVectorizeHints::FK_Enabled) {
       R << " (Force=" << NV("Force", true);
       if (Width.Value != 0)
         R << ", Vector Width=" << NV("VectorWidth", getWidth());
@@ -256,16 +238,6 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     }
     return R;
   });
-}
-
-const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  if (getWidth() == ElementCount::getFixed(1))
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Disabled)
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
-    return LV_NAME;
-  return OptimizationRemarkAnalysis::AlwaysPrint;
 }
 
 bool LoopVectorizeHints::allowReordering() const {
@@ -308,6 +280,22 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 
     // Check if the hint starts with the loop metadata prefix.
     StringRef Name = S->getString();
+    // The single-operand enable/disable pair carries no argument.
+    if (Args.empty()) {
+      if (Name == "llvm.loop.vectorize.enable")
+        Force = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.disable")
+        Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.predicate.enable")
+        Predicate = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.predicate.disable")
+        Predicate = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.scalable.enable")
+        Scalable = SK_PreferScalable;
+      else if (Name == "llvm.loop.vectorize.scalable.disable")
+        Scalable = SK_FixedWidthOnly;
+      continue;
+    }
     if (Args.size() == 1)
       setHint(Name, Args[0]);
   }
@@ -322,8 +310,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width,        &Interleave, &Force,
-                   &IsVectorized, &Predicate,  &Scalable};
+  // Force, Predicate, and Scalable are omitted: they are only spelled as
+  // single-operand enable/disable nodes, which never reach setHint().
+  Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
@@ -436,25 +425,6 @@ static IntegerType *getWiderInductionTy(const DataLayout &DL, Type *Ty0,
   return TyA->getScalarSizeInBits() > TyB->getScalarSizeInBits() ? TyA : TyB;
 }
 
-/// Check that the instruction has outside loop users and is not an
-/// identified reduction variable.
-static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
-                               SmallPtrSetImpl<Value *> &AllowedExit) {
-  // Reductions, Inductions and non-header phis are allowed to have exit users. All
-  // other instructions must not have external users.
-  if (!AllowedExit.count(Inst))
-    // Check that all of the users of the loop are inside the BB.
-    for (User *U : Inst->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      // This user may be a reduction exit value.
-      if (!TheLoop->contains(UI)) {
-        LLVM_DEBUG(dbgs() << "LV: Found an outside user for : " << *UI << '\n');
-        return true;
-      }
-    }
-  return false;
-}
-
 /// Returns true if A and B have same pointer operands or same SCEVs addresses
 static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
                                StoreInst *B) {
@@ -472,21 +442,35 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
   return SE->getSCEV(APtr) == SE->getSCEV(BPtr);
 }
 
+void LoopVectorizationLegality::collectUnitStridePredicates() const {
+  if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
+    return;
+
+  for (BasicBlock *BB : TheLoop->blocks())
+    for (Instruction &I : *BB)
+      if (Value *Ptr = getLoadStorePointerOperand(&I))
+        isConsecutivePtr(getLoadStoreType(&I), Ptr);
+}
+
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
   // FIXME: Currently, the set of symbolic strides is sometimes queried before
   // it's collected.  This happens from canVectorizeWithIfConvert, when the
   // pointer is checked to reference consecutive elements suitable for a
   // masked access.
-  const auto &Strides =
-    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
-
-  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                            AllowRuntimeSCEVChecks, false)
+  // Stride versioning requires adding a SCEV equality predicate; only consult
+  // the symbolic strides when runtime SCEV checks are permitted.
+  const auto &Strides = LAI && AllowRuntimeSCEVChecks
+                            ? LAI->getSymbolicStrides()
+                            : DenseMap<Value *, const SCEV *>();
+  SmallVector<const SCEVPredicate *> Predicates;
+  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
+                            AllowRuntimeSCEVChecks ? &Predicates : nullptr)
                    .value_or(0);
-  if (Stride == 1 || Stride == -1)
-    return Stride;
-  return 0;
+  if (Stride != 1 && Stride != -1)
+    return 0;
+  PSE.addPredicates(Predicates);
+  return Stride;
 }
 
 bool LoopVectorizationLegality::isInvariant(Value *V) const {
@@ -585,12 +569,13 @@ public:
 
 } // namespace
 
-bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
+bool LoopVectorizationLegality::isUniform(
+    Value *V, std::optional<ElementCount> VF) const {
   if (isInvariant(V))
     return true;
-  if (VF.isScalable())
+  if (!VF || VF->isScalable())
     return false;
-  if (VF.isScalar())
+  if (VF->isScalar())
     return true;
 
   // Since we rely on SCEV for uniformity, if the type is not SCEVable, it is
@@ -602,7 +587,7 @@ bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
 
   // Rewrite AddRecs in TheLoop to step by VF and check if the expression for
   // lane 0 matches the expressions for all other lanes.
-  unsigned FixedVF = VF.getKnownMinValue();
+  unsigned FixedVF = VF->getKnownMinValue();
   const SCEV *FirstLaneExpr =
       SCEVAddRecForUniformityRewriter::rewrite(S, *SE, FixedVF, 0, TheLoop);
   if (isa<SCEVCouldNotCompute>(FirstLaneExpr))
@@ -618,8 +603,8 @@ bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
   });
 }
 
-bool LoopVectorizationLegality::isUniformMemOp(Instruction &I,
-                                               ElementCount VF) const {
+bool LoopVectorizationLegality::isUniformMemOp(
+    Instruction &I, std::optional<ElementCount> VF) const {
   Value *Ptr = getLoadStorePointerOperand(&I);
   if (!Ptr)
     return false;
@@ -642,7 +627,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // not supported yet.
     Instruction *Term = BB->getTerminator();
     if (!isa<UncondBrInst, CondBrInst>(Term)) {
-      reportVectorizationFailure("Unsupported basic block terminator",
+      reportVectorizationFailure(
+          "Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -661,7 +647,26 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure("Unsupported conditional branch",
+      reportVectorizationFailure(
+          "Unsupported conditional branch",
+          "loop control flow is not understood by vectorizer",
+          "CFGNotUnderstood", ORE, TheLoop);
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+  }
+
+  // Each nested loop must exit via its latch only, as a region with the latch
+  // as its only exiting block is created for it. Note that the branch check
+  // above rejects divergent exits, but exits with an outer-loop invariant
+  // condition are allowed through.
+  SmallVector<Loop *, 4> LoopNest = TheLoop->getLoopsInPreorder();
+  for (Loop *Lp : drop_begin(LoopNest)) {
+    if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
+      reportVectorizationFailure(
+          "Nested loop does not exit via its latch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -675,9 +680,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
                          TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure("Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Outer loop contains divergent loops",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -697,9 +703,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   return Result;
 }
 
-void LoopVectorizationLegality::addInductionPhi(
-    PHINode *Phi, const InductionDescriptor &ID,
-    SmallPtrSetImpl<Value *> &AllowedExit) {
+void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
+                                                const InductionDescriptor &ID) {
   Inductions[Phi] = ID;
 
   // In case this induction also comes with casts that we know we can ignore
@@ -738,17 +743,6 @@ void LoopVectorizationLegality::addInductionPhi(
       PrimaryInduction = Phi;
   }
 
-  // Both the PHI node itself, and the "post-increment" value feeding
-  // back into the PHI node may have external users.
-  // We can allow those uses, except if the SCEVs we have for them rely
-  // on predicates that only hold within the loop, since allowing the exit
-  // currently means re-using this SCEV outside the loop (see PR33706 for more
-  // details).
-  if (PSE.getPredicate().isAlwaysTrue()) {
-    AllowedExit.insert(Phi);
-    AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
-  }
-
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
@@ -760,7 +754,7 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&Phi, TheLoop, PSE, ID) &&
         ID.getKind() == InductionDescriptor::IK_IntInduction) {
-      addInductionPhi(&Phi, ID, AllowedExit);
+      addInductionPhi(&Phi, ID);
       return true;
     }
     // Bail out for any Phi in the outer loop header that is not a supported
@@ -863,12 +857,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // can convert it to select during if-conversion. No need to check if
     // the PHIs in this block are induction or reduction variables.
     if (BB != Header) {
-      // Non-header phi nodes that have outside uses can be vectorized. Add
-      // them to the list of allowed exits.
-      // Unsafe cyclic dependencies with header phis are identified during
-      // legalization for reduction, induction and fixed order
-      // recurrences.
-      AllowedExit.insert(&I);
+      // Non-header phi nodes that have outside uses can be vectorized. Unsafe
+      // cyclic dependencies with header phis are identified during legalization
+      // for reduction, induction and fixed order recurrences.
       return true;
     }
 
@@ -885,7 +876,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
-      AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
@@ -907,30 +897,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                  ID.getConstIntStepValue() == nullptr;
         };
 
-    // TODO: Instead of recording the AllowedExit, it would be good to
-    // record the complementary set: NotAllowedExit. These include (but may
-    // not be limited to):
-    // 1. Reduction phis as they represent the one-before-last value, which
-    // is not available when vectorized
-    // 2. Induction phis and increment when SCEV predicates cannot be used
-    // outside the loop - see addInductionPhi
-    // 3. Non-Phis with outside uses when SCEV predicates cannot be used
-    // outside the loop - see call to hasOutsideLoopUser in the non-phi
-    // handling below
-    // 4. FixedOrderRecurrence phis that can possibly be handled by
-    // extraction.
-    // By recording these, we can then reason about ways to vectorize each
-    // of these NotAllowedExit.
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
         !IsDisallowedStridedPointerInduction(ID)) {
-      addInductionPhi(Phi, ID, AllowedExit);
+      addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
     }
 
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
-      AllowedExit.insert(Phi);
       FixedOrderRecurrences.insert(Phi);
       return true;
     }
@@ -939,7 +914,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // and re-try classifying it a an induction PHI.
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
         !IsDisallowedStridedPointerInduction(ID)) {
-      addInductionPhi(Phi, ID, AllowedExit);
+      addInductionPhi(Phi, ID);
       return true;
     }
 
@@ -961,11 +936,10 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
     // we can vectorize it given loosened floating-point constraints.
-    LibFunc Func;
     bool IsMathLibCall =
         TLI && CI->getCalledFunction() && CI->getType()->isFloatingPointTy() &&
-        TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
-        TLI->hasOptimizedCodeGen(Func);
+        TLI->hasOptimizedCodeGen(
+            TLI->getLibFunc(CI->getCalledFunction()->getName()));
 
     if (IsMathLibCall) {
       // TODO: Ideally, we should not use clang-specific language here,
@@ -1082,22 +1056,6 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     Hints->setPotentiallyUnsafe();
   }
 
-  // Reduction instructions are allowed to have exit users.
-  // All other instructions must not have external users.
-  if (hasOutsideLoopUser(TheLoop, &I, AllowedExit)) {
-    // We can safely vectorize loops where instructions within the loop are
-    // used outside the loop only if the SCEV predicates within the loop is
-    // same as outside the loop. Allowing the exit means reusing the SCEV
-    // outside the loop.
-    if (PSE.getPredicate().isAlwaysTrue()) {
-      AllowedExit.insert(&I);
-      return true;
-    }
-    reportVectorizationFailure("Value cannot be used outside the loop",
-                               "ValueUsedOutsideLoop", ORE, TheLoop, &I);
-    return false;
-  }
-
   return true;
 }
 
@@ -1177,6 +1135,10 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   if (LdBB != HBinOp->getParent() || LdBB != HSt->getParent())
     return false;
 
+  // The bucket value and its update must not be used outside the histogram.
+  if (!IndexedLoad->hasOneUse() || !HBinOp->hasOneUse())
+    return false;
+
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
   // Store the operations that make up the histogram.
@@ -1233,8 +1195,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(Hints->vectorizeAnalysisPassName(),
-                                        "loop not vectorized: ", *LAR);
+      return OptimizationRemarkAnalysis(LV_NAME, "loop not vectorized: ", *LAR);
     });
   }
 
@@ -1397,27 +1358,6 @@ bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
   return Inductions.count(PN);
 }
 
-const InductionDescriptor *
-LoopVectorizationLegality::getIntOrFpInductionDescriptor(PHINode *Phi) const {
-  if (!isInductionPhi(Phi))
-    return nullptr;
-  auto &ID = getInductionVars().find(Phi)->second;
-  if (ID.getKind() == InductionDescriptor::IK_IntInduction ||
-      ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return &ID;
-  return nullptr;
-}
-
-const InductionDescriptor *
-LoopVectorizationLegality::getPointerInductionDescriptor(PHINode *Phi) const {
-  if (!isInductionPhi(Phi))
-    return nullptr;
-  auto &ID = getInductionVars().find(Phi)->second;
-  if (ID.getKind() == InductionDescriptor::IK_PtrInduction)
-    return &ID;
-  return nullptr;
-}
-
 bool LoopVectorizationLegality::isCastedInductionVariable(
     const Value *V) const {
   auto *Inst = dyn_cast<Instruction>(V);
@@ -1435,11 +1375,21 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 
 bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+
+  // Without a latch, we cannot properly answer blockNeedsPredication,
+  // return early.
+  if (!Latch) {
+    assert(ORE->allowExtraAnalysis(DEBUG_TYPE) &&
+           !canVectorizeLoopCFG(TheLoop, /*UseVPlanNativePath=*/false) &&
+           "Loop shape should have been rejected by earlier checks");
+    return false;
+  }
+
   // When vectorizing early exits, create predicates for the latch block only.
   // For a single early exit, it must be a direct predecessor of the latch.
   // For multiple early exits, they form a chain where each exiting block
   // dominates all subsequent blocks up to the latch.
-  BasicBlock *Latch = TheLoop->getLoopLatch();
   if (hasUncountableEarlyExit())
     return BB == Latch;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
@@ -1548,13 +1498,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
           auto *CurrI = dyn_cast<Instruction>(CurrV);
           if (!CurrI || !TheLoop->contains(CurrI)) {
+            BasicBlock *LoopPred = TheLoop->getLoopPredecessor();
+            Instruction *CtxI = LoopPred ? LoopPred->getTerminator() : nullptr;
+            assert((CtxI || ORE->allowExtraAnalysis(DEBUG_TYPE)) &&
+                   "Loop with multiple predecessors should have been rejected "
+                   "early.");
             // If operands from outside the loop may be poison then Ptr may also
             // be poison.
-            if (!isGuaranteedNotToBePoison(CurrV, AC,
-                                           TheLoop->getLoopPredecessor()
-                                               ->getTerminator()
-                                               ->getIterator(),
-                                           DT))
+            if (!isGuaranteedNotToBePoison(CurrV, AC, CtxI, DT))
               return false;
             continue;
           }
@@ -1603,7 +1554,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
-        !blockCanBePredicated(BB, SafePointers, MaskedOp)) {
+        !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
@@ -1616,8 +1567,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 // Helper function to canVectorizeLoopNestCFG.
-bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
-                                                    bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorizeLoopCFG(
+    Loop *Lp, bool UseVPlanNativePath) const {
   assert((UseVPlanNativePath || Lp->isInnermost()) &&
          "VPlan-native path is not enabled.");
 
@@ -1634,9 +1585,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    reportVectorizationFailure("Loop doesn't have a legal pre-header",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Loop doesn't have a legal pre-header",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1645,9 +1597,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
-    reportVectorizationFailure("The loop must have a single backedge",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "The loop must have a single backedge",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1863,16 +1816,16 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   Instruction *L = nullptr;
   Value *Ptr = nullptr;
   Value *R = nullptr;
+  // The exit-condition load can appear on either side of the icmp.
   if (!match(Br->getCondition(),
-             m_OneUse(m_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
-                             m_Value(R))))) {
+             m_OneUse(m_c_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
+                               m_Value(R))))) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  // FIXME: Don't rely on operand ordering for the comparison.
   if (!TheLoop->isLoopInvariant(R)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
@@ -1911,7 +1864,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
-      if (I.mayWriteToMemory()) {
+      if (I.mayReadOrWriteMemory()) {
+        // We need to mask all other memory ops.
+        ConditionallyExecutedOps.insert(&I);
+        if (isa<LoadInst>(&I))
+          continue;
         if (auto *SI = dyn_cast<StoreInst>(&I)) {
           AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
           if (AR == AliasResult::NoAlias)
@@ -2017,12 +1974,14 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for ReadWrite loops with uncountable exits for now.
-  if (UncountableExitType == UncountableExitTrait::ReadWrite) {
-    reportVectorizationFailure(
-        "Writes to memory unsupported in early exit loops",
-        "Cannot vectorize early exit loop with writes to memory",
-        "WritesInEarlyExitLoop", ORE, TheLoop);
+  // TODO: Remove this restriction, should be straightforward to support.
+  if (UncountableExitType != UncountableExitTrait::None &&
+      !LAI->getStoresToInvariantAddresses().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
+                         "loop-invariant addresses\n");
+    reportVectorizationFailure("Cannot vectorize early exit loops with stores "
+                               "to loop-invariant addresses",
+                               "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
   }
 
@@ -2032,22 +1991,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
                               ? " (with a runtime bound check)"
                               : "")
                       << "!\n");
-  }
-
-  unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
-  if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
-    SCEVThreshold = PragmaVectorizeSCEVCheckThreshold;
-
-  if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
-                         "due to SCEVThreshold");
-    reportVectorizationFailure("Too many SCEV checks needed",
-        "Too many SCEV assumptions need to be made and checked at runtime",
-        "TooManySCEVRunTimeChecks", ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   // Okay! We've done all the tests. If any have failed, return false. Otherwise
@@ -2070,11 +2013,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   }
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
-
-  SmallPtrSet<const Value *, 8> ReductionLiveOuts;
-
-  for (const auto &Reduction : getReductionVars())
-    ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
@@ -2099,9 +2037,11 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   SmallPtrSet<Value *, 8> SafePointers;
 
   // Mark all blocks for predication, including those that ordinarily do not
-  // need predication such as the header block.
+  // need predication such as the header block, and collect instructions needing
+  // predication in TailFoldedMaskedOp.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    [[maybe_unused]] bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
+    [[maybe_unused]] bool R =
+        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }

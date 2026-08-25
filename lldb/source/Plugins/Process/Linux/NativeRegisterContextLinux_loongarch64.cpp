@@ -10,17 +10,16 @@
 
 #include "NativeRegisterContextLinux_loongarch64.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
-
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
@@ -102,9 +101,6 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
   ::memset(&m_gpr, 0, sizeof(m_gpr));
   ::memset(&m_lsx, 0, sizeof(m_lsx));
   ::memset(&m_lasx, 0, sizeof(m_lasx));
-
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 
   // Refer to:
   // https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html#control-and-status-registers-related-to-watchpoints

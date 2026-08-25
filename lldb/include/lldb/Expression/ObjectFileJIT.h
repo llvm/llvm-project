@@ -28,6 +28,9 @@ public:
   virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
                                    lldb_private::SectionList &section_list) = 0;
   virtual ArchSpec GetArchitecture() = 0;
+  /// Returns the Target this JIT-compiled code was produced for, or null
+  /// if the delegate that created this ObjectFile no longer exists.
+  virtual lldb::TargetSP GetTargetSP() = 0;
 };
 
 class ObjectFileJIT : public ObjectFile {
@@ -61,7 +64,6 @@ public:
   static ModuleSpecList
   GetModuleSpecifications(const lldb_private::FileSpec &file,
                           lldb::DataExtractorSP &extractor_sp,
-                          lldb::offset_t data_offset,
                           lldb::offset_t file_offset, lldb::offset_t length);
 
   // LLVM RTTI support
@@ -92,6 +94,10 @@ public:
   void Dump(lldb_private::Stream *s) override;
 
   lldb_private::ArchSpec GetArchitecture() override;
+
+  /// Returns the Target this JIT-compiled code was produced for, or null
+  /// if the delegate that created this ObjectFile no longer exists.
+  lldb::TargetSP GetTargetSP();
 
   lldb_private::UUID GetUUID() override;
 

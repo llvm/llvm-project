@@ -16,20 +16,19 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
-#include "flang/Support/Fortran-features.h"
 #include "flang/Support/Timing.h"
 #include "mlir/Support/RawOstreamExtras.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace Fortran::frontend;
@@ -382,7 +381,11 @@ bool CompilerInstance::setUpTargetMachine() {
 
   llvm::TargetOptions tOpts = llvm::TargetOptions();
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
+  tOpts.EnableMachineFunctionSplitter = targetOpts.SplitMachineFunctions;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
+  tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.FunctionSections = CGOpts.FunctionSections;
+  tOpts.DataSections = CGOpts.DataSections;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

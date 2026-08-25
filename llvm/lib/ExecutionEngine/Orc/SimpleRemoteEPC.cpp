@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -27,25 +29,8 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
+  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
           RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
-          RunAsVoidFunctionAddr, Result, VoidFnAddr))
-    return std::move(Err);
-  return Result;
-}
-
-Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                    int Arg) {
-  int32_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
-          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
@@ -86,12 +71,19 @@ void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
   }
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+SimpleRemoteEPC::createDefaultMemoryManager() {
+  return sps::createEPCGenericJITLinkMemoryManager(getExecutionSession());
+}
+
 Expected<std::unique_ptr<DylibManager>>
 SimpleRemoteEPC::createDefaultDylibMgr() {
-  auto DM = EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(*this);
-  if (!DM)
-    return DM.takeError();
-  return std::make_unique<EPCGenericDylibManager>(std::move(*DM));
+  return sps::createEPCGenericDylibManager(getExecutionSession());
+}
+
+Expected<std::unique_ptr<MemoryAccess>>
+SimpleRemoteEPC::createDefaultMemoryAccess() {
+  return sps::createEPCGenericMemoryAccess(getExecutionSession());
 }
 
 Error SimpleRemoteEPC::disconnect() {
@@ -182,41 +174,6 @@ void SimpleRemoteEPC::handleDisconnect(Error Err) {
   DisconnectCV.notify_all();
 }
 
-Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
-  EPCGenericJITLinkMemoryManager::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
-}
-
-Expected<std::unique_ptr<MemoryAccess>>
-SimpleRemoteEPC::createDefaultMemoryAccess(SimpleRemoteEPC &SREPC) {
-  EPCGenericMemoryAccess::FuncAddrs FAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{FAs.WriteUInt8s, rt::MemoryWriteUInt8sWrapperName},
-           {FAs.WriteUInt16s, rt::MemoryWriteUInt16sWrapperName},
-           {FAs.WriteUInt32s, rt::MemoryWriteUInt32sWrapperName},
-           {FAs.WriteUInt64s, rt::MemoryWriteUInt64sWrapperName},
-           {FAs.WriteBuffers, rt::MemoryWriteBuffersWrapperName},
-           {FAs.WritePointers, rt::MemoryWritePointersWrapperName},
-           {FAs.ReadUInt8s, rt::MemoryReadUInt8sWrapperName},
-           {FAs.ReadUInt16s, rt::MemoryReadUInt16sWrapperName},
-           {FAs.ReadUInt32s, rt::MemoryReadUInt32sWrapperName},
-           {FAs.ReadUInt64s, rt::MemoryReadUInt64sWrapperName},
-           {FAs.ReadBuffers, rt::MemoryReadBuffersWrapperName},
-           {FAs.ReadStrings, rt::MemoryReadStringsWrapperName}}))
-    return std::move(Err);
-
-  return std::make_unique<EPCGenericMemoryAccess>(SREPC, FAs);
-}
-
 Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                                    ExecutorAddr TagAddr,
                                    ArrayRef<char> ArgBytes) {
@@ -277,7 +234,7 @@ Error SimpleRemoteEPC::handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
   return Error::success();
 }
 
-Error SimpleRemoteEPC::setup(Setup S) {
+Error SimpleRemoteEPC::setup() {
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
 
   std::promise<MSVCPExpected<SimpleRemoteEPCExecutorInfo>> EIP;
@@ -333,33 +290,13 @@ Error SimpleRemoteEPC::setup(Setup S) {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
-  if (auto Err = getBootstrapSymbols(
-          {{JDI.JITDispatchContext, ExecutorSessionObjectName},
-           {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName},
-           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
-           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
+  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[rt::DispatchCtxName] =
+      BootstrapSymbols[ExecutorSessionObjectName];
+
+  if (auto Err =
+          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
     return Err;
-
-  // Set a default CreateMemoryManager if none is specified.
-  if (!S.CreateMemoryManager)
-    S.CreateMemoryManager = createDefaultMemoryManager;
-
-  if (auto MemMgr = S.CreateMemoryManager(*this)) {
-    OwnedMemMgr = std::move(*MemMgr);
-    this->MemMgr = OwnedMemMgr.get();
-  } else
-    return MemMgr.takeError();
-
-  // Set a default CreateMemoryAccess if none is specified.
-  if (!S.CreateMemoryAccess)
-    S.CreateMemoryAccess = createDefaultMemoryAccess;
-
-  if (auto MemAccess = S.CreateMemoryAccess(*this)) {
-    OwnedMemAccess = std::move(*MemAccess);
-    this->MemAccess = OwnedMemAccess.get();
-  } else
-    return MemAccess.takeError();
 
   return Error::success();
 }

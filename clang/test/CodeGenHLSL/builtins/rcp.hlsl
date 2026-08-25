@@ -6,16 +6,16 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,DXIL_CHECK,NO_HALF,DXIL_NO_HALF
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
 // RUN:   --check-prefixes=CHECK,NATIVE_HALF,SPIR_NATIVE_HALF,SPIR_CHECK
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF,SPIR_NO_HALF,SPIR_CHECK
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) half @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) half @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 0xH3C00, %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 1.000000e+00, %{{.*}} 
 // NATIVE_HALF: ret half %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) float @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) float @
@@ -25,7 +25,7 @@ half test_rcp_half(half p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <2 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <2 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <2 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <2 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <2 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <2 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <2 x float> @
@@ -35,7 +35,7 @@ half2 test_rcp_half2(half2 p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <3 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <3 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <3 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <3 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <3 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <3 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <3 x float> @
@@ -45,7 +45,7 @@ half3 test_rcp_half3(half3 p0) { return rcp(p0); }
 
 // DXIL_NATIVE_HALF: define hidden noundef nofpclass(nan inf) <4 x half> @
 // SPIR_NATIVE_HALF: define hidden spir_func noundef nofpclass(nan inf) <4 x half> @
-// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <4 x half> splat (half  0xH3C00), %{{.*}} 
+// NATIVE_HALF: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <4 x half> splat (half  1.000000e+00), %{{.*}} 
 // NATIVE_HALF: ret <4 x half> %hlsl.rcp
 // DXIL_NO_HALF: define hidden noundef nofpclass(nan inf) <4 x float> @
 // SPIR_NO_HALF: define hidden spir_func noundef nofpclass(nan inf) <4 x float> @
@@ -76,6 +76,12 @@ float3 test_rcp_float3(float3 p0) { return rcp(p0); }
 // CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <4 x float> splat (float 1.000000e+00), %{{.*}}
 // CHECK: ret <4 x float> %hlsl.rcp
 float4 test_rcp_float4(float4 p0) { return rcp(p0); }
+
+// DXIL_CHECK: define hidden noundef nofpclass(nan inf) <5 x float> @
+// SPIR_CHECK: define hidden spir_func noundef nofpclass(nan inf) <5 x float> @
+// CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <5 x float> splat (float 1.000000e+00), %{{.*}}
+// CHECK: ret <5 x float> %hlsl.rcp
+vector<float, 5> test_rcp_float5(vector<float, 5> p0) { return rcp(p0); }
 
 // DXIL_CHECK: define hidden noundef nofpclass(nan inf) double @
 // SPIR_CHECK: define hidden spir_func noundef nofpclass(nan inf) double @

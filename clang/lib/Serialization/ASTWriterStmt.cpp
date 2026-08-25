@@ -1250,6 +1250,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0, N = E->getNumInits(); I != N; ++I)
       Record.AddStmt(E->getInit(I));
   }
+  Record.writeBool(E->isExplicit());
   Code = serialization::EXPR_INIT_LIST;
 }
 
@@ -1323,7 +1324,7 @@ void ASTStmtWriter::VisitVAArgExpr(VAArgExpr *E) {
   Record.AddTypeSourceInfo(E->getWrittenTypeInfo());
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
-  Record.push_back(E->isMicrosoftABI());
+  Record.push_back(E->getVarargABI());
   Code = serialization::EXPR_VA_ARG;
 }
 
@@ -1339,7 +1340,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
 void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
   Record.AddStmt(E->getDataStringLiteral());
   Record.writeUInt32(E->getStartingElementPos());
   Record.writeUInt32(E->getDataElementCount());
@@ -1536,6 +1536,7 @@ void ASTStmtWriter::VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
   VisitExpr(E);
   Record.AddSelectorRef(E->getSelector());
   Record.AddSourceLocation(E->getAtLoc());
+  Record.AddSourceLocation(E->getSelectorNameLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Code = serialization::EXPR_OBJC_SELECTOR_EXPR;
 }
@@ -1757,6 +1758,37 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.push_back(static_cast<unsigned>(S->getKind()));
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  for (Stmt *SubStmt : S->children())
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_CXX_EXPANSION_PATTERN;
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getPreambleStmts().size());
+  Record.AddDeclRef(S->getParent());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToPreamble());
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_SELECT;
+}
+
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKeywordLoc());
@@ -1770,10 +1802,11 @@ void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   Record.push_back(E->getOperator());
+  Record.push_back(E->isReversed());
   Record.AddSourceLocation(E->BeginLoc);
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
-      !E->isCoroElideSafe() && !E->usesMemberSyntax())
+      !E->isCoroElideSafe() && !E->usesMemberSyntax() && !E->isReversed())
     AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_OPERATOR_CALL;
@@ -2077,6 +2110,15 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   Code = serialization::EXPR_EXPR_WITH_CLEANUPS;
 }
 
+void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumTemplateArgs());
+  AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
+  Record.AddDeclarationNameInfo(E->getNameInfo());
+  Record.AddTemplateName(E->getTemplateName());
+  Code = serialization::EXPR_DEPENDENT_TEMPLATE_ID;
+}
+
 void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
@@ -2214,11 +2256,14 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);
+  Record.push_back(E->TypeTraitExprBits.IsComparisonResult);
   Record.push_back(E->TypeTraitExprBits.NumArgs);
   Record.push_back(E->TypeTraitExprBits.Kind); // FIXME: Stable encoding
 
   if (E->TypeTraitExprBits.IsBooleanTypeTrait)
     Record.push_back(E->TypeTraitExprBits.Value);
+  else if (E->isValueDependent())
+    Record.AddAPValue(APValue());
   else
     Record.AddAPValue(E->getAPValue());
 
@@ -2297,10 +2342,10 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getAssociatedDecl());
-  CurrentPackingBits.addBit(E->isReferenceParameter());
+  CurrentPackingBits.addBit(E->getFinal());
   CurrentPackingBits.addBits(E->getIndex(), /*Width=*/12);
   Record.writeUnsignedOrNone(E->getPackIndex());
-  CurrentPackingBits.addBit(E->getFinal());
+  Record.AddTypeRef(E->getParameterType());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
@@ -2546,6 +2591,11 @@ void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_SPLIT_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
     OMPCanonicalLoopSequenceTransformationDirective *D) {
   VisitStmt(D);
@@ -2755,10 +2805,18 @@ void ASTStmtWriter::VisitOMPScanDirective(OMPScanDirective *D) {
   Code = serialization::STMT_OMP_SCAN_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
+void ASTStmtWriter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
-  Code = serialization::STMT_OMP_ORDERED_DIRECTIVE;
+  Code = serialization::STMT_OMP_ORDERED_STANDALONE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTeamsDirective(OMPTeamsDirective *D) {

@@ -28,3 +28,22 @@ constexpr int foo() {
   return s.b[0];
 }
 static_assert(foo() == 12, "");
+
+int arr[3]; // both-note {{declared here}}
+constexpr bool f() { // both-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // both-note {{read of dereferenced one-past-the-end pointer}} \
+                    // both-warning {{array index 3 is past the end of the array}}
+  return true;
+}
+
+namespace InitListModify {
+  struct Aggregate {
+    int x = 0;
+    int y = ++x;
+  };
+  constexpr Aggregate aggr1;
+  static_assert(aggr1.x == 1 && aggr1.y == 1, "");
+  // This is not specified by the standard, but sanity requires it.
+  constexpr Aggregate aggr2 = {};
+  static_assert(aggr2.x == 1 && aggr2.y == 1, "");
+}

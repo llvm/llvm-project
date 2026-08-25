@@ -11,6 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class TestClassTemplateSpecializationParametersHandling(TestBase):
     def test_class_template_specialization(self):
         self.build()

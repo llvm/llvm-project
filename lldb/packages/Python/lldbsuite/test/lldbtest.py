@@ -8,14 +8,14 @@ common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 entire of part of the test suite .  Example:
 
 # Exercises the test suite in the types directory....
-/Volumes/data/lldb/svn/ToT/test $ ./dotest.py -A x86_64 types
+/Volumes/data/lldb/svn/ToT/test $ ./dotest.py types
 ...
 
 Session logs for test failures/errors/unexpected successes will go into directory '2012-05-16-13_35_42'
-Command invoked: python ./dotest.py -A x86_64 types
+Command invoked: python ./dotest.py types
 compilers=['clang']
 
-Configuration: arch=x86_64 compiler=clang
+Configuration: compiler=clang
 ----------------------------------------------------------------------
 Collected 72 tests
 
@@ -32,6 +32,7 @@ from __future__ import annotations
 
 # System modules
 import abc
+import errno
 from functools import wraps
 import gc
 import io
@@ -44,8 +45,9 @@ import signal
 from subprocess import *
 import sys
 import time
+import datetime
 import traceback
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 # Third-party modules
 import unittest
@@ -61,6 +63,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.skip_reason import UnsupportedReason
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -257,15 +260,56 @@ def which(program):
     return None
 
 
+def _truncate_for_log(text: str, max_characters: int = 32 * 1024) -> str:
+    """
+    Returns ``text`` unchanged if it fits in ``max_characters``, otherwise
+    returns a truncated copy with a trailing note describing how many
+    characters were dropped.
+    """
+    if len(text) <= max_characters:
+        return text
+    dropped = len(text) - max_characters
+    return (
+        f"{text[:max_characters]}\n"
+        f"... (output truncated: {dropped} of {len(text)} characters omitted)"
+    )
+
+
+def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
+    """
+    Returns a string representation of an SBValue suitable for use in
+    diagnostic messages. If the value has more than ``max_children``
+    direct or indirect children, a short placeholder is returned instead
+    of ``str(val)`` to avoid bloating the test log size.
+    """
+    to_visit = [val]
+    total = 0
+    while to_visit:
+        current = to_visit.pop()
+        n = current.GetNumChildren()
+        if n == 0:
+            continue
+        total += n
+        if total > max_children:
+            return (
+                f"<SBValue '{val.GetName()}' with more than {max_children} "
+                f"direct/indirect children (dump skipped)>"
+            )
+        for i in range(n):
+            to_visit.append(current.GetChildAtIndex(i))
+    return str(val)
+
+
 class ValueCheck:
     def __init__(
         self,
-        name=None,
-        value=None,
-        type=None,
-        summary=None,
-        children=None,
-        dereference=None,
+        name: str = None,
+        value: str = None,
+        type: str = None,
+        summary: str = None,
+        children: [ValueCheck] = None,
+        dereference: bool = None,
+        valobj: lldb.SBValue = None,
     ):
         """
         :param name: The name that the SBValue should have. None if the summary
@@ -283,15 +327,35 @@ class ValueCheck:
                          children.
         :param dereference: A ValueCheck for the SBValue returned by the
                             `Dereference` function.
+        :param valobj: If supplied, ignore the other arguments and build a
+                       ValueCheck that matches valobj except for the name
+                       of the toplevel valobj.
         """
-        self.expect_name = name
-        self.expect_value = value
-        self.expect_type = type
-        self.expect_summary = summary
-        self.children = children
-        self.dereference = dereference
+        if valobj:
+            # SBValues so we don't need to dereference
+            self.dereference = None
+            # We don't want to compare the top-level VO
+            # name as the reference object may come from
+            # a different source.  So we pass that in in
+            # the recursive part by hand below.
 
-    def check_value(self, test_base, val, error_msg=None):
+            self.expect_name = name
+            # Copy everything else from the incoming valobj:
+            self.expect_summary = valobj.GetSummary()
+            self.expect_type = valobj.GetDisplayTypeName()
+            self.expect_value = valobj.GetValue()
+            self.children: [ValueCheck] = []
+            for child in valobj.children:
+                self.children.append(ValueCheck(valobj=child, name=child.name))
+        else:
+            self.expect_name = name
+            self.expect_value = value
+            self.expect_type = type
+            self.expect_summary = summary
+            self.children = children
+            self.dereference = dereference
+
+    def check_value(self, test_base, val, error_msg=""):
         """
         Checks that the given value matches the currently set properties
         of this ValueCheck. If a match failed, the given TestBase will
@@ -301,17 +365,14 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertSuccess(val.GetError())
-
-        # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
-        pattern_type = type(re.compile(""))
 
         if self.expect_name:
             test_base.assertEqual(self.expect_name, val.GetName(), this_error_msg)
         if self.expect_value:
-            if isinstance(self.expect_value, pattern_type):
+            if isinstance(self.expect_value, re.Pattern):
                 test_base.assertRegex(val.GetValue(), self.expect_value, this_error_msg)
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
@@ -320,7 +381,7 @@ class ValueCheck:
                 self.expect_type, val.GetDisplayTypeName(), this_error_msg
             )
         if self.expect_summary:
-            if isinstance(self.expect_summary, pattern_type):
+            if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
                     val.GetSummary(), self.expect_summary, this_error_msg
                 )
@@ -334,7 +395,7 @@ class ValueCheck:
         if self.dereference is not None:
             self.dereference.check_value(test_base, val.Dereference(), error_msg)
 
-    def check_value_children(self, test_base, val, error_msg=None):
+    def check_value_children(self, test_base, val, error_msg=""):
         """
         Checks that the children of a SBValue match a certain structure and
         have certain properties.
@@ -344,7 +405,7 @@ class ValueCheck:
         """
 
         this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + str(val)
+        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -411,6 +472,11 @@ class _LocalProcess(_BaseProcess):
         self._delayafterterminate = 0.1
 
     @property
+    def args(self):
+        assert self._proc is not None, "No process"
+        return self._proc.args
+
+    @property
     def pid(self):
         assert self._proc is not None, "No process"
         return self._proc.pid
@@ -433,6 +499,16 @@ class _LocalProcess(_BaseProcess):
 
         stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
         stderr = kwargs.pop("stderr", None)
+        # This works around a bug in the macOS job control code where
+        # a supurious SIGHUP is sent to the the process group of our
+        # spawned subprocess when it is shutting down.
+        # While this SIGHUP doesn't cause any issues for our subprocess,
+        # it does reach the LIT process and stops the test suite run
+        # early.
+        # This parameter forces the spawned process into a new process
+        # group which prevents the supurious SIGHUP from reaching LIT.
+        # We don't
+        kwargs.setdefault("start_new_session", True)
 
         self._proc = Popen(
             [executable] + args,
@@ -482,7 +558,12 @@ class _LocalProcess(_BaseProcess):
 class _RemoteProcess(_BaseProcess):
     def __init__(self, install_remote):
         self._pid = None
+        self._args = None
         self._install_remote = install_remote
+
+    @property
+    def args(self):
+        assert self._args
 
     @property
     def pid(self):
@@ -525,6 +606,7 @@ class _RemoteProcess(_BaseProcess):
                 "remote_platform.Launch('%s', '%s') failed: %s" % (dst_path, args, err)
             )
         self._pid = launch_info.GetProcessID()
+        self._args = args
 
     def terminate(self):
         lldb.remote_platform.Kill(self._pid)
@@ -731,9 +813,7 @@ class Base(unittest.TestCase):
         remote_test_dir = configuration.lldb_platform_working_dir
         for c in components:
             remote_test_dir = lldbutil.join_remote_paths(remote_test_dir, c)
-            error = lldb.remote_platform.MakeDirectory(
-                remote_test_dir, 448
-            )  # 448 = 0o700
+            error = lldb.remote_platform.MakeDirectory(remote_test_dir, 0o700)
             if error.Fail():
                 raise Exception(
                     "making remote directory '%s': %s" % (remote_test_dir, error)
@@ -775,7 +855,7 @@ class Base(unittest.TestCase):
         previous contents."""
         bdir = self.getBuildDir()
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            shutil.rmtree(bdir)
+            lldbutil.remove_tree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
@@ -817,11 +897,12 @@ class Base(unittest.TestCase):
             "settings set use-color false",
             # Disable the statusline by default.
             "settings set show-statusline false",
+            "settings set target.check-vo-ownership true",
         ]
 
         # Set any user-overridden settings.
         for setting, value in configuration.settings:
-            commands.append("setting set %s %s" % (setting, value))
+            commands.append("setting set -- %s %s" % (setting, value))
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if (
@@ -965,6 +1046,9 @@ class Base(unittest.TestCase):
                 self.framework_dir = os.path.dirname(framework)
                 self.lib_lldb = lib
                 self.darwinWithFramework = self.platformIsDarwin()
+
+        # As the last operation, mark the setup completed for dumpSessionInfo.
+        self.__setup_done__ = True
 
     def setAsync(self, value):
         """Sets async mode to True/False and ensures it is reset after the testcase completes."""
@@ -1160,6 +1244,18 @@ class Base(unittest.TestCase):
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
 
+        # Kill any process a target is still holding on to.
+        for i in range(self.dbg.GetNumTargets()):
+            process = self.dbg.GetTargetAtIndex(i).GetProcess()
+            # Only kill processes that are still alive.
+            if process.IsValid() and process.is_alive:
+                process.Kill()
+                self.assertEqual(
+                    process.GetState(),
+                    lldb.eStateExited,
+                    "Failed to kill process during teardown",
+                )
+
         # Remove subprocesses created by the test.
         self.cleanupSubprocesses()
 
@@ -1214,6 +1310,15 @@ class Base(unittest.TestCase):
             # Once by the Python unittest framework, and a second time by us.
             print("expected failure", file=sbuf)
 
+    def skipTest(self, reason):
+        """Skip the test, reporting an `UnsupportedReason` as UNSUPPORTED.
+
+        `unittest` records a raised `SkipTest` as `str(exception)`, so the reason
+        type never reaches the result; remember the distinction on the test."""
+        if isinstance(reason, UnsupportedReason):
+            self._skipped_as_unsupported = True
+        super().skipTest(reason)
+
     def markSkippedTest(self):
         """Callback invoked when a test is skipped."""
         self.__skipped__ = True
@@ -1247,16 +1352,18 @@ class Base(unittest.TestCase):
         Dump the debugger interactions leading to a test error/failure.  This
         allows for more convenient postmortem analysis.
 
-        See also LLDBTestResult (dotest.py) which is a singlton class derived
+        See also LLDBTestResult (dotest.py) which is a singleton class derived
         from TextTestResult and overwrites addError, addFailure, and
         addExpectedFailure methods to allow us to to mark the test instance as
         such.
         """
+        # Ensure 'setUp' has completed.
+        if not getattr(self, "__setup_done__", False):
+            return
 
-        # We are here because self.tearDown() detected that this test instance
-        # either errored or failed.  The lldb.test_result singleton contains
-        # two lists (errors and failures) which get populated by the unittest
-        # framework.  Look over there for stack trace information.
+        # The lldb.test_result singleton contains two lists (errors and
+        # failures) which get populated by the unittest framework.  Look over
+        # there for stack trace information.
         #
         # The lists contain 2-tuples of TestCase instances and strings holding
         # formatted tracebacks.
@@ -1286,15 +1393,14 @@ class Base(unittest.TestCase):
 
         session_file = self.getLogBasenameForCurrentTest() + ".log"
 
+        lldbutil.mkdir_p(os.path.dirname(session_file))
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        session = encoded_file.open(session_file, "utf-8", mode="w")
+        session = encoded_file.open(session_file, "utf-8", mode="a")
 
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
                     print(traceback, file=session)
-
-        import datetime
 
         print(
             "Session info generated @",
@@ -1307,8 +1413,12 @@ class Base(unittest.TestCase):
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
             # keep all log files, rename them to include prefix
+            # e.g. .../TestDAP_module/Incomplete.log > Failure_<test-name>.log
             src_log_basename = self.getLogBasenameForCurrentTest()
-            dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
+            dst_log_basename = (
+                f"{self.getLogBasenameForCurrentTest(prefix)}_{self.testMethodName}"
+            )
+            files = []
             for src in self.log_files:
                 if os.path.isfile(src):
                     dst = src.replace(src_log_basename, dst_log_basename)
@@ -1323,6 +1433,12 @@ class Base(unittest.TestCase):
 
                     lldbutil.mkdir_p(os.path.dirname(dst))
                     os.rename(src, dst)
+                    files.append(dst)
+            if files:
+                print(
+                    "Log Files:\n - %s" % ("\n - ".join(files)),
+                    file=sys.stderr,
+                )
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in self.log_files:
@@ -1502,18 +1618,6 @@ class Base(unittest.TestCase):
 
         return False
 
-    def getRunOptions(self):
-        """Command line option for -A and -C to run this test again, called from
-        self.dumpSessionInfo()."""
-        arch = self.getArchitecture()
-        comp = self.getCompiler()
-        option_str = ""
-        if arch:
-            option_str = "-A " + arch
-        if comp:
-            option_str += " -C " + comp
-        return option_str
-
     def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)
         return getattr(method, variant_name, None)
@@ -1563,10 +1667,45 @@ class Base(unittest.TestCase):
 
         self.runBuildCommand(command)
 
+    def build_and_run(
+        self,
+        build_dictionary: dict[str, str] | None = None,
+        file_name: str = "",
+        comment: str = "// break here",
+    ) -> Tuple[lldb.SBTarget, lldb.SBProcess, lldb.SBThread, lldb.SBBreakpoint]:
+        """
+        Builds the target binary, launches it and runs to the breakpoint
+        location specified by the '// break here' comment.
+
+        Returns the target/process/thread/breakpoint returned from
+        lldbutil.run_to_name_breakpoint
+        """
+        self.build(dictionary=build_dictionary)
+
+        if file_name:
+            main_candidates = [file_name]
+        else:
+            main_candidates = ["main.c", "main.cpp", "main.m", "main.mm"]
+
+        for candidate in main_candidates:
+            if os.path.exists(candidate):
+                return lldbutil.run_to_source_breakpoint(
+                    self, comment, lldb.SBFileSpec(candidate, False)
+                )
+
+        self.fail(
+            f"Could not find any main file in {self.mydir}."
+            + "Searched: "
+            + ", ".join(main_candidates)
+        )
+
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))
+        env = dict(os.environ)
+        if configuration.sdkroot:
+            env["SDKROOT"] = configuration.sdkroot
         try:
-            output = check_output(command, stderr=STDOUT, errors="replace")
+            output = check_output(command, stderr=STDOUT, errors="replace", env=env)
         except CalledProcessError as cpe:
             raise build_exception.BuildError(cpe)
         self.trace(output)
@@ -1613,7 +1752,8 @@ class Base(unittest.TestCase):
                 "EXE": exe_name,
                 "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
-                "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
+                "LD_EXTRAS": "%s -Wl,-rpath,%s -Wl,-rpath,%s"
+                % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
             d = {
@@ -1925,6 +2065,8 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
             expanded[method_name] = method
             continue
         for value_name in variant.get_enabled_values():
+            if _is_excluded_variant_combination(method, variant.name, value_name):
+                continue
             new_name = method_name + "_" + value_name
 
             @decorators.add_test_categories([value_name])
@@ -1954,6 +2096,30 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
 _test_variants = []
 
 
+# Variant value combinations that should never be generated. Each entry maps
+# `variant_name -> value`; a method copy is dropped when its already-set
+# variant attributes plus the new value being added match every key in the
+# entry. Add entries here for crosses that don't exercise anything new and
+# would only inflate the matrix on remote test runs.
+_excluded_variant_combinations = [
+    # Example (uncomment + adapt when registering a real cross to drop):
+    # {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
+]
+
+
+def _is_excluded_variant_combination(method, variant_name, value_name):
+    """Return True if assigning *variant_name=value_name* to *method* would
+    produce a combination listed in `_excluded_variant_combinations`."""
+    for combo in _excluded_variant_combinations:
+        if combo.get(variant_name) != value_name:
+            continue
+        if all(
+            getattr(method, k, None) == v for k, v in combo.items() if k != variant_name
+        ):
+            return True
+    return False
+
+
 class LLDBTestCaseFactory(type):
     def __new__(cls, name, bases, attrs):
         original_testcase = super(LLDBTestCaseFactory, cls).__new__(
@@ -1970,9 +2136,6 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE and not has_variant_tests:
             return original_testcase
 
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            original_testcase.SHARED_BUILD_TESTCASE = False
-
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
         def no_reason(*args, **kwargs):
@@ -1983,6 +2146,11 @@ class LLDBTestCaseFactory(type):
             if attrname.startswith("test") and not getattr(
                 attrvalue, "__no_debug_info_test__", False
             ):
+                # Track only the entries created by THIS attrname so that
+                # variant expansion doesn't accidentally double-expand entries
+                # from a sibling test method whose name happens to be a strict
+                # prefix of attrname (e.g. test_foo vs test_foo_bar).
+                this_attr_entries = {}
                 # Create debug info variants unless NO_DEBUG_INFO_TESTCASE
                 if not original_testcase.NO_DEBUG_INFO_TESTCASE:
                     # If any debug info categories were explicitly tagged, assume that list to be
@@ -2031,26 +2199,38 @@ class LLDBTestCaseFactory(type):
                         if skip_reason:
                             test_method = unittest.skip(skip_reason)(test_method)
 
-                        newattrs[method_name] = test_method
+                        this_attr_entries[method_name] = test_method
                 else:
-                    # NO_DEBUG_INFO_TESTCASE — put method in newattrs for variant expansion
-                    newattrs[attrname] = attrvalue
+                    # NO_DEBUG_INFO_TESTCASE — put method in this_attr_entries
+                    # for variant expansion.
+                    this_attr_entries[attrname] = attrvalue
 
-                # Expand test variants (e.g. additional variant dimensions)
+                # Expand test variants only on the entries we just created
+                # for this attrname, not on the whole newattrs dict (which
+                # would double-expand sibling methods whose names share a
+                # prefix).
                 for variant in _test_variants:
                     if variant.should_expand(attrvalue):
                         xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                         skip_fns = getattr(attrvalue, "__variant_skip__", {})
-                        newattrs = _expand_test_variants(
+                        this_attr_entries = _expand_test_variants(
                             attrname,
-                            newattrs,
+                            this_attr_entries,
                             variant,
                             xfail_fns=xfail_fns,
                             skip_fns=skip_fns,
                         )
 
+                # Merge this attrname's variant-expanded entries into
+                # newattrs.
+                newattrs.update(this_attr_entries)
+
             else:
                 newattrs[attrname] = attrvalue
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            newattrs["SHARED_BUILD_TESTCASE"] = False
+
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
@@ -2146,7 +2326,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         with open(src, "w") as f:
             f.write(new_content)
 
-        self.addTearDownHook(lambda: os.remove(src))
+        self.addTearDownHook(lambda: os.remove(lldbutil.get_extended_windows_path(src)))
 
     def setUp(self):
         # Works with the test driver to conditionally skip tests via
@@ -2215,6 +2395,8 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
+            if lldb.remote_platform:
+                local_shlib_path = os.path.realpath(local_shlib_path)
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:
@@ -2234,6 +2416,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 dirs.append(dir_to_add)
 
         env_value = self.platformContext.shlib_path_separator.join(dirs)
+        # On Windows the shlib env var is PATH. `SetEnvironmentEntries` with
+        # append=True replaces any matching key, so simply returning
+        # "PATH=<test-build-dir>" would wipe out the inherited PATH and break
+        # DLL resolution. Prepend our dirs to the inherited PATH instead.
+        if sys.platform == "win32" and shlib_environment_var == "PATH":
+            existing = os.environ.get("PATH", None)
+            if existing is not None:
+                env_value = (
+                    env_value + self.platformContext.shlib_path_separator + existing
+                )
         return ["%s=%s" % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):
@@ -2535,7 +2727,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 )
 
     def filecheck(
-        self, command, check_file, filecheck_options="", expect_cmd_failure=False
+        self, command, check_file, filecheck_options=None, expect_cmd_failure=False
     ):
         # Run the command.
         self.runCmd(
@@ -2562,7 +2754,10 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             self.assertTrue(False, "No valid FileCheck executable specified")
         filecheck_args = [filecheck_bin, check_file_abs]
         if filecheck_options:
-            filecheck_args.append(filecheck_options)
+            if isinstance(filecheck_options, list):
+                filecheck_args.extend(filecheck_options)
+            else:
+                filecheck_args.append(str(filecheck_options))
         subproc = Popen(
             filecheck_args,
             stdin=PIPE,
@@ -2594,14 +2789,16 @@ FileCheck output:
 
         self.assertEqual(cmd_status, 0)
 
-    def filecheck_log(
-        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
-    ):
+    def filecheck_log(self, log_file, check_file, filecheck_options=None):
+        input_option = f"-input-file={log_file}"
+        if filecheck_options:
+            filecheck_options = [filecheck_options, input_option]
+        else:
+            filecheck_options = input_option
         return self.filecheck(
-            f"platform shell -h -- cat {log_file}",
+            "script None",
             check_file,
             filecheck_options,
-            expect_cmd_failure,
         )
 
     def expect(
@@ -2707,7 +2904,7 @@ FileCheck output:
         ]
         if exe:
             # Newline before output to make large strings more readable
-            log_lines.append("Got output:\n{}".format(output))
+            log_lines.append(f"Got output:\n{_truncate_for_log(output)}")
 
         # Assume that we start matched if we want a match
         # Meaning if you have no conditions, matching or
@@ -2800,7 +2997,6 @@ FileCheck output:
         )
 
         frame = self.frame()
-
         if not options:
             options = lldb.SBExpressionOptions()
 
@@ -2827,7 +3023,7 @@ FileCheck output:
             summary=result_summary,
             children=result_children,
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     def expect_var_path(
@@ -2854,7 +3050,7 @@ FileCheck output:
         value_check = ValueCheck(
             type=type, value=value, summary=summary, children=children
         )
-        value_check.check_value(self, eval_result, str(eval_result))
+        value_check.check_value(self, eval_result)
         return eval_result
 
     """Assert that an lldb.SBError is in the "success" state."""
@@ -2991,7 +3187,7 @@ FileCheck output:
 def remove_file(file, num_retries=1, sleep_duration=0.5):
     for i in range(num_retries + 1):
         try:
-            os.remove(file)
+            os.remove(lldbutil.get_extended_windows_path(file))
             return True
         except:
             time.sleep(sleep_duration)

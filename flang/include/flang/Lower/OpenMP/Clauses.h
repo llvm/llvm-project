@@ -322,6 +322,8 @@ using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
 using Update = tomp::clause::UpdateT<TypeTy, IdTy, ExprTy>;
+using UpdateDependObjects =
+    tomp::clause::UpdateDependObjectsT<TypeTy, IdTy, ExprTy>;
 using Use = tomp::clause::UseT<TypeTy, IdTy, ExprTy>;
 using UseDeviceAddr = tomp::clause::UseDeviceAddrT<TypeTy, IdTy, ExprTy>;
 using UseDevicePtr = tomp::clause::UseDevicePtrT<TypeTy, IdTy, ExprTy>;
@@ -329,6 +331,17 @@ using UsesAllocators = tomp::clause::UsesAllocatorsT<TypeTy, IdTy, ExprTy>;
 using Weak = tomp::clause::WeakT<TypeTy, IdTy, ExprTy>;
 using When = tomp::clause::WhenT<TypeTy, IdTy, ExprTy>;
 using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
+
+DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
+                                    semantics::SemanticsContext &semaCtx);
+
+ProcedureDesignator
+makeProcedureDesignator(const parser::ProcedureDesignator &inp,
+                        semantics::SemanticsContext &semaCtx);
+
+ReductionOperator
+makeReductionOperator(const parser::OmpReductionIdentifier &inp,
+                      semantics::SemanticsContext &semaCtx);
 } // namespace clause
 
 using tomp::type::operator==;

@@ -15,20 +15,19 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include <elf.h>
-#include <sys/uio.h>
-
 #if defined(__arm64__) || defined(__aarch64__)
-#include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "Plugins/Process/Linux/NativeRegisterContextLinux_arm64dbreg.h"
 #endif
 
-#include "lldb/Host/linux/Ptrace.h"
 #include <asm/ptrace.h>
+#include <elf.h>
+#include <sys/uio.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
 
@@ -78,8 +77,6 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_tls, 0, sizeof(m_tls));
   ::memset(&m_gpr_arm, 0, sizeof(m_gpr_arm));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;

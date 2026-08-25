@@ -12,6 +12,7 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/IR/Attributes.h"
@@ -96,6 +97,11 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
   return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
 }
 
+MlirDialect mlirContextGetLoadedDialect(MlirContext context,
+                                        MlirStringRef name) {
+  return wrap(unwrap(context)->getLoadedDialect(unwrap(name)));
+}
+
 bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
   return unwrap(context)->isOperationRegistered(unwrap(name));
 }
@@ -119,6 +125,18 @@ unsigned mlirContextGetNumThreads(MlirContext context) {
 
 MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
+}
+
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
 }
 
 //===----------------------------------------------------------------------===//
@@ -403,6 +421,14 @@ MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(Location(UnknownLoc::get(unwrap(context))));
 }
 
+MlirTypeID mlirLocationUnknownGetTypeID() {
+  return wrap(UnknownLoc::getTypeID());
+}
+
+bool mlirLocationIsAUnknown(MlirLocation location) {
+  return isa<UnknownLoc>(unwrap(location));
+}
+
 bool mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
   return unwrap(l1) == unwrap(l2);
 }
@@ -552,11 +578,11 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   }
 
   DictionaryAttr attributes = state.attributes.getDictionary(context);
-  OpaqueProperties properties = state.getRawProperties();
+  PropertyRef properties = state.getRawProperties();
 
   if (!properties && info->getOpPropertyByteSize() > 0 && !attributes.empty()) {
-    auto prop = std::make_unique<char[]>(info->getOpPropertyByteSize());
-    properties = OpaqueProperties(prop.get());
+    auto propAlloc = std::make_unique<char[]>(info->getOpPropertyByteSize());
+    properties = PropertyRef(info->getOpPropertiesTypeID(), propAlloc.get());
     if (properties) {
       auto emitError = [&]() {
         return mlir::emitError(state.location)
@@ -645,6 +671,25 @@ bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
 
 size_t mlirOperationHashValue(MlirOperation op) {
   return OperationEquivalence::computeHash(unwrap(op));
+}
+
+/// Translates the C equivalence flags to mlir::OperationEquivalence::Flags. The
+/// enumerator values mirror each other.
+static OperationEquivalence::Flags unwrapEquivalenceFlags(uint32_t flags) {
+  return static_cast<OperationEquivalence::Flags>(flags);
+}
+
+bool mlirOperationIsStructurallyEquivalent(MlirOperation lhs, MlirOperation rhs,
+                                           uint32_t flags) {
+  return OperationEquivalence::isEquivalentTo(unwrap(lhs), unwrap(rhs),
+                                              unwrapEquivalenceFlags(flags));
+}
+
+size_t mlirOperationStructuralHashValue(MlirOperation op, uint32_t flags) {
+  return OperationEquivalence::computeHash(
+      unwrap(op), /*hashOperands=*/OperationEquivalence::directHashValue,
+      /*hashResults=*/OperationEquivalence::ignoreHashValue,
+      unwrapEquivalenceFlags(flags));
 }
 
 MlirContext mlirOperationGetContext(MlirOperation op) {
@@ -1209,6 +1254,16 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
 }
 
+void mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                                MlirOpOperandReplaceFilterCallback filter,
+                                void *userData) {
+  assert(filter && "expected non-null filter callback");
+  unwrap(of).replaceUsesWithIf(unwrap(with),
+                               [filter, userData](OpOperand &operand) -> bool {
+                                 return filter(wrap(&operand), userData);
+                               });
+}
+
 MlirLocation mlirValueGetLocation(MlirValue v) {
   return wrap(unwrap(v).getLoc());
 }
@@ -1400,4 +1455,88 @@ void mlirSymbolTableWalkSymbolTables(MlirOperation from, bool allSymUsesVisible,
                                   callback(wrap(foundOpCpp), isVisible,
                                            userData);
                                 });
+}
+
+//===----------------------------------------------------------------------===//
+// IRMapping API
+//===----------------------------------------------------------------------===//
+
+MlirIRMapping mlirIRMappingCreate(void) { return wrap(new IRMapping()); }
+
+void mlirIRMappingDestroy(MlirIRMapping mapping) { delete unwrap(mapping); }
+
+void mlirIRMappingMapValue(MlirIRMapping mapping, MlirValue from,
+                           MlirValue to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingMapBlock(MlirIRMapping mapping, MlirBlock from,
+                           MlirBlock to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingMapOperation(MlirIRMapping mapping, MlirOperation from,
+                               MlirOperation to) {
+  unwrap(mapping)->map(unwrap(from), unwrap(to));
+}
+
+void mlirIRMappingClear(MlirIRMapping mapping) { unwrap(mapping)->clear(); }
+
+MlirValue mlirIRMappingLookupOrDefaultValue(MlirIRMapping mapping,
+                                            MlirValue from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirValue mlirIRMappingLookupOrNullValue(MlirIRMapping mapping,
+                                         MlirValue from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+MlirBlock mlirIRMappingLookupOrDefaultBlock(MlirIRMapping mapping,
+                                            MlirBlock from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirBlock mlirIRMappingLookupOrNullBlock(MlirIRMapping mapping,
+                                         MlirBlock from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+MlirOperation mlirIRMappingLookupOrDefaultOperation(MlirIRMapping mapping,
+                                                    MlirOperation from) {
+  return wrap(unwrap(mapping)->lookupOrDefault(unwrap(from)));
+}
+
+MlirOperation mlirIRMappingLookupOrNullOperation(MlirIRMapping mapping,
+                                                 MlirOperation from) {
+  return wrap(unwrap(mapping)->lookupOrNull(unwrap(from)));
+}
+
+bool mlirIRMappingContainsValue(MlirIRMapping mapping, MlirValue value) {
+  return unwrap(mapping)->contains(unwrap(value));
+}
+
+bool mlirIRMappingContainsBlock(MlirIRMapping mapping, MlirBlock block) {
+  return unwrap(mapping)->contains(unwrap(block));
+}
+
+bool mlirIRMappingContainsOperation(MlirIRMapping mapping, MlirOperation op) {
+  return unwrap(mapping)->contains(unwrap(op));
+}
+
+void mlirIRMappingEraseValue(MlirIRMapping mapping, MlirValue value) {
+  unwrap(mapping)->erase(unwrap(value));
+}
+
+void mlirIRMappingEraseBlock(MlirIRMapping mapping, MlirBlock block) {
+  unwrap(mapping)->erase(unwrap(block));
+}
+
+void mlirIRMappingEraseOperation(MlirIRMapping mapping, MlirOperation op) {
+  unwrap(mapping)->erase(unwrap(op));
+}
+
+MlirOperation mlirOperationCloneWithMapping(MlirOperation op,
+                                            MlirIRMapping mapping) {
+  return wrap(unwrap(op)->clone(*unwrap(mapping)));
 }

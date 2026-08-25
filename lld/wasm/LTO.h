@@ -46,6 +46,7 @@ public:
 
   void add(BitcodeFile &f);
   SmallVector<InputFile *, 0> compile();
+  void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;

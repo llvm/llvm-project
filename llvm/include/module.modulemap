@@ -274,6 +274,7 @@ module LLVM_IR {
   extern module LLVM_Extern_IR_Intrinsics_Enum "module.extern.modulemap"
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/IR/BundleAttributes.def"
   textual header "llvm/IR/ConstrainedOps.def"
   textual header "llvm/IR/DebugInfoFlags.def"
   textual header "llvm/IR/FunctionProperties.def"
@@ -313,6 +314,8 @@ module LLVM_Object {
   requires cplusplus
   umbrella "llvm/Object"
   module * { export * }
+
+  textual header "llvm/Object/BBAddrMap.def"
 }
 
 module LLVM_Option {
@@ -353,6 +356,12 @@ module LLVM_Transforms {
 
   // Requires DEBUG_TYPE to be defined by including file.
   exclude header "llvm/Transforms/Utils/InstructionWorklist.h"
+
+  // Not a normal header: it is read as a string at build time and embedded
+  // into the instrumentor runtime.
+  exclude header "llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"
+
+  textual header "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
@@ -369,6 +378,11 @@ module TargetParserGen {
   }
   module RISCVTargetParserDef {
     header "llvm/TargetParser/RISCVTargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
+  module AMDGPUTargetParserDef {
+    header "llvm/TargetParser/AMDGPUTargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
     export *
   }
@@ -402,6 +416,9 @@ module LLVM_Utils {
     // Exclude this; it should only be used on Windows.
     exclude header "llvm/Support/Windows/WindowsSupport.h"
 
+    // Exclude this; it should only be used on z/OS.
+    exclude header "llvm/Support/SystemZ/zos_wrappers/string.h"
+
     // Exclude these; they are fundamentally non-modular.
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
@@ -416,12 +433,13 @@ module LLVM_Utils {
     module * { export * }
 
     // These are intended for textual inclusion.
-    textual header "llvm/TargetParser/AMDGPUTargetParser.def"
     textual header "llvm/TargetParser/ARMTargetParser.def"
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
+    textual header "llvm/TargetParser/NVPTXTargetParser.def"
     textual header "llvm/TargetParser/PPCTargetParser.def"
+    textual header "llvm/TargetParser/TripleName.def"
     textual header "llvm/TargetParser/XtensaTargetParser.def"
   }
 
@@ -453,4 +471,5 @@ module LLVM_SandboxIR {
   module * { export * }
 
   textual header "llvm/SandboxIR/Values.def"
+  textual header "llvm/SandboxIR/ValuesDefFilesList.def"
 }

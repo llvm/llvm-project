@@ -47,7 +47,8 @@ class StringRef;
 class raw_ostream;
 class LiveIntervals;
 class LiveVariables;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 // This structure uniquely identifies a basic block section.
@@ -85,12 +86,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
   using NumberInfo = DenseMapInfo<unsigned>;
 
-  static inline MBBSectionID getEmptyKey() {
-    return MBBSectionID(NumberInfo::getEmptyKey());
-  }
-  static inline MBBSectionID getTombstoneKey() {
-    return MBBSectionID(NumberInfo::getTombstoneKey());
-  }
   static unsigned getHashValue(const MBBSectionID &SecID) {
     return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
                                     NumberInfo::getHashValue(SecID.Number));
@@ -217,6 +212,8 @@ private:
   /// Fixed unique ID assigned to this basic block upon creation. Used with
   /// basic block sections and basic block labels.
   std::optional<UniqueBBID> BBID;
+
+  SmallVector<unsigned> PrefetchTargets;
 
   /// With basic block sections, this stores the Section ID of the basic block.
   MBBSectionID SectionID{0};
@@ -1033,13 +1030,17 @@ public:
   }
 
   // Helper method for new pass manager migration.
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    const SplitCriticalEdgeAnalyses &Analyses,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
-  LLVM_ABI MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
+  LLVM_ABI MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to

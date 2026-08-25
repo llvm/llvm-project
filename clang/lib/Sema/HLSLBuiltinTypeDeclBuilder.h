@@ -64,10 +64,16 @@ public:
   ~BuiltinTypeDeclBuilder();
 
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
-                                                  ConceptDecl *CD);
+                                                  ConceptDecl *CD = nullptr);
   BuiltinTypeDeclBuilder &
   addSimpleTemplateParams(ArrayRef<StringRef> Names,
                           ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
+  // Adds `<typename element_type, int sample_count = 0>` for multisampled
+  // textures, with \p CD constraining the element type. Unlike the other
+  // textures the element type has no default argument.
+  BuiltinTypeDeclBuilder &addMSTextureTemplateParams(StringRef ElementName,
+                                                     StringRef SampleCountName,
+                                                     ConceptDecl *CD);
   CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
@@ -80,67 +86,98 @@ public:
                    bool HasCounter,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
-  addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
+  addTextureHandle(ResourceClass RC, bool IsROV, bool IsArray,
+                   ResourceDimension RD, Expr *SampleCountExpr = nullptr,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
-  BuiltinTypeDeclBuilder &addArraySubscriptOperators(
-      ResourceDimension Dim = ResourceDimension::Unknown);
+  BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
+  BuiltinTypeDeclBuilder &
+  addArraySubscriptOperators(ResourceDimension Dim = ResourceDimension::Unknown,
+                             bool IsArray = false);
 
   // Builtin types constructors
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor();
-  BuiltinTypeDeclBuilder &addCopyConstructor();
-  BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(
+      AccessSpecifier Access = AccessSpecifier::AS_public);
+  BuiltinTypeDeclBuilder &
+  addCopyConstructor(AccessSpecifier Access = AccessSpecifier::AS_public);
+  BuiltinTypeDeclBuilder &addCopyAssignmentOperator(
+      AccessSpecifier Access = AccessSpecifier::AS_public);
 
   // Static create methods
   BuiltinTypeDeclBuilder &addStaticInitializationFunctions(bool HasCounter);
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
-  BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim,
+                                                bool IsArray = false);
+  BuiltinTypeDeclBuilder &addTextureLoadMSMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
-  BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();
+  BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim,
+                                           bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim,
+                                               bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim,
+                                               bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim,
+                                                bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim,
+                                              bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim,
+                                                       bool IsArray = false);
+  BuiltinTypeDeclBuilder &addCalculateLodMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim,
+                                           bool IsArray = false);
+  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim,
+                                              bool IsArray = false);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef,
-                                                  QualType IndexTy,
+                                                  bool IsConstReturn,
+                                                  bool IsRef, QualType IndexTy,
                                                   QualType ElemTy = QualType());
   BuiltinTypeDeclBuilder &
-  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+  addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
+  BuiltinTypeDeclBuilder &
+  addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
+                                        StringRef BuiltinName);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
   BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+  BuiltinTypeDeclBuilder &addGetDimensionsMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addMipsMember(ResourceDimension Dim);
 
 private:
   BuiltinTypeDeclBuilder &addCreateFromBinding();
   BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
   BuiltinTypeDeclBuilder &addCreateFromBindingWithImplicitCounter();
   BuiltinTypeDeclBuilder &addCreateFromImplicitBindingWithImplicitCounter();
-  BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
-                                            ResourceClass RC,
-                                            ResourceDimension RD, bool IsROV,
-                                            bool RawBuffer, bool IsCounter,
-                                            AccessSpecifier Access);
+  BuiltinTypeDeclBuilder &
+  addResourceMember(StringRef MemberName, ResourceClass RC,
+                    ResourceDimension RD, bool IsROV, bool RawBuffer,
+                    bool IsCounter, bool IsArray, QualType ElementTy,
+                    Expr *SampleCountExpr = nullptr,
+                    AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
+  CXXRecordDecl *addPrivateNestedRecord(StringRef Name);
+  CXXRecordDecl *addMipsSliceType(ResourceDimension Dim, QualType ReturnType);
+  CXXRecordDecl *addMipsType(ResourceDimension Dim, QualType ReturnType);
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, ResourceDimension RD, bool IsROV,
-                  bool RawBuffer,
+                  bool RawBuffer, bool IsArray, QualType ElementTy,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                         QualType ElementTy,
                          AccessSpecifier Access = AccessSpecifier::AS_private);
   QualType getGatherReturnType();
+  BuiltinTypeDeclBuilder &addDerivativeAvailability(StringRef MethodName);
   FieldDecl *getResourceHandleField() const;
   FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();

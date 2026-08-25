@@ -395,6 +395,15 @@ define i1 @two_nonnull_mallocs_hidden() {
   ret i1 %cmp
 }
 
+define <4 x i1> @test_vector_icmp() {
+; CHECK-LABEL: @test_vector_icmp(
+; CHECK-NEXT:    ret <4 x i1> zeroinitializer
+;
+  %ptr = call ptr @malloc(i64 16)
+  %gep = getelementptr i8, ptr %ptr, <4 x i64> <i64 4, i64 8, i64 12, i64 16>
+  %cmp = icmp eq <4 x ptr> %gep, splat (ptr null)
+  ret <4 x i1> %cmp
+}
 
 !0 = !{}
 

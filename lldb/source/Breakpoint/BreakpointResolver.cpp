@@ -63,6 +63,57 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
   return UnknownResolver;
 }
 
+bool BreakpointResolver::ResolverTyInMask(uint64_t mask) {
+  if (mask == eResolverUnknown)
+    return false;
+
+  return (mask & MaskForResolverTy()) != 0;
+}
+
+uint64_t BreakpointResolver::MaskForResolverTy() {
+  ResolverTy thisID = GetResolverTy();
+
+  switch (thisID) {
+  case FileLineResolver:
+    return eResolverFileAndLine;
+  case AddressResolver:
+    return eResolverAddress;
+  case NameResolver:
+    return eResolverName;
+  case FileRegexResolver:
+    return eResolverFileRegex;
+  case PythonResolver:
+    return eResolverPython;
+  case ExceptionResolver:
+    return eResolverException;
+  default:
+    return eResolverUnknown;
+  }
+}
+
+std::string BreakpointResolver::DescribeMask(uint64_t mask) {
+  std::string result;
+  if (mask & eResolverFileAndLine)
+    result.push_back('F');
+  if (mask & eResolverAddress)
+    result.push_back('A');
+  if (mask & eResolverName)
+    result.push_back('N');
+  if (mask & eResolverFileRegex)
+    result.push_back('S');
+  if (mask & eResolverPython)
+    result.push_back('P');
+  if (mask & eResolverException)
+    result.push_back('E');
+  return result;
+}
+
+bool BreakpointResolver::TypeMaskIsValid(uint64_t mask) {
+  if (mask == 0)
+    return false;
+  return (mask & BreakpointResolverAllResolversMask) != 0;
+}
+
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
                                        lldb::addr_t offset,
@@ -373,7 +424,7 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
     if (!expected_instructions) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints),
                      expected_instructions.takeError(),
-                     "error: Unable to read instructions at address 0x{0:x}",
+                     "error: Unable to read instructions at address {1:x}: {0}",
                      loc_addr.GetLoadAddress(&target));
       return BreakpointLocationSP();
     }
@@ -382,7 +433,7 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
     if (!instructions ||
         instructions->GetInstructionList().GetSize() != m_offset) {
       LLDB_LOG(GetLog(LLDBLog::Breakpoints),
-               "error: Unable to read {0} instructions at address 0x{1:x}",
+               "error: Unable to read {0} instructions at address {1:x}",
                m_offset, loc_addr.GetLoadAddress(&target));
       return BreakpointLocationSP();
     }

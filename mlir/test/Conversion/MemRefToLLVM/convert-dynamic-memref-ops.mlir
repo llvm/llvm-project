@@ -105,7 +105,7 @@ func.func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
 // CHECK: %[[desc:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  memref.alloca(%arg0, %arg1) {alignment = 32} : memref<?x?xf32>
+  memref.alloca(%arg0, %arg1) alignment = 32 : memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 
@@ -133,11 +133,11 @@ func.func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
 // ALIGNED-ALLOC-NEXT:  %[[bytes:.*]] = llvm.ptrtoint %[[gep]] : !llvm.ptr to i64
 // ALIGNED-ALLOC-NEXT:  %[[alignment:.*]] = llvm.mlir.constant(32 : index) : i64
 // ALIGNED-ALLOC-NEXT:  %[[allocated:.*]] = llvm.call @aligned_alloc(%[[alignment]], %[[bytes]]) : (i64, i64) -> !llvm.ptr
-  %0 = memref.alloc() {alignment = 32} : memref<32x18xf32>
+  %0 = memref.alloc() alignment = 32 : memref<32x18xf32>
   // Do another alloc just to test that we have a unique declaration for
   // aligned_alloc.
   // ALIGNED-ALLOC:  llvm.call @aligned_alloc
-  %1 = memref.alloc() {alignment = 64} : memref<4096xf32>
+  %1 = memref.alloc() alignment = 64 : memref<4096xf32>
 
   // Alignment is to element type boundaries (minimum 16 bytes).
   // ALIGNED-ALLOC:  %[[c32:.*]] = llvm.mlir.constant(32 : index) : i64
@@ -149,7 +149,7 @@ func.func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
   %3 = memref.alloc() : memref<4096xvector<2xf32>>
   // ALIGNED-ALLOC:  %[[c8:.*]] = llvm.mlir.constant(8 : index) : i64
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c8]],
-  %4 = memref.alloc() {alignment = 8} : memref<1024xvector<4xf32>>
+  %4 = memref.alloc() alignment = 8 : memref<1024xvector<4xf32>>
   // Bump the memref allocation size if its size is not a multiple of alignment.
   // ALIGNED-ALLOC:       %[[c32:.*]] = llvm.mlir.constant(32 : index) : i64
   // ALIGNED-ALLOC:       llvm.mlir.constant(1 : index) : i64
@@ -158,7 +158,7 @@ func.func @stdlib_aligned_alloc(%N : index) -> memref<32x18xf32> {
   // ALIGNED-ALLOC-NEXT:  llvm.urem
   // ALIGNED-ALLOC-NEXT:  %[[SIZE_ALIGNED:.*]] = llvm.sub
   // ALIGNED-ALLOC-NEXT:  llvm.call @aligned_alloc(%[[c32]], %[[SIZE_ALIGNED]])
-  %5 = memref.alloc() {alignment = 32} : memref<100xf32>
+  %5 = memref.alloc() alignment = 32 : memref<100xf32>
   // Bump alignment to the next power of two if it isn't.
   // ALIGNED-ALLOC:  %[[c128:.*]] = llvm.mlir.constant(128 : index) : i64
   // ALIGNED-ALLOC:  llvm.call @aligned_alloc(%[[c128]]
@@ -175,9 +175,9 @@ func.func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %mixed[%i, %j] : memref<42x?xf32>
   return
@@ -192,9 +192,9 @@ func.func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %dynamic[%i, %j] : memref<?x?xf32>
   return
@@ -230,9 +230,9 @@ func.func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %va
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %dynamic[%i, %j] : memref<?x?xf32>
   return
@@ -247,9 +247,9 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %mixed[%i, %j] : memref<42x?xf32>
   return
@@ -644,4 +644,22 @@ func.func @ranked_unranked() {
   %0 = memref.alloc() : memref<1 x memref<* x f32>>
   memref.cast %0 : memref<1 x memref<* x f32>> to memref<* x memref<* x f32>>
   return
+}
+
+// -----
+
+// Verify that loading from a negative-stride memref does not emit nuw on the
+// GEP or the intermediate mul: mul nuw with a negative (unsigned-large) stride
+// would produce poison per LangRef.
+// CHECK-LABEL: func @memref_load_neg_stride(
+func.func @memref_load_neg_stride(%base: memref<2000xf32>) -> f32 {
+  // CHECK: %[[OFF:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw> : i64
+  // CHECK-NEXT: %[[PTR:.*]] = llvm.getelementptr inbounds %{{.*}}[%[[OFF]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  // CHECK-NEXT: llvm.load %[[PTR]] : !llvm.ptr -> f32
+  %flip = memref.reinterpret_cast %base to
+      offset: [1000], sizes: [100], strides: [-1]
+      : memref<2000xf32> to memref<100xf32, strided<[-1], offset: 1000>>
+  %c5 = arith.constant 5 : index
+  %v = memref.load %flip[%c5] : memref<100xf32, strided<[-1], offset: 1000>>
+  return %v : f32
 }

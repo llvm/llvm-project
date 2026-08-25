@@ -34,7 +34,7 @@ class FileSystem;
 using namespace sampleprof;
 
 class MIRProfileLoader;
-class MIRProfileLoaderPass : public MachineFunctionPass {
+class LLVM_ABI MIRProfileLoaderPass : public MachineFunctionPass {
   MachineFunction *MF;
   std::string ProfileFileName;
   FSDiscriminatorPass P;

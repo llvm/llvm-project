@@ -185,6 +185,13 @@ bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // level already) but may be implementable for some value in projects
   // building multiple independent libraries with LTO and then linking those
   // together.
+
+  // Prevent generation of cross-CU references for DWARF v2 due to conflicts
+  // resulting from the FAQ recommendation: "If you are producing DWARF V2,
+  // please use the DWARF V3 definition of DW_FORM_ref_addr."
+  // (https://dwarfstd.org/faq.html)
+  if (DD->getDwarfVersion() == 2)
+    return false;
   if (isDwoUnit() && !DD->shareAcrossDWOCUs())
     return false;
   return (isa<DIType>(D) ||
@@ -1144,8 +1151,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructTypeDIE(VariantPart, Composite);
         }
       } else if (Tag == dwarf::DW_TAG_namelist) {
-        auto *Var = dyn_cast<DINode>(Element);
-        auto *VarDIE = getDIE(Var);
+        auto *VarDIE = getDIE(Element);
         if (VarDIE) {
           DIE &ItemDie = createAndAddDIE(dwarf::DW_TAG_namelist_item, Buffer);
           addDIEEntry(ItemDie, dwarf::DW_AT_namelist_item, *VarDIE);
@@ -1536,13 +1542,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->isLocalToUnit())
     addFlag(SPDie, dwarf::DW_AT_external);
 
-  if (DD->useAppleExtensionAttributes()) {
-    if (SP->isOptimized())
-      addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
+  if (SP->isOptimized())
+    addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
 
+  if (DD->useAppleExtensionAttributes())
     if (unsigned isa = Asm->getISAEncoding())
       addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
-  }
 
   if (SP->isLValueReference())
     addFlag(SPDie, dwarf::DW_AT_reference);
@@ -2080,7 +2085,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
     Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -2096,7 +2101,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 }
 
@@ -2123,7 +2128,9 @@ void DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
 
 void DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                                 const MCSymbol *Label, const MCSymbol *Sec) {
-  if (Asm->doesDwarfUseRelocationsAcrossSections())
+  // If we are in an object file and not a DWO, emit a label. Otherwise we are
+  // in a DWO and we cannot emit relocations, so emit a section delta.
+  if (Asm->doesDwarfUseRelocationsAcrossSections() && !isDwoUnit())
     addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   else
     addSectionDelta(Die, Attribute, Label, Sec);

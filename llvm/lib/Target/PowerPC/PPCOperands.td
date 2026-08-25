@@ -104,6 +104,16 @@ multiclass SignedImmediateWithPCRel<ValueType vt, code pred, SDNodeXForm xform,
 }
 
 //===----------------------------------------------------------------------===//
+// Immediate transformation functions
+//===----------------------------------------------------------------------===//
+
+// NEG_S32 - Negate a signed 32-bit immediate value
+def NEG_S32 : SDNodeXForm<imm, [{
+  // Transformation function: -imm
+  return getI32Imm(-N->getSExtValue(), SDLoc(N));
+}]>;
+
+//===----------------------------------------------------------------------===//
 // Immediate AsmOperand definitions
 //===----------------------------------------------------------------------===//
 def U1Imm : ImmediateAsmOperand<"isUImm<1>">;
@@ -116,6 +126,7 @@ def U7Imm : ImmediateAsmOperand<"isUImm<7>">;
 def U8Imm : ImmediateAsmOperand<"isUImm<8>">;
 def U10Imm : ImmediateAsmOperand<"isUImm<10>">;
 def U12Imm : ImmediateAsmOperand<"isUImm<12>">;
+def U32Imm : ImmediateAsmOperand<"isUImm<32>">;
 def S5Imm : ImmediateAsmOperand<"isSImm<5>">;
 
 // Special cases that have custom predicat and/or render method.
@@ -126,6 +137,7 @@ def S16Imm : ImmediateAsmOperand<"isS16Imm","addS16ImmOperands">;
 def S17Imm : ImmediateAsmOperand<"isS17Imm","addS16ImmOperands">;
 def S32Imm : ImmediateAsmOperand<"isS32Imm">;
 def S34Imm : ImmediateAsmOperand<"isS34Imm">;
+def NegS32Imm : ImmediateAsmOperand<"isS32Imm","addNegImmOperands">;
 
 //===----------------------------------------------------------------------===//
 // i32 immediate operands
@@ -167,6 +179,9 @@ defm u10imm : UnsignedImmediate<i32,
 defm u12imm : UnsignedImmediate<i32,
   [{ return isUInt<12>(Imm); }], NOOP_SDNodeXForm,
   "U12Imm", 12>;
+defm u32imm : UnsignedImmediate<i32,
+  [{ return isUInt<32>(Imm); }], NOOP_SDNodeXForm,
+  "U32Imm", 32>;
 
 defm s5imm : SignedImmediate<i32,
   [{ return isInt<5>(Imm); }], NOOP_SDNodeXForm,
@@ -179,6 +194,9 @@ defm s32imm : SignedImmediateWithPCRel<i32,
 defm s34imm : SignedImmediateReloc<i32,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34">;
+defm neg_s32imm : SignedImmediateReloc<i32,
+  [{ return isInt<32>(Imm); }], NEG_S32,
+  "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
 
 //===----------------------------------------------------------------------===//
 // i64 immediate operands
@@ -190,6 +208,10 @@ defm s32imm64 : SignedImmediateWithPCRel<i64,
 defm s34imm64 : SignedImmediateWithPCRel<i64,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34", "PPC::fixup_ppc_pcrel34">;
+defm neg_s32imm64 : SignedImmediateReloc<i64,
+  [{ return isInt<32>(Imm); }], NEG_S32,
+  "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
+
 
 //===----------------------------------------------------------------------===//
 // Special case immediate operands

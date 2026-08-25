@@ -15,8 +15,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
@@ -31,24 +29,10 @@ namespace orc {
 class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
                                  public SimpleRemoteEPCTransportClient {
 public:
-  /// A setup object containing callbacks to construct a memory manager and
-  /// memory access object. Both are optional. If not specified,
-  /// EPCGenericJITLinkMemoryManager and EPCGenericMemoryAccess will be used.
-  struct Setup {
-    using CreateMemoryManagerFn =
-        Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
-            SimpleRemoteEPC &);
-    using CreateMemoryAccessFn =
-        Expected<std::unique_ptr<MemoryAccess>>(SimpleRemoteEPC &);
-
-    unique_function<CreateMemoryManagerFn> CreateMemoryManager;
-    unique_function<CreateMemoryAccessFn> CreateMemoryAccess;
-  };
-
   /// Create a SimpleRemoteEPC using the given transport type and args.
   template <typename TransportT, typename... TransportTCtorArgTs>
   static Expected<std::unique_ptr<SimpleRemoteEPC>>
-  Create(std::unique_ptr<TaskDispatcher> D, Setup S,
+  Create(std::unique_ptr<TaskDispatcher> D,
          TransportTCtorArgTs &&...TransportTCtorArgs) {
     std::unique_ptr<SimpleRemoteEPC> SREPC(
         new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
@@ -58,7 +42,7 @@ public:
     if (!T)
       return T.takeError();
     SREPC->T = std::move(*T);
-    if (auto Err = SREPC->setup(std::move(S)))
+    if (auto Err = SREPC->setup())
       return joinErrors(std::move(Err), SREPC->disconnect());
     return std::move(SREPC);
   }
@@ -72,15 +56,16 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
-
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
 
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override;
+
   Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
 
   Error disconnect() override;
 
@@ -95,17 +80,12 @@ private:
                   std::unique_ptr<TaskDispatcher> D)
       : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
 
-  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-  createDefaultMemoryManager(SimpleRemoteEPC &SREPC);
-  static Expected<std::unique_ptr<MemoryAccess>>
-  createDefaultMemoryAccess(SimpleRemoteEPC &SREPC);
-
   Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
                     ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
 
   Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
                     shared::WrapperFunctionBuffer ArgBytes);
-  Error setup(Setup S);
+  Error setup();
 
   Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                      shared::WrapperFunctionBuffer ArgBytes);
@@ -125,12 +105,8 @@ private:
   Error DisconnectErr = Error::success();
 
   std::unique_ptr<SimpleRemoteEPCTransport> T;
-  std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
-  std::unique_ptr<MemoryAccess> OwnedMemAccess;
 
   ExecutorAddr RunAsMainAddr;
-  ExecutorAddr RunAsVoidFunctionAddr;
-  ExecutorAddr RunAsIntFunctionAddr;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

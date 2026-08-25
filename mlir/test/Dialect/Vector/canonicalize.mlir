@@ -403,7 +403,7 @@ func.func @constant_mask_transpose_to_transposed_constant_mask() -> (vector<2x3x
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]}
+    offsets = [0, 0], sizes = [2, 2], strides = [1, 1]
       : vector<4x3xi1> to vector<2x2xi1>
   // CHECK: arith.constant dense<true> : vector<2x2xi1>
   return %1 : vector<2x2xi1>
@@ -414,7 +414,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [1, 0], sizes = [2, 2], strides = [1, 1]}
+    offsets = [1, 0], sizes = [2, 2], strides = [1, 1]
       : vector<4x3xi1> to vector<2x2xi1>
   // CHECK: vector.constant_mask [1, 2] : vector<2x2xi1>
   return %1 : vector<2x2xi1>
@@ -425,7 +425,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]}
+    offsets = [0, 1], sizes = [2, 2], strides = [1, 1]
       : vector<4x3xi1> to vector<2x2xi1>
   // CHECK: vector.constant_mask [2, 1] : vector<2x2xi1>
   return %1 : vector<2x2xi1>
@@ -436,7 +436,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]}
+    offsets = [2, 0], sizes = [2, 2], strides = [1, 1]
       : vector<4x3xi1> to vector<2x2xi1>
   // CHECK: arith.constant dense<false> : vector<2x2xi1>
   return %1 : vector<2x2xi1>
@@ -447,7 +447,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [0, 2], sizes = [2, 1], strides = [1, 1]}
+    offsets = [0, 2], sizes = [2, 1], strides = [1, 1]
       : vector<4x3xi1> to vector<2x1xi1>
   // CHECK: arith.constant dense<false> : vector<2x1xi1>
   return %1 : vector<2x1xi1>
@@ -458,7 +458,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [0, 1], sizes = [2, 1], strides = [1, 1]}
+    offsets = [0, 1], sizes = [2, 1], strides = [1, 1]
       : vector<4x3xi1> to vector<2x1xi1>
   // CHECK: arith.constant dense<true> : vector<2x1xi1>
   return %1 : vector<2x1xi1>
@@ -469,7 +469,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [1, 1], sizes = [2, 1], strides = [1, 1]}
+    offsets = [1, 1], sizes = [2, 1], strides = [1, 1]
       : vector<4x3xi1> to vector<2x1xi1>
   // CHECK: vector.constant_mask [1, 1] : vector<2x1xi1>
   return %1 : vector<2x1xi1>
@@ -482,7 +482,7 @@ func.func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 func.func @extract_strided_slice_of_create_mask(%dim0: index, %dim1: index) -> (vector<2x2xi1>) {
   %0 = vector.create_mask %dim0, %dim1 : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+    offsets = [2, 1], sizes = [2, 2], strides = [1, 1]
       : vector<4x3xi1> to vector<2x2xi1>
   // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
   // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
@@ -500,7 +500,7 @@ func.func @extract_strided_slice_partial_of_create_mask(
   %dim0: index, %dim1: index, %dim2 : index) -> (vector<2x2x8xi1>) {
   %0 = vector.create_mask %dim0, %dim1, %dim2 : vector<4x3x8xi1>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 1], sizes = [2, 2], strides = [1, 1]}
+    offsets = [2, 1], sizes = [2, 2], strides = [1, 1]
       : vector<4x3x8xi1> to vector<2x2x8xi1>
   // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
   // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
@@ -517,7 +517,7 @@ func.func @extract_strided_slice_partial_of_create_mask(
 //  CHECK-NEXT:   return %[[ARG]] : vector<4x3xi1>
 func.func @extract_strided_fold(%arg : vector<4x3xi1>) -> (vector<4x3xi1>) {
   %0 = vector.extract_strided_slice %arg
-    {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]}
+    offsets = [0, 0], sizes = [4, 3], strides = [1, 1]
       : vector<4x3xi1> to vector<4x3xi1>
   return %0 : vector<4x3xi1>
 }
@@ -529,10 +529,10 @@ func.func @extract_strided_fold(%arg : vector<4x3xi1>) -> (vector<4x3xi1>) {
 //  CHECK-NEXT:   return %[[ARG]] : vector<4x4xf32>
 func.func @extract_strided_fold_insert(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
   -> (vector<4x4xf32>) {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [2, 2], strides = [1, 1]
     : vector<4x4xf32> into vector<8x16xf32>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 2], sizes = [4, 4], strides = [1, 1]}
+    offsets = [2, 2], sizes = [4, 4], strides = [1, 1]
       : vector<8x16xf32> to vector<4x4xf32>
   return %1 : vector<4x4xf32>
 }
@@ -543,15 +543,15 @@ func.func @extract_strided_fold_insert(%a: vector<4x4xf32>, %b: vector<8x16xf32>
 // CHECK-LABEL: extract_strided_fold_insert
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<6x4xf32>
 //  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG0]]
-//  CHECK-SAME:     {offsets = [0, 0], sizes = [4, 4], strides = [1, 1]}
+//  CHECK-SAME:     offsets = [0, 0], sizes = [4, 4], strides = [1, 1]
 //  CHECK-SAME:       : vector<6x4xf32> to vector<4x4xf32>
 //  CHECK-NEXT:   return %[[EXT]] : vector<4x4xf32>
 func.func @extract_strided_fold_insert(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
   -> (vector<4x4xf32>) {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [2, 2], strides = [1, 1]
     : vector<6x4xf32> into vector<8x16xf32>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 2], sizes = [4, 4], strides = [1, 1]}
+    offsets = [2, 2], sizes = [4, 4], strides = [1, 1]
       : vector<8x16xf32> to vector<4x4xf32>
   return %1 : vector<4x4xf32>
 }
@@ -562,18 +562,18 @@ func.func @extract_strided_fold_insert(%a: vector<6x4xf32>, %b: vector<8x16xf32>
 // CHECK-LABEL: negative_extract_strided_fold
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<4x4xf32>, %[[ARG1:.*]]: vector<8x16xf32>
 //       CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[ARG0]], %[[ARG1]]
-//  CHECK-SAME:     {offsets = [2, 2], strides = [1, 1]}
+//  CHECK-SAME:     offsets = [2, 2], strides = [1, 1]
 //  CHECK-SAME:       : vector<4x4xf32> into vector<8x16xf32>
 //       CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %[[INS]]
-//  CHECK-SAME:     {offsets = [2, 2], sizes = [6, 4], strides = [1, 1]}
+//  CHECK-SAME:     offsets = [2, 2], sizes = [6, 4], strides = [1, 1]
 //  CHECK-SAME:       : vector<8x16xf32> to vector<6x4xf32>
 //  CHECK-NEXT:   return %[[EXT]] : vector<6x4xf32>
 func.func @negative_extract_strided_fold(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
   -> (vector<6x4xf32>) {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [2, 2], strides = [1, 1]
     : vector<4x4xf32> into vector<8x16xf32>
   %1 = vector.extract_strided_slice %0
-    {offsets = [2, 2], sizes = [6, 4], strides = [1, 1]}
+    offsets = [2, 2], sizes = [6, 4], strides = [1, 1]
       : vector<8x16xf32> to vector<6x4xf32>
   return %1 : vector<6x4xf32>
 }
@@ -584,17 +584,17 @@ func.func @negative_extract_strided_fold(%a: vector<4x4xf32>, %b: vector<8x16xf3
 // CHECK-LABEL: extract_strided_fold_insert
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<2x8xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
 //  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG1]]
-//  CHECK-SAME:     {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]}
+//  CHECK-SAME:     offsets = [0, 0], sizes = [1, 1], strides = [1, 1]
 //  CHECK-SAME:       : vector<1x4xf32> to vector<1x1xf32>
 //  CHECK-NEXT:   return %[[EXT]] : vector<1x1xf32>
 func.func @extract_strided_fold_insert(%a: vector<2x8xf32>, %b: vector<1x4xf32>,
                                   %c : vector<1x4xf32>) -> (vector<1x1xf32>) {
-  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 1], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %b, %a offsets = [0, 1], strides = [1, 1]
     : vector<1x4xf32> into vector<2x8xf32>
-  %1 = vector.insert_strided_slice %c, %0 {offsets = [1, 0], strides = [1, 1]}
+  %1 = vector.insert_strided_slice %c, %0 offsets = [1, 0], strides = [1, 1]
     : vector<1x4xf32> into vector<2x8xf32>
   %2 = vector.extract_strided_slice %1
-      {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
+      offsets = [0, 1], sizes = [1, 1], strides = [1, 1]
         : vector<2x8xf32> to vector<1x1xf32>
   return %2 : vector<1x1xf32>
 }
@@ -1404,6 +1404,37 @@ func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>, 
 
 // -----
 
+// A scalable vector dimension holds `vscale * N` elements, so the static size N
+// is only a lower bound and cannot prove that the transfer is in bounds. Here
+// `vector<[4]xf32>` reads `4 * vscale` elements from a 4-element memref, which
+// is out of bounds for every `vscale > 1`.
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_scalable
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<4xf32>, vector<[4]xf32>
+func.func @no_fold_transfer_read_in_bounds_scalable(%m: memref<4xf32>, %p: f32) -> vector<[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %v = vector.transfer_read %m[%c0], %p : memref<4xf32>, vector<[4]xf32>
+  return %v : vector<[4]xf32>
+}
+
+// -----
+
+// Same for the write path, where an unsound fold is an out-of-bounds store.
+
+// CHECK-LABEL: func @no_fold_transfer_write_in_bounds_scalable
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : vector<[4]xf32>, memref<4xf32>
+func.func @no_fold_transfer_write_in_bounds_scalable(%m: memref<4xf32>, %v: vector<[4]xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %v, %m[%c0] : vector<[4]xf32>, memref<4xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
@@ -1614,10 +1645,10 @@ func.func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) 
   %cst = arith.constant dense<2.000000e+00> : vector<29x7xf32>
   %cst_1 = arith.constant dense<1> : vector<4x37x9xi32>
   %0 = vector.extract_strided_slice %cst
-    {offsets = [2, 3], sizes = [12, 2], strides = [1, 1]}
+    offsets = [2, 3], sizes = [12, 2], strides = [1, 1]
       : vector<29x7xf32> to vector<12x2xf32>
   %1 = vector.extract_strided_slice %cst_1
-    {offsets = [1, 2, 5], sizes = [2, 13, 3], strides = [1, 1, 1]}
+    offsets = [1, 2, 5], sizes = [2, 13, 3], strides = [1, 1, 1]
       : vector<4x37x9xi32> to vector<2x13x3xi32>
   return %0, %1 : vector<12x2xf32>, vector<2x13x3xi32>
 }
@@ -1630,7 +1661,7 @@ func.func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) 
 func.func @extract_strided_broadcast(%arg0: vector<4xf16>) -> vector<2x4xf16> {
  %0 = vector.broadcast %arg0 : vector<4xf16> to vector<16x4xf16>
  %1 = vector.extract_strided_slice %0
-  {offsets = [0, 0], sizes = [2, 4], strides = [1, 1]} :
+  offsets = [0, 0], sizes = [2, 4], strides = [1, 1] :
   vector<16x4xf16> to vector<2x4xf16>
   return %1 : vector<2x4xf16>
 }
@@ -1638,13 +1669,13 @@ func.func @extract_strided_broadcast(%arg0: vector<4xf16>) -> vector<2x4xf16> {
 // -----
 
 // CHECK-LABEL: extract_strided_broadcast2
-//       CHECK:   %[[E:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0], sizes = [2], strides = [1]} : vector<4xf16> to vector<2xf16>
+//       CHECK:   %[[E:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0], sizes = [2], strides = [1] : vector<4xf16> to vector<2xf16>
 //  CHECK-NEXT:   %[[B:.*]] = vector.broadcast %[[E]] : vector<2xf16> to vector<2x2xf16>
 //  CHECK-NEXT:   return %[[B]] : vector<2x2xf16>
 func.func @extract_strided_broadcast2(%arg0: vector<4xf16>) -> vector<2x2xf16> {
  %0 = vector.broadcast %arg0 : vector<4xf16> to vector<16x4xf16>
  %1 = vector.extract_strided_slice %0
-  {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} :
+  offsets = [0, 0], sizes = [2, 2], strides = [1, 1] :
   vector<16x4xf16> to vector<2x2xf16>
   return %1 : vector<2x2xf16>
 }
@@ -1658,7 +1689,7 @@ func.func @extract_strided_broadcast2(%arg0: vector<4xf16>) -> vector<2x2xf16> {
 func.func @extract_strided_broadcast3(%arg0: vector<1xf32>) -> vector<1x4xf32> {
  %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x8xf32>
  %1 = vector.extract_strided_slice %0
-      {offsets = [0, 4], sizes = [1, 4], strides = [1, 1]}
+      offsets = [0, 4], sizes = [1, 4], strides = [1, 1]
       : vector<1x8xf32> to vector<1x4xf32>
   return %1 : vector<1x4xf32>
 }
@@ -1672,7 +1703,7 @@ func.func @extract_strided_broadcast3(%arg0: vector<1xf32>) -> vector<1x4xf32> {
 func.func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
  %0 = vector.broadcast %arg0 : f32 to vector<1x8xf32>
  %1 = vector.extract_strided_slice %0
-      {offsets = [0, 4], sizes = [1, 4], strides = [1, 1]}
+      offsets = [0, 4], sizes = [1, 4], strides = [1, 1]
       : vector<1x8xf32> to vector<1x4xf32>
   return %1 : vector<1x4xf32>
 }
@@ -1687,7 +1718,7 @@ func.func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
 func.func @extract_strided_broadcast5(%arg0: vector<2x1xf32>) -> vector<2x4xf32> {
  %0 = vector.broadcast %arg0 : vector<2x1xf32> to vector<2x8xf32>
  %1 = vector.extract_strided_slice %0
-      {offsets = [0, 4], sizes = [2, 4], strides = [1, 1]}
+      offsets = [0, 4], sizes = [2, 4], strides = [1, 1]
       : vector<2x8xf32> to vector<2x4xf32>
   return %1 : vector<2x4xf32>
 }
@@ -1812,6 +1843,61 @@ func.func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
 
   // CHECK-NEXT: return %[[T0]], %[[T0]], %[[T0]]
   return %r0, %r1, %r2: tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read
+//       CHECK:   vector.transfer_read {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   %[[R:.*]] = vector.transfer_write {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read_and_write
+//  CHECK-SAME:   %[[MASK:[0-9a-zA-Z_]+]]: vector<2x3x4xi1>
+//       CHECK:   %[[V:.*]] = vector.transfer_read {{.*}}, {{.*}}, %[[MASK]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write %[[V]], {{.*}}, %[[MASK]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read_and_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
 }
 
 // -----
@@ -2202,6 +2288,26 @@ func.func @masked_vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x3xf32>,
+func.func @vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>) -> vector<2x3xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32>
+//       CHECK:   return %[[v]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[VAL_0:.*]]: vector<2x3xf32>, %{{.*}}: vector<2x3xf32>,
+func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>, %mask: vector<2x3xi1>) -> vector<2x3xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32> } : vector<2x3xi1> -> vector<2x3xf32>
+//       CHECK:   return %[[VAL_0]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_multi_reduction_unit_dimensions(
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
 func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
@@ -2293,7 +2399,7 @@ func.func @masked_vector_multi_reduction_unit_dimensions_single_elem(%source: ve
 // CHECK-LABEL: func @insert_strided_slice_full_range
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<16x16xf16>, %{{.+}}: vector<16x16xf16>
 func.func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<16x16xf16>) -> vector<16x16xf16> {
-  %0 = vector.insert_strided_slice %source, %dest {offsets = [0, 0], strides = [1, 1]} : vector<16x16xf16> into vector<16x16xf16>
+  %0 = vector.insert_strided_slice %source, %dest offsets = [0, 0], strides = [1, 1] : vector<16x16xf16> into vector<16x16xf16>
   // CHECK: return %[[SOURCE]]
   return %0: vector<16x16xf16>
 }
@@ -2306,7 +2412,7 @@ func.func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: ve
 func.func @extract_strided_splatlike(%arg0: f16) -> vector<2x4xf16> {
  %0 = vector.broadcast %arg0 : f16 to vector<16x4xf16>
  %1 = vector.extract_strided_slice %0
-  {offsets = [1, 0], sizes = [2, 4], strides = [1, 1]} :
+  offsets = [1, 0], sizes = [2, 4], strides = [1, 1] :
   vector<16x4xf16> to vector<2x4xf16>
   return %1 : vector<2x4xf16>
 }
@@ -2445,11 +2551,11 @@ func.func @extract_splat_vector_3d_constant() -> (vector<2xi32>, vector<2xi32>, 
 func.func @extract_strided_slice_1d_constant() -> (vector<3xi32>, vector<2xi32>, vector<1xi32>) {
   %cst = arith.constant dense<[0, 1, 2]> : vector<3xi32>
   %a = vector.extract_strided_slice %cst
-   {offsets = [0], sizes = [3], strides = [1]} : vector<3xi32> to vector<3xi32>
+   offsets = [0], sizes = [3], strides = [1] : vector<3xi32> to vector<3xi32>
   %b = vector.extract_strided_slice %cst
-   {offsets = [1], sizes = [2], strides = [1]} : vector<3xi32> to vector<2xi32>
+   offsets = [1], sizes = [2], strides = [1] : vector<3xi32> to vector<2xi32>
   %c = vector.extract_strided_slice %cst
-   {offsets = [2], sizes = [1], strides = [1]} : vector<3xi32> to vector<1xi32>
+   offsets = [2], sizes = [1], strides = [1] : vector<3xi32> to vector<1xi32>
   return %a, %b, %c : vector<3xi32>, vector<2xi32>, vector<1xi32>
 }
 
@@ -2463,11 +2569,11 @@ func.func @extract_strided_slice_1d_constant() -> (vector<3xi32>, vector<2xi32>,
 func.func @extract_strided_slice_2d_constant() -> (vector<1x1xi32>, vector<1x2xi32>, vector<2x2xi32>) {
   %cst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
   %a = vector.extract_strided_slice %cst
-   {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<2x3xi32> to vector<1x1xi32>
+   offsets = [0, 0], sizes = [1, 1], strides = [1, 1] : vector<2x3xi32> to vector<1x1xi32>
   %b = vector.extract_strided_slice %cst
-   {offsets = [1, 1], sizes = [1, 2], strides = [1, 1]} : vector<2x3xi32> to vector<1x2xi32>
+   offsets = [1, 1], sizes = [1, 2], strides = [1, 1] : vector<2x3xi32> to vector<1x2xi32>
   %c = vector.extract_strided_slice %cst
-   {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]} : vector<2x3xi32> to vector<2x2xi32>
+   offsets = [0, 1], sizes = [2, 2], strides = [1, 1] : vector<2x3xi32> to vector<2x2xi32>
   return %a, %b, %c : vector<1x1xi32>, vector<1x2xi32>, vector<2x2xi32>
 }
 
@@ -2482,13 +2588,13 @@ func.func @extract_strided_slice_2d_constant() -> (vector<1x1xi32>, vector<1x2xi
 func.func @extract_strided_slice_3d_constant() -> (vector<1x2x2xi32>, vector<1x1x2xi32>, vector<2x1x2xi32>, vector<1x1x1xi32>) {
   %cst = arith.constant dense<[[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]]> : vector<3x2x2xi32>
   %a = vector.extract_strided_slice %cst
-   {offsets = [2], sizes = [1], strides = [1]} : vector<3x2x2xi32> to vector<1x2x2xi32>
+   offsets = [2], sizes = [1], strides = [1] : vector<3x2x2xi32> to vector<1x2x2xi32>
   %b = vector.extract_strided_slice %cst
-   {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]} : vector<3x2x2xi32> to vector<1x1x2xi32>
+   offsets = [0, 1], sizes = [1, 1], strides = [1, 1] : vector<3x2x2xi32> to vector<1x1x2xi32>
   %c = vector.extract_strided_slice %cst
-   {offsets = [1, 1, 0], sizes = [2, 1, 2], strides = [1, 1, 1]} : vector<3x2x2xi32> to vector<2x1x2xi32>
+   offsets = [1, 1, 0], sizes = [2, 1, 2], strides = [1, 1, 1] : vector<3x2x2xi32> to vector<2x1x2xi32>
   %d = vector.extract_strided_slice %cst
-   {offsets = [2, 1, 1], sizes = [1, 1, 1], strides = [1, 1, 1]} : vector<3x2x2xi32> to vector<1x1x1xi32>
+   offsets = [2, 1, 1], sizes = [1, 1, 1], strides = [1, 1, 1] : vector<3x2x2xi32> to vector<1x1x1xi32>
   return %a, %b, %c, %d : vector<1x2x2xi32>, vector<1x1x2xi32>, vector<2x1x2xi32>, vector<1x1x1xi32>
 }
 
@@ -2500,7 +2606,7 @@ func.func @extract_strided_slice_3d_constant() -> (vector<1x2x2xi32>, vector<1x1
 //       CHECK: return %[[V]] : vector<4xf16>
 func.func @extract_extract_strided(%arg0: vector<32x16x4xf16>) -> vector<4xf16> {
  %1 = vector.extract_strided_slice %arg0
-  {offsets = [7, 3], sizes = [10, 8], strides = [1, 1]} :
+  offsets = [7, 3], sizes = [10, 8], strides = [1, 1] :
   vector<32x16x4xf16> to vector<10x8x4xf16>
   %2 = vector.extract %1[2, 4] : vector<4xf16> from vector<10x8x4xf16>
   return %2 : vector<4xf16>
@@ -2514,7 +2620,7 @@ func.func @extract_extract_strided(%arg0: vector<32x16x4xf16>) -> vector<4xf16> 
 //       CHECK: return %[[V]] : f32
 func.func @extract_insert_strided(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
   -> f32 {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [2, 2], strides = [1, 1]
     : vector<6x4xf32> into vector<8x16xf32>
   %2 = vector.extract %0[2, 4] : f32 from vector<8x16xf32>
   return %2 : f32
@@ -2528,7 +2634,7 @@ func.func @extract_insert_strided(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
 //       CHECK: return %[[V]] : f32
 func.func @extract_insert_rank_reduce(%a: vector<4xf32>, %b: vector<8x16xf32>)
   -> f32 {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [2, 2], strides = [1]
     : vector<4xf32> into vector<8x16xf32>
   %2 = vector.extract %0[2, 4] : f32 from vector<8x16xf32>
   return %2 : f32
@@ -2541,7 +2647,7 @@ func.func @extract_insert_rank_reduce(%a: vector<4xf32>, %b: vector<8x16xf32>)
 //       CHECK: vector.extract
 func.func @negative_extract_insert(%a: vector<2x15xf32>, %b: vector<12x8x16xf32>)
   -> vector<16xf32> {
-  %0 = vector.insert_strided_slice %a, %b {offsets = [4, 2, 0], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %a, %b offsets = [4, 2, 0], strides = [1, 1]
     : vector<2x15xf32> into vector<12x8x16xf32>
   %2 = vector.extract %0[4, 2] : vector<16xf32> from vector<12x8x16xf32>
   return %2 : vector<16xf32>
@@ -2555,9 +2661,9 @@ func.func @negative_extract_insert(%a: vector<2x15xf32>, %b: vector<12x8x16xf32>
 //       CHECK: return %[[V]] : vector<16xf32>
 func.func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %c: vector<2x16xf32>)
   -> vector<16xf32> {
-  %0 = vector.insert_strided_slice %c, %b {offsets = [4, 2, 0], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %c, %b offsets = [4, 2, 0], strides = [1, 1]
     : vector<2x16xf32> into vector<12x8x16xf32>
-  %1 = vector.insert_strided_slice %a, %0 {offsets = [0, 2, 0], strides = [1, 1]}
+  %1 = vector.insert_strided_slice %a, %0 offsets = [0, 2, 0], strides = [1, 1]
     : vector<2x16xf32> into vector<12x8x16xf32>
   %2 = vector.extract %1[4, 2] : vector<16xf32> from vector<12x8x16xf32>
   return %2 : vector<16xf32>
@@ -2583,7 +2689,7 @@ func.func @extract_from_extract_chain_should_not_fold_dynamic_extracts(%v: vecto
 //       CHECK: return %[[V]] : vector<4xf32>
 func.func @extract_extract_strided2(%A: vector<2x4xf32>)
   -> (vector<4xf32>) {
- %0 = vector.extract_strided_slice %A {offsets = [1, 0], sizes = [1, 4], strides = [1, 1]} : vector<2x4xf32> to vector<1x4xf32>
+ %0 = vector.extract_strided_slice %A offsets = [1, 0], sizes = [1, 4], strides = [1, 1] : vector<2x4xf32> to vector<1x4xf32>
  %1 = vector.extract %0[0] : vector<4xf32> from vector<1x4xf32>
  return %1 : vector<4xf32>
 }
@@ -2732,6 +2838,99 @@ func.func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> ve
 func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5xi32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
   return %shuffle : vector<5xi32>
+}
+
+// -----
+
+// All mask elements are poison: replace shuffle with poison.
+// CHECK-LABEL: func @shuffle_all_poison_mask
+//   CHECK-NOT:   vector.shuffle
+//       CHECK:   %[[P:.*]] = ub.poison : vector<2xi32>
+//       CHECK:   return %[[P]]
+func.func @shuffle_all_poison_mask(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [-1, -1] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused: replace V1 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v1
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V2 is unused: replace V2 operand with poison.
+// CHECK-LABEL: func @shuffle_unused_v2
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v2(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// -----
+
+// V1 is unused (mask has poison indices mixed with V2 references).
+// CHECK-LABEL: func @shuffle_unused_v1_with_poison_idx
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3xi32>
+//       CHECK:   vector.shuffle %[[P]], %[[B]] [4, -1, 3] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_unused_v1_with_poison_idx(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<3xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, -1, 3] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<3xi32>
+}
+
+// -----
+
+// V2 is unused (multidimensional vectors).
+// CHECK-LABEL: func @shuffle_unused_v2_multidim
+//  CHECK-SAME:   %[[A:.*]]: vector<4x2xf32>, %[[B:.*]]: vector<3x2xf32>
+//       CHECK:   %[[P:.*]] = ub.poison : vector<3x2xf32>
+//       CHECK:   vector.shuffle %[[A]], %[[P]] [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+func.func @shuffle_unused_v2_multidim(%v0 : vector<4x2xf32>, %v1 : vector<3x2xf32>) -> vector<3x2xf32> {
+  %shuffle = vector.shuffle %v0, %v1 [2, 0, 3] : vector<4x2xf32>, vector<3x2xf32>
+  return %shuffle : vector<3x2xf32>
+}
+
+// -----
+
+// Both operands are used: no folding.
+// CHECK-LABEL: func @shuffle_both_operands_used
+//  CHECK-SAME:   %[[A:.*]]: vector<3xi32>, %[[B:.*]]: vector<3xi32>
+//       CHECK:   vector.shuffle %[[A]], %[[B]] [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 3, 1, 4] : vector<3xi32>, vector<3xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// -----
+
+// One operand is poison, the other one is not used.
+// CHECK-LABEL: func @shuffle_poison_unused
+//       CHECK:   %[[r:.*]] = ub.poison : vector<4xi32>
+//       CHECK:   return %[[r]]
+func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
 }
 
 // -----
@@ -3049,7 +3248,7 @@ func.func @bitcast(%a: vector<4x8xf32>) -> vector<4x16xi16> {
 func.func @insert_strided_slice_splatlike(%x: f32) -> (vector<8x16xf32>) {
   %splat0 = vector.broadcast %x : f32 to vector<4x4xf32>
   %splat1 = vector.broadcast %x : f32 to vector<8x16xf32>
-  %0 = vector.insert_strided_slice %splat0, %splat1 {offsets = [2, 2], strides = [1, 1]}
+  %0 = vector.insert_strided_slice %splat0, %splat1 offsets = [2, 2], strides = [1, 1]
     : vector<4x4xf32> into vector<8x16xf32>
   return %0 : vector<8x16xf32>
 }
@@ -3061,9 +3260,9 @@ func.func @insert_strided_slice_splatlike(%x: f32) -> (vector<8x16xf32>) {
 //  CHECK-SAME: (%[[ARG:.*]]: vector<8x16xf32>)
 //  CHECK-NEXT:   return %[[ARG]] : vector<8x16xf32>
 func.func @insert_extract_strided_slice(%x: vector<8x16xf32>) -> (vector<8x16xf32>) {
-  %0 = vector.extract_strided_slice %x {offsets = [0, 8], sizes = [2, 4], strides = [1, 1]}
+  %0 = vector.extract_strided_slice %x offsets = [0, 8], sizes = [2, 4], strides = [1, 1]
         : vector<8x16xf32> to vector<2x4xf32>
-  %1 = vector.insert_strided_slice %0, %x {offsets = [0, 8], strides = [1, 1]}
+  %1 = vector.insert_strided_slice %0, %x offsets = [0, 8], strides = [1, 1]
         : vector<2x4xf32> into vector<8x16xf32>
   return %1 : vector<8x16xf32>
 }
@@ -3083,11 +3282,11 @@ func.func @insert_strided_1d_constant() ->
   %cst_1 = arith.constant dense<4> : vector<1xi32>
   %cst_2 = arith.constant dense<[5, 6]> : vector<2xi32>
   %cst_3 = arith.constant dense<[7, 8, 9]> : vector<3xi32>
-  %a = vector.insert_strided_slice %cst_1, %vcst {offsets = [0], strides = [1]} : vector<1xi32> into vector<3xi32>
-  %b = vector.insert_strided_slice %cst_1, %vcst {offsets = [2], strides = [1]} : vector<1xi32> into vector<3xi32>
-  %c = vector.insert_strided_slice %cst_2, %vcst {offsets = [0], strides = [1]} : vector<2xi32> into vector<3xi32>
-  %d = vector.insert_strided_slice %cst_2, %vcst {offsets = [1], strides = [1]} : vector<2xi32> into vector<3xi32>
-  %e = vector.insert_strided_slice %cst_3, %vcst {offsets = [0], strides = [1]} : vector<3xi32> into vector<3xi32>
+  %a = vector.insert_strided_slice %cst_1, %vcst offsets = [0], strides = [1] : vector<1xi32> into vector<3xi32>
+  %b = vector.insert_strided_slice %cst_1, %vcst offsets = [2], strides = [1] : vector<1xi32> into vector<3xi32>
+  %c = vector.insert_strided_slice %cst_2, %vcst offsets = [0], strides = [1] : vector<2xi32> into vector<3xi32>
+  %d = vector.insert_strided_slice %cst_2, %vcst offsets = [1], strides = [1] : vector<2xi32> into vector<3xi32>
+  %e = vector.insert_strided_slice %cst_3, %vcst offsets = [0], strides = [1] : vector<3xi32> into vector<3xi32>
   return %a, %b, %c, %d, %e : vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>
 }
 
@@ -3108,13 +3307,13 @@ func.func @insert_strided_2d_constant() ->
   %cst_1 = arith.constant dense<9> : vector<1xi32>
   %cst_2 = arith.constant dense<[18, 19]> : vector<2xi32>
   %cst_3 = arith.constant dense<[[28, 29], [38, 39]]> : vector<2x2xi32>
-  %a = vector.insert_strided_slice %cst_1, %vcst {offsets = [1, 0], strides = [1]} : vector<1xi32> into vector<3x2xi32>
-  %b = vector.insert_strided_slice %cst_1, %vcst {offsets = [2, 1], strides = [1]} : vector<1xi32> into vector<3x2xi32>
-  %c = vector.insert_strided_slice %cst_2, %vcst {offsets = [0, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
-  %d = vector.insert_strided_slice %cst_2, %vcst {offsets = [1, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
-  %e = vector.insert_strided_slice %cst_2, %vcst {offsets = [2, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
-  %f = vector.insert_strided_slice %cst_3, %vcst {offsets = [0, 0], strides = [1, 1]} : vector<2x2xi32> into vector<3x2xi32>
-  %g = vector.insert_strided_slice %cst_3, %vcst {offsets = [1, 0], strides = [1, 1]} : vector<2x2xi32> into vector<3x2xi32>
+  %a = vector.insert_strided_slice %cst_1, %vcst offsets = [1, 0], strides = [1] : vector<1xi32> into vector<3x2xi32>
+  %b = vector.insert_strided_slice %cst_1, %vcst offsets = [2, 1], strides = [1] : vector<1xi32> into vector<3x2xi32>
+  %c = vector.insert_strided_slice %cst_2, %vcst offsets = [0, 0], strides = [1] : vector<2xi32> into vector<3x2xi32>
+  %d = vector.insert_strided_slice %cst_2, %vcst offsets = [1, 0], strides = [1] : vector<2xi32> into vector<3x2xi32>
+  %e = vector.insert_strided_slice %cst_2, %vcst offsets = [2, 0], strides = [1] : vector<2xi32> into vector<3x2xi32>
+  %f = vector.insert_strided_slice %cst_3, %vcst offsets = [0, 0], strides = [1, 1] : vector<2x2xi32> into vector<3x2xi32>
+  %g = vector.insert_strided_slice %cst_3, %vcst offsets = [1, 0], strides = [1, 1] : vector<2x2xi32> into vector<3x2xi32>
   return %a, %b, %c, %d, %e, %f, %g :
     vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>
 }
@@ -3188,7 +3387,7 @@ func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
   %c4 = arith.constant 4 : index
   %c10 = arith.constant 10 : index
   %mask = vector.create_mask %c10, %c4 : vector<12x7xi1>
-  %res = vector.extract_strided_slice %mask {offsets = [3], sizes = [5], strides = [1]} : vector<12x7xi1> to vector<5x7xi1>
+  %res = vector.extract_strided_slice %mask offsets = [3], sizes = [5], strides = [1] : vector<12x7xi1> to vector<5x7xi1>
   return %res : vector<5x7xi1>
 }
 
@@ -3855,7 +4054,7 @@ func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
 // CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0, 0] : vector<4xi32> from vector<8x1x2x1x1x4xi32>
 // CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
 func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_overlap(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<4xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1] : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
   %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<4xi32>
   return %2 : vector<4xi32>
 }
@@ -3866,7 +4065,7 @@ func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_d
 // CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0] : vector<4xi32> from vector<8x2x4xi32>
 // CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
 func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_no_overlap(%arg0 : vector<8x2x4xi32>) -> vector<4xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<8x2x4xi32> to vector<1x1x4xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0], sizes = [1, 1], strides = [1, 1] : vector<8x2x4xi32> to vector<1x1x4xi32>
   %2 = vector.shape_cast %1 : vector<1x1x4xi32> to vector<4xi32>
   return %2 : vector<4xi32>
 }
@@ -3877,7 +4076,7 @@ func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_d
 // CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0] : vector<1x4xi32> from vector<8x1x2x1x1x4xi32>
 // CHECK-NEXT:   return %[[EXTRACT]] :  vector<1x4xi32>
 func.func @contiguous_extract_strided_slices_to_extract_shorter_size_list(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x4xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1], strides = [1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1], strides = [1, 1, 1, 1, 1] : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
   %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<1x4xi32>
   return %2 : vector<1x4xi32>
 }
@@ -3887,7 +4086,7 @@ func.func @contiguous_extract_strided_slices_to_extract_shorter_size_list(%arg0 
 // CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size
 // CHECK-NEXT:   vector.extract_strided_slice
 func.func @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<8x1x1x1x1x4xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [8, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<8x1x1x1x1x4xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0, 0, 0, 0, 0], sizes = [8, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1] : vector<8x1x2x1x1x4xi32> to vector<8x1x1x1x1x4xi32>
   return %1 : vector<8x1x1x1x1x4xi32>
 }
 
@@ -3896,7 +4095,7 @@ func.func @contiguous_extract_strided_slices_to_extract_failure_non_unit_outer_s
 // CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_size
 // CHECK-NEXT:   vector.extract_strided_slice
 func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x1x1x1x2xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 2], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x2xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 2], strides = [1, 1, 1, 1, 1, 1] : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x2xi32>
   return %1 : vector<1x1x1x1x1x2xi32>
 }
 
@@ -3905,7 +4104,7 @@ func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_size(%a
 // CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size
 // CHECK-NEXT:    vector.extract_strided_slice
 func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_size(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<1x1x2x1x1x1xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 2, 1, 1, 1], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x2x1x1x1xi32>
+  %1 = vector.extract_strided_slice %arg0 offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 2, 1, 1, 1], strides = [1, 1, 1, 1, 1, 1] : vector<8x1x2x1x1x4xi32> to vector<1x1x2x1x1x1xi32>
   return %1 : vector<1x1x2x1x1x1xi32>
 }
 
@@ -4170,12 +4369,12 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32
 // CHECK-LABEL: extract_strided_slice_of_extract_strided_slice
 //  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
 //       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
-//  CHECK-SAME: {offsets = [1, 3], sizes = [2, 2], strides = [1, 1]}
+//  CHECK-SAME: offsets = [1, 3], sizes = [2, 2], strides = [1, 1]
 //  CHECK-SAME: : vector<4x8x16xf32> to vector<2x2x16xf32>
 //       CHECK: return %[[RESULT]]
 func.func @extract_strided_slice_of_extract_strided_slice(%arg0: vector<4x8x16xf32>) -> vector<2x2x16xf32> {
-  %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
-  %1 = vector.extract_strided_slice %0 {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]} : vector<3x4x16xf32> to vector<2x2x16xf32>
+  %0 = vector.extract_strided_slice %arg0 offsets = [1, 2], sizes = [3, 4], strides = [1, 1] : vector<4x8x16xf32> to vector<3x4x16xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [0, 1], sizes = [2, 2], strides = [1, 1] : vector<3x4x16xf32> to vector<2x2x16xf32>
   return %1 : vector<2x2x16xf32>
 }
 
@@ -4184,12 +4383,12 @@ func.func @extract_strided_slice_of_extract_strided_slice(%arg0: vector<4x8x16xf
 // CHECK-LABEL: extract_strided_slice_inner_shorter
 //  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
 //       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
-//  CHECK-SAME: {offsets = [1, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1]}
+//  CHECK-SAME: offsets = [1, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1]
 //  CHECK-SAME: : vector<4x8x16xf32> to vector<2x2x4xf32>
 //       CHECK: return %[[RESULT]]
 func.func @extract_strided_slice_inner_shorter(%arg0: vector<4x8x16xf32>) -> vector<2x2x4xf32> {
-  %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [3], strides = [1]} : vector<4x8x16xf32> to vector<3x8x16xf32>
-  %1 = vector.extract_strided_slice %0 {offsets = [0, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1]} : vector<3x8x16xf32> to vector<2x2x4xf32>
+  %0 = vector.extract_strided_slice %arg0 offsets = [1], sizes = [3], strides = [1] : vector<4x8x16xf32> to vector<3x8x16xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [0, 1, 2], sizes = [2, 2, 4], strides = [1, 1, 1] : vector<3x8x16xf32> to vector<2x2x4xf32>
   return %1 : vector<2x2x4xf32>
 }
 
@@ -4198,12 +4397,12 @@ func.func @extract_strided_slice_inner_shorter(%arg0: vector<4x8x16xf32>) -> vec
 // CHECK-LABEL: extract_strided_slice_outer_shorter
 //  CHECK-SAME: %[[ARG0:.*]]: vector<4x8x16xf32>
 //       CHECK: %[[RESULT:.*]] = vector.extract_strided_slice %[[ARG0]]
-//  CHECK-SAME: {offsets = [1, 2], sizes = [2, 4], strides = [1, 1]}
+//  CHECK-SAME: offsets = [1, 2], sizes = [2, 4], strides = [1, 1]
 //  CHECK-SAME: : vector<4x8x16xf32> to vector<2x4x16xf32>
 //       CHECK: return %[[RESULT]]
 func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vector<2x4x16xf32> {
-  %0 = vector.extract_strided_slice %arg0 {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]} : vector<4x8x16xf32> to vector<3x4x16xf32>
-  %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
+  %0 = vector.extract_strided_slice %arg0 offsets = [1, 2], sizes = [3, 4], strides = [1, 1] : vector<4x8x16xf32> to vector<3x4x16xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [0], sizes = [2], strides = [1] : vector<3x4x16xf32> to vector<2x4x16xf32>
   return %1 : vector<2x4x16xf32>
 }
 
@@ -4238,4 +4437,30 @@ func.func @no_fold_alltrue_mask_empty_body_scalar_result(
   %all_true = vector.constant_mask [1] : vector<1xi1>
   %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
   return %result : i32
+}
+
+// -----
+
+// The test checks the `InterleaveDeinterleaveFolder` pattern of `vector.interleave`
+// to correctly fold the following identity:
+//  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+
+// CHECK-LABEL: func @interleave_deinterleave_fold
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<4xf32>)
+//       CHECK: return %[[ARG0]]
+func.func @interleave_deinterleave_fold(%arg0: vector<4xf32>) -> vector<4xf32> {
+  %even, %odd = vector.deinterleave %arg0 : vector<4xf32> -> vector<2xf32>
+  %result = vector.interleave %even, %odd : vector<2xf32> -> vector<4xf32>
+  return %result : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @interleave_splat
+//       CHECK:   %[[C:.*]] = arith.constant dense<0.000000e+00> : vector<[4]xf32>
+//       CHECK:   return %[[C]]
+func.func @interleave_splat() -> vector<[4]xf32> {
+  %cst = arith.constant dense<0.0> : vector<[2]xf32>
+  %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
+  return %0 : vector<[4]xf32>
 }

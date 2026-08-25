@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <string>
 
 namespace fir {
 
@@ -25,6 +26,7 @@ struct NameUniquer;
 
 #define GEN_PASS_DECL_FIRTOLLVMLOWERING
 #define GEN_PASS_DECL_CODEGENREWRITE
+#define GEN_PASS_DECL_REMATERIALIZEFIRBOXOPSPASS
 #define GEN_PASS_DECL_TARGETREWRITEPASS
 #define GEN_PASS_DECL_BOXEDPROCEDUREPASS
 #define GEN_PASS_DECL_LOWERREPACKARRAYSPASS
@@ -60,10 +62,21 @@ struct FIRToLLVMPassOptions {
   // type's descriptor.
   bool typeDescriptorsRenamedForAssembly = false;
 
+  // Name of the function to call when allocating CUDA Fortran descriptors
+  // during FIR-to-LLVM lowering. Must have the same signature as
+  // CUFAllocDescriptor. Empty defaults to CUFAllocDescriptor.
+  std::string cudaDescriptorAllocFunction;
+
   // Specify the calculation method for complex number division used by the
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
+
+  // Suffix appended to the libc allocator name (malloc, free, aligned_alloc,
+  // posix_memalign) for allocations marked with a heap allocation mode, e.g.
+  // malloc -> malloc_unified. Lets a runtime name its entry points otherwise.
+  std::string unifiedHeapAllocSuffix = "_unified";
+  std::string managedHeapAllocSuffix = "_managed";
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

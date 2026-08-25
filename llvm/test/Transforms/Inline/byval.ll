@@ -182,14 +182,6 @@ entry:
 @c = common addrspace(1) global i32 0, align 4
 
 define internal void @f5_as1(ptr addrspace(1) byval(%struct.S1) nocapture readonly align 4 %p) {
-; CHECK-LABEL: define internal void @f5_as1(
-; CHECK-SAME: ptr addrspace(1) readonly byval([[STRUCT_S1:%.*]]) align 4 captures(none) [[P:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr addrspace(1) @d, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[P]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) @c, align 4
-; CHECK-NEXT:    ret void
-;
 entry:
   store i32 0, ptr addrspace(1) @d, align 4
   %0 = load i32, ptr addrspace(1) %p, align 4
@@ -200,7 +192,13 @@ entry:
 define i32 @test5_as1() {
 ; CHECK-LABEL: define i32 @test5_as1() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @f5_as1(ptr addrspace(1) byval([[STRUCT_S1:%.*]]) align 4 @d)
+; CHECK-NEXT:    [[D:%.*]] = alloca [[STRUCT_S1:%.*]], align 8, addrspace(1)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p1(ptr addrspace(1) [[D]])
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 8 [[D]], ptr addrspace(1) align 4 @d, i64 4, i1 false)
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) @d, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[D]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) @c, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.end.p1(ptr addrspace(1) [[D]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) @c, align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;

@@ -4,7 +4,7 @@
 // target teams distribute parallel do.
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 : ui64, "dlti.global_memory_space" = 1 : ui64>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
-  omp.declare_reduction @add_reduction_byref_box_4xi32 : !llvm.ptr attributes {byref_element_type = !llvm.array<4 x i32>} alloc {
+  omp.declare_reduction @add_reduction_byref_box_4xi32 byref_element_type(!llvm.array<4 x i32>) : !llvm.ptr alloc {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -25,8 +25,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
-    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "red_array"}
-    omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
+    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) name("red_array") -> !llvm.ptr
+    omp.target kernel_type(spmd) map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.mlir.constant(1000 : i32) : i32
       omp.teams reduction(byref @add_reduction_byref_box_4xi32 %arg0 -> %arg1 : !llvm.ptr) {
@@ -41,12 +41,20 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }
+
+// Verify kernel environment has correct ReductionDataSize for by-ref array
+// reduction.  The by-ref element type is [4 x i32] = 16 bytes, so the
+// struct should be {[4 x i32]} = 16 bytes.  Failing to account for the by-ref
+// indirection would result in a struct of {ptr} = 8 bytes.
+// ReductionBufferLength is 0: the offload plugin sizes the teams reduction
+// buffer at launch from the actual number of teams.
+// AMDGCN: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16 }
 
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // AMDGCN-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func
@@ -54,10 +62,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // AMDGCN: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
 // AMDGCN: store ptr {{%.*}}, ptr
 
-// AMDGCN-LABEL: define internal void @_omp_reduction_list_to_global_reduce_func
-// AMDGCN: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
-// AMDGCN: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
-// AMDGCN: store ptr {{%.*}}, ptr
+// No longer emitted: __kmpc_gpu_xteam_reduce_nowait does not take the
+// list-to-global reduce callback, so createReductionsGPU stops emitting it.
+// AMDGCN-NOT: define internal void @_omp_reduction_list_to_global_reduce_func
 
 // AMDGCN-LABEL: define internal void @_omp_reduction_global_to_list_copy_func
 // AMDGCN: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
@@ -67,7 +74,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // -----
 
 module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true, omp.is_target_device = true} {
-  omp.declare_reduction @add_reduction_byref_box_4xi32 : !llvm.ptr attributes {byref_element_type = !llvm.array<4 x i32>} alloc {
+  omp.declare_reduction @add_reduction_byref_box_4xi32 byref_element_type(!llvm.array<4 x i32>) : !llvm.ptr alloc {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -88,8 +95,8 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
-    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "red_array"}
-    omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
+    %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) name("red_array") -> !llvm.ptr
+    omp.target kernel_type(spmd) map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.mlir.constant(1000 : i32) : i32
       omp.teams reduction(byref @add_reduction_byref_box_4xi32 %arg0 -> %arg1 : !llvm.ptr) {
@@ -104,12 +111,14 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }
+
+// NVPTX: @{{.*}}_kernel_environment = {{.*}} %struct.ConfigurationEnvironmentTy { {{.*}}i32 16 }
 
 // Verify descriptor is copied via memcpy and base_ptr is updated in all helpers
 // NVPTX-LABEL: define internal void @_omp_reduction_shuffle_and_reduce_func
@@ -117,13 +126,11 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
 // NVPTX: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
 // NVPTX: store ptr {{%.*}}, ptr
 
-// NVPTX-LABEL: define internal void @_omp_reduction_list_to_global_reduce_func
-// NVPTX: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
-// NVPTX: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
-// NVPTX: store ptr {{%.*}}, ptr
+// No longer emitted: __kmpc_gpu_xteam_reduce_nowait does not take the
+// list-to-global reduce callback, so createReductionsGPU stops emitting it.
+// NVPTX-NOT: define internal void @_omp_reduction_list_to_global_reduce_func
 
 // NVPTX-LABEL: define internal void @_omp_reduction_global_to_list_copy_func
 // NVPTX: call void @llvm.memcpy{{.*}}(ptr {{.*}}, ptr {{.*}}, i64 {{[0-9]+}}, i1 false)
 // NVPTX: getelementptr {{.*}} ptr {{%.*}}, i32 0, i32 0
 // NVPTX: store ptr {{%.*}}, ptr
-

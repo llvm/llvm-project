@@ -11,14 +11,14 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %0 = arith.constant dense<42.> : vector<4xf32>
 // CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
   %1 = arith.addf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : vector<4xi64>
-  %3 = arith.divsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : vector<4xi64>
-  %4 = arith.divui %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : vector<4xi64>
-  %5 = arith.remsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : vector<4xi64>
-  %6 = arith.remui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg3 : vector<4xi64>
+  %3 = arith.divsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg3 : vector<4xi64>
+  %4 = arith.divui %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg3 : vector<4xi64>
+  %5 = arith.remsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg3 : vector<4xi64>
+  %6 = arith.remui %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : vector<4xf32>
   %7 = arith.divf %arg0, %0 : vector<4xf32>
 // CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : vector<4xf32>
@@ -31,10 +31,10 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %11 = arith.xori %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = arith.shli %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : vector<4xi64>
-  %13 = arith.shrsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
-  %14 = arith.shrui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg3 : vector<4xi64>
+  %13 = arith.shrsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg3 : vector<4xi64>
+  %14 = arith.shrui %arg2, %arg3 : vector<4xi64>
   return %1 : vector<4xf32>
 }
 
@@ -156,6 +156,30 @@ func.func @index_castui_nneg_not_set(%arg0: i1) {
 // CHECK-NOT: nneg
   %0 = arith.index_castui %arg0 : i1 to index
   return
+}
+
+// -----
+
+// Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+// pointers and all memrefs with integer or index element types convert to the
+// same struct type. Verify that no sext/zext/trunc is generated.
+
+// CHECK-LABEL: @memref_index_cast
+// CHECK-NOT: llvm.sext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_cast(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_cast %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @memref_index_castui
+// CHECK-NOT: llvm.zext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_castui(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_castui %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
 }
 
 // -----
@@ -377,6 +401,68 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: experimental_constrained_addf
+func.func @experimental_constrained_addf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 downward ignore
+  %1 = arith.addf %arg0, %arg1 downward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 upward ignore
+  %2 = arith.addf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 towardzero ignore
+  %3 = arith.addf %arg0, %arg1 toward_zero : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearestaway ignore
+  %4 = arith.addf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_subf
+func.func @experimental_constrained_subf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 tonearest ignore
+  %0 = arith.subf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 downward ignore
+  %1 = arith.subf %arg0, %arg1 downward : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_mulf
+func.func @experimental_constrained_mulf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 upward ignore
+  %0 = arith.mulf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 towardzero ignore
+  %1 = arith.mulf %arg0, %arg1 toward_zero : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_divf
+func.func @experimental_constrained_divf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearest ignore
+  %0 = arith.divf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearestaway ignore
+  %1 = arith.divf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// Verify that fastmath flags are stripped when lowering to constrained
+// intrinsics (constrained FP and fastmath are contradictory).
+// CHECK-LABEL: constrained_addf_with_fastmath
+func.func @constrained_addf_with_fastmath(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore : f64
+// CHECK-NOT: fastmath
+  %0 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f64
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @convertf_f16_to_bf16
 func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
 // CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
@@ -471,7 +557,7 @@ func.func @fcmp(f32, f32) -> () {
   %13 = arith.cmpf une, %arg0, %arg1 : f32
   %14 = arith.cmpf uno, %arg0, %arg1 : f32
 
-  %15 = arith.cmpf oeq, %arg0, %arg1 {fastmath = #arith.fastmath<fast>} : f32
+  %15 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
   return
 }
@@ -518,6 +604,30 @@ func.func @addui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -
   %sum, %carry = arith.addui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
   // CHECK-NEXT: return [[SUM]], [[CARRY]] : vector<3xi16>, vector<3xi1>
   return %sum, %carry : vector<3xi16>, vector<3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @subui_extended_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> (i32, i1)
+func.func @subui_extended_scalar(%arg0: i32, %arg1: i32) -> (i32, i1) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (i32, i32) -> !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(i32, i1)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i32, i1
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subui_extended_vector1d
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3xi16>, [[ARG1:%.+]]: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>)
+func.func @subui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (vector<3xi16>, vector<3xi16>) -> !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : vector<3xi16>, vector<3xi1>
+  return %diff, %borrow : vector<3xi16>, vector<3xi1>
 }
 
 // -----
@@ -670,16 +780,16 @@ func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
 }
 
 // CHECK-LABEL: @ceildivui
-// CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
-func.func @ceildivui(%arg0 : i32) -> i32 {
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
+func.func @ceildivui(%arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
 // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
-// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
+// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG1]] : i32
 // CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
 // CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
-  %0 = arith.ceildivui %arg0, %arg0 : i32
+  %0 = arith.ceildivui %arg0, %arg1 : i32
   return %0: i32
 }
 
@@ -871,4 +981,3 @@ func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8
   %3 = arith.cmpf oeq, %arg0, %arg3 : f32
   return
 }
-

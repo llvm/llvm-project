@@ -617,7 +617,11 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // to avoid a memory leak.
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple, SkipModuleCPU, FeaturesStr, Options, RM, CM, OLvl));
-    assert(Target && "Could not allocate target machine!");
+    if (!Target) {
+      WithColor::error(errs(), argv[0])
+          << "could not allocate target machine\n";
+      return 1;
+    }
 
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
@@ -646,7 +650,11 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
-    assert(Target && "Could not allocate target machine!");
+    if (!Target) {
+      WithColor::error(errs(), argv[0])
+          << "could not allocate target machine\n";
+      exit(1);
+    }
 
     // Set PGO options based on command line flags
     setPGOOptions(*Target);
@@ -667,17 +675,14 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     Err.print(argv[0], WithColor::error(errs(), argv[0]));
     return 1;
   }
-  if (!TargetTriple.empty())
-    M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
+
+  M->setTargetTriple(TheTriple);
 
   std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
   if (!CM && CM_IR)
     Target->setCodeModel(*CM_IR);
   if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
     Target->setLargeDataThreshold(*LDT);
-
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
@@ -741,20 +746,27 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   else if (VerifyEach)
     VK = VerifierKind::EachPass;
 
-  if (EnableNewPassManager || !PassPipeline.empty()) {
-    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
-                                  std::move(Target), std::move(Out),
-                                  std::move(DwoOut), Context, TLII, VK,
-                                  PassPipeline, codegen::getFileType());
+  // Use the NewPM if the user specifies -passes (NewPM specific), specifically
+  // requests the NewPM with -enable-new-pm, or the target defaults to the
+  // NewPM, the user has not explicitly disabled the NewPM with
+  // -enable-new-pm=false, and the user has not specified -run-pass.
+  if (!PassPipeline.empty() ||
+      (EnableNewPassManager.getNumOccurrences() > 0 && EnableNewPassManager) ||
+      (Target->shouldDefaultToNewPM() &&
+       !(EnableNewPassManager.getNumOccurrences() && !EnableNewPassManager) &&
+       getRunPassNames().empty())) {
+    return compileModuleWithNewPM(
+        argv[0], std::move(M), std::move(MIR), std::move(Target),
+        std::move(Out), std::move(DwoOut), Context, TLII, VK, PassPipeline,
+        PluginList, codegen::getFileType());
   }
 
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
-      Target->Options.EABIVersion, Options.MCOptions.ABIName,
-      Target->Options.VecLib));
+      Target->Options.ExceptionModel, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

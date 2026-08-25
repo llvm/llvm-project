@@ -552,6 +552,27 @@ OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
+OMPSplitDirective *
+OMPSplitDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                          SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                          unsigned NumLoops, Stmt *AssociatedStmt,
+                          Stmt *TransformedStmt, Stmt *PreInits) {
+  OMPSplitDirective *Dir = createDirective<OMPSplitDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  return Dir;
+}
+
+OMPSplitDirective *OMPSplitDirective::CreateEmpty(const ASTContext &C,
+                                                  unsigned NumClauses,
+                                                  unsigned NumLoops) {
+  return createEmptyDirective<OMPSplitDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+}
+
 OMPFuseDirective *OMPFuseDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
@@ -1036,22 +1057,33 @@ OMPScanDirective *OMPScanDirective::CreateEmpty(const ASTContext &C,
   return createEmptyDirective<OMPScanDirective>(C, NumClauses);
 }
 
-OMPOrderedDirective *OMPOrderedDirective::Create(const ASTContext &C,
-                                                 SourceLocation StartLoc,
-                                                 SourceLocation EndLoc,
-                                                 ArrayRef<OMPClause *> Clauses,
-                                                 Stmt *AssociatedStmt) {
-  return createDirective<OMPOrderedDirective>(
-      C, Clauses, cast_or_null<CapturedStmt>(AssociatedStmt),
-      /*NumChildren=*/0, StartLoc, EndLoc);
+OMPOrderedStandaloneDirective *OMPOrderedStandaloneDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses) {
+  return createDirective<OMPOrderedStandaloneDirective>(
+      C, Clauses, /*AssociatedStmt=*/nullptr, /*NumChildren=*/0, StartLoc,
+      EndLoc);
 }
 
-OMPOrderedDirective *OMPOrderedDirective::CreateEmpty(const ASTContext &C,
-                                                      unsigned NumClauses,
-                                                      bool IsStandalone,
-                                                      EmptyShell) {
-  return createEmptyDirective<OMPOrderedDirective>(C, NumClauses,
-                                                   !IsStandalone);
+OMPOrderedStandaloneDirective *
+OMPOrderedStandaloneDirective::CreateEmpty(const ASTContext &C,
+                                           unsigned NumClauses, EmptyShell) {
+  return createEmptyDirective<OMPOrderedStandaloneDirective>(C, NumClauses);
+}
+
+OMPOrderedBlockAssocDirective *OMPOrderedBlockAssocDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt) {
+  return createDirective<OMPOrderedBlockAssocDirective>(
+      C, Clauses, cast<CapturedStmt>(AssociatedStmt), /*NumChildren=*/0,
+      StartLoc, EndLoc);
+}
+
+OMPOrderedBlockAssocDirective *
+OMPOrderedBlockAssocDirective::CreateEmpty(const ASTContext &C,
+                                           unsigned NumClauses, EmptyShell) {
+  return createEmptyDirective<OMPOrderedBlockAssocDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true);
 }
 
 OMPAtomicDirective *

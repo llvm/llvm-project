@@ -285,16 +285,15 @@ test.format_optional_else else
 
 //===----------------------------------------------------------------------===//
 // Default-valued properties (ex. optional) elided in property dictionary
-// TODO: elisions generate extra spaces
 //===----------------------------------------------------------------------===//
 
-// CHECK: test.format_optional_prop_dict {{$}}
+// CHECK: test.format_optional_prop_dict{{$}}
 test.format_optional_prop_dict
 
-// CHECK: test.format_optional_prop_dict {{$}}
+// CHECK: test.format_optional_prop_dict{{$}}
 test.format_optional_prop_dict <{a = [], b = 1 : i32}>
 
-// CHECK: test.format_optional_prop_dict {{$}}
+// CHECK: test.format_optional_prop_dict{{$}}
 test.format_optional_prop_dict <{}>
 
 // CHECK: test.format_optional_prop_dict <{a = ["foo"]}>
@@ -493,6 +492,12 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_types_match_optional
 test.format_types_match_optional
+
+// CHECK: test.format_optional_operand_type
+test.format_optional_operand_type
+
+// CHECK: test.format_optional_operand_type(%[[I64]]) : i64
+test.format_optional_operand_type(%i64) : i64
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference

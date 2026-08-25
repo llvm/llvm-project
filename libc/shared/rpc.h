@@ -20,10 +20,21 @@
 
 #include "rpc_util.h"
 
-namespace rpc {
-
 /// Use scoped atomic variants if they are available for the target.
 #if !__has_builtin(__scoped_atomic_load_n)
+#ifdef _MSC_VER // MSVC atomic support.
+#include <intrin.h>
+#define __scoped_atomic_load_n(src, ord, scp)                                  \
+  __iso_volatile_load32((const volatile int32_t *)(src))
+#define __scoped_atomic_store_n(dst, src, ord, scp)                            \
+  (sizeof(*(dst)) == 4                                                         \
+       ? __iso_volatile_store32((volatile int32_t *)(dst), (__int32)(src))     \
+       : __iso_volatile_store64((volatile int64_t *)(dst), (__int64)(src)))
+#define __scoped_atomic_fetch_or(src, val, ord, scp)                           \
+  _InterlockedOr((volatile long *)(src), (long)(val))
+#define __scoped_atomic_fetch_and(src, val, ord, scp)                          \
+  _InterlockedAnd((volatile long *)(src), (long)(val))
+#else // GNU atomic support.
 #define __scoped_atomic_load_n(src, ord, scp) __atomic_load_n(src, ord)
 #define __scoped_atomic_store_n(dst, src, ord, scp)                            \
   __atomic_store_n(dst, src, ord)
@@ -36,12 +47,19 @@ namespace rpc {
 #define __scoped_atomic_fetch_sub(src, val, ord, scp)                          \
   __atomic_fetch_sub(src, val, ord)
 #endif
+#endif
 #if !__has_builtin(__scoped_atomic_thread_fence)
+#ifdef _MSC_VER
+#define __scoped_atomic_thread_fence(ord, scp) _ReadWriteBarrier()
+#else
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
+#endif
+
+namespace rpc {
 
 /// Generic codes that can be used when implementing the server.
-enum Status {
+enum RPCStatus {
   RPC_SUCCESS = 0x0,
   RPC_ERROR = 0x1000,
   RPC_UNHANDLED_OPCODE = 0x1001,
@@ -56,8 +74,8 @@ static_assert(sizeof(Buffer) == 64, "Buffer size mismatch");
 /// A target specific struct containing a doorbell to wake the server-side
 /// thread.
 struct alignas(64) Doorbell {
-  uint64_t *value;
-  uint64_t *mailbox;
+  RPC_GLOBAL uint64_t *value;
+  RPC_GLOBAL uint64_t *mailbox;
   uint32_t event_id;
 };
 
@@ -94,26 +112,26 @@ template <bool Invert> struct Process {
   RPC_ATTRS ~Process() = default;
 
   const uint32_t port_count = 0;
-  Doorbell *const doorbell = nullptr;
-  const uint32_t *const inbox = nullptr;
-  uint32_t *const outbox = nullptr;
-  Header *const header = nullptr;
-  Buffer *const packet = nullptr;
+  RPC_GLOBAL Doorbell *const doorbell = nullptr;
+  RPC_GLOBAL const uint32_t *const inbox = nullptr;
+  RPC_GLOBAL uint32_t *const outbox = nullptr;
+  RPC_GLOBAL Header *const header = nullptr;
+  RPC_GLOBAL Buffer *const packet = nullptr;
 
   static constexpr uint64_t NUM_BITS_IN_WORD = sizeof(uint32_t) * 8;
   uint32_t lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
+  // The buffer is supplied by the host unqualified, so the casts below are
+  // C-style as they need to change the address space.
   RPC_ATTRS Process(uint32_t port_count, void *buffer)
-      : port_count(port_count), doorbell(reinterpret_cast<Doorbell *>(
-                                    advance(buffer, doorbell_offset()))),
-        inbox(reinterpret_cast<uint32_t *>(
-            advance(buffer, inbox_offset(port_count)))),
-        outbox(reinterpret_cast<uint32_t *>(
-            advance(buffer, outbox_offset(port_count)))),
-        header(reinterpret_cast<Header *>(
-            advance(buffer, header_offset(port_count)))),
-        packet(reinterpret_cast<Buffer *>(
-            advance(buffer, buffer_offset(port_count)))) {}
+      : port_count(port_count),
+        doorbell((RPC_GLOBAL Doorbell *)advance(buffer, doorbell_offset())),
+        inbox((RPC_GLOBAL uint32_t *)advance(buffer, inbox_offset(port_count))),
+        outbox(
+            (RPC_GLOBAL uint32_t *)advance(buffer, outbox_offset(port_count))),
+        header((RPC_GLOBAL Header *)advance(buffer, header_offset(port_count))),
+        packet(
+            (RPC_GLOBAL Buffer *)advance(buffer, buffer_offset(port_count))) {}
 
   /// Allocate a memory buffer sufficient to store the following equivalent
   /// representation in memory.
@@ -132,30 +150,36 @@ template <bool Invert> struct Process {
 
   /// Ring the doorbell if the protocol was configured with one.
   RPC_ATTRS void notify(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
     uint32_t event_id = rpc::broadcast_value(lane_mask, doorbell->event_id);
     if (rpc::is_first_lane(lane_mask)) {
+      // The interrupt is optional and is skipped if there is no mailbox.
       if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
-                                     __MEMORY_SCOPE_SYSTEM)) {
-        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
+                                     __MEMORY_SCOPE_SYSTEM) &&
+          doorbell->mailbox) {
         __scoped_atomic_store_n(doorbell->mailbox,
                                 static_cast<uint64_t>(doorbell->event_id),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+        __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
         signal_interrupt(event_id);
       }
     }
+#endif
   }
 
   /// Decrement the doorbell signal if the protocol is using one.
   RPC_ATTRS void finish(uint64_t lane_mask) const {
+#ifndef _MSC_VER
     if (!doorbell->value)
       return;
 
     if (rpc::is_first_lane(lane_mask))
       __scoped_atomic_fetch_sub(doorbell->value, 1UL, __ATOMIC_RELAXED,
                                 __MEMORY_SCOPE_SYSTEM);
+#endif
   }
 
   /// Retrieve the inbox state from memory shared between processes.
@@ -190,8 +214,8 @@ template <bool Invert> struct Process {
   /// Given the current outbox and inbox values, wait until the inbox changes
   /// to indicate that this thread owns the buffer element.
   RPC_ATTRS void wait_for_ownership(uint64_t lane_mask, uint32_t index,
-                                    uint32_t outbox, uint32_t in) {
-    while (buffer_unavailable(in, outbox)) {
+                                    uint32_t out, uint32_t in) {
+    while (buffer_unavailable(in, out)) {
       sleep_briefly();
       in = load_inbox(lane_mask, index);
     }
@@ -201,7 +225,7 @@ template <bool Invert> struct Process {
   /// The packet is a linearly allocated array of buffers used to communicate
   /// with the other process. This function returns the appropriate slot in this
   /// array such that the process can operate on an entire warp or wavefront.
-  RPC_ATTRS Buffer *get_packet(uint32_t index, uint32_t lane_size) {
+  RPC_ATTRS RPC_GLOBAL Buffer *get_packet(uint32_t index, uint32_t lane_size) {
     return &packet[index * lane_size];
   }
 
@@ -332,7 +356,7 @@ template <bool Invert> struct Process {
 /// Invokes a function across every active buffer across the total lane size.
 template <typename F>
 RPC_ATTRS static void invoke_rpc(F &&fn, uint32_t lane_size, uint64_t lane_mask,
-                                 Buffer *slot) {
+                                 RPC_GLOBAL Buffer *slot) {
   if constexpr (is_process_gpu()) {
     fn(&slot[rpc::get_lane_id()], rpc::get_lane_id());
   } else {
@@ -395,7 +419,7 @@ private:
     if (owns_buffer && T)
       out = process.invert_outbox(lane_mask, index, out);
     process.unlock(lane_mask, index);
-    if constexpr (!T)
+    if constexpr (T)
       process.finish(lane_mask);
   }
 
@@ -503,7 +527,7 @@ template <bool T>
 template <typename W>
 RPC_ATTRS void Port<T>::recv_and_send(W work) {
   recv(work);
-  send([](Buffer *, uint32_t) { /* no-op */ });
+  send([](RPC_GLOBAL Buffer *, uint32_t) { /* no-op */ });
 }
 
 /// Helper routine to simplify the interface when sending from the GPU using
@@ -520,7 +544,7 @@ RPC_ATTRS void Port<T>::send_n(const void *src, uint64_t size) {
 template <bool T>
 RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
   uint64_t num_sends = 0;
-  send([&](Buffer *buffer, uint32_t id) {
+  send([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     reinterpret_cast<uint64_t *>(buffer->data)[0] = lane_value(size, id);
     num_sends = is_process_gpu() ? lane_value(size, id)
                                  : rpc::max(lane_value(size, id), num_sends);
@@ -533,7 +557,7 @@ RPC_ATTRS void Port<T>::send_n(const void *const *src, uint64_t *size) {
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
   while (rpc::ballot(mask, idx < num_sends)) {
-    send([=](Buffer *buffer, uint32_t id) {
+    send([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
                          : lane_value(size, id) - idx;
@@ -551,7 +575,7 @@ template <bool T>
 template <typename A>
 RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   uint64_t num_recvs = 0;
-  recv([&](Buffer *buffer, uint32_t id) {
+  recv([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
     lane_value(size, id) = reinterpret_cast<uint64_t *>(buffer->data)[0];
     lane_value(dst, id) =
         reinterpret_cast<uint8_t *>(alloc(lane_value(size, id)));
@@ -566,7 +590,7 @@ RPC_ATTRS void Port<T>::recv_n(void **dst, uint64_t *size, A &&alloc) {
   uint64_t idx = sizeof(Buffer::data) - sizeof(uint64_t);
   uint64_t mask = process.header[index].mask;
   while (rpc::ballot(mask, idx < num_recvs)) {
-    recv([=](Buffer *buffer, uint32_t id) {
+    recv([=](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       uint64_t len = lane_value(size, id) - idx > sizeof(Buffer::data)
                          ? sizeof(Buffer::data)
                          : lane_value(size, id) - idx;
@@ -583,7 +607,7 @@ template <typename Ty>
 RPC_ATTRS void Port<T>::send_n(const Ty *src) {
   for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
     const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
-    send([&](Buffer *buffer, uint32_t id) {
+    send([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       rpc_memcpy(buffer->data, advance(&lane_value(src, id), idx), bytes);
     });
   }
@@ -595,7 +619,7 @@ template <typename Ty>
 RPC_ATTRS void Port<T>::recv_n(Ty *dst) {
   for (uint64_t idx = 0; idx < sizeof(Ty); idx += sizeof(Buffer::data)) {
     const uint64_t bytes = rpc::min(sizeof(Ty) - idx, sizeof(Buffer::data));
-    recv([&](Buffer *buffer, uint32_t id) {
+    recv([&](RPC_GLOBAL Buffer *buffer, uint32_t id) {
       rpc_memcpy(advance(&lane_value(dst, id), idx), buffer->data, bytes);
     });
   }

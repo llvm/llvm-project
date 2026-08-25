@@ -13,11 +13,52 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 namespace Fortran::utils::openmp {
+std::string getCanonicalDefaultDeclareMapperName(fir::RecordType recordType) {
+  auto appendKinds = [](std::string &name, llvm::ArrayRef<std::int64_t> kinds) {
+    for (std::int64_t kind : kinds) {
+      name.append("K");
+      if (kind < 0) {
+        name.append("N");
+        kind = -kind;
+      }
+      name.append(std::to_string(kind));
+    }
+  };
+
+  auto [kind, deconstructed] =
+      fir::NameUniquer::deconstruct(recordType.getName());
+  if (kind != fir::NameUniquer::NameKind::DERIVED_TYPE)
+    return recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+
+  // Preserve legacy symbol spelling for non-parameterized types.
+  // Rebuilding through doGenerated() can duplicate module prefixes for
+  // intrinsic-derived names like __fortran_builtins::c_ptr.
+  if (deconstructed.kinds.empty())
+    return recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+
+  llvm::SmallVector<llvm::StringRef> modules;
+  llvm::SmallVector<llvm::StringRef> procs;
+  modules.reserve(deconstructed.modules.size());
+  procs.reserve(deconstructed.procs.size());
+  for (const std::string &module : deconstructed.modules)
+    modules.emplace_back(module);
+  for (const std::string &proc : deconstructed.procs) {
+    procs.emplace_back(proc);
+  }
+
+  std::string mapperName = deconstructed.name;
+  appendKinds(mapperName, deconstructed.kinds);
+  mapperName.append(llvm::omp::OmpDefaultMapperName);
+  return fir::NameUniquer::doGenerated(
+      modules, procs, deconstructed.blockId, mapperName);
+}
+
 mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
@@ -26,26 +67,33 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
     bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
 
+  auto getPtrVarType = [](mlir::Type ptrType) {
+    mlir::TypeAttr varType = mlir::TypeAttr::get(
+        llvm::cast<mlir::omp::PointerLikeType>(ptrType).getElementType());
+
+    // For types with unknown extents such as <2x?xi32> we discard the
+    // incomplete type info and only retain the base type. The correct
+    // dimensions are later recovered through the bounds info.
+    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+      if (seqType.hasDynamicExtents())
+        varType = mlir::TypeAttr::get(seqType.getEleTy());
+    return varType;
+  };
+
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
     retTy = baseAddr.getType();
   }
 
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  // For types with unknown extents such as <2x?xi32> we discard the incomplete
-  // type info and only retain the base type. The correct dimensions are later
-  // recovered through the bounds info.
-  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
-    if (seqType.hasDynamicExtents())
-      varType = mlir::TypeAttr::get(seqType.getEleTy());
+  auto varPtrType = getPtrVarType(retTy);
+  auto varPtrPtrTy =
+      varPtrPtr ? getPtrVarType(varPtrPtr.getType()) : mlir::TypeAttr{};
 
   mlir::omp::MapInfoOp op =
-      mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varType,
+      mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varPtrType,
           builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-          varPtrPtr, members, membersIndex, bounds, mapperId,
+          varPtrPtr, varPtrPtrTy, members, membersIndex, bounds, mapperId,
           builder.getStringAttr(name), builder.getBoolAttr(partialMap));
   return op;
 }
@@ -167,6 +215,29 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
     RecordMemberMapperMangler mangler) {
+  auto getKindlessDefaultMapperName =
+      [](fir::RecordType recType) -> std::string {
+    auto [nameKind, deconstructed] =
+        fir::NameUniquer::deconstruct(recType.getName());
+    if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE ||
+        deconstructed.kinds.empty())
+      return {};
+
+    llvm::SmallVector<llvm::StringRef> modules;
+    llvm::SmallVector<llvm::StringRef> procs;
+    modules.reserve(deconstructed.modules.size());
+    procs.reserve(deconstructed.procs.size());
+    for (const std::string &module : deconstructed.modules)
+      modules.emplace_back(module);
+    for (const std::string &proc : deconstructed.procs)
+      procs.emplace_back(proc);
+
+    std::string mapperName =
+        deconstructed.name + llvm::omp::OmpDefaultMapperName;
+    return fir::NameUniquer::doGenerated(
+        modules, procs, deconstructed.blockId, mapperName);
+  };
+
   if (mapperNameStr.empty())
     return {};
 
@@ -174,6 +245,15 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   if (moduleOp.lookupSymbol(mapperNameStr))
     return mlir::FlatSymbolRefAttr::get(
         firOpBuilder.getContext(), mapperNameStr);
+
+  if (std::string kindlessMapperName = getKindlessDefaultMapperName(recordType);
+      !kindlessMapperName.empty() && kindlessMapperName != mapperNameStr) {
+    if (auto explicitMapper = moduleOp.lookupSymbol<mlir::omp::DeclareMapperOp>(
+            kindlessMapperName);
+        explicitMapper && explicitMapper.getType() == recordType)
+      return mlir::FlatSymbolRefAttr::get(
+          firOpBuilder.getContext(), kindlessMapperName);
+  }
 
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
@@ -209,7 +289,6 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
         firOpBuilder, loc, firOpBuilder.getRefType(fieldTy), rec, field);
   };
 
-  llvm::SmallVector<mlir::Value> clauseMapVars;
   llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
   llvm::SmallVector<mlir::Value> memberMapOps;
 
@@ -221,11 +300,40 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
   for (const auto &entry : llvm::enumerate(recordType.getTypeList())) {
     const auto &memberName = entry.value().first;
     const auto &memberType = entry.value().second;
+
+    // OpenMP 5.0, 5.1, 5.2: Default Map Clause
+    //
+    // "If a component of a derived type list item is a map clause list item
+    // that results  from the predefined default mapper for that derived type,
+    // and the component is not also an explicit list item or the array base
+    // of an explicit list item on the same construct, then: if it has the
+    // POINTER attribute, it is attach-INELIGIBLE. If a list item in a map
+    // clause is an associated pointer that is attach-ineligible, the effect
+    // of the map clause does not apply to its pointer target."
+    //
+    // What this comes down to is we wish to skip emitting a map inside of
+    // the implicit declare mapper generation for pointer components. As well
+    // as preventing any nested record types that are pointers from being
+    // processed further by the declare mapper infrastructure. The
+    // descriptor ("pointer") should be mapped by the containing derived
+    // type, this prevents the data ("pointee") from being mapped and
+    // processed any further. We should, however, keep an eye on if the
+    // record types mapping applying to this descriptor poses issues, or
+    // if attach-ineligible still requires an attach map to be emitted
+    // alongside the descriptor, even if the pointee has no map emitted.
+    // if either case applies, then we will need to emit the maps here and
+    // then opt out of base address expansion for these implicit declare
+    // mappers in the MapInfoFinalization pass.
+    //
+    // Notably, this caveat does not apply to allocatables. They get
+    // deep-copy semantics.
+    if (fir::isPointerType(fir::unwrapRefType(memberType)))
+      continue;
+
     mlir::FlatSymbolRefAttr mapperId;
     if (auto recType = mlir::dyn_cast<fir::RecordType>(
             fir::getFortranElementType(memberType))) {
-      std::string mapperIdName =
-          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      std::string mapperIdName = getCanonicalDefaultDeclareMapperName(recType);
       mangler(mapperIdName, memberName);
       mapperId = getOrGenImplicitDefaultDeclareMapper(
           firOpBuilder, loc, recType, mapperIdName, mangler);
@@ -255,8 +363,9 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       captureKind, declareOp.getType(0),
       /*partialMap=*/true);
 
-  clauseMapVars.emplace_back(mapOp);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseMapVars);
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  clauseOps.mapVars.emplace_back(mapOp);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
   return mlir::FlatSymbolRefAttr::get(firOpBuilder.getContext(), mapperNameStr);
 }
 } // namespace Fortran::utils::openmp

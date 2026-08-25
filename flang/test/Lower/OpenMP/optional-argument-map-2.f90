@@ -46,7 +46,7 @@ end module mod
 ! CHECK:             %[[VAL_20:.*]] = arith.constant -1 : index
 ! CHECK:             fir.result %[[VAL_19]], %[[VAL_20]], %[[VAL_19]], %[[VAL_19]], %[[VAL_19]] : index, index, index, index, index
 ! CHECK:           }
-! CHECK:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_9]]#0 : index) upper_bound(%[[VAL_9]]#1 : index) extent(%[[VAL_9]]#2 : index) stride(%[[VAL_9]]#3 : index) start_idx(%[[VAL_9]]#4 : index) {stride_in_bytes = true}
+! CHECK:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_9]]#0 : index) upper_bound(%[[VAL_9]]#1 : index) extent(%[[VAL_9]]#2 : index) stride(%[[VAL_9]]#3 : index) start_idx(%[[VAL_9]]#4 : index) stride_in_bytes(true)
 ! CHECK:           %[[VAL_23:.*]] = fir.is_present %[[VAL_2]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> i1
 ! CHECK:           fir.if %[[VAL_23]] {
 ! CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -62,7 +62,7 @@ end module mod
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.char<1,4> {bindc_name = "b", uniq_name = "_QMmodFroutine_boxcharEb"}
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_4]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_6]]#1 : !fir.ref<!fir.char<1,4>>, !fir.char<1,4>) map_clauses(from) capture(ByRef) -> !fir.ref<!fir.char<1,4>> {name = "b"}
+! CHECK:           %[[VAL_7:.*]] = omp.map.info var_ptr(%[[VAL_6]]#1 : !fir.ref<!fir.char<1,4>>, !fir.char<1,4>) map_clauses(from) capture(ByRef) name("b") -> !fir.ref<!fir.char<1,4>>
 ! CHECK-FPRIV:     fir.store %[[VAL_3]]#0 to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-FPRIV:     %[[VAL_8:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-FPRIV:     %[[VAL_9:.*]]:2 = fir.unboxchar %[[VAL_8]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -70,18 +70,17 @@ end module mod
 ! CHECK-FPRIV:     %[[VAL_11:.*]] = arith.constant 1 : index
 ! CHECK-FPRIV:     %[[VAL_12:.*]]:2 = fir.unboxchar %[[VAL_8]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-FPRIV:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]]#1, %[[VAL_11]] : index
-! CHECK-FPRIV:     %[[VAL_14:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_12]]#1 : index) stride(%[[VAL_11]] : index) start_idx(%[[VAL_10]] : index) {stride_in_bytes = true}
+! CHECK-FPRIV:     %[[VAL_14:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_12]]#1 : index) stride(%[[VAL_11]] : index) start_idx(%[[VAL_10]] : index) stride_in_bytes(true)
 ! CHECK-FPRIV:     %[[VAL_16:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
-! CHECK-FPRIV:     %[[VAL_17:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%[[VAL_14]]) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>> {name = ""}
+! CHECK-FPRIV:     %[[VAL_17:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[VAL_14]]) name("") -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
 ! CHECK-FPRIV:     %[[VAL_18:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, to) capture(ByRef) members(%[[VAL_17]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>>
-! CHECK-FPRIV:     omp.target map_entries(%[[VAL_7]] -> %[[VAL_19:.*]], %[[VAL_18]] -> %[[VAL_20:.*]], %[[VAL_17]] -> %[[VAL_21:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) private(@_QMmodFroutine_boxcharEa_firstprivate_boxchar_c8xU %[[VAL_3]]#0 -> %[[VAL_22:.*]] [map_idx=1] : !fir.boxchar<1>) {
-! CHECK-FPRIV:         %[[VAL_23:.*]] = arith.constant 4 : index
-! CHECK-FPRIV:         %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_19]] typeparams %[[VAL_23]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK-FPRIV:         %[[VAL_25:.*]]:2 = fir.unboxchar %[[VAL_22]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-FPRIV:         %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]]#0 typeparams %[[VAL_25]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK-FPRIV:         hlfir.assign %[[VAL_26]]#0 to %[[VAL_24]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
-! CHECK-FPRIV:         omp.terminator
-! CHECK-FPRIV:       }
+! CHECK-FPRIV:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[VAL_16]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[VAL_14]]) -> !fir.ref<!fir.boxchar<1>>
+! CHECK-FPRIV:     omp.target kernel_type(generic) map_entries(%[[VAL_7]] -> %[[VAL_21:.*]], %[[VAL_18]] -> %[[VAL_22:.*]], [[VAL_20:.*]] -> %{{.*}}, %[[VAL_17]] -> %[[VAL_23:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) private(@_QMmodFroutine_boxcharEa_firstprivate_boxchar_c8xU %[[VAL_3]]#0 -> %[[VAL_24:.*]] [map_idx=1] : !fir.boxchar<1>) {
+! CHECK-FPRIV:         %[[VAL_25:.*]] = arith.constant 4 : index
+! CHECK-FPRIV:         %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_21]] typeparams %[[VAL_25]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK-FPRIV:         %[[VAL_27:.*]]:2 = fir.unboxchar %[[VAL_24]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-FPRIV:         %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_27]]#0 typeparams %[[VAL_27]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-FPRIV:         hlfir.assign %[[VAL_28]]#0 to %[[VAL_26]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
 ! CHECK-FPRIV:       return
 ! CHECK-FPRIV:     }
 ! CHECK-NO-FPRIV:  %[[VAL_8:.*]] = fir.is_present %[[VAL_3]]#1 : (!fir.ref<!fir.char<1,?>>) -> i1
@@ -94,25 +93,26 @@ end module mod
 ! CHECK-NO-FPRIV:       fir.result %[[VAL_9]], %[[VAL_9]] : index, index
 ! CHECK-NO-FPRIV:     }
 ! CHECK-NO-FPRIV:  %[[VAL_13:.*]] = arith.subi %[[VAL_14:.*]]#0, %[[VAL_10]] : index
-! CHECK-NO-FPRIV:  %[[VAL_15:.*]] = omp.map.bounds lower_bound(%[[VAL_9]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_14]]#0 : index) stride(%[[VAL_14]]#1 : index) start_idx(%[[VAL_9]] : index) {stride_in_bytes = true}
-! CHECK-NO-FPRIV:  %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(implicit) capture(ByCopy) bounds(%[[VAL_15]]) -> !fir.ref<!fir.char<1,?>> {name = "a"}
+! CHECK-NO-FPRIV:  %[[VAL_15:.*]] = omp.map.bounds lower_bound(%[[VAL_9]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_14]]#0 : index) stride(%[[VAL_14]]#1 : index) start_idx(%[[VAL_9]] : index) stride_in_bytes(true)
+! CHECK-NO-FPRIV:  %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(implicit) capture(ByCopy) bounds(%[[VAL_15]]) name("a") -> !fir.ref<!fir.char<1,?>>
 ! CHECK-NO-FPRIV:  fir.store %[[ARG0]] to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-NO-FPRIV:  %[[VAL_17:.*]] = arith.constant 0 : index
 ! CHECK-NO-FPRIV:  %[[VAL_18:.*]] = arith.constant 1 : index
 ! CHECK-NO-FPRIV:           %[[VAL_19:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-NO-FPRIV:           %[[VAL_20:.*]] = arith.subi %[[VAL_19]]#1, %[[VAL_18]] : index
-! CHECK-NO-FPRIV:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_17]] : index) upper_bound(%[[VAL_20]] : index) extent(%[[VAL_19]]#1 : index) stride(%[[VAL_18]] : index) start_idx(%[[VAL_17]] : index) {stride_in_bytes = true}
+! CHECK-NO-FPRIV:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_17]] : index) upper_bound(%[[VAL_20]] : index) extent(%[[VAL_19]]#1 : index) stride(%[[VAL_18]] : index) start_idx(%[[VAL_17]] : index) stride_in_bytes(true)
 ! CHECK-NO-FPRIV:           %[[VAL_22:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
-! CHECK-NO-FPRIV:           %[[VAL_23:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.char<1,?>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) bounds(%14) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>> {name = ""}
-! CHECK-NO-FPRIV:           %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, implicit, to) capture(ByRef) members(%[[VAL_23]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>> {name = ""}
-! CHECK-NO-FPRIV:           omp.target map_entries(%[[VAL_7]] -> %[[VAL_25:.*]], %[[VAL_16]] -> %[[VAL_26:.*]], %[[VAL_24]] -> %[[VAL_27:.*]], %[[VAL_23]] -> %[[VAL_28:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,?>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) {
-! CHECK-NO-FPRIV:             %[[VAL_29:.*]] = fir.load %[[VAL_27]] : !fir.ref<!fir.boxchar<1>>
-! CHECK-NO-FPRIV:             %[[VAL_30:.*]]:2 = fir.unboxchar %[[VAL_29]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NO-FPRIV:             %[[VAL_31:.*]] = arith.constant 4 : index
-! CHECK-NO-FPRIV:             %[[VAL_32:.*]]:2 = hlfir.declare %[[VAL_25]] typeparams %[[VAL_31]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK-NO-FPRIV:             %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_26]] typeparams %[[VAL_30]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK-NO-FPRIV:             hlfir.assign %[[VAL_33]]#0 to %[[VAL_32]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
-! CHECK-NO-FPRIV:             omp.terminator
-! CHECK-NO-FPRIV:           }
-! CHECK-NO-FPRIV:           return
-! CHECK-NO-FPRIV:         }
+! CHECK-NO-FPRIV:           %[[VAL_23:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%14) name("") -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+! CHECK-NO-FPRIV:           %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, implicit, to) capture(ByRef) members(%[[VAL_23]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) name("") -> !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[VAL_21]]) name("") -> !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:  omp.target kernel_type(generic) map_entries(%[[VAL_7]] -> %[[VAL_27:.*]], %[[VAL_16]] -> %[[VAL_28:.*]], %[[VAL_24]] -> %[[VAL_29:.*]], %[[VAL_26]] -> %[[VAL_30:.*]], %[[VAL_23]] -> %[[VAL_30:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,?>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) {
+! CHECK-NO-FPRIV:    %[[VAL_31:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:    %[[VAL_32:.*]]:2 = fir.unboxchar %[[VAL_31]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NO-FPRIV:    %[[VAL_33:.*]] = arith.constant 4 : index
+! CHECK-NO-FPRIV:    %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_27]] typeparams %[[VAL_33]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK-NO-FPRIV:    %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_32]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NO-FPRIV:    hlfir.assign %[[VAL_35]]#0 to %[[VAL_34]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
+! CHECK-NO-FPRIV:    omp.terminator
+! CHECK-NO-FPRIV:  }
+! CHECK-NO-FPRIV:  return
+! CHECK-NO-FPRIV:}

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <fstream>
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
@@ -29,16 +28,27 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                                      DeviceImageTy &Image,
                                                      GlobalTy &DeviceGlobal) {
   const char *GlobalName = DeviceGlobal.getName().data();
+  size_t SymbolSize = 0;
+  void *SymbolAddr = nullptr;
 
   L0ProgramTy &Program = L0ProgramTy::makeL0Program(Image);
-  auto AddrOrErr = Program.getSymbolDeviceAddr(GlobalName);
-  if (!AddrOrErr)
-    return AddrOrErr.takeError();
+  if (auto Err =
+          Program.getSymbolMetadata(GlobalName, &SymbolAddr, &SymbolSize))
+    return Err;
 
   // Save the pointer to the symbol allowing nullptr.
-  DeviceGlobal.setPtr(*AddrOrErr);
+  DeviceGlobal.setPtr(SymbolAddr);
+  DeviceGlobal.setSize(SymbolSize);
 
   return Plugin::success();
+}
+
+bool L0GlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  // Images returned by the Level Zero runtime do not correctly expose kernel
+  // functions as global symbols. Bypass the normal ELF handling.here.
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return !(Flags & Ignored);
 }
 
 inline L0DeviceTy &L0ProgramTy::getL0Device() const {
@@ -60,9 +70,9 @@ Error L0ProgramTy::deinit() {
 Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
                                     const std::string_view CommonBuildOptions,
                                     ze_module_format_t Format) {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   const ze_module_constants_t SpecConstants =
-      l0Device.getPlugin()
+      L0Device.getPlugin()
           .getOptions()
           .CommonSpecConstants.getModuleConstants();
 
@@ -83,19 +93,24 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  Error CreateErrors = Error::success();
-  auto handleError = [&](Error Err) {
-    if (BuildLog)
-      zeModuleBuildLogDestroy(BuildLog);
-    CreateErrors = joinErrors(std::move(CreateErrors), std::move(Err));
-  };
-  CALL_ZE_HANDLE_ERROR(handleError, zeModuleCreate, l0Device.getZeContext(),
-                       l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
-  if (CreateErrors)
-    return CreateErrors;
-
+  ze_result_t RC;
+  CALL_ZE(RC, zeModuleCreate, L0Device.getZeContext(), L0Device.getZeDevice(),
+          &ModuleDesc, &Module, &BuildLog);
   if (BuildLog)
     zeModuleBuildLogDestroy(BuildLog);
+  if (RC != ZE_RESULT_SUCCESS) {
+    // zeModuleCreate compiles/loads the provided image, so a build failure here
+    // means the image itself could not be loaded for this device (e.g. a
+    // truncated or malformed binary) rather than a generic JIT failure of an
+    // otherwise valid program. Report it as INVALID_BINARY in that case (as
+    // opposed to the default mapping of ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
+    // to ErrorCode::COMPILE_FAILURE).
+    const auto ErrCode = RC == ZE_RESULT_ERROR_MODULE_BUILD_FAILURE
+                             ? ErrorCode::INVALID_BINARY
+                             : getOffloadErrorCode(RC);
+    return Plugin::error(ErrCode, "zeModuleCreate failed with error %d, %s", RC,
+                         getZeErrorName(RC));
+  }
 
   // Check if module link is required. We do not need this check for
   // library module.
@@ -111,12 +126,12 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   if (Modules.empty())
     GlobalModule = Module;
   Modules.push_back(Module);
-  l0Device.addGlobalModule(Module);
+  L0Device.addGlobalModule(Module);
   return Plugin::success();
 }
 
 Error L0ProgramBuilderTy::linkModules() {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   if (!RequiresModuleLink) {
     ODBG(OLDT_Module) << "Module link is not required";
     return Plugin::success();
@@ -128,8 +143,8 @@ Error L0ProgramBuilderTy::linkModules() {
 
   ze_module_build_log_handle_t LinkLog = nullptr;
   CALL_ZE_RET_ERROR(zeModuleDynamicLink,
-                    static_cast<uint32_t>(l0Device.getNumGlobalModules()),
-                    l0Device.getGlobalModulesArray(), &LinkLog);
+                    static_cast<uint32_t>(L0Device.getNumGlobalModules()),
+                    L0Device.getGlobalModulesArray(), &LinkLog);
   return Plugin::success();
 }
 
@@ -166,11 +181,12 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   auto ExpectedNewE =
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
-    ODBG(OLDT_Module) << "Warning: unable to get ELF handle!";
+    std::string ErrMsg = toString(ExpectedNewE.takeError());
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle: " << ErrMsg;
     return false;
   }
   bool Res = false;
-  auto processObjF = [&](const auto ELFObjF) {
+  auto ProcessObjF = [&](const auto ELFObjF) {
     if (!ELFObjF) {
       ODBG(OLDT_Module) << "Warning: Unexpected ELF type!";
       return false;
@@ -178,7 +194,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     const auto &ELFF = ELFObjF->getELFFile();
     auto Sections = ELFF.sections();
     if (!Sections) {
-      ODBG(OLDT_Module) << "Warning: unable to get ELF sections!";
+      std::string ErrMsg = toString(Sections.takeError());
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections: " << ErrMsg;
       return false;
     }
     bool SeenOffloadSection = false;
@@ -188,7 +205,9 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       Error Err = Plugin::success();
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
-          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle!";
+          std::string ErrMsg = toString(std::move(Err));
+          ODBG(OLDT_Module)
+              << "Warning: unable to get ELF notes handle: " << ErrMsg;
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
@@ -215,10 +234,10 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
     return SeenOffloadSection;
   };
   if (const auto *O = dyn_cast<ELF64LEObjectFile>((*ExpectedNewE).get())) {
-    Res = processObjF(O);
+    Res = ProcessObjF(O);
   } else if (const auto *O =
                  dyn_cast<ELF32LEObjectFile>((*ExpectedNewE).get())) {
-    Res = processObjF(O);
+    Res = ProcessObjF(O);
   } else {
     assert(false && "Unexpected ELF format");
   }
@@ -226,7 +245,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
 }
 
 Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
-  auto &l0Device = getL0Device();
+  auto &L0Device = getL0Device();
   auto Image = getMemoryBuffer();
 
   // Check if image is an inner OffloadBinary (nested format)
@@ -237,14 +256,14 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     auto InnerBinariesOrErr = llvm::object::OffloadBinary::create(Image);
     if (!InnerBinariesOrErr)
       return Plugin::error(
-          ErrorCode::UNKNOWN, "Failed to parse inner OffloadBinary: %s",
+          ErrorCode::INVALID_BINARY, "Failed to parse inner OffloadBinary: %s",
           llvm::toString(InnerBinariesOrErr.takeError()).c_str());
 
     auto &InnerBinaries = *InnerBinariesOrErr;
 
     // Should contain exactly one image
     if (InnerBinaries.size() != 1)
-      return Plugin::error(ErrorCode::UNKNOWN,
+      return Plugin::error(ErrorCode::INVALID_BINARY,
                            "Expected single inner OffloadBinary entry, got %zu",
                            InnerBinaries.size());
 
@@ -271,7 +290,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
         Options += " " + CompileOpts.str();
       if (!LinkOpts.empty())
         Options += " " + LinkOpts.str();
-      replaceDriverOptsWithBackendOpts(l0Device, Options);
+      replaceDriverOptsWithBackendOpts(L0Device, Options);
       ODBG(OLDT_Module) << "Using compile options: " << CompileOpts
                         << ", link options: " << LinkOpts;
     }
@@ -287,7 +306,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       ODBG(OLDT_Module) << "Loading native binary module";
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
-      return Plugin::error(ErrorCode::UNKNOWN,
+      return Plugin::error(ErrorCode::INVALID_BINARY,
                            "Unsupported image kind %d in inner OffloadBinary",
                            static_cast<int>(ImageKind));
     }
@@ -307,7 +326,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   uint64_t MajorVer, MinorVer;
   if (!isValidOneOmpImage(Image.getBuffer(), MajorVer, MinorVer)) {
     ODBG(OLDT_Module) << "Warning: image is not a valid oneAPI OpenMP image.";
-    return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "Invalid oneAPI OpenMP image");
   }
   ODBG(OLDT_Module) << "Processing ELF-wrapped SPIR-V image";
 
@@ -331,7 +351,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   auto ExpectedNewE = ELFObjectFileBase::createELFObjectFile(Image);
   assert(ExpectedNewE &&
          "isValidOneOmpImage() returns true for invalid ELF image");
-  auto processELF = [&](auto *EObj) {
+  auto ProcessELF = [&](auto *EObj) {
     assert(EObj && "isValidOneOmpImage() returns true for invalid ELF image.");
     const auto &E = EObj->getELFFile();
     // Collect auxiliary information.
@@ -459,9 +479,9 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   };
 
   if (auto *O = dyn_cast<ELF64LEObjectFile>((*ExpectedNewE).get())) {
-    processELF(O);
+    ProcessELF(O);
   } else if (auto *O = dyn_cast<ELF32LEObjectFile>((*ExpectedNewE).get())) {
-    processELF(O);
+    ProcessELF(O);
   } else {
     assert(false && "Unexpected ELF format");
   }
@@ -495,7 +515,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     std::string Options(BuildOptions);
     {
       Options += " " + It->second.CompileOpts + " " + It->second.LinkOpts;
-      replaceDriverOptsWithBackendOpts(l0Device, Options);
+      replaceDriverOptsWithBackendOpts(L0Device, Options);
     }
 
     for (size_t I = 0; I < NumParts; I++) {
@@ -520,7 +540,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     return Plugin::success();
   }
 
-  return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
+  return Plugin::error(ErrorCode::INVALID_BINARY,
+                       "Failed to create program modules.");
 }
 
 Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
@@ -537,27 +558,32 @@ Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
       /*BufferName=*/"L0Program ELF");
 }
 
-Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
-  ODBG(OLDT_Module) << "Looking up OpenMP global variable '" << CName << "'.";
-
-  if (!GlobalModule || !CName)
+Error L0ProgramTy::getSymbolMetadata(const char *Name, void **AddrPtr,
+                                     size_t *SizePtr) const {
+  if (!Name || !AddrPtr || !SizePtr)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Invalid arguments to getSymbolDeviceAddr");
 
-  size_t SizeDummy = 0;
-  void *DevicePtr = nullptr;
+  size_t SymbolSize = 0;
+  void *SymbolAddr = nullptr;
   ze_result_t RC;
   for (auto Module : Modules) {
-    CALL_ZE(RC, zeModuleGetGlobalPointer, Module, CName, &SizeDummy,
-            &DevicePtr);
-    if (RC == ZE_RESULT_SUCCESS && DevicePtr)
-      return DevicePtr;
-    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, CName, &DevicePtr);
-    if (RC == ZE_RESULT_SUCCESS && DevicePtr)
-      return DevicePtr;
+    CALL_ZE(RC, zeModuleGetGlobalPointer, Module, Name, &SymbolSize,
+            &SymbolAddr);
+    if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
+      *AddrPtr = SymbolAddr;
+      *SizePtr = SymbolSize;
+      return Plugin::success();
+    }
+    CALL_ZE(RC, zeModuleGetFunctionPointer, Module, Name, &SymbolAddr);
+    if (RC == ZE_RESULT_SUCCESS && SymbolAddr) {
+      *AddrPtr = SymbolAddr;
+      *SizePtr = 0;
+      return Plugin::success();
+    }
   }
-  return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Symbol '%s' not found on device", CName);
+  return Plugin::error(ErrorCode::NOT_FOUND, "symbol '%s' not found on device",
+                       Name);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
@@ -571,7 +597,7 @@ Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Cannot read from device global variable %s", Name);
   }
-  return getL0Device().enqueueMemCopy(HostPtr, DevicePtr, Size);
+  return getL0Device().enqueueMemCopyAndSync(HostPtr, DevicePtr, Size);
 }
 
 Error L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
@@ -585,7 +611,7 @@ Error L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Cannot write to device global variable %s", Name);
   }
-  return getL0Device().enqueueMemCopy(DevicePtr, HostPtr, Size);
+  return getL0Device().enqueueMemCopyAndSync(DevicePtr, HostPtr, Size);
 }
 
 Error L0ProgramTy::loadModuleKernels() {

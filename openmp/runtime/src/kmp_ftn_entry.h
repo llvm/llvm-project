@@ -387,7 +387,7 @@ int FTN_STDCALL FTN_CONTROL_TOOL(int command, int modifier, void *arg) {
 #else
   OMPT_STORE_RETURN_ADDRESS(__kmp_entry_gtid());
   if (!TCR_4(__kmp_init_middle)) {
-    return -2;
+    __kmp_middle_initialize();
   }
   kmp_info_t *this_thr = __kmp_threads[__kmp_entry_gtid()];
   ompt_task_info_t *parent_task_info = OMPT_CUR_TASK_INFO(this_thr);
@@ -1636,9 +1636,23 @@ void FTN_STDCALL FTN_SET_NUM_TEAMS(int KMP_DEREF num_teams) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
   }
+  kmp_info_t *th = __kmp_entry_thread();
+  // OpenMP 5.1, Section 3.4.3: omp_set_num_teams may not be called from
+  // within a parallel region other than the implicit parallel region.
+  // Also guard against calls from within a teams region: nteams-var is a
+  // device-scoped ICV and concurrent modification from multiple team initial
+  // threads may race.
+  // t_level counts both active and serialized parallel levels (0 at the
+  // implicit top-level parallel region), so this catches all non-implicit
+  // parallel regions.
+  if (th->th.th_teams_microtask || th->th.th_team->t.t_level > 0) {
+    KMP_WARNING(SetNumTeamsInParOrTeamsRegion, "omp_set_num_teams");
+    return;
+  }
   __kmp_set_num_teams(KMP_DEREF num_teams);
 #endif
 }
+
 int FTN_STDCALL FTN_GET_MAX_TEAMS(void) {
 #ifdef KMP_STUB
   return 1;
@@ -1657,9 +1671,24 @@ void FTN_STDCALL FTN_SET_TEAMS_THREAD_LIMIT(int KMP_DEREF limit) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
   }
+  kmp_info_t *th = __kmp_entry_thread();
+  // OpenMP 5.1, Section 3.4.5: omp_set_teams_thread_limit may not be called
+  // from within a parallel region other than the implicit parallel region.
+  // Also guard against calls from within a teams region:
+  // teams-thread-limit-var is a device-scoped ICV and concurrent modification
+  // from multiple team initial threads may race.
+  // t_level counts both active and serialized parallel levels (0 at the
+  // implicit top-level parallel region), so this catches all non-implicit
+  // parallel regions.
+  if (th->th.th_teams_microtask || th->th.th_team->t.t_level > 0) {
+    KMP_WARNING(SetTeamsThreadLimitInParOrTeamsRegion,
+                "omp_set_teams_thread_limit");
+    return;
+  }
   __kmp_set_teams_thread_limit(KMP_DEREF limit);
 #endif
 }
+
 int FTN_STDCALL FTN_GET_TEAMS_THREAD_LIMIT(void) {
 #ifdef KMP_STUB
   return 1;

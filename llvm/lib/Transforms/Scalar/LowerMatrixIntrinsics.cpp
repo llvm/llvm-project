@@ -193,7 +193,7 @@ static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
   if (isa<ConstantInt>(VecStart) && cast<ConstantInt>(VecStart)->isZero())
     VecStart = BasePtr;
   else
-    VecStart = Builder.CreateGEP(EltType, BasePtr, VecStart, "vec.gep");
+    VecStart = Builder.CreateInBoundsGEP(EltType, BasePtr, VecStart, "vec.gep");
 
   return VecStart;
 }
@@ -902,9 +902,10 @@ public:
     // it conditionally instead.
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
+      ShapeInfo Shape = S->second;
       ShapeMap.erase(S);
       if (supportsShapeInfo(New))
-        ShapeMap.insert({New, S->second});
+        ShapeMap.insert({New, Shape});
     }
     Old.replaceAllUsesWith(New);
   }
@@ -1387,7 +1388,7 @@ public:
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
@@ -1425,7 +1426,7 @@ public:
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
@@ -1591,6 +1592,8 @@ public:
     Type *ElementType = cast<FixedVectorType>(LHS->getType())->getElementType();
     bool IsIntVec = ElementType->isIntegerTy();
 
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
     // Floating point reductions require reassocation.
     if (!IsIntVec && !FMF.allowReassoc())
       return;
@@ -1603,12 +1606,13 @@ public:
                   m_Load(m_Value()),
                   m_CombineOr(m_Intrinsic<Intrinsic::matrix_transpose>(),
                               m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                                  m_Value(), m_SpecificInt(1))))));
+                                  m_Value(), m_One())))));
     };
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
-    auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
+    auto GetCostForArg = [this, &CanBeFlattened, CostKind](Value *Op,
+                                                           unsigned N) {
       if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
@@ -1624,17 +1628,17 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost += TTI.getShuffleCost(
               TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
       if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
-                                       EltTy) *
+                                       EltTy, CostKind) *
             N;
         InstructionCost NewCost = TTI.getArithmeticInstrCost(
-            cast<Instruction>(Op)->getOpcode(), VecTy);
+            cast<Instruction>(Op)->getOpcode(), VecTy, CostKind);
         return NewCost - OriginalCost;
       }
 
@@ -1646,7 +1650,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost -= TTI.getShuffleCost(
               TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
+              FixedVectorType::get(EltTy, 1), TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1687,12 +1691,12 @@ public:
     InstructionCost ReductionCost =
         TTI.getArithmeticReductionCost(
             AddOpCode, cast<FixedVectorType>(LHS->getType()),
-            IsIntVec ? std::nullopt : std::optional(FMF)) +
-        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType());
+            IsIntVec ? std::nullopt : std::optional(FMF), CostKind) +
+        TTI.getArithmeticInstrCost(MulOpCode, LHS->getType(), CostKind);
     InstructionCost SequentialAddCost =
-        TTI.getArithmeticInstrCost(AddOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(AddOpCode, ElementType, CostKind) *
             (LShape.NumColumns - 1) +
-        TTI.getArithmeticInstrCost(MulOpCode, ElementType) *
+        TTI.getArithmeticInstrCost(MulOpCode, ElementType, CostKind) *
             (LShape.NumColumns);
     if ((LHSCost + ReductionCost - SequentialAddCost) > InstructionCost(0))
       return;
@@ -1720,7 +1724,15 @@ public:
       Value *Arg;
       if (match(Op, m_Intrinsic<Intrinsic::matrix_column_major_load>(
                         m_Value(Arg)))) {
-        auto *NewLoad = Builder.CreateLoad(Op->getType(), Arg);
+        auto *MatLoad = cast<IntrinsicInst>(Op);
+        bool IsVolatile = cast<ConstantInt>(MatLoad->getArgOperand(2))->isOne();
+        // Preserve the volatile flag and alignment of the original load.
+        Align Alignment = getAlignForIndex(
+            0, MatLoad->getArgOperand(1),
+            cast<FixedVectorType>(Op->getType())->getElementType(),
+            MatLoad->getParamAlign(0));
+        auto *NewLoad = Builder.CreateAlignedLoad(Op->getType(), Arg, Alignment,
+                                                  IsVolatile);
         Op->replaceAllUsesWith(NewLoad);
         eraseFromParentAndRemoveFromShapeMap(cast<Instruction>(Op));
         return;
@@ -1873,14 +1885,31 @@ public:
   /// Ensure that the memory in \p Load does not alias \p Store by potentially
   /// copying it to a new location.  This new or otherwise the original location
   /// is returned.
-  Value *getNonAliasingPointer(LoadInst *Load, StoreInst *Store,
-                               CallInst *MatMul) {
+  std::pair<Value *, AllocaInst *>
+  getNonAliasingPointer(LoadInst *Load, StoreInst *Store, CallInst *MatMul) {
     MemoryLocation StoreLoc = MemoryLocation::get(Store);
     MemoryLocation LoadLoc = MemoryLocation::get(Load);
 
     // If we can statically determine noalias we're good.
     if (AA->isNoAlias(LoadLoc, StoreLoc))
-      return Load->getPointerOperand();
+      return {Load->getPointerOperand(), nullptr};
+
+    // If the pointers are in different address spaces, we cannot compare them
+    // at runtime. Conservatively copy the load operand to a new buffer.
+    IRBuilder<> AllocaBuilder(&Func.getEntryBlock().front());
+    if (Load->getPointerAddressSpace() != Store->getPointerAddressSpace()) {
+      auto *VT = cast<FixedVectorType>(Load->getType());
+      auto *ArrayTy =
+          ArrayType::get(VT->getElementType(), VT->getNumElements());
+      AllocaInst *Alloca =
+          AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+      IRBuilder<> Builder(MatMul);
+      Builder.CreateLifetimeStart(Alloca);
+      Builder.CreateMemCpy(Alloca, Alloca->getAlign(),
+                           Load->getPointerOperand(), Load->getAlign(),
+                           LoadLoc.Size.getValue());
+      return {Alloca, Alloca};
+    }
 
     // Create code to check if the memory locations of the Load and Store
     // overlap and if they do, copy Load's operand to a new buffer.
@@ -1926,6 +1955,15 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1, Check1->begin());
+
+    auto *VT = cast<FixedVectorType>(Load->getType());
+    // Use an array type for the alloca, to avoid potentially huge alignment
+    // requirements for large vector types.
+    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
+    AllocaInst *Alloca =
+        AllocaBuilder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
+    Builder.CreateLifetimeStart(Alloca);
+
     Value *LoadEnd = Builder.CreatePtrAdd(
         LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
         "load.end",
@@ -1936,13 +1974,6 @@ public:
 
     // Copy load operand to new alloca.
     Builder.SetInsertPoint(Copy, Copy->begin());
-    auto *VT = cast<FixedVectorType>(Load->getType());
-    // Use an array type for the alloca, to avoid potentially huge alignment
-    // requirements for large vector types.
-    auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
-    AllocaInst *Alloca =
-        Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
-
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
@@ -1957,7 +1988,7 @@ public:
     DTUpdates.push_back({DT->Insert, Check1, Copy});
     DTUpdates.push_back({DT->Insert, Check1, Fusion});
     DT->applyUpdates(DTUpdates);
-    return PHI;
+    return {PHI, Alloca};
   }
 
   bool isFusionProfitable(CallInst *MatMul) {
@@ -2079,8 +2110,8 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
 
-    Value *APtr = getNonAliasingPointer(LoadOp0, Store, MatMul);
-    Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
+    auto [APtr, AAlloca] = getNonAliasingPointer(LoadOp0, Store, MatMul);
+    auto [BPtr, BAlloca] = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
     // Use loop-based tiling when the number of expected operations exceeds
@@ -2114,6 +2145,15 @@ public:
           storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
                       getIndex(CPtr, I), getIndex(CPtr, J), EltType, Builder);
         }
+    }
+
+    // End the lifetime of the allocas used for alias-safe copies.
+    {
+      IRBuilder<> Builder(Store);
+      if (AAlloca)
+        Builder.CreateLifetimeEnd(AAlloca);
+      if (BAlloca)
+        Builder.CreateLifetimeEnd(BAlloca);
     }
 
     // Mark eliminated instructions as fused and remove them.
@@ -2360,17 +2400,23 @@ public:
     Builder.SetInsertPoint(BlockIP);
     MatrixTy PhiM = getMatrix(Inst, SI, Builder);
 
+    // Cache the reshaped columns per incoming block, so that a block listed
+    // more than once contributes identical incoming values to the new PHIs.
+    SmallDenseMap<BasicBlock *, MatrixTy> ReshapedIncoming;
     for (auto [IncomingV, IncomingB] :
          llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
       // getMatrix() may insert some instructions to help with reshaping. The
-      // safest place for those is at the top of the block after the rest of the
-      // PHI's. Even better, if we can put it in the incoming block.
-      Builder.SetInsertPoint(BlockIP);
+      // safest place for those is just before the terminator of the incoming
+      // block. If there's a valid insert point before the def, even better.
+      Builder.SetInsertPoint(IncomingB->getTerminator());
       if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
         if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
           Builder.SetInsertPoint(*MaybeIP);
 
-      MatrixTy OpM = getMatrix(IncomingV, SI, Builder);
+      auto [It, Inserted] = ReshapedIncoming.try_emplace(IncomingB);
+      if (Inserted)
+        It->second = getMatrix(IncomingV, SI, Builder);
+      const MatrixTy &OpM = It->second;
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
         PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));

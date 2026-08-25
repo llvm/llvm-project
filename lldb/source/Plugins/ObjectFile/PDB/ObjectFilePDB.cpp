@@ -111,9 +111,10 @@ ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-ModuleSpecList ObjectFilePDB::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length) {
+ModuleSpecList
+ObjectFilePDB::GetModuleSpecifications(const FileSpec &file,
+                                       DataExtractorSP &extractor_sp,
+                                       offset_t file_offset, offset_t length) {
   ModuleSpec module_spec(file);
   llvm::BumpPtrAllocator allocator;
   std::unique_ptr<PDBFile> pdb_file = loadPDBFile(file.GetPath(), allocator);

@@ -25,7 +25,7 @@ namespace gpu {
 template <typename T> using Private = __gpu_private T;
 template <typename T> using Constant = __gpu_constant T;
 template <typename T> using Local = __gpu_local T;
-template <typename T> using Global = __gpu_local T;
+template <typename T> using Global = __gpu_global T;
 
 LIBC_INLINE uint32_t get_num_blocks_x() { return __gpu_num_blocks(0); }
 
@@ -119,11 +119,11 @@ LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
 }
 
 LIBC_INLINE uint32_t reduce(uint64_t lane_mask, uint32_t x) {
-  return __gpu_lane_sum_u32(lane_mask, x);
+  return __gpu_lane_add_u32(lane_mask, x);
 }
 
 LIBC_INLINE uint32_t scan(uint64_t lane_mask, uint32_t x) {
-  return __gpu_prefix_scan_sum_u32(lane_mask, x);
+  return __gpu_prefix_scan_add_u32(lane_mask, x);
 }
 
 LIBC_INLINE uint64_t fixed_frequency_clock() {

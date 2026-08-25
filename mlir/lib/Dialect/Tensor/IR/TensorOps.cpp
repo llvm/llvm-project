@@ -24,6 +24,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -43,6 +44,26 @@
 
 using namespace mlir;
 using namespace mlir::tensor;
+
+/// Implements the `VerifiableTensorEncoding` contract documented in
+/// TensorEncoding.td for patterns that refine a tensor's shape to be more
+/// static: verifiable encodings are re-checked against the refined shape and
+/// dropped if they no longer hold; opaque encodings (not implementing the
+/// interface) are propagated unconditionally.
+static Attribute propagateEncoding(Attribute encoding, ArrayRef<int64_t> shape,
+                                   Type elementType) {
+  auto verifiable = dyn_cast_or_null<VerifiableTensorEncoding>(encoding);
+  if (!verifiable)
+    return encoding;
+
+  MLIRContext *ctx = encoding.getContext();
+  // to avoid user's error stream
+  ScopedDiagnosticHandler swallow(ctx, [](Diagnostic &) { return success(); });
+  auto emit = [ctx]() { return mlir::emitError(UnknownLoc::get(ctx)); };
+  return succeeded(verifiable.verifyEncoding(shape, elementType, emit))
+             ? encoding
+             : Attribute{};
+}
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
@@ -104,9 +125,12 @@ FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
       mixedSizes.push_back(b.getIndexAttr(sz));
   }
 
-  // Create empty tensor.
-  Value emptyTensor =
-      tensor::EmptyOp::create(b, loc, mixedSizes, tensorType.getElementType());
+  // Create empty tensor with the same encoding as the result type.
+  Attribute encoding;
+  if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType))
+    encoding = rankedTensorType.getEncoding();
+  Value emptyTensor = tensor::EmptyOp::create(
+      b, loc, mixedSizes, tensorType.getElementType(), encoding);
   return emptyTensor;
 }
 
@@ -921,7 +945,7 @@ void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  std::optional<int64_t> index = getConstantIndex();
   if (!index)
     return {};
 
@@ -932,14 +956,14 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
   // Out of bound indices produce undefined behavior but are still valid IR.
   // Don't choke on them.
-  int64_t indexVal = index.getInt();
+  int64_t indexVal = index.value();
   if (indexVal < 0 || indexVal >= tensorType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.
-  if (!tensorType.isDynamicDim(index.getInt())) {
+  if (!tensorType.isDynamicDim(indexVal)) {
     Builder builder(getContext());
-    return builder.getIndexAttr(tensorType.getShape()[index.getInt()]);
+    return builder.getIndexAttr(tensorType.getShape()[indexVal]);
   }
 
   Operation *definingOp = getSource().getDefiningOp();
@@ -950,11 +974,11 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
         llvm::cast<RankedTensorType>(fromElements.getResult().getType());
     // The case where the type encodes the size of the dimension is handled
     // above.
-    assert(ShapedType::isDynamic(resultType.getShape()[index.getInt()]));
+    assert(ShapedType::isDynamic(resultType.getShape()[indexVal]));
 
     // Find the operand of the fromElements that corresponds to this index.
     auto dynExtents = fromElements.getDynamicExtents().begin();
-    for (auto dim : resultType.getShape().take_front(index.getInt()))
+    for (auto dim : resultType.getShape().take_front(indexVal))
       if (ShapedType::isDynamic(dim))
         dynExtents++;
 
@@ -962,14 +986,12 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   }
 
   // The size at the given index is now known to be a dynamic size.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
-
   if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
     // Fold only for non-rank reduced ops. For the rank-reduced version, rely on
     // `resolve-shaped-type-result-dims` pass.
     if (sliceOp.getType().getRank() == sliceOp.getSourceType().getRank() &&
-        sliceOp.isDynamicSize(unsignedIndex)) {
-      return {sliceOp.getDynamicSize(unsignedIndex)};
+        sliceOp.isDynamicSize(indexVal)) {
+      return {sliceOp.getDynamicSize(indexVal)};
     }
   }
 
@@ -2272,10 +2294,18 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     SmallVector<OpFoldResult> outputOfr =
         getMixedValues(newOutputShape, dynamicOutputShape, rewriter);
+    // The refined types are still applied to the same src/result values, so
+    // propagate their encodings, letting each encoding self-decide whether it
+    // still holds on the more-static shape.
+    Type elementType = expandOp.getSrcType().getElementType();
     auto inputType = RankedTensorType::get(
-        newInputShape, expandOp.getSrcType().getElementType());
+        newInputShape, elementType,
+        propagateEncoding(expandOp.getSrcType().getEncoding(), newInputShape,
+                          elementType));
     auto outputType = RankedTensorType::get(
-        newOutputShape, expandOp.getSrcType().getElementType());
+        newOutputShape, elementType,
+        propagateEncoding(expandOp.getResultType().getEncoding(),
+                          newOutputShape, elementType));
     auto inputCast = CastOp::create(rewriter, expandOp.getLoc(), inputType,
                                     expandOp.getSrc());
     auto newExpand = ExpandShapeOp::create(
@@ -2384,7 +2414,8 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
       if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
     inferredType =
-        RankedTensorType::get(projectedShape, inferredType.getElementType());
+        RankedTensorType::get(projectedShape, inferredType.getElementType(),
+                              inferredType.getEncoding());
   }
   return inferredType;
 }
@@ -3013,10 +3044,22 @@ public:
     if (!sliceResult.isValid)
       return failure();
 
-    // Create the new op in canonical form.
-    auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
+    // Create the new op in canonical form. The refined shape is inferred from
+    // the destination type, but the encoding is a per-value property of the
+    // source: insert_slice does not convert between encodings, so the
+    // produced cast/op must carry the source's encoding (dropping it would
+    // silently discard downstream metadata such as bounds, layout, or
+    // sparsity descriptors). If the source's encoding no longer holds on the
+    // refined shape (e.g. a `VerifiableTensorEncoding` that self-invalidates),
+    // it is dropped in accordance with the encoding's own contract.
+    auto sourceTypeBase = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
         mixedSizes);
+    auto sourceType = RankedTensorType::get(
+        sourceTypeBase.getShape(), sourceTypeBase.getElementType(),
+        propagateEncoding(insertSliceOp.getSourceType().getEncoding(),
+                          sourceTypeBase.getShape(),
+                          sourceTypeBase.getElementType()));
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
@@ -3322,7 +3365,10 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
     }
   }
 
-  return RankedTensorType::get(inferredShape, sourceType.getElementType());
+  Type elementType = sourceType.getElementType();
+  return RankedTensorType::get(
+      inferredShape, elementType,
+      propagateEncoding(sourceType.getEncoding(), inferredShape, elementType));
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3729,9 +3775,11 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
                      [&](int64_t x) { return x == ShapedType::kDynamic; }))
       return failure();
 
-    // Rewrite the op using the new static type.
+    Type elementType = padTensorOp.getType().getElementType();
     auto newResultType = RankedTensorType::get(
-        newOutDims, padTensorOp.getType().getElementType());
+        newOutDims, elementType,
+        propagateEncoding(padTensorOp.getType().getEncoding(), newOutDims,
+                          elementType));
     auto newOp = PadOp::create(
         rewriter, padTensorOp->getLoc(), newResultType, input, staticLow,
         staticHigh, newLows, newHighs, padTensorOp.getNofold(),
