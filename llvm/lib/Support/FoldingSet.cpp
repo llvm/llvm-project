@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
@@ -31,8 +30,6 @@ bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
   return memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
 }
 
-/// Used to compare the "ordering" of two nodes as defined by the
-/// profiled bits and their ordering defined by memcmp().
 bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size)
     return Size < RHS.Size;
@@ -42,8 +39,6 @@ bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeID Implementation
 
-/// Add* - Add various data types to Bit data.
-///
 void FoldingSetNodeID::AddString(StringRef String) {
   unsigned Size = String.size();
 
@@ -108,25 +103,18 @@ void FoldingSetNodeID::AddString(StringRef String) {
   Bits.push_back(V);
 }
 
-// AddNodeID - Adds the Bit data of another ID to *this.
 void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
 }
 
-/// operator== - Used to compare two nodes to each other.
-///
 bool FoldingSetNodeID::operator==(const FoldingSetNodeID &RHS) const {
   return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
 }
 
-/// operator== - Used to compare two nodes to each other.
-///
 bool FoldingSetNodeID::operator==(FoldingSetNodeIDRef RHS) const {
   return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
 }
 
-/// Used to compare the "ordering" of two nodes as defined by the
-/// profiled bits and their ordering defined by memcmp().
 bool FoldingSetNodeID::operator<(const FoldingSetNodeID &RHS) const {
   return *this < FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
 }
@@ -135,9 +123,6 @@ bool FoldingSetNodeID::operator<(FoldingSetNodeIDRef RHS) const {
   return FoldingSetNodeIDRef(Bits.data(), Bits.size()) < RHS;
 }
 
-/// Intern - Copy this node's data to a memory region allocated from the
-/// given allocator and return a FoldingSetNodeIDRef describing the
-/// interned data.
 FoldingSetNodeIDRef
 FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
   unsigned *New = Allocator.Allocate<unsigned>(Bits.size());
@@ -178,7 +163,7 @@ static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
   return Buckets + BucketNum;
 }
 
-/// AllocateBuckets - Allocated initialized bucket memory.
+/// AllocateBuckets - Allocate initialized bucket memory.
 static void **AllocateBuckets(unsigned NumBuckets) {
   void **Buckets =
       static_cast<void **>(safe_calloc(NumBuckets + 1, sizeof(void *)));
@@ -199,26 +184,29 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
-    : Buckets(Arg.Buckets), NumBuckets(Arg.NumBuckets), NumNodes(Arg.NumNodes) {
-  Arg.Buckets = nullptr;
-  Arg.NumBuckets = 0;
-  Arg.NumNodes = 0;
+    : Buckets(std::exchange(Arg.Buckets, nullptr)),
+      NumBuckets(std::exchange(Arg.NumBuckets, 0)),
+      NumNodes(std::exchange(Arg.NumNodes, 0)) {
+  Arg.incrementEpoch();
 }
 
 FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
+  if (this == &RHS)
+    return *this;
+
+  incrementEpoch();
+  RHS.incrementEpoch();
   free(Buckets); // This may be null if the set is in a moved-from state.
-  Buckets = RHS.Buckets;
-  NumBuckets = RHS.NumBuckets;
-  NumNodes = RHS.NumNodes;
-  RHS.Buckets = nullptr;
-  RHS.NumBuckets = 0;
-  RHS.NumNodes = 0;
+  Buckets = std::exchange(RHS.Buckets, nullptr);
+  NumBuckets = std::exchange(RHS.NumBuckets, 0);
+  NumNodes = std::exchange(RHS.NumNodes, 0);
   return *this;
 }
 
 FoldingSetBase::~FoldingSetBase() { free(Buckets); }
 
 void FoldingSetBase::clear() {
+  incrementEpoch();
   // Set all but the last bucket to null pointers.
   memset(Buckets, 0, NumBuckets * sizeof(void *));
 
@@ -234,19 +222,11 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   assert((NewBucketCount > NumBuckets) &&
          "Can't shrink a folding set with GrowBucketCount");
   assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
-  void **OldBuckets = Buckets;
-  unsigned OldNumBuckets = NumBuckets;
 
-  // Clear out new buckets.
-  Buckets = AllocateBuckets(NewBucketCount);
-  // Set NumBuckets only if allocation of new buckets was successful.
-  NumBuckets = NewBucketCount;
-  NumNodes = 0;
-
-  // Walk the old buckets, rehashing nodes into their new place.
+  FoldingSetBase Tmp(llvm::Log2_32(NewBucketCount));
   FoldingSetNodeID TempID;
-  for (unsigned i = 0; i != OldNumBuckets; ++i) {
-    void *Probe = OldBuckets[i];
+  for (unsigned i = 0; i != NumBuckets; ++i) {
+    void *Probe = Buckets[i];
     if (!Probe)
       continue;
     while (Node *NodeInBucket = GetNextPtr(Probe)) {
@@ -255,35 +235,27 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
       NodeInBucket->SetNextInBucket(nullptr);
 
       // Insert the node into the new bucket, after recomputing the hash.
-      InsertNode(NodeInBucket,
-                 GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
-                              Buckets, NumBuckets),
-                 Info);
+      Tmp.InsertNode(
+          NodeInBucket,
+          GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
+                       Tmp.Buckets, Tmp.NumBuckets),
+          Info);
       TempID.clear();
     }
   }
 
-  free(OldBuckets);
-}
-
-/// GrowHashTable - Double the size of the hash table and rehash everything.
-///
-void FoldingSetBase::GrowHashTable(const FoldingSetInfo &Info) {
-  GrowBucketCount(NumBuckets * 2, Info);
+  *this = std::move(Tmp);
 }
 
 void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   // This will give us somewhere between EltCount / 2 and
   // EltCount buckets.  This puts us in the load factor
   // range of 1.0 - 2.0.
-  if (EltCount < capacity())
+  if (EltCount <= capacity())
     return;
   GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
 
-/// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
-/// return it.  If not, return the insertion token that will make insertion
-/// faster.
 FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
   unsigned IDHash = ID.ComputeHash();
@@ -306,15 +278,13 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   return nullptr;
 }
 
-/// InsertNode - Insert the specified node into the folding set, knowing that it
-/// is not already in the map.  InsertPos must be obtained from
-/// FindNodeOrInsertPos.
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
   assert(!N->getNextInBucket());
+  incrementEpoch();
   // Do we need to grow the hashtable?
   if (NumNodes + 1 > capacity()) {
-    GrowHashTable(Info);
+    GrowBucketCount(NumBuckets * 2, Info);
     FoldingSetNodeID TempID;
     InsertPos = GetBucketFor(Info.ComputeNodeHash(this, N, TempID), Buckets,
                              NumBuckets);
@@ -338,8 +308,6 @@ void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
   *Bucket = N;
 }
 
-/// RemoveNode - Remove a node from the folding set, returning true if one was
-/// removed or false if the node was not in the folding set.
 bool FoldingSetBase::RemoveNode(Node *N) {
   // Because each bucket is a circular list, we don't need to compute N's hash
   // to remove it.
@@ -347,6 +315,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   if (!Ptr)
     return false; // Not in folding set.
 
+  incrementEpoch();
   --NumNodes;
   N->SetNextInBucket(nullptr);
 
@@ -379,12 +348,8 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   }
 }
 
-/// GetOrInsertNode - If there is an existing simple Node exactly
-/// equal to the specified node, return it.  Otherwise, insert 'N' and it
-/// instead.
 FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N,
-                                const FoldingSetInfo &Info) {
+FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
   FoldingSetNodeID ID;
   Info.GetNodeProfile(this, N, ID);
   void *IP;
@@ -397,7 +362,9 @@ FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N,
 //===----------------------------------------------------------------------===//
 // FoldingSetIteratorImpl Implementation
 
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
+FoldingSetIteratorImpl::FoldingSetIteratorImpl(const DebugEpochBase *Epoch,
+                                               void **Bucket)
+    : DebugEpochBase::HandleBase(Epoch) {
   // Skip to the first non-null non-self-cycle bucket.
   while (*Bucket != reinterpret_cast<void *>(-1) &&
          (!*Bucket || !GetNextPtr(*Bucket)))
@@ -407,6 +374,7 @@ FoldingSetIteratorImpl::FoldingSetIteratorImpl(void **Bucket) {
 }
 
 void FoldingSetIteratorImpl::advance() {
+  assert(isHandleInSync() && "invalid iterator access!");
   // If there is another link within this bucket, go to it.
   void *Probe = NodePtr->getNextInBucket();
 

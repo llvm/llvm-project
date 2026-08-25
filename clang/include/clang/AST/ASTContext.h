@@ -296,7 +296,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
-  llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
+      HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -2155,7 +2156,7 @@ public:
   /// C++11 deduced auto type.
   QualType
   getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
-              TemplateDecl *TypeConstraintConcept = nullptr,
+              TemplateName TypeConstraintConcept = TemplateName(),
               ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
@@ -2930,9 +2931,16 @@ public:
   /// [[gnu::ms_struct]].
   bool defaultsToMsStruct() const;
 
+  /// Whether layout (offset and size) information can be queried for \p D.
+  static bool hasLayout(const RecordDecl *D) {
+    D = D->getDefinition();
+    return D && !D->isInvalidDecl() && D->isCompleteDefinition();
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
+  /// \pre hasLayout(D)
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
 
   /// Get or compute information about the layout of the specified
@@ -3259,12 +3267,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///

@@ -194,8 +194,6 @@ public:
   AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
                        const AMDGPUSubtarget &AMDGPUSTI);
 
-  bool mayIgnoreSignedZero(SDValue Op) const;
-
   static inline SDValue stripBitcast(SDValue Val) {
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
   }
