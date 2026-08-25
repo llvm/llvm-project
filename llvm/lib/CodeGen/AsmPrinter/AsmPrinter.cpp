@@ -1999,24 +1999,24 @@ void AsmPrinter::handleCallsiteForCallgraph(
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  for (const MachineOperand &CalleeOperand : MI.operands()) {
-    if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
-      // Handle direct calls.
-      MCSymbol *CalleeSymbol = nullptr;
-      switch (CalleeOperand.getType()) {
-      case llvm::MachineOperand::MO_GlobalAddress:
-        CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
-        break;
-      case llvm::MachineOperand::MO_ExternalSymbol:
-        CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
-        break;
-      default:
-        llvm_unreachable(
-            "Expected to only handle direct call instructions here.");
-      }
-      FuncCGInfo.DirectCallees.insert(CalleeSymbol);
-      return; // Early exit after handling the direct call instruction.
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+    // Handle direct calls.
+    MCSymbol *CalleeSymbol = nullptr;
+    switch (CalleeOperand.getType()) {
+    case llvm::MachineOperand::MO_GlobalAddress:
+      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
+      break;
+    case llvm::MachineOperand::MO_ExternalSymbol:
+      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
+      break;
+    default:
+      llvm_unreachable(
+          "Expected to only handle direct call instructions here.");
     }
+    FuncCGInfo.DirectCallees.insert(CalleeSymbol);
+    return; // Early exit after handling the direct call instruction.
   }
   const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
   if (CallSiteInfo == CallSitesInfoMap.end())
