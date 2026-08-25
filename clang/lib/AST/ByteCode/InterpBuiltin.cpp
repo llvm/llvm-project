@@ -397,14 +397,10 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
     if (Off < 0)
       return false;
 
-    unsigned Length = 0;
-    for (uint64_t I = Off; I != Lit->getLength(); ++I) {
-      if (Lit->getCodeUnit(I) == 0)
-        break;
-      ++Length;
-    }
-
-    pushInteger(S, Length, Call->getType());
+    UnsignedOrNone ZeroIndex = Lit->findZeroCodeUnit(Off);
+    if (!ZeroIndex)
+      return false;
+    pushInteger(S, *ZeroIndex, Call->getType());
     return true;
   }
 
