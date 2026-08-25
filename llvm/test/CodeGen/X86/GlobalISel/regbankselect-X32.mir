@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=i386-linux-gnu                       -run-pass=regbankselect %s -o - | FileCheck %s
-# RUN: llc -mtriple=i386-linux-gnu -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple=i386-linux-gnu                       -run-pass=reg-bank-select %s -o - | FileCheck %s
+# RUN: llc -mtriple=i386-linux-gnu -regbankselect-greedy -run-pass=reg-bank-select %s -o - | FileCheck %s
 
 --- |
   define void @test_uadde_i32() {

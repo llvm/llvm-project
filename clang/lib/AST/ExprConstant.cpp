@@ -2314,6 +2314,10 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           !Var->isStaticLocal())
         return false;
 
+      // Address of a managed variable is never a constant expression.
+      if (Info.getLangOpts().CUDA && Var->hasAttr<HIPManagedAttr>())
+        return false;
+
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
       if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
@@ -2321,8 +2325,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
-             !Var->getType()->isCUDADeviceBuiltinTextureType()) ||
-            Var->hasAttr<HIPManagedAttr>())
+             !Var->getType()->isCUDADeviceBuiltinTextureType()))
           return false;
       }
     }
@@ -7614,6 +7617,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   if (RD->isUnion())
     return true;
 
+  if (!ASTContext::hasLayout(RD))
+    return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
   // We don't have a good way to iterate fields in reverse, so collect all the
@@ -8008,6 +8013,8 @@ class APValueToBufferConverter {
 
   bool visitRecord(const APValue &Val, QualType Ty, CharUnits Offset) {
     const RecordDecl *RD = Ty->getAsRecordDecl();
+    if (!ASTContext::hasLayout(RD))
+      return false;
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     // Visit the base classes.

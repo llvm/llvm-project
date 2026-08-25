@@ -9879,30 +9879,31 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
   assert((ResVT.is256BitVector() || ResVT.is512BitVector()) &&
          "Value type must be 256-/512-bit wide");
 
+  SmallVector<SDValue, 4> Ops(Op->ops());
+  unsigned NumSubElems = Ops[0].getSimpleValueType().getVectorNumElements();
   unsigned NumOperands = Op.getNumOperands();
+
   unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
   SmallSet<SDValue, 4> Undefs;
-  for (unsigned i = 0; i != NumOperands; ++i) {
-    SDValue SubVec = Op.getOperand(i);
+  for (auto [I, SubVec] : enumerate(Ops)) {
     if (SubVec.isUndef())
       continue;
     if (ISD::isFreezeUndef(SubVec.getNode())) {
-        // If the freeze(undef) has multiple uses then we must fold to zero.
-        if (SubVec.hasOneUse()) {
-          ++NumFreezeUndef;
-        } else {
-          ++NumZero;
-          Undefs.insert(SubVec);
-        }
-    }
-    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+      // If the freeze(undef) has multiple uses then we must fold to zero.
+      if (SubVec.hasOneUse()) {
+        ++NumFreezeUndef;
+      } else {
+        ++NumZero;
+        Undefs.insert(SubVec);
+      }
+    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode())) {
       ++NumZero;
-    else {
-      assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
-      NonZeros |= 1 << i;
+    } else {
+      assert(I < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
+      NonZeros |= 1 << I;
       ++NumNonZero;
     }
   }
@@ -9910,11 +9911,10 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
   // If we have more than 2 non-zeros, build each half separately.
   if (NumNonZero > 2) {
     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
-    ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(0, NumOperands/2));
+                             ArrayRef<SDValue>(Ops).slice(0, NumOperands / 2));
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(NumOperands/2));
+                             ArrayRef<SDValue>(Ops).slice(NumOperands / 2));
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
@@ -9928,14 +9928,12 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, const SDLoc &dl,
     DAG.ReplaceAllUsesWith(
         U, getZeroVector(U.getSimpleValueType(), Subtarget, DAG, dl));
 
-  MVT SubVT = Op.getOperand(0).getSimpleValueType();
-  unsigned NumSubElems = SubVT.getVectorNumElements();
-  for (unsigned i = 0; i != NumOperands; ++i) {
-    if ((NonZeros & (1 << i)) == 0)
+  for (auto [I, SubVec] : enumerate(Ops)) {
+    if ((NonZeros & (1 << I)) == 0)
       continue;
 
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, Op.getOperand(i),
-                      DAG.getVectorIdxConstant(i * NumSubElems, dl));
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, SubVec,
+                      DAG.getVectorIdxConstant(I * NumSubElems, dl));
   }
 
   return Vec;
@@ -20676,21 +20674,24 @@ std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
   if (useSSE) {
     MachineFunction &MF = DAG.getMachineFunction();
     unsigned SSFISize = DstVT.getStoreSize();
-    int SSFI =
-        MF.getFrameInfo().CreateStackObject(SSFISize, Align(SSFISize), false);
+    // The slot is private, so ABI alignment is enough. More might realign the
+    // frame.
+    Align SlotAlign = DAG.getEVTAlign(DstVT);
+    int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SlotAlign, false);
     auto PtrVT = getPointerTy(MF.getDataLayout());
     SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
     Tys = DAG.getVTList(MVT::Other);
     SDValue FSTOps[] = {Chain, Result, StackSlot};
     MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
-        MachineMemOperand::MOStore, SSFISize, Align(SSFISize));
+        MachineMemOperand::MOStore, SSFISize, SlotAlign);
 
     Chain =
         DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps, DstVT, StoreMMO);
     Result = DAG.getLoad(
         DstVT, DL, Chain, StackSlot,
-        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
+        SlotAlign);
     Chain = Result.getValue(1);
   }
 
@@ -30217,6 +30218,13 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                            DAG.getVectorIdxConstant(0, DL));
     else
       MinMax = Result;
+
+    // The signed-zero fixup may corrupt the numeric NewY result with the sign
+    // bit of a NaN NewX. Restore NewY in that case.
+    if (IsNum && !IgnoreNaN && !IsXNeverNaN) {
+      SDValue IsXNaN = DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+      MinMax = DAG.getSelect(DL, VT, IsXNaN, NewY, MinMax);
+    }
   }
 
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
@@ -43814,74 +43822,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
     }
 
-    // Attempt to merge insertps Op1 with an inner target shuffle node.
-    SmallVector<int, 8> TargetMask1;
-    SmallVector<SDValue, 2> Ops1;
-    APInt KnownUndef1, KnownZero1;
-    if (getTargetShuffleAndZeroables(Op1, TargetMask1, Ops1, KnownUndef1,
-                                     KnownZero1)) {
-      if (KnownUndef1[SrcIdx] || KnownZero1[SrcIdx]) {
-        // Zero/UNDEF insertion - zero out element and remove dependency.
-        InsertPSMask |= (1u << DstIdx);
-        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
-                           DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-      }
-      // Update insertps mask srcidx and reference the source input directly.
-      int M = TargetMask1[SrcIdx];
-      assert(0 <= M && M < 8 && "Shuffle index out of range");
-      InsertPSMask = (InsertPSMask & 0x3f) | ((M & 0x3) << 6);
-      Op1 = Ops1[M < 4 ? 0 : 1];
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
-                         DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-    }
-
-    // Attempt to merge insertps Op0 with an inner target shuffle node.
-    SmallVector<int, 8> TargetMask0;
-    SmallVector<SDValue, 2> Ops0;
-    APInt KnownUndef0, KnownZero0;
-    if (getTargetShuffleAndZeroables(Op0, TargetMask0, Ops0, KnownUndef0,
-                                     KnownZero0)) {
-      bool Updated = false;
-      bool UseInput00 = false;
-      bool UseInput01 = false;
-      for (int i = 0; i != 4; ++i) {
-        if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
-          // No change if element is already zero or the inserted element.
-          continue;
-        }
-
-        if (KnownUndef0[i] || KnownZero0[i]) {
-          // If the target mask is undef/zero then we must zero the element.
-          InsertPSMask |= (1u << i);
-          Updated = true;
-          continue;
-        }
-
-        // The input vector element must be inline.
-        int M = TargetMask0[i];
-        if (M != i && M != (i + 4))
-          return SDValue();
-
-        // Determine which inputs of the target shuffle we're using.
-        UseInput00 |= (0 <= M && M < 4);
-        UseInput01 |= (4 <= M);
-      }
-
-      // If we're not using both inputs of the target shuffle then use the
-      // referenced input directly.
-      if (UseInput00 && !UseInput01) {
-        Updated = true;
-        Op0 = Ops0[0];
-      } else if (!UseInput00 && UseInput01) {
-        Updated = true;
-        Op0 = Ops0[1];
-      }
-
-      if (Updated)
-        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
-                           DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-    }
-
     // If we're inserting an element from a vbroadcast load, fold the
     // load into the X86insertps instruction. We need to convert the scalar
     // load to a vector and clear the source lane of the INSERTPS control.
@@ -50784,9 +50724,21 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       Attribute::StrictFP);
   if (IsStrict) {
     // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
-    // requires 512-bit types to be legal and a power of 2 lane count.
-    if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
+    // requires 512-bit types to be legal.
+    if (!Subtarget.useAVX512Regs())
       return SDValue();
+    // Widen a non-power-of-two lane count to get a machine type, but only
+    // while it still fits one divide. Two chains lose to a chain plus a scalar.
+    unsigned NumElts = VT.getVectorNumElements();
+    if (!isPowerOf2_32(NumElts)) {
+      if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
+        return SDValue();
+      SDValue WideDividend = DAG.WidenVector(Dividend, DL);
+      EVT WideVT = WideDividend.getValueType();
+      SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
+      SDValue Wide = DAG.getNode(Opc, DL, WideVT, WideDividend, WideDivisor);
+      return DAG.getExtractSubvector(DL, VT, Wide, 0);
+    }
   } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
              !Subtarget.hasAVX2()) {
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
@@ -53700,6 +53652,9 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   SDValue Y = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
+  if (N->getOpcode() == ISD::OR && !N->getFlags().hasDisjoint())
+    return SDValue();
+
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
 
@@ -53989,6 +53944,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
+    return R;
+
+  if (SDValue R = combineAddOrSubToADCOrSBB(N, dl, DAG))
     return R;
 
   return SDValue();
@@ -59760,14 +59718,18 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold ADC(C1,C2,Carry) -> ADC(0,C1+C2,Carry)
-  // iff the flag result is dead.
-  // TODO: Allow flag result if C1+C2 doesn't signed/unsigned overflow.
-  if (LHSC && RHSC && !LHSC->isZero() && !N->hasAnyUseOfValue(1)) {
-    SDLoc DL(N);
-    APInt Sum = LHSC->getAPIntValue() + RHSC->getAPIntValue();
-    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(),
-                       DAG.getConstant(0, DL, LHS.getValueType()),
-                       DAG.getConstant(Sum, DL, LHS.getValueType()), CarryIn);
+  // iff the flag result is dead or C1+C2 doesn't signed/unsigned overflow.
+  if (LHSC && RHSC && !LHSC->isZero()) {
+    bool UOF, SOF;
+    APInt Sum = LHSC->getAPIntValue().uadd_ov(RHSC->getAPIntValue(), UOF);
+    (void)LHSC->getAPIntValue().sadd_ov(RHSC->getAPIntValue(), SOF);
+
+    if (!N->hasAnyUseOfValue(1) || (!UOF && !SOF)) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(),
+                         DAG.getConstant(0, DL, LHS.getValueType()),
+                         DAG.getConstant(Sum, DL, LHS.getValueType()), CarryIn);
+    }
   }
 
   if (SDValue Flags = combineCarryThroughADD(CarryIn, DAG)) {

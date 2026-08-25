@@ -18,6 +18,8 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CxxStringTypes.cpp
   Generic.cpp
   GenericBitset.cpp
+  GenericErrorCode.cpp
+  GenericFilesystem.cpp
   GenericInitializerList.cpp
   GenericList.cpp
   GenericOptional.cpp
@@ -41,11 +43,13 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   MsvcStl.cpp
   MsvcStlAtomic.cpp
   MsvcStlDeque.cpp
+  MsvcStlExpected.cpp
   MsvcStlSmartPointer.cpp
   MsvcStlSpan.cpp
   MsvcStlTree.cpp
   MsvcStlTuple.cpp
   MsvcStlUnordered.cpp
+  MsvcStlValarray.cpp
   MsvcStlVariant.cpp
   MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp

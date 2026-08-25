@@ -142,3 +142,8 @@ auto UserDefinedLiteral = "foo\\bar"_abc;
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: {{.*}} can be written as a raw string literal
 // CHECK-FIXES: auto UserDefinedLiteral = R"(foo\bar)"_abc;
 } // namespace gh97243
+
+namespace gh213891 {
+unsigned operator""_w(const char *);
+auto v = 12_w;
+} // namespace gh213891

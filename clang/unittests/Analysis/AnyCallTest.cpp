@@ -37,24 +37,26 @@ const IntegerLiteral *asIntegerLiteral(const Expr *E) {
 
 void expectIntegerArguments(const AnyCall &Call,
                             std::initializer_list<int> Expected) {
-  ASSERT_EQ(Call.arg_size(), Expected.size());
+  llvm::SmallVector<const Expr *, 4> Args = Call.arguments();
+  ASSERT_EQ(Args.size(), Expected.size());
+  EXPECT_EQ(Call.arg_size(), Expected.size());
+  EXPECT_FALSE(Args.empty());
   EXPECT_FALSE(Call.arg_empty());
-  EXPECT_EQ(Call.arguments()[0], Call.getArg(0));
-  EXPECT_EQ(*Call.arg_begin(), Call.getArg(0));
 
   unsigned Index = 0;
   for (int ExpectedValue : Expected) {
-    const auto *Arg = asIntegerLiteral(Call.getArg(Index));
+    const auto *Arg = asIntegerLiteral(Args[Index]);
     ASSERT_NE(Arg, nullptr);
     EXPECT_EQ(Arg->getValue(), ExpectedValue);
+    EXPECT_EQ(Arg, Call.getArg(Index));
     ++Index;
   }
 }
 
 void expectNoArguments(const AnyCall &Call) {
+  EXPECT_TRUE(Call.arguments().empty());
   EXPECT_TRUE(Call.arg_empty());
   EXPECT_EQ(Call.arg_size(), 0u);
-  EXPECT_EQ(Call.arg_begin(), Call.arg_end());
 }
 
 TEST(AnyCallTest, ExposesFunctionParametersAndArguments) {
@@ -79,6 +81,85 @@ TEST(AnyCallTest, ExposesFunctionParametersAndArguments) {
   EXPECT_EQ(*Call.param_begin(), Callee->getParamDecl(0));
 
   expectIntegerArguments(Call, {1, 2});
+}
+
+TEST(AnyCallTest, IncludesImplicitObjectInMemberCallArguments) {
+  auto AST = buildAST(R"cpp(
+    struct Widget {
+      void method(int value);
+    };
+    void target(Widget &widget) { widget.method(3); }
+  )cpp");
+  ASTContext &Ctx = AST->getASTContext();
+  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const auto *CE = selectFirst<CXXMemberCallExpr>(
+      "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(hasName("method"))))
+                        .bind("call"),
+                    Ctx));
+  ASSERT_NE(CE, nullptr);
+
+  AnyCall Call(CE);
+  llvm::SmallVector<const Expr *, 4> Args = Call.arguments();
+  ASSERT_EQ(Args.size(), 2u);
+
+  const auto *Object = dyn_cast<DeclRefExpr>(Args[0]->IgnoreParenImpCasts());
+  ASSERT_NE(Object, nullptr);
+  EXPECT_EQ(Object->getDecl()->getName(), "widget");
+
+  const auto *Argument = asIntegerLiteral(Args[1]);
+  ASSERT_NE(Argument, nullptr);
+  EXPECT_EQ(Argument->getValue(), 3);
+}
+
+TEST(AnyCallTest, OperatorCallArgumentsAlreadyIncludeImplicitObject) {
+  auto AST = buildAST(R"cpp(
+    struct Callable {
+      void operator()(int value);
+    };
+    void target(Callable &callable) { callable(4); }
+  )cpp");
+  ASTContext &Ctx = AST->getASTContext();
+  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const auto *CE = selectFirst<CXXOperatorCallExpr>(
+      "call",
+      match(cxxOperatorCallExpr(hasOverloadedOperatorName("()")).bind("call"),
+            Ctx));
+  ASSERT_NE(CE, nullptr);
+
+  AnyCall Call(CE);
+  llvm::SmallVector<const Expr *, 4> Args = Call.arguments();
+  ASSERT_EQ(Args.size(), 2u);
+
+  const auto *Object = dyn_cast<DeclRefExpr>(Args[0]->IgnoreParenImpCasts());
+  ASSERT_NE(Object, nullptr);
+  EXPECT_EQ(Object->getDecl()->getName(), "callable");
+
+  const auto *Argument = asIntegerLiteral(Args[1]);
+  ASSERT_NE(Argument, nullptr);
+  EXPECT_EQ(Argument->getValue(), 4);
+}
+
+TEST(AnyCallTest, StaticOperatorCallExcludesObjectArgument) {
+  auto AST = buildAST(R"cpp(
+    struct Callable {
+      static void operator()(int value);
+    };
+    void target(Callable &callable) { callable(5); }
+  )cpp",
+                      {"-fsyntax-only", "-std=c++23"});
+  ASTContext &Ctx = AST->getASTContext();
+  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const auto *CE = selectFirst<CXXOperatorCallExpr>(
+      "call",
+      match(cxxOperatorCallExpr(hasOverloadedOperatorName("()")).bind("call"),
+            Ctx));
+  ASSERT_NE(CE, nullptr);
+
+  AnyCall Call(CE);
+  expectIntegerArguments(Call, {5});
 }
 
 TEST(AnyCallTest, ExposesBlockCallArguments) {

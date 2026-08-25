@@ -13,21 +13,8 @@
 #include "SPIRVTargetMachine.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
-#include "SPIRVCBufferAccess.h"
-#include "SPIRVCtorDtorLowering.h"
-#include "SPIRVEmitIntrinsics.h"
-#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRVGlobalRegistry.h"
-#include "SPIRVLegalizeImplicitBinding.h"
-#include "SPIRVLegalizePointerCast.h"
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
-#include "SPIRVMergeRegionExitTargets.h"
-#include "SPIRVPrepareFunctions.h"
-#include "SPIRVPrepareGlobals.h"
-#include "SPIRVPushConstantAccess.h"
-#include "SPIRVRegularizer.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -41,6 +28,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
@@ -104,11 +92,6 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
-}
-
-void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {
@@ -270,7 +253,7 @@ bool SPIRVPassConfig::addLegalizeMachineIR() {
 
 // Do not add the RegBankSelect pass, as we only ever need virtual registers.
 bool SPIRVPassConfig::addRegBankSelect() {
-  disablePass(&RegBankSelect::ID);
+  disablePass(&RegBankSelectLegacy::ID);
   return false;
 }
 
@@ -285,19 +268,9 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
              "instructions"),
     cl::Optional, cl::init(false));
 
-namespace {
-// A custom subclass of InstructionSelect, which is mostly the same except from
-// not requiring RegBankSelect to occur previously.
-class SPIRVInstructionSelect : public InstructionSelect {
-  // We don't use register banks, so unset the requirement for them
-  MachineFunctionProperties getRequiredProperties() const override {
-    return InstructionSelect::getRequiredProperties().resetRegBankSelected();
-  }
-};
-} // namespace
-
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new SPIRVInstructionSelect());
+  addPass(new InstructionSelectLegacy(getOptLevel(),
+                                      /*RequireRegBankSelection=*/false));
   return false;
 }

@@ -10625,18 +10625,40 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
         }
       }
 
-      // Use SHL/ADDI (and possible XORI) to avoid having to materialize
+      // Use SLLI/ADDI (and possible XORI) to avoid having to materialize
       // a constant in register
       if ((TrueVal - FalseVal).isPowerOf2() && FalseVal.isSignedIntN(12)) {
         SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
-        return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+        return DAG.getNode(ISD::ADD, DL, VT, BitDiff, FalseV);
       }
       if ((FalseVal - TrueVal).isPowerOf2() && TrueVal.isSignedIntN(12)) {
         SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
-        CondV = DAG.getLogicalNOT(DL, CondV, CondV->getValueType(0));
+        CondV = DAG.getLogicalNOT(DL, CondV, CondV.getValueType());
         SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
-        return DAG.getNode(ISD::ADD, DL, VT, TrueV, BitDiff);
+        return DAG.getNode(ISD::ADD, DL, VT, BitDiff, TrueV);
+      }
+
+      // If we can't use ADDI, it might still be profitable to use SLLI/ADD or
+      // SLLI/SUB. We need to materialize a large constant for the czero+add
+      // sequence below anyway. Using SLLI avoids materializing the delta.
+      // Don't do this if the condition is an equality comparison since czero
+      // allows us to fold part of the compare.
+      if ((TrueVal - FalseVal).isPowerOf2() &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((TrueVal - FalseVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::ADD, DL, VT, FalseV, BitDiff);
+      }
+      if ((FalseVal - TrueVal).isPowerOf2() && !FalseVal.isSignedIntN(12) &&
+          !(CondV.getOpcode() == ISD::SETCC &&
+            ISD::isIntEqualitySetCC(
+                cast<CondCodeSDNode>(CondV.getOperand(2))->get()))) {
+        SDValue Log2 = DAG.getConstant((FalseVal - TrueVal).logBase2(), DL, VT);
+        SDValue BitDiff = DAG.getNode(ISD::SHL, DL, VT, CondV, Log2);
+        return DAG.getNode(ISD::SUB, DL, VT, FalseV, BitDiff);
       }
 
       auto getCost = [&](const APInt &Delta, const APInt &Addend) {
@@ -12212,6 +12234,26 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable(
+        "Unexpected RISC-V packed multiply high accumulate intrinsic");
+  case Intrinsic::riscv_pmhacc:
+    return RISCVISD::MHACC;
+  case Intrinsic::riscv_pmhracc:
+    return RISCVISD::MHRACC;
+  case Intrinsic::riscv_pmhaccu:
+    return RISCVISD::MHACCU;
+  case Intrinsic::riscv_pmhraccu:
+    return RISCVISD::MHRACCU;
+  case Intrinsic::riscv_pmhaccsu:
+    return RISCVISD::MHACCSU;
+  case Intrinsic::riscv_pmhraccsu:
+    return RISCVISD::MHRACCSU;
+  }
+}
+
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                      SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(0);
@@ -12563,6 +12605,43 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_pmhacc:
+  case Intrinsic::riscv_pmhracc:
+  case Intrinsic::riscv_pmhaccu:
+  case Intrinsic::riscv_pmhraccu:
+  case Intrinsic::riscv_pmhaccsu:
+  case Intrinsic::riscv_pmhraccsu: {
+    EVT VT = Op.getValueType();
+    unsigned MulOpc = getRVPMulHighAccumulateOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32 has no single instruction for 64-bit packed multiply high
+    // accumulate. Split v4i16 into two v2i16 packed operations, and split
+    // v2i32 into scalar i32 operations.
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
+      auto [RdLo, RdHi] = DAG.SplitVector(Rd, DL);
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(MulOpc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(MulOpc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto Extract = [&](SDValue V, unsigned Idx) {
+        return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+      };
+      SDValue Lo = DAG.getNode(MulOpc, DL, MVT::i32, Extract(Rd, 0),
+                               Extract(Rs1, 0), Extract(Rs2, 0));
+      SDValue Hi = DAG.getNode(MulOpc, DL, MVT::i32, Extract(Rd, 1),
+                               Extract(Rs1, 1), Extract(Rs2, 1));
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
@@ -16632,6 +16711,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
+    case Intrinsic::riscv_pmhacc:
+    case Intrinsic::riscv_pmhracc:
+    case Intrinsic::riscv_pmhaccu:
+    case Intrinsic::riscv_pmhraccu:
+    case Intrinsic::riscv_pmhaccsu:
+    case Intrinsic::riscv_pmhraccsu: {
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      EVT WideVT = MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Rd =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Rs1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      SDValue Rs2 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(3), Undef);
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateOpcode(IntNo), DL,
+                                WideVT, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
     case Intrinsic::riscv_paadd:
     case Intrinsic::riscv_paaddu:
     case Intrinsic::riscv_pasub:
@@ -18857,6 +18959,67 @@ static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::BITCAST, DL, VT, Sra);
 }
 
+static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  bool N0IsSExt = N0.getOpcode() == ISD::SIGN_EXTEND;
+  bool N0IsZExt = N0.getOpcode() == ISD::ZERO_EXTEND;
+  bool N1IsSExt = N1.getOpcode() == ISD::SIGN_EXTEND;
+  bool N1IsZExt = N1.getOpcode() == ISD::ZERO_EXTEND;
+
+  if (!(N0IsSExt || N0IsZExt) || !(N1IsSExt || N1IsZExt) || !N0.hasOneUse() ||
+      !N1.hasOneUse())
+    return SDValue();
+
+  SDValue A = N0.getOperand(0);
+  SDValue B = N1.getOperand(0);
+  EVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  if (A.getValueType() != SrcVT || B.getValueType() != SrcVT)
+    return SDValue();
+
+  unsigned RV32Opc, RV64Opc;
+  bool IsSignedUnsigned = false;
+  if (N0IsSExt && N1IsSExt) {
+    RV32Opc = RISCVISD::PWMUL;
+    RV64Opc = RISCVISD::PMUL_HALVES_01;
+  } else if (N0IsZExt && N1IsZExt) {
+    RV32Opc = RISCVISD::PWMULU;
+    RV64Opc = RISCVISD::PMULU_HALVES_01;
+  } else {
+    IsSignedUnsigned = true;
+    RV32Opc = RISCVISD::PWMULSU;
+    RV64Opc = RISCVISD::PMULSU_HALVES_00;
+    if (N0IsZExt && N1IsSExt)
+      std::swap(A, B);
+  }
+
+  SDLoc DL(N);
+  if (!Subtarget.is64Bit())
+    return DAG.getNode(RV32Opc, DL, VT, A, B);
+
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  if (IsSignedUnsigned) {
+    SDValue Zero = DAG.getConstant(0, DL, LegalSrcVT);
+    A = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, Zero);
+    B = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, B, Zero);
+    return DAG.getNode(RV64Opc, DL, VT, A, B);
+  }
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  return DAG.getNode(RV64Opc, DL, VT, Zip, Zip);
+}
+
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -18898,6 +19061,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+
+  if (SDValue V = combinePExtWideningMul(N, DAG, Subtarget))
     return V;
 
   if (SDValue V = combineVectorMulToSraBitcast(N, DAG))
@@ -18999,10 +19165,17 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
 /// The idea behind this canonicalization is that if %p is used as a mask
 /// in a masked.load/store, we can easily turn it to use VL-predicate later
 /// by assigning `vl = min(%m, <number of vector elements>)`.
-static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
-                                              SDValue RHS, ISD::CondCode CC,
-                                              const SDLoc &DL,
-                                              SelectionDAG &DAG) {
+static SDValue canonicalizeMaskForVLPredicate(
+    EVT MaskVT, SDValue LHS, SDValue RHS, ISD::CondCode CC, const SDLoc &DL,
+    SelectionDAG &DAG, const TargetLowering::DAGCombinerInfo &DCI) {
+
+  // This transformation performs checks against the vector element type, which
+  // is also used to generate scalar value that will be splatted later. Because
+  // of this, the emitted scalar value might not be legal type and therefore we
+  // need to run this before type legalizer.
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
   using namespace SDPatternMatch;
   if (!MaskVT.isFixedLengthVector() ||
       !(CC == ISD::SETUGT || CC == ISD::SETGT || CC == ISD::SETULT ||
@@ -19017,7 +19190,10 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
   }
   bool IsSigned = ISD::isSignedIntSetCC(CC);
 
-  SDValue Boundary = DAG.getSplatValue(RHS, /*LegalizeType=*/true);
+  EVT ElementVT = LHS.getValueType().getScalarType();
+  uint64_t ElementSize = LHS.getScalarValueSizeInBits();
+
+  SDValue Boundary = DAG.getSplatValue(RHS);
   if (!Boundary)
     return SDValue();
 
@@ -19030,32 +19206,48 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
       return SDValue();
   }
 
-  SDValue BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+  SDValue BaseIndex = DAG.getSplatValue(LHSOp0);
   if (!BaseIndex) {
     std::swap(LHSOp0, LHSOp1);
-    BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+    BaseIndex = DAG.getSplatValue(LHSOp0);
   }
-  if (!BaseIndex || !isa<BuildVectorSDNode>(LHSOp1) ||
-      BaseIndex.getValueType() != Boundary.getValueType())
+  if (!BaseIndex || !isa<BuildVectorSDNode>(LHSOp1))
     return SDValue();
 
   // Return {a,n} from a build_vector sequence of {a, a+n, a+2n, a+3n, ....}
   auto StepVector = cast<BuildVectorSDNode>(LHSOp1)->isArithmeticSequence();
   if (!StepVector || !StepVector->second.isOne())
     return SDValue();
-  EVT LenVT = BaseIndex.getValueType();
   const APInt &Start = StepVector->first;
-  unsigned LenWidth = LenVT.getScalarSizeInBits();
-  APInt Offset =
-      IsSigned ? Start.sextOrTrunc(LenWidth) : Start.zextOrTrunc(LenWidth);
+
+  Boundary = DAG.getExtOrTrunc(IsSigned, Boundary, DL, ElementVT);
+  BaseIndex = DAG.getExtOrTrunc(IsSigned, BaseIndex, DL, ElementVT);
+  SDValue Offset = DAG.getConstant(IsSigned ? Start.sextOrTrunc(ElementSize)
+                                            : Start.zextOrTrunc(ElementSize),
+                                   DL, ElementVT);
+
+  if (IsSigned) {
+    // Two additional conditions:
+    // 1. Offset + BaseIndex never overflow
+    if (!DAG.willNotOverflowAdd(/*IsSigned=*/true, BaseIndex, Offset))
+      return SDValue();
+
+    // 2. Offset + BaseIndex has to be non-negative
+    auto BaseIndexKB = DAG.computeKnownBits(BaseIndex);
+    auto OffsetKB = DAG.computeKnownBits(Offset);
+    if (!KnownBits::add(BaseIndexKB, OffsetKB, /*NSW=*/true,
+                        /*NUW=*/false)
+             .isNonNegative())
+      return SDValue();
+  }
 
   unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
   SDValue NewStepVector = DAG.getStepVector(DL, LHS.getValueType());
-  BaseIndex = DAG.getNode(
-      ISD::ADD, DL, LenVT, BaseIndex, DAG.getConstant(Offset, DL, LenVT),
-      IsSigned ? SDNodeFlags::NoSignedWrap : SDNodeFlags::NoUnsignedWrap);
-  BaseIndex = DAG.getNode(MinOpc, DL, LenVT, Boundary, BaseIndex);
-  Boundary = DAG.getNode(ISD::SUB, DL, LenVT, Boundary, BaseIndex);
+  BaseIndex = DAG.getNode(ISD::ADD, DL, ElementVT, BaseIndex, Offset,
+                          IsSigned ? SDNodeFlags::NoSignedWrap
+                                   : SDNodeFlags::NoUnsignedWrap);
+  BaseIndex = DAG.getNode(MinOpc, DL, ElementVT, Boundary, BaseIndex);
+  Boundary = DAG.getNode(ISD::SUB, DL, ElementVT, Boundary, BaseIndex);
   Boundary = DAG.getSplat(RHS.getValueType(), DL, Boundary);
 
   return DAG.getSetCC(DL, MaskVT, NewStepVector, Boundary, CC);
@@ -19190,7 +19382,8 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT OpVT = N0.getValueType();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (SDValue V = canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG))
+  if (SDValue V =
+          canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG, DCI))
     return V;
 
   // Looking for an equality compare.
@@ -26239,8 +26432,10 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
-                            "have a frame pointer");
+      Func.getContext().diagnose(DiagnosticInfoUnsupported{
+          Func,
+          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
+          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
