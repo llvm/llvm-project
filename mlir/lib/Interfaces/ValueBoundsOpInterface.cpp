@@ -29,6 +29,34 @@ namespace mlir {
 #include "mlir/Interfaces/ValueBoundsOpInterface.cpp.inc"
 } // namespace mlir
 
+bool ValueBoundsConstraintSet::isProvablyNonNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GE,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyNonPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LE,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GT,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LT,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
 static Operation *getOwnerOfValue(Value value) {
   if (auto bbArg = dyn_cast<BlockArgument>(value))
     return bbArg.getOwner()->getParentOp();
@@ -307,7 +335,7 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
        cast<BlockArgument>(value).getOwner()->isEntryBlock())) {
     LDBG() << "Push to worklist: " << value
            << " (dim: " << dim.value_or(kIndexValue) << ")";
-    worklist.push(pos);
+    worklist.push(valueDim);
   }
 
   return pos;
@@ -383,11 +411,10 @@ bool ValueBoundsConstraintSet::isMapped(Value value,
 void ValueBoundsConstraintSet::processWorklist() {
   LDBG() << "Processing value bounds worklist...";
   while (!worklist.empty()) {
-    int64_t pos = worklist.front();
+    ValueDim valueDim = worklist.front();
     worklist.pop();
-    assert(positionToValueDim[pos].has_value() &&
-           "did not expect std::nullopt on worklist");
-    ValueDim valueDim = *positionToValueDim[pos];
+    assert(valueDimToPosition.contains(valueDim) &&
+           "expected mapped worklist entry");
     Value value = valueDim.first;
     int64_t dim = valueDim.second;
 
@@ -820,9 +847,7 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
     return cstr.comparePos(lhsPos, cmp, rhsPos);
   };
   ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
-  lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
-  rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
-  return cstr.comparePos(lhsPos, cmp, rhsPos);
+  return cstr.populateAndCompare(lhs, cmp, rhs);
 }
 
 FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,

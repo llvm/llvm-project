@@ -3,7 +3,7 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
-set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
+set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR};-DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}")
 if(APPLE AND CMAKE_OSX_SYSROOT AND (LLVM_TARGET_TRIPLE STREQUAL LLVM_HOST_TRIPLE))
   # Only propagate the host sysroot for native runtimes builds.
   list(APPEND RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}")
@@ -115,6 +115,27 @@ macro(append_passthrough_options out type names)
   endforeach()
 endmacro()
 
+# Wire build-order dependencies on flang for targets that invoke it. This
+# allows us to configure the runtimes without first building flang. Attaches the
+# flang dependency to the main build target and any fortran module file builds,
+# like 'install-libomp-mod' or `install-flang-rt-mod'.
+function(add_flang_mod_deps build_target)
+  if(NOT TARGET flang)
+    return ()
+  endif ()
+
+  if(TARGET ${build_target})
+    add_dependencies(${build_target} flang)
+  endif()
+  foreach(tgt IN LISTS ARGN)
+    if(tgt MATCHES "-mod($|-)" OR tgt MATCHES "check-(flang-rt|openmp)($|-)")
+      if(TARGET ${tgt})
+        add_dependencies(${tgt} flang)
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
@@ -138,7 +159,7 @@ function(builtin_default_target compiler_rt_path)
                                                 SANITIZER
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS})
 endfunction()
 
@@ -162,7 +183,7 @@ function(builtin_register_target compiler_rt_path name)
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            USE_TOOLCHAIN
-                           FOLDER "Compiler-RT"
+                           FOLDER "compiler-rt"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
 
@@ -193,7 +214,7 @@ if(compiler_rt_path)
     add_custom_target(install-builtins-stripped)
     set_target_properties(
       builtins install-builtins install-builtins-stripped
-      PROPERTIES FOLDER "Compiler-RT"
+      PROPERTIES FOLDER "compiler-rt"
     )
   endif()
 
@@ -278,8 +299,12 @@ function(runtime_default_target)
   endforeach()
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     # The target libomp-mod is a dependee of check-flang needed to run its
-    # OpenMP tests
+    # OpenMP tests. install-libomp-mod is a separate distribution component
+    # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
+    list(APPEND extra_targets "libomp-mod-barrier")
+    list(APPEND extra_targets "install-libomp-mod")
+    list(APPEND extra_targets "install-libomp-mod-stripped")
 
     # Let the "doxygen" build target also build openmp's doxygen, just like
     # "check" and "install" also apply to the runtimes builds.
@@ -293,8 +318,12 @@ function(runtime_default_target)
     endif ()
   endif ()
   if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # The target flang-rt-mod is a dependee of check-flang.
+    # The target flang-rt-mod is a dependee of check-flang. install-flang-rt-mod
+    # is a separate distribution component so that install-flang-rt does not
+    # require building flang.
     list(APPEND extra_targets "flang-rt-mod")
+    list(APPEND extra_targets "install-flang-rt-mod")
+    list(APPEND extra_targets "install-flang-rt-mod-stripped")
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
@@ -337,6 +366,8 @@ function(runtime_default_target)
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
+
+  add_flang_mod_deps(runtimes-build ${extra_targets} ${test_targets})
 endfunction()
 
 # runtime_register_target(name)
@@ -491,6 +522,8 @@ function(runtime_register_target name)
     add_dependencies(install-${component} install-${component}-${name})
     add_dependencies(install-${component}-stripped install-${component}-${name}-stripped)
   endforeach()
+
+  add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
 endfunction()
 
 # Check if we have any runtimes to build.
@@ -514,7 +547,7 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                flang
+                flang-lazy
                 count
                 lld
                 lli
@@ -548,14 +581,19 @@ if(build_runtimes)
     endif()
   endif()
 
-  # Forward user-provived system configuration to runtimes for requirement introspection.
+  # Forward user-provided system configuration to runtimes for requirement introspection.
+  # These are lists, so their separators have to survive being passed on the
+  # sub-build's command line; an unescaped ';' would split them into separate
+  # arguments.
   # CMAKE_PREFIX_PATH is the search path for CMake packages.
   if(CMAKE_PREFIX_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_prefix_path ${CMAKE_PREFIX_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${escaped_prefix_path}")
   endif()
   # CMAKE_PROGRAM_PATH is the search path for executables such as python.
   if(CMAKE_PROGRAM_PATH)
-    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
+    string(JOIN "$<SEMICOLON>" escaped_program_path ${CMAKE_PROGRAM_PATH})
+    list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${escaped_program_path}")
   endif()
 
   set(libclc_enabled FALSE)
@@ -596,22 +634,36 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    # The offload unittests detect the GPU arch at configure time via
+    # -mcpu=native.
+    if(LLVM_INCLUDE_TESTS)
+      if(TARGET offload-arch)
+        list(APPEND extra_deps offload-arch)
+      endif()
+    endif()
   endif()
-  if(LLVM_LIBC_GPU_BUILD)
-    set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
-    foreach(name ${LLVM_RUNTIME_TARGETS})
-      if(name MATCHES "^(amdgcn|nvptx)")
-        set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+  if("libsycl" IN_LIST LLVM_ENABLE_RUNTIMES)
+    foreach(dep clang-linker-wrapper clang-sycl-linker clang llvm-offload-binary)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
       endif()
     endforeach()
-    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET llvm-offload-binary)
-      list(APPEND extra_deps llvm-offload-binary)
-    endif()
-    if(TARGET clang-nvlink-wrapper)
-      list(APPEND extra_deps clang-nvlink-wrapper)
-    endif()
   endif()
+  set(_gpu_loader "${LLVM_TOOLS_BINARY_DIR}/llvm-gpu-loader${CMAKE_EXECUTABLE_SUFFIX}")
+  foreach(name ${LLVM_RUNTIME_TARGETS})
+    if(name MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv")
+      set(RUNTIMES_${name}_CMAKE_CROSSCOMPILING_EMULATOR "${_gpu_loader}" CACHE STRING "")
+      if(TARGET llvm-offload-binary)
+        list(APPEND extra_deps llvm-offload-binary)
+      endif()
+      if(TARGET clang-nvlink-wrapper)
+        list(APPEND extra_deps clang-nvlink-wrapper)
+      endif()
+      if(TARGET llvm-link)
+        list(APPEND extra_deps llvm-link)
+      endif()
+    endif()
+  endforeach()
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
@@ -669,7 +721,7 @@ if(build_runtimes)
         add_custom_target(check-builtins)
         set_target_properties(
           check-builtins
-          PROPERTIES FOLDER "Compiler-RT"
+          PROPERTIES FOLDER "compiler-rt"
         )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
@@ -800,11 +852,18 @@ ${_flag_values}\
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
 
+    # Flang is not in extra_deps to avoid making runtimes configure depend on
+    # it being fully built, but tests still need it.
+    set(extra_test_deps ${extra_deps})
+    if(TARGET flang)
+      list(APPEND extra_test_deps flang)
+    endif()
+
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
-      add_dependencies(${target} ${extra_deps})
+      add_dependencies(${target} ${extra_test_deps})
     endforeach()
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
+    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_test_deps})
   endif()
 
   # Flang tests depend on module files built by the runtimes.
@@ -814,6 +873,7 @@ ${_flag_values}\
     endif ()
     if (TARGET libomp-mod)
       add_dependencies(flang-rt-test-deps libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod-barrier)
     endif ()
   endif ()
 endif()

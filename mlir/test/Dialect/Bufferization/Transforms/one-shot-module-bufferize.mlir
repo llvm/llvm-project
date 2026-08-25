@@ -97,7 +97,7 @@ func.func @foo(%arg0: tensor<3x8xf16>) -> tensor<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP-LABEL:   func.func @call_extract_slice(
 // CHECK-NO-LAYOUT-MAP-SAME:                                  %[[VAL_0:.*]]: memref<4x8xf16>) -> memref<3x8xf16> {
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_1:.*]] = memref.subview %[[VAL_0]][1, 0] [3, 8] [1, 1] : memref<4x8xf16> to memref<3x8xf16, strided<[8, 1], offset: 8>>
-// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() alignment = 64 : memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           memref.copy %[[VAL_1]], %[[VAL_2]] : memref<3x8xf16, strided<[8, 1], offset: 8>> to memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           %[[VAL_3:.*]] = call @foo(%[[VAL_2]]) : (memref<3x8xf16>) -> memref<3x8xf16>
 // CHECK-NO-LAYOUT-MAP:           return %[[VAL_3]] : memref<3x8xf16>
@@ -488,9 +488,9 @@ func.func @main() {
   %v1 = arith.constant 1.0 : f32
   %v2 = arith.constant 2.0 : f32
 
-  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() {alignment = 64 : i64} : memref<64xf32>
-  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() {alignment = 64 : i64} : memref<f32>
+  // CHECK-NEXT:   %[[A:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[B:.*]] = memref.alloc() alignment = 64 : memref<64xf32>
+  // CHECK-NEXT:   %[[C:.*]] = memref.alloc() alignment = 64 : memref<f32>
   //  CHECK-DAG:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, strided<[?], offset: ?>>
   //  CHECK-DAG:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, strided<[], offset: ?>>
@@ -751,7 +751,7 @@ func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
   // We are conservative around recursive functions. The analysis cannot handle
   // them, so we have to assume the op operand of the call op bufferizes to a
   // memory read and write. This causes a copy in this test case.
-  // CHECK: %[[copy:.*]] = memref.alloc() {alignment = 64 : i64} : memref<5xf32>
+  // CHECK: %[[copy:.*]] = memref.alloc() alignment = 64 : memref<5xf32>
   // CHECK: memref.copy %[[arg0]], %[[copy]]
   // CHECK: %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
   // CHECK: %[[call:.*]] = call @foo(%[[cast]])
@@ -797,7 +797,7 @@ func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
 
 // CHECK-LABEL: func @result_type_mismatch({{.*}}) -> memref<5xf32, strided<[?], offset: ?>>
 func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
-  // CHECK: %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc() alignment = 64 : memref<10xf32>
   %t = tensor.empty() : tensor<10xf32>
   cf.cond_br %c, ^bb1, ^bb2
 ^bb1:
@@ -831,62 +831,6 @@ module @inner_module {
 
 // -----
 
-// CHECK:   func.func @custom_types(
-// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME:  ) -> (!test.test_memref<[4, 8], f64>,
-// CHECK-SAME:        !test.test_memref<[4, 8], f64>)
-func.func @custom_types(%arg: !test.test_tensor<[4, 4], f64>)
-    -> (!test.test_tensor<[4, 8], f64>, !test.test_tensor<[4, 8], f64>) {
-  // CHECK: %[[out1:.*]] = "test.dummy_memref_op"(%[[arg]]) :
-  // CHECK-SAME: (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 8], f64>
-  %out1 = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 8], f64>
-
-  // CHECK: %[[alloc:.*]] = "test.create_memref_op"
-  // CHECK: %[[out2:.*]] = "test.dummy_memref_op"(%[[alloc]])
-  // CHECK-SAME: (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 8], f64>
-  %alloc = "test.create_tensor_op"() : () -> !test.test_tensor<[4, 4], f64>
-  %out2 = "test.dummy_tensor_op"(%alloc) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 8], f64>
-
-  // CHECK: return %[[out1]], %[[out2]]
-  return %out1, %out2 :
-    !test.test_tensor<[4, 8], f64>, !test.test_tensor<[4, 8], f64>
-}
-
-// -----
-
-// CHECK:   func.func @custom_types_foo(
-// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME:  ) -> !test.test_memref<[4, 4], f64>
-func.func @custom_types_foo(%arg: !test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64> {
-  // CHECK: %[[out:.*]] = "test.dummy_memref_op"(%[[arg]])
-  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64>
-  // CHECK: return %[[out]]
-  return %out : !test.test_tensor<[4, 4], f64>
-}
-
-// CHECK:   func.func @custom_types_bar(
-// CHECK-SAME:    %[[arg:.*]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME:  ) -> !test.test_memref<[4, 8], f64>
-func.func @custom_types_bar(%arg: !test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 8], f64> {
-  // CHECK: %[[call:.*]] = call @custom_types_foo(%[[arg]])
-  %call = func.call @custom_types_foo(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64>
-
-  // CHECK: %[[out:.*]] = "test.dummy_memref_op"(%[[call]])
-  %out = "test.dummy_tensor_op"(%call) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 8], f64>
-
-  // CHECK: return %[[out]]
-  return %out : !test.test_tensor<[4, 8], f64>
-}
-
-// -----
-
 // Test that foldMemRefCasts does not downgrade a ranked return type to unranked
 // when the return value is produced by a memref.cast from unranked to ranked.
 // CHECK-LABEL: func.func @ranked_return_via_unranked_call(
@@ -905,179 +849,3 @@ func.func @ranked_return_via_unranked_call(%arg0: tensor<64x20x40xf32>) -> tenso
   return %b : tensor<64x20x40xf32>
 }
 func.func private @relu_unranked(tensor<*xf32>) -> tensor<*xf32>
-
-// -----
-
-// CHECK:   func.func @custom_types_scf_for_inplace(
-// CHECK-SAME:    %[[arg:.+]]: !test.test_memref<[4, 4], f64>,
-// CHECK-SAME:    %[[lb:.+]]: index, %[[ub:.+]]: index, %[[step:.+]]: index
-// CHECK-SAME:  ) -> !test.test_memref<[4, 4], f64>
-func.func @custom_types_scf_for_inplace(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %lb: index, %ub: index, %step: index)
-    -> !test.test_tensor<[4, 4], f64> {
-  // CHECK: %[[loop:.+]] = scf.for %{{.*}} = %[[lb]] to %[[ub]] step %[[step]]
-  // CHECK-SAME: iter_args(%[[iter:.+]] = %[[arg]]) -> (!test.test_memref<[4, 4], f64>) {
-  // CHECK: %[[call:.+]] = "test.dummy_memref_op"(%[[iter]])
-  // CHECK: scf.yield %[[call]] : !test.test_memref<[4, 4], f64>
-  %loop = scf.for %i = %lb to %ub step %step
-      iter_args(%iter = %arg) -> (!test.test_tensor<[4, 4], f64>) {
-    // Inside loop: use iter_args directly (this is inplace modifiable op)
-    %call = "test.dummy_tensor_op"(%iter) : (!test.test_tensor<[4, 4], f64>)
-      -> !test.test_tensor<[4, 4], f64>
-    // Yield: return the same iter_args value (or result of inplace op on it)
-    scf.yield %call : !test.test_tensor<[4, 4], f64>
-  }
-
-  // CHECK: return %[[loop]] : !test.test_memref<[4, 4], f64>
-  return %loop : !test.test_tensor<[4, 4], f64>
-}
-
-// -----
-
-func.func private @custom_types_identity_2d(%arg: !test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64> {
-  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64>
-  return %out : !test.test_tensor<[4, 4], f64>
-}
-
-// Same as @custom_types_scf_for_inplace, but with an inner call to test alias analysis
-// through function boundaries.
-// CHECK-LABEL: func.func @custom_types_scf_for_inplace_with_call(
-// CHECK-SAME: %[[arg:.+]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME: %[[lb:.+]]: index, %[[ub:.+]]: index, %[[step:.+]]: index
-// CHECK-SAME: ) -> !test.test_memref<[4, 4], f64>
-// CHECK: %[[loop:.+]] = scf.for %{{.*}} = %[[lb]] to %[[ub]] step %[[step]] iter_args(%[[iter:.+]] = %[[arg]]) -> (!test.test_memref<[4, 4], f64>) {
-// CHECK: %[[call:.+]] = func.call @custom_types_identity_2d(%[[iter]]) : (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 4], f64>
-// CHECK: scf.yield %[[call]] : !test.test_memref<[4, 4], f64>
-// CHECK: return %[[loop]] : !test.test_memref<[4, 4], f64>
-func.func @custom_types_scf_for_inplace_with_call(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %lb: index, %ub: index, %step: index)
-    -> !test.test_tensor<[4, 4], f64> {
-  %loop = scf.for %i = %lb to %ub step %step
-      iter_args(%iter = %arg) -> (!test.test_tensor<[4, 4], f64>) {
-    %call = func.call @custom_types_identity_2d(%iter)
-      : (!test.test_tensor<[4, 4], f64>) -> !test.test_tensor<[4, 4], f64>
-    scf.yield %call : !test.test_tensor<[4, 4], f64>
-  }
-
-  return %loop : !test.test_tensor<[4, 4], f64>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @custom_types_scf_if_inplace(
-// CHECK-SAME: %[[arg:.+]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME: %[[cond:.+]]: i1
-// CHECK-SAME: ) -> !test.test_memref<[4, 4], f64>
-// CHECK: %[[res:.+]] = scf.if %[[cond]] -> (!test.test_memref<[4, 4], f64>) {
-// CHECK: %[[dummy:.+]] = "test.dummy_memref_op"(%[[arg]]) : (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 4], f64>
-// CHECK: scf.yield %[[dummy]] : !test.test_memref<[4, 4], f64>
-// CHECK: } else {
-// CHECK: scf.yield %[[arg]] : !test.test_memref<[4, 4], f64>
-// CHECK: }
-// CHECK: return %[[res]] : !test.test_memref<[4, 4], f64>
-func.func @custom_types_scf_if_inplace(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %cond: i1)
-    -> !test.test_tensor<[4, 4], f64> {
-  %res = scf.if %cond -> (!test.test_tensor<[4, 4], f64>) {
-    %dummy = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-      -> !test.test_tensor<[4, 4], f64>
-    scf.yield %dummy : !test.test_tensor<[4, 4], f64>
-  } else {
-    scf.yield %arg : !test.test_tensor<[4, 4], f64>
-  }
-  return %res : !test.test_tensor<[4, 4], f64>
-}
-
-// -----
-
-func.func private @custom_types_identity_2d(%arg: !test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64> {
-  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64>
-  return %out : !test.test_tensor<[4, 4], f64>
-}
-
-// CHECK-LABEL: func.func @custom_types_scf_if_inplace_with_call(
-// CHECK-SAME: %[[arg:.+]]: !test.test_memref<[4, 4], f64>
-// CHECK-SAME: %[[cond:.+]]: i1
-// CHECK-SAME: ) -> !test.test_memref<[4, 4], f64>
-// CHECK: %[[res:.+]] = scf.if %[[cond]] -> (!test.test_memref<[4, 4], f64>) {
-// CHECK: %[[call:.+]] = func.call @custom_types_identity_2d(%[[arg]]) : (!test.test_memref<[4, 4], f64>) -> !test.test_memref<[4, 4], f64>
-// CHECK: scf.yield %[[call]] : !test.test_memref<[4, 4], f64>
-// CHECK: } else {
-// CHECK: scf.yield %[[arg]] : !test.test_memref<[4, 4], f64>
-// CHECK: }
-// CHECK: return %[[res]] : !test.test_memref<[4, 4], f64>
-func.func @custom_types_scf_if_inplace_with_call(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %cond: i1)
-    -> !test.test_tensor<[4, 4], f64> {
-  %res = scf.if %cond -> (!test.test_tensor<[4, 4], f64>) {
-    %call = func.call @custom_types_identity_2d(%arg)
-      : (!test.test_tensor<[4, 4], f64>) -> !test.test_tensor<[4, 4], f64>
-    scf.yield %call : !test.test_tensor<[4, 4], f64>
-  } else {
-    scf.yield %arg : !test.test_tensor<[4, 4], f64>
-  }
-  return %res : !test.test_tensor<[4, 4], f64>
-}
-
-// -----
-
-// CHECK-LABEL: func.func @scf_while_inplace(
-// CHECK-SAME: !test.test_memref<[4, 4], f64>
-// CHECK: scf.while
-// CHECK: scf.condition
-// CHECK: scf.yield
-// CHECK: return
-func.func @scf_while_inplace(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %cond: i1)
-    -> !test.test_tensor<[4, 4], f64> {
-  %loop = scf.while (%iter = %arg)
-      : (!test.test_tensor<[4, 4], f64>) -> !test.test_tensor<[4, 4], f64> {
-    scf.condition(%cond) %iter : !test.test_tensor<[4, 4], f64>
-  } do {
-  ^bb0(%current: !test.test_tensor<[4, 4], f64>):
-    %dummy = "test.dummy_tensor_op"(%current) : (!test.test_tensor<[4, 4], f64>)
-      -> !test.test_tensor<[4, 4], f64>
-    scf.yield %dummy : !test.test_tensor<[4, 4], f64>
-  }
-  return %loop : !test.test_tensor<[4, 4], f64>
-}
-
-// -----
-
-func.func private @custom_types_identity_2d(%arg: !test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64> {
-  %out = "test.dummy_tensor_op"(%arg) : (!test.test_tensor<[4, 4], f64>)
-    -> !test.test_tensor<[4, 4], f64>
-  return %out : !test.test_tensor<[4, 4], f64>
-}
-
-// CHECK-LABEL: func.func @scf_while_inplace(
-// CHECK-SAME: !test.test_memref<[4, 4], f64>
-// CHECK: scf.while
-// CHECK: scf.condition
-// CHECK: scf.yield
-// CHECK: return
-func.func @scf_while_inplace(
-    %arg: !test.test_tensor<[4, 4], f64>,
-    %cond: i1)
-    -> !test.test_tensor<[4, 4], f64> {
-  %loop = scf.while (%iter = %arg)
-      : (!test.test_tensor<[4, 4], f64>) -> !test.test_tensor<[4, 4], f64> {
-    scf.condition(%cond) %iter : !test.test_tensor<[4, 4], f64>
-  } do {
-  ^bb0(%current: !test.test_tensor<[4, 4], f64>):
-    %call = func.call @custom_types_identity_2d(%current)
-      : (!test.test_tensor<[4, 4], f64>) -> !test.test_tensor<[4, 4], f64>
-    scf.yield %call : !test.test_tensor<[4, 4], f64>
-  }
-  return %loop : !test.test_tensor<[4, 4], f64>
-}

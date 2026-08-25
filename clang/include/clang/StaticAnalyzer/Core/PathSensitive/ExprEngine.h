@@ -83,7 +83,6 @@ class ConstraintManager;
 class ExplodedNodeSet;
 class ExplodedNode;
 class MemRegion;
-class NodeBuilderContext;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
@@ -156,29 +155,8 @@ private:
   SValBuilder &svalBuilder;
 
   unsigned int currStmtIdx = 0;
-
-  /// Pointer to a (so-called, somewhat misnamed) NodeBuilderContext object
-  /// which has three independent roles:
-  /// - It holds a pointer to the CFGBlock that is currently under analysis.
-  ///   (This is the primary way to get the current block.)
-  /// - It holds a pointer to the current StackFrame. (This is rarely
-  ///   used, the stack frame is usually queried from a recent
-  ///   ExplodedNode. Unfortunately it seems that these two sources of truth
-  ///   are not always consistent.)
-  /// - It can be used for constructing `NodeBuilder`s. Practically all
-  ///   `NodeBuilder` objects are useless complications in the code, so I
-  ///   intend to replace them with direct use of `CoreEngine::makeNode`.
-  /// TODO: Eventually `currBldrCtx` should be replaced by two separate fields:
-  /// `const CFGBlock *CurrBlock` & `const StackFrame *CurrStackFrame`
-  /// that are kept up-to-date and are almost always non-null during the
-  /// analysis. I will switch to this more natural representation when
-  /// `NodeBuilder`s are eliminated from the code.
-  const NodeBuilderContext *currBldrCtx = nullptr;
-  /// Historically `currBldrCtx` pointed to a local variable in some stack
-  /// frame. This field is introduced as a temporary measure to allow a gradual
-  /// transition. Only use this in {re,}setCurrStackFrameAndBlock!
-  /// TODO: Remove this temporary hack.
-  std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
+  const StackFrame *CurrStackFrame = nullptr;
+  const CFGBlock *CurrBlock = nullptr;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -235,12 +213,6 @@ public:
     return &CTU;
   }
 
-  // FIXME: Ideally the body of this method should look like
-  //   CurrStackFrame = SF;
-  //   CurrBlock = B;
-  // where CurrStackFrame and CurrBlock are new member variables that
-  // fulfill the roles of `currBldrCtx` in a more natural way.
-  // This implementation is a temporary measure to allow a gradual transition.
   void setCurrStackFrameAndBlock(const StackFrame *SF, const CFGBlock *B) {
     // The current StackFrame and Block is reset at the beginning of
     // dispatchWorkItem. Ideally, this method should be called only once per
@@ -249,20 +221,16 @@ public:
     // StackFrame and Block needs to change in the middle of a single step
     // (which currently happens only once, in processCallExit), use an explicit
     // call to resetCurrStackFrameAndBlock.
-    assert(!currBldrCtx && !OwnedCurrBldrCtx &&
+    assert(!CurrBlock && !CurrStackFrame &&
            "The current StackFrame and Block is already set");
-    OwnedCurrBldrCtx.emplace(Engine, B, SF);
-    currBldrCtx = &*OwnedCurrBldrCtx;
+    assert(SF && B && "The StackFrame and Block must be non-null");
+    CurrStackFrame = SF;
+    CurrBlock = B;
   }
 
   void resetCurrStackFrameAndBlock() {
-    currBldrCtx = nullptr;
-    OwnedCurrBldrCtx = std::nullopt;
-  }
-
-  const NodeBuilderContext &getBuilderContext() const {
-    assert(currBldrCtx);
-    return *currBldrCtx;
+    CurrStackFrame = nullptr;
+    CurrBlock = nullptr;
   }
 
   const StackFrame *getRootStackFrame() const {
@@ -277,15 +245,11 @@ public:
   /// (e.g. a recent `ExplodedNode`). Traditionally this stack frame is
   /// only used for block count calculations (`getNumVisited`); it is probably
   /// wise to follow this tradition until the discrepancies are resolved.
-  const StackFrame *getCurrStackFrame() const {
-    return currBldrCtx ? currBldrCtx->getStackFrame() : nullptr;
-  }
+  const StackFrame *getCurrStackFrame() const { return CurrStackFrame; }
 
   /// Get the 'current' CFGBlock corresponding to the current work item
   /// (elementary analysis step handled by `dispatchWorkItem`).
-  const CFGBlock *getCurrBlock() const {
-    return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
-  }
+  const CFGBlock *getCurrBlock() const { return CurrBlock; }
 
   ConstCFGElementRef getCFGElementRef() const {
     return {getCurrBlock(), currStmtIdx};
@@ -368,6 +332,7 @@ public:
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
   void ProcessLoopExit(const Stmt* S, ExplodedNode *Pred);
+  void ProcessLifetimeEnd(const Stmt *S, const VarDecl *D, ExplodedNode *Pred);
 
   void ProcessInitializer(const CFGInitializer I, ExplodedNode *Pred);
 
@@ -387,8 +352,9 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
-                               NodeBuilder &Builder, ExplodedNode *Pred);
+  /// Returns nullptr or a node descending from Pred.
+  ExplodedNode *processCFGBlockEntrance(const BlockEntrance &BE,
+                                        ExplodedNode *Pred);
 
   void runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst);
@@ -593,6 +559,14 @@ public:
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  /// Implementation detail of VisitObjCForCollectionStmt, which contains the
+  /// logic that needs to be executed both in the "container is empty" case
+  /// (HasElements=false) and the "container is not empty" case
+  /// (HasElements=true).
+  void populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                                     SVal ElementV, bool HasElements);
+
   void VisitObjCMessage(const ObjCMessageExpr *ME, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
 
@@ -670,10 +644,7 @@ public:
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const StackFrame *SF, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
-                                      NodeBuilder &Bldr, ExplodedNode *Pred);
-
-  void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         NodeBuilder &Bldr);
+                                      ExplodedNodeSet &Dst, ExplodedNode *Pred);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
@@ -771,7 +742,7 @@ public:
                 const CallEvent &Call);
 
   /// Default implementation of call evaluation.
-  void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
+  void defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                        const CallEvent &Call,
                        const EvalCallOptions &CallOpts = {});
 
@@ -808,12 +779,11 @@ public:
   /// and updateObjectsUnderConstruction.
   std::pair<ProgramStateRef, SVal>
   handleConstructionContext(const Expr *E, ProgramStateRef State,
-                            const NodeBuilderContext *BldrCtx,
                             const StackFrame *SF, const ConstructionContext *CC,
                             EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(), SF,
-                                            CC, CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, getNumVisitedCurrent(),
+                                            SF, CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, SF, CC, CallOpts);
 
     return std::make_pair(State, V);
@@ -834,8 +804,10 @@ private:
                     bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
-  void examineStackFrames(const Decl *D, const StackFrame *SF,
-                          bool &IsRecursive, unsigned &StackDepth);
+  void
+  examineStackFrames(const Decl *D,
+                     llvm::iterator_range<StackFrame::parent_iterator> Frames,
+                     bool &IsRecursive, unsigned &StackDepth);
 
   enum CallInlinePolicy {
     CIP_Allowed,
@@ -907,9 +879,9 @@ private:
                             const StackFrame *SF);
 
   void inlineCall(WorkList *WList, const CallEvent &Call, const Decl *D,
-                  NodeBuilder &Bldr, ExplodedNode *Pred, ProgramStateRef State);
+                  ExplodedNode *Pred, ProgramStateRef State);
 
-  void ctuBifurcate(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
+  void ctuBifurcate(const CallEvent &Call, const Decl *D, ExplodedNodeSet &Dst,
                     ExplodedNode *Pred, ProgramStateRef State);
 
   /// Returns true if the CTU analysis is running its second phase.
@@ -917,20 +889,20 @@ private:
 
   /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.
-  void conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                            ExplodedNode *Pred, ProgramStateRef State);
+  ExplodedNode *conservativeEvalCall(const CallEvent &Call, ExplodedNode *Pred,
+                                     ProgramStateRef State);
 
   /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.
-  void BifurcateCall(const MemRegion *BifurReg,
-                     const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
-                     ExplodedNode *Pred);
+  void dynDispatchBifurcate(const MemRegion *BifurReg, const CallEvent &Call,
+                            const Decl *D, ExplodedNodeSet &Dst,
+                            ExplodedNode *Pred);
 
   bool replayWithoutInlining(ExplodedNode *P, const StackFrame *CalleeSF);
 
   /// Models a trivial copy or move constructor or trivial assignment operator
   /// call with a simple bind.
-  void performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
+  void performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                           const CallEvent &Call);
 
   /// If the value of the given expression \p InitWithAdjustments is a NonLoc,

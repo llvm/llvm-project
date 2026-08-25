@@ -320,6 +320,8 @@ public:
     case Instruction::FRem:
     case Instruction::FPTrunc:
     case Instruction::FPExt:
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
     // FIXME: To clean up and correct the semantics of fast-math-flags, FCmp
     //        should not be treated as a math op, but the other opcodes should.
     //        This would make things consistent with Select/PHI (FP value type

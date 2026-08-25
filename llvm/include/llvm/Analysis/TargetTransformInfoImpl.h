@@ -68,7 +68,7 @@ public:
   virtual InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const {
+                       const TTI::TargetCostKind CostKind) const {
     llvm_unreachable("Not implemented");
   }
 
@@ -475,6 +475,8 @@ public:
     return true;
   }
 
+  virtual unsigned getMinimumLookupTableEntryBitWidth() const { return 8; }
+
   virtual bool shouldBuildRelLookupTables() const { return false; }
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
@@ -567,6 +569,8 @@ public:
   }
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
+
+  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
 
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
@@ -720,7 +724,10 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
+  virtual unsigned getMaxInterleaveFactor(ElementCount VF,
+                                          bool HasUnorderedReductions) const {
+    return 1;
+  }
 
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -771,7 +778,7 @@ public:
 
   virtual InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const {
     return 1;
@@ -944,6 +951,12 @@ public:
     case Intrinsic::coro_alloc:
     case Intrinsic::coro_begin:
     case Intrinsic::coro_begin_custom_abi:
+    case Intrinsic::coro_dead:
+    case Intrinsic::coro_id:
+    case Intrinsic::coro_id_async:
+    case Intrinsic::coro_id_retcon:
+    case Intrinsic::coro_id_retcon_once:
+    case Intrinsic::coro_noop:
     case Intrinsic::coro_free:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
@@ -1146,9 +1159,7 @@ public:
     return VF;
   }
 
-  virtual bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
-    return false;
-  }
+  virtual bool preferFixedOverScalableIfEqualCost() const { return false; }
 
   virtual bool preferInLoopReduction(RecurKind Kind, Type *Ty) const {
     return false;
@@ -1162,7 +1173,7 @@ public:
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {
     // We consider epilogue vectorization unprofitable for targets that
     // don't consider interleaving beneficial (eg. MVE).
-    return getMaxInterleaveFactor(Iters) > 1;
+    return getMaxInterleaveFactor(Iters, false) > 1;
   }
 
   virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
@@ -1636,12 +1647,12 @@ public:
 
         if (Shuffle->isExtractSubvectorMask(SubIndex))
           return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
-                                           VecSrcTy, Mask, CostKind, SubIndex,
+                                           VecSrcTy, CostKind, Mask, SubIndex,
                                            VecTy, Operands, Shuffle);
 
         if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
           return TargetTTI->getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, VecSrcTy, Mask, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecSrcTy, CostKind, Mask,
               SubIndex,
               FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
               Operands, Shuffle);
@@ -1671,7 +1682,7 @@ public:
 
           return TargetTTI->getShuffleCost(
               IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc, VecTy,
-              VecTy, AdjustMask, CostKind, 0, nullptr, Operands, Shuffle);
+              VecTy, CostKind, AdjustMask, 0, nullptr, Operands, Shuffle);
         }
 
         // Narrowing shuffle - perform shuffle at original wider width and
@@ -1682,57 +1693,57 @@ public:
 
         InstructionCost ShuffleCost = TargetTTI->getShuffleCost(
             IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc,
-            VecSrcTy, VecSrcTy, AdjustMask, CostKind, 0, nullptr, Operands,
+            VecSrcTy, VecSrcTy, CostKind, AdjustMask, 0, nullptr, Operands,
             Shuffle);
 
         SmallVector<int, 16> ExtractMask(Mask.size());
         std::iota(ExtractMask.begin(), ExtractMask.end(), 0);
         return ShuffleCost + TargetTTI->getShuffleCost(
                                  TTI::SK_ExtractSubvector, VecTy, VecSrcTy,
-                                 ExtractMask, CostKind, 0, VecTy, {}, Shuffle);
+                                 CostKind, ExtractMask, 0, VecTy, {}, Shuffle);
       }
 
       if (Shuffle->isIdentity())
         return TTI::TCC_Free;
 
       if (Shuffle->isReverse())
-        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, VecSrcTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, VecSrcTy,
+                                         CostKind, Mask, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isTranspose())
         return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, VecSrcTy,
-                                         Mask, CostKind, 0, nullptr, Operands,
+                                         CostKind, Mask, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isZeroEltSplat())
         return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, VecSrcTy,
-                                         Mask, CostKind, 0, nullptr, Operands,
+                                         CostKind, Mask, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isSingleSource())
         return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
-                                         VecSrcTy, Mask, CostKind, 0, nullptr,
+                                         VecSrcTy, CostKind, Mask, 0, nullptr,
                                          Operands, Shuffle);
 
       if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
         return TargetTTI->getShuffleCost(
-            TTI::SK_InsertSubvector, VecTy, VecSrcTy, Mask, CostKind, SubIndex,
+            TTI::SK_InsertSubvector, VecTy, VecSrcTy, CostKind, Mask, SubIndex,
             FixedVectorType::get(VecTy->getScalarType(), NumSubElts), Operands,
             Shuffle);
 
       if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, VecSrcTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, VecSrcTy,
+                                         CostKind, Mask, 0, nullptr, Operands,
                                          Shuffle);
 
       if (Shuffle->isSplice(SubIndex))
-        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy, VecSrcTy, Mask,
-                                         CostKind, SubIndex, nullptr, Operands,
-                                         Shuffle);
+        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy, VecSrcTy,
+                                         CostKind, Mask, SubIndex, nullptr,
+                                         Operands, Shuffle);
 
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, VecSrcTy,
-                                       Mask, CostKind, 0, nullptr, Operands,
+                                       CostKind, Mask, 0, nullptr, Operands,
                                        Shuffle);
     }
     case Instruction::ExtractElement: {

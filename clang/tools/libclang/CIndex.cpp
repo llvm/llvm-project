@@ -1312,6 +1312,14 @@ bool CursorVisitor::VisitFriendDecl(FriendDecl *D) {
   return false;
 }
 
+bool CursorVisitor::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    if (VisitTemplateParameters(TPL))
+      return true;
+
+  return VisitFriendDecl(D);
+}
+
 bool CursorVisitor::VisitDecompositionDecl(DecompositionDecl *D) {
   for (auto *B : D->bindings()) {
     if (Visit(MakeCXCursor(B, TU, RegionOfInterest)))
@@ -1336,9 +1344,8 @@ bool CursorVisitor::VisitTypeConstraint(const TypeConstraint &TC) {
     if (VisitNestedNameSpecifierLoc(TC.getNestedNameSpecifierLoc()))
       return true;
   }
-  if (TC.getNamedConcept()) {
-    if (Visit(MakeCursorTemplateRef(TC.getNamedConcept(),
-                                    TC.getConceptNameLoc(), TU)))
+  if (TemplateDecl *TD = TC.getNamedConcept().getAsTemplateDecl()) {
+    if (Visit(MakeCursorTemplateRef(TD, TC.getConceptNameLoc(), TU)))
       return true;
   }
   if (auto Args = TC.getTemplateArgsAsWritten()) {
@@ -1586,6 +1593,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -1738,6 +1747,10 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+bool CursorVisitor::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -1791,9 +1804,8 @@ bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
   if (TL.isConstrained()) {
     if (auto *CR = TL.getConceptReference()) {
-      if (CR->getNamedConcept()) {
-        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
-                                           CR->getConceptNameLoc(), TU));
+      if (TemplateDecl *TD = CR->getNamedConcept().getAsTemplateDecl()) {
+        return Visit(MakeCursorTemplateRef(TD, CR->getConceptNameLoc(), TU));
       }
     }
   }
@@ -2188,7 +2200,10 @@ public:
   void VisitOMPFlushDirective(const OMPFlushDirective *D);
   void VisitOMPDepobjDirective(const OMPDepobjDirective *D);
   void VisitOMPScanDirective(const OMPScanDirective *D);
-  void VisitOMPOrderedDirective(const OMPOrderedDirective *D);
+  void
+  VisitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective *D);
+  void
+  VisitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective *D);
   void VisitOMPAtomicDirective(const OMPAtomicDirective *D);
   void VisitOMPTargetDirective(const OMPTargetDirective *D);
   void VisitOMPTargetDataDirective(const OMPTargetDataDirective *D);
@@ -2417,6 +2432,9 @@ void OMPClauseEnqueue::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseEnqueue::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
@@ -2467,6 +2485,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {
@@ -2523,12 +2543,16 @@ void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
@@ -3459,7 +3483,13 @@ void EnqueueVisitor::VisitOMPScanDirective(const OMPScanDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
-void EnqueueVisitor::VisitOMPOrderedDirective(const OMPOrderedDirective *D) {
+void EnqueueVisitor::VisitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective *D) {
+  VisitOMPExecutableDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective *D) {
   VisitOMPExecutableDirective(D);
 }
 
@@ -3918,19 +3948,20 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
       for (LambdaExpr::capture_iterator C = E->explicit_capture_begin(),
                                         CEnd = E->explicit_capture_end();
            C != CEnd; ++C) {
+
         if (!C->capturesVariable())
           continue;
-        // TODO: handle structured bindings here ?
-        if (!isa<VarDecl>(C->getCapturedVar()))
-          continue;
-        if (Visit(MakeCursorVariableRef(cast<VarDecl>(C->getCapturedVar()),
-                                        C->getLocation(), TU)))
-          return true;
-      }
-      // Visit init captures
-      for (auto InitExpr : E->capture_inits()) {
-        if (InitExpr && Visit(InitExpr))
-          return true;
+
+        if (const auto *CV = dyn_cast_or_null<VarDecl>(C->getCapturedVar())) {
+          if (CV->isInitCapture()) {
+            // Init capture is a declaration, create VarDecl cursor
+            if (Visit(MakeCXCursor(CV, TU, RegionOfInterest)))
+              return true;
+          } else
+            // Non init capture is a VariableRef
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(), TU)))
+              return true;
+        }
       }
 
       TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
@@ -3960,8 +3991,8 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
           return true;
       }
 
-      if (E->getNamedConcept() &&
-          Visit(MakeCursorTemplateRef(E->getNamedConcept(),
+      if (E->getNamedConcept().getAsTemplateDecl() &&
+          Visit(MakeCursorTemplateRef(E->getConceptDecl(),
                                       E->getConceptNameLoc(), TU)))
         return true;
 
@@ -6373,8 +6404,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPDepobjDirective");
   case CXCursor_OMPScanDirective:
     return cxstring::createRef("OMPScanDirective");
-  case CXCursor_OMPOrderedDirective:
-    return cxstring::createRef("OMPOrderedDirective");
+  case CXCursor_OMPOrderedStandaloneDirective:
+    return cxstring::createRef("OMPOrderedStandaloneDirective");
+  case CXCursor_OMPOrderedBlockAssocDirective:
+    return cxstring::createRef("OMPOrderedBlockAssocDirective");
   case CXCursor_OMPAtomicDirective:
     return cxstring::createRef("OMPAtomicDirective");
   case CXCursor_OMPTargetDirective:
@@ -7284,6 +7317,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
+  case Decl::CXXExpansionStmt:
     return C;
 
   // Declaration kinds that don't make any sense here, but are
@@ -10174,11 +10208,6 @@ Logger &cxindex::Logger::operator<<(CXSourceRange range) {
 
 Logger &cxindex::Logger::operator<<(CXString Str) {
   *this << clang_getCString(Str);
-  return *this;
-}
-
-Logger &cxindex::Logger::operator<<(const llvm::format_object_base &Fmt) {
-  LogOS << Fmt;
   return *this;
 }
 

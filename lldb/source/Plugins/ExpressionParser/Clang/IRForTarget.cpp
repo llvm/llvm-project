@@ -180,6 +180,11 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // on Windows, so let's only check for Itanium guard variables.
     bool is_guard_var = isGuardVariableSymbol(result_name, /*MS ABI*/ false);
 
+    // Skip non-globals, e.g. the MS ABI dynamic initializer function that
+    // shares a mangled name with the result variable.
+    if (!isa<GlobalVariable>(value_symbol.second))
+      continue;
+
     if (result_name.contains("$__lldb_expr_result_ptr") && !is_guard_var) {
       found_result = true;
       m_result_is_pointer = true;
@@ -427,7 +432,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
       return false;
     }
 
-    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0}",
+    LLDB_LOG(log, "Found CFStringCreateWithBytes at {0:x}",
              CFStringCreateWithBytes_addr);
 
     // Build the function type:
@@ -543,6 +548,9 @@ bool IRForTarget::RewriteObjCConstStrings() {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
+
+  std::vector<std::pair<GlobalVariable *, GlobalVariable *>>
+      nsstring_to_cstr_list;
 
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
     llvm::StringRef value_name = value_symbol.first();
@@ -684,14 +692,16 @@ bool IRForTarget::RewriteObjCConstStrings() {
       if (!cstr_array)
         cstr_global = nullptr;
 
-      if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
-        LLDB_LOG(log, "Error rewriting the constant string");
+      // Queue up replacing the string as we are currently iterating
+      // over the module.
+      nsstring_to_cstr_list.emplace_back(nsstring_global, cstr_global);
+    }
+  }
 
-        // We don't print an error message here because RewriteObjCConstString
-        // has done so for us.
-
-        return false;
-      }
+  for (auto [nsstring_global, cstr_global] : nsstring_to_cstr_list) {
+    if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
+      LLDB_LOG(log, "Error rewriting the constant string");
+      return false;
     }
   }
 
@@ -797,7 +807,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
     if (sel_registerName_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
-    LLDB_LOG(log, "Found sel_registerName at {0}", sel_registerName_addr);
+    LLDB_LOG(log, "Found sel_registerName at {0:x}", sel_registerName_addr);
 
     // Build the function type: struct objc_selector
     // *sel_registerName(uint8_t*)
@@ -1084,7 +1094,7 @@ bool IRForTarget::HandleSymbol(Value *symbol) {
     return false;
   }
 
-  LLDB_LOG(log, "Found \"{0}\" at {1}", name, symbol_addr);
+  LLDB_LOG(log, "Found \"{0}\" at {1:x}", name, symbol_addr);
 
   Type *symbol_type = symbol->getType();
 
@@ -1141,7 +1151,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
   lldb::addr_t class_ptr =
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 
-  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1})", name,
+  LLDB_LOG(log, "Found reference to Objective-C class {0} ({1:x})", name,
            (unsigned long long)class_ptr);
 
   if (class_ptr == LLDB_INVALID_ADDRESS)
@@ -1176,6 +1186,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
 
 bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
   std::vector<CallInst *> calls_to_remove;
+  llvm::SmallVector<llvm::Function *, 2> dead_atexit_callbacks;
 
   for (Instruction &inst : basic_block) {
     CallInst *call = dyn_cast<CallInst>(&inst);
@@ -1188,20 +1199,41 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
 
     llvm::Function *func = call->getCalledFunction();
 
-    if (func && func->getName() == "__cxa_atexit")
+    // Itanium ABI uses __cxa_atexit; MS ABI uses plain atexit.
+    if (func &&
+        (func->getName() == "__cxa_atexit" || func->getName() == "atexit"))
       remove = true;
 
     llvm::Value *val = call->getCalledOperand();
 
-    if (val && val->getName() == "__cxa_atexit")
+    if (val && (val->getName() == "__cxa_atexit" || val->getName() == "atexit"))
       remove = true;
 
-    if (remove)
+    if (remove) {
+      // MS ABI destructor thunks (mangled "??__F...") reference the static
+      // they destroy; track them to clear once the call is gone.
+      if (call->arg_size() > 0)
+        if (auto *cb = dyn_cast<llvm::Function>(
+                call->getArgOperand(0)->stripPointerCasts()))
+          if (cb->hasInternalLinkage() && cb->getName().starts_with("??__F"))
+            dead_atexit_callbacks.push_back(cb);
       calls_to_remove.push_back(call);
+    }
   }
 
   for (CallInst *ci : calls_to_remove)
     ci->eraseFromParent();
+
+  // Clear the body of any orphaned atexit-destructor thunk so it no longer
+  // references the statics it used to destroy.
+  for (llvm::Function *cb : dead_atexit_callbacks) {
+    if (!cb->use_empty())
+      continue;
+    cb->deleteBody();
+    llvm::BasicBlock *entry =
+        llvm::BasicBlock::Create(cb->getContext(), "", cb);
+    llvm::ReturnInst::Create(cb->getContext(), entry);
+  }
 
   return true;
 }

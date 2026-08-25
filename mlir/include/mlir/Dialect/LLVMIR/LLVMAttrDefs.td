@@ -97,6 +97,28 @@ def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionEntryCountAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_FunctionEntryCountAttr
+    : LLVM_Attr<"FunctionEntryCount", "function_entry_count"> {
+  let summary = "LLVM function entry count profile metadata";
+  let description = [{
+    Models function-level `!prof` entry-count metadata. The `entry_count` field
+    stores the unsigned 64-bit counter bit pattern. The `count_type` field
+    defaults to real and selects whether the metadata is emitted as
+    `"function_entry_count"` or `"synthetic_function_entry_count"`. The optional
+    `imports` field stores the trailing import GUID operands used by ThinLTO
+    sample PGO.
+  }];
+  let parameters = (ins "uint64_t":$entry_count,
+                        DefaultValuedParameter<"ProfileCountType",
+                                               "ProfileCountType::Real">:$count_type,
+                        OptionalArrayRefParameter<"uint64_t">:$imports);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 
@@ -338,6 +360,33 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
   "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
+def LLVM_DISourceLanguageNameParameter : AttrOrTypeParameter<
+  "unsigned", "debug info source language name"> {
+  let parser = [{ [&]() -> FailureOr<unsigned> {
+    SMLoc loc = $_parser.getCurrentLocation();
+    StringRef name;
+    if ($_parser.parseKeyword(&name))
+      return failure();
+    unsigned value = llvm::dwarf::getSourceLanguageName(name);
+    if (!value)
+      return $_parser.emitError(loc)
+        << "invalid debug info source language name: " << name;
+    return value;
+  }() }];
+  let printer = [{ $_printer << llvm::dwarf::SourceLanguageNameString(
+      static_cast<llvm::dwarf::SourceLanguageName>($_self)) }];
+  let defaultValue = "0";
+}
+
+// Source-language dialect values are defined by LLVM's
+// dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
+// represents "no source-language dialect" as 0; the LLVM IR printer omits the
+// `dialect:` field for that value.
+def LLVM_DILanguageDialectParameter : LLVM_DIParameter<
+  "language dialect", /*default=*/"0", "LanguageDialect",
+  /*errorCase=*/"~0U"
+>;
+
 def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"0", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
@@ -413,6 +462,30 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 }
 
 //===----------------------------------------------------------------------===//
+// DISourceLanguageNameAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DISourceLanguageNameAttr : LLVM_Attr<"DISourceLanguageName",
+                                               "di_source_language_name"> {
+  let parameters = (ins
+    // An unversioned source-language name (a DW_LANG_* value). This maps to
+    // llvm::DISourceLanguageName::Name when HasVersion is false.
+    LLVM_DILanguageParameter:$language,
+    // A version-independent source-language name (a DW_LNAME_* value). This
+    // maps to llvm::DISourceLanguageName::Name when HasVersion is true.
+    LLVM_DISourceLanguageNameParameter:$name,
+    // The language-dependent version. Its presence maps to
+    // llvm::DISourceLanguageName::HasVersion and its value maps to Version.
+    OptionalParameter<"std::optional<uint32_t>">:$version,
+    // An optional target-specific source-language dialect. Zero represents no
+    // dialect, its value maps to llvm::DISourceLanguageName::Dialect.
+    LLVM_DILanguageDialectParameter:$dialect
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DICompileUnitAttr
 //===----------------------------------------------------------------------===//
 
@@ -425,7 +498,10 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"bool">:$isRecSelf,
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
-    LLVM_DILanguageParameter:$sourceLanguage,
+    // A plain DW_LANG value uses the historical inline syntax. Source language
+    // names, versions, and dialects are represented by
+    // DISourceLanguageNameAttr.
+    OptionalParameter<"DISourceLanguageNameAttr">:$sourceLanguage,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
     OptionalParameter<"bool">:$isOptimized,
@@ -437,6 +513,24 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage,
+      "unsigned":$sourceLanguageDialect, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
+    ), [{
+      auto language = DISourceLanguageNameAttr::get(
+          id.getContext(), sourceLanguage, /*name=*/0,
+          /*version=*/std::nullopt, sourceLanguageDialect);
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   language, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
@@ -445,13 +539,25 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"StringAttr", "{}">:$splitDebugFilename,
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
+      auto language = DISourceLanguageNameAttr::get(
+          id.getContext(), sourceLanguage, /*name=*/0,
+          /*version=*/std::nullopt, /*dialect=*/0);
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, file, producer, isOptimized, emissionKind,
-                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
-                   importedEntities);
+                   language, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
-  let assemblyFormat = "`<` struct(params) `>`";
+  let assemblyFormat = [{
+    `<` struct(
+      $recId, $isRecSelf, $id,
+      custom<SourceLanguage>($sourceLanguage),
+      $file, $producer, $isOptimized, $emissionKind,
+      $isDebugInfoForProfiling, $nameTableKind, $splitDebugFilename,
+      $importedEntities
+    ) `>`
+  }];
+  let genVerifyDecl = 1;
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.
     /// @{
@@ -710,36 +816,34 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
                                       "DILocalScopeAttr"> {
   let parameters = (ins
-    // DIRecursiveTypeAttrInterface specific parameters.
-    OptionalParameter<"DistinctAttr">:$recId,
-    OptionalParameter<"bool">:$isRecSelf,
-    // DISubprogramAttr specific parameters.
-    OptionalParameter<"DistinctAttr">:$id,
-    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"StringAttr">:$linkageName,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"unsigned">:$line,
-    OptionalParameter<"unsigned">:$scopeLine,
-    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
-    OptionalArrayRefParameter<"DINodeAttr">:$annotations
-  );
-  let builders = [
-    AttrBuilder<(ins
-      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
-      "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
-      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
-    ), [{
+      // DIRecursiveTypeAttrInterface specific parameters.
+      OptionalParameter<"DistinctAttr">:$recId,
+      OptionalParameter<"bool">:$isRecSelf,
+      // DISubprogramAttr specific parameters.
+      OptionalParameter<"DistinctAttr">:$id,
+      OptionalParameter<"DICompileUnitAttr">:$compileUnit,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"StringAttr">:$linkageName,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"unsigned">:$line,
+      OptionalParameter<"unsigned">:$scopeLine,
+      OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
+      OptionalParameter<"DISubroutineTypeAttr">:$type,
+      OptionalArrayRefParameter<"Attribute">:$retainedNodes,
+      OptionalArrayRefParameter<"DINodeAttr">:$annotations);
+  let builders = [AttrBuilder<
+      (ins "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+          "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
+          "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+          "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+          "ArrayRef<Attribute>":$retainedNodes,
+          "ArrayRef<DINodeAttr>":$annotations),
+      [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
                    subprogramFlags, type, retainedNodes, annotations);
-    }]>
-  ];
+    }]>];
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.
@@ -1585,14 +1689,16 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
 //===----------------------------------------------------------------------===//
 
 def ModuleFlagAttr
-    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag",
+                [DeclareAttrInterfaceMethods<LLVM_ModuleFlagAttrInterface>]> {
   let summary = "LLVM module flag metadata";
   let description = [{
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
     and third is the value of the flag. Supported keys and values include:
-      - Arbitrary `key`s holding integer constants or strings.
+      - Arbitrary `key`s holding integer constants, integer-like dialect
+        attributes, strings, or non-empty string arrays.
       - Domain specific keys (e.g "CG Profile"), holding lists of supported
         module flag values (e.g. `llvm.cgprofile_entry`).
 
@@ -1752,19 +1858,56 @@ def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def LLVM_MDFuncAttr : LLVM_Attr<"MDFunc", "md_func"> {
-  let summary = "LLVM function-as-metadata";
+def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
+  let summary = "LLVM global value-as-metadata";
   let description = [{
-    References a function (or global) symbol as LLVM metadata, corresponding
-    to `llvm::ValueAsMetadata::get(function)` in LLVM IR.
+    References a symbol-backed global value as LLVM metadata, corresponding to
+    `llvm::ValueAsMetadata::get(value)` in LLVM IR.
 
     Example:
     ```mlir
-    #llvm.md_func<@my_kernel>
+    #llvm.md_global_value<@my_kernel>
     ```
   }];
   let parameters = (ins "FlatSymbolRefAttr":$name);
   let assemblyFormat = "`<` $name `>`";
+}
+
+def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
+  let summary = "LLVM null pointer as metadata";
+  let description = [{
+    Wraps a null pointer constant as an LLVM metadata node, corresponding to
+    `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantPointerNull` in LLVM
+    IR. `addressSpace` is the address space of the null pointer, so that
+    `ptr null` and `ptr addrspace(1) null` remain distinguishable.
+
+    Example:
+    ```mlir
+    #llvm.md_null<0>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
+}
+
+def LLVM_MDAddrSpaceCastAttr
+    : LLVM_Attr<"MDAddrSpaceCast", "md_addrspacecast"> {
+  let summary = "LLVM addrspacecast constant expression as metadata";
+  let description = [{
+    Wraps an `addrspacecast` constant expression as an LLVM metadata node,
+    corresponding to `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantExpr`
+    with an `addrspacecast` opcode in LLVM IR. `arg` is the metadata attribute
+    for the pointer being cast and `addressSpace` is the address space of the
+    resulting pointer.
+
+    Example:
+    ```mlir
+    #llvm.md_addrspacecast<#llvm.md_global_value<@my_global>, 0>
+    ```
+  }];
+  let parameters = (ins "Attribute":$arg, "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $arg `,` $addressSpace `>`";
+  let genVerifyDecl = 1;
 }
 
 def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
@@ -1772,7 +1915,8 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_func`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, `#llvm.md_null`,
+    `#llvm.md_addrspacecast`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1783,5 +1927,37 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let parameters = (ins OptionalArrayRefParameter<"Attribute">:$operands);
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
+
+def LLVM_MDNodeArrayAttr
+    : TypedArrayAttrBase<LLVM_MDNodeAttr,
+                         "array of #llvm.md_node attributes">;
+
+def LLVM_FunctionMetadataAttr
+    : LLVM_Attr<"FunctionMetadata", "func_metadata"> {
+  let summary = "LLVM function metadata attachment";
+  let description = [{
+    Models one LLVM IR function metadata attachment. LLVM IR allows several
+    attachments with the same metadata kind, so function metadata is represented
+    as an ordered list of these entries instead of a dictionary.
+
+    Example:
+    ```mlir
+    #llvm.func_metadata<"type", <#llvm.md_string<"id">>>
+    ```
+  }];
+  let parameters = (ins "StringAttr":$metadataName, "MDNodeAttr":$node);
+  let assemblyFormat = "`<` $metadataName `,` $node `>`";
+  let genVerifyDecl = 1;
+}
+
+def LLVM_FunctionMetadataArrayAttr
+    : TypedArrayAttrBase<LLVM_FunctionMetadataAttr,
+                         "array of #llvm.func_metadata attributes">;
+
+def LLVM_AnyMDAttr : AnyAttrOf<[
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
+    LLVM_MDNullAttr, LLVM_MDAddrSpaceCastAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
+    "md_addrspacecast, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

@@ -16,6 +16,7 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
+#include "lldb/Utility/ProcessAddress.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -26,9 +27,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <map>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
 #include <vector>
 
 namespace lldb_private {
@@ -96,11 +97,11 @@ public:
   virtual Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                                      MemoryRegionInfo &range_info);
 
-  virtual Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  virtual Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                             size_t &bytes_read) = 0;
 
-  Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
-                               size_t &bytes_read);
+  Status ReadMemoryWithoutTrap(const ProcessAddress &addr, void *buf,
+                               size_t size, size_t &bytes_read);
 
   virtual Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                                 std::vector<uint8_t> &tags);
@@ -133,8 +134,10 @@ public:
   ReadCStringFromMemory(lldb::addr_t addr, char *buffer, size_t max_size,
                         size_t &total_bytes_read);
 
-  virtual Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                             size_t &bytes_written) = 0;
+  /// Write memory while not overwriting breakpoints in memory. The breakpoints'
+  /// saved bytes are updated with what would have been written.
+  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                     size_t &bytes_written);
 
   virtual llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
                                                       uint32_t permissions) {
@@ -247,8 +250,12 @@ public:
   // Access to inferior stdio
   virtual int GetTerminalFileDescriptor() { return m_terminal_fd; }
 
-  // Stop id interface
+  /// Write up to \p len bytes from \p buf to the inferior's stdin.
+  virtual size_t WriteStdin(const void *buf, size_t len, Status &error) {
+    return 0;
+  }
 
+  // Stop id interface
   uint32_t GetStopID() const;
 
   // Callbacks for low-level process state changes
@@ -266,6 +273,11 @@ public:
     virtual void
     NewSubprocess(NativeProcessProtocol *parent_process,
                   std::unique_ptr<NativeProcessProtocol> child_process) = 0;
+
+    /// Called by the platform when the inferior writes to stdout/stderr
+    /// through a redirected pseudoconsole that the platform owns.
+    virtual void NewProcessOutput(NativeProcessProtocol *process,
+                                  llvm::StringRef data) {}
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,
@@ -447,7 +459,9 @@ protected:
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };
 
-  std::unordered_map<lldb::addr_t, SoftwareBreakpoint> m_software_breakpoints;
+  // Using std::map so that breakpoints are sorted in ascending address order.
+  // WriteMemory relies on this.
+  std::map<lldb::addr_t, SoftwareBreakpoint> m_software_breakpoints;
   lldb::pid_t m_pid;
 
   std::vector<std::unique_ptr<NativeThreadProtocol>> m_threads;
@@ -471,6 +485,13 @@ protected:
 
   // Extensions enabled per the last SetEnabledExtensions() call.
   Extension m_enabled_extensions;
+
+  // Write to memory, with no awareness of software breakpoint sites. Used to
+  // implement WriteMemory. May be called directly for use cases that should
+  // ignore software breakpoint sites, for example adding or removing those
+  // breakpoints.
+  virtual Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                               size_t &bytes_written) = 0;
 
   // lldb_private::Host calls should be used to launch a process for debugging,
   // and then the process should be attached to. When attaching to a process

@@ -13,6 +13,10 @@ program openacc_reduction_validity
   !$acc parallel reduction(+:i)
   !$acc end parallel
 
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:i)
+  !$acc end parallel
+
   !$acc parallel reduction(*:i)
   !$acc end parallel
 
@@ -48,6 +52,10 @@ program openacc_reduction_validity
   !$acc end parallel
 
   !$acc parallel reduction(+:r)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:r)
   !$acc end parallel
 
   !$acc parallel reduction(*:r)
@@ -88,6 +96,10 @@ program openacc_reduction_validity
   !$acc end parallel
 
   !$acc parallel reduction(+:c)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:c)
   !$acc end parallel
 
   !$acc parallel reduction(*:c)
@@ -143,6 +155,11 @@ program openacc_reduction_validity
 
   !ERROR: reduction operator not supported for logical type
   !$acc parallel reduction(+:l)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !ERROR: reduction operator not supported for logical type
+  !$acc parallel reduction(-:l)
   !$acc end parallel
 
   !ERROR: reduction operator not supported for logical type

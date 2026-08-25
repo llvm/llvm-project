@@ -161,13 +161,26 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+
+  // clang-sycl-linker needs the device target triple and architecture to
+  // finalize a device image. Emit the values derived from --target/-march=
+  // before the linker inputs, so that -triple=/-arch= passed through
+  // -Xlinker/-Wl take priority.
+  if (Args.hasArg(options::OPT_sycl_link)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-triple=" + ToolChain.getTripleString()));
+    StringRef Arch = Args.getLastArgValue(options::OPT_march_EQ);
+    if (!Arch.empty())
+      CmdArgs.push_back(Args.MakeArgString("-arch=" + Arch));
+  }
+
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
   // TODO: Consider moving SPIR-V linking to a separate tool.
-  if (C.getDriver().isUsingLTO()) {
+  if (ToolChain.isUsingLTO(Args)) {
     // Implement limited LTO support through llvm-lto.
     if (Args.hasArg(options::OPT_sycl_link)) {
       // For unsupported cases, throw the same error as when LTO isn't supported
@@ -201,7 +214,7 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args) {
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
-  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || D.isUsingLTO();
+  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || isUsingLTO(Args);
 
   // Lookup binaries into the driver directory.
   getProgramPaths().push_back(getDriver().Dir);

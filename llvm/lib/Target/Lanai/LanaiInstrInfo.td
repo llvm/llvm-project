@@ -681,7 +681,8 @@ let isBranch = 1, isBarrier = 1, isTerminator = 1, hasDelaySlot = 1 in {
                   [(br bb:$addr)]> {
     let DDDI = 0b0000;
   }
-  let Uses = [SR] in
+  // BRCC is a conditional branch. It can fall through, so isBarrer = 0.
+  let isBarrier = 0, Uses = [SR] in
     def BRCC : InstBR<(outs), (ins BrTarget:$addr, CCOp:$DDDI),
                       "b$DDDI\t$addr",
                       [(LanaiBrCC bb:$addr, imm:$DDDI)]>;

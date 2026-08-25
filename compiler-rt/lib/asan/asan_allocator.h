@@ -217,8 +217,9 @@ typedef VeryDenseSizeClassMap SizeClassMap;
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
 typedef DefaultSizeClassMap SizeClassMap;
 #    elif SANITIZER_ALPHA
-// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  Use 512G so the
-// allocator fits comfortably within the 2.5T HighMem region.
+// Alpha has a 42-bit user VAS (TASK_SIZE = 0x40000000000).  With fixed shadow
+// offset 0x70000000000, all app memory is in LowMem [0, 7T).  Use 512G so the
+// allocator fits comfortably within LowMem alongside other mappings.
 const uptr kAllocatorSize = 0x8000000000ULL;  // 512G.
 typedef DefaultSizeClassMap SizeClassMap;
 #    elif SANITIZER_WINDOWS

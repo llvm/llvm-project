@@ -10,9 +10,9 @@ set (FILES
   NativeProcessProtocolTest.cpp
   PipeTest.cpp
   ProcessLaunchInfoTest.cpp
+  ProcessRunLockTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
-  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )
@@ -36,8 +36,15 @@ if (LLDB_ENABLE_TERMIOS)
   )
 endif()
 
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  list(APPEND FILES
+    windows/StripConPTYSequencesTest.cpp
+  )
+endif()
+
 add_lldb_unittest(HostTests
   ${FILES}
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS
     lldbHost
     lldbCore

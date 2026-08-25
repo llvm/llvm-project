@@ -147,6 +147,8 @@ function(llvm_update_pch name)
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
+  cmake_parse_arguments(ARG "NO_TARGET_DEPENDENCY" "OUTPUT_FILE_VAR" "" ${ARGN})
+
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(native_export_file "${target_name}.exports")
     add_custom_command(OUTPUT ${native_export_file}
@@ -238,6 +240,15 @@ function(add_llvm_symbol_exports target_name export_file)
 
   set_property(DIRECTORY APPEND
     PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${native_export_file})
+
+  if(ARG_OUTPUT_FILE_VAR)
+    set(${ARG_OUTPUT_FILE_VAR}
+      "${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}" PARENT_SCOPE)
+  endif()
+
+  if(ARG_NO_TARGET_DEPENDENCY)
+    return()
+  endif()
 
   add_dependencies(${target_name} ${target_name}_exports)
 

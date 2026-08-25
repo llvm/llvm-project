@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not avaiable. "
-                 "Skip unistd targets.")
+    "Skip unistd targets.")
   return()
 endif()
 
@@ -108,6 +108,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
+  execle
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execle
 )
 
 add_entrypoint_object(
@@ -236,7 +243,6 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.pathconf
 )
 
-
 add_entrypoint_object(
   pipe
   ALIAS
@@ -301,6 +307,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sleep
+)
+
+add_entrypoint_object(
   symlink
   ALIAS
   DEPENDS
@@ -350,6 +363,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  usleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.usleep
+)
+
+add_entrypoint_object(
   write
   ALIAS
   DEPENDS
@@ -362,6 +382,9 @@ add_entrypoint_object(
     environ.cpp
   HDRS
     environ.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -372,6 +395,10 @@ add_entrypoint_object(
     getopt.h
   DEPENDS
     libc.include.unistd
+    libc.hdr.unistd_macros
+    libc.hdr.types.FILE
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file

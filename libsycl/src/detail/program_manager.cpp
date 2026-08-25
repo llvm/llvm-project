@@ -8,6 +8,7 @@
 
 #include <detail/program_manager.hpp>
 
+#include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/exception.hpp>
 
 #include <detail/device_impl.hpp>
@@ -18,7 +19,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-DeviceKernelInfo &_LIBSYCL_EXPORT
+_LIBSYCL_EXPORT DeviceKernelInfo &
 getDeviceKernelInfo(std::string_view KernelName) {
   return ProgramAndKernelManager::getInstance().getDeviceKernelInfo(KernelName);
 }
@@ -49,9 +50,12 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
       llvm::StringRef(static_cast<const char *>(BinaryStart), Size),
       /*Identifier=*/"");
   auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
-  if (!BinOrErr || BinOrErr->empty())
+  if (!BinOrErr) {
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                          "Failed to parse OffloadBinary");
+                          "Failed to parse OffloadBinary: " +
+                              llvm::toString(BinOrErr.takeError()));
+  }
+  assert(!BinOrErr->empty() && "OffloadBinary must contain at least one entry");
 
   DeviceImageManagerVec Images;
   Images.reserve(BinOrErr->size());
@@ -147,6 +151,19 @@ ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
                OL_SYMBOL_KIND_KERNEL, &Kernel);
   KernelInfo.addKernel(DeviceHandle, Kernel);
   return Kernel;
+}
+
+bool ProgramAndKernelManager::hasCompatibleImage(const DeviceImpl &Device) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+
+  for (const auto &BinaryImagesPair : MDeviceImageManagers) {
+    for (const auto &Image : BinaryImagesPair.second) {
+      if (isImageCompatible(*Image, Device))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 } // namespace detail

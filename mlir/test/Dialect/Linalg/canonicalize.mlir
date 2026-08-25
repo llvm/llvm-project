@@ -1219,6 +1219,23 @@ func.func @broadcast_non_splat_constant(%init: tensor<2x3xf32>) -> tensor<2x3xf3
   return %0 : tensor<2x3xf32>
 }
 
+
+// -----
+
+// A splat of a complex element type yields an ArrayAttr, which is not a
+// TypedAttr, so the fold must decline instead of asserting in the cast.
+// CHECK-LABEL: @broadcast_splat_constant_complex
+//       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast
+//       CHECK:   return %[[BROADCAST]] : tensor<2x3xcomplex<f32>>
+func.func @broadcast_splat_constant_complex(%init: tensor<2x3xcomplex<f32>>)
+    -> tensor<2x3xcomplex<f32>> {
+  %cst = arith.constant dense<(1.000000e+00,2.000000e+00)> : tensor<3xcomplex<f32>>
+  %0 = linalg.broadcast
+      ins(%cst: tensor<3xcomplex<f32>>)
+      outs(%init: tensor<2x3xcomplex<f32>>)
+      dimensions = [0]
+  return %0 : tensor<2x3xcomplex<f32>>
+}
 // -----
 
 // CHECK-LABEL: @broadcast_broadcast_fold
@@ -1350,6 +1367,23 @@ func.func @transpose_non_splat_constant(%init: tensor<3x2xf32>) -> tensor<3x2xf3
   func.return %transpose : tensor<3x2xf32>
 }
 
+
+// -----
+
+// A splat of a complex element type yields an ArrayAttr, which is not a
+// TypedAttr, so the fold must decline instead of asserting in the cast.
+// CHECK-LABEL: @transpose_splat_constant_complex
+//       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose
+//       CHECK:   return %[[TRANSPOSE]] : tensor<3x2xcomplex<f32>>
+func.func @transpose_splat_constant_complex(%init: tensor<3x2xcomplex<f32>>)
+    -> tensor<3x2xcomplex<f32>> {
+  %cst = arith.constant dense<(1.000000e+00,2.000000e+00)> : tensor<2x3xcomplex<f32>>
+  %transpose = linalg.transpose
+      ins(%cst: tensor<2x3xcomplex<f32>>)
+      outs(%init: tensor<3x2xcomplex<f32>>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xcomplex<f32>>
+}
 // -----
 
 func.func @transpose_transpose_cancel(%input: tensor<5x4x3xf32>,
@@ -1610,7 +1644,46 @@ func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<312
   return %pack : tensor<31250x1200x16x1xf32>
 }
 // CHECK-LABEL: func @fold_padding_value_pack
-// CHECK-NOT:     padding_value
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_dynamic_with_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x1xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x1xf32>
+  return %pack : tensor<31250x?x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_dynamic_with_unit_tile_size
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x2xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x2xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 2]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x2xf32>
+  return %pack : tensor<31250x?x16x2xf32>
+}
+// CHECK-LABEL: func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size
+//       CHECK:   linalg.pack
+//       CHECK:   padding_value
 
 // -----
 

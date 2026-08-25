@@ -20,30 +20,24 @@ S agg_invoker() {
 }
 
 // CIR-LABEL: cir.func no_inline internal private dso_local @_ZZ11agg_invokervEN3$_08__invokeEi
-// CIR-SAME:    (%[[I_ARG:.*]]: !s32i {{.*}}) -> !rec_S
-// CIR:         %[[I_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-// CIR:         %[[RETVAL:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["__retval"]
-// CIR:         %[[UNUSED:.*]] = cir.alloca !rec_anon{{[^,]*}}, {{.*}} ["unused.capture"]
-// CIR-NOT:     cir.alloca {{.*}} ["agg.tmp
+// CIR-SAME:    (%[[AGG_RESULT:.*]]: !cir.ptr<!rec_S> {{.*}}llvm.sret = !rec_S{{.*}}, %[[I_ARG:.*]]: !s32i {{.*}})
+// CIR:         %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+// CIR:         %[[UNUSED:.*]] = cir.alloca "unused.capture" {{.*}} : !cir.ptr<!rec_anon{{.*}}>
+// CIR-NOT:     cir.alloca "agg.tmp
 // CIR:         cir.store %[[I_ARG]], %[[I_ALLOCA]]
 // CIR:         %[[I:.*]] = cir.load{{.*}} %[[I_ALLOCA]]
-// CIR:         %[[CALL:.*]] = cir.call @_ZZ11agg_invokervENK3$_0clEi(%[[UNUSED]], %[[I]]){{.*}} -> !rec_S
+// CIR:         cir.call @_ZZ11agg_invokervENK3$_0clEi(%[[AGG_RESULT]], %[[UNUSED]], %[[I]])
 // CIR-NOT:     cir.copy
-// CIR:         cir.store{{.*}} %[[CALL]], %[[RETVAL]]
-// CIR:         %[[RET:.*]] = cir.load %[[RETVAL]]
-// CIR:         cir.return %[[RET]]
+// CIR:         cir.return
 
-// LLVM-LABEL: define internal %struct.S @"_ZZ11agg_invokervEN3$_08__invokeEi"
-// LLVM-SAME:    (i32 {{[^,)]*}} %[[I_ARG:[^,)]+]])
+// LLVM-LABEL: define internal void @"_ZZ11agg_invokervEN3$_08__invokeEi"
+// LLVM-SAME:    (ptr dead_on_unwind noalias writable sret(%struct.S) align 4 %[[AGG_RESULT:[^,)]+]], i32 {{[^,)]*}} %[[I_ARG:[^,)]+]])
 // LLVM:         %[[I_ALLOCA:.*]] = alloca i32
-// LLVM:         %[[RETVAL:.*]] = alloca %struct.S
 // LLVM:         %[[UNUSED:.*]] = alloca %class.anon
 // LLVM:         store i32 %[[I_ARG]], ptr %[[I_ALLOCA]]
 // LLVM:         %[[I:.*]] = load i32, ptr %[[I_ALLOCA]]
-// LLVM:         %[[CALL:.*]] = call %struct.S @"_ZZ11agg_invokervENK3$_0clEi"(ptr {{.*}} %[[UNUSED]], i32 {{.*}} %[[I]])
-// LLVM:         store %struct.S %[[CALL]], ptr %[[RETVAL]]
-// LLVM:         %[[RET:.*]] = load %struct.S, ptr %[[RETVAL]]
-// LLVM:         ret %struct.S %[[RET]]
+// LLVM:         call void @"_ZZ11agg_invokervENK3$_0clEi"(ptr {{.*}} sret(%struct.S) {{[^,]*}} %[[AGG_RESULT]], ptr {{.*}} %[[UNUSED]], i32 {{.*}} %[[I]])
+// LLVM:         ret void
 
 // OGCG-LABEL: define internal void @"_ZZ11agg_invokervEN3$_08__invokeEi"
 // OGCG-SAME:    (ptr {{.*}} sret(%struct.S) {{[^,]*}} %[[AGG_RESULT:[^,]+]], i32 {{[^,)]*}} %[[I_ARG:[^,)]+]])

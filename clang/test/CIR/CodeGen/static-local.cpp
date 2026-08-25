@@ -188,7 +188,7 @@ void references_param_and_previous(int param) {
   static int refs_magic_static = magic_static;
 
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z29references_param_and_previousi
-// CIR-BOTH:    %[[PARAM_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["param", init]
+// CIR-BOTH:    %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:    %[[GET_MAG_STATIC:.*]] = cir.get_global static_local @_ZZ29references_param_and_previousiE12magic_static : !cir.ptr<!s32i>
 //
 // CIR-BEFORE-LPP:    cir.local_init static_local @_ZZ29references_param_and_previousiE12magic_static ctor {
@@ -279,9 +279,9 @@ void multi_refs(int one, int two, int, int three, int, int four, int) {
   static A magic_static = one + three + four + bar();
   static A refs_magic_static = magic_static;
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z10multi_refsiiiiiii(
-// CIR-BOTH:   %[[ONE_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["one", init]
-// CIR-BOTH:   %[[THREE_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["three", init]
-// CIR-BOTH:   %[[FOUR_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["four", init]
+// CIR-BOTH:   %[[ONE_ALLOCA:.*]] = cir.alloca "one" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[THREE_ALLOCA:.*]] = cir.alloca "three" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[FOUR_ALLOCA:.*]] = cir.alloca "four" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[GET_MS:.*]] = cir.get_global static_local @_ZZ10multi_refsiiiiiiiE12magic_static : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP:   cir.local_init static_local @_ZZ10multi_refsiiiiiiiE12magic_static ctor {
 //
@@ -328,7 +328,7 @@ void multi_refs(int one, int two, int, int three, int, int four, int) {
 // CIR:   cir.if %[[IS_UNINIT]] {
 //
 // CIR-BOTH:     %[[GET_REF_MS_INIT:.*]] = cir.get_global static_local @_ZZ10multi_refsiiiiiiiE17refs_magic_static : !cir.ptr<!rec_A>
-// CIR-BOTH:     cir.copy %[[GET_MS]] to %[[GET_REF_MS_INIT]] : !cir.ptr<!rec_A>
+// CIR-BOTH:     cir.copy %[[GET_MS]] align(4) to %[[GET_REF_MS_INIT]] align(4) : !cir.ptr<!rec_A>
 // CIR-BEFORE-LPP:     cir.yield
 // CIR-BEFORE-LPP:   }
 //
@@ -387,10 +387,10 @@ void InMember::mem_func(int one, int two, int, int three) {
   int some_local = mem_get_int();
   static int magic_static = three + mem_get_int() + one + some_local;
 // CIR-BOTH-LABEL:  cir.func no_inline dso_local @_ZN8InMember8mem_funcEiiii(
-// CIR-BOTH:    %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_InMember>, !cir.ptr<!cir.ptr<!rec_InMember>>, ["this", init]
-// CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["one", init]
-// CIR-BOTH:    %[[THREE_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["three", init]
-// CIR-BOTH:    %[[LOCAL_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["some_local", init]
+// CIR-BOTH:    %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_InMember>>
+// CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca "one" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH:    %[[THREE_ALLOCA:.*]] = cir.alloca "three" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH:    %[[LOCAL_ALLOCA:.*]] = cir.alloca "some_local" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:    %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_InMember>>, !cir.ptr<!rec_InMember>
 // CIR-BOTH:    %[[GET_INT:.*]] = cir.call @_ZN8InMember11mem_get_intEv(%[[THIS_LOAD]]) : (!cir.ptr<!rec_InMember>{{.*}}) -> (!s32i {llvm.noundef})
 // CIR-BOTH:    cir.store{{.*}} %[[GET_INT]], %[[LOCAL_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -461,7 +461,7 @@ void InMember::mem_func(int one, int two, int, int three) {
 void self_ref(int one) {
   static int magic_static = magic_static + one;
 // CIR-BOTH-LABEL:  cir.func no_inline dso_local @_Z8self_refi(
-// CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["one", init]
+// CIR-BOTH:    %[[ONE_ALLOCA:.*]] = cir.alloca "one" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BOTH:    %[[GET_MS:.*]] = cir.get_global static_local @_ZZ8self_refiE12magic_static : !cir.ptr<!s32i>
 //
 // CIR-BEFORE-LPP:    cir.local_init static_local @_ZZ8self_refiE12magic_static ctor {
@@ -542,8 +542,8 @@ void test_dtor() {
 // CIR:    %[[GET_DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
 // CIR:    %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:    %[[MS_DECAY:.*]] = cir.cast bitcast %[[GET_MS_DEL]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
-// CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:    cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
 
 // CIR:   }
@@ -601,8 +601,8 @@ void test_ctor_dtor() {
 // CIR:    %[[GET_DTOR:.*]] = cir.get_global @_ZN11HasCtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasCtorDtor>)>>
 // CIR:    %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasCtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:    %[[MS_DECAY:.*]] = cir.cast bitcast %[[GET_MS_DEL]] : !cir.ptr<!rec_HasCtorDtor> -> !cir.ptr<!void>
-// CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:    %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:    cir.call @__cxa_atexit(%[[DTOR_DECAY]], %[[MS_DECAY]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:    cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
 // CIR:   }
 // CIR: }
@@ -629,20 +629,9 @@ int referenced_inside() {
   static int static_local = bar();
   auto lam = []() { return static_local; };
   return lam();
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
-// CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<!{{.*}}>, !cir.ptr<!cir.ptr<!{{.*}}>>, ["this", init]
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
-// CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global static_local @_ZZ17referenced_insidevE12static_local : !cir.ptr<!s32i>
-// CIR-BOTH:   %[[LOAD_SL:.*]] = cir.load {{.*}}%[[GET_SL]] : !cir.ptr<!s32i>, !s32i
-// CIR-BOTH:   cir.store %[[LOAD_SL]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
-// CIR-BOTH:   %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !s32i
-// CIR-BOTH:   cir.return %[[LOAD_RET]] : !s32i
-// CIR-BOTH: }
-//
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z17referenced_insidev()
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca !{{.*}}, !cir.ptr<!{{.*}}>, ["lam"]
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca "lam" {{.*}} : !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global static_local @_ZZ17referenced_insidevE12static_local : !cir.ptr<!s32i>
 // CIR-BEFORE-LLP:   cir.local_init static_local @_ZZ17referenced_insidevE12static_local ctor {
 //
@@ -673,10 +662,18 @@ int referenced_inside() {
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
 //
-
-// LLVM-CIR-LABEL: define internal noundef i32 @"_ZZ17referenced_insidevENK3$_0clEv"(
-// LLVM-CIR:   load i32, ptr @_ZZ17referenced_insidevE12static_local
+// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
+// CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
+// CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global static_local @_ZZ17referenced_insidevE12static_local : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_SL:.*]] = cir.load {{.*}}%[[GET_SL]] : !cir.ptr<!s32i>, !s32i
+// CIR-BOTH:   cir.store %[[LOAD_SL]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR-BOTH:   cir.return %[[LOAD_RET]] : !s32i
+// CIR-BOTH: }
 //
+
 // LLVM-CIR-LABEL: define dso_local noundef i32 @_Z17referenced_insidev()
 // LLVM-CIR: %[[GET_GUARD:.*]] = load atomic i8, ptr @_ZGVZ17referenced_insidevE12static_local acquire
 // LLVM-CIR: %[[IS_UNINIT:.*]] = icmp eq i8 %[[GET_GUARD]], 0
@@ -689,6 +686,9 @@ int referenced_inside() {
 // LLVM-CIR: %[[CALL:.*]] = call noundef i32 @_Z3barv()
 // LLVM-CIR: store i32 %[[CALL]], ptr @_ZZ17referenced_insidevE12static_local
 // LLVM-CIR: call void @__cxa_guard_release(ptr @_ZGVZ17referenced_insidevE12static_local)
+//
+// LLVM-CIR-LABEL: define internal noundef i32 @"_ZZ17referenced_insidevENK3$_0clEv"(
+// LLVM-CIR:   load i32, ptr @_ZZ17referenced_insidevE12static_local
 //
 // OGCG-LABEL: define dso_local noundef i32 @_Z17referenced_insidev()
 // OGCG: %[[GET_GUARD:.*]] = load atomic i8, ptr @_ZGVZ17referenced_insidevE12static_local acquire
@@ -711,20 +711,9 @@ int referenced_inside_const() {
   static int static_local = 42;
   auto lam = []() { return static_local; };
   return lam();
-// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
-// CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<!{{.*}}>, !cir.ptr<!cir.ptr<!{{.*}}>>, ["this", init]
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
-// CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global @_ZZ23referenced_inside_constvE12static_local : !cir.ptr<!s32i>
-// CIR-BOTH:   %[[LOAD_SL:.*]] = cir.load {{.*}}%[[GET_SL]] : !cir.ptr<!s32i>, !s32i
-// CIR-BOTH:   cir.store %[[LOAD_SL]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
-// CIR-BOTH:   %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !s32i
-// CIR-BOTH:   cir.return %[[LOAD_RET]] : !s32i
-// CIR-BOTH: }
-//
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z23referenced_inside_constv()
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca !{{.*}}, !cir.ptr<!{{.*}}>, ["lam"]
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca "lam" {{.*}} : !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global @_ZZ23referenced_inside_constvE12static_local : !cir.ptr<!s32i>
 // CIR-BOTH-NOT: static_local
 // CIR-BOTH-NOT: atomic 
@@ -733,13 +722,24 @@ int referenced_inside_const() {
 // CIR-BOTH:   %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !s32i
 // CIR-BOTH:   cir.return %[[RET_LOAD]] : !s32i
 // CIR-BOTH: }
-
-// LLVM-CIR-LABEL: define internal noundef i32 @"_ZZ23referenced_inside_constvENK3$_0clEv"(
-// LLVM-CIR:   load i32, ptr @_ZZ23referenced_inside_constvE12static_local
 //
+// CIR-BOTH-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
+// CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
+// CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global @_ZZ23referenced_inside_constvE12static_local : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_SL:.*]] = cir.load {{.*}}%[[GET_SL]] : !cir.ptr<!s32i>, !s32i
+// CIR-BOTH:   cir.store %[[LOAD_SL]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
+// CIR-BOTH:   %[[LOAD_RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!s32i>, !s32i
+// CIR-BOTH:   cir.return %[[LOAD_RET]] : !s32i
+// CIR-BOTH: }
+
 // LLVM-CIR-LABEL: define dso_local noundef i32 @_Z23referenced_inside_constv()
 // LLVM-CIR-NOT: atomic
 // LLVM-CIR: call noundef i32 @"_ZZ23referenced_inside_constvENK3$_0clEv"(ptr 
+//
+// LLVM-CIR-LABEL: define internal noundef i32 @"_ZZ23referenced_inside_constvENK3$_0clEv"(
+// LLVM-CIR:   load i32, ptr @_ZZ23referenced_inside_constvE12static_local
 //
 // OGCG-LABEL: define dso_local noundef i32 @_Z23referenced_inside_constv()
 // OGCG-NOT: atomic

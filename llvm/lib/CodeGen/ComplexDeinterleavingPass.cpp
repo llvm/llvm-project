@@ -127,10 +127,6 @@ hash_code hash_value(const ComplexValue &Arg) {
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
 template <> struct llvm::DenseMapInfo<ComplexValue> {
-  static inline ComplexValue getEmptyKey() {
-    return {DenseMapInfo<Value *>::getEmptyKey(),
-            DenseMapInfo<Value *>::getEmptyKey()};
-  }
   static unsigned getHashValue(const ComplexValue &Val) {
     return hash_combine(DenseMapInfo<Value *>::getHashValue(Val.Real),
                         DenseMapInfo<Value *>::getHashValue(Val.Imag));
@@ -660,23 +656,22 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
   // A +/+ has a rotation of 0. If any of the operands are fneg, we flip the
   // rotations and use the operand.
   unsigned Negs = 0;
-  Value *Op;
-  if (match(R0, m_Neg(m_Value(Op)))) {
+  if (isNeg(R0)) {
     Negs |= 1;
-    R0 = Op;
-  } else if (match(R1, m_Neg(m_Value(Op)))) {
+    R0 = getNegOperand(R0);
+  } else if (isNeg(R1)) {
     Negs |= 1;
-    R1 = Op;
+    R1 = getNegOperand(R1);
   }
 
   if (isNeg(I0)) {
     Negs |= 2;
     Negs ^= 1;
-    I0 = Op;
-  } else if (match(I1, m_Neg(m_Value(Op)))) {
+    I0 = getNegOperand(I0);
+  } else if (isNeg(I1)) {
     Negs |= 2;
     Negs ^= 1;
-    I1 = Op;
+    I1 = getNegOperand(I1);
   }
 
   ComplexDeinterleavingRotation Rotation = (ComplexDeinterleavingRotation)Negs;
@@ -1216,14 +1211,15 @@ ComplexDeinterleavingGraph::identifyNode(ComplexValues &Vals) {
 ComplexDeinterleavingGraph::CompositeNode *
 ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
                                                  Instruction *Imag) {
-  auto IsOperationSupported = [](unsigned Opcode) -> bool {
-    return Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+  auto IsOperationSupported = [](Instruction *I) -> bool {
+    unsigned Opcode = I->getOpcode();
+    return match(I, m_AnyIntrinsic<Intrinsic::fma, Intrinsic::fmuladd>()) ||
+           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
            Opcode == Instruction::FNeg || Opcode == Instruction::Add ||
            Opcode == Instruction::Sub;
   };
 
-  if (!IsOperationSupported(Real->getOpcode()) ||
-      !IsOperationSupported(Imag->getOpcode()))
+  if (!IsOperationSupported(Real) || !IsOperationSupported(Imag))
     return nullptr;
 
   std::optional<FastMathFlags> Flags;
@@ -1249,11 +1245,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
   auto Collect = [&Flags](Instruction *Insn, SmallVectorImpl<Product> &Muls,
                           AddendList &Addends) -> bool {
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
-    SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
       auto [V, IsPositive] = Worklist.pop_back_val();
-      if (!Visited.insert(V).second)
-        continue;
 
       Instruction *I = dyn_cast<Instruction>(V);
       if (!I) {
@@ -1312,6 +1305,30 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       case Instruction::FNeg:
         Worklist.emplace_back(I->getOperand(0), !IsPositive);
         break;
+      case Instruction::Call: {
+        Value *A, *B, *C;
+        if (!match(I, m_Intrinsic<Intrinsic::fma>(m_Value(A), m_Value(B),
+                                                  m_Value(C))) &&
+            !match(I, m_Intrinsic<Intrinsic::fmuladd>(m_Value(A), m_Value(B),
+                                                      m_Value(C)))) {
+          Addends.emplace_back(I, IsPositive);
+          continue;
+        }
+
+        if (isNeg(A)) {
+          A = getNegOperand(A);
+          IsPositive = !IsPositive;
+        }
+
+        if (isNeg(B)) {
+          B = getNegOperand(B);
+          IsPositive = !IsPositive;
+        }
+
+        Muls.push_back(Product{A, B, IsPositive});
+        Worklist.emplace_back(C, IsPositive);
+        break;
+      }
       default:
         Addends.emplace_back(I, IsPositive);
         continue;

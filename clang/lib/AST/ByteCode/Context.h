@@ -47,7 +47,7 @@ class EvalIDScope;
 class Context final {
 public:
   /// Initialises the constexpr VM.
-  Context(ASTContext &Ctx);
+  explicit Context(ASTContext &Ctx);
 
   /// Cleans up the constexpr VM.
   ~Context();
@@ -97,6 +97,12 @@ public:
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
                                                 unsigned Kind);
 
+  std::optional<bool> evaluateWithSubstitution(State &Parent,
+                                               const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
@@ -121,10 +127,12 @@ public:
   }
 
   bool canClassify(QualType T) const {
+    T = T.getCanonicalType();
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())
@@ -133,6 +141,10 @@ public:
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
+
+    if (T->isEnumeralType())
+      return true;
+
     return classify(T) != std::nullopt;
   }
   bool canClassify(const Expr *E) const {

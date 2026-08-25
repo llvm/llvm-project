@@ -71,6 +71,20 @@ on all AMDGCN targets unless otherwise noted.
 }];
 }
 
+def DocCatAMDGPUConversion : DocumentationCategory<"Conversion Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU conversion instructions, including conversions
+between standard floating-point types, integer types and packed low-precision formats.
+}];
+}
+
+def DocCatAMDGPUPrefetch : DocumentationCategory<"Prefetch Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU prefetch instructions, including instructions
+for prefetching data and instructions.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // ABI / Special Register Builtins — Documentation records
 //===----------------------------------------------------------------------===//
@@ -443,6 +457,8 @@ matrix ``B`` and adds the 16x16 f32 accumulator ``C``.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -459,6 +475,8 @@ result to bf16.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -474,6 +492,8 @@ matrix ``A`` by a 32x16 matrix ``B`` and adds the 16x16 accumulator ``C``.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -490,6 +510,8 @@ A and B contain packed 8-bit floats passed as integer vectors.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -506,6 +528,8 @@ A and B contain packed 8-bit floats passed as integer vectors.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -524,6 +548,8 @@ matrix ``B`` and adds the i32 accumulator ``C``.
   a compile-time constant integer expression convertible to bool. If true,
   the result saturates instead of wrapping on overflow. If omitted, defaults
   to false.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -539,6 +565,8 @@ independently per operand.
   (FP8, BF8, FP6, BF6, or FP4). Must be compile-time constants.
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -551,6 +579,8 @@ and adds the 32x16 f32 accumulator ``C``.
 
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -570,6 +600,37 @@ WMMA with per-operand scale factors applied during the computation.
 - ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 32-bit scale exponents.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Global Available/Visible Memory Access Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatAVLoadStore : DocumentationCategory<"Available/Visible Memory Access Builtins"> {
+  let Content = [{
+These builtins perform 128-bit global or flat memory loads and stores with
+available/visible (AV) semantics.
+}];
+}
+
+def DocAVLoadB128 : Documentation {
+  let Category = DocCatAVLoadStore;
+  let Content = [{
+Loads 128 bits (4 x i32) from the pointer ``ptr``. The pointer must be in
+the global or generic address space. The ``scope`` argument specifies the
+synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
+}];
+}
+
+def DocAVStoreB128 : Documentation {
+  let Category = DocCatAVLoadStore;
+  let Content = [{
+Stores 128 bits (4 x i32) of ``data`` to the pointer ``ptr``. The pointer
+must be in the global or generic address space. The ``scope`` argument
+specifies the synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
 }];
 }
 
@@ -613,5 +674,161 @@ scale variant.
 - ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
+}];
+}
+
+def DocWMMA_f64_16x16x4_f64_GFX1251 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f64 inputs and f64 output, using a
+4-deep K dimension. Multiplies a 16x4 matrix ``A`` by a 4x16 matrix ``B``
+and adds the 16x16 f64 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Tensor DMA Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatTensorDMA : DocumentationCategory<"Tensor DMA Builtins"> {
+  let Content = [{
+Asynchronous tensor DMA transfers between global memory and LDS. Track
+completion using ``TENSOR_CNT`` or *asyncmarks* (see the ``AMDGPU
+Asynchronous Operations`` document).
+
+``D0``..``D4`` are the five chunks of the hardware tensor descriptor. The
+``_d2`` machine instruction is selected when ``D2`` and ``D3`` are zero-
+initialized; otherwise ``_d4`` is used. ``D4`` is reserved and silently
+ignored on gfx1250. ``cpol`` is a compile-time cache-policy bitfield
+(``th`` in bits [0:2], scope in bits [3:4]).
+}];
+}
+
+def DocTensorLoadToLDS_GFX1250 : Documentation {
+  let Category = DocCatTensorDMA;
+  let Content = [{
+Asynchronously copies a tensor from global memory into LDS.
+}];
+}
+
+def DocTensorStoreFromLDS_GFX1250 : Documentation {
+  let Category = DocCatTensorDMA;
+  let Content = [{
+Asynchronously copies a tensor from LDS into global memory.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Bit Manipulation Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatBitManip : DocumentationCategory<"Bit Manipulation Builtins"> {
+  let Content = [{
+These builtins perform bit-manipulation operations within a wavefront.
+}];
+}
+
+def DocSBitReplicate : Documentation {
+  let Category = DocCatBitManip;
+  let Content = [{
+Replicates each bit of the 32-bit ``src`` operand into two adjacent bits of a
+64-bit result. Bit ``i`` of the input is copied to bits ``2*i`` and ``2*i+1``
+of the output. The operand must be uniform across the wavefront. A divergent
+value gives an undefined result.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// S-Buffer Load Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatSBufferLoad : DocumentationCategory<"S-Buffer Load Builtins"> {
+  let Content = [{
+These builtins lower to ``llvm.amdgcn.ptr.s.buffer.load`` and issue an
+``s_buffer_load`` when the byte offset is uniform across the wavefront.
+When the offset is divergent, the backend may lower to a ``buffer_load``.
+
+.. warning::
+
+   These builtins should generally be avoided. They must only be used to emit
+   ``s_buffer_load`` instructions that access memory not modified during kernel
+   execution. ``s_buffer_load`` uses a separate cache that is not coherent with
+   the caches used by other load and store operations. The compiler does not
+   verify the alignment requirements imposed by ``s_buffer_load``. However,
+   because automatic promotion of ``buffer_load`` to ``s_buffer_load`` where
+   legal is not yet fully implemented, these builtins are provided so that
+   programmers can use such load operations directly.
+
+These builtins take the buffer resource as ``__amdgpu_buffer_rsrc_t``, which
+can be created with ``__builtin_amdgcn_make_buffer_rsrc``. The backend
+lowers the resource to the 4-dword SGPR descriptor required by the instruction.
+
+The return type selects the load width. Separate builtins are provided for
+each supported scalar and vector element type.
+}];
+}
+
+def DocSBufferLoad : Documentation {
+  let Category = DocCatSBufferLoad;
+  let Content = [{
+Loads data from a buffer using an SGPR buffer descriptor.
+
+- ``rsrc``: buffer resource descriptor.
+- ``offset``: byte offset from the base of the buffer. May be variable; a
+  uniform offset enables ``s_buffer_load`` selection.
+- ``aux``: cache-policy and control flags. Must be a compile-time constant.
+  The encoding is target-dependent. Common fields include:
+
+  - Pre-GFX12: bit 0 = glc, bit 1 = slc, bit 2 = dlc (GFX10/GFX11), bit 3 =
+    swz, bit 4 = scc (GFX90a).
+  - GFX942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1.
+  - GFX12+: bits [0-2] = th, bits [3-4] = scope, bit 6 = swz.
+
+  The volatile bit is not permitted for this intrinsic.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Conversion Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCvtScaleF32Pk32BF6F32 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 32-component single-precision floating-point input ``src``
+using the scale factor ``scale``, then converts the values to a packed
+32-component BF6 value, returned as a 6-element vector of 32-bit unsigned
+integers.
+}];
+}
+
+def DocCvtScaleF32Pk32FP6F32 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Scales a packed 32-component single-precision floating-point input ``src``
+using the scale factor ``scale``, then converts the values to a packed
+32-component FP6 value, returned as a 6-element vector of 32-bit unsigned
+integers.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Prefetch Builtins
+//===----------------------------------------------------------------------===//
+
+def DocPrefetchInst_GFX12 : Documentation {
+  let Category = DocCatAMDGPUPrefetch;
+  let Content = [{
+Prefetch instructions into I-Cache from the address given by ``ptr`` pointing
+to instruction memory, with the length specified by ``len``, which should be
+0-31 (1-32 chunks, units of 128 bytes).
 }];
 }

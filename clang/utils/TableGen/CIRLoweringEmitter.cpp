@@ -134,11 +134,11 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
-void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
-                                 llvm::StringRef PatternName, bool IsRecursive,
-                                 llvm::StringRef ExtraDecl,
-                                 const Record *CustomCtorRec,
-                                 llvm::StringRef LLVMOp) {
+void GenerateLLVMLoweringPattern(
+    llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
+    llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
+    llvm::StringRef LLVMOp, llvm::StringRef ConstrainedLLVMIntrinsic,
+    bool ConstrainedHasRoundingMode, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -147,6 +147,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   Code << "class " << PatternName
        << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
   Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
+  Code << "  [[maybe_unused]] mlir::SymbolTableCollection &symbolTables;\n";
 
   if (CustomCtor) {
     for (const CustomLoweringCtor::Param &P : CustomCtor->Params)
@@ -162,7 +163,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   // Constructor
   Code << "  " << PatternName
        << "(const mlir::TypeConverter &typeConverter, "
-          "mlir::MLIRContext *context, const mlir::DataLayout &dataLayout";
+          "mlir::MLIRContext *context, const mlir::DataLayout &dataLayout, "
+          "mlir::SymbolTableCollection &symbolTables";
 
   if (CustomCtor)
     emitCustomParamList(Code, CustomCtor->Params);
@@ -170,7 +172,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   Code << ")\n";
 
   Code << "    : OpConversionPattern<cir::" << OpName
-       << ">(typeConverter, context), dataLayout(dataLayout)";
+       << ">(typeConverter, context), dataLayout(dataLayout), "
+          "symbolTables(symbolTables)";
 
   if (CustomCtor)
     emitCustomInitList(Code, CustomCtor->Params);
@@ -182,16 +185,39 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "  }\n\n";
 
-  if (!LLVMOp.empty()) {
+  if (!ConstrainedLLVMIntrinsic.empty()) {
+    // Generate a matchAndRewrite body for a floating-point operation that
+    // carries an optional `fenv` attribute. The shared `lowerConstrainableFPOp`
+    // helper lowers to the plain `llvmOp` when no `fenv` attribute is present
+    // and to a call to the constrained floating-point intrinsic when one is.
+    assert(!LLVMOp.empty() && "constrainedLLVMIntrinsic requires llvmOp");
+    Code
+        << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
+        << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+           "const override {\n";
+    Code << "    return lowerConstrainableFPOp<mlir::LLVM::" << LLVMOp
+         << ">(\n";
+    Code << "        op, adaptor.getOperands(), op.getFenvAttr(),\n";
+    Code << "        *getTypeConverter(), rewriter, \""
+         << ConstrainedLLVMIntrinsic << "\",\n";
+    Code << "        /*hasRoundingMode=*/"
+         << (ConstrainedHasRoundingMode ? "true" : "false") << ");\n";
+    Code << "  }\n";
+  } else if (!LLVMOp.empty()) {
     // Generate the matchAndRewrite body automatically.
     Code
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
-    Code
-        << "    mlir::Type resTy = typeConverter->convertType(op.getType());\n";
-    Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-         << ">(op, resTy, adaptor.getOperands());\n";
+    if (HasZeroResult) {
+      Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands());\n";
+    } else {
+      Code << "    mlir::Type resTy = "
+              "typeConverter->convertType(op.getType());\n";
+      Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
+           << ">(op, resTy, adaptor.getOperands());\n";
+    }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
   } else {
@@ -229,6 +255,10 @@ void Generate(const Record *OpRecord) {
         OpRecord->getValueAsString("extraLLVMLoweringPatternDecl");
 
     llvm::StringRef LLVMOp = OpRecord->getValueAsString("llvmOp");
+    llvm::StringRef ConstrainedLLVMIntrinsic =
+        OpRecord->getValueAsString("constrainedLLVMIntrinsic");
+    bool ConstrainedHasRoundingMode =
+        OpRecord->getValueAsBit("constrainedLLVMIntrinsicHasRoundingMode");
 
     if (!LLVMOp.empty() && CustomCtor)
       PrintFatalError(OpRecord->getLoc(),
@@ -236,8 +266,17 @@ void Generate(const Record *OpRecord) {
                           "' has both llvmOp and a custom lowering "
                           "constructor, which is not supported");
 
+    if (!ConstrainedLLVMIntrinsic.empty() && LLVMOp.empty())
+      PrintFatalError(OpRecord->getLoc(),
+                      "op '" + OpName +
+                          "' has constrainedLLVMIntrinsic set but no llvmOp, "
+                          "which is not supported");
+
+    const DagInit *ResultsDag = OpRecord->getValueAsDag("results");
+    bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
-                                CustomCtor, LLVMOp);
+                                CustomCtor, LLVMOp, ConstrainedLLVMIntrinsic,
+                                ConstrainedHasRoundingMode, IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.

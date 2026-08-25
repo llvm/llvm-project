@@ -5,7 +5,7 @@ module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader
 //      CHECK: func.func @atomic_addi_storage_buffer
 // CHECK-SAME: (%[[VAL:.+]]: i32,
 func.func @atomic_addi_storage_buffer(%value: i32, %memref: memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> i32 {
-  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[AC:.+]] = spirv.InBoundsAccessChain
   // CHECK: %[[ATOMIC:.+]] = spirv.AtomicIAdd <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<i32, StorageBuffer>
   // CHECK: return %[[ATOMIC]]
   %0 = memref.atomic_rmw "addi" %value, %memref[%i0, %i1, %i2] : (i32, memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>) -> i32
@@ -25,7 +25,7 @@ func.func @atomic_maxs_workgroup(%value: i32, %memref: memref<2x3x4xi32, #spirv.
 //      CHECK: func.func @atomic_maxu_storage_buffer
 // CHECK-SAME: (%[[VAL:.+]]: i32,
 func.func @atomic_maxu_storage_buffer(%value: i32, %memref: memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> i32 {
-  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[AC:.+]] = spirv.InBoundsAccessChain
   // CHECK: %[[ATOMIC:.+]] = spirv.AtomicUMax <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<i32, StorageBuffer>
   // CHECK: return %[[ATOMIC]]
   %0 = memref.atomic_rmw "maxu" %value, %memref[%i0, %i1, %i2] : (i32, memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>) -> i32
@@ -45,7 +45,7 @@ func.func @atomic_mins_workgroup(%value: i32, %memref: memref<2x3x4xi32, #spirv.
 //      CHECK: func.func @atomic_minu_storage_buffer
 // CHECK-SAME: (%[[VAL:.+]]: i32,
 func.func @atomic_minu_storage_buffer(%value: i32, %memref: memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> i32 {
-  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[AC:.+]] = spirv.InBoundsAccessChain
   // CHECK: %[[ATOMIC:.+]] = spirv.AtomicUMin <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<i32, StorageBuffer>
   // CHECK: return %[[ATOMIC]]
   %0 = memref.atomic_rmw "minu" %value, %memref[%i0, %i1, %i2] : (i32, memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>) -> i32
@@ -65,7 +65,7 @@ func.func @atomic_ori_workgroup(%value: i32, %memref: memref<2x3x4xi32, #spirv.s
 //      CHECK: func.func @atomic_andi_storage_buffer
 // CHECK-SAME: (%[[VAL:.+]]: i32,
 func.func @atomic_andi_storage_buffer(%value: i32, %memref: memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> i32 {
-  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[AC:.+]] = spirv.InBoundsAccessChain
   // CHECK: %[[ATOMIC:.+]] = spirv.AtomicAnd <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<i32, StorageBuffer>
   // CHECK: return %[[ATOMIC]]
   %0 = memref.atomic_rmw "andi" %value, %memref[%i0, %i1, %i2] : (i32, memref<2x3x4xi32, #spirv.storage_class<StorageBuffer>>) -> i32
@@ -143,6 +143,24 @@ func.func @atomic_andi_i8_storage_buffer(%value: i8, %memref: memref<16xi8, #spi
   //      CHECK:     return
   %0 = memref.atomic_rmw "andi" %value, %memref[%i0] : (i8, memref<16xi8, #spirv.storage_class<StorageBuffer>>) -> i8
   return %0: i8
+}
+
+}
+
+// -----
+
+// Floating-point atomic add requires the shader_atomic_float_add extension.
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader, AtomicFloat32AddEXT], [SPV_EXT_shader_atomic_float_add]>, #spirv.resource_limits<>>} {
+
+//      CHECK: func.func @atomic_addf_storage_buffer
+// CHECK-SAME: (%[[VAL:.+]]: f32,
+func.func @atomic_addf_storage_buffer(%value: f32, %memref: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> f32 {
+  // CHECK: %[[AC:.+]] = spirv.InBoundsAccessChain
+  // CHECK: %[[ATOMIC:.+]] = spirv.EXT.AtomicFAdd <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<f32, StorageBuffer>
+  // CHECK: return %[[ATOMIC]]
+  %0 = memref.atomic_rmw "addf" %value, %memref[%i0, %i1, %i2] : (f32, memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>) -> f32
+  return %0: f32
 }
 
 }

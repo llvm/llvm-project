@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -34,6 +35,13 @@ namespace xegpu {
 using namespace mlir;
 
 namespace {
+
+// Forward declaration for use inside UnrollPattern below.
+SmallVector<Value>
+unrollByTile(SmallVector<OpFoldResult> mixedOffsets,
+             xegpu::TensorDescType tdescTy, ArrayRef<int64_t> targetShape,
+             const std::function<Value(SmallVector<OpFoldResult>)> &createOp,
+             Location loc, PatternRewriter &rewriter);
 
 template <typename SourceOp>
 struct UnrollPattern : public OpRewritePattern<SourceOp> {
@@ -59,9 +67,8 @@ protected:
   }
 
   SmallVector<Type> getUnrolledTypes(ShapedType type,
-                                     ArrayRef<int64_t> tileShape,
-                                     bool returnSingleType = false) const {
-    return options.getUnrolledTypes(type, tileShape, returnSingleType);
+                                     ArrayRef<int64_t> tileShape) const {
+    return options.getUnrolledTypes(type, tileShape);
   }
 
   /// Emulate the the unpack behavior using insert_strided_slice for VectorType
@@ -140,17 +147,15 @@ private:
   xegpu::UnrollOptions options;
 };
 
-// Generic helper function for unrolling operations with offsets.
-//
-// Iterates over tile offsets within the tensor descriptor shape and calls
-// the provided createOp function for each computed offset. This is used by
-// operations like LoadNd, StoreNd, CreateNdDesc, and PrefetchNd when they
-// have explicit offsets that need to be adjusted for each unrolled tile.
-SmallVector<Value> computeUnrolledOffsets(
-    SmallVector<OpFoldResult> mixedOffsets, xegpu::TensorDescType tdescTy,
-    ArrayRef<int64_t> targetShape,
-    const std::function<Value(SmallVector<OpFoldResult>)> &createOp,
-    Location loc, PatternRewriter &rewriter) {
+// Walks tile offsets within the tensor descriptor shape and emits one op per
+// tile by calling `createOp` with the per-tile offsets. Used by LoadNd,
+// StoreNd, CreateNdDesc, and PrefetchNd unrollers, which all need to adjust
+// their explicit offsets for each unrolled tile.
+SmallVector<Value>
+unrollByTile(SmallVector<OpFoldResult> mixedOffsets,
+             xegpu::TensorDescType tdescTy, ArrayRef<int64_t> targetShape,
+             const std::function<Value(SmallVector<OpFoldResult>)> &createOp,
+             Location loc, PatternRewriter &rewriter) {
   int64_t rank = tdescTy.getRank();
   ArrayRef<int64_t> shape = tdescTy.getShape();
 
@@ -195,16 +200,29 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
     if (!targetShape)
       return failure();
 
-    SmallVector<Value> newOps;
+    // Keep the high-D source; only the tile shape shrinks.
+    Value src = op.getSource();
+    auto makeCreateNd = [&](Type tdesc) -> Value {
+      auto ndTy = cast<xegpu::TensorDescType>(tdesc);
+      if (isa<MemRefType>(src.getType()))
+        return xegpu::CreateNdDescOp::create(rewriter, loc, ndTy,
+                                             cast<TypedValue<MemRefType>>(src));
+      return xegpu::CreateNdDescOp::create(
+          rewriter, loc, ndTy, src, op.getMixedSizes(), op.getMixedStrides());
+    };
 
-    auto newTdescTy = getUnrolledTypes(tdescTy, *targetShape)[0];
-    auto newOp =
-        xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy, op.getSource(),
-                                      op.getMixedSizes(), op.getMixedStrides());
-    newOps.push_back(newOp);
+    SmallVector<Type> newTdescTys = getUnrolledTypes(tdescTy, *targetShape);
+    SmallVector<Value> newOps;
+    if (tdescTy.getRank() <= 2) {
+      // 2D: one tdesc, broadcast across tiles by pack/unpack.
+      newOps.push_back(makeCreateNd(newTdescTys[0]));
+    } else {
+      // >2D: one tdesc per tile, so the source count matches the pack count.
+      for (Type t : newTdescTys)
+        newOps.push_back(makeCreateNd(t));
+    }
     Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
     rewriter.replaceOp(op, castOp);
-
     return success();
   }
 };
@@ -224,9 +242,9 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
     if (layout)
       layout = layout.dropInstData();
 
+    // Batch (leading) dims unroll to unit tiles; one tdesc serves all.
     SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
-
+        getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdesc = pack(
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
@@ -234,12 +252,10 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
       xegpu::PrefetchNdOp::create(rewriter, loc, convertedTdesc[0], offsets,
                                   op.getL1HintAttr(), op.getL2HintAttr(),
                                   op.getL3HintAttr(), layout);
-      // return dummy Value to satisfy function's signature
       return nullptr;
     };
-
-    computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                           createPrefetch, loc, rewriter);
+    unrollByTile(op.getMixedOffsets(), tdescTy, *targetShape, createPrefetch,
+                 loc, rewriter);
 
     rewriter.eraseOp(op);
     return success();
@@ -266,24 +282,24 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
     Type elemTy = tdescTy.getElementType();
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
-
-    SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
     SmallVector<Value> newOps;
 
-    auto createLoad = [&](SmallVector<OpFoldResult> offsets) {
+    // Batch (leading) dims unroll to unit tiles; one tdesc serves all.
+    SmallVector<Type> convertedTdescTypes =
+        getUnrolledTypes(tdescTy, *targetShape);
+    SmallVector<Value> convertedTdescs = pack(
+        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+
+    auto createLoad = [&](SmallVector<OpFoldResult> offsets) -> Value {
       return xegpu::LoadNdOp::create(
           rewriter, loc, newValueTy, convertedTdescs[0], offsets,
           op.getPackedAttr(), op.getTransposeAttr(), op.getL1HintAttr(),
           op.getL2HintAttr(), op.getL3HintAttr(), layout);
     };
-    newOps = computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                                    createLoad, loc, rewriter);
+    newOps = unrollByTile(op.getMixedOffsets(), tdescTy, *targetShape,
+                          createLoad, loc, rewriter);
 
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
-
     rewriter.replaceOp(op, castOp);
     return success();
   }
@@ -307,26 +323,28 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape, /*returnSingleType*/ true);
-
-    SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     SmallVector<Value> convertedValues =
         pack(op.getValue(), convertedValTypes, *targetShape, loc, rewriter);
 
     size_t valueIndex = 0;
+
+    // Batch (leading) dims unroll to unit tiles like any other dim. valueIndex
+    // advances in unrollByTile's tile order, staying in sync with the packed
+    // values.
+    SmallVector<Type> convertedTdescTypes =
+        getUnrolledTypes(tdescTy, *targetShape);
+    SmallVector<Value> convertedTdescs = pack(
+        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+
     auto createStore = [&](SmallVector<OpFoldResult> offsets) {
       xegpu::StoreNdOp::create(rewriter, loc, convertedValues[valueIndex++],
                                convertedTdescs[0], offsets, op.getL1HintAttr(),
                                op.getL2HintAttr(), op.getL3HintAttr(), layout);
-      // return dummy Value to satisfy function's signature
-      return nullptr;
+      return (Value) nullptr;
     };
-
-    computeUnrolledOffsets(op.getMixedOffsets(), tdescTy, *targetShape,
-                           createStore, loc, rewriter);
+    unrollByTile(op.getMixedOffsets(), tdescTy, *targetShape, createStore, loc,
+                 rewriter);
 
     rewriter.eraseOp(op);
     return success();
@@ -340,15 +358,26 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     Location loc = op.getLoc();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != 3)
+    if (!targetShape || targetShape->size() < 3)
       return failure();
-    auto M = (*targetShape)[0];
-    auto K = (*targetShape)[1];
-    auto N = (*targetShape)[2];
 
-    int64_t aBlockSize[2] = {M, K};
-    int64_t bBlockSize[2] = {K, N};
-    int64_t cBlockSize[2] = {M, N};
+    // targetShape is [batch..., M, K, N]
+    int64_t tsRank = targetShape->size();
+    auto M = (*targetShape)[tsRank - 3];
+    auto K = (*targetShape)[tsRank - 2];
+    auto N = (*targetShape)[tsRank - 1];
+    ArrayRef<int64_t> batchDims(targetShape->data(), tsRank - 3);
+
+    // Build block sizes including batch dimensions.
+    SmallVector<int64_t> aBlockSize(batchDims);
+    aBlockSize.push_back(M);
+    aBlockSize.push_back(K);
+    SmallVector<int64_t> bBlockSize(batchDims);
+    bBlockSize.push_back(K);
+    bBlockSize.push_back(N);
+    SmallVector<int64_t> cBlockSize(batchDims);
+    cBlockSize.push_back(M);
+    cBlockSize.push_back(N);
 
     auto a = op.getLhs();
     auto b = op.getRhs();
@@ -371,29 +400,40 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
 
     auto aShape = a.getType().getShape();
     auto bShape = b.getType().getShape();
-    int64_t mIters = aShape[0] / M;
-    int64_t kIters = aShape[1] / K;
-    int64_t nIters = bShape[1] / N;
+
+    // Compute iteration counts. Batch dims only iterate over M and N (not
+    // K-reduction), so compute batch iterations from the C block size.
+    int64_t batchRank = batchDims.size();
+    int64_t mIters = aShape[batchRank] / M;
+    int64_t kIters = aShape[batchRank + 1] / K;
+    int64_t nIters = bShape[batchRank + 1] / N;
+
+    // Compute batch iterations (product of batch dim ratios).
+    int64_t batchIters = 1;
+    for (int64_t d = 0; d < batchRank; ++d)
+      batchIters *= aShape[d] / batchDims[d];
 
     SmallVector<Value> newOps;
-    for (int64_t i = 0; i < mIters; ++i) {
-      for (int64_t j = 0; j < nIters; ++j) {
-        Value tmpC;
-        if (c)
-          tmpC = cVals[i * nIters + j];
+    for (int64_t batch = 0; batch < batchIters; ++batch) {
+      for (int64_t i = 0; i < mIters; ++i) {
+        for (int64_t j = 0; j < nIters; ++j) {
+          Value tmpC;
+          if (c)
+            tmpC = cVals[batch * (mIters * nIters) + i * nIters + j];
 
-        for (int64_t k = 0; k < kIters; ++k) {
-          Value aVec = aVals[i * kIters + k];
-          Value bVec = bVals[k * nIters + j];
-          SmallVector<Value> operands({aVec, bVec});
-          if (tmpC)
-            operands.push_back(tmpC);
+          for (int64_t k = 0; k < kIters; ++k) {
+            Value aVec = aVals[batch * (mIters * kIters) + i * kIters + k];
+            Value bVec = bVals[batch * (kIters * nIters) + k * nIters + j];
+            SmallVector<Value> operands({aVec, bVec});
+            if (tmpC)
+              operands.push_back(tmpC);
 
-          tmpC =
-              xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
-                                    xegpu::dropInstDataOnAttrs(op->getAttrs()));
+            tmpC = xegpu::DpasOp::create(
+                rewriter, loc, vecTy, operands,
+                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+          }
+          newOps.push_back(tmpC);
         }
-        newOps.push_back(tmpC);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
@@ -409,18 +449,32 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
     Location loc = op.getLoc();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape || targetShape->size() != 4)
+    if (!targetShape || targetShape->size() < 4)
       return failure();
-    auto M = (*targetShape)[0];
-    auto K = (*targetShape)[1];
-    auto N = (*targetShape)[2];
-    auto S = (*targetShape)[3];
 
-    int64_t aBlockSize[2] = {M, K};
-    int64_t bBlockSize[2] = {K, N};
-    int64_t cBlockSize[2] = {M, N};
-    int64_t aScaleBlockSize[2] = {M, S};
-    int64_t bScaleBlockSize[2] = {S, N};
+    // targetShape is [batch..., M, K, N, S]
+    int64_t tsRank = targetShape->size();
+    auto M = (*targetShape)[tsRank - 4];
+    auto K = (*targetShape)[tsRank - 3];
+    auto N = (*targetShape)[tsRank - 2];
+    auto S = (*targetShape)[tsRank - 1];
+    ArrayRef<int64_t> batchDims(targetShape->data(), tsRank - 4);
+
+    SmallVector<int64_t> aBlockSize(batchDims);
+    aBlockSize.push_back(M);
+    aBlockSize.push_back(K);
+    SmallVector<int64_t> bBlockSize(batchDims);
+    bBlockSize.push_back(K);
+    bBlockSize.push_back(N);
+    SmallVector<int64_t> cBlockSize(batchDims);
+    cBlockSize.push_back(M);
+    cBlockSize.push_back(N);
+    SmallVector<int64_t> aScaleBlockSize(batchDims);
+    aScaleBlockSize.push_back(M);
+    aScaleBlockSize.push_back(S);
+    SmallVector<int64_t> bScaleBlockSize(batchDims);
+    bScaleBlockSize.push_back(S);
+    bScaleBlockSize.push_back(N);
 
     auto a = op.getA();
     auto b = op.getB();
@@ -445,35 +499,44 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
 
     auto aShape = a.getType().getShape();
     auto bShape = b.getType().getShape();
-    int64_t mIters = aShape[0] / M;
-    int64_t kIters = aShape[1] / K;
-    int64_t nIters = bShape[1] / N;
+    int64_t batchRank = batchDims.size();
+    int64_t mIters = aShape[batchRank] / M;
+    int64_t kIters = aShape[batchRank + 1] / K;
+    int64_t nIters = bShape[batchRank + 1] / N;
+
+    int64_t batchIters = 1;
+    for (int64_t d = 0; d < batchRank; ++d)
+      batchIters *= aShape[d] / batchDims[d];
 
     SmallVector<Value> newOps;
     xegpu::DpasMxOp newDpasMxOp;
-    for (int64_t i = 0; i < mIters; ++i) {
-      for (int64_t j = 0; j < nIters; ++j) {
-        Value tmpC;
-        if (c)
-          tmpC = cVals[i * nIters + j];
+    for (int64_t batch = 0; batch < batchIters; ++batch) {
+      for (int64_t i = 0; i < mIters; ++i) {
+        for (int64_t j = 0; j < nIters; ++j) {
+          Value tmpC;
+          if (c)
+            tmpC = cVals[batch * (mIters * nIters) + i * nIters + j];
 
-        for (int64_t k = 0; k < kIters; ++k) {
-          Value aVec = aVals[i * kIters + k];
-          Value bVec = bVals[k * nIters + j];
-          SmallVector<Value> operands({aVec, bVec});
-          if (tmpC)
-            operands.push_back(tmpC);
-          if (ascale)
-            operands.push_back(aScaleVals[i * kIters + k]);
-          if (bscale)
-            operands.push_back(bScaleVals[k * nIters + j]);
+          for (int64_t k = 0; k < kIters; ++k) {
+            Value aVec = aVals[batch * (mIters * kIters) + i * kIters + k];
+            Value bVec = bVals[batch * (kIters * nIters) + k * nIters + j];
+            SmallVector<Value> operands({aVec, bVec});
+            if (tmpC)
+              operands.push_back(tmpC);
+            if (ascale)
+              operands.push_back(
+                  aScaleVals[batch * (mIters * kIters) + i * kIters + k]);
+            if (bscale)
+              operands.push_back(
+                  bScaleVals[batch * (kIters * nIters) + k * nIters + j]);
 
-          newDpasMxOp = xegpu::DpasMxOp::create(
-              rewriter, loc, vecTy, operands,
-              xegpu::dropInstDataOnAttrs(op->getAttrs()));
-          tmpC = newDpasMxOp.getResult();
+            newDpasMxOp = xegpu::DpasMxOp::create(
+                rewriter, loc, vecTy, operands,
+                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+            tmpC = newDpasMxOp.getResult();
+          }
+          newOps.push_back(newDpasMxOp);
         }
-        newOps.push_back(newDpasMxOp);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
@@ -566,7 +629,8 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       auto newOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newValueTy, op.getSource(), o, m,
           rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr(), layout);
+          op.getL2HintAttr(), op.getL3HintAttr(), layout,
+          /*contiguity=*/nullptr);
       newOps.push_back(newOp);
     }
 
@@ -661,7 +725,8 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
                                     rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr(), layout);
+                                    op.getL3HintAttr(), layout,
+                                    /*contiguity=*/nullptr);
     }
 
     rewriter.eraseOp(op);
@@ -683,7 +748,7 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
 
     Type elemTy = valueTy.getElementType();
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
 
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
@@ -698,7 +763,8 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
     }
 
     SmallVector<Value> newOps;
-    layout = layout.dropInstData();
+    if (layout)
+      layout = layout.dropInstData();
     for (SmallVector<OpFoldResult> offsets : offsetsList) {
       auto newOp = xegpu::LoadMatrixOp::create(
           rewriter, op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
@@ -722,7 +788,9 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getData().getType());
     assert(valueTy && "the value type must be vector type!");
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
@@ -741,7 +809,7 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 
     for (auto [v, offsets] : llvm::zip_equal(convertedValues, offsetsList))
       xegpu::StoreMatrixOp::create(rewriter, loc, v, op.getMemDesc(), offsets,
-                                   layout.dropInstData());
+                                   layout);
 
     rewriter.eraseOp(op);
     return success();
@@ -753,27 +821,111 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 /// after inst_data stripped. If it does, it will unroll the vector into
 /// multiple smaller vectors according to the target shape, and create multiple
 /// ConvertLayoutOp with the unrolled vectors and the stripped layouts.
+///
+/// When the input and target layouts have different inst_data, the source is
+/// extracted at the input inst_data granularity and the result is inserted at
+/// the target inst_data granularity, enabling slice cancellation during
+/// canonicalization.
 struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
   using UnrollPattern<xegpu::ConvertLayoutOp>::UnrollPattern;
+
+  /// Extracts source in `inTile` slices, regroups into `convTile`-sized
+  /// ConvertLayoutOps, and inserts the result in `outTile` slices.
+  /// Returns failure if the tiles do not evenly divide.
+  LogicalResult
+  rewriteWithRegrouping(xegpu::ConvertLayoutOp op, VectorType valueTy,
+                        ArrayRef<int64_t> convTile, ArrayRef<int64_t> inTile,
+                        ArrayRef<int64_t> outTile,
+                        xegpu::DistributeLayoutAttr inputLayout,
+                        xegpu::DistributeLayoutAttr targetLayout, Location loc,
+                        PatternRewriter &rewriter) const {
+    ArrayRef<int64_t> vecShape = valueTy.getShape();
+    if (!computeShapeRatio(vecShape, convTile) ||
+        !computeShapeRatio(convTile, inTile) ||
+        !computeShapeRatio(convTile, outTile))
+      return failure();
+
+    Type elemTy = valueTy.getElementType();
+    int64_t rank = valueTy.getRank();
+    VectorType convTy = VectorType::get(convTile, elemTy);
+    SmallVector<int64_t> strides(rank, 1);
+
+    Value source = op.getSource();
+    auto zeroOf = [&](VectorType ty) -> Value {
+      return arith::ConstantOp::create(
+          rewriter, loc, ty,
+          DenseElementsAttr::get(ty, rewriter.getZeroAttr(elemTy)));
+    };
+    auto addOffsets = [](ArrayRef<int64_t> a,
+                         ArrayRef<int64_t> b) -> SmallVector<int64_t> {
+      SmallVector<int64_t> res(a);
+      for (auto [r, v] : llvm::zip_equal(res, b))
+        r += v;
+      return res;
+    };
+
+    Value result = zeroOf(valueTy);
+    for (SmallVector<int64_t> convOff :
+         StaticTileOffsetRange(vecShape, convTile)) {
+      // Build the convert tile from inTile-sized slices of the source.
+      Value conv;
+      if (convTile == inTile) {
+        conv = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, source, convOff, convTile, strides);
+      } else {
+        conv = zeroOf(convTy);
+        for (SmallVector<int64_t> inLocal :
+             StaticTileOffsetRange(convTile, inTile)) {
+          Value piece = vector::ExtractStridedSliceOp::create(
+              rewriter, loc, source, addOffsets(convOff, inLocal), inTile,
+              strides);
+          conv = vector::InsertStridedSliceOp::create(rewriter, loc, piece,
+                                                      conv, inLocal, strides);
+        }
+      }
+
+      conv = xegpu::ConvertLayoutOp::create(rewriter, loc, convTy, conv,
+                                            inputLayout, targetLayout);
+
+      // Write the converted tile into the result as outTile-sized slices.
+      if (convTile == outTile) {
+        result = vector::InsertStridedSliceOp::create(rewriter, loc, conv,
+                                                      result, convOff, strides);
+      } else {
+        for (SmallVector<int64_t> outLocal :
+             StaticTileOffsetRange(convTile, outTile)) {
+          Value piece = vector::ExtractStridedSliceOp::create(
+              rewriter, loc, conv, outLocal, outTile, strides);
+          result = vector::InsertStridedSliceOp::create(
+              rewriter, loc, piece, result, addOffsets(convOff, outLocal),
+              strides);
+        }
+      }
+    }
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Type valType = op.getType();
 
-    xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
     xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes.");
 
     if (valType.isIntOrFloat()) {
       rewriter.replaceOp(op, op.getSource());
-      assert(!inputLayout.dropInstData() && !targetLayout.dropInstData() &&
-             "unexpected layout attributes for scalar type");
       return success();
     }
 
-    if (inputLayout.getEffectiveInstDataAsInt().empty() ||
-        targetLayout.getEffectiveInstDataAsInt().empty())
+    // Capture inst_data granularities before stripping them.
+    SmallVector<int64_t> inTile = inputLayout.getEffectiveInstDataAsInt();
+    SmallVector<int64_t> outTile = targetLayout.getEffectiveInstDataAsInt();
+    if (inTile.empty() || outTile.empty())
       return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
     inputLayout = inputLayout.dropInstData();
@@ -786,20 +938,30 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
     if (!targetShape || targetShape->size() != (size_t)valueTy.getRank())
       return failure();
 
-    Value newSource = op.getSource();
-    SmallVector<Value> newOps;
-    if (inputLayout && targetLayout) {
-      SmallVector<Type> convertedValTypes =
-          getUnrolledTypes(valueTy, *targetShape);
-      SmallVector<Value> convertedValues =
-          pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
-      for (auto [v, t] : llvm::zip(convertedValues, convertedValTypes)) {
-        auto newOp = xegpu::ConvertLayoutOp::create(rewriter, loc, t, v,
-                                                    inputLayout, targetLayout);
-        newOps.push_back(newOp);
-      }
-      newSource = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
+    // Nothing to convert if layouts match after stripping inst_data.
+    if (!inputLayout || !targetLayout || inputLayout.isEqualTo(targetLayout)) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
     }
+
+    // Try regrouping: extract at inTile, convert, insert at outTile.
+    if (succeeded(rewriteWithRegrouping(op, valueTy, *targetShape, inTile,
+                                        outTile, inputLayout, targetLayout, loc,
+                                        rewriter)))
+      return success();
+
+    // Fallback: pack/unpack at the convert tile granularity.
+    SmallVector<Type> convertedValTypes =
+        getUnrolledTypes(valueTy, *targetShape);
+    SmallVector<Value> convertedValues =
+        pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
+    SmallVector<Value> newOps;
+    for (auto [v, t] : llvm::zip(convertedValues, convertedValTypes)) {
+      auto newOp = xegpu::ConvertLayoutOp::create(rewriter, loc, t, v,
+                                                  inputLayout, targetLayout);
+      newOps.push_back(newOp);
+    }
+    Value newSource = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
 
     rewriter.replaceOp(op, newSource);
     return success();

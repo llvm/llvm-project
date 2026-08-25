@@ -22,6 +22,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <locale>
 
 struct custom_codecvt : std::codecvt<wchar_t, char, std::mbstate_t> {
   using base = std::codecvt<wchar_t, char, std::mbstate_t>;

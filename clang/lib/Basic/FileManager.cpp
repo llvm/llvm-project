@@ -25,6 +25,7 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -63,6 +64,9 @@ static void normalizeCacheKey(StringRef &Path,
 // Common logic.
 //===----------------------------------------------------------------------===//
 
+FileManager::FileManager(const FileSystemOptions &FSO)
+    : FileManager(FSO, nullptr) {}
+
 FileManager::FileManager(const FileSystemOptions &FSO,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : FS(std::move(FS)), FileSystemOpts(FSO), SeenDirEntries(64),
@@ -71,6 +75,16 @@ FileManager::FileManager(const FileSystemOptions &FSO,
   // file system.
   if (!this->FS)
     this->FS = llvm::vfs::getRealFileSystem();
+}
+
+void FileManager::setVirtualFileSystem(
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+  this->FS = std::move(FS);
+}
+
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+FileManager::getVirtualFileSystemPtr() const {
+  return FS;
 }
 
 FileManager::~FileManager() = default;
@@ -640,24 +654,6 @@ std::error_code FileManager::getStatValue(StringRef Path,
   }
 
   return std::error_code();
-}
-
-void FileManager::GetUniqueIDMapping(
-    SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const {
-  UIDToFiles.clear();
-  UIDToFiles.resize(NextFileUID);
-
-  for (const auto &Entry : SeenFileEntries) {
-    // Only return files that exist and are not redirected.
-    if (!Entry.getValue() || !isa<FileEntry *>(Entry.getValue()->V))
-      continue;
-    FileEntryRef FE(Entry);
-    // Add this file if it's the first one with the UID, or if its name is
-    // better than the existing one.
-    OptionalFileEntryRef &ExistingFE = UIDToFiles[FE.getUID()];
-    if (!ExistingFE || FE.getName() < ExistingFE->getName())
-      ExistingFE = FE;
-  }
 }
 
 StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {

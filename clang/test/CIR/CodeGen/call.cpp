@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 void f1() {}
 void f2() {
@@ -35,7 +37,7 @@ int f6() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z2f6v() -> (!s32i{{.*}})
-// CIR:         %[[#b:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR:         %[[#b:]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         %[[#a:]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:    %[[#c:]] = cir.const #false
 // CIR-NEXT:    %{{.+}} = cir.call @_Z2f5iPib(%[[#a]], %[[#b:]], %[[#c]]) : (!s32i {{.*}}, !cir.ptr<!s32i> {{.*}}, !cir.bool {{.*}}) -> (!s32i{{.*}})
@@ -82,26 +84,50 @@ void f11() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3f11v()
-// CIR:         %[[#s:]] = cir.call @_Z3f10v() : () -> !rec_S
+// CIR:         %[[#coerce:]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+// CIR:         %[[#ret:]] = cir.call @_Z3f10v() : () -> !u64i
+// CIR-NEXT:    cir.store %[[#ret]], %[[#coerce]] : !u64i, !cir.ptr<!u64i>
+// CIR-NEXT:    %[[#cast:]] = cir.cast bitcast %[[#coerce]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[#s:]] = cir.load %[[#cast]] : !cir.ptr<!rec_S>, !rec_S
 // CIR-NEXT:    cir.store align(4) %[[#s]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @_Z3f11v(){{.*}}
-// LLVM:         %[[#s:]] = call %struct.S @_Z3f10v()
+// LLVM:         %[[#coerce:]] = alloca i64, align 8
+// LLVM:         %[[#ret:]] = call i64 @_Z3f10v()
+// LLVM-NEXT:    store i64 %[[#ret]], ptr %[[#coerce]], align 8
+// LLVM-NEXT:    %[[#s:]] = load %struct.S, ptr %[[#coerce]], align 4
 // LLVM-NEXT:    store %struct.S %[[#s]], ptr %{{.+}}, align 4
+
+// OGCG-LABEL: define{{.*}} void @_Z3f11v(){{.*}}
+// OGCG:         %[[S:.+]] = alloca %struct.S, align 4
+// OGCG:         %[[RET:.+]] = call i64 @_Z3f10v()
+// OGCG-NEXT:    store i64 %[[RET]], ptr %[[S]], align 4
 
 void f12() {
   f10();
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3f12v()
-// CIR:         %[[#slot:]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
-// CIR-NEXT:    %[[#ret:]] = cir.call @_Z3f10v() : () -> !rec_S
-// CIR-NEXT:    cir.store align(4) %[[#ret]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
+// CIR:         %[[#coerce:]] = cir.alloca "coerce" align(8) : !cir.ptr<!u64i>
+// CIR-NEXT:    %[[#slot:]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[#ret:]] = cir.call @_Z3f10v() : () -> !u64i
+// CIR-NEXT:    cir.store %[[#ret]], %[[#coerce]] : !u64i, !cir.ptr<!u64i>
+// CIR-NEXT:    %[[#cast:]] = cir.cast bitcast %[[#coerce]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_S>
+// CIR-NEXT:    %[[#val:]] = cir.load %[[#cast]] : !cir.ptr<!rec_S>, !rec_S
+// CIR-NEXT:    cir.store align(4) %[[#val]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @_Z3f12v(){{.*}} {
-// LLVM:         %[[#slot:]] = alloca %struct.S, i64 1, align 4
-// LLVM-NEXT:    %[[#ret:]] = call %struct.S @_Z3f10v()
-// LLVM-NEXT:    store %struct.S %[[#ret]], ptr %[[#slot]], align 4
+// LLVM:         %[[#coerce:]] = alloca i64, align 8
+// LLVM-NEXT:    %[[#slot:]] = alloca %struct.S, align 4
+// LLVM-NEXT:    %[[#ret:]] = call i64 @_Z3f10v()
+// LLVM-NEXT:    store i64 %[[#ret]], ptr %[[#coerce]], align 8
+// LLVM-NEXT:    %[[#val:]] = load %struct.S, ptr %[[#coerce]], align 4
+// LLVM-NEXT:    store %struct.S %[[#val]], ptr %[[#slot]], align 4
+
+// OGCG-LABEL: define{{.*}} void @_Z3f12v(){{.*}}
+// OGCG:         %[[COERCE:.+]] = alloca %struct.S, align 4
+// OGCG:         %[[RET:.+]] = call i64 @_Z3f10v()
+// OGCG-NEXT:    store i64 %[[RET]], ptr %[[COERCE]], align 4
 
 void f13() noexcept;
 void f14() {
@@ -141,12 +167,12 @@ void use_TakesFunc() {
   TakesFunc(Passed);
 }
 
-// CIR-LABEL: _Z9TakesFuncIFivEEDcRKT_
-// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca !cir.ptr<!cir.func<() -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, ["f", init, const]
+// CIR-LABEL: cir.func{{.*}} @_Z9TakesFuncIFivEEDcRKT_(
+// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca "f" {{.*}} init const : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>
 // CIR: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
 // CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
 
-// LLVM-LABEL: _Z9TakesFuncIFivEEDcRKT_
+// LLVM-LABEL: define{{.*}} @_Z9TakesFuncIFivEEDcRKT_(
 // LLVM-NEXT: %[[FUNC_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[FUNC_LOAD:.*]] = load ptr, ptr %[[FUNC_ALLOCA]]
 // LLVM-NEXT: %[[CALL:.*]] = call noundef i32 %[[FUNC_LOAD]]()

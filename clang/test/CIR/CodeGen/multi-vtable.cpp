@@ -30,16 +30,16 @@ void Mother::MotherKey() {}
 void Father::FatherKey() {}
 void Child::MotherKey() {}
 
-// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: !rec_Father = !cir.struct<class "Father" {!cir.vptr}
-// CIR-DAG: !rec_Mother = !cir.struct<class "Mother" {!cir.vptr}
-// CIR-DAG: !rec_Child = !cir.struct<class "Child" {!rec_Mother, !rec_Father}
+// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>, data !cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: !rec_Father = !cir.struct<class "Father" {data !cir.vptr}
+// CIR-DAG: !rec_Mother = !cir.struct<class "Mother" {data !cir.vptr}
+// CIR-DAG: !rec_Child = !cir.struct<class "Child" {data !rec_Mother, data !rec_Father}
 
 // Child vtable
 
-// CIR:      cir.global "private" external @_ZTV5Child = #cir.vtable<{
+// CIR:      cir.global "private" constant external @_ZTV5Child = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -53,7 +53,7 @@ void Child::MotherKey() {}
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
 // CIR-SAME: }> : [[CHILD_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV5Child = global { [4 x ptr], [3 x ptr] } {
+// LLVM:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,
@@ -67,7 +67,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
+// OGCG:      @_ZTV5Child = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -83,7 +83,7 @@ void Child::MotherKey() {}
 
 // Mother vtable
 
-// CIR:      cir.global "private" external @_ZTV6Mother = #cir.vtable<{
+// CIR:      cir.global "private" constant external @_ZTV6Mother = #cir.vtable<{
 // CIR-SAME:      #cir.const_array<[
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -92,7 +92,7 @@ void Child::MotherKey() {}
 // CIR-SAME:      ]> : !cir.array<!cir.ptr<!u8i> x 4>
 // CIR-SAME: }> : [[MOTHER_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV6Mother = global { [4 x ptr] } {
+// LLVM:      @_ZTV6Mother = constant { [4 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,
@@ -101,7 +101,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Mother = constant { [4 x ptr] } {
+// OGCG:      @_ZTV6Mother = unnamed_addr constant { [4 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -112,7 +112,7 @@ void Child::MotherKey() {}
 
 // Father vtable
 
-// CIR:      cir.global "private" external @_ZTV6Father = #cir.vtable<{
+// CIR:      cir.global "private" constant external @_ZTV6Father = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -120,7 +120,7 @@ void Child::MotherKey() {}
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
 // CIR-SAME: }> : [[FATHER_VTABLE_TYPE]]
 
-// LLVM:      @_ZTV6Father = global { [3 x ptr] } {
+// LLVM:      @_ZTV6Father = constant { [3 x ptr] } {
 // LLVM-SAME:     [3 x ptr] [
 // LLVM-SAME:         ptr null,
 // LLVM-SAME:         ptr null,
@@ -128,7 +128,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Father = constant { [3 x ptr] } {
+// OGCG:      @_ZTV6Father = unnamed_addr constant { [3 x ptr] } {
 // OGCG-SAME:     [3 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -140,7 +140,7 @@ void Child::MotherKey() {}
 Child::Child() {}
 
 // CIR: cir.func {{.*}} @_ZN5ChildC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Child>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [0] -> !cir.ptr<!rec_Mother>

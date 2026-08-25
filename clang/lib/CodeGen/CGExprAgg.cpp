@@ -95,6 +95,10 @@ public:
                      Expr *ExprToVisit, ArrayRef<Expr *> Args,
                      Expr *ArrayFiller);
 
+  void EmitComparisonResult(const Expr *E,
+                            const ComparisonCategoryInfo &CmpInfo,
+                            llvm::Value *ResultValue);
+
   AggValueSlot::NeedsGCBarriers_t needsGC(QualType T) {
     if (CGF.getLangOpts().getGC() && TypeRequiresGCollection(T))
       return AggValueSlot::NeedsGCBarriers;
@@ -164,6 +168,7 @@ public:
   void VisitBinAssign(const BinaryOperator *E);
   void VisitBinComma(const BinaryOperator *E);
   void VisitBinCmp(const BinaryOperator *E);
+  void VisitTypeTraitExpr(const TypeTraitExpr *E);
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
     Visit(E->getSemanticForm());
   }
@@ -253,6 +258,10 @@ void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
     CGF.EmitAtomicLoad(LV, E->getExprLoc(), Dest);
     return;
   }
+
+  if (E->getType().getAddressSpace() == LangAS::hlsl_constant)
+    if (CGF.CGM.getHLSLRuntime().emitBufferCopy(CGF, E, LV, Dest))
+      return;
 
   EmitFinalDestCopy(E->getType(), LV);
 }
@@ -874,7 +883,44 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
-  case CK_DerivedToBase:
+  case CK_DerivedToBase: {
+    assert(CGF.getLangOpts().HLSL &&
+           "Derived/Base casts in EmitAggExpr are only supported in HLSL");
+
+    // Create a temporary for the derived record, switch it out with the current
+    // Dest slot, and emit the derived value.
+    QualType DerivedTy = E->getSubExpr()->getType();
+    RawAddress DerivedAddr = CGF.CreateMemTempWithoutCast(DerivedTy);
+    AggValueSlot DerivedTmpSlot = AggValueSlot::forAddr(
+        DerivedAddr, DerivedTy.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
+
+    AggValueSlot DestBaseSlot = Dest;
+    Dest = DerivedTmpSlot;
+
+    Visit(E->getSubExpr());
+
+    // Perform derived-to-base address conversion to get the address
+    // of the base record within the derived record. In HLSL this should
+    // always be same as the derived because of single inheritance, but let's
+    // do it properly.
+    Address BaseAddrInDerived = CGF.GetAddressOfBaseClass(
+        DerivedTmpSlot.getAddress(), DerivedTy->castAsCXXRecordDecl(),
+        E->path_begin(), E->path_end(),
+        /*NullCheckValue=*/false, E->getExprLoc());
+
+    AggValueSlot SrcBaseSlot = AggValueSlot::forAddr(
+        BaseAddrInDerived, E->getType().getQualifiers(),
+        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+
+    // Copy the base class to the original destination slot and restore it.
+    EmitCopy(E->getType(), DestBaseSlot, SrcBaseSlot);
+    Dest = DestBaseSlot;
+    break;
+  }
+
   case CK_BaseToDerived:
   case CK_UncheckedDerivedToBase: {
     llvm_unreachable("cannot perform hierarchy conversion in EmitAggExpr: "
@@ -1163,6 +1209,21 @@ static llvm::Value *EmitCompare(CGBuilderTy &Builder, CodeGenFunction &CGF,
                    "already been handled");
 }
 
+void AggExprEmitter::EmitComparisonResult(const Expr *E,
+                                          const ComparisonCategoryInfo &CmpInfo,
+                                          llvm::Value *ResultValue) {
+  // Create the return value in the destination slot.
+  EnsureDest(E->getType());
+  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
+
+  // Emit the address of the first (and only) field in the comparison category
+  // type, and initialize it from the constant integer value selected above.
+  LValue FieldLV = CGF.EmitLValueForFieldInitialization(
+      DestLV, *CmpInfo.Record->field_begin());
+  CGF.EmitStoreThroughLValue(RValue::get(ResultValue), FieldLV,
+                             /*IsInit=*/true);
+}
+
 void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
   using llvm::BasicBlock;
   using llvm::PHINode;
@@ -1230,17 +1291,22 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
     Select = Builder.CreateSelect(
         EmitCmp(CK_Less), EmitCmpRes(CmpInfo.getLess()), SelectGT, "sel.lt");
   }
-  // Create the return value in the destination slot.
-  EnsureDest(E->getType());
-  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
 
-  // Emit the address of the first (and only) field in the comparison category
-  // type, and initialize it from the constant integer value selected above.
-  LValue FieldLV = CGF.EmitLValueForFieldInitialization(
-      DestLV, *CmpInfo.Record->field_begin());
-  CGF.EmitStoreThroughLValue(RValue::get(Select), FieldLV, /*IsInit*/ true);
+  EmitComparisonResult(E, CmpInfo, Select);
+}
 
-  // All done! The result is in the Dest slot.
+void AggExprEmitter::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
+
+  const ComparisonCategoryInfo &CmpInfo =
+      CGF.getContext().CompCategories.getInfoForType(E->getType());
+  const auto Result =
+      ComparisonCategoryResult(E->getAPValue().getInt().getZExtValue());
+  llvm::Value *ResultValue =
+      Builder.getInt(CmpInfo.getValueInfo(Result)->getIntValue());
+
+  EmitComparisonResult(E, CmpInfo, ResultValue);
 }
 
 void AggExprEmitter::VisitBinaryOperator(const BinaryOperator *E) {
@@ -2203,7 +2269,7 @@ void CodeGenFunction::EmitAggExpr(const Expr *E, AggValueSlot Slot) {
 
 LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
   assert(hasAggregateEvaluationKind(E->getType()) && "Invalid argument!");
-  Address Temp = CreateMemTemp(E->getType());
+  Address Temp = CreateMemTempWithoutCast(E->getType());
   LValue LV = MakeAddrLValue(Temp, E->getType());
   EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
                                          AggValueSlot::DoesNotNeedGCBarriers,
@@ -2281,7 +2347,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              // HLSL uses aggregate-copy for user-defined record types.
+              (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "
              "constructor or assignment operator");
       // Ignore empty classes in C++.
@@ -2302,9 +2370,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
-    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
-      return;
+  assert(Ty.getAddressSpace() != LangAS::hlsl_constant &&
+         "copies of aggregates in hlsl_constant address space should be "
+         "handled earlier by the HLSL runtime");
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is

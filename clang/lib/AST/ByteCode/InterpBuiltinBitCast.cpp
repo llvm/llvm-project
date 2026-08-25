@@ -39,7 +39,7 @@ enum class Result { Success, Skip, Failure };
 
 /// Used to iterate over pointer fields.
 using DataFunc =
-    llvm::function_ref<Result(const Pointer &P, PrimType Ty, Bits BitOffset,
+    llvm::function_ref<Result(PtrView P, PrimType Ty, Bits BitOffset,
                               Bits FullBitWidth, bool PackedBools)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
@@ -78,9 +78,55 @@ using DataFunc =
     }                                                                          \
   } while (0)
 
+// FIXME: It is unfortunate that we have this function at all, but we can read
+// from a StringPointer. In the later callback-based reading and writing paths,
+// we do assume a BlockPointer though.
+static std::pair<Block *, std::unique_ptr<Descriptor>>
+convertToBlockPointer(const Context &Ctx, const StringPointer &SP) {
+  const StringLiteral *S = SP.getLiteral();
+  const size_t CharWidth = S->getCharByteWidth();
+  const size_t BitWidth = CharWidth * Ctx.getCharBit();
+  unsigned StringLength = S->getLength();
+
+  OptPrimType CharType =
+      Ctx.classify(S->getType()->castAsArrayTypeUnsafe()->getElementType());
+  assert(CharType);
+
+  // Create a descriptor for the string.
+  std::unique_ptr<Descriptor> Desc = std::make_unique<Descriptor>(
+      S, S->getType().getTypePtr(), *CharType, StringLength + 1,
+      /*IsConst=*/true,
+      /*isTemporary=*/false,
+      /*isMutable=*/false,
+      /*IsVolatile=*/false);
+
+  // Allocate storage for the string.
+  // The byte length does not include the null terminator.
+  // unsigned GlobalIndex = Globals.size();
+  auto *Memory = new std::byte[sizeof(Block) + Desc->getAllocSize()];
+  auto *B = new (Memory) Block(Ctx.getEvalID(), Desc.get());
+  B->invokeCtor();
+
+  new (B->rawData()) GlobalInlineDescriptor{GlobalInitState::Initialized};
+
+  Pointer Ptr(B);
+  if (CharWidth == 1) {
+    std::memcpy(&Ptr.elem<char>(0), S->getString().data(), StringLength);
+  } else {
+    // Construct the string in storage.
+    for (unsigned I = 0; I <= StringLength; ++I) {
+      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
+      INT_TYPE_SWITCH_NO_BOOL(*CharType,
+                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
+    }
+  }
+  Ptr.initializeAllElements();
+  return std::make_pair(std::move(B), std::move(Desc));
+}
+
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
-static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
+static Result enumerateData(PtrView P, const Context &Ctx, Bits Offset,
                             Bits BitsToRead, DataFunc F, bool Initialize) {
   const Descriptor *FieldDesc = P.getFieldDesc();
   assert(FieldDesc);
@@ -131,6 +177,8 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
   // Records.
   if (FieldDesc->isRecord()) {
     const Record *R = FieldDesc->ElemRecord;
+    if (R->getDecl()->isInvalidDecl())
+      return Result::Failure;
     const ASTRecordLayout &Layout =
         Ctx.getASTContext().getASTRecordLayout(R->getDecl());
     bool Ok = true;
@@ -139,7 +187,7 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
       if (Fi.isUnnamedBitField())
         continue;
 
-      Pointer Elem = P.atField(Fi.Offset);
+      PtrView Elem = P.atField(Fi.Offset);
       Bits BitOffset =
           Offset + Bits(Layout.getFieldOffset(Fi.Decl->getFieldIndex()));
       Result Res =
@@ -153,7 +201,7 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
       Ok = Ok && Res != Result::Failure;
     }
     for (const Record::Base &B : R->bases()) {
-      Pointer Elem = P.atField(B.Offset);
+      PtrView Elem = P.atField(B.Offset);
       if (!Initialize && !Elem.isInitialized())
         return Result::Failure;
 
@@ -179,8 +227,19 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
 static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
                                    Bits BitsToRead, DataFunc F,
                                    bool Initialize) {
-  return enumerateData(P, Ctx, Bits::zero(), BitsToRead, F, Initialize) !=
-         Result::Failure;
+
+  if (P.isStringPointer()) {
+    auto [B, Desc] = convertToBlockPointer(Ctx, P.asStringPointer());
+
+    bool Result = enumerateData(Pointer(B).atIndex(P.getIndex()).view(), Ctx,
+                                Bits::zero(), BitsToRead, F,
+                                Initialize) == Result::Failure;
+    delete[] reinterpret_cast<std::byte *>(B);
+    return Result;
+  }
+
+  return enumerateData(P.view(), Ctx, Bits::zero(), BitsToRead, F,
+                       Initialize) != Result::Failure;
 }
 
 //  This function is constexpr if and only if To, From, and the types of
@@ -298,7 +357,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
 
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         Bits BitWidth = FullBitWidth;
 
@@ -426,7 +485,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(), Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         QualType PtrType = P.getType();
         if (T == PT_Float) {
@@ -508,11 +567,10 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 }
 
 using PrimTypeVariant =
-    std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
-                 Char<false>, Char<true>, Integral<16, false>,
-                 Integral<16, true>, Integral<32, false>, Integral<32, true>,
-                 Integral<64, false>, Integral<64, true>, IntegralAP<true>,
-                 IntegralAP<false>, Boolean, Floating>;
+    std::variant<Pointer, MemberPointer, FixedPoint, Char<false>, Char<true>,
+                 Integral<16, false>, Integral<16, true>, Integral<32, false>,
+                 Integral<32, true>, Integral<64, false>, Integral<64, true>,
+                 IntegralAP<true>, IntegralAP<false>, Boolean, Floating>;
 
 // NB: This implementation isn't exactly ideal, but:
 //   1) We can't just do a bitcast here since we need to be able to
@@ -523,23 +581,41 @@ using PrimTypeVariant =
 bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
                              const Pointer &SrcPtr, const Pointer &DestPtr,
                              Bits Size) {
-  assert(SrcPtr.isBlockPointer());
+  assert(SrcPtr.isReadablePointerType());
   assert(DestPtr.isBlockPointer());
 
   llvm::SmallVector<PrimTypeVariant> Values;
-  enumeratePointerFields(
-      SrcPtr, S.getContext(), Size,
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
-          bool PackedBools) -> Result {
-        TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
-        return Result::Success;
-      },
-      false);
+
+  if (SrcPtr.isStringPointer()) {
+    const auto &SP = SrcPtr.asStringPointer();
+
+    auto [B, Desc] = convertToBlockPointer(S.getContext(), SP);
+    enumeratePointerFields(
+        Pointer(B).atIndex(SrcPtr.getIndex()), S.getContext(), Size,
+        [&](const PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+            bool PackedBools) -> Result {
+          TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
+          return Result::Success;
+        },
+        false);
+
+    delete[] B;
+  } else {
+
+    enumeratePointerFields(
+        SrcPtr, S.getContext(), Size,
+        [&](const PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+            bool PackedBools) -> Result {
+          TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
+          return Result::Success;
+        },
+        false);
+  }
 
   unsigned ValueIndex = 0;
   enumeratePointerFields(
       DestPtr, S.getContext(), Size,
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](const PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         TYPE_SWITCH(T, {
           P.deref<T>() = std::get<T>(Values[ValueIndex]);

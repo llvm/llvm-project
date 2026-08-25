@@ -1304,9 +1304,9 @@ define <8 x i8> @vselect_equivalent_shuffle_v8i8_zeroswap(<8 x i8> %a) {
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI91_0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI91_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %c = shufflevector <8 x i8> zeroinitializer, <8 x i8> %a, <8 x i32> <i32 8, i32 0, i32 10, i32 1, i32 12, i32 13, i32 14, i32 15>
@@ -1371,11 +1371,9 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_equivalent_shuffle_v8i16_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI93_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI93_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI93_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %c = shufflevector <8 x i16> %a, <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %c
@@ -1398,21 +1396,12 @@ define <8 x i16> @vselect_equivalent_shuffle_v8i16_zero(<8 x i16> %a) {
 ; CHECK-SD: .byte   14
 ; CHECK-SD: .byte   15
 define <8 x i16> @vselect_equivalent_shuffle_v8i16_zeroswap(<8 x i16> %a) {
-; CHECK-SD-LABEL: vselect_equivalent_shuffle_v8i16_zeroswap:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI94_0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI94_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vselect_equivalent_shuffle_v8i16_zeroswap:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI94_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI94_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vselect_equivalent_shuffle_v8i16_zeroswap:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI94_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI94_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ret
   %c = shufflevector <8 x i16> zeroinitializer, <8 x i16> %a, <8 x i32> <i32 8, i32 0, i32 10, i32 1, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %c
 }
@@ -1518,12 +1507,18 @@ define <8 x i8> @vselect_cmpz_eq(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-LABEL: vselect_tst:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vselect_tst:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_tst:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-GI-NEXT:    bsl v0.8b, v2.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp eq <8 x i8> %tmp3, zeroinitializer
   %d = select <8 x i1> %tmp4, <8 x i8> %c, <8 x i8> %b
@@ -1531,10 +1526,16 @@ define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @sext_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-LABEL: sext_tst:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sext_tst:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sext_tst:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
   %d = sext <8 x i1> %tmp4 to <8 x i8>

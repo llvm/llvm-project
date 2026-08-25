@@ -204,6 +204,12 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
+static bool
+hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
+                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                      OptimizationRemarkEmitter *ORE,
+                      SmallVectorImpl<Instruction *> &HoistedInstructions);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -220,7 +226,9 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 using PointersAndHasReadsOutsideSet =
     std::pair<SmallSetVector<Value *, 8>, bool>;
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
+                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
+                           Loop *L);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -514,7 +522,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       do {
         LocalPromoted = false;
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
-             collectPromotionCandidates(MSSA, AA, L)) {
+             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
               DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
@@ -936,6 +944,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         continue;
       }
 
+      if (auto *Ins = dyn_cast<InsertElementInst>(&I))
+        if (hoistInsertPastInsert(Ins, CurLoop, DT,
+                                  CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
+                                  MSSAU, SE, ORE, HoistedInstructions)) {
+          Changed = true;
+          continue;
+        }
+
       // Attempt to remove floating point division out of the loop by
       // converting it to a reciprocal multiplication.
       if (I.getOpcode() == Instruction::FDiv && I.hasAllowReciprocal() &&
@@ -1051,11 +1067,84 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   if (Changed) {
     assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
            "Dominator tree verification failed");
-    LI->verify(*DT);
+    LI->verify();
   }
 #endif
 
   return Changed;
+}
+
+static std::optional<uint64_t>
+getConstantInsertionIndex(InsertElementInst *Ins) {
+  // Must have constant insertion lane.
+  auto *InsertedIdxCI = dyn_cast<ConstantInt>(Ins->getOperand(2));
+  if (!InsertedIdxCI)
+    return std::nullopt;
+  auto *VecTy = cast<VectorType>(Ins->getType());
+
+  // Avoid hoisting past out of bounds inserts.
+  if (InsertedIdxCI->isNegative() ||
+      InsertedIdxCI->getValue().uge(
+          VecTy->getElementCount().getKnownMinValue()))
+    return std::nullopt;
+  return InsertedIdxCI->getValue().getLimitedValue();
+}
+
+static bool
+hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
+                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                      OptimizationRemarkEmitter *ORE,
+                      SmallVectorImpl<Instruction *> &HoistedInstructions) {
+  // Canonicalize:
+  //   %inner = insertelement %base, %variant, C1
+  //   %outer = insertelement %inner, %invariant, C2
+  // into:
+  //   %outer = insertelement %base, %invariant, C2
+  //   %inner = insertelement %outer, %variant, C1
+  // so we can hoist %outer
+
+  // The instruction we are hoisting must have invariant insertion data
+  Value *InsertedElt = Ins->getOperand(1);
+  if (!CurLoop->isLoopInvariant(InsertedElt))
+    return false;
+
+  std::optional<uint64_t> HoistIdx = getConstantInsertionIndex(Ins);
+  if (!HoistIdx)
+    return false;
+
+  InsertElementInst *Inner = Ins;
+  while (!CurLoop->isLoopInvariant(Inner->getOperand(0))) {
+    // If the inner value isn't invariant, check to see if it is another insert
+    // All instructions in the chain must be in the same basic block
+    auto *InnerIns = dyn_cast<InsertElementInst>(Inner->getOperand(0));
+    if (!InnerIns || InnerIns->getParent() != Ins->getParent())
+      return false;
+
+    // Make sure not hoisting past insertions into the same lane
+    std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(InnerIns);
+    if (!InsertIdx || *InsertIdx == *HoistIdx)
+      return false;
+
+    // Instruction being hoisted past must only have one use
+    if (!InnerIns->hasOneUse())
+      return false;
+
+    Inner = InnerIns;
+  }
+
+  // Base case of `insertelement <4 x i8> %invar0, i8 %invar1, i32 2` handled in
+  // base LICM logic
+  if (Inner == Ins)
+    return false;
+
+  Ins->replaceAllUsesWith(Ins->getOperand(0));
+  Ins->moveBefore(Inner->getIterator());
+  Ins->setOperand(0, Inner->getOperand(0));
+  Inner->setOperand(0, Ins);
+  hoist(*Ins, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
+  HoistedInstructions.push_back(Ins);
+  return true;
 }
 
 // Return true if LI is invariant within scope of the loop. LI is invariant if
@@ -1979,7 +2068,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // store is never executed, but the exit blocks are not executed either.
 
   bool DereferenceableInPH = false;
-  bool StoreIsGuanteedToExecute = false;
+  bool StoreIsGuaranteedToExecute = false;
   bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
 
@@ -2075,7 +2164,7 @@ bool llvm::promoteLoopAccessesToScalars(
         Align InstAlignment = Store->getAlign();
         bool GuaranteedToExecute =
             SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
-        StoreIsGuanteedToExecute |= GuaranteedToExecute;
+        StoreIsGuaranteedToExecute |= GuaranteedToExecute;
         if (GuaranteedToExecute) {
           DereferenceableInPH = true;
           if (StoreSafety == StoreSafetyUnknown)
@@ -2100,7 +2189,8 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getValueOperand()->getType(),
-              Store->getAlign(), MDL, Preheader->getTerminator(), AC, DT, TLI);
+              Store->getAlign(),
+              SimplifyQuery(MDL, TLI, DT, AC, Preheader->getTerminator()));
         }
       } else
         continue; // Not a load or store.
@@ -2148,9 +2238,13 @@ bool llvm::promoteLoopAccessesToScalars(
   if (StoreSafety == StoreSafetyUnknown) {
     Value *Object = getUnderlyingObject(SomePtr);
     bool ExplicitlyDereferenceableOnly;
+    // The dereferenceability query here is only required to satisfy the
+    // writable contract, actual dereferenceability has already been proven
+    // above. As such, we can ignore frees.
     if (isWritableObject(Object, ExplicitlyDereferenceableOnly) &&
         (!ExplicitlyDereferenceableOnly ||
-         isDereferenceablePointer(SomePtr, AccessTy, MDL)) &&
+         isDereferenceablePointer(SomePtr, AccessTy, MDL,
+                                  /*IgnoreFree=*/true)) &&
         isThreadLocalObject(Object, CurLoop, DT, TTI))
       StoreSafety = StoreSafe;
   }
@@ -2190,13 +2284,13 @@ bool llvm::promoteLoopAccessesToScalars(
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
                         SawUnorderedAtomic,
-                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        StoreIsGuaranteedToExecute ? AATags : AAMDNodes(),
                         *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = nullptr;
-  if (FoundLoadToPromote || !StoreIsGuanteedToExecute) {
+  if (FoundLoadToPromote || !StoreIsGuaranteedToExecute) {
     PreheaderLoad =
         new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
                      Preheader->getTerminator()->getIterator());
@@ -2243,17 +2337,23 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
+                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
+                           Loop *L) {
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
     if (const auto *SI = dyn_cast<StoreInst>(I)) {
       const Value *PtrOp = SI->getPointerOperand();
+      if (isStrongerThanMonotonic(SI->getOrdering()))
+        return false;
       return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
     }
     if (const auto *LI = dyn_cast<LoadInst>(I)) {
       const Value *PtrOp = LI->getPointerOperand();
+      if (isStrongerThanMonotonic(LI->getOrdering()))
+        return false;
       return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
     }
     return false;
@@ -2264,7 +2364,22 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (IsPotentiallyPromotable(I)) {
       AttemptingPromotion.insert(I);
-      AST.add(I);
+      if (StoreInst *SI = dyn_cast<StoreInst>(I);
+          SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT, L)) {
+        // Promotion requires inserting a new store at the loop exits; we need
+        // to prove that store doesn't alias anything, in addition to proving
+        // aliasing for the stores we're removing. The new store is executed
+        // unconditionally, so when we're proving aliasing for that store, we
+        // can't rely on AA tags for stores which are conditionally executed.
+        //
+        // As a future improvement, we could avoid stripping AA tags in more
+        // cases. isGuaranteedToExecute() is stronger than what we need.
+        // We only need to prove that every exit from the loop is dominated
+        // by a store to the same location with the same AA tag.
+        AST.addWithoutAATags(SI);
+      } else {
+        AST.add(I);
+      }
     }
   });
 

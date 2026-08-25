@@ -12,7 +12,7 @@
 
       module omp_lib_kinds
 
-        use, intrinsic :: iso_c_binding
+        use :: iso_c_binding
 
         ! Set PRIVATE by default to explicitly only export what is meant
         ! to be exported by this MODULE.
@@ -40,6 +40,8 @@
         integer, parameter, public :: omp_alloctrait_val_kind = c_intptr_t
         integer, parameter, public :: omp_interop_kind = c_intptr_t
         integer, parameter, public :: omp_interop_fr_kind = omp_integer_kind
+        integer, parameter, public :: omp_interop_property_kind = omp_integer_kind
+        integer, parameter, public :: omp_interop_rc_kind = omp_integer_kind
 
         type omp_alloctrait
           integer(kind=omp_alloctrait_key_kind) key
@@ -60,6 +62,27 @@
         ! Set PRIVATE by default to explicitly only export what is meant
         ! to be exported by this MODULE.
         private
+
+        private :: kmp_get_affinity_mask_proc_c
+        private :: kmp_set_affinity_mask_proc_c
+        private :: kmp_set_blocktime_c
+        private :: kmp_set_disp_num_buffers_c
+        private :: kmp_set_library_c
+        private :: kmp_set_stacksize_c
+        private :: kmp_unset_affinity_mask_proc_c
+        private :: omp_get_ancestor_thread_num_c
+        private :: omp_get_partition_place_nums_c
+        private :: omp_get_place_num_procs_c
+        private :: omp_get_place_proc_ids_c
+        private :: omp_get_schedule_c
+        private :: omp_get_team_size_c
+        private :: omp_pause_resource_c
+        private :: omp_set_default_device_c
+        private :: omp_set_max_active_levels_c
+        private :: omp_set_num_teams_c
+        private :: omp_set_num_threads_c
+        private :: omp_set_schedule_c
+        private :: omp_set_teams_thread_limit_c
 
         ! Re-export definitions in omp_lib_kinds
         public :: omp_integer_kind
@@ -84,6 +107,8 @@
         public :: omp_alloctrait_val_kind
         public :: omp_interop_kind
         public :: omp_interop_fr_kind
+        public :: omp_interop_property_kind
+        public :: omp_interop_rc_kind
         public :: omp_alloctrait
         public :: omp_pause_resource_kind
         public :: omp_depend_kind
@@ -218,16 +243,39 @@
 
         integer (kind=omp_interop_kind), parameter, public :: omp_interop_none = 0
 
+!       interop property constants
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_fr_id = -1
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_fr_name = -2
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_vendor = -3
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_vendor_name = -4
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device_num = -5
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_platform = -6
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device = -7
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_device_context = -8
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_targetsync = -9
+        integer (kind=omp_interop_property_kind), parameter, public :: omp_ipr_first = -9
+
+!       interop return code constants
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_no_value = 1
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_success = 0
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_empty = -1
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_out_of_range = -2
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_int = -3
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_ptr = -4
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_type_str = -5
+        integer (kind=omp_interop_rc_kind), parameter, public :: omp_irc_other = -6
+
         interface
 
 !         ***
 !         *** omp_* entry points
 !         ***
 
-          subroutine omp_set_num_threads(num_threads) bind(c)
+          subroutine omp_set_num_threads_c(num_threads) bind(c,                &
+              name='omp_set_num_threads')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: num_threads
-          end subroutine omp_set_num_threads
+          end subroutine omp_set_num_threads_c
 
           subroutine omp_set_dynamic(dynamic_threads) bind(c)
             use omp_lib_kinds
@@ -284,10 +332,11 @@
             integer (kind=omp_integer_kind) omp_get_thread_limit
           end function omp_get_thread_limit
 
-          subroutine omp_set_max_active_levels(max_levels) bind(c)
+          subroutine omp_set_max_active_levels_c(max_levels) bind(c,           &
+              name='omp_set_max_active_levels')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: max_levels
-          end subroutine omp_set_max_active_levels
+          end subroutine omp_set_max_active_levels_c
 
           function omp_get_max_active_levels() bind(c)
             use omp_lib_kinds
@@ -304,29 +353,32 @@
             integer (kind=omp_integer_kind) omp_get_active_level
           end function omp_get_active_level
 
-          function omp_get_ancestor_thread_num(level) bind(c)
+          function omp_get_ancestor_thread_num_c(level) bind(c,                &
+              name='omp_get_ancestor_thread_num')
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_ancestor_thread_num
+            integer (kind=omp_integer_kind) omp_get_ancestor_thread_num_c
             integer (kind=omp_integer_kind), value :: level
-          end function omp_get_ancestor_thread_num
+          end function omp_get_ancestor_thread_num_c
 
-          function omp_get_team_size(level) bind(c)
+          function omp_get_team_size_c(level) bind(c, name='omp_get_team_size')
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_team_size
+            integer (kind=omp_integer_kind) omp_get_team_size_c
             integer (kind=omp_integer_kind), value :: level
-          end function omp_get_team_size
+          end function omp_get_team_size_c
 
-          subroutine omp_set_schedule(kind, chunk_size) bind(c)
+          subroutine omp_set_schedule_c(kind, chunk_size) bind(c,              &
+              name='omp_set_schedule')
             use omp_lib_kinds
             integer (kind=omp_sched_kind), value :: kind
             integer (kind=omp_integer_kind), value :: chunk_size
-          end subroutine omp_set_schedule
+          end subroutine omp_set_schedule_c
 
-          subroutine omp_get_schedule(kind, chunk_size) bind(c)
+          subroutine omp_get_schedule_c(kind, chunk_size) bind(c,              &
+              name='omp_get_schedule')
             use omp_lib_kinds
             integer (kind=omp_sched_kind) kind
             integer (kind=omp_integer_kind) chunk_size
-          end subroutine omp_get_schedule
+          end subroutine omp_get_schedule_c
 
           function omp_get_proc_bind() bind(c)
             use omp_lib_kinds
@@ -338,17 +390,19 @@
             integer (kind=omp_integer_kind) omp_get_num_places
           end function omp_get_num_places
 
-          function omp_get_place_num_procs(place_num) bind(c)
+          function omp_get_place_num_procs_c(place_num) bind(c,                &
+              name='omp_get_place_num_procs')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: place_num
-            integer (kind=omp_integer_kind) omp_get_place_num_procs
-          end function omp_get_place_num_procs
+            integer (kind=omp_integer_kind) omp_get_place_num_procs_c
+          end function omp_get_place_num_procs_c
 
-          subroutine omp_get_place_proc_ids(place_num, ids) bind(c)
+          subroutine omp_get_place_proc_ids_c(place_num, ids) bind(c,          &
+              name='omp_get_place_proc_ids')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: place_num
             integer (kind=omp_integer_kind) ids(*)
-          end subroutine omp_get_place_proc_ids
+          end subroutine omp_get_place_proc_ids_c
 
           function omp_get_place_num() bind(c)
             use omp_lib_kinds
@@ -360,10 +414,11 @@
             integer (kind=omp_integer_kind) omp_get_partition_num_places
           end function omp_get_partition_num_places
 
-          subroutine omp_get_partition_place_nums(place_nums) bind(c)
+          subroutine omp_get_partition_place_nums_c(place_nums) bind(c,        &
+              name='omp_get_partition_place_nums')
             use omp_lib_kinds
             integer (kind=omp_integer_kind) place_nums(*)
-          end subroutine omp_get_partition_place_nums
+          end subroutine omp_get_partition_place_nums_c
 
           function omp_get_wtime() bind(c)
             use omp_lib_kinds
@@ -380,10 +435,11 @@
             integer (kind=omp_integer_kind) omp_get_default_device
           end function omp_get_default_device
 
-          subroutine omp_set_default_device(device_num) bind(c)
+          subroutine omp_set_default_device_c(device_num) bind(c,              &
+              name='omp_set_default_device')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: device_num
-          end subroutine omp_set_default_device
+          end subroutine omp_set_default_device_c
 
           function omp_get_num_devices() bind(c)
             use omp_lib_kinds
@@ -420,12 +476,13 @@
             integer (kind=omp_integer_kind) omp_get_device_num
           end function omp_get_device_num
 
-          function omp_pause_resource(kind, device_num) bind(c)
+          function omp_pause_resource_c(kind, device_num) bind(c,              &
+              name='omp_pause_resource')
             use omp_lib_kinds
             integer (kind=omp_pause_resource_kind), value :: kind
             integer (kind=omp_integer_kind), value :: device_num
-            integer (kind=omp_integer_kind) omp_pause_resource
-          end function omp_pause_resource
+            integer (kind=omp_integer_kind) omp_pause_resource_c
+          end function omp_pause_resource_c
 
           function omp_pause_resource_all(kind) bind(c)
             use omp_lib_kinds
@@ -614,20 +671,22 @@
             integer (kind=kmp_size_t_kind) :: omp_capture_affinity
           end function omp_capture_affinity
 
-          subroutine omp_set_num_teams(num_teams) bind(c)
+          subroutine omp_set_num_teams_c(num_teams) bind(c,                    &
+              name='omp_set_num_teams')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: num_teams
-          end subroutine omp_set_num_teams
+          end subroutine omp_set_num_teams_c
 
           function omp_get_max_teams() bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_teams
           end function omp_get_max_teams
 
-          subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
+          subroutine omp_set_teams_thread_limit_c(thread_limit) bind(c,        &
+              name='omp_set_teams_thread_limit')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: thread_limit
-          end subroutine omp_set_teams_thread_limit
+          end subroutine omp_set_teams_thread_limit_c
 
           function omp_get_teams_thread_limit() bind(c)
             use omp_lib_kinds
@@ -640,20 +699,20 @@
           end subroutine omp_display_env
 
           function omp_target_alloc(size, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             type(c_ptr) omp_target_alloc
             integer(c_size_t), value :: size
             integer(c_int), value :: device_num
           end function omp_target_alloc
 
           subroutine omp_target_free(device_ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             type(c_ptr), value :: device_ptr
             integer(c_int), value :: device_num
           end subroutine omp_target_free
 
           function omp_target_is_present(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             integer(c_int) omp_target_is_present
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
@@ -661,7 +720,7 @@
 
           function omp_target_memcpy(dst, src, length, dst_offset, src_offset, &
               dst_device_num, src_device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: length, dst_offset, src_offset
@@ -671,7 +730,7 @@
           function omp_target_memcpy_rect(dst, src, element_size, num_dims,    &
               volume, dst_offsets, src_offsets, dst_dimensions,                &
               src_dimensions, dst_device_num, src_device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_rect
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: element_size
@@ -684,7 +743,7 @@
               src_offset, dst_device_num, src_device_num, depobj_count,        &
               depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_async
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: length, dst_offset, src_offset
@@ -698,7 +757,7 @@
               src_dimensions, dst_device_num, src_device_num, depobj_count,    &
               depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_rect_async
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: element_size
@@ -710,7 +769,7 @@
           end function omp_target_memcpy_rect_async
 
           function omp_target_memset(ptr, val, count, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_int, c_size_t
             type(c_ptr) :: omp_target_memset
             type(c_ptr), value :: ptr
             integer(c_int), value :: val
@@ -721,7 +780,7 @@
           function omp_target_memset_async(ptr, val, count, device_num, &
                                            depobj_count, depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_int, c_size_t
             type(c_ptr) :: omp_target_memset_async
             type(c_ptr), value :: ptr
             integer(c_int), value :: val
@@ -733,7 +792,7 @@
 
           function omp_target_associate_ptr(host_ptr, device_ptr, size,        &
               device_offset, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_associate_ptr
             type(c_ptr), value :: host_ptr, device_ptr
             integer(c_size_t), value :: size, device_offset
@@ -741,21 +800,21 @@
           end function omp_target_associate_ptr
 
           function omp_get_mapped_ptr(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             type(c_ptr) omp_get_mapped_ptr
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
           end function omp_get_mapped_ptr
 
           function omp_target_disassociate_ptr(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             integer(c_int) omp_target_disassociate_ptr
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
           end function omp_target_disassociate_ptr
 
           function omp_target_is_accessible(ptr, size, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only : c_ptr, c_size_t, c_int
             integer(c_int) omp_target_is_accessible
             type(c_ptr), value :: ptr
             integer(c_size_t), value :: size
@@ -764,7 +823,7 @@
 
           function omp_alloc(size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_alloc
             integer(c_size_t), value :: size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -772,7 +831,7 @@
 
           function omp_aligned_alloc(alignment, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_aligned_alloc
             integer(c_size_t), value :: alignment, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -780,7 +839,7 @@
 
           function omp_calloc(nmemb, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_calloc
             integer(c_size_t), value :: nmemb, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -788,7 +847,7 @@
 
           function omp_aligned_calloc(alignment, nmemb, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_aligned_calloc
             integer(c_size_t), value :: alignment, nmemb, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -796,7 +855,7 @@
 
           function omp_realloc(ptr, size, allocator, free_allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_realloc
             type(c_ptr), value :: ptr
             integer(c_size_t), value :: size
@@ -806,7 +865,7 @@
 
           subroutine omp_free(ptr, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr
+            use :: iso_c_binding, only : c_ptr
             type(c_ptr), value :: ptr
             integer(omp_allocator_handle_kind), value :: allocator
           end subroutine omp_free
@@ -911,20 +970,20 @@
 !         *** kmp_* entry points
 !         ***
 
-          subroutine kmp_set_stacksize(size) bind(c)
+          subroutine kmp_set_stacksize_c(size) bind(c, name='kmp_set_stacksize')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: size
-          end subroutine kmp_set_stacksize
+          end subroutine kmp_set_stacksize_c
 
           subroutine kmp_set_stacksize_s(size) bind(c)
             use omp_lib_kinds
             integer (kind=kmp_size_t_kind), value :: size
           end subroutine kmp_set_stacksize_s
 
-          subroutine kmp_set_blocktime(msec) bind(c)
+          subroutine kmp_set_blocktime_c(msec) bind(c, name='kmp_set_blocktime')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: msec
-          end subroutine kmp_set_blocktime
+          end subroutine kmp_set_blocktime_c
 
           subroutine kmp_set_library_serial() bind(c)
           end subroutine kmp_set_library_serial
@@ -935,10 +994,10 @@
           subroutine kmp_set_library_throughput() bind(c)
           end subroutine kmp_set_library_throughput
 
-          subroutine kmp_set_library(libnum) bind(c)
+          subroutine kmp_set_library_c(libnum) bind(c, name='kmp_set_library')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: libnum
-          end subroutine kmp_set_library
+          end subroutine kmp_set_library_c
 
           subroutine kmp_set_defaults(string)
             character (len=*) :: string
@@ -964,10 +1023,11 @@
             integer (kind=omp_integer_kind) kmp_get_library
           end function kmp_get_library
 
-          subroutine kmp_set_disp_num_buffers(num) bind(c)
+          subroutine kmp_set_disp_num_buffers_c(num) bind(c,                   &
+              name='kmp_set_disp_num_buffers')
             use omp_lib_kinds
             integer (kind=omp_integer_kind), value :: num
-          end subroutine kmp_set_disp_num_buffers
+          end subroutine kmp_set_disp_num_buffers_c
 
           function kmp_set_affinity(mask) bind(c)
             use omp_lib_kinds
@@ -996,26 +1056,29 @@
             integer (kind=kmp_affinity_mask_kind) mask
           end subroutine kmp_destroy_affinity_mask
 
-          function kmp_set_affinity_mask_proc(proc, mask) bind(c)
+          function kmp_set_affinity_mask_proc_c(proc, mask) bind(c,            &
+              name='kmp_set_affinity_mask_proc')
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_set_affinity_mask_proc
+            integer (kind=omp_integer_kind) kmp_set_affinity_mask_proc_c
             integer (kind=omp_integer_kind), value :: proc
             integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_set_affinity_mask_proc
+          end function kmp_set_affinity_mask_proc_c
 
-          function kmp_unset_affinity_mask_proc(proc, mask) bind(c)
+          function kmp_unset_affinity_mask_proc_c(proc, mask) bind(c,          &
+              name='kmp_unset_affinity_mask_proc')
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_unset_affinity_mask_proc
+            integer (kind=omp_integer_kind) kmp_unset_affinity_mask_proc_c
             integer (kind=omp_integer_kind), value :: proc
             integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_unset_affinity_mask_proc
+          end function kmp_unset_affinity_mask_proc_c
 
-          function kmp_get_affinity_mask_proc(proc, mask) bind(c)
+          function kmp_get_affinity_mask_proc_c(proc, mask) bind(c,            &
+              name='kmp_get_affinity_mask_proc')
             use omp_lib_kinds
-            integer (kind=omp_integer_kind) kmp_get_affinity_mask_proc
+            integer (kind=omp_integer_kind) kmp_get_affinity_mask_proc_c
             integer (kind=omp_integer_kind), value :: proc
             integer (kind=kmp_affinity_mask_kind) mask
-          end function kmp_get_affinity_mask_proc
+          end function kmp_get_affinity_mask_proc_c
 
           function kmp_malloc(size) bind(c)
             use omp_lib_kinds
@@ -1061,7 +1124,160 @@
             logical (kind=omp_logical_kind) kmp_get_cancellation_status
           end function kmp_get_cancellation_status
 
+!         ***
+!         *** interop query routines
+!         ***
+
+          function omp_get_num_interop_properties(interop) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_integer_kind) omp_get_num_interop_properties
+          end function omp_get_num_interop_properties
+
+          function omp_get_interop_int(interop, property_id, err) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_intptr_t, c_int
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_property_kind), value :: property_id
+            integer (kind=c_int) :: err
+            integer (kind=c_intptr_t) omp_get_interop_int
+          end function omp_get_interop_int
+
+          function omp_get_interop_ptr(interop, property_id, err) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_property_kind), value :: property_id
+            integer (kind=c_int) :: err
+            type(c_ptr) omp_get_interop_ptr
+          end function omp_get_interop_ptr
+
+          function omp_get_interop_str(interop, property_id, err) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_property_kind), value :: property_id
+            integer (kind=c_int) :: err
+            type(c_ptr) omp_get_interop_str
+          end function omp_get_interop_str
+
+          function omp_get_interop_name(interop, property_id) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_ptr
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_property_kind), value :: property_id
+            type(c_ptr) omp_get_interop_name
+          end function omp_get_interop_name
+
+          function omp_get_interop_type_desc(interop, property_id) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_ptr
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_property_kind), value :: property_id
+            type(c_ptr) omp_get_interop_type_desc
+          end function omp_get_interop_type_desc
+
+          function omp_get_interop_rc_desc(interop, ret_code) bind(c)
+            use omp_lib_kinds
+            use, intrinsic :: iso_c_binding, only: c_ptr
+            integer (kind=omp_interop_kind), value :: interop
+            integer (kind=omp_interop_rc_kind), value :: ret_code
+            type(c_ptr) omp_get_interop_rc_desc
+          end function omp_get_interop_rc_desc
+
         end interface
+
+        ! Generic interfaces for multiple integer kinds
+        interface omp_set_num_threads
+          module procedure omp_set_num_threads_i1, omp_set_num_threads_i2,     &
+              omp_set_num_threads_i4, omp_set_num_threads_i8
+        end interface omp_set_num_threads
+        interface omp_set_max_active_levels
+          module procedure omp_set_max_active_levels_i1,                       &
+              omp_set_max_active_levels_i2, omp_set_max_active_levels_i4,      &
+              omp_set_max_active_levels_i8
+        end interface omp_set_max_active_levels
+        interface omp_set_default_device
+          module procedure omp_set_default_device_i1,                          &
+              omp_set_default_device_i2, omp_set_default_device_i4,            &
+              omp_set_default_device_i8
+        end interface omp_set_default_device
+        interface omp_set_num_teams
+          module procedure omp_set_num_teams_i1, omp_set_num_teams_i2,         &
+              omp_set_num_teams_i4, omp_set_num_teams_i8
+        end interface omp_set_num_teams
+        interface omp_set_teams_thread_limit
+          module procedure omp_set_teams_thread_limit_i1,                      &
+              omp_set_teams_thread_limit_i2, omp_set_teams_thread_limit_i4,    &
+              omp_set_teams_thread_limit_i8
+        end interface omp_set_teams_thread_limit
+        interface kmp_set_stacksize
+          module procedure kmp_set_stacksize_i1, kmp_set_stacksize_i2,         &
+              kmp_set_stacksize_i4, kmp_set_stacksize_i8
+        end interface kmp_set_stacksize
+        interface kmp_set_blocktime
+          module procedure kmp_set_blocktime_i1, kmp_set_blocktime_i2,         &
+              kmp_set_blocktime_i4, kmp_set_blocktime_i8
+        end interface kmp_set_blocktime
+        interface kmp_set_library
+          module procedure kmp_set_library_i1, kmp_set_library_i2,             &
+              kmp_set_library_i4, kmp_set_library_i8
+        end interface kmp_set_library
+        interface kmp_set_disp_num_buffers
+          module procedure kmp_set_disp_num_buffers_i1,                        &
+              kmp_set_disp_num_buffers_i2, kmp_set_disp_num_buffers_i4,        &
+              kmp_set_disp_num_buffers_i8
+        end interface kmp_set_disp_num_buffers
+        interface omp_get_ancestor_thread_num
+          module procedure omp_get_ancestor_thread_num_i1,                     &
+              omp_get_ancestor_thread_num_i2, omp_get_ancestor_thread_num_i4,  &
+              omp_get_ancestor_thread_num_i8
+        end interface omp_get_ancestor_thread_num
+        interface omp_get_team_size
+          module procedure omp_get_team_size_i1, omp_get_team_size_i2,         &
+              omp_get_team_size_i4, omp_get_team_size_i8
+        end interface omp_get_team_size
+        interface omp_get_place_num_procs
+          module procedure omp_get_place_num_procs_i1,                         &
+              omp_get_place_num_procs_i2, omp_get_place_num_procs_i4,          &
+              omp_get_place_num_procs_i8
+        end interface omp_get_place_num_procs
+        interface omp_set_schedule
+          module procedure omp_set_schedule_i1, omp_set_schedule_i2,           &
+              omp_set_schedule_i4, omp_set_schedule_i8
+        end interface omp_set_schedule
+        interface omp_get_schedule
+          module procedure omp_get_schedule_i1, omp_get_schedule_i2,           &
+              omp_get_schedule_i4, omp_get_schedule_i8
+        end interface omp_get_schedule
+        interface omp_pause_resource
+          module procedure omp_pause_resource_i1, omp_pause_resource_i2,       &
+              omp_pause_resource_i4, omp_pause_resource_i8
+        end interface omp_pause_resource
+        interface omp_get_place_proc_ids
+          module procedure omp_get_place_proc_ids_i4, omp_get_place_proc_ids_i8
+        end interface omp_get_place_proc_ids
+        interface omp_get_partition_place_nums
+          module procedure omp_get_partition_place_nums_i4,                    &
+              omp_get_partition_place_nums_i8
+        end interface omp_get_partition_place_nums
+        interface kmp_set_affinity_mask_proc
+          module procedure kmp_set_affinity_mask_proc_i1,                      &
+              kmp_set_affinity_mask_proc_i2, kmp_set_affinity_mask_proc_i4,    &
+              kmp_set_affinity_mask_proc_i8
+        end interface kmp_set_affinity_mask_proc
+        interface kmp_unset_affinity_mask_proc
+          module procedure kmp_unset_affinity_mask_proc_i1,                    &
+              kmp_unset_affinity_mask_proc_i2,                                 &
+              kmp_unset_affinity_mask_proc_i4,                                 &
+              kmp_unset_affinity_mask_proc_i8
+        end interface kmp_unset_affinity_mask_proc
+        interface kmp_get_affinity_mask_proc
+          module procedure kmp_get_affinity_mask_proc_i1,                      &
+              kmp_get_affinity_mask_proc_i2, kmp_get_affinity_mask_proc_i4,    &
+              kmp_get_affinity_mask_proc_i8
+        end interface kmp_get_affinity_mask_proc
+
 
         ! make the above routine definitions public
         public :: omp_set_num_threads
@@ -1182,5 +1398,415 @@
         public :: kmp_set_warnings_on
         public :: kmp_set_warnings_off
         public :: kmp_get_cancellation_status
+        public :: omp_get_num_interop_properties
+        public :: omp_get_interop_int
+        public :: omp_get_interop_ptr
+        public :: omp_get_interop_str
+        public :: omp_get_interop_name
+        public :: omp_get_interop_type_desc
+        public :: omp_get_interop_rc_desc
 
+
+
+        ! Submodule procedure declarations for integer-kind wrappers.
+        interface
+          module subroutine omp_set_num_threads_i1(num_threads)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: num_threads
+          end subroutine omp_set_num_threads_i1
+          module subroutine omp_set_num_threads_i2(num_threads)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: num_threads
+          end subroutine omp_set_num_threads_i2
+          module subroutine omp_set_num_threads_i4(num_threads)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: num_threads
+          end subroutine omp_set_num_threads_i4
+          module subroutine omp_set_num_threads_i8(num_threads)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: num_threads
+          end subroutine omp_set_num_threads_i8
+          module subroutine omp_set_max_active_levels_i1(max_levels)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: max_levels
+          end subroutine omp_set_max_active_levels_i1
+          module subroutine omp_set_max_active_levels_i2(max_levels)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: max_levels
+          end subroutine omp_set_max_active_levels_i2
+          module subroutine omp_set_max_active_levels_i4(max_levels)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: max_levels
+          end subroutine omp_set_max_active_levels_i4
+          module subroutine omp_set_max_active_levels_i8(max_levels)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: max_levels
+          end subroutine omp_set_max_active_levels_i8
+          module subroutine omp_set_default_device_i1(device_num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: device_num
+          end subroutine omp_set_default_device_i1
+          module subroutine omp_set_default_device_i2(device_num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: device_num
+          end subroutine omp_set_default_device_i2
+          module subroutine omp_set_default_device_i4(device_num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: device_num
+          end subroutine omp_set_default_device_i4
+          module subroutine omp_set_default_device_i8(device_num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: device_num
+          end subroutine omp_set_default_device_i8
+          module subroutine omp_set_num_teams_i1(num_teams)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: num_teams
+          end subroutine omp_set_num_teams_i1
+          module subroutine omp_set_num_teams_i2(num_teams)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: num_teams
+          end subroutine omp_set_num_teams_i2
+          module subroutine omp_set_num_teams_i4(num_teams)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: num_teams
+          end subroutine omp_set_num_teams_i4
+          module subroutine omp_set_num_teams_i8(num_teams)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: num_teams
+          end subroutine omp_set_num_teams_i8
+          module subroutine omp_set_teams_thread_limit_i1(thread_limit)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: thread_limit
+          end subroutine omp_set_teams_thread_limit_i1
+          module subroutine omp_set_teams_thread_limit_i2(thread_limit)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: thread_limit
+          end subroutine omp_set_teams_thread_limit_i2
+          module subroutine omp_set_teams_thread_limit_i4(thread_limit)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: thread_limit
+          end subroutine omp_set_teams_thread_limit_i4
+          module subroutine omp_set_teams_thread_limit_i8(thread_limit)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: thread_limit
+          end subroutine omp_set_teams_thread_limit_i8
+          module subroutine kmp_set_stacksize_i1(size)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: size
+          end subroutine kmp_set_stacksize_i1
+          module subroutine kmp_set_stacksize_i2(size)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: size
+          end subroutine kmp_set_stacksize_i2
+          module subroutine kmp_set_stacksize_i4(size)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: size
+          end subroutine kmp_set_stacksize_i4
+          module subroutine kmp_set_stacksize_i8(size)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: size
+          end subroutine kmp_set_stacksize_i8
+          module subroutine kmp_set_blocktime_i1(msec)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: msec
+          end subroutine kmp_set_blocktime_i1
+          module subroutine kmp_set_blocktime_i2(msec)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: msec
+          end subroutine kmp_set_blocktime_i2
+          module subroutine kmp_set_blocktime_i4(msec)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: msec
+          end subroutine kmp_set_blocktime_i4
+          module subroutine kmp_set_blocktime_i8(msec)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: msec
+          end subroutine kmp_set_blocktime_i8
+          module subroutine kmp_set_library_i1(libnum)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: libnum
+          end subroutine kmp_set_library_i1
+          module subroutine kmp_set_library_i2(libnum)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: libnum
+          end subroutine kmp_set_library_i2
+          module subroutine kmp_set_library_i4(libnum)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: libnum
+          end subroutine kmp_set_library_i4
+          module subroutine kmp_set_library_i8(libnum)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: libnum
+          end subroutine kmp_set_library_i8
+          module subroutine kmp_set_disp_num_buffers_i1(num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: num
+          end subroutine kmp_set_disp_num_buffers_i1
+          module subroutine kmp_set_disp_num_buffers_i2(num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: num
+          end subroutine kmp_set_disp_num_buffers_i2
+          module subroutine kmp_set_disp_num_buffers_i4(num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: num
+          end subroutine kmp_set_disp_num_buffers_i4
+          module subroutine kmp_set_disp_num_buffers_i8(num)
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: num
+          end subroutine kmp_set_disp_num_buffers_i8
+          module function omp_get_ancestor_thread_num_i1(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_ancestor_thread_num_i1
+          end function omp_get_ancestor_thread_num_i1
+          module function omp_get_ancestor_thread_num_i2(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_ancestor_thread_num_i2
+          end function omp_get_ancestor_thread_num_i2
+          module function omp_get_ancestor_thread_num_i4(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_ancestor_thread_num_i4
+          end function omp_get_ancestor_thread_num_i4
+          module function omp_get_ancestor_thread_num_i8(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_ancestor_thread_num_i8
+          end function omp_get_ancestor_thread_num_i8
+          module function omp_get_team_size_i1(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_team_size_i1
+          end function omp_get_team_size_i1
+          module function omp_get_team_size_i2(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_team_size_i2
+          end function omp_get_team_size_i2
+          module function omp_get_team_size_i4(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_team_size_i4
+          end function omp_get_team_size_i4
+          module function omp_get_team_size_i8(level)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: level
+          integer(kind=omp_integer_kind) :: omp_get_team_size_i8
+          end function omp_get_team_size_i8
+          module function omp_get_place_num_procs_i1(place_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: place_num
+          integer(kind=omp_integer_kind) :: omp_get_place_num_procs_i1
+          end function omp_get_place_num_procs_i1
+          module function omp_get_place_num_procs_i2(place_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: place_num
+          integer(kind=omp_integer_kind) :: omp_get_place_num_procs_i2
+          end function omp_get_place_num_procs_i2
+          module function omp_get_place_num_procs_i4(place_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: place_num
+          integer(kind=omp_integer_kind) :: omp_get_place_num_procs_i4
+          end function omp_get_place_num_procs_i4
+          module function omp_get_place_num_procs_i8(place_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: place_num
+          integer(kind=omp_integer_kind) :: omp_get_place_num_procs_i8
+          end function omp_get_place_num_procs_i8
+          module subroutine omp_set_schedule_i1(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(kind=omp_sched_kind), value :: kind
+          integer(c_int8_t), value :: chunk_size
+          end subroutine omp_set_schedule_i1
+          module subroutine omp_set_schedule_i2(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(kind=omp_sched_kind), value :: kind
+          integer(c_int16_t), value :: chunk_size
+          end subroutine omp_set_schedule_i2
+          module subroutine omp_set_schedule_i4(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(kind=omp_sched_kind), value :: kind
+          integer(c_int), value :: chunk_size
+          end subroutine omp_set_schedule_i4
+          module subroutine omp_set_schedule_i8(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(kind=omp_sched_kind), value :: kind
+          integer(c_int64_t), value :: chunk_size
+          end subroutine omp_set_schedule_i8
+          module subroutine omp_get_schedule_i1(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(kind=omp_sched_kind), intent(out) :: kind
+          integer(c_int8_t), intent(out) :: chunk_size
+          end subroutine omp_get_schedule_i1
+          module subroutine omp_get_schedule_i2(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(kind=omp_sched_kind), intent(out) :: kind
+          integer(c_int16_t), intent(out) :: chunk_size
+          end subroutine omp_get_schedule_i2
+          module subroutine omp_get_schedule_i4(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(kind=omp_sched_kind), intent(out) :: kind
+          integer(c_int), intent(out) :: chunk_size
+          end subroutine omp_get_schedule_i4
+          module subroutine omp_get_schedule_i8(kind, chunk_size)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(kind=omp_sched_kind), intent(out) :: kind
+          integer(c_int64_t), intent(out) :: chunk_size
+          end subroutine omp_get_schedule_i8
+          module function omp_pause_resource_i1(kind, device_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(kind=omp_pause_resource_kind), value :: kind
+          integer(c_int8_t), value :: device_num
+          integer(kind=omp_integer_kind) :: omp_pause_resource_i1
+          end function omp_pause_resource_i1
+          module function omp_pause_resource_i2(kind, device_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(kind=omp_pause_resource_kind), value :: kind
+          integer(c_int16_t), value :: device_num
+          integer(kind=omp_integer_kind) :: omp_pause_resource_i2
+          end function omp_pause_resource_i2
+          module function omp_pause_resource_i4(kind, device_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(kind=omp_pause_resource_kind), value :: kind
+          integer(c_int), value :: device_num
+          integer(kind=omp_integer_kind) :: omp_pause_resource_i4
+          end function omp_pause_resource_i4
+          module function omp_pause_resource_i8(kind, device_num)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(kind=omp_pause_resource_kind), value :: kind
+          integer(c_int64_t), value :: device_num
+          integer(kind=omp_integer_kind) :: omp_pause_resource_i8
+          end function omp_pause_resource_i8
+          module function kmp_set_affinity_mask_proc_i1(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_set_affinity_mask_proc_i1
+          end function kmp_set_affinity_mask_proc_i1
+          module function kmp_set_affinity_mask_proc_i2(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_set_affinity_mask_proc_i2
+          end function kmp_set_affinity_mask_proc_i2
+          module function kmp_set_affinity_mask_proc_i4(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_set_affinity_mask_proc_i4
+          end function kmp_set_affinity_mask_proc_i4
+          module function kmp_set_affinity_mask_proc_i8(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_set_affinity_mask_proc_i8
+          end function kmp_set_affinity_mask_proc_i8
+          module function kmp_unset_affinity_mask_proc_i1(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_unset_affinity_mask_proc_i1
+          end function kmp_unset_affinity_mask_proc_i1
+          module function kmp_unset_affinity_mask_proc_i2(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_unset_affinity_mask_proc_i2
+          end function kmp_unset_affinity_mask_proc_i2
+          module function kmp_unset_affinity_mask_proc_i4(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_unset_affinity_mask_proc_i4
+          end function kmp_unset_affinity_mask_proc_i4
+          module function kmp_unset_affinity_mask_proc_i8(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_unset_affinity_mask_proc_i8
+          end function kmp_unset_affinity_mask_proc_i8
+          module function kmp_get_affinity_mask_proc_i1(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int8_t
+          integer(c_int8_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_get_affinity_mask_proc_i1
+          end function kmp_get_affinity_mask_proc_i1
+          module function kmp_get_affinity_mask_proc_i2(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int16_t
+          integer(c_int16_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_get_affinity_mask_proc_i2
+          end function kmp_get_affinity_mask_proc_i2
+          module function kmp_get_affinity_mask_proc_i4(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_get_affinity_mask_proc_i4
+          end function kmp_get_affinity_mask_proc_i4
+          module function kmp_get_affinity_mask_proc_i8(proc, mask)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: proc
+          integer(kind=kmp_affinity_mask_kind) :: mask
+          integer(kind=omp_integer_kind) :: kmp_get_affinity_mask_proc_i8
+          end function kmp_get_affinity_mask_proc_i8
+          module subroutine omp_get_place_proc_ids_i4(place_num, ids)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), value :: place_num
+          integer(c_int), intent(out) :: ids(*)
+          end subroutine omp_get_place_proc_ids_i4
+          module subroutine omp_get_place_proc_ids_i8(place_num, ids)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), value :: place_num
+          integer(c_int64_t), intent(out) :: ids(*)
+          end subroutine omp_get_place_proc_ids_i8
+          module subroutine omp_get_partition_place_nums_i4(place_nums)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int
+          integer(c_int), intent(out) :: place_nums(*)
+          end subroutine omp_get_partition_place_nums_i4
+          module subroutine omp_get_partition_place_nums_i8(place_nums)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only: c_int, c_int64_t
+          integer(c_int64_t), intent(out) :: place_nums(*)
+          end subroutine omp_get_partition_place_nums_i8
+        end interface
       end module omp_lib

@@ -442,12 +442,6 @@ struct ExactEqualsExpression {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<const Expression *> {
-  static const Expression *getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
   static unsigned getHashValue(const Expression *E) {
     return E->getComputedHash();
   }
@@ -457,16 +451,12 @@ template <> struct llvm::DenseMapInfo<const Expression *> {
   }
 
   static bool isEqual(const ExactEqualsExpression &LHS, const Expression *RHS) {
-    if (RHS == getEmptyKey())
-      return false;
     return LHS == *RHS;
   }
 
   static bool isEqual(const Expression *LHS, const Expression *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     // Compare hashes before equality.  This is *not* what the hashtable does,
     // since it is computing it modulo the number of buckets, whereas we are
     // using the full hash keyspace.  Since the hashes are precomputed, this
@@ -3451,43 +3441,15 @@ bool NewGVN::runGVN() {
   unsigned ICount = 1;
   // Add an empty instruction to account for the fact that we start at 1
   DFSToInstr.emplace_back(nullptr);
-  // Note: We want ideal RPO traversal of the blocks, which is not quite the
-  // same as dominator tree order, particularly with regard whether backedges
-  // get visited first or second, given a block with multiple successors.
-  // If we visit in the wrong order, we will end up performing N times as many
+  // Note: Number the blocks in RPO to put every definition before its uses,
+  // except for a PHI operand arriving along a back edge. A wrong order costs
   // iterations.
-  // The dominator tree does guarantee that, for a given dom tree node, it's
-  // parent must occur before it in the RPO ordering. Thus, we only need to sort
-  // the siblings.
   ReversePostOrderTraversal<Function *> RPOT(&F);
   unsigned Counter = 0;
-  for (auto &B : RPOT) {
+  for (BasicBlock *B : RPOT) {
     auto *Node = DT->getNode(B);
     assert(Node && "RPO and Dominator tree should have same reachability");
     RPOOrdering[Node] = ++Counter;
-  }
-  // Sort dominator tree children arrays into RPO.
-  // TODO: this code shouldn't rely on domtree internals. It also most probably
-  // shouldn't rely on the order of nodes in the tree...
-  for (auto &B : RPOT) {
-    auto *Node = DT->getNode(B);
-    if (Node->isLeaf())
-      continue;
-    SmallVector<DomTreeNode *> Children;
-    while (!Node->isLeaf()) {
-      Children.push_back(*Node->begin());
-      Node->removeChild(*Node->begin());
-    }
-    llvm::sort(Children, [&](const DomTreeNode *A, const DomTreeNode *B) {
-      return RPOOrdering[A] < RPOOrdering[B];
-    });
-    for (DomTreeNode *Child : Children)
-      Node->addChild(Child);
-  }
-
-  // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  for (auto *DTN : depth_first(DT->getRootNode())) {
-    BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
     ICount += BlockRange.second - BlockRange.first;

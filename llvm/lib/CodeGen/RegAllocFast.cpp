@@ -200,7 +200,7 @@ private:
   struct LiveReg {
     MachineInstr *LastUse = nullptr; ///< Last instr to use reg.
     Register VirtReg;                ///< Virtual register number.
-    MCPhysReg PhysReg = 0;           ///< Currently held here.
+    MCRegister PhysReg;              ///< Currently held here.
     bool LiveOut = false;            ///< Register is possibly live out.
     bool Reloaded = false;           ///< Register was reloaded.
     bool Error = false;              ///< Could not allocate.
@@ -282,7 +282,7 @@ private:
   bool isPhysRegFree(MCRegister PhysReg) const;
 
   /// Mark a physreg as used in this instruction.
-  void markRegUsedInInstr(MCPhysReg PhysReg) {
+  void markRegUsedInInstr(MCRegister PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
       UsedInInstr[static_cast<unsigned>(Unit)] = InstrGen | 1;
   }
@@ -389,9 +389,9 @@ private:
   bool shouldAllocateRegister(const Register Reg) const;
   int getStackSpaceFor(Register VirtReg);
   void spill(MachineBasicBlock::iterator Before, Register VirtReg,
-             MCPhysReg AssignedReg, bool Kill, bool LiveOut);
+             MCRegister AssignedReg, bool Kill, bool LiveOut);
   void reload(MachineBasicBlock::iterator Before, Register VirtReg,
-              MCPhysReg PhysReg);
+              MCRegister PhysReg);
 
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
@@ -494,7 +494,8 @@ int RegAllocFastImpl::getStackSpaceFor(Register VirtReg) {
   if (Alignment > CurrentAlign && !TRI->canRealignStack(MF))
     Alignment = CurrentAlign;
 
-  int FrameIdx = MFI->CreateSpillStackObject(Size, Alignment);
+  int FrameIdx =
+      MFI->CreateSpillStackObject(Size, Alignment, TRI->getSpillStackID(RC));
 
   // Assign the slot.
   StackSlotForVirtReg[VirtReg] = FrameIdx;
@@ -599,8 +600,8 @@ bool RegAllocFastImpl::mayLiveIn(Register VirtReg) {
 /// Insert spill instruction for \p AssignedReg before \p Before. Update
 /// DBG_VALUEs with \p VirtReg operands with the stack slot.
 void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
-                             Register VirtReg, MCPhysReg AssignedReg, bool Kill,
-                             bool LiveOut) {
+                             Register VirtReg, MCRegister AssignedReg,
+                             bool Kill, bool LiveOut) {
   LLVM_DEBUG(dbgs() << "Spilling " << printReg(VirtReg, TRI) << " in "
                     << printReg(AssignedReg, TRI));
   int FI = getStackSpaceFor(VirtReg);
@@ -646,8 +647,8 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
     // how the dbg_values are getting unassigned.
     if (DBG.isNonListDebugValue()) {
       MachineOperand &MO = DBG.getDebugOperand(0);
-      if (MO.isReg() && MO.getReg() == 0) {
-        updateDbgValueForSpill(DBG, FI, 0);
+      if (MO.isReg() && !MO.getReg()) {
+        updateDbgValueForSpill(DBG, FI, Register());
       }
     }
   }
@@ -659,7 +660,7 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
 
 /// Insert reload instruction for \p PhysReg before \p Before.
 void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
-                              Register VirtReg, MCPhysReg PhysReg) {
+                              Register VirtReg, MCRegister PhysReg) {
   LLVM_DEBUG(dbgs() << "Reloading " << printReg(VirtReg, TRI) << " into "
                     << printReg(PhysReg, TRI) << '\n');
   int FI = getStackSpaceFor(VirtReg);
@@ -717,8 +718,8 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator InsertBefore =
       getMBBBeginInsertionPoint(MBB, PrologLiveIns);
   for (const LiveReg &LR : LiveVirtRegs) {
-    MCPhysReg PhysReg = LR.PhysReg;
-    if (PhysReg == 0 || LR.Error)
+    MCRegister PhysReg = LR.PhysReg;
+    if (!PhysReg || LR.Error)
       continue;
 
     MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
@@ -743,7 +744,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
 /// not used by a virtreg. Kill the physreg, marking it free. This may add
 /// implicit kills to MO->getParent() and invalidate MO.
 bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
-  assert(Register::isPhysicalRegister(Reg) && "expected physreg");
+  assert(Reg.isPhysical() && "expected physreg");
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
   markRegUsedInInstr(Reg);
@@ -774,7 +775,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       reload(ReloadBefore, VirtReg, LRI->PhysReg);
 
       setPhysRegState(LRI->PhysReg, regFree);
-      LRI->PhysReg = 0;
+      LRI->PhysReg = MCRegister();
       LRI->Reloaded = true;
       displacedAny = true;
       break;
@@ -807,7 +808,7 @@ void RegAllocFastImpl::freePhysReg(MCRegister PhysReg) {
     assert(LRI != LiveVirtRegs.end());
     LLVM_DEBUG(dbgs() << ' ' << printReg(LRI->VirtReg, TRI) << '\n');
     setPhysRegState(LRI->PhysReg, regFree);
-    LRI->PhysReg = 0;
+    LRI->PhysReg = MCRegister();
   }
     return;
   }
@@ -850,7 +851,7 @@ void RegAllocFastImpl::assignDanglingDebugValues(MachineInstr &Definition,
       continue;
 
     // Test whether the physreg survives from the definition to the DBG_VALUE.
-    MCPhysReg SetToReg = Reg;
+    MCRegister SetToReg = Reg;
     unsigned Limit = 20;
     for (MachineBasicBlock::iterator I = std::next(Definition.getIterator()),
                                      E = DbgValue->getIterator();
@@ -858,13 +859,13 @@ void RegAllocFastImpl::assignDanglingDebugValues(MachineInstr &Definition,
       if (I->modifiesRegister(Reg, TRI) || --Limit == 0) {
         LLVM_DEBUG(dbgs() << "Register did not survive for " << *DbgValue
                           << '\n');
-        SetToReg = 0;
+        SetToReg = MCRegister();
         break;
       }
     }
     for (MachineOperand &MO : DbgValue->getDebugOperandsForReg(VirtReg)) {
       MO.setReg(SetToReg);
-      if (SetToReg != 0)
+      if (SetToReg)
         MO.setIsRenamable();
     }
   }
@@ -879,8 +880,8 @@ void RegAllocFastImpl::assignVirtToPhysReg(MachineInstr &AtMI, LiveReg &LR,
   Register VirtReg = LR.VirtReg;
   LLVM_DEBUG(dbgs() << "Assigning " << printReg(VirtReg, TRI) << " to "
                     << printReg(PhysReg, TRI) << '\n');
-  assert(LR.PhysReg == 0 && "Already assigned a physreg");
-  assert(PhysReg != 0 && "Trying to assign no register");
+  assert(!LR.PhysReg && "Already assigned a physreg");
+  assert(PhysReg && "Trying to assign no register");
   LR.PhysReg = PhysReg;
   setPhysRegState(PhysReg, VirtReg.id());
 
@@ -899,10 +900,10 @@ Register RegAllocFastImpl::traceCopyChain(Register Reg) const {
 
     MachineInstr *VRegDef = MRI->getUniqueVRegDef(Reg);
     if (!VRegDef || !isCoalescable(*VRegDef))
-      return 0;
+      return Register();
     Reg = VRegDef->getOperand(1).getReg();
   } while (++C <= ChainLengthLimit);
-  return 0;
+  return Register();
 }
 
 /// Check if any of \p VirtReg's definitions is a copy. If it is follow the
@@ -929,7 +930,7 @@ Register RegAllocFastImpl::traceCopies(Register VirtReg) const {
 void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
                                     Register Hint0, bool LookAtPhysRegUses) {
   const Register VirtReg = LR.VirtReg;
-  assert(LR.PhysReg == 0);
+  assert(!LR.PhysReg);
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   LLVM_DEBUG(dbgs() << "Search register for " << printReg(VirtReg)
@@ -1018,7 +1019,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     return;
 
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
-  MCPhysReg PhysReg;
+  MCRegister PhysReg;
   bool IsRenamable = true;
   if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
     PhysReg = LRI->PhysReg;
@@ -1057,13 +1058,13 @@ bool RegAllocFastImpl::defineLiveThroughVirtReg(MachineInstr &MI,
     return false;
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   if (LRI != LiveVirtRegs.end()) {
-    MCPhysReg PrevReg = LRI->PhysReg;
-    if (PrevReg != 0 && isRegUsedInInstr(PrevReg, true)) {
+    MCRegister PrevReg = LRI->PhysReg;
+    if (PrevReg && isRegUsedInInstr(PrevReg, true)) {
       LLVM_DEBUG(dbgs() << "Need new assignment for " << printReg(PrevReg, TRI)
                         << " (tied/earlyclobber resolution)\n");
       freePhysReg(PrevReg);
-      LRI->PhysReg = 0;
-      allocVirtReg(MI, *LRI, 0, true);
+      LRI->PhysReg = MCRegister();
+      allocVirtReg(MI, *LRI, Register(), true);
       MachineBasicBlock::iterator InsertBefore =
           std::next((MachineBasicBlock::iterator)MI.getIterator());
       LLVM_DEBUG(dbgs() << "Copy " << printReg(LRI->PhysReg, TRI) << " to "
@@ -1106,8 +1107,8 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       }
     }
   }
-  if (LRI->PhysReg == 0) {
-    allocVirtReg(MI, *LRI, 0, LookAtPhysRegUses);
+  if (!LRI->PhysReg) {
+    allocVirtReg(MI, *LRI, Register(), LookAtPhysRegUses);
   } else {
     assert((!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) || LRI->Error) &&
            "TODO: preassign mismatch");
@@ -1116,7 +1117,7 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
                       << printReg(LRI->PhysReg, TRI) << '\n');
   }
 
-  MCPhysReg PhysReg = LRI->PhysReg;
+  MCRegister PhysReg = LRI->PhysReg;
   if (LRI->Reloaded || LRI->LiveOut) {
     if (!MI.isImplicitDef()) {
       MachineBasicBlock::iterator SpillBefore =
@@ -1178,7 +1179,7 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   }
 
   // If necessary allocate a register.
-  if (LRI->PhysReg == 0) {
+  if (!LRI->PhysReg) {
     assert(!MO.isTied() && "tied op should be allocated");
     Register Hint;
     if (MI.isCopy() && MI.getOperand(1).getSubReg() == 0) {
@@ -1254,7 +1255,7 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
 /// \return true if MI's MachineOperands were re-arranged/invalidated.
 bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
                                   const LiveReg &Assignment) {
-  MCPhysReg PhysReg = Assignment.PhysReg;
+  MCRegister PhysReg = Assignment.PhysReg;
   assert(PhysReg && "assignments should always be to a valid physreg");
 
   if (LLVM_UNLIKELY(Assignment.Error)) {
@@ -1335,9 +1336,9 @@ void RegAllocFastImpl::dumpState() const {
   for (const LiveReg &LR : LiveVirtRegs) {
     Register VirtReg = LR.VirtReg;
     assert(VirtReg.isVirtual() && "Bad map key");
-    MCPhysReg PhysReg = LR.PhysReg;
-    if (PhysReg != 0) {
-      assert(Register::isPhysicalRegister(PhysReg) && "mapped to physreg");
+    MCRegister PhysReg = LR.PhysReg;
+    if (PhysReg) {
+      assert(PhysReg.isPhysical() && "mapped to physreg");
       for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
         assert(getRegUnitState(Unit) == VirtReg && "inverse map valid");
       }
@@ -1619,8 +1620,8 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
 
     // Displace clobbered registers.
     for (const LiveReg &LR : LiveVirtRegs) {
-      MCPhysReg PhysReg = LR.PhysReg;
-      if (PhysReg != 0 && isClobberedByRegMasks(PhysReg))
+      MCRegister PhysReg = LR.PhysReg;
+      if (PhysReg && isClobberedByRegMasks(PhysReg))
         displacePhysReg(MI, PhysReg);
     }
   }

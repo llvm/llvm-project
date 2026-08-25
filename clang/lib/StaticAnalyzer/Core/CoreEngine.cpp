@@ -254,11 +254,9 @@ void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
       break;
     }
     default:
-      assert(Loc.getAs<PostStmt>() ||
-             Loc.getAs<PostInitializer>() ||
-             Loc.getAs<PostImplicitCall>() ||
-             Loc.getAs<CallExitEnd>() ||
-             Loc.getAs<LoopExit>() ||
+      assert(Loc.getAs<PostStmt>() || Loc.getAs<PostInitializer>() ||
+             Loc.getAs<PostImplicitCall>() || Loc.getAs<CallExitEnd>() ||
+             Loc.getAs<LoopExit>() || Loc.getAs<LifetimeEnd>() ||
              Loc.getAs<PostAllocatorCall>());
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
@@ -306,6 +304,9 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
       } else if (std::optional<CFGAutomaticObjDtor> AutoDtor =
                      LastElement.getAs<CFGAutomaticObjDtor>()) {
         RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
+      } else if (std::optional<CFGScopeMarker> ScopeMarker =
+                     LastElement.getAs<CFGScopeMarker>()) {
+        RS = dyn_cast<ReturnStmt>(ScopeMarker->getTriggerStmt());
       }
     }
 
@@ -324,19 +325,12 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
 
   // Call into the ExprEngine to process entering the CFGBlock.
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getStackFrame());
-  ExplodedNodeSet DstNodes;
-  NodeBuilder Builder(Pred, DstNodes, ExprEng.getBuilderContext());
-  ExprEng.processCFGBlockEntrance(L, BE, Builder, Pred);
-
-  // Auto-generate a node.
-  if (!Builder.hasGeneratedNodes()) {
-    Builder.generateNode(BE, Pred->State, Pred);
-  }
+  ExplodedNode *Processed = ExprEng.processCFGBlockEntrance(BE, Pred);
 
   ExplodedNodeSet CheckerNodes;
-  for (auto *N : DstNodes) {
-    ExprEng.runCheckersForBlockEntrance(BE, N, CheckerNodes);
-  }
+
+  if (Processed)
+    ExprEng.runCheckersForBlockEntrance(BE, Processed, CheckerNodes);
 
   // Enqueue nodes onto the worklist.
   enqueue(CheckerNodes);
@@ -567,13 +561,13 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
                                    ProgramStateRef State, ExplodedNode *Pred,
                                    bool MarkAsSink) const {
-  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+  bool IsPO = State->isPosteriorlyOverconstrained();
 
   bool IsNew;
-  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink || IsPO, &IsNew);
   N->addPredecessor(Pred, G);
 
-  return IsNew ? N : nullptr;
+  return (IsNew && !IsPO) ? N : nullptr;
 }
 
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,
@@ -591,9 +585,10 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
 
   // Do not create extra nodes. Move to the next CFG element.
   if (N->getLocation().getAs<PostInitializer>() ||
-      N->getLocation().getAs<PostImplicitCall>()||
-      N->getLocation().getAs<LoopExit>()) {
-    WList->enqueue(N, Block, Idx+1);
+      N->getLocation().getAs<PostImplicitCall>() ||
+      N->getLocation().getAs<LoopExit>() ||
+      N->getLocation().getAs<LifetimeEnd>()) {
+    WList->enqueue(N, Block, Idx + 1);
     return;
   }
 
@@ -674,16 +669,4 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
       NumPathsExplored++;
     }
   }
-}
-
-ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
-                                        ProgramStateRef State,
-                                        ExplodedNode *FromN, bool MarkAsSink) {
-  HasGeneratedNodes = true;
-  Frontier.erase(FromN);
-  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
-
-  Frontier.insert(N);
-
-  return N;
 }

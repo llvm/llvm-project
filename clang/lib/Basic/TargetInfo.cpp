@@ -19,42 +19,45 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 using namespace clang;
 
-static const LangASMap DefaultAddrSpaceMap = {0};
+static constexpr LangASMap DefaultAddrSpaceMap;
 // The fake address space map must have a distinct entry for each
 // language-specific address space.
-static const LangASMap FakeAddrSpaceMap = {
-    0,  // Default
-    1,  // opencl_global
-    3,  // opencl_local
-    2,  // opencl_constant
-    0,  // opencl_private
-    4,  // opencl_generic
-    5,  // opencl_global_device
-    6,  // opencl_global_host
-    7,  // cuda_device
-    8,  // cuda_constant
-    9,  // cuda_shared
-    1,  // sycl_global
-    5,  // sycl_global_device
-    6,  // sycl_global_host
-    3,  // sycl_local
-    0,  // sycl_private
-    10, // ptr32_sptr
-    11, // ptr32_uptr
-    12, // ptr64
-    13, // hlsl_groupshared
-    14, // hlsl_constant
-    15, // hlsl_private
-    16, // hlsl_device
-    17, // hlsl_input
-    18, // hlsl_output
-    19, // hlsl_push_constant
-    20, // wasm_funcref
+static constexpr LangASMap FakeAddrSpaceMap = {
+    {LangAS::Default, 0},
+    {LangAS::opencl_global, 1},
+    {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},
+    {LangAS::opencl_private, 0},
+    {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5},
+    {LangAS::opencl_global_host, 6},
+    {LangAS::cuda_device, 7},
+    {LangAS::cuda_constant, 8},
+    {LangAS::cuda_shared, 9},
+    {LangAS::sycl_global, 1},
+    {LangAS::sycl_global_device, 5},
+    {LangAS::sycl_global_host, 6},
+    {LangAS::sycl_local, 3},
+    {LangAS::sycl_private, 0},
+    {LangAS::ptr32_sptr, 10},
+    {LangAS::ptr32_uptr, 11},
+    {LangAS::ptr64, 12},
+    {LangAS::hlsl_groupshared, 13},
+    {LangAS::hlsl_constant, 14},
+    {LangAS::hlsl_private, 15},
+    {LangAS::hlsl_device, 16},
+    {LangAS::hlsl_input, 17},
+    {LangAS::hlsl_output, 18},
+    {LangAS::hlsl_push_constant, 19},
+    {LangAS::wasm_funcref, 20},
+    {LangAS::amdgpu_barrier, 21},
 };
 
 // TargetInfo Constructor.
@@ -164,8 +167,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
+  HasBuiltinZOSVaList = false;
   HasAArch64ACLETypes = false;
   HasRISCVVTypes = false;
+  HasAMDGPUTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
   HasUnalignedAccess = false;
   ARMCDECoprocMask = 0;
@@ -198,6 +203,20 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
+
+size_t TargetInfo::getMaxBitIntWidth() const {
+  // Consider -fexperimental-max-bitint-width= first.
+  if (MaxBitIntWidth)
+    return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
+
+  // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
+  // maximum bit width that LLVM claims its IR can support. However, most
+  // backends currently have a bug where they only support float to int
+  // conversion (and vice versa) on types that are <= 128 bits and crash
+  // otherwise. We're setting the max supported value to 128 to be
+  // conservative.
+  return 128;
+}
 
 void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
 
@@ -491,7 +510,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     // for OpenCL C 2.0 but with no access to target capabilities. Target
     // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.getOpenCLCompatibleVersion() == 300) {
+    if (Opts.getOpenCLCompatibleVersion() >= 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
@@ -632,23 +651,27 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_Default;
 }
 
+VTableUniquenessKind TargetInfo::getVTableUniqueness() const {
+  return VTableUniquenessKind::AlwaysUnique;
+}
+
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
     return true;
   return false;
 }
 
 bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
     return true;
   return false;
 }
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
-  return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+  return !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver15);
 }
 
 void TargetInfo::setDependentOpenCLOpts() {

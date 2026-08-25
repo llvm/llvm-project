@@ -18,6 +18,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 #include <optional>
 #include <string>
 
@@ -39,7 +40,9 @@ public:
     using TripleStorageType = SmallVector<llvm::Triple, 5>;
 
     SDKPlatformInfo(TripleStorageType Triples, StringRef PlatformPrefix)
-        : Triples(std::move(Triples)), PlatformPrefix(PlatformPrefix) {}
+        : Triples(std::move(Triples)), PlatformPrefix(PlatformPrefix) {
+      assert(!this->Triples.empty() && "Triples cannot be empty");
+    }
 
     const TripleStorageType &getTriples() const { return Triples; }
     StringRef getPlatformPrefix() const { return PlatformPrefix; }
@@ -167,7 +170,8 @@ public:
   DarwinSDKInfo(
       std::string FilePath, llvm::Triple::OSType OS,
       llvm::Triple::EnvironmentType Environment, VersionTuple Version,
-      StringRef DisplayName, VersionTuple MaximumDeploymentTarget,
+      StringRef DisplayName, VersionTuple DefaultDeploymentTarget,
+      VersionTuple MaximumDeploymentTarget,
       PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
@@ -176,9 +180,12 @@ public:
                              std::optional<RelatedTargetVersionMapping>>())
       : FilePath(std::move(FilePath)), OS(OS), Environment(Environment),
         Version(Version), DisplayName(DisplayName),
+        DefaultDeploymentTarget(DefaultDeploymentTarget),
         MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
-        VersionMappings(std::move(VersionMappings)) {}
+        VersionMappings(std::move(VersionMappings)) {
+    assert(!this->PlatformInfos.empty() && "PlatformInfos cannot be empty");
+  }
 
   /// Construct SDK Info inferred from the parameters rather than read from
   /// SDKSettings.json.
@@ -198,21 +205,19 @@ public:
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
+  const llvm::VersionTuple &getDefaultDeploymentTarget() const {
+    return DefaultDeploymentTarget;
+  }
+
   const StringRef getDisplayName() const { return DisplayName; }
 
   const llvm::Triple &getCanonicalPlatformTriple() const {
     return PlatformInfos[0].getTriples()[0];
   }
 
-  bool supportsTriple(const llvm::Triple &Triple) const {
-    return getPlatformInfo(Triple) != nullptr;
-  }
+  bool supportsTriple(const llvm::Triple &Triple) const;
 
-  StringRef getPlatformPrefix(const llvm::Triple &Triple) const {
-    if (const SDKPlatformInfo *PlatformInfo = getPlatformInfo(Triple))
-      return PlatformInfo->getPlatformPrefix();
-    return StringRef();
-  }
+  StringRef getPlatformPrefix(const llvm::Triple &Triple) const;
 
   // Returns the optional, target-specific version mapping that maps from one
   // target to another target.
@@ -237,20 +242,12 @@ public:
                              const llvm::json::Object *Obj);
 
 private:
-  const SDKPlatformInfo *getPlatformInfo(const llvm::Triple &Triple) const {
-    for (const SDKPlatformInfo &PlatformInfo : PlatformInfos) {
-      const auto &Triples = PlatformInfo.getTriples();
-      if (llvm::find(Triples, Triple) != Triples.end())
-        return &PlatformInfo;
-    }
-    return nullptr;
-  }
-
   std::string FilePath;
   llvm::Triple::OSType OS;
   llvm::Triple::EnvironmentType Environment;
   VersionTuple Version;
   std::string DisplayName;
+  VersionTuple DefaultDeploymentTarget;
   VersionTuple MaximumDeploymentTarget;
   PlatformInfoStorageType PlatformInfos;
   // Need to wrap the value in an optional here as the value has to be default

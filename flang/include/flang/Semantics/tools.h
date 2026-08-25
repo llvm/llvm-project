@@ -13,6 +13,7 @@
 // canonically for use in semantic checking.
 
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/designator-path.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -195,6 +196,8 @@ const Symbol *HasImpureFinal(
 bool MayRequireFinalization(const DerivedTypeSpec &);
 // Does this type have an allocatable direct component?
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &);
+// Does this type have a pointer direct component?
+bool HasPointerDirectComponent(const DerivedTypeSpec &);
 // Does this type have any defined assignment at any level (or any polymorphic
 // allocatable)?
 bool MayHaveDefinedAssignment(const DerivedTypeSpec &);
@@ -204,7 +207,22 @@ bool IsAssumedLengthCharacter(const Symbol &);
 bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
+
+// Builds an evaluate::DesignatorPath (the structural prefix of a designator
+// used by OpenACC data-sharing analysis) from the parse tree. It uses the
+// already-resolved base symbol and component structure, and analyzes and folds
+// subscript expressions. Returns std::nullopt when the designator cannot be
+// represented (e.g. an unresolved name or a non-integer/erroneous subscript).
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::Designator &);
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::FunctionReference &);
+std::optional<evaluate::DesignatorPath> GetDesignatorPath(
+    SemanticsContext &, const parser::ArrayElement &);
+
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);

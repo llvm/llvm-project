@@ -36,33 +36,33 @@ struct short_container {
 template<typename C>
 void test_container(C& c)
 {
-//  Can't say noexcept here because the container might not be
-    static_assert( std::is_signed_v<decltype(std::ssize(c))>, "");
-    assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
+  static_assert(noexcept(std::ssize(c)) == noexcept(c.size()));
+  static_assert(std::is_signed_v<decltype(std::ssize(c))>, "");
+  assert(std::ssize(c) == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
 template<typename C>
 void test_const_container(const C& c)
 {
-//  Can't say noexcept here because the container might not be
-    static_assert( std::is_signed_v<decltype(std::ssize(c))>, "");
-    assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
+  static_assert(noexcept(std::ssize(c)) == noexcept(c.size()));
+  static_assert(std::is_signed_v<decltype(std::ssize(c))>, "");
+  assert(std::ssize(c) == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
 template<typename T>
 void test_const_container(const std::initializer_list<T>& c)
 {
-    LIBCPP_ASSERT_NOEXCEPT(std::ssize(c)); // our std::ssize is conditionally noexcept
-    static_assert( std::is_signed_v<decltype(std::ssize(c))>, "");
-    assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
+  ASSERT_NOEXCEPT(std::ssize(c));
+  static_assert(std::is_signed_v<decltype(std::ssize(c))>, "");
+  assert(std::ssize(c) == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
 template<typename T>
 void test_container(std::initializer_list<T>& c)
 {
-    LIBCPP_ASSERT_NOEXCEPT(std::ssize(c)); // our std::ssize is conditionally noexcept
-    static_assert( std::is_signed_v<decltype(std::ssize(c))>, "");
-    assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
+  ASSERT_NOEXCEPT(std::ssize(c));
+  static_assert(std::is_signed_v<decltype(std::ssize(c))>, "");
+  assert(std::ssize(c) == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
 template<typename T, std::size_t Sz>
@@ -118,7 +118,7 @@ int main(int, char**)
     static_assert( std::numeric_limits<                   decltype(std::ssize(sc))>::max()  > 60000, "");
     static_assert( std::numeric_limits<std::make_signed_t<decltype(std:: size(sc))>>::max() < 60000, "");
     assert (std::ssize(sc) == 60000);
-    LIBCPP_ASSERT_NOT_NOEXCEPT(std::ssize(sc));
+    ASSERT_NOT_NOEXCEPT(std::ssize(sc));
 
-  return 0;
+    return 0;
 }

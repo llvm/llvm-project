@@ -14,14 +14,11 @@
 #ifndef LLVM_CLANG_AST_GLOBALDECL_H
 #define LLVM_CLANG_AST_GLOBALDECL_H
 
-#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclOpenACC.h"
-#include "clang/AST/DeclOpenMP.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Casting.h"
@@ -29,6 +26,12 @@
 #include <cassert>
 
 namespace clang {
+
+class FunctionTemplateDecl;
+class OMPDeclareMapperDecl;
+class OMPDeclareReductionDecl;
+class OpenACCDeclareDecl;
+class OpenACCRoutineDecl;
 
 enum class DynamicInitKind : unsigned {
   NoStub = 0,
@@ -58,10 +61,16 @@ class GlobalDecl {
   llvm::PointerIntPair<const Decl *, 3> Value;
   unsigned MultiVersionIndex = 0;
 
+  CLANG_ABI static bool hasCUDAGlobalAttr(const Decl *D);
+
+  /// Whether \p D is a kernel referred to through a KernelReferenceKind,
+  /// either directly or as a function template.
+  CLANG_ABI static bool isKernelReference(const Decl *D);
+
   void Init(const Decl *D) {
     assert(!isa<CXXConstructorDecl>(D) && "Use other ctor with ctor decls!");
     assert(!isa<CXXDestructorDecl>(D) && "Use other ctor with dtor decls!");
-    assert(!D->hasAttr<CUDAGlobalAttr>() && "Use other ctor with GPU kernels!");
+    assert(!hasCUDAGlobalAttr(D) && "Use other ctor with GPU kernels!");
 
     Value.setPointer(D);
   }
@@ -85,10 +94,10 @@ public:
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
-  GlobalDecl(const OMPDeclareReductionDecl *D) { Init(D); }
-  GlobalDecl(const OMPDeclareMapperDecl *D) { Init(D); }
-  GlobalDecl(const OpenACCRoutineDecl *D) { Init(D); }
-  GlobalDecl(const OpenACCDeclareDecl *D) { Init(D); }
+  GlobalDecl(const OMPDeclareReductionDecl *D);
+  GlobalDecl(const OMPDeclareMapperDecl *D);
+  GlobalDecl(const OpenACCRoutineDecl *D);
+  GlobalDecl(const OpenACCDeclareDecl *D);
   GlobalDecl(const CXXConstructorDecl *D, CXXCtorType Type) : Value(D, Type) {}
   GlobalDecl(const CXXDestructorDecl *D, CXXDtorType Type) : Value(D, Type) {}
   GlobalDecl(const VarDecl *D, DynamicInitKind StubKind)
@@ -123,9 +132,7 @@ public:
   }
 
   unsigned getMultiVersionIndex() const {
-    assert(isa<FunctionDecl>(
-               getDecl()) &&
-               !cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>() &&
+    assert(isa<FunctionDecl>(getDecl()) && !hasCUDAGlobalAttr(getDecl()) &&
            !isa<CXXConstructorDecl>(getDecl()) &&
            !isa<CXXDestructorDecl>(getDecl()) &&
            "Decl is not a plain FunctionDecl!");
@@ -133,13 +140,7 @@ public:
   }
 
   KernelReferenceKind getKernelReferenceKind() const {
-    assert(((isa<FunctionDecl>(getDecl()) &&
-             cast<FunctionDecl>(getDecl())->isReferenceableKernel()) ||
-            (isa<FunctionTemplateDecl>(getDecl()) &&
-             cast<FunctionTemplateDecl>(getDecl())
-                 ->getTemplatedDecl()
-                 ->hasAttr<CUDAGlobalAttr>())) &&
-           "Decl is not a GPU kernel!");
+    assert(isKernelReference(getDecl()) && "Decl is not a GPU kernel!");
 
     return static_cast<KernelReferenceKind>(Value.getInt());
   }
@@ -163,11 +164,8 @@ public:
     return GD;
   }
 
-  static KernelReferenceKind getDefaultKernelReference(const FunctionDecl *D) {
-    return (D->hasAttr<DeviceKernelAttr>() || D->getLangOpts().CUDAIsDevice)
-               ? KernelReferenceKind::Kernel
-               : KernelReferenceKind::Stub;
-  }
+  CLANG_ABI static KernelReferenceKind
+  getDefaultKernelReference(const FunctionDecl *D);
 
   GlobalDecl getWithDecl(const Decl *D) {
     GlobalDecl Result(*this);
@@ -190,8 +188,7 @@ public:
   }
 
   GlobalDecl getWithMultiVersionIndex(unsigned Index) {
-    assert(isa<FunctionDecl>(getDecl()) &&
-           !cast<FunctionDecl>(getDecl())->hasAttr<CUDAGlobalAttr>() &&
+    assert(isa<FunctionDecl>(getDecl()) && !hasCUDAGlobalAttr(getDecl()) &&
            !isa<CXXConstructorDecl>(getDecl()) &&
            !isa<CXXDestructorDecl>(getDecl()) &&
            "Decl is not a plain FunctionDecl!");
@@ -215,10 +212,6 @@ public:
 namespace llvm {
 
   template<> struct DenseMapInfo<clang::GlobalDecl> {
-    static inline clang::GlobalDecl getEmptyKey() {
-      return clang::GlobalDecl();
-    }
-
     static unsigned getHashValue(clang::GlobalDecl GD) {
       return DenseMapInfo<void*>::getHashValue(GD.getAsOpaquePtr());
     }

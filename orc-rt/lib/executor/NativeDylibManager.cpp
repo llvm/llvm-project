@@ -13,8 +13,6 @@
 #include "orc-rt/NativeDylibManager.h"
 #include "orc-rt/Session.h"
 
-#include <sstream> // For NativeDylibAPIs.inc.
-
 #if defined(__APPLE__) || defined(__linux__)
 #include "Unix/NativeDylibAPIs.inc"
 #else
@@ -45,6 +43,11 @@ NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
 }
 
 void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
+  // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
+  // mustn't be dlclose'd).
+  if (Path.empty())
+    return OnComplete(hostOSGetGlobalLookupHandle());
+
   auto H = hostOSLoadLibrary(Path);
   if (!H)
     return OnComplete(H.takeError());
@@ -67,22 +70,14 @@ void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
 
   auto Addrs = hostOSLibraryLookup(Handle, Names);
 
-  bool HasMissing = false;
-  std::ostringstream ErrMsg;
-  for (size_t I = 0, E = Symbols.size(); I != E; ++I) {
-    if (Addrs[I] == nullptr && Symbols[I].second == RequiredSymbol) {
-      if (!HasMissing) {
-        ErrMsg << "Required symbols {";
-        HasMissing = true;
-      }
-      ErrMsg << " \"" << Names[I] << "\"";
-    }
-  }
-  if (HasMissing) {
-    ErrMsg << " } not found";
-    OnLookupComplete(make_error<StringError>(ErrMsg.str()));
-    return;
-  }
+  // Convert weak-missing entries (empty optional from hostOSLibraryLookup)
+  // to a present zero address. This matches the resolve semantics of
+  // llvm::orc::rt_bootstrap::SimpleExecutorDylibManager: an empty optional
+  // in the result signals a missing required symbol, while a missing
+  // weakly-referenced symbol is reported as a zero address.
+  for (size_t I = 0, E = Symbols.size(); I != E; ++I)
+    if (!Addrs[I] && Symbols[I].second == WeaklyReferencedSymbol)
+      Addrs[I] = nullptr;
 
   OnLookupComplete(std::move(Addrs));
 }
