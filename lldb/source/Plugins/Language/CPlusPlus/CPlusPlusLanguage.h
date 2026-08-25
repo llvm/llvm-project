@@ -24,7 +24,7 @@ class CPlusPlusLanguage : public Language {
 public:
   class CxxMethodName : public Language::MethodName {
   public:
-    CxxMethodName(std::string s) : Language::MethodName(s) {}
+    CxxMethodName(std::string s) : Language::MethodName(std::move(s)) {}
 
     bool ContainsPath(llvm::StringRef path);
 
