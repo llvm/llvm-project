@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "clang/Driver/CommonArgs.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -220,17 +219,22 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 SYCLToolChain::getDeviceLibs(
     const llvm::opt::ArgList &DriverArgs, BoundArch /*BA*/,
     const Action::OffloadKind /*DeviceOffloadingKind*/) const {
-  if (!getTriple().isSPIROrSPIRV())
+  if (!getTriple().isSPIRV() || !getTriple().isArch64Bit())
     return {};
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
     return {};
-  // compiler-rt always installs the spirv64 .bc file under lib/<triple>/
-  // regardless of LLVM_ENABLE_PER_TARGET_RUNTIME_DIR, so only check that path.
+  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: lib/<triple>/libclang_rt.builtins.bc
   SmallString<128> BCPath(getDriver().ResourceDir);
   llvm::sys::path::append(BCPath, "lib", getTriple().str(),
                           "libclang_rt.builtins.bc");
-  if (!llvm::sys::fs::exists(BCPath)) {
+  if (!getDriver().getVFS().exists(BCPath)) {
+    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF: lib/<os>/libclang_rt.builtins-spirv64.bc
+    BCPath = getDriver().ResourceDir;
+    llvm::sys::path::append(BCPath, "lib", getOSLibName(),
+                            "libclang_rt.builtins-spirv64.bc");
+  }
+  if (!getDriver().getVFS().exists(BCPath)) {
     getDriver().Diag(clang::diag::err_drv_no_compiler_rt_builtins_bc) << BCPath;
     return {};
   }
