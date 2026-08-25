@@ -1413,9 +1413,10 @@ namespace {
 
         CGF.EmitBlock(RethrowBB);
         if (SavedExnVar) {
-          CGF.EmitRuntimeCallOrInvoke(RethrowFn,
-                                      CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
-                                                                    CGF.getPointerAlign()));
+          CGF.EmitRuntimeCallOrInvoke(RethrowFn, CGF.Builder.CreateAlignedLoad(
+                                                     CGF.Int8PtrTy, SavedExnVar,
+                                                     CGF.getPointerAlign()));
+
         } else {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn);
         }
