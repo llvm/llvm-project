@@ -860,16 +860,22 @@ void FactsGenerator::handleFullExprCleanup(
 
 void FactsGenerator::handleExitBlock() {
   bool IsDestructor = isa_and_nonnull<CXXDestructorDecl>(AC.getDecl());
+  bool IsMain = false;
+  if (const auto *Func = dyn_cast_if_present<FunctionDecl>(AC.getDecl()))
+    IsMain = Func->isMain();
+
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
     // Create FieldEscapeFacts for all field origins that remain live at exit.
     // Fields in destructors do not escape since the object is being destroyed.
     if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl());
-        FD && !IsDestructor)
+        FD && !IsDestructor) {
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
-    else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {
+    } else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl());
+               VD && !IsMain) {
       // Create GlobalEscapeFacts for all origins with global-storage that
       // remain live at exit.
+      // Avoid escaping globals in 'main' function to reduce false positives.
       if (VD->hasGlobalStorage()) {
         EscapesInCurrentBlock.push_back(
             FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));

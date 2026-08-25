@@ -126,3 +126,9 @@ void store_local_in_global_but_moved(std::string s){
   global_view = s; // expected-warning-re {{stack memory associated with parameter 's' may escape to the global variable 'global_view' which will dangle{{.*}} may have been moved}}
   takeString(std::move(s)); //expected-note {{potentially moved here}}
 }
+
+int main() {
+  int local = 0;
+  global = &local; // no-warning
+  return 0;
+}
