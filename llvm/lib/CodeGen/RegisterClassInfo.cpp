@@ -131,10 +131,6 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
   // Cached orders cannot regain unreserved registers; recompute them lazily.
   bool OnlyNewReservations = Reserved.subsetOf(ReservedInput);
 
-  // Subtract the old set to find newly reserved registers.
-  BitVector NewReservations = ReservedInput;
-  NewReservations.reset(Reserved);
-
   Reserved = ReservedInput;
 
   // Pressure limits depend on the number of allocatable registers.
@@ -161,7 +157,7 @@ void RegisterClassInfo::updateReservedRegs(const BitVector &ReservedInput) {
 
     for (unsigned I = 0; I != Info.NumRegs; ++I) {
       MCPhysReg PhysReg = Info.Order[I];
-      if (NewReservations.test(PhysReg))
+      if (Reserved.test(PhysReg))
         continue;
 
       uint8_t Cost = RegCosts[PhysReg];
