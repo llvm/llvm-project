@@ -238,12 +238,6 @@ static cl::opt<bool> UseExpensiveRangeSharpening(
     cl::desc("Use more powerful methods of sharpening expression ranges. May "
              "be costly in terms of compile time"));
 
-static cl::opt<unsigned> MaxPhiSCCAnalysisSize(
-    "scalar-evolution-max-scc-analysis-depth", cl::Hidden,
-    cl::desc("Maximum amount of nodes to process while searching SCEVUnknown "
-             "Phi strongly connected components"),
-    cl::init(8));
-
 static cl::opt<bool>
     EnableFiniteLoopControl("scalar-evolution-finite-loop", cl::Hidden,
                             cl::desc("Handle <= and >= in finite loops"),
@@ -285,52 +279,8 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
     return;
   }
 
-  auto *NAry = dyn_cast<SCEVNAryExpr>(this);
-  SCEV::NoWrapFlags Flags = NAry ? NAry->getNoWrapFlags() : SCEV::FlagAnyWrap;
-  switch (getSCEVType()) {
-  case scPtrToAddr:
-    CanonicalSCEV = SE.getPtrToAddrExpr(CanonOps[0]);
-    return;
-  case scTruncate:
-    CanonicalSCEV = SE.getTruncateExpr(CanonOps[0], getType());
-    return;
-  case scZeroExtend:
-    CanonicalSCEV = SE.getZeroExtendExpr(CanonOps[0], getType());
-    return;
-  case scSignExtend:
-    CanonicalSCEV = SE.getSignExtendExpr(CanonOps[0], getType());
-    return;
-  case scUDivExpr:
-    CanonicalSCEV = SE.getUDivExpr(CanonOps[0], CanonOps[1]);
-    return;
-  case scAddExpr:
-    CanonicalSCEV = SE.getAddExpr(CanonOps, Flags);
-    return;
-  case scMulExpr:
-    CanonicalSCEV = SE.getMulExpr(CanonOps, Flags);
-    return;
-  case scAddRecExpr:
-    CanonicalSCEV = SE.getAddRecExpr(
-        CanonOps, cast<SCEVAddRecExpr>(this)->getLoop(), Flags);
-    return;
-  case scSMaxExpr:
-    CanonicalSCEV = SE.getSMaxExpr(CanonOps);
-    return;
-  case scUMaxExpr:
-    CanonicalSCEV = SE.getUMaxExpr(CanonOps);
-    return;
-  case scSMinExpr:
-    CanonicalSCEV = SE.getSMinExpr(CanonOps);
-    return;
-  case scUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps);
-    return;
-  case scSequentialUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps, /*Sequential=*/true);
-    return;
-  default:
-    llvm_unreachable("Unknown SCEV type");
-  }
+  // Rebuild the expression from the canonical operands, stripping use flags.
+  CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5214,7 +5164,6 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
     return Result;
 
   const SCEV *Step = AR->getStepRecurrence(*this);
-  unsigned BitWidth = getTypeSizeInBits(AR->getType());
   const Loop *L = AR->getLoop();
 
   // Check whether the backedge-taken count is SCEVCouldNotCompute.
@@ -5244,14 +5193,13 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   // start value and the backedge is guarded by a comparison with the post-inc
   // value, the addrec is safe.
   if (isKnownPositive(Step)) {
-    const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
-                                getUnsignedRangeMax(Step));
-    if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
-        isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
+    ICmpInst::Predicate Pred;
+    const SCEV *OverflowLimit =
+        getUnsignedOverflowLimitForStep(Step, &Pred, this);
+    if (isLoopBackedgeGuardedByCond(L, Pred, AR, OverflowLimit) ||
+        isKnownOnEveryIteration(Pred, AR, OverflowLimit))
       Result = setFlags(Result, SCEV::FlagNUW);
-    }
   }
-
   return Result;
 }
 
@@ -13833,12 +13781,15 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   // will not generate any unsigned overflow. Relaxed no-overflow conditions
   // exploit NoWrapFlags, allowing to optimize in presence of undefined
   // behaviors like the case of C language.
-  if (!Stride->isOne() && !NoWrap)
-    if (canIVOverflowOnGT(RHS, Stride, IsSigned))
-      return getCouldNotCompute();
-
+  bool MayAddOverflow = false;
   const SCEV *Start = IV->getStart();
   const SCEV *End = RHS;
+  if (!Stride->isOne() && canIVOverflowOnGT(RHS, Stride, IsSigned)) {
+    if (!NoWrap)
+      return getCouldNotCompute();
+    MayAddOverflow = true;
+  }
+
   if (!isLoopEntryGuardedByCond(L, Cond, getAddExpr(Start, Stride), RHS)) {
     // If we know that Start >= RHS in the context of loop, then we know that
     // min(RHS, Start) = RHS at this point.
@@ -13860,12 +13811,21 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
       return End;
   }
 
-  // Compute ((Start - End) + (Stride - 1)) / Stride.
-  // FIXME: This can overflow. Holding off on fixing this for now;
-  // howManyGreaterThans will hopefully be gone soon.
-  const SCEV *One = getOne(Stride->getType());
-  const SCEV *BECount = getUDivExpr(
-      getAddExpr(getMinusSCEV(Start, End), getMinusSCEV(Stride, One)), Stride);
+  const SCEV *Delta = getMinusSCEV(Start, End);
+  const SCEV *BECount;
+  if (MayAddOverflow) {
+    // The ceiling division instead needs Start >= End, so that (Start - End) is
+    // the exact unsigned distance between them.
+    if (!isLoopEntryGuardedByCond(
+            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, Start, End))
+      return getCouldNotCompute();
+    BECount = getUDivCeilSCEV(Delta, Stride);
+  } else {
+    // Compute ((Start - End) + (Stride - 1)) / Stride, if the IV cannot
+    // overflow as it requires fewer operations.
+    const SCEV *One = getOne(Stride->getType());
+    BECount = getUDivExpr(getAddExpr(Delta, getMinusSCEV(Stride, One)), Stride);
+  }
 
   APInt MaxStart = IsSigned ? getSignedRangeMax(Start)
                             : getUnsignedRangeMax(Start);

@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
     libc.src.sys.resource.setrlimit
 
     # sys/sem.h entrypoints
@@ -1530,6 +1531,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1543,6 +1545,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # locale.h entrypoints
     libc.src.locale.localeconv

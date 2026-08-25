@@ -18989,15 +18989,14 @@ static SDValue combinePExtWideningMul(SDNode *N, SelectionDAG &DAG,
   bool IsSignedUnsigned = false;
   if (N0IsSExt && N1IsSExt) {
     RV32Opc = RISCVISD::PWMUL;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMUL_H_B01 : RISCVISD::PMUL_W_H01;
+    RV64Opc = RISCVISD::PMUL_HALVES_01;
   } else if (N0IsZExt && N1IsZExt) {
     RV32Opc = RISCVISD::PWMULU;
-    RV64Opc = VT == MVT::v4i16 ? RISCVISD::PMULU_H_B01 : RISCVISD::PMULU_W_H01;
+    RV64Opc = RISCVISD::PMULU_HALVES_01;
   } else {
     IsSignedUnsigned = true;
     RV32Opc = RISCVISD::PWMULSU;
-    RV64Opc =
-        VT == MVT::v4i16 ? RISCVISD::PMULSU_H_B00 : RISCVISD::PMULSU_W_H00;
+    RV64Opc = RISCVISD::PMULSU_HALVES_00;
     if (N0IsZExt && N1IsSExt)
       std::swap(A, B);
   }
@@ -19166,10 +19165,17 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
 /// The idea behind this canonicalization is that if %p is used as a mask
 /// in a masked.load/store, we can easily turn it to use VL-predicate later
 /// by assigning `vl = min(%m, <number of vector elements>)`.
-static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
-                                              SDValue RHS, ISD::CondCode CC,
-                                              const SDLoc &DL,
-                                              SelectionDAG &DAG) {
+static SDValue canonicalizeMaskForVLPredicate(
+    EVT MaskVT, SDValue LHS, SDValue RHS, ISD::CondCode CC, const SDLoc &DL,
+    SelectionDAG &DAG, const TargetLowering::DAGCombinerInfo &DCI) {
+
+  // This transformation performs checks against the vector element type, which
+  // is also used to generate scalar value that will be splatted later. Because
+  // of this, the emitted scalar value might not be legal type and therefore we
+  // need to run this before type legalizer.
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
   using namespace SDPatternMatch;
   if (!MaskVT.isFixedLengthVector() ||
       !(CC == ISD::SETUGT || CC == ISD::SETGT || CC == ISD::SETULT ||
@@ -19184,7 +19190,10 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
   }
   bool IsSigned = ISD::isSignedIntSetCC(CC);
 
-  SDValue Boundary = DAG.getSplatValue(RHS, /*LegalizeType=*/true);
+  EVT ElementVT = LHS.getValueType().getScalarType();
+  uint64_t ElementSize = LHS.getScalarValueSizeInBits();
+
+  SDValue Boundary = DAG.getSplatValue(RHS);
   if (!Boundary)
     return SDValue();
 
@@ -19197,32 +19206,48 @@ static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
       return SDValue();
   }
 
-  SDValue BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+  SDValue BaseIndex = DAG.getSplatValue(LHSOp0);
   if (!BaseIndex) {
     std::swap(LHSOp0, LHSOp1);
-    BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+    BaseIndex = DAG.getSplatValue(LHSOp0);
   }
-  if (!BaseIndex || !isa<BuildVectorSDNode>(LHSOp1) ||
-      BaseIndex.getValueType() != Boundary.getValueType())
+  if (!BaseIndex || !isa<BuildVectorSDNode>(LHSOp1))
     return SDValue();
 
   // Return {a,n} from a build_vector sequence of {a, a+n, a+2n, a+3n, ....}
   auto StepVector = cast<BuildVectorSDNode>(LHSOp1)->isArithmeticSequence();
   if (!StepVector || !StepVector->second.isOne())
     return SDValue();
-  EVT LenVT = BaseIndex.getValueType();
   const APInt &Start = StepVector->first;
-  unsigned LenWidth = LenVT.getScalarSizeInBits();
-  APInt Offset =
-      IsSigned ? Start.sextOrTrunc(LenWidth) : Start.zextOrTrunc(LenWidth);
+
+  Boundary = DAG.getExtOrTrunc(IsSigned, Boundary, DL, ElementVT);
+  BaseIndex = DAG.getExtOrTrunc(IsSigned, BaseIndex, DL, ElementVT);
+  SDValue Offset = DAG.getConstant(IsSigned ? Start.sextOrTrunc(ElementSize)
+                                            : Start.zextOrTrunc(ElementSize),
+                                   DL, ElementVT);
+
+  if (IsSigned) {
+    // Two additional conditions:
+    // 1. Offset + BaseIndex never overflow
+    if (!DAG.willNotOverflowAdd(/*IsSigned=*/true, BaseIndex, Offset))
+      return SDValue();
+
+    // 2. Offset + BaseIndex has to be non-negative
+    auto BaseIndexKB = DAG.computeKnownBits(BaseIndex);
+    auto OffsetKB = DAG.computeKnownBits(Offset);
+    if (!KnownBits::add(BaseIndexKB, OffsetKB, /*NSW=*/true,
+                        /*NUW=*/false)
+             .isNonNegative())
+      return SDValue();
+  }
 
   unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
   SDValue NewStepVector = DAG.getStepVector(DL, LHS.getValueType());
-  BaseIndex = DAG.getNode(
-      ISD::ADD, DL, LenVT, BaseIndex, DAG.getConstant(Offset, DL, LenVT),
-      IsSigned ? SDNodeFlags::NoSignedWrap : SDNodeFlags::NoUnsignedWrap);
-  BaseIndex = DAG.getNode(MinOpc, DL, LenVT, Boundary, BaseIndex);
-  Boundary = DAG.getNode(ISD::SUB, DL, LenVT, Boundary, BaseIndex);
+  BaseIndex = DAG.getNode(ISD::ADD, DL, ElementVT, BaseIndex, Offset,
+                          IsSigned ? SDNodeFlags::NoSignedWrap
+                                   : SDNodeFlags::NoUnsignedWrap);
+  BaseIndex = DAG.getNode(MinOpc, DL, ElementVT, Boundary, BaseIndex);
+  Boundary = DAG.getNode(ISD::SUB, DL, ElementVT, Boundary, BaseIndex);
   Boundary = DAG.getSplat(RHS.getValueType(), DL, Boundary);
 
   return DAG.getSetCC(DL, MaskVT, NewStepVector, Boundary, CC);
@@ -19357,7 +19382,8 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT OpVT = N0.getValueType();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (SDValue V = canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG))
+  if (SDValue V =
+          canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG, DCI))
     return V;
 
   // Looking for an equality compare.
@@ -26406,8 +26432,10 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
-      reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
-                            "have a frame pointer");
+      Func.getContext().diagnose(DiagnosticInfoUnsupported{
+          Func,
+          "'SiFive-CLIC-preemptible' interrupt functions cannot have a frame "
+          "pointer"});
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

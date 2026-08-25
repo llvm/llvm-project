@@ -72,6 +72,7 @@ static_library("CPlusPlus") {
     "MsvcStlTree.cpp",
     "MsvcStlTuple.cpp",
     "MsvcStlUnordered.cpp",
+    "MsvcStlValarray.cpp",
     "MsvcStlVariant.cpp",
     "MsvcStlVector.cpp",
   ]
