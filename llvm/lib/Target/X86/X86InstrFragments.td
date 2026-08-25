@@ -884,6 +884,18 @@ def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+// Only matches when the data (non-flags) result of the xor is unused, i.e. the
+// __builtin_parity idiom where only EFLAGS are consumed. This guards the 64-bit
+// h-register XOR8rr_NOREX pattern: its GR8_NOREX result may be allocated to a
+// high-byte register (AH/BH/CH/DH), which cannot be encoded in a REX-prefixed
+// instruction. If the result value escaped (e.g. got zero/sign-extended into an
+// R8-R15 register) the encoder would fail, so restrict the trick to the case
+// where the value result has no uses at all.
+def xor_flag_dead_result : PatFrag<(ops node:$lhs, node:$rhs),
+                                   (X86xor_flag node:$lhs, node:$rhs), [{
+  return SDValue(N, 0).use_empty();
+}]>;
+
 def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
                             (X86and_flag node:$lhs, node:$rhs), [{
   return hasNoCarryFlagUses(SDValue(N, 1));

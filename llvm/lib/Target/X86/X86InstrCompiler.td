@@ -1927,10 +1927,11 @@ def : Pat<(store (i8 (trunc_su (srl_su GR16:$src, (i8 8)))), addr:$dst),
 // we need to be more careful. We're using a NOREX instruction here in case
 // register allocation fails to keep the two registers together. So we need to
 // make sure we can't accidentally mix R8-R15 with an h-register.
-def : Pat<(X86xor_flag (i8 (trunc GR32:$src)),
-                       (i8 (trunc (srl_su GR32:$src, (i8 8))))),
+def : Pat<(xor_flag_dead_result (i8 (trunc GR32:$src)),
+                                (i8 (trunc (srl_su GR32:$src, (i8 8))))),
           (XOR8rr_NOREX (EXTRACT_SUBREG GR32:$src, sub_8bit),
-                        (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
+                        (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>,
+      Requires<[In64BitMode]>;
 
 // (shl x, 1) ==> (add x, x)
 // Note that if x is undef (immediate or otherwise), we could theoretically
