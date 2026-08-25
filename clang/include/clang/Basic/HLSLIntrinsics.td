@@ -1329,7 +1329,7 @@ vector.
 Normalize is based on the following formula: x / length(x).
 }];
   let ParamNames = ["x"];
-  let Body = "return x / __detail::length_impl(x);";
+  let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
