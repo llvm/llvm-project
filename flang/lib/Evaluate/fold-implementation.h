@@ -1411,12 +1411,7 @@ public:
               kind, *charLength_, std::move(elements_), ConstantSubscripts{n}}};
         }
       } else {
-        // resultInfo_ is default-constructed (kind 0) and only ever has its
-        // isFromInexactLiteralConversion flag set above; give it the actual
-        // runtime kind here so that the Constant's result_ carries a valid
-        // kind (kind_ is a public field of Type<CAT>, not a category with
-        // its own constructor call, so this preserves that flag).
-        assert(resultInfo_.kind() == kind);
+        CHECK(resultInfo_.kind() == kind);
         return Expr<T>{Constant<T>{
             kind, std::move(elements_), ConstantSubscripts{n}, resultInfo_}};
       }
@@ -1907,6 +1902,7 @@ Expr<TO> FoldOperation(
   return common::visit(
       [&msvcWorkaround](auto &kindExpr) -> Expr<TO> {
         using Operand = ResultType<decltype(kindExpr)>;
+        const int operandKind{kindExpr.kind()};
         const int toKind{msvcWorkaround.toKind};
         // This variable is a workaround for msvc which emits an error when
         // using the FROMCAT template parameter below.
@@ -2007,18 +2003,12 @@ Expr<TO> FoldOperation(
             }
           } else if constexpr (TO::category == TypeCategory::Logical &&
               FromCat == TypeCategory::Logical) {
-            // The conversion's target kind is a runtime property; build the
-            // result LOGICAL constant with that kind rather than letting it
-            // default (the Expr<Logical>(bool) constructor would otherwise
-            // produce LogicalResultKind=4 and silently drop the conversion).
-            return Expr<TO>{Constant<TO>{
-                toKind, value::LogicalValue{toKind, value->IsTrue()}}};
+            return MakeConstantExpr<TO>(toKind, value->IsTrue());
           }
         } else if constexpr (TO::category == FromCat &&
             FromCat != TypeCategory::Character) {
           // Conversion of non-constant in same type category
-          auto fromTy{kindExpr.GetType()};
-          if (fromTy && fromTy->kind() == toKind) {
+          if (Operand::category == TO::category && toKind == operandKind) {
             return std::move(kindExpr); // remove needless conversion
           } else if constexpr (TO::category == TypeCategory::Logical ||
               TO::category == TypeCategory::Integer) {
@@ -2026,24 +2016,16 @@ Expr<TO> FoldOperation(
                     std::get_if<Convert<Operand, TO::category>>(&kindExpr.u)}) {
               // Conversion of conversion of same category & kind
               if (auto *x{std::get_if<Expr<TO>>(&innerConv->left().u)}) {
-                // intermediateKind is the kind of the middle (Operand) result;
-                // xKind is the kind of the innermost expression, which must
-                // match the outer target for the round trip to be a no-op.
-                auto intermediateTy{kindExpr.GetType()};
-                auto xTy{x->GetType()};
-                int intermediateKind{
-                    intermediateTy ? intermediateTy->kind() : 0};
-                int xKind{xTy ? xTy->kind() : 0};
-                if constexpr (TO::category == TypeCategory::Logical) {
-                  return std::move(*x); // no-op Logical conversion pair
-                } else { // Integer
-                  if (xKind == toKind && toKind <= intermediateKind) {
-                    return std::move(*x); // widening/narrowing conversion pair
-                  } else if (toKind == SubscriptIntegerKind &&
-                      xKind == toKind) {
-                    // int(int(size(...),kind=k),kind=8) -> size(...)
+                if (TO::category == TypeCategory::Logical ||
+                    toKind <= operandKind) {
+                  return std::move(*x); // no-op Logical or Integer
+                                        // widening/narrowing conversion pair
+                } else if constexpr (std::is_same_v<TO,
+                                         DescriptorInquiry::Result>) {
+                  if (toKind == DescriptorInquiry::kind()) {
                     if (std::holds_alternative<DescriptorInquiry>(x->u) ||
                         std::holds_alternative<TypeParamInquiry>(x->u)) {
+                      // int(int(size(...),kind=k),kind=8) -> size(...)
                       return std::move(*x);
                     }
                   }
@@ -2277,19 +2259,19 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       auto quotAndRem{folded->first.DivideSigned(folded->second)};
       if (quotAndRem.divisionByZero) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) division by zero"_warn_en_US, folded->first.kind());
+            "INTEGER(%d) division by zero"_warn_en_US, kind);
         return Expr<T>{std::move(x)};
       }
       if (quotAndRem.overflow) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) division overflowed"_warn_en_US, folded->first.kind());
+            "INTEGER(%d) division overflowed"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, quotAndRem.quotient}};
     } else if constexpr (T::category == TypeCategory::Unsigned) {
       auto quotAndRem{folded->first.DivideUnsigned(folded->second)};
       if (quotAndRem.divisionByZero) {
         context.Warn(common::UsageWarning::FoldingException,
-            "UNSIGNED(%d) division by zero"_warn_en_US, folded->first.kind());
+            "UNSIGNED(%d) division by zero"_warn_en_US, kind);
         return Expr<T>{std::move(x)};
       }
       return Expr<T>{Constant<T>{kind, quotAndRem.quotient}};
@@ -2304,9 +2286,10 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
         if (folded->second.IsZero() && context.moduleFileName().has_value()) {
           using IntType = typename T::Scalar::Word;
           auto intNumerator{folded->first.ToInteger()};
+          const int intKind{intNumerator.value.kind()};
           isCanonicalNaNOrInf = intNumerator.flags == RealFlags{} &&
-              intNumerator.value >= IntType{16, -1} &&
-              intNumerator.value <= IntType{16, 1};
+              intNumerator.value >= IntType{intKind, -1} &&
+              intNumerator.value <= IntType{intKind, 1};
         }
       }
       if (!isCanonicalNaNOrInf) {
@@ -2332,14 +2315,13 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       auto power{folded->first.Power(folded->second)};
       if (power.divisionByZero) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) zero to negative power"_warn_en_US,
-            folded->first.kind());
+            "INTEGER(%d) zero to negative power"_warn_en_US, kind);
       } else if (power.overflow) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) power overflowed"_warn_en_US, folded->first.kind());
+            "INTEGER(%d) power overflowed"_warn_en_US, kind);
       } else if (power.zeroToZero) {
         context.Warn(common::UsageWarning::FoldingException,
-            "INTEGER(%d) 0**0 is not defined"_warn_en_US, folded->first.kind());
+            "INTEGER(%d) 0**0 is not defined"_warn_en_US, kind);
       }
       return Expr<T>{Constant<T>{kind, power.power}};
     } else {
@@ -2358,7 +2340,7 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       } else {
         context.Warn(common::UsageWarning::FoldingFailure,
             "Power for %s cannot be folded on host"_warn_en_US,
-            DynamicType{T::category, folded->first.kind()}.AsFortran());
+            DynamicType{T::category, kind}.AsFortran());
       }
     }
   }

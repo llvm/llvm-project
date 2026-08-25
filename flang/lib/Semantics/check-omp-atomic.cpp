@@ -202,7 +202,7 @@ private:
   evaluate::Expr<T> Reconstruct(const S &op, evaluate::Expr<T> atom,
       evaluate::Expr<T> op1, evaluate::Expr<T> op2) {
     using TypeS = llvm::remove_cvref_t<decltype(op)>;
-    const int KindS{op.kind()};
+    const int kindS{op.kind()};
     // This function has to be semantically correct for all possible types
     // of S even though at runtime s will only be one of the matched types.
     // Limit the construction to the operation types that we tried to match
@@ -213,7 +213,7 @@ private:
       CHECK(op1.kind() == op2.kind());
       const int K{op1.kind()};
       if constexpr (std::is_same_v<TypeS, evaluate::LogicalOperation>) {
-        CHECK(K == KindS);
+        CHECK(K == kindS);
         // Logical operators take an extra argument in their constructor,
         // so they need their own reconstruction code.
         common::LogicalOperator opCode{op.logicalOperator};
@@ -224,9 +224,9 @@ private:
       }
     } else {
       // Generic reconstruction.
-      return evaluate::Expr<T>(TypeS(KindS, //
+      return evaluate::Expr<T>(TypeS(kindS, //
           std::move(atom),
-          evaluate::Expr<T>(TypeS(KindS, //
+          evaluate::Expr<T>(TypeS(kindS, //
               std::move(op1), std::move(op2)))));
     }
   }

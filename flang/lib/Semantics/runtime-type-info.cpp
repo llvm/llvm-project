@@ -357,7 +357,7 @@ static SomeExpr SaveObjectInit(
   CHECK(symbol.get<ObjectEntityDetails>().init().has_value());
   SetReadOnlyCompilerCreatedFlags(symbol);
   return evaluate::AsGenericExpr(
-      evaluate::Designator<evaluate::SomeDerived>{0, symbol});
+      evaluate::Designator<evaluate::SomeDerived>{/*kind=*/0, symbol});
 }
 
 static SomeExpr IntExpr(int kind, std::int64_t n) {

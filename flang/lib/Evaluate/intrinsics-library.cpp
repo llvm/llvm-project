@@ -152,7 +152,7 @@ template <typename FuncType, typename TR, typename... TA, size_t... I>
 static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     FoldingContext &context, std::vector<Expr<SomeType>> &&args,
     std::index_sequence<I...>) {
-  const int kind{TR::kind};
+  constexpr int kind{TR::kind};
   host::HostFloatingPointEnvironment hostFPE;
   hostFPE.SetUpHostFloatingPointEnvironment(context);
   host::HostType<TR> hostResult{};

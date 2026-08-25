@@ -22,7 +22,7 @@ static std::optional<Expr<SomeType>> ZeroExtend(const Constant<T> &c) {
         Scalar<LargestInt>::ConvertUnsigned(LargestIntKind, v).value);
   }
   return AsGenericExpr(Constant<LargestInt>{
-      LargestIntKind, std::move(exts), ConstantSubscripts{c.shape()}});
+      LargestIntKind, std::move(exts), ConstantSubscripts(c.shape())});
 }
 
 // for ALL, ANY & PARITY
@@ -164,7 +164,7 @@ static std::optional<Expr<SomeInteger>> IntToRealBoundHelper(
   using IType = Type<TypeCategory::Integer>;
   using IntType = Scalar<Type<TypeCategory::Integer>>;
   using RealType = Scalar<Type<TypeCategory::Real>>;
-  IntType result{xIKind, 0}; // 0
+  IntType result{IntType::Zero(xIKind)}; // 0
   while (true) {
     std::optional<IntType> next;
     for (int bit{0}; bit < IntType::bits(xIKind); ++bit) {
@@ -238,7 +238,7 @@ public:
   template <typename T> Result Test(int kind) {
     if (T::category == typeAndShape_->type().category() &&
         kind == typeAndShape_->type().kind()) {
-      return AsGenericExpr(FunctionRef<T>{typeAndShape_->type().kind(),
+      return AsGenericExpr(FunctionRef<T>{kind,
           ProcedureDesignator{std::move(call_.specificIntrinsic)},
           std::move(call_.arguments)});
     } else {
@@ -286,7 +286,7 @@ static Expr<SomeType> IntTransferMold(
   }
   Constant<SubscriptInteger> value{SubscriptIntegerKind,
       std::vector<Scalar<SubscriptInteger>>{
-          Scalar<SubscriptInteger>{SubscriptIntegerKind, 0}},
+          Scalar<SubscriptInteger>::Zero(SubscriptIntegerKind)},
       std::move(shape)};
   auto expr{ConvertToType(iType, AsGenericExpr(std::move(value)))};
   CHECK(expr.has_value());

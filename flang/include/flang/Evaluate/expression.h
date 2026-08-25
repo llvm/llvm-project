@@ -923,9 +923,7 @@ public:
   using Result = SomeKind<CAT>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
-  int kind() const {
-    return common::visit([](const auto &v) -> int { return v.kind(); }, u);
-  }
+  using ExpressionBase<SomeKind<CAT>>::kind;
 
   common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
 };

@@ -312,7 +312,7 @@ std::optional<Expr<SomeComplex>> ConstructComplex(
 // Extracts the real or imaginary part of the result of a COMPLEX
 // expression, when that expression is simple enough to be duplicated.
 template <bool GET_IMAGINARY> struct ComplexPartExtractor {
-  // NOTE: The the code in this class was dead code; a std/common::withStdString
+  // NOTE: The the code in this class was dead code; a std/common::visit
   // was forgotten such that the overload resolution was looking for a
   // std::variant<...> overload instead for the runtime content of the
   // std::variant. There was no specialization for std::variant so this fallback
@@ -689,8 +689,6 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
             return PromoteAndRelate(opr, std::move(rx), std::move(ry));
           },
           [&](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
-            // rx aliases x, so sequence the conversion before std::move(x)
-            // (argument order is unspecified)
             auto converted{ConvertTo(rx, std::move(iy))};
             return Relate(messages, opr, std::move(x),
                 AsGenericExpr(std::move(converted)));

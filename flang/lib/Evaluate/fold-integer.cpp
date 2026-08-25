@@ -10,7 +10,6 @@
 #include "fold-matmul.h"
 #include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
-#include "flang/Evaluate/shape.h"
 
 namespace Fortran::evaluate {
 
@@ -329,8 +328,10 @@ template <typename T> class CountAccumulator {
 public:
   constexpr int kind() const { return kind_; }
 
-  CountAccumulator(int kind, const Constant<MaskT> &mask)
-      : kind_{kind}, mask_{mask} {}
+  CountAccumulator(int kind, int maskKind, const Constant<MaskT> &mask)
+      : kind_{kind}, mask_{mask} {
+    CHECK(maskKind == mask.kind());
+  }
   void operator()(
       Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
     CHECK(element.kind() == kind());
@@ -350,17 +351,18 @@ private:
 };
 
 template <typename T>
-static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
+static Expr<T> FoldCount(
+    int kind, int maskKind, FoldingContext &context, FunctionRef<T> &&ref) {
   using KindLogical = Type<TypeCategory::Logical>;
   static_assert(T::category == TypeCategory::Integer);
-  const int kind{ref.kind()};
+  CHECK(kind == ref.kind());
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<KindLogical>> arrayAndMask{
-          ProcessReductionArgs<KindLogical>(LogicalResultKind, context,
-              ref.arguments(), dim, /*ARRAY=*/0, /*DIM=*/1)}) {
-    CountAccumulator<T> accumulator{kind, arrayAndMask->array};
+          ProcessReductionArgs<KindLogical>(maskKind, context, ref.arguments(),
+              dim, /*ARRAY=*/0, /*DIM=*/1)}) {
+    CountAccumulator<T> accumulator{kind, maskKind, arrayAndMask->array};
     Constant<T> result{DoReduction<T>(kind, arrayAndMask->array,
-        arrayAndMask->mask, dim, Scalar<T>{kind, 0}, accumulator)};
+        arrayAndMask->mask, dim, Scalar<T>::Zero(kind), accumulator)};
     if (accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
           "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
@@ -1050,7 +1052,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
           cx->u);
     }
   } else if (name == "count") {
-    return FoldCount<T>(context, std::move(funcRef));
+    int maskKind = args[0]->GetType()->kind();
+    return FoldCount<T>(kind, maskKind, context, std::move(funcRef));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(kind, {kind, kind}, context,
         std::move(funcRef),
@@ -1262,7 +1265,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &x) {
             using TR = typename std::decay_t<decltype(x)>::Result;
-            return MakeConstantExpr<T>(kind, Scalar<TR>::MAXEXPONENT(x.kind()));
+            const int trKind{x.kind()};
+            return MakeConstantExpr<T>(kind, Scalar<TR>::MAXEXPONENT(trKind));
           },
           sx->u);
     }
@@ -1275,7 +1279,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       return common::visit(
           [&](const auto &x) {
             using TR = typename std::decay_t<decltype(x)>::Result;
-            return MakeConstantExpr<T>(kind, Scalar<TR>::MINEXPONENT(x.kind()));
+            const int trKind{x.kind()};
+            return MakeConstantExpr<T>(kind, Scalar<TR>::MINEXPONENT(trKind));
           },
           sx->u);
     }
@@ -1391,6 +1396,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
         symbol = args[0]->GetAssumedTypeDummy();
       }
       if (symbol && IsAssumedRank(*symbol)) {
+        // DescriptorInquiry can only be placed in expression of kind
+        // DescriptorInquiry::ResultKind.
         return ConvertToType<T>(kind,
             Expr<DescriptorInquiry::Result>{DescriptorInquiry{
                 NamedEntity{*symbol}, DescriptorInquiry::Field::Rank}});

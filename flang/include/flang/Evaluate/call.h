@@ -297,7 +297,7 @@ struct SpecificIntrinsic {
 
 struct ProcedureDesignator {
   static int kind() {
-    llvm_unreachable("This class has no kind");
+    DIE("This class has no kind");
     return 0;
   }
 
@@ -339,7 +339,7 @@ using Chevrons = std::vector<Expr<SomeType>>;
 class ProcedureRef {
 public:
   static int kind() {
-    llvm_unreachable("This class has no kind");
+    DIE("This class has no kind");
     return 0;
   }
 

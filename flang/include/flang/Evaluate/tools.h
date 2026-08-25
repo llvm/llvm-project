@@ -638,12 +638,40 @@ common::IfNoLvalue<Expr<SomeKind<TC>>, FROM> ConvertTo(
       to.u);
 }
 
+template <typename FROM>
+common::IfNoLvalue<Expr<SomeType>, FROM> ConvertTo(
+    const Expr<SomeType> &to, FROM &&from) {
+  return common::visit(
+      [&](const auto &toCatExpr) {
+        return AsGenericExpr(ConvertTo(toCatExpr, std::move(from)));
+      },
+      to.u);
+}
+
 // Convert an expression of some known category to a dynamically chosen
 // kind of some category (usually but not necessarily distinct).
+template <TypeCategory TOCAT, typename VALUE> struct ConvertToKindHelper {
+  using Result = std::optional<Expr<SomeKind<TOCAT>>>;
+  using Types = CategoryTypes<TOCAT>;
+  ConvertToKindHelper(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
+  template <typename T> Result Test(int k) {
+    if (kind == k) {
+      return std::make_optional(
+          AsCategoryExpr(ConvertToType<T>(k, std::move(value))));
+    }
+    return std::nullopt;
+  }
+  int kind;
+  VALUE value;
+};
+
 template <TypeCategory TOCAT, typename VALUE>
 common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
     int kind, VALUE &&x) {
-  return AsCategoryExpr(ConvertToType<Type<TOCAT>>(kind, std::move(x)));
+  auto result{
+      SearchTypes(ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})};
+  CHECK(result.has_value());
+  return *result;
 }
 
 // Given a type category CAT, SameKindExprs<CAT, N> is a variant that

@@ -9,14 +9,10 @@
 #include "real-value-impl.h"
 #include "integer-value-impl.h"
 #include "flang/Common/idioms.h"
-#include "flang/Decimal/decimal.h"
 #include "flang/Evaluate/integer-value.h"
-#include "flang/Evaluate/real-value.h"
-#include "flang/Evaluate/rounding-bits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <cstring>
-#include <new>
 #include <string>
 
 namespace Fortran::evaluate::value {

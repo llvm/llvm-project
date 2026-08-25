@@ -1,4 +1,5 @@
 #include "../../lib/Evaluate/host.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -16,7 +17,7 @@ template <typename... T> struct RunOnTypes {};
 template <typename Test, typename... T>
 struct RunOnTypes<Test, std::tuple<T...>> {
   template <typename U> static void RunOnKinds() {
-    for (int kind : KindsByType<U::category>::kinds) {
+    for (int kind : Fortran::common::KindsByType<U::category>::kinds) {
       Test::template Run<U>(kind);
     }
   }

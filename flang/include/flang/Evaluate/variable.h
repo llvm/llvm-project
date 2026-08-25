@@ -450,6 +450,7 @@ FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 class DescriptorInquiry {
 public:
   using Result = SubscriptInteger;
+  static constexpr int ResultKind{SubscriptIntegerKind};
   static constexpr int kind() { return SubscriptIntegerKind; }
   static constexpr DynamicType GetType() {
     return DynamicType{TypeCategory::Integer, SubscriptIntegerKind};

@@ -44,7 +44,7 @@ public:
     case 4:
       return static_cast<std::int64_t>(ch & 0xffffffffu);
     }
-    llvm_unreachable("unsupported character kind");
+    DIE("unsupported character kind");
   }
 
   static Character NEW_LINE(int kind) { return Character{kind, 1, NewLine()}; }

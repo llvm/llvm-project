@@ -46,22 +46,14 @@ TYPED_TEST_SUITE(RealValueHostTypedKind, RealHostTypedKinds, KindName);
 
 class RealValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(RealValueKind, RealValueKind,
-    testing::ValuesIn(RealKinds), [](const testing::TestParamInfo<int> &info) {
+    testing::ValuesIn(KindsByType<TypeCategory::Real>::kinds),
+    [](const testing::TestParamInfo<int> &info) {
       return "REAL_" + std::to_string(info.param);
     });
 
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
-
-constexpr int KindPos(int kind) {
-  for (std::size_t i{0}; i < std::size(RealKinds); ++i) {
-    if (RealKinds[i] == kind) {
-      return static_cast<int>(i);
-    }
-  }
-  return -1;
-}
 
 testing::AssertionResult RealValuesEqual(const char *lhsExpr,
     const char *rhsExpr, const RealValue &lhs, const RealValue &rhs) {
@@ -84,7 +76,7 @@ std::string AsFortranString(const RealValue &x, int kind, bool minimal) {
 
 /// Takes an integer and distributes its bits across a floating-point value so
 /// that a short sweep still covers signs, zeroes, subnormals, infinities and
-/// NaNs.  The LSB complements the result.  Copied from the legacy real.cpp.
+/// NaNs. The LSB complements the result. Copied from the legacy real.cpp.
 static std::uint32_t SpreadBits(std::uint32_t n) {
   static const int shifts[]{
       -1, 31, 23, 30, 22, 0, 24, 29, 25, 28, 26, 1, 16, 21, 2, -1};
@@ -124,6 +116,16 @@ static void ExpectSameAsHost(const RealValue &got, HostT expected) {
   u.f = expected;
   EXPECT_EQ(std::uint64_t{u.ui}, got.RawBits().ToUInt64())
       << "expected " << double{expected} << ", got " << got.DumpHexadecimal();
+}
+
+static constexpr int KindPos(int kind) {
+  constexpr auto &RealKinds{KindsByType<TypeCategory::Real>::kinds};
+  for (std::size_t i{0}; i < std::size(RealKinds); ++i) {
+    if (RealKinds[i] == kind) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1549,11 +1549,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
           Expr<SomeReal> realExpr{common::visit(
               [&](const auto &z) {
                 using PartType = typename ResultType<decltype(z)>::Part;
+                const int partkind{z.kind()};
                 auto part{kind == MiscKind::ComplexPartRe
                         ? ComplexPart::Part::RE
                         : ComplexPart::Part::IM};
                 return AsCategoryExpr(Designator<PartType>{
-                    z.kind(), ComplexPart{std::move(*dataRef), part}});
+                    partkind, ComplexPart{std::move(*dataRef), part}});
               },
               zExpr->u)};
           return AsGenericExpr(std::move(realExpr));

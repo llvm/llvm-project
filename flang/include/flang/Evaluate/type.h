@@ -568,30 +568,6 @@ bool AreSameDerivedTypeIgnoringSequence(
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX)
 
-/// Iterable lists of valid kinds for each TypeCategory for use by SearchTypes.
-template <TypeCategory CAT> struct KindsByType;
-template <> struct KindsByType<TypeCategory::Integer> {
-  static constexpr int kinds[] = FORTRAN_INTEGER_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Unsigned> {
-  static constexpr int kinds[] = FORTRAN_UNSIGNED_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Real> {
-  static constexpr int kinds[] = FORTRAN_REAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Complex> {
-  static constexpr int kinds[] = FORTRAN_REAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Logical> {
-  static constexpr int kinds[] = FORTRAN_LOGICAL_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Character> {
-  static constexpr int kinds[] = FORTRAN_CHARACTER_KINDS;
-};
-template <> struct KindsByType<TypeCategory::Derived> {
-  static constexpr int kinds[] = {0};
-};
-
 // Given a VISITOR class of the general form
 //   struct VISITOR {
 //     using Result = ...;
@@ -609,7 +585,7 @@ common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
   using Tuple = typename VISITOR::Types;
   if constexpr (J < std::tuple_size_v<Tuple>) {
     using TYPE = std::tuple_element_t<J, Tuple>;
-    for (int kind : evaluate::KindsByType<TYPE::category>::kinds) {
+    for (int kind : common::KindsByType<TYPE::category>::kinds) {
       if (auto result{visitor.template Test<TYPE>(kind)}) {
         return result;
       }
