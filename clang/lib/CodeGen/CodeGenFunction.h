@@ -346,6 +346,18 @@ public:
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock::iterator InsertPt) const;
 
+  /// For -fsanitize=array-bounds: whether the context of each expression a check
+  /// may be emitted for requires the object it designates to exist. An
+  /// expression with no entry was never walked; see mustElementExist().
+  using BoundsCheckRequirementMap = llvm::DenseMap<const Expr *, bool>;
+  BoundsCheckRequirementMap BoundsCheckRequirements;
+
+  /// Records those requirements for every expression in \p Root.
+  /// \p RootRequires is what the context asks of \p Root itself: nothing for a
+  /// body, but a reference member's initializer is asked for the object.
+  void computeBoundsCheckRequirements(const Stmt *Root,
+                                      bool RootRequires = false);
+
   /// CurFuncDecl - Holds the Decl for the current outermost
   /// non-closure context.
   const Decl *CurFuncDecl = nullptr;
@@ -3397,15 +3409,23 @@ public:
                      SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr);
 
-  /// Emit a check that \p Base points into an array object, which
-  /// we can access at index \p Index. \p Accessed should be \c false if we
-  /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
+  /// Emit a check that \p Base points into an array object, which we can access
+  /// at index \p Index. \p MustExist selects the comparison: when the context
+  /// requires the designated element to exist the index must be strictly less
+  /// than the bound, otherwise an index equal to the bound is accepted, because
+  /// C11 6.5.6p8 makes a one-past-the-end pointer a valid value and 6.5.3.2p3
+  /// makes "&Arr[Idx]" legal for Idx equal to the bound.
   void EmitBoundsCheck(const Expr *ArrayExpr, const Expr *ArrayExprBase,
-                       llvm::Value *Index, QualType IndexType, bool Accessed);
+                       llvm::Value *Index, QualType IndexType, bool MustExist);
+
+  /// Does the context \p E appears in require the element it designates to
+  /// exist? Read from BoundsCheckRequirements; see the comment
+  /// on mustElementExist in CGExpr.cpp for the model.
+  bool mustElementExist(const Expr *E);
   void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
                            llvm::Value *IndexVal, QualType IndexType,
                            llvm::Value *BoundsVal, QualType BoundsType,
-                           bool Accessed);
+                           bool MustExist);
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
@@ -3436,7 +3456,7 @@ public:
   // counted_by attribute.
   void EmitCountedByBoundsChecking(const Expr *ArrayExpr, QualType ArrayType,
                                    Address ArrayInst, QualType IndexType,
-                                   llvm::Value *IndexVal, bool Accessed,
+                                   llvm::Value *IndexVal, bool MustExist,
                                    bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -4496,8 +4516,7 @@ public:
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
   LValue EmitUnaryOpLValue(const UnaryOperator *E);
-  LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
-                                bool Accessed = false);
+  LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E);
   llvm::Value *EmitMatrixIndexExpr(const Expr *E);
   LValue EmitMatrixSingleSubscriptExpr(const MatrixSingleSubscriptExpr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);

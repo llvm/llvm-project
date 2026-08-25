@@ -2193,7 +2193,7 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   QualType IdxTy = E->getIdx()->getType();
 
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
-    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
+    CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, CGF.mustElementExist(E));
 
   Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
 
@@ -4580,8 +4580,10 @@ llvm::Value *CodeGenFunction::EmitPointerArithmetic(
     index = Builder.CreateNeg(index, "idx.neg");
 
   if (SanOpts.has(SanitizerKind::ArrayBounds))
+    // `a[i]` is `*(a + i)` (C99 6.5.2.1p2), so ask the context as a subscript
+    // does; `p = a + i` only computes an address.
     EmitBoundsCheck(BO, pointerOperand, index, indexOperand->getType(),
-                    /*Accessed*/ false);
+                    mustElementExist(BO));
 
   const PointerType *pointerType =
       pointerOperand->getType()->getAs<PointerType>();
