@@ -2668,7 +2668,7 @@ exit:
   ret void
 }
 
-; %stride is usedc through both `trunc`/`sext` for different accesses.
+; %stride is used through both `trunc`/`sext` for different accesses.
 define void @trunc_ext_stride(ptr noalias %p.out, ptr %p0, ptr %p1, i32 %stride) {
 ; CHECK-LABEL: VPlan for loop in 'trunc_ext_stride'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -2754,6 +2754,83 @@ header:
   store i32 %val, ptr %gep.st, align 8
 
   %exitcond = icmp slt i32 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+; Stride is used through a chain of casts defined outside VPlan.
+define void @trunc_ext_chained_stride(ptr noalias %p.out, ptr %p, i64 %stride) {
+; CHECK-LABEL: VPlan for loop in 'trunc_ext_chained_stride'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %stride.trunc = trunc i64 %stride to i1
+; CHECK-NEXT:    IR   %stride.sext = sext i1 %stride.trunc to i64
+; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
+; CHECK-EMPTY:
+; CHECK-NEXT:  strides.check:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp ne ir<%stride>, ir<-1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<-1>
+; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
+; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
+; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP7]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:  Successor(s): ir-bb<header>
+;
+entry:
+  %stride.trunc = trunc i64 %stride to i1
+  %stride.sext = sext i1 %stride.trunc to i64
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+
+  %idx = mul i64 %iv, %stride.sext
+
+  %gep.ld = getelementptr i64, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 8
+
+  %gep.st = getelementptr i64, ptr %p.out, i64 %iv
+  store i64 %ld, ptr %gep.st, align 8
+
+  %exitcond = icmp slt i64 %iv.next, 128
   br i1 %exitcond, label %header, label %exit
 
 exit:
