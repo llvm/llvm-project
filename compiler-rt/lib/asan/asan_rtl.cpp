@@ -334,48 +334,42 @@ static void InitializeHighMemEnd() {
 }
 
 void PrintAddressSpaceLayout() {
-  if (!kGaplessShadow) {
-    if (kHighMemBeg) {
-      Printf("|| `[%p, %p]` || HighMem    ||\n", (void*)kHighMemBeg,
-             (void*)kHighMemEnd);
-      Printf("|| `[%p, %p]` || HighShadow ||\n", (void*)kHighShadowBeg,
-             (void*)kHighShadowEnd);
-    }
-    if (kMidMemBeg) {
-      Printf("|| `[%p, %p]` || ShadowGap3 ||\n", (void*)kShadowGap3Beg,
-             (void*)kShadowGap3End);
-      Printf("|| `[%p, %p]` || MidMem     ||\n", (void*)kMidMemBeg,
-             (void*)kMidMemEnd);
-      Printf("|| `[%p, %p]` || ShadowGap2 ||\n", (void*)kShadowGap2Beg,
-             (void*)kShadowGap2End);
-      Printf("|| `[%p, %p]` || MidShadow  ||\n", (void*)kMidShadowBeg,
-             (void*)kMidShadowEnd);
-    }
-    Printf("|| `[%p, %p]` || ShadowGap  ||\n", (void*)kShadowGapBeg,
-           (void*)kShadowGapEnd);
-    if (kLowShadowBeg) {
-      Printf("|| `[%p, %p]` || LowShadow  ||\n", (void*)kLowShadowBeg,
-             (void*)kLowShadowEnd);
-      Printf("|| `[%p, %p]` || LowMem     ||\n", (void*)kLowMemBeg,
-             (void*)kLowMemEnd);
-    }
-    Printf("MemToShadow(shadow): %p %p", (void*)MEM_TO_SHADOW(kLowShadowBeg),
-           (void*)MEM_TO_SHADOW(kLowShadowEnd));
-    if (kHighMemBeg) {
-      Printf(" %p %p", (void*)MEM_TO_SHADOW(kHighShadowBeg),
-             (void*)MEM_TO_SHADOW(kHighShadowEnd));
-    }
-    if (kMidMemBeg) {
-      Printf(" %p %p", (void*)MEM_TO_SHADOW(kMidShadowBeg),
-             (void*)MEM_TO_SHADOW(kMidShadowEnd));
-    }
-  } else {
-    Printf("|| `[%p, %p]` || Shadow  ||\n", (void*)kLowShadowBeg,
-           (void*)kHighShadowEnd);
-    Printf("|| `[%p, %p]` || Mem     ||\n", (void*)kLowMemBeg,
-           (void*)kHighMemEnd);
-    Printf("MemToShadow(shadow): %p %p", (void*)MEM_TO_SHADOW(kLowShadowBeg),
+  if (kHighMemBeg) {
+    Printf("|| `[%p, %p]` || HighMem    ||\n",
+           (void*)kHighMemBeg, (void*)kHighMemEnd);
+    Printf("|| `[%p, %p]` || HighShadow ||\n",
+           (void*)kHighShadowBeg, (void*)kHighShadowEnd);
+  }
+  if (kMidMemBeg) {
+    Printf("|| `[%p, %p]` || ShadowGap3 ||\n",
+           (void*)kShadowGap3Beg, (void*)kShadowGap3End);
+    Printf("|| `[%p, %p]` || MidMem     ||\n",
+           (void*)kMidMemBeg, (void*)kMidMemEnd);
+    Printf("|| `[%p, %p]` || ShadowGap2 ||\n",
+           (void*)kShadowGap2Beg, (void*)kShadowGap2End);
+    Printf("|| `[%p, %p]` || MidShadow  ||\n",
+           (void*)kMidShadowBeg, (void*)kMidShadowEnd);
+  }
+  Printf("|| `[%p, %p]` || ShadowGap  ||\n",
+         (void*)kShadowGapBeg, (void*)kShadowGapEnd);
+  if (kLowShadowBeg) {
+    Printf("|| `[%p, %p]` || LowShadow  ||\n",
+           (void*)kLowShadowBeg, (void*)kLowShadowEnd);
+    Printf("|| `[%p, %p]` || LowMem     ||\n",
+           (void*)kLowMemBeg, (void*)kLowMemEnd);
+  }
+  Printf("MemToShadow(shadow): %p %p",
+         (void*)MEM_TO_SHADOW(kLowShadowBeg),
+         (void*)MEM_TO_SHADOW(kLowShadowEnd));
+  if (kHighMemBeg) {
+    Printf(" %p %p",
+           (void*)MEM_TO_SHADOW(kHighShadowBeg),
            (void*)MEM_TO_SHADOW(kHighShadowEnd));
+  }
+  if (kMidMemBeg) {
+    Printf(" %p %p",
+           (void*)MEM_TO_SHADOW(kMidShadowBeg),
+           (void*)MEM_TO_SHADOW(kMidShadowEnd));
   }
   Printf("\n");
   Printf("redzone=%zu\n", (uptr)flags()->redzone);
@@ -389,6 +383,7 @@ void PrintAddressSpaceLayout() {
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
   Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
+  Printf("kGaplessShadow: %d\n", kGaplessShadow);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
