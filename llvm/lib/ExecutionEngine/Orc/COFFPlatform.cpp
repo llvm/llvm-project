@@ -173,9 +173,10 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     return GeneratorArchive.takeError();
 
   std::set<std::string> DylibsToPreload;
-  auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Create(
-      ObjLinkingLayer, nullptr, std::move(*GeneratorArchive),
-      COFFImportFileScanner(DylibsToPreload));
+  auto OrcRuntimeArchiveGenerator =
+      COFFStaticLibraryDefinitionGenerator::Create(ObjLinkingLayer, nullptr,
+                                                   std::move(*GeneratorArchive),
+                                                   DylibsToPreload);
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
@@ -299,7 +300,6 @@ Error COFFPlatform::setupJITDylib(JITDylib &JD) {
         return Err;
   }
 
-  JD.addGenerator(DLLImportDefinitionGenerator::Create(ES, ObjLinkingLayer));
   return Error::success();
 }
 
@@ -379,7 +379,7 @@ bool COFFPlatform::supportedTarget(const Triple &TT) {
 
 COFFPlatform::COFFPlatform(
     ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
-    std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
+    std::unique_ptr<COFFStaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
     std::set<std::string> DylibsToPreload,
     std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
     std::unique_ptr<object::Archive> OrcRuntimeArchive,
