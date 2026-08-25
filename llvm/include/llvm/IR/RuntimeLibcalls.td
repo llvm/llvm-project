@@ -3466,11 +3466,9 @@ defvar X86CommonLibcalls =
        LibcallImpls<(add X86LongDoubleF128Body), isLongDoubleF128>,
        LibmHasExp10F32, LibmHasExp10F64,
        LibcallImpls<(add exp10l_f80), isLongDoubleX87AndHasExp10>,
-       LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
+       // MSVCRT does not provide the powi helpers.
+       LibcallImpls<(add __powisf2, __powidf2, __powitf2_f128), isNotOSMSVCRT>,
        SecurityCheckCookieIfWinMSVC,
-       // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
-       // hack for one test relying on it.
-       __powitf2_f128,
        DefaultStackProtector,
        DefaultSafeStackGlobals,
        LibcallImpls<(add MemChkLibcalls), isNotPS>,
