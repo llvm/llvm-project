@@ -250,8 +250,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSUB, MVT::bf16, Custom);
       // Promote scalar operations to a v2bf16 operation with an unused high
       // lane.
-      for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
-                           ISD::FCANONICALIZE})
+      for (unsigned Opc : {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMAXNUM,
+                           ISD::FMINNUM, ISD::FCANONICALIZE})
         AddPromotedToType(Opc, MVT::bf16, MVT::v2bf16);
     }
 
@@ -1056,7 +1056,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasOCPFP8ConversionInsts()) {
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  if (Subtarget->hasOCPFP8ConversionInsts() || HasE5M3ConversionInsts) {
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
@@ -3475,7 +3477,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
-  BitVector Skipped(Ins.size());
+  BitVector Skipped(Fn.arg_size());
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
 
@@ -11014,16 +11016,43 @@ SDValue SITargetLowering::lowerFromFP8(SDValue Op, bool IsBF8,
 SDValue
 SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
-  // by gfx942 fall through to the generic expansion.
+  // Handle the OCP FP8 formats (E4M3FN, E5M2) and unsigned E5M3 on subtargets
+  // with matching HW conversions. Other formats use the generic expansion.
   APFloatBase::Semantics FPSemantic =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
-  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
-      FPSemantic != APFloatBase::S_Float8E5M2)
-    return SDValue();
+  const bool IsFP8 = FPSemantic == APFloatBase::S_Float8E4M3FN;
   const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
+  const bool IsE5M3 = FPSemantic == APFloatBase::S_Float8E5M3FNU;
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
+    return SDValue();
 
   EVT DstVT = Op.getValueType();
+  if (IsE5M3) {
+    if (DstVT.getScalarType() != MVT::f32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    SDValue Src = Op.getOperand(0);
+    assert((!DstVT.isVector() || DstVT == MVT::v2f32) &&
+           "only the v2f32 vector result is custom lowered");
+
+    if (DstVT.isVector())
+      Src = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Src);
+    Src = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+
+    auto ConvertByte = [&](unsigned ByteSel) {
+      return DAG.getNode(AMDGPUISD::CVT_F32_FP8_E5M3, SL, MVT::f32, Src,
+                         DAG.getTargetConstant(ByteSel, SL, MVT::i32));
+    };
+
+    if (!DstVT.isVector())
+      return ConvertByte(0);
+    return DAG.getBuildVector(DstVT, SL, {ConvertByte(0), ConvertByte(1)});
+  }
+
   if (!DstVT.isVector()) {
     SDValue Src = Op.getOperand(0);
     if (Src.getValueType() != MVT::i32) {
@@ -11041,7 +11070,7 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   return SDValue();
 }
 
-SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
+SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
                                      SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
@@ -11059,7 +11088,9 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
     return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
   }
 
-  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_BF8_F32 : AMDGPUISD::CVT_PK_FP8_F32;
+  unsigned Opc = IsBF8    ? AMDGPUISD::CVT_PK_BF8_F32
+                 : IsE5M3 ? AMDGPUISD::CVT_PK_FP8_F32_E5M3
+                          : AMDGPUISD::CVT_PK_FP8_F32;
   SDValue PoisonI32 = DAG.getPOISON(MVT::i32);
   SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
 
@@ -11081,32 +11112,40 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
 SDValue
 SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
                                                SelectionDAG &DAG) const {
-  // Only the OCP fp8 formats E4M3FN and E5M2 map to HW conversions, everything
-  // else uses the generic expansion.
+  // The OCP FP8 formats (E4M3FN, E5M2) and unsigned E5M3 map to HW conversions
+  // on subtargets that support them. Everything else uses generic expansion.
   APFloatBase::Semantics Sem =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
-  if (Sem != APFloatBase::S_Float8E4M3FN && Sem != APFloatBase::S_Float8E5M2)
+  const bool IsFP8 = Sem == APFloatBase::S_Float8E4M3FN;
+  const bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
+  const bool IsE5M3 = Sem == APFloatBase::S_Float8E5M3FNU;
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
     return SDValue();
-  bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
 
-  // The packed HW conversions round to nearest-even and never saturate.
+  // The HW conversions only support nearest-even. The OCP conversions do not
+  // saturate. The unsigned E5M3 conversion always clamps out-of-range inputs,
+  // which also refines the non-saturating form where those inputs are poison.
   if (static_cast<RoundingMode>(Op.getConstantOperandVal(2)) !=
       RoundingMode::NearestTiesToEven)
     return SDValue();
-  if (Op.getConstantOperandVal(3) != 0)
+  if (!IsE5M3 && Op.getConstantOperandVal(3) != 0)
     return SDValue();
 
   EVT SrcEltVT = Op.getOperand(0).getValueType().getScalarType();
   // The f32 form is built here rather than by a tablegen pattern because the
   // HW result is i32 while the node result is i16 after the i8 promotion.
   if (SrcEltVT == MVT::f32)
-    return lowerToFP8(Op, IsBF8, DAG);
-  if (SrcEltVT == MVT::f16 && Subtarget->hasF16FP8ConversionInsts()) {
+    return lowerToFP8(Op, IsBF8, IsE5M3, DAG);
+  if (!IsE5M3 && SrcEltVT == MVT::f16 &&
+      Subtarget->hasF16FP8ConversionInsts()) {
     // A scalar conversion is selected from the generic node by tablegen, only
     // the illegal v2i8 result type needs lowering here.
     if (!Op.getValueType().isVector())
       return Op;
-    return lowerToFP8(Op, IsBF8, DAG);
+    return lowerToFP8(Op, IsBF8, false, DAG);
   }
   return SDValue();
 }
@@ -13237,7 +13276,7 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
   SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i32);
   SDValue Rsrc;
 
-  if (Subtarget->has45BitNumRecordsBufferResource()) {
+  if (Subtarget->getBufferResourceNumRecordsWidth() == 45) {
     NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i64);
     NumRecords = DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
                              DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
@@ -15505,6 +15544,14 @@ static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
     }
 
     assert(ScalarTySize < 32);
+    if (TypeSize % 32 == 0) {
+      assert(DWordOffset < TypeSize / 32);
+      SDValue Cast = DAG.getBitcast(
+          EVT::getVectorVT(*DAG.getContext(), MVT::i32, TypeSize / 32), Src);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Cast,
+                         DAG.getConstant(DWordOffset, SL, MVT::i32));
+    }
+
     auto NumElements = TypeSize / ScalarTySize;
     auto Trunc32Elements = (ScalarTySize * NumElements) / 32;
     auto NormalizedTrunc = Trunc32Elements * 32 / ScalarTySize;
@@ -18301,9 +18348,38 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
       Op2.getOpcode() != ISD::FP_EXTEND)
     return SDValue();
 
-  // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
-  // regardless of the denorm mode setting. Therefore,
-  // fp-contract is sufficient to allow generating fdot2.
+  // The fdot2 fold (fma_mix -> dot2) is only safe when both instructions agree
+  // on how f16 subnormal inputs are handled. However, if both FMAs carry afn
+  // the caller accepts approximate results, so any subnormal flushing
+  // introduced by dot2 is acceptable regardless of mode.
+  //
+  // gfx90a (CDNA2) is the sole exception (dot2UnconditionalFlush): v_dot2c
+  // unconditionally flushes f16 subnormal inputs to zero regardless of MODE,
+  // while v_fma_mix_f32 preserves them when ieee=1 (the default compute kernel
+  // mode). The fold is safe only when f32 denorm = PreserveSign, which implies
+  // ieee=0 so both flush.
+  //
+  // All other GPUs: v_dot2 does NOT flush f16 subnormal inputs. v_fma_mix_f32
+  // flushes them only when f32 denorm = PreserveSign. The fold is safe only
+  // when f32 denorm is IEEE (both preserve the subnormal). Dynamic mode is
+  // also rejected since the runtime value is unknown.
+  bool AllowInaccuracy = N->getFlags().hasApproximateFuncs() &&
+                         FMA->getFlags().hasApproximateFuncs();
+  if (!AllowInaccuracy) {
+    const MachineFunction &MF = DAG.getMachineFunction();
+    DenormalMode Mode = MF.getDenormalMode(APFloat::IEEEsingle());
+    if (Subtarget->dot2UnconditionalFlush()) {
+      // gfx90a: fold safe only when f32 denorm flushes.
+      if (Mode != DenormalMode::getPreserveSign())
+        return SDValue();
+    } else {
+      // All other GPUs: fold safe only when f32 denorm is IEEE.
+      if (Mode != DenormalMode::getIEEE())
+        return SDValue();
+    }
+  }
+
+  // fp-contract allows reassociating the fma tree into a dot product.
   const TargetOptions &Options = DAG.getTarget().Options;
   if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
       (N->getFlags().hasAllowContract() &&

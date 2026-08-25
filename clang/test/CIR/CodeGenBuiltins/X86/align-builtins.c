@@ -1,13 +1,11 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -emit-cir -o %t.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir %s
+// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -emit-cir -o %t.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -x c -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -x c++ -ffreestanding -triple x86_64-unknown-linux -target-feature +avx512vl -Wno-implicit-function-declaration -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -ffreestanding -triple=x86_64-unknown-linux -target-feature +avx512vl -emit-llvm -Wall -Werror %s -o - | FileCheck %s -check-prefix=OGCG

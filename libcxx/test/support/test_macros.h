@@ -535,7 +535,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_NO_UNIQUE_ADDRESS
 #endif
 
-#ifdef _LIBCPP_SHORT_WCHAR
+#if defined(_WIN32) || defined(__SIZEOF_WCHAR_T__) && __SIZEOF_WCHAR_T__ == 2
 #  define TEST_SHORT_WCHAR
 #endif
 
@@ -573,5 +573,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
 #  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
+
+// Align benchmark functions and never inline them to reduce changes in performance in unrelated benchmarks
+#define TEST_ALIGN_BENCHMARK __attribute__((aligned(128), noinline))
 
 #endif // SUPPORT_TEST_MACROS_HPP

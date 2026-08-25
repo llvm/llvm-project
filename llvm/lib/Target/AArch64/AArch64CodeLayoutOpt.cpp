@@ -21,6 +21,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -37,14 +38,17 @@ using namespace llvm;
 #define AARCH64_CODE_LAYOUT_OPT_NAME "AArch64 Code Layout Optimization"
 
 enum CodeLayoutOpt {
-  CmpCsel,   // Align CMP/CMN-CSEL pairs
-  FcmpFcsel, // Align FCMP-FCSEL pairs
+  None = 0,
+  CmpCsel = 1 << 0,   // Align CMP/CMN-CSEL pairs
+  FcmpFcsel = 1 << 1, // Align FCMP-FCSEL pairs
+  LLVM_MARK_AS_BITMASK_ENUM(FcmpFcsel)
 };
 
 static cl::bits<CodeLayoutOpt> EnableCodeAlignment(
     "aarch64-code-layout-opt-enable", cl::Hidden, cl::CommaSeparated,
     cl::desc("Enable code alignment optimization for instruction pairs"),
     cl::values(
+        clEnumValN(None, "none", "Disable the code alignment pass"),
         clEnumValN(CmpCsel, "cmp-csel", "CMP/CMN-CSEL pair alignment (32-bit)"),
         clEnumValN(FcmpFcsel, "fcmp-fcsel", "FCMP-FCSEL pair alignment")));
 
@@ -83,13 +87,13 @@ private:
   /// Align each fusible CMP/CMN-CSEL or FCMP-FCSEL pair in \p MBB by emitting
   /// .p2align before the lead instruction (splitting the block if needed).
   /// \returns true iff at least one pair was found and aligned.
-  bool alignLayoutSensitivePatterns(MachineBasicBlock *MBB);
+  bool alignLayoutSensitivePatterns(MachineBasicBlock *MBB, CodeLayoutOpt CLO);
 
   /// Emit .p2align before MI. Splits the block if MI is not at its start.
   void emitP2Align(MachineInstr &MI, Align DesiredAlign,
                    unsigned MaxSkipBytes = 4);
 
-  bool optimizeForCodeLayout(MachineFunction &MF);
+  bool optimizeForCodeLayout(MachineFunction &MF, CodeLayoutOpt CLO);
 };
 
 } // end anonymous namespace
@@ -169,19 +173,26 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
 
-  // Default: enable when the subtarget opts in via FeatureAlignCmpCSelPairs.
-  if (!EnableCodeAlignment.getBits() && Subtarget->hasAlignCmpCSelPairs()) {
-    if (Subtarget->hasFuseCmpCSel())
-      EnableCodeAlignment.addValue(CmpCsel);
-    if (Subtarget->hasFuseFCmpFCSel())
-      EnableCodeAlignment.addValue(FcmpFcsel);
+  CodeLayoutOpt CLO = None;
+  if (EnableCodeAlignment.getNumOccurrences()) {
+    if (EnableCodeAlignment.isSet(CodeLayoutOpt::CmpCsel))
+      CLO |= CodeLayoutOpt::CmpCsel;
+    if (EnableCodeAlignment.isSet(CodeLayoutOpt::FcmpFcsel))
+      CLO |= CodeLayoutOpt::FcmpFcsel;
+  } else {
+    // Default: enable when the subtarget opts in via FeatureAlignCmpCSelPairs.
+    if (Subtarget->hasAlignCmpCSelPairs()) {
+      if (Subtarget->hasFuseCmpCSel())
+        CLO |= CodeLayoutOpt::CmpCsel;
+      if (Subtarget->hasFuseFCmpFCSel())
+        CLO |= CodeLayoutOpt::FcmpFcsel;
+    }
   }
 
-  if (!(EnableCodeAlignment.isSet(CmpCsel) && Subtarget->hasFuseCmpCSel()) &&
-      !(EnableCodeAlignment.isSet(FcmpFcsel) && Subtarget->hasFuseFCmpFCSel()))
+  if (CLO == None)
     return false;
 
-  return optimizeForCodeLayout(MF);
+  return optimizeForCodeLayout(MF, CLO);
 }
 
 void AArch64CodeLayoutOpt::emitP2Align(MachineInstr &MI, Align DesiredAlign,
@@ -204,8 +215,8 @@ void AArch64CodeLayoutOpt::emitP2Align(MachineInstr &MI, Align DesiredAlign,
 // A pair is: a qualifying lead instruction immediately followed by its
 // consumer (CMP/CMN→CSEL or FCMP→FCSEL), with no intervening instructions.
 // Returns true iff at least one pair was found and aligned.
-bool AArch64CodeLayoutOpt::alignLayoutSensitivePatterns(
-    MachineBasicBlock *MBB) {
+bool AArch64CodeLayoutOpt::alignLayoutSensitivePatterns(MachineBasicBlock *MBB,
+                                                        CodeLayoutOpt CLO) {
   auto End = MBB->instr_end();
   SmallVector<std::pair<MachineInstr *, bool>, 4> Pairs;
 
@@ -216,14 +227,14 @@ bool AArch64CodeLayoutOpt::alignLayoutSensitivePatterns(
       break;
 
     // --- CMP/CMN-CSEL detection ---
-    if (EnableCodeAlignment.isSet(CmpCsel) && isQualifyingIntCompare(MI) &&
+    if ((CLO & CodeLayoutOpt::CmpCsel) && isQualifyingIntCompare(MI) &&
         NextIt->getOpcode() == AArch64::CSELWr) {
       Pairs.push_back({&MI, true});
       continue;
     }
 
     // --- FCMP-FCSEL detection ---
-    if (EnableCodeAlignment.isSet(FcmpFcsel) &&
+    if ((CLO & CodeLayoutOpt::FcmpFcsel) &&
         isFloatingPointCompare(MI.getOpcode()) &&
         isFloatingPointConditionalSelect(NextIt->getOpcode())) {
       Pairs.push_back({&MI, false});
@@ -240,12 +251,13 @@ bool AArch64CodeLayoutOpt::alignLayoutSensitivePatterns(
   return !Pairs.empty();
 }
 
-bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF) {
+bool AArch64CodeLayoutOpt::optimizeForCodeLayout(MachineFunction &MF,
+                                                 CodeLayoutOpt CLO) {
   DBG("optimizeForCodeLayout: " << MF.getName() << "\n");
 
   bool Changed = false;
   for (auto &MBB : MF)
-    Changed |= alignLayoutSensitivePatterns(&MBB);
+    Changed |= alignLayoutSensitivePatterns(&MBB, CLO);
 
   if (!Changed)
     return false;

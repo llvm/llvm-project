@@ -168,9 +168,9 @@ struct AsyncInfoWrapperTy {
 
   /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
-  void freeAllocationAfterSynchronization(void *Ptr) {
+  void freeAllocationAfterSynchronization(void *Ptr, TargetAllocTy Kind) {
     std::lock_guard<std::mutex> AllocationGuard(AsyncInfoPtr->Mutex);
-    AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
+    AsyncInfoPtr->AssociatedAllocations.push_back({Ptr, Kind});
   }
 
 private:
@@ -456,11 +456,12 @@ struct KernelLaunchArgsTy {
   uint32_t UserThreadLimit[3] = {0, 0, 0};
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t StrictBlocksAndThreads
-        : 1; // The user-requested number of blocks and threads are strict.
+    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
+    uint64_t StrictThreads
+        : 1; // The user-requested number of threads is strict.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0};
+  } Flags = {0, 0, 0, 0, 0};
   /// Set by the caller when replaying a previously recorded kernel launch, so
   /// the plugin can report the outcome back; null for a normal launch.
   KernelReplayOutcomeTy *ReplayOutcome = nullptr;
@@ -600,6 +601,7 @@ private:
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                  uint32_t UserNumBlocks, uint64_t LoopTripCount,
                                  uint32_t &EffectiveNumThreads,
+                                 bool IsNumThreadsStrict,
                                  bool IsNumThreadsFromUser) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic, No-Loop
@@ -894,10 +896,7 @@ public:
   }
 };
 
-/// A plugin-side context grouping a set of devices. Plugins that need to hold
-/// native context state (e.g. Level Zero's ze_context_handle_t) override this
-/// through GenericPluginTy::createPluginContext. The base class is a plain
-/// device set used by plugins that do not need native context state.
+/// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
                   llvm::ArrayRef<GenericDeviceTy *> Devices)
@@ -910,8 +909,18 @@ struct PluginContextTy {
 
   virtual ~PluginContextTy() = default;
 
+  /// Release resources owned by this context. Called from olDestroyContext
+  /// before the object is destroyed so that errors are propagated instead of
+  /// being swallowed in the destructor.
+  virtual llvm::Error deinit() { return llvm::Error::success(); }
+
   llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
   GenericPluginTy &getPlugin() const { return Plugin; }
+
+  /// Initialize a __tgt_async_info structure on \p Device.
+  Error initAsyncInfo(GenericDeviceTy &Device, __tgt_async_info **AsyncInfoPtr);
+  virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
 protected:
   GenericPluginTy &Plugin;
@@ -1143,10 +1152,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, KernelLaunchArgsTy &LaunchArgs,
                      __tgt_async_info *AsyncInfo);
-
-  /// Initialize a __tgt_async_info structure.
-  Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
-  virtual Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
   /// Enqueue a host call to AsyncInfo
   Error enqueueHostCall(void (*Callback)(void *), void *UserData,
@@ -1402,8 +1407,12 @@ private:
   /// only necessary for unhosted targets like the GPU.
   virtual bool shouldSetupRPCServer() const { return false; }
 
-  /// Pointer to the memory manager or nullptr if not available.
+  /// Pointer to the device memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
+  /// Memory managers for the host and shared allocation kinds or nullptr if not
+  /// available.
+  MemoryManagerTy *HostMemoryManager;
+  MemoryManagerTy *SharedMemoryManager;
 
   /// Per device setting of MemoryManager's Threshold
   virtual size_t getMemoryManagerSizeThreshold() { return 0; }
@@ -1439,6 +1448,20 @@ private:
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
+
+  /// Return the memory manager for the given allocation kind.
+  MemoryManagerTy *getMemoryManagerFor(TargetAllocTy Kind) {
+    switch (Kind) {
+    case TARGET_ALLOC_DEFAULT:
+    case TARGET_ALLOC_DEVICE:
+      return MemoryManager;
+    case TARGET_ALLOC_HOST:
+      return HostMemoryManager;
+    case TARGET_ALLOC_SHARED:
+      return SharedMemoryManager;
+    }
+    return nullptr;
+  }
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1654,14 +1677,9 @@ struct GenericPluginTy {
                          "async_barrier not supported");
   }
 
-  /// Create a plugin-side context grouping the given devices. The default
-  /// implementation returns a plain PluginContextTy that only tracks the
-  /// device set. Plugins that own native context state (e.g. Level Zero)
-  /// override this to instantiate a plugin-specific subclass.
+  /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
-  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) {
-    return std::make_unique<PluginContextTy>(*this, Devices);
-  }
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
 
 protected:
   /// Indicate whether a device id is valid.
@@ -1793,9 +1811,6 @@ public:
 
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
-
-  /// Creates an asynchronous queue for the given plugin.
-  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
 
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);

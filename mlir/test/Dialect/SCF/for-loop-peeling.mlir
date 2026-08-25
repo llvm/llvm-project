@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -scf-for-loop-peeling -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -scf-for-loop-peeling=skip-partial=false -canonicalize -split-input-file -verify-diagnostics | FileCheck %s -check-prefix=CHECK-NO-SKIP
 
+
 //  CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s1 - (-s0 + s1) mod s2)>
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //      CHECK: func @fully_dynamic_bounds(
@@ -377,3 +378,24 @@ func.func @zero_step(%arg0: memref<i64>) {
   return
 }
 
+// -----
+
+// CHECK-LABEL:   func.func @non_index_loop_bounds(
+// CHECK-SAME:                                         %[[INIT:.*]]: i32,
+// CHECK-SAME:                                         %[[N:.*]]: i32) -> i32 {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C2:.*]] = arith.constant 2 : i32
+// CHECK:           %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[C0]] to %[[N]] step %[[C2]] iter_args(%[[ACC:.*]] = %[[INIT]]) -> (i32) : i32 {
+// CHECK:             %[[ADD:.*]] = arith.addi %[[ACC]], %[[IV]] : i32
+// CHECK:             scf.yield %[[ADD]] : i32
+// CHECK:           }
+// CHECK:           return %[[RESULT]] : i32
+func.func @non_index_loop_bounds(%init: i32, %n: i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %c2 = arith.constant 2 : i32
+  %r = scf.for %i = %c0 to %n step %c2 iter_args(%a = %init) -> (i32) : i32 {
+    %t = arith.addi %a, %i : i32
+    scf.yield %t : i32
+  }
+  return %r : i32
+}

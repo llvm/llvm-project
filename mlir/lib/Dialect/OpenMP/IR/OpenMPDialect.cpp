@@ -344,6 +344,48 @@ void OpenMPDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect operation attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
+  if (!isa<DeclareTargetInterface>(op))
+    return op->emitError() << "omp.declare_target can only be applied to "
+                              "DeclareTargetInterface ops";
+
+  auto declareTargetAttr = dyn_cast<DeclareTargetAttr>(attr);
+  if (!declareTargetAttr)
+    return op->emitError()
+           << "omp.declare_target must be an #omp.declaretarget attribute";
+
+  if (isa<mlir::FunctionOpInterface>(op)) {
+    if (declareTargetAttr.getAutomap())
+      return op->emitOpError()
+             << "omp.declare_target 'automap' is not valid on functions";
+
+    // TODO: Disallow the `local` clause (OpenMP 6.0).
+    if (declareTargetAttr.getCaptureClause().getValue() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      return op->emitOpError()
+             << "omp.declare_target 'link' is not valid on functions";
+  } else {
+    // TODO: Disallow the `indirect` clause (OpenMP 5.1).
+    if (declareTargetAttr.getImplicit())
+      return op->emitOpError()
+             << "omp.declare_target 'implicit' is only valid on functions";
+  }
+  return success();
+}
+
+LogicalResult
+OpenMPDialect::verifyOperationAttribute(Operation *op,
+                                        NamedAttribute attribute) {
+  if (attribute.getName() == "omp.declare_target")
+    return verifyDeclareTargetAttr(op, attribute.getValue());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser and printer for Allocate Clause
 //===----------------------------------------------------------------------===//
 
@@ -4828,6 +4870,31 @@ LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
 }
 
+LogicalResult CriticalOp::verify() {
+  SymbolRefAttr currentName = getNameAttr();
+
+  CriticalOp parentCritical = (*this)->getParentOfType<CriticalOp>();
+
+  while (parentCritical) {
+    SymbolRefAttr parentName = parentCritical.getNameAttr();
+
+    if (currentName == parentName) {
+      if (currentName) {
+        return emitOpError() << "cannot be nested inside another omp.critical "
+                                "region with the same name ("
+                             << currentName << ")";
+      } else {
+        return emitOpError() << "cannot be nested inside another unnamed "
+                                "omp.critical region";
+      }
+    }
+
+    parentCritical = parentCritical->getParentOfType<CriticalOp>();
+  }
+
+  return success();
+}
+
 LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getNameAttr()) {
     SymbolRefAttr symbolRef = getNameAttr();
@@ -5048,6 +5115,12 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   if (auto op = dyn_cast<AtomicUpdateOp>(getFirstOp()))
     return op;
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
+}
+
+AtomicCompareOp AtomicCaptureOp::getAtomicCompareOp() {
+  if (auto op = dyn_cast<AtomicCompareOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicCompareOp>(getSecondOp());
 }
 
 LogicalResult AtomicCaptureOp::verify() {

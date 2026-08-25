@@ -3639,8 +3639,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
+      TLI.getExceptionSelectorRegister(
+          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -8755,16 +8757,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   std::optional<unsigned> ResOPC;
   switch (VPIntrin.getIntrinsicID()) {
-  case Intrinsic::vp_ctlz: {
-    bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
-    ResOPC = IsZeroUndef ? ISD::VP_CTLZ_ZERO_POISON : ISD::VP_CTLZ;
-    break;
-  }
-  case Intrinsic::vp_cttz: {
-    bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
-    ResOPC = IsZeroUndef ? ISD::VP_CTTZ_ZERO_POISON : ISD::VP_CTTZ;
-    break;
-  }
   case Intrinsic::vp_cttz_elts: {
     bool IsZeroPoison = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
     ResOPC = IsZeroPoison ? ISD::VP_CTTZ_ELTS_ZERO_POISON : ISD::VP_CTTZ_ELTS;
@@ -9015,47 +9007,12 @@ void SelectionDAGBuilder::visitVPStridedStore(
   setValue(&VPIntrin, ST);
 }
 
-void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDLoc DL = getCurSDLoc();
-
-  ISD::CondCode Condition;
-  CmpInst::Predicate CondCode = VPIntrin.getPredicate();
-
-  Value *Op1 = VPIntrin.getOperand(0);
-  Value *Op2 = VPIntrin.getOperand(1);
-  // #2 is the condition code
-  SDValue MaskOp = getValue(VPIntrin.getOperand(3));
-  SDValue EVL = getValue(VPIntrin.getOperand(4));
-  MVT EVLParamVT = TLI.getVPExplicitVectorLengthTy();
-  assert(EVLParamVT.isScalarInteger() && EVLParamVT.bitsGE(MVT::i32) &&
-         "Unexpected target EVL type");
-  EVL = DAG.getNode(ISD::ZERO_EXTEND, DL, EVLParamVT, EVL);
-
-  if (VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy()) {
-    Condition = getFCmpCondCode(CondCode);
-    SimplifyQuery SQ(DAG.getDataLayout(), &VPIntrin);
-    if (isKnownNeverNaN(Op2, SQ) && isKnownNeverNaN(Op1, SQ))
-      Condition = getFCmpCodeWithoutNaN(Condition);
-  } else {
-    Condition = getICmpCondCode(CondCode);
-  }
-
-  EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                        VPIntrin.getType());
-  setValue(&VPIntrin, DAG.getSetCCVP(DL, DestVT, getValue(Op1), getValue(Op2),
-                                     Condition, MaskOp, EVL));
-}
-
 void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     const VPIntrinsic &VPIntrin) {
   SDLoc DL = getCurSDLoc();
   unsigned Opcode = getISDForVPIntrinsic(VPIntrin);
 
   auto IID = VPIntrin.getIntrinsicID();
-
-  if (const auto *CmpI = dyn_cast<VPCmpIntrinsic>(&VPIntrin))
-    return visitVPCmp(*CmpI);
 
   SmallVector<EVT, 4> ValueVTs;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -9107,64 +9064,6 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     visitVPStridedStore(VPIntrin, OpValues);
     break;
-  case ISD::VP_FMULADD: {
-    assert(OpValues.size() == 5 && "Unexpected number of operands");
-    SDNodeFlags SDFlags;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(&VPIntrin))
-      SDFlags.copyFMF(*FPMO);
-    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), ValueVTs[0])) {
-      setValue(&VPIntrin, DAG.getNode(ISD::VP_FMA, DL, VTs, OpValues, SDFlags));
-    } else {
-      SDValue Mul = DAG.getNode(
-          ISD::VP_FMUL, DL, VTs,
-          {OpValues[0], OpValues[1], OpValues[3], OpValues[4]}, SDFlags);
-      SDValue Add =
-          DAG.getNode(ISD::VP_FADD, DL, VTs,
-                      {Mul, OpValues[2], OpValues[3], OpValues[4]}, SDFlags);
-      setValue(&VPIntrin, Add);
-    }
-    break;
-  }
-  case ISD::VP_IS_FPCLASS: {
-    const DataLayout DLayout = DAG.getDataLayout();
-    EVT DestVT = TLI.getValueType(DLayout, VPIntrin.getType());
-    auto Constant = OpValues[1]->getAsZExtVal();
-    SDValue Check = DAG.getTargetConstant(Constant, DL, MVT::i32);
-    SDValue V = DAG.getNode(ISD::VP_IS_FPCLASS, DL, DestVT,
-                            {OpValues[0], Check, OpValues[2], OpValues[3]});
-    setValue(&VPIntrin, V);
-    return;
-  }
-  case ISD::VP_INTTOPTR: {
-    SDValue N = OpValues[0];
-    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), VPIntrin.getType());
-    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(), VPIntrin.getType());
-    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
-                               OpValues[2]);
-    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
-                             OpValues[2]);
-    setValue(&VPIntrin, N);
-    break;
-  }
-  case ISD::VP_PTRTOINT: {
-    SDValue N = OpValues[0];
-    EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                          VPIntrin.getType());
-    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(),
-                                       VPIntrin.getOperand(0)->getType());
-    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
-                               OpValues[2]);
-    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
-                             OpValues[2]);
-    setValue(&VPIntrin, N);
-    break;
-  }
-  case ISD::VP_ABS:
-  case ISD::VP_CTLZ:
-  case ISD::VP_CTLZ_ZERO_POISON:
-  case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS: {
     SDValue Result =
@@ -9805,9 +9704,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // some reason.
     // This code should not handle libcalls that are already canonicalized to
     // intrinsics by the middle-end.
-    LibFunc Func;
-    if (!I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName() &&
-        LibInfo->getLibFunc(*F, Func) && LibInfo->hasOptimizedCodeGen(Func)) {
+    LibFunc Func = !I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName()
+                       ? LibInfo->getLibFunc(*F)
+                       : NotLibFunc;
+    if (LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {
       default: break;
       case LibFunc_bcmp:

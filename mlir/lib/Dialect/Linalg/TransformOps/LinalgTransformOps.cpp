@@ -292,6 +292,11 @@ void transform::ApplyExtractSliceSinkingPatternsOp::populatePatterns(
   linalg::populateExtractSliceSinkingPatterns(patterns, defaultControlFn);
 }
 
+void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateSwapExtractSliceWithFillPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -4460,6 +4465,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
 
   // If rank <= 1, do nothing
   if (target.getNumLoops() <= 1) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Only broadcasts with a 0-D input are handled; leave anything else
+  // unchanged.
+  if (auto broadcastOp = dyn_cast<linalg::BroadcastOp>(target.getOperation());
+      broadcastOp && broadcastOp.getInput().getType().getRank() != 0) {
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }

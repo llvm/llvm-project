@@ -484,7 +484,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     AssertOperandType(1, Op0Ty);
     return Type::getVoidTy(Ctx);
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
@@ -617,7 +616,7 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+  assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
           getNumOperandsForOpcode() == getNumOperands() ||
@@ -666,7 +665,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::ExtractVectorForPart:
     return 2;
@@ -717,7 +715,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
@@ -851,15 +848,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       return V1;
     Value *V2 = State.get(getOperand(1));
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
-  }
-  case VPInstruction::CalculateTripCountMinusVF: {
-    Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *VFxUF = State.get(getOperand(1), VPLane(0));
-    Value *Sub = Builder.CreateSub(ScalarTC, VFxUF);
-    Value *Cmp =
-        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, VFxUF);
-    Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
-    return Builder.CreateSelect(Cmp, Sub, Zero);
   }
   case VPInstruction::ExplicitVectorLength: {
     // TODO: Restructure this code with an explicit remainder loop, vsetvli can
@@ -1436,7 +1424,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(this->getScalarType(), VF);
     return Ctx.TTI.getShuffleCost(
         TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
-        cast<VectorType>(VectorTy), {}, Ctx.CostKind, -1);
+        cast<VectorType>(VectorTy), Ctx.CostKind, {}, -1);
   }
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask: {
@@ -1468,7 +1456,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
       return 0;
     auto *VectorTy = cast<VectorType>(toVectorTy(EltTy, VF));
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                                  VectorTy, /*Mask=*/{}, Ctx.CostKind,
+                                  VectorTy, Ctx.CostKind, /*Mask=*/{},
                                   /*Index=*/0);
   }
   case VPInstruction::ExtractLastLane: {
@@ -1597,7 +1585,7 @@ void VPInstruction::execute(VPTransformState &State) {
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+  assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
   State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
@@ -1646,7 +1634,6 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
@@ -1714,7 +1701,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
@@ -1802,9 +1788,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BranchOnTwoConds:
     O << "branch-on-two-conds";
-    break;
-  case VPInstruction::CalculateTripCountMinusVF:
-    O << "TC > VF ? TC - VF : 0";
     break;
   case VPInstruction::CanonicalIVIncrementForPart:
     O << "VF * Part +";
@@ -2414,9 +2397,12 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
+  auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
+  assert(PtrPos && "Expected a memory intrinsic with a valid pointer position");
   MemI->addParamAttr(
-      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
-  State.set(this, MemI);
+      *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  if (!MemI->getType()->isVoidTy())
+    State.set(this, MemI);
 }
 
 InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
@@ -2430,10 +2416,18 @@ InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *Ty = toVectorTy(getScalarType(), VF);
+  Type *DataTy;
+  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(getVectorIntrinsicID()))
+    DataTy = getOperand(*DataPos)->getScalarType();
+  else
+    DataTy = getScalarType();
+  assert(!DataTy->isVoidTy() && "Expected a non-void data type");
+  Type *Ty = toVectorTy(DataTy, VF);
+  auto MaskPos = VPIntrinsic::getMaskParamPos(getVectorIntrinsicID());
+  assert(MaskPos && "Expected a memory intrinsic with a valid mask position");
   return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
-                                 !match(getOperand(2), m_True()), Alignment,
-                                 Ctx);
+                                 !match(getOperand(*MaskPos), m_True()),
+                                 Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
@@ -2563,8 +2557,11 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode, Type *ResultTy) {
   case Instruction::FPTrunc:
     return FastMathFlags();
   case Instruction::Select:
-    // Selects only have fast-math flags if they produce a floating-point value.
-    if (ResultTy && FPMathOperator::isSupportedFloatingPointType(ResultTy))
+  case Instruction::PHI:
+  case Instruction::Call:
+    // Selects, phis and calls only have fast-math flags if they have a
+    // supported floating-point result type.
+    if (FPMathOperator::isSupportedFloatingPointType(ResultTy))
       return FastMathFlags();
     return VPIRFlags();
   case Instruction::ICmp:
@@ -2618,7 +2615,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   llvm_unreachable("Unknown OperationType enum");
 }
 
-bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
+bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode,
+                                          Type *ResultTy) const {
   // Handle opcodes without default flags.
   if (Opcode == Instruction::ICmp)
     return OpType == OperationType::Cmp;
@@ -2627,7 +2625,7 @@ bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
   if (Opcode == VPInstruction::ComputeReductionResult)
     return OpType == OperationType::ReductionOp;
 
-  OperationType Required = getDefaultFlags(Opcode).OpType;
+  OperationType Required = getDefaultFlags(Opcode, ResultTy).OpType;
   return Required == OperationType::Other || Required == OpType;
 }
 #endif
@@ -4858,7 +4856,7 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
 
   return Cost + IG->getNumMembers() *
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, VectorTy, {}, Ctx.CostKind,
+                                           VectorTy, VectorTy, Ctx.CostKind, {},
                                            0);
 }
 
