@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMXCoreDisassembler
   MCDisassembler
   Support
   XCoreInfo
+  XCoreDesc
 
   ADD_TO_COMPONENT
   XCore
