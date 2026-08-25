@@ -3762,7 +3762,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         mlir::Type elementType = convertType(insertOp.getType().getEleTy());
         mlir::Value val = insertOp.getVal();
         // Logical constants reach the insertion through a `fir.convert`.
-        if (auto convertOp = val.getDefiningOp<fir::ConvertOp>())
+        auto convertOp = val.getDefiningOp<fir::ConvertOp>();
+        if (convertOp)
           val = convertOp.getValue();
         auto constant = val.getDefiningOp<mlir::arith::ConstantOp>();
         if (!constant)
@@ -3770,14 +3771,18 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         mlir::TypedAttr valueAttr = constant.getValue();
         if (valueAttr.getType() != elementType) {
           // Looking through the `fir.convert` leaves the constant with the
-          // source type. Only fold a boolean feeding an integer element, which
-          // the conversion normalizes to a canonical 0/1, see
-          // ConvertOpConversion.
-          auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(valueAttr);
+          // source type. Only an integer<->logical conversion is folded here:
+          // it normalizes any integer operand to a canonical 0/1, see
+          // ConvertOpConversion. Any other mismatching conversion is left to
+          // the regular lowering.
+          auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
           auto intType = mlir::dyn_cast<mlir::IntegerType>(elementType);
-          if (!boolAttr || !intType)
+          if (!intAttr || !intType || !convertOp ||
+              (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
+               !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
             continue;
-          valueAttr = mlir::IntegerAttr::get(intType, boolAttr.getValue());
+          valueAttr = mlir::IntegerAttr::get(
+              intType, intAttr.getValue().isZero() ? 0 : 1);
         }
         auto vecType =
             mlir::VectorType::get(insertOp.getType().getShape(), elementType);
