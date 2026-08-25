@@ -132,8 +132,31 @@ static cl::opt<int> SLSRBasisDistanceThreshold(
 static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
                                  cl::desc("Use TTI to compute RP for SLSR-RP"));
 
+static cl::opt<bool> EnableRPFilter(
+    "slsr-rp-filter", cl::init(false), cl::Hidden,
+    cl::desc("SLSR: skip rewrites in blocks where they would push register "
+             "pressure past the target's register budget"));
+
+static cl::opt<unsigned> SLSRRegBudget(
+    "slsr-reg-budget", cl::init(0), cl::Hidden,
+    cl::desc("SLSR: override the register budget reported by TTI"));
+
+static cl::opt<double> SLSRRPSafeFraction(
+    "slsr-rp-safe-fraction", cl::init(0.9), cl::Hidden,
+    cl::desc("SLSR: fraction of the register budget treated as safe"));
+
+static cl::opt<unsigned> SLSRRPAbsDelta(
+    "slsr-rp-abs-delta", cl::init(4), cl::Hidden,
+    cl::desc("SLSR: pressure increase tolerated in a block that is already "
+             "over the register budget"));
+
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
+STATISTIC(NumRPFilteredBlocks,
+          "Number of blocks whose rewrites SLSR skipped due to register "
+          "pressure");
+STATISTIC(NumRPFilteredCandidates,
+          "Number of candidates SLSR skipped due to register pressure");
 
 namespace {
 
@@ -1515,11 +1538,20 @@ public:
            const TargetTransformInfo *TTI)
       : F(F), PickedCandidateMap(PickedCandidateMap), TTI(TTI) {}
 
-  void run() {
+  // Candidates whose rewrite would push their block's register pressure past
+  // what the target can allocate are added to \p ToSkipRewrite.
+  void run(DenseSet<Instruction *> &ToSkipRewrite) {
     buildBBToNumCandsAndBasises(PickedCandidateMap);
     // TODO: 16 is an arbitrary threshold.
-    if (MaxNumBasisesInBB > 16)
+    bool HaveLiveness = MaxNumBasisesInBB > 16;
+    if (HaveLiveness)
       buildBBToLiveness(*F); // Do liveness analysis.
+
+    // The pressure numbers below only mean anything once liveness has been
+    // computed, and without a budget there is nothing to compare them to.
+    std::optional<unsigned> Budget;
+    if (EnableRPFilter && HaveLiveness)
+      Budget = getRegisterBudget();
 
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
     for (auto &BB : *F) {
@@ -1532,10 +1564,14 @@ public:
         dbgs() << "MaxRP:" << BB.getName() << ":" << RP << "," << RPBackward << "\n";
       });
 #else
-      auto [MaxRP, MaxRPWithSLSR] = maxPressureInBlockBackward(
-          BB, BBToLiveness[&BB].LiveIn, BBToLiveness[&BB].LiveOut);
+      const BlockLiveness &BL = getLiveness(&BB);
+      auto [MaxRP, MaxRPWithSLSR] =
+          maxPressureInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
       DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
                            << MaxRPWithSLSR << ")" << "\n");
+
+      if (Budget && rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
+        skipRewritesInBlock(BB, ToSkipRewrite);
 #endif
     }
   }
@@ -1556,6 +1592,60 @@ private:
   };
 
   DenseMap<const BasicBlock *, BlockLiveness> BBToLiveness;
+
+  // Liveness is only computed for functions that pass the candidate-count
+  // gate. Blocks of the remaining functions read as having nothing live across
+  // their boundaries, which is why no rewrite is suppressed in that case.
+  const BlockLiveness &getLiveness(const BasicBlock *BB) const {
+    static const BlockLiveness Empty;
+    auto It = BBToLiveness.find(BB);
+    return It == BBToLiveness.end() ? Empty : It->second;
+  }
+
+  std::optional<unsigned> getRegisterBudget() const {
+    if (SLSRRegBudget > 0)
+      return SLSRRegBudget.getValue();
+    std::optional<unsigned> Budget = TTI->getRegisterBudget(*F);
+    if (Budget && *Budget == 0)
+      return std::nullopt;
+    return Budget;
+  }
+
+  // Return true if rewriting every candidate in a block, taking its peak
+  // pressure from \p Before to \p After, would ask the allocator for more
+  // registers than \p Budget.
+  bool rewriteWouldOverflowBudget(unsigned Before, unsigned After,
+                                  unsigned Budget) const {
+    // Leave the allocator some slack: it also has to satisfy register class
+    // and ABI constraints that this estimate knows nothing about.
+    unsigned SafeBudget = static_cast<unsigned>(Budget * SLSRRPSafeFraction);
+
+    // There is headroom, so however much the rewrite adds is irrelevant.
+    if (After <= SafeBudget)
+      return false;
+
+    // The rewrite is what takes the block over.
+    if (Before <= SafeBudget)
+      return true;
+
+    // Already over budget. SLSR can still lower pressure here, so only refuse
+    // rewrites that make it meaningfully worse.
+    return After > Before && After - Before > SLSRRPAbsDelta;
+  }
+
+  void skipRewritesInBlock(const BasicBlock &BB,
+                           DenseSet<Instruction *> &ToSkipRewrite) {
+    ++NumRPFilteredBlocks;
+    DEBUG_SLSR_RP(dbgs() << "RP filter: skipping rewrites in " << BB.getName()
+                         << "\n");
+    for (const Instruction &I : BB) {
+      auto It = PickedCandidateMap.find(&I);
+      if (It == PickedCandidateMap.end())
+        continue;
+      if (ToSkipRewrite.insert(It->first).second)
+        ++NumRPFilteredCandidates;
+    }
+  }
 
   std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
       const BasicBlock *BB,
@@ -1932,8 +2022,11 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     if (Candidate *C = pickRewriteCandidate(I))
       PickedCandidateMap[I] = C;
 
+  // Candidates whose rewrite is predicted to hurt more than it helps.
+  DenseSet<Instruction *> ToSkipRewrite;
+
   RPFilter RPFilter(&F, PickedCandidateMap, TTI);
-  RPFilter.run();
+  RPFilter.run(ToSkipRewrite);
 
   // From SortedCandidateInsts, remove some candidates that are likely to
   // increase register pressure. The candidate's Inst is the source of
@@ -1961,7 +2054,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   // Done before rewriting: rewriting inserts instructions and does
   // replaceAllUsesWith, which would invalidate both the in-block index map and
   // operands' user sets.
-  DenseSet<Instruction *> ToSkipRewrite;
   {
     DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>> IndexCache;
     for (Instruction *I : SortedCandidateInsts)

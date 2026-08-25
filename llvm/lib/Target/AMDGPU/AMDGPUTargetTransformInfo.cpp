@@ -309,6 +309,18 @@ unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   return 4;
 }
 
+std::optional<unsigned> GCNTTIImpl::getRegisterBudget(const Function &F) const {
+  // Report the VGPR budget implied by the occupancy F is compiled for. Callers
+  // comparing a single lumped pressure number against this are conservative on
+  // the SGPR side, which is intentional: whether a value lands in an SGPR or a
+  // VGPR depends on divergence, not on its type.
+  //
+  // On GFX90A this is the combined VGPR+AGPR budget; see getMaxNumVectorRegs
+  // for the split. In dynamic VGPR mode "amdgpu-waves-per-eu" implies no VGPR
+  // limit at all, so this degrades to the full register file.
+  return ST->getMaxNumVGPRs(F);
+}
+
 TypeSize
 GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {

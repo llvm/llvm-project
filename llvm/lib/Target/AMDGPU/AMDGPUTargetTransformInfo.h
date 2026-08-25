@@ -129,6 +129,7 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned RCID) const override;
+  std::optional<unsigned> getRegisterBudget(const Function &F) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;
   unsigned getMinVectorRegisterBitWidth() const override;
