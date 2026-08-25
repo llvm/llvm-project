@@ -25,7 +25,7 @@ TEST_F(LlvmLibcGetrusageTest, BasicTest) {
   struct rusage usage = {};
   ASSERT_THAT(LIBC_NAMESPACE::getrusage(RUSAGE_SELF, &usage), Succeeds());
   // The number of soft page faults should be stably greater than 0.
-  ASSERT_TRUE(usage.ru_minflt > 0);
+  EXPECT_GT(usage.ru_minflt, 0L);
 }
 
 TEST_F(LlvmLibcGetrusageTest, TestWhoInvalid) {
