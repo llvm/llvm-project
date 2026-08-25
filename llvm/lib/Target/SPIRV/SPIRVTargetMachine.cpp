@@ -13,21 +13,8 @@
 #include "SPIRVTargetMachine.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
-#include "SPIRVCBufferAccess.h"
-#include "SPIRVCtorDtorLowering.h"
-#include "SPIRVEmitIntrinsics.h"
-#include "SPIRVFinalizeShaderLinkage.h"
 #include "SPIRVGlobalRegistry.h"
-#include "SPIRVLegalizeImplicitBinding.h"
-#include "SPIRVLegalizePointerCast.h"
-#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
-#include "SPIRVMergeRegionExitTargets.h"
-#include "SPIRVPrepareFunctions.h"
-#include "SPIRVPrepareGlobals.h"
-#include "SPIRVPushConstantAccess.h"
-#include "SPIRVRegularizer.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -105,11 +92,6 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
-}
-
-void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
 }
 
 namespace {

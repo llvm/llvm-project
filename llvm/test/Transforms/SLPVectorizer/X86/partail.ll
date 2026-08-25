@@ -7,34 +7,29 @@ define void @get_block(i32 %y_pos, i1 %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SUB14:%.*]] = sub nsw i32 [[Y_POS:%.*]], undef
-; CHECK-NEXT:    [[SHR15:%.*]] = ashr i32 [[SUB14]], 2
-; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp sgt i32 [[SHR15]], 0
-; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CMP_I_I]], i32 [[SHR15]], i32 0
-; CHECK-NEXT:    [[CMP_I4_I:%.*]] = icmp slt i32 [[COND_I_I]], undef
-; CHECK-NEXT:    [[COND_I5_I:%.*]] = select i1 [[CMP_I4_I]], i32 [[COND_I_I]], i32 undef
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUB14]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], <i32 2, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[TMP2]], <i32 0, i32 -1, i32 -5, i32 -9>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> <i32 poison, i32 undef, i32 undef, i32 undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i32> [[TMP5]], undef
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[TMP5]], <4 x i32> undef
+; CHECK-NEXT:    [[COND_I5_I:%.*]] = extractelement <4 x i32> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[IDXPROM30:%.*]] = sext i32 [[COND_I5_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[IDXPROM30]]
-; CHECK-NEXT:    [[CMP_I_I_1:%.*]] = icmp sgt i32 [[SUB14]], -1
-; CHECK-NEXT:    [[COND_I_I_1:%.*]] = select i1 [[CMP_I_I_1]], i32 undef, i32 0
-; CHECK-NEXT:    [[CMP_I4_I_1:%.*]] = icmp slt i32 [[COND_I_I_1]], undef
-; CHECK-NEXT:    [[COND_I5_I_1:%.*]] = select i1 [[CMP_I4_I_1]], i32 [[COND_I_I_1]], i32 undef
+; CHECK-NEXT:    [[COND_I5_I_1:%.*]] = extractelement <4 x i32> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[IDXPROM30_1:%.*]] = sext i32 [[COND_I5_I_1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[IDXPROM30_1]]
-; CHECK-NEXT:    [[CMP_I_I_2:%.*]] = icmp sgt i32 [[SUB14]], -5
-; CHECK-NEXT:    [[COND_I_I_2:%.*]] = select i1 [[CMP_I_I_2]], i32 undef, i32 0
-; CHECK-NEXT:    [[CMP_I4_I_2:%.*]] = icmp slt i32 [[COND_I_I_2]], undef
-; CHECK-NEXT:    [[COND_I5_I_2:%.*]] = select i1 [[CMP_I4_I_2]], i32 [[COND_I_I_2]], i32 undef
+; CHECK-NEXT:    [[COND_I5_I_2:%.*]] = extractelement <4 x i32> [[TMP7]], i64 2
 ; CHECK-NEXT:    [[IDXPROM30_2:%.*]] = sext i32 [[COND_I5_I_2]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[IDXPROM30_2]]
-; CHECK-NEXT:    [[CMP_I_I_3:%.*]] = icmp sgt i32 [[SUB14]], -9
-; CHECK-NEXT:    [[COND_I_I_3:%.*]] = select i1 [[CMP_I_I_3]], i32 undef, i32 0
-; CHECK-NEXT:    [[CMP_I4_I_3:%.*]] = icmp slt i32 [[COND_I_I_3]], undef
-; CHECK-NEXT:    [[COND_I5_I_3:%.*]] = select i1 [[CMP_I4_I_3]], i32 [[COND_I_I_3]], i32 undef
+; CHECK-NEXT:    [[COND_I5_I_3:%.*]] = extractelement <4 x i32> [[TMP7]], i64 3
 ; CHECK-NEXT:    [[IDXPROM30_3:%.*]] = sext i32 [[COND_I5_I_3]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[IDXPROM30_3]]
 ; CHECK-NEXT:    ret void
