@@ -250,6 +250,37 @@ TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOpNotDecoded) {
   EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5 01 9f");
 }
 
+// A selector whose ULEB128 encoding runs off the end of the expression must
+// be reported, not silently accepted as a complete operation.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TruncatedSelector) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d a5");
+}
+
+// The selector may also be missing entirely.
+TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_MissingSelector) {
+  const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux};
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true);
+  DWARFExpression Expr(DE, 8);
+
+  DIDumpOptions DumpOpts;
+  printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+
+  EXPECT_EQ(OS.str(), "<decoding error> e9 0d");
+}
+
 // NVPTX packs virtual register names into DWARF register numbers, so compact
 // printing without a callback must recover the name and return true.
 TEST(NVPTXPackedRegister, Compact_DW_OP_regx_NoMRI) {

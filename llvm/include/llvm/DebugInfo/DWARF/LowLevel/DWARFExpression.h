@@ -27,9 +27,12 @@ public:
 
   /// This class represents an Operation in the Expression.
   ///
-  /// An Operation can be in Error state (check with isError()). This
-  /// means that it couldn't be decoded successfully and if it is the
-  /// case, all others fields contain undefined values.
+  /// An Operation can be in Error state (check with isError()). This means
+  /// that it couldn't be decoded successfully. Some fields stay valid so that
+  /// a caller can report or copy the bytes it could not decode: getCode(),
+  /// getDescription(), getEndOffset(), which is the offset the operation
+  /// started at, and in some cases getSubCode(). The remaining operand values
+  /// are undefined.
   class Operation {
   public:
     /// Size and signedness of expression operations' operands.
