@@ -229,7 +229,8 @@ SYCLToolChain::getDeviceLibs(
   llvm::sys::path::append(BCPath, "lib", getTriple().str(),
                           "libclang_rt.builtins.bc");
   if (!getDriver().getVFS().exists(BCPath)) {
-    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF: lib/<os>/libclang_rt.builtins-spirv64.bc
+    // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF:
+    // lib/<os>/libclang_rt.builtins-spirv64.bc
     BCPath = getDriver().ResourceDir;
     llvm::sys::path::append(BCPath, "lib", getOSLibName(),
                             "libclang_rt.builtins-spirv64.bc");
