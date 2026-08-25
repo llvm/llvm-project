@@ -17,3 +17,44 @@ int main(void) {
   __builtin___clear_cache(buffer, buffer+32);
   return 0;
 }
+
+// The declaration of __builtin___clear_cache is rewritten to take the address
+// space of each pointer it is called with, so @llvm.clear_cache has to be
+// declared in the address space that is actually passed in rather than in the
+// target default one.
+
+typedef char __attribute__((address_space(1))) as1_char;
+typedef char __attribute__((address_space(2))) as2_char;
+
+// CHECK-LABEL: @clear_cache_as1(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[BEGIN_ADDR:%.*]] = alloca ptr addrspace(1), align 8
+// CHECK-NEXT:    [[END_ADDR:%.*]] = alloca ptr addrspace(1), align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[BEGIN:%.*]], ptr [[BEGIN_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[END:%.*]], ptr [[END_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[BEGIN_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[END_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.clear_cache.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(1) [[TMP1]])
+// CHECK-NEXT:    ret void
+//
+void clear_cache_as1(as1_char *begin, as1_char *end) {
+  __builtin___clear_cache(begin, end);
+}
+
+// The two pointers delimit one range, so a call that mixes address spaces gets
+// the end pointer cast into the address space of the begin pointer.
+// CHECK-LABEL: @clear_cache_mixed(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[BEGIN_ADDR:%.*]] = alloca ptr addrspace(1), align 8
+// CHECK-NEXT:    [[END_ADDR:%.*]] = alloca ptr addrspace(2), align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[BEGIN:%.*]], ptr [[BEGIN_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(2) [[END:%.*]], ptr [[END_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[BEGIN_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(2), ptr [[END_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(2) [[TMP1]] to ptr addrspace(1)
+// CHECK-NEXT:    call void @llvm.clear_cache.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(1) [[TMP2]])
+// CHECK-NEXT:    ret void
+//
+void clear_cache_mixed(as1_char *begin, as2_char *end) {
+  __builtin___clear_cache(begin, end);
+}
