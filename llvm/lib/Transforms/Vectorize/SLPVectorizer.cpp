@@ -10981,8 +10981,58 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                          /*Extract=*/false, CostKind,
                                          AreAllValuesNonConst, UniqueValues);
     UniquesCost += ReusesCost;
-    if (UniquesCost <= InsertsCost)
+    if (UniquesCost <= InsertsCost) {
+      // Packing to a vector that occupies the same register width as the
+      // original only adds the reshuffle cost; keep the originals. Loads may
+      // instead benefit from a wider contiguous load.
+      if (S && S.getOpcode() != Instruction::Load) {
+        unsigned EltBits =
+            S.getMainOp()->getDataLayout().getTypeSizeInBits(ScalarTy);
+        unsigned MinVF = R.getMinVF(EltBits);
+        auto RegWidth = [&](unsigned N) {
+          return std::max(getFullVectorNumberOfElements(TTI, ScalarTy, N),
+                          MinVF);
+        };
+        // Keeping the originals just moves the reshuffle to the operand
+        // columns with duplicates; keep them only if at most one column has
+        // duplicates, so the total number of reshuffles does not grow.
+        auto HasExtraReshuffle = [&]() {
+          if (BuildGatherOnly)
+            return false;
+          unsigned NumDupColumns = 0;
+          for (unsigned OpIdx :
+               seq<unsigned>(S.getMainOp()->getNumOperands())) {
+            SmallPtrSet<const Value *, 16> UniqueOps;
+            for (Value *V : VL) {
+              if (isa<PoisonValue>(V))
+                continue;
+              Value *Op;
+              if (S.isCopyableElement(V)) {
+                if (OpIdx != 0)
+                  continue;
+                Op = V;
+              } else {
+                auto *I = dyn_cast<Instruction>(V);
+                if (!I || OpIdx >= I->getNumOperands())
+                  continue;
+                Op = I->getOperand(OpIdx);
+              }
+              if (!isConstant(Op) && !UniqueOps.insert(Op).second) {
+                ++NumDupColumns;
+                break;
+              }
+            }
+            if (NumDupColumns > 1)
+              return true;
+          }
+          return false;
+        };
+        return std::make_pair(true, RegWidth(NumUniqueScalarValues) >=
+                                            RegWidth(VL.size()) &&
+                                        !HasExtraReshuffle());
+      }
       return std::make_pair(true, false);
+    }
     InstructionCost CostDiff = UniquesCost - InsertsCost;
     if (CostDiff < TTI::TCC_Expensive ||
         (R.getTreeSize() == 0 && R.isReductionTree() &&
