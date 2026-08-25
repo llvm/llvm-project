@@ -2697,18 +2697,8 @@ define <2 x i32> @test_pmulhu_w(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmulhsu_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pwcvt.b a4, a0
-; RV32-NEXT:    pwcvtu.b a6, a2
-; RV32-NEXT:    pwcvt.b a0, a1
-; RV32-NEXT:    pwmul.h t1, a5, a7
-; RV32-NEXT:    pwcvtu.b a2, a3
-; RV32-NEXT:    pncvt.h a5, t1
-; RV32-NEXT:    pwmul.h a6, a4, a6
-; RV32-NEXT:    pwmul.h t1, a1, a3
-; RV32-NEXT:    pncvt.h a1, t1
-; RV32-NEXT:    pwmul.h a2, a0, a2
-; RV32-NEXT:    pncvt.h a4, a6
-; RV32-NEXT:    pncvt.h a0, a2
+; RV32-NEXT:    pwmulsu.b a4, a0, a2
+; RV32-NEXT:    pwmulsu.b a0, a1, a3
 ; RV32-NEXT:    pncvth.b a1, a0
 ; RV32-NEXT:    pncvth.b a0, a4
 ; RV32-NEXT:    ret
@@ -2756,18 +2746,8 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmulhsu_b_commuted:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pwcvtu.b a4, a0
-; RV32-NEXT:    pwcvt.b a6, a2
-; RV32-NEXT:    pwcvtu.b a0, a1
-; RV32-NEXT:    pwmul.h t1, a5, a7
-; RV32-NEXT:    pwcvt.b a2, a3
-; RV32-NEXT:    pncvt.h a5, t1
-; RV32-NEXT:    pwmul.h a6, a4, a6
-; RV32-NEXT:    pwmul.h t1, a1, a3
-; RV32-NEXT:    pncvt.h a1, t1
-; RV32-NEXT:    pwmul.h a2, a0, a2
-; RV32-NEXT:    pncvt.h a4, a6
-; RV32-NEXT:    pncvt.h a0, a2
+; RV32-NEXT:    pwmulsu.b a4, a2, a0
+; RV32-NEXT:    pwmulsu.b a0, a3, a1
 ; RV32-NEXT:    pncvth.b a1, a0
 ; RV32-NEXT:    pncvth.b a0, a4
 ; RV32-NEXT:    ret

@@ -2395,9 +2395,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
     }
   }
 
+  // The `printProperties` method is responsible for printing out a leading
+  // space so that empty `prop-dict`s don't produce stray whitespace.
   if (fmt.useProperties) {
-    body << "  _odsPrinter << \" \";\n"
-         << "  printProperties(this->getContext(), _odsPrinter, "
+    body << "  printProperties(this->getContext(), _odsPrinter, "
             "getProperties(), elidedProps);\n";
   }
 }
