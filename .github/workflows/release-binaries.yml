@@ -276,7 +276,7 @@ jobs:
       run: |
         choco install wixtoolset --version 3.14.1.20250415
         # Add wix install directory to PATH.
-        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName >> $env:GITHUB_PATH
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
