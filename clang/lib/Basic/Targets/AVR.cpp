@@ -434,6 +434,10 @@ static const MCUInfo AVRMcus[] = {
 } // namespace targets
 } // namespace clang
 
+static bool ArchHasFLMAP(StringRef Name) {
+  return Name.starts_with("avr64") || Name.starts_with("avr128");
+}
+
 static bool ArchHasELPM(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
       .Cases({"31", "51", "6"}, true)
@@ -550,6 +554,8 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AVR_ARCH__", Arch);
 
   // TODO: perhaps we should use the information from AVRDevices.td instead?
+  if (ArchHasFLMAP(DefineName))
+    Builder.defineMacro("__AVR_HAVE_FLMAP__");
   if (ArchHasELPM(Arch))
     Builder.defineMacro("__AVR_HAVE_ELPM__");
   if (ArchHasELPMX(Arch))
