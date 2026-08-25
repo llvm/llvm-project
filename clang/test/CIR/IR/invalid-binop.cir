@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!vs32i = !cir.vector<4 x !s32i>
+
+module {
+  cir.func @nuw_on_signed(%lhs: !vs32i, %rhs: !vs32i) {
+    // expected-error@below {{the nuw flag requires an unsigned integer type}}
+    %0 = cir.add nuw %lhs, %rhs : !vs32i
+    cir.return
+  }
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+
+module {
+  cir.func @nsw_on_unsigned(%lhs: !u32i, %rhs: !u32i) {
+    // expected-error@below {{the nsw flag requires a signed integer type}}
+    %0 = cir.sub nsw %lhs, %rhs : !u32i
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @conflicting_wrap_flags(%lhs: !s32i, %rhs: !s32i) {
+    // expected-error@below {{flags are mutually exclusive}}
+    %0 = cir.add nsw nuw %lhs, %rhs : !s32i
+    cir.return
+  }
+}

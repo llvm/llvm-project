@@ -2941,22 +2941,27 @@ mlir::LogicalResult cir::FuncOp::verify() {
 // AddOp / SubOp
 //===----------------------------------------------------------------------===//
 
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
+static LogicalResult verifyAddSubFlags(Operation *op, Type type, bool nsw,
+                                       bool nuw, bool sat) {
+  if ((nsw && nuw) || (sat && (nsw || nuw)))
+    return op->emitOpError()
+           << "the nsw, nuw, and saturated flags are mutually exclusive";
+  if (nsw && !cir::isSIntOrVectorOfSIntType(type))
+    return op->emitOpError() << "the nsw flag requires a signed integer type";
+  if (nuw && !cir::isUIntOrVectorOfUIntType(type))
+    return op->emitOpError()
+           << "the nuw flag requires an unsigned integer type";
   return mlir::success();
 }
 
+LogicalResult cir::AddOp::verify() {
+  return verifyAddSubFlags(getOperation(), getType(), getNoSignedWrap(),
+                           getNoUnsignedWrap(), getSaturated());
+}
+
 LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
+  return verifyAddSubFlags(getOperation(), getType(), getNoSignedWrap(),
+                           getNoUnsignedWrap(), getSaturated());
 }
 
 //===----------------------------------------------------------------------===//
