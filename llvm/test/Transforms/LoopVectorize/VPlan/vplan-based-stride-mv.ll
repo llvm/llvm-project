@@ -3351,16 +3351,16 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%i> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT-SCALAR ir<%i.ext> = sext ir<%i> to i64
-; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%i.ext>, ir<1>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%iv.ext> = sext ir<%iv> to i64
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv.ext>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
-; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%i.ext>
+; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv.ext>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
-; CHECK-NEXT:      EMIT ir<%i.next> = add ir<%i>, ir<1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%i.next.ext> = sext ir<%i.next> to i32
-; CHECK-NEXT:      EMIT ir<%ec> = icmp sgt ir<%i.next.ext>, ir<%M>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT-SCALAR ir<%iv.next.ext> = sext ir<%iv.next> to i32
+; CHECK-NEXT:      EMIT ir<%ec> = icmp sgt ir<%iv.next.ext>, ir<%M>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -3368,7 +3368,7 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%i>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -3384,16 +3384,16 @@ entry:
   br label %header
 
 header:
-  %i = phi i16 [ 0, %entry ], [ %i.next, %header ]
-  %i.ext = sext i16 %i to i64
-  %idx = mul i64 %i.ext, %stride
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.ext = sext i16 %iv to i64
+  %idx = mul i64 %iv.ext, %stride
   %gep.ld = getelementptr i64, ptr %p, i64 %idx
-  %ld = load i64, ptr %gep.ld, align 8
-  %gep.st = getelementptr i64, ptr %p.out, i64 %i.ext
-  store i64 %ld, ptr %gep.st, align 8
-  %i.next = add i16 %i, 1
-  %i.next.ext = sext i16 %i.next to i32
-  %ec = icmp sle i32 %i.next.ext, %M
+  %ld = load i64, ptr %gep.ld
+  %gep.st = getelementptr i64, ptr %p.out, i64 %iv.ext
+  store i64 %ld, ptr %gep.st
+  %iv.next = add i16 %iv, 1
+  %iv.next.ext = sext i16 %iv.next to i32
+  %ec = icmp sle i32 %iv.next.ext, %M
   br i1 %ec, label %header, label %exit
 
 exit:

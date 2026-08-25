@@ -4189,9 +4189,9 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = trunc i32 [[INDEX]] to i16
 ; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP10]] to i64
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; COMPARE-NO-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 8
+; COMPARE-NO-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 4
 ; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[TMP11]]
-; COMPARE-NO-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 8
+; COMPARE-NO-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 4
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; COMPARE-NO-MV-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP66:![0-9]+]]
@@ -4206,9 +4206,9 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-NO-MV-NEXT:    [[I_EXT:%.*]] = sext i16 [[I]] to i64
 ; COMPARE-NO-MV-NEXT:    [[IDX:%.*]] = mul i64 [[I_EXT]], [[STRIDE]]
 ; COMPARE-NO-MV-NEXT:    [[GEP_LD:%.*]] = getelementptr i64, ptr [[P]], i64 [[IDX]]
-; COMPARE-NO-MV-NEXT:    [[LD:%.*]] = load i64, ptr [[GEP_LD]], align 8
+; COMPARE-NO-MV-NEXT:    [[LD:%.*]] = load i64, ptr [[GEP_LD]], align 4
 ; COMPARE-NO-MV-NEXT:    [[GEP_ST:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[I_EXT]]
-; COMPARE-NO-MV-NEXT:    store i64 [[LD]], ptr [[GEP_ST]], align 8
+; COMPARE-NO-MV-NEXT:    store i64 [[LD]], ptr [[GEP_ST]], align 4
 ; COMPARE-NO-MV-NEXT:    [[I_NEXT]] = add i16 [[I]], 1
 ; COMPARE-NO-MV-NEXT:    [[I_NEXT_EXT:%.*]] = sext i16 [[I_NEXT]] to i32
 ; COMPARE-NO-MV-NEXT:    [[EC:%.*]] = icmp sle i32 [[I_NEXT_EXT]], [[M]]
@@ -4244,9 +4244,9 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-LAA-MV-NEXT:    [[TMP10:%.*]] = trunc i32 [[INDEX]] to i16
 ; COMPARE-LAA-MV-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP10]] to i64
 ; COMPARE-LAA-MV-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP11]]
-; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 8
+; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[TMP11]]
-; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 8
+; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; COMPARE-LAA-MV-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP66:![0-9]+]]
@@ -4261,9 +4261,9 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-LAA-MV-NEXT:    [[I_EXT:%.*]] = sext i16 [[I]] to i64
 ; COMPARE-LAA-MV-NEXT:    [[IDX:%.*]] = mul i64 [[I_EXT]], [[STRIDE]]
 ; COMPARE-LAA-MV-NEXT:    [[GEP_LD:%.*]] = getelementptr i64, ptr [[P]], i64 [[IDX]]
-; COMPARE-LAA-MV-NEXT:    [[LD:%.*]] = load i64, ptr [[GEP_LD]], align 8
+; COMPARE-LAA-MV-NEXT:    [[LD:%.*]] = load i64, ptr [[GEP_LD]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[GEP_ST:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[I_EXT]]
-; COMPARE-LAA-MV-NEXT:    store i64 [[LD]], ptr [[GEP_ST]], align 8
+; COMPARE-LAA-MV-NEXT:    store i64 [[LD]], ptr [[GEP_ST]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[I_NEXT]] = add i16 [[I]], 1
 ; COMPARE-LAA-MV-NEXT:    [[I_NEXT_EXT:%.*]] = sext i16 [[I_NEXT]] to i32
 ; COMPARE-LAA-MV-NEXT:    [[EC:%.*]] = icmp sle i32 [[I_NEXT_EXT]], [[M]]
@@ -4275,16 +4275,16 @@ entry:
   br label %header
 
 header:
-  %i = phi i16 [ 0, %entry ], [ %i.next, %header ]
-  %i.ext = sext i16 %i to i64
-  %idx = mul i64 %i.ext, %stride
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.ext = sext i16 %iv to i64
+  %idx = mul i64 %iv.ext, %stride
   %gep.ld = getelementptr i64, ptr %p, i64 %idx
-  %ld = load i64, ptr %gep.ld, align 8
-  %gep.st = getelementptr i64, ptr %p.out, i64 %i.ext
-  store i64 %ld, ptr %gep.st, align 8
-  %i.next = add i16 %i, 1
-  %i.next.ext = sext i16 %i.next to i32
-  %ec = icmp sle i32 %i.next.ext, %M
+  %ld = load i64, ptr %gep.ld
+  %gep.st = getelementptr i64, ptr %p.out, i64 %iv.ext
+  store i64 %ld, ptr %gep.st
+  %iv.next = add i16 %iv, 1
+  %iv.next.ext = sext i16 %iv.next to i32
+  %ec = icmp sle i32 %iv.next.ext, %M
   br i1 %ec, label %header, label %exit
 
 exit:
