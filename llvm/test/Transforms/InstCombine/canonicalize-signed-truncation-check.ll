@@ -245,8 +245,8 @@ define i1 @p_sext_trunc(i8 %x) {
 ; CHECK-LABEL: @p_sext_trunc(
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
 ; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], -8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %tmp0 = trunc i8 %x to i3
@@ -260,8 +260,8 @@ define i1 @p_sext_trunc_i128(i128 %x) {
 ; CHECK-LABEL: @p_sext_trunc_i128(
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[X:%.*]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i64 [[TMP0]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i128 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i128 [[X]], -9223372036854775808
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i128 [[TMP1]], -18446744073709551616
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %tmp0 = trunc i128 %x to i64
@@ -275,8 +275,8 @@ define <2 x i1> @p_sext_trunc_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @p_sext_trunc_vec(
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i3>
 ; CHECK-NEXT:    call void @use_v2i3(<2 x i3> [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i3> [[TMP0]] to <2 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i8> [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], splat (i8 -4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i8> [[TMP1]], splat (i8 -8)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %tmp0 = trunc <2 x i8> %x to <2 x i3>

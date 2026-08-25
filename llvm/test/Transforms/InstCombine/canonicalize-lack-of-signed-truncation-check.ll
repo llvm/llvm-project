@@ -243,8 +243,8 @@ define i1 @p_sext_trunc(i8 %x) {
 ; CHECK-LABEL: @p_sext_trunc(
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i8 [[X:%.*]] to i3
 ; CHECK-NEXT:    call void @use3(i3 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i3 [[TMP0]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 8
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %tmp0 = trunc i8 %x to i3
