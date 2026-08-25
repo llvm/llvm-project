@@ -55,9 +55,9 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
