@@ -25,6 +25,7 @@ add_flang_nongtest_unittest(designator-path
   NonGTestTesting
   FortranEvaluate
   FortranSemantics
+  FortranParser
 )
 
 add_flang_nongtest_unittest(integer
