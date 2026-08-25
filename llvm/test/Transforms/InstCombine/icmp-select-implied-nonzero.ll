@@ -18,8 +18,7 @@ define i1 @check_len_multiuse_ne(i64 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV]], i64 9223372036854775807, i64 [[MIN]]
 ; CHECK-NEXT:    call void @use(i64 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add i64 %max, %size
@@ -39,8 +38,7 @@ define i1 @check_len_multiuse_eq(i64 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV]], i64 9223372036854775807, i64 [[MIN]]
 ; CHECK-NEXT:    call void @use(i64 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add i64 %max, %size
@@ -61,8 +59,7 @@ define i1 @check_len_multiuse_commuted(i64 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV]], i64 9223372036854775807, i64 [[MIN]]
 ; CHECK-NEXT:    call void @use(i64 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add i64 %size, %max
@@ -83,8 +80,7 @@ define i1 @check_len_multiuse_i32(i32 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 2147483647)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV]], i32 2147483647, i32 [[MIN]]
 ; CHECK-NEXT:    call void @use32(i32 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call i32 @llvm.umax.i32(i32 %size, i32 1)
   %add = add i32 %max, %size
@@ -148,8 +144,7 @@ define <2 x i1> @check_len_multiuse_vec(<2 x i64> %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[ADD]], <2 x i64> splat (i64 9223372036854775807))
 ; CHECK-NEXT:    [[LEN:%.*]] = select <2 x i1> [[OV]], <2 x i64> splat (i64 9223372036854775807), <2 x i64> [[MIN]]
 ; CHECK-NEXT:    call void @usev(<2 x i64> [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i64> [[LEN]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %max = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %size, <2 x i64> splat (i64 1))
   %add = add <2 x i64> %max, %size
@@ -170,8 +165,7 @@ define i1 @check_len_assume(i64 %size) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OK]])
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    call void @use(i64 [[MIN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add i64 %max, %size
@@ -192,8 +186,7 @@ define i1 @check_len_multiuse_strict(i64 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV_NOT]], i64 [[MIN]], i64 9223372036854775807
 ; CHECK-NEXT:    call void @use(i64 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add i64 %max, %size
@@ -259,8 +252,7 @@ define i1 @check_len_nsw_flag(i64 %size) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[OV]], i64 9223372036854775807, i64 [[MIN]]
 ; CHECK-NEXT:    call void @use(i64 [[LEN]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[LEN]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call i64 @llvm.umax.i64(i64 %size, i64 1)
   %add = add nsw i64 %max, %size

@@ -20,12 +20,6 @@ define void @zero_check_dominated(i64 %size) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    call void @use(i64 [[MIN]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[MIN]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -156,12 +150,6 @@ define void @add_nonzero_only(i64 %x, i64 %y) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       normal:
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[ADD]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -200,12 +188,6 @@ define void @add_nonzero_swapped_premise(i64 %x, i64 %y) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       normal:
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[ADD]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -289,12 +271,6 @@ define void @umin_swapped_premise(i64 %size) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 9223372036854775807)
 ; CHECK-NEXT:    call void @use(i64 [[MIN]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[MIN]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -335,12 +311,6 @@ define void @umin_commuted(i64 %size) {
 ; CHECK:       normal:
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 9223372036854775807, i64 [[ADD]])
 ; CHECK-NEXT:    call void @use(i64 [[MIN]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[MIN]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
@@ -419,12 +389,6 @@ define void @umin_nonconst_clamp(i64 %size, i64 %y) {
 ; CHECK-NEXT:    [[CLAMP:%.*]] = or i64 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 [[CLAMP]])
 ; CHECK-NEXT:    call void @use(i64 [[MIN]])
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[MIN]], 0
-; CHECK-NEXT:    br i1 [[Z]], label [[ISZERO:%.*]], label [[NONZERO:%.*]]
-; CHECK:       iszero:
-; CHECK-NEXT:    call void @sink_zero()
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       nonzero:
 ; CHECK-NEXT:    call void @sink_nonzero()
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
