@@ -3414,7 +3414,8 @@ public:
   void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
                            llvm::Value *IndexVal, QualType IndexType,
                            llvm::Value *BoundsVal, QualType BoundsType,
-                           bool Accessed);
+                           bool Accessed,
+                           CharUnits IndexScale = CharUnits::One());
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for

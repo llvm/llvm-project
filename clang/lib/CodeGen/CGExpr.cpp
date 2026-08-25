@@ -1298,12 +1298,10 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
                       BoundsVal, getContext().getSizeType(), Accessed);
 }
 
-void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
-                                          QualType ArrayBaseType,
-                                          llvm::Value *IndexVal,
-                                          QualType IndexType,
-                                          llvm::Value *BoundsVal,
-                                          QualType BoundsType, bool Accessed) {
+void CodeGenFunction::EmitBoundsCheckImpl(
+    const Expr *ArrayExpr, QualType ArrayBaseType, llvm::Value *IndexVal,
+    QualType IndexType, llvm::Value *BoundsVal, QualType BoundsType,
+    bool Accessed, CharUnits IndexScale) {
   if (!BoundsVal)
     return;
 
@@ -1323,14 +1321,23 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
   llvm::Value *IndexInst = Builder.CreateIntCast(IndexVal, Ty, IndexSigned);
   llvm::Value *BoundsInst = Builder.CreateIntCast(BoundsVal, Ty, false);
 
+  // For a '__sized_by' bound the loaded value is a byte count, so compare it
+  // against the index scaled to bytes: 'index * sizeof(element)'. The
+  // element-counting ('__counted_by') and plain-array cases pass a scale of 1.
+  // The value reported to the runtime handler stays the (unscaled) index.
+  llvm::Value *CheckIndex = IndexInst;
+  if (IndexScale > CharUnits::One())
+    CheckIndex = Builder.CreateMul(
+        IndexInst, llvm::ConstantInt::get(Ty, IndexScale.getQuantity()));
+
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(ArrayExpr->getExprLoc()),
       EmitCheckTypeDescriptor(ArrayBaseType),
       EmitCheckTypeDescriptor(IndexType),
   };
 
-  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexInst, BoundsInst)
-                                : Builder.CreateICmpULE(IndexInst, BoundsInst);
+  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(CheckIndex, BoundsInst)
+                                : Builder.CreateICmpULE(CheckIndex, BoundsInst);
 
   if (BoundsSigned) {
     // Don't allow a negative bounds.
@@ -4999,9 +5006,36 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
     BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
                                           ".counted_by.load");
 
+    const auto *CAT = FD->getType()->getAs<CountAttributedType>();
+
+    // For the '_or_null' variants a null pointer describes no accessible
+    // memory, so treat the bound as 0 when the pointer is null; any access then
+    // traps.
+    if (CAT->isOrNull()) {
+      llvm::Value *Ptr = EmitScalarExpr(ME);
+      llvm::Value *IsNull = Builder.CreateIsNull(Ptr);
+      BoundsVal = Builder.CreateSelect(
+          IsNull, llvm::ConstantInt::get(BoundsType, 0), BoundsVal);
+    }
+
+    // For '__sized_by' the bound is a byte count, so the index (in elements)
+    // must be scaled to bytes before comparing. '__counted_by' counts elements
+    // and needs no scaling. A void (or otherwise zero-/unknown-sized) pointee
+    // uses the GNU convention of element size 1, i.e. no scaling.
+    CharUnits IndexScale = CharUnits::One();
+    if (CAT->isCountInBytes()) {
+      QualType ElemTy = ArrayType->getPointeeType();
+      if (!ElemTy.isNull() && !ElemTy->isIncompleteType() &&
+          !ElemTy->isFunctionType()) {
+        CharUnits ElemSize = getContext().getTypeSizeInChars(ElemTy);
+        if (!ElemSize.isZero())
+          IndexScale = ElemSize;
+      }
+    }
+
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
-                        CountFD->getType(), Accessed);
+                        CountFD->getType(), Accessed, IndexScale);
   }
 }
 
