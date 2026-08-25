@@ -25,6 +25,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
@@ -176,7 +177,7 @@ uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __las
 template <class _ValueType, class _ForwardIterator, class _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
-  auto __idx = __first;
+  auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
   for (; __n > 0; ++__idx, (void)--__n)
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType;
@@ -218,7 +219,7 @@ uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last)
 template <class _ValueType, class _ForwardIterator, class _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
-  auto __idx = __first;
+  auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
   for (; __n > 0; ++__idx, (void)--__n)
     ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType();
@@ -402,32 +403,46 @@ template <class _Alloc, class _ContiguousIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
     _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
-  using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
   static_assert(
       __is_cpp17_move_insertable_v<_Alloc>, "The specified type does not meet the requirements of Cpp17MoveInsertable");
-  if (__libcpp_is_constant_evaluated() || !__is_trivially_relocatable_v<_ValueType> ||
-      !__allocator_has_trivial_move_construct_v<_Alloc, _ValueType> ||
-      !__allocator_has_trivial_destroy_v<_Alloc, _ValueType>) {
+
+  using __value_type = typename iterator_traits<_ContiguousIterator>::value_type;
+
+  if _LIBCPP_CONSTEXPR (__allocator_has_trivial_move_construct_v<_Alloc, __value_type> &&
+                        __allocator_has_trivial_destroy_v<_Alloc, __value_type> &&
+                        __is_trivially_relocatable_v<__value_type>) {
+    if (!__libcpp_is_constant_evaluated()) {
+      // Casting to void* to suppress clang complaining that this is technically UB.
+      __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
+                       std::__to_address(__first),
+                       sizeof(__value_type) * (__last - __first));
+      return;
+    }
+  }
+
+  using __alloc_traits = allocator_traits<_Alloc>;
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (!_LIBCPP_HAS_EXCEPTIONS || is_nothrow_move_constructible<__value_type>::value) {
+    while (__first != __last) {
+      __alloc_traits::construct(__alloc, std::__to_address(__result), std::move(*__first));
+      __alloc_traits::destroy(__alloc, std::__to_address(__first));
+      ++__first;
+      ++__result;
+    }
+  } else
+#endif
+  {
     auto __destruct_first = __result;
     auto __guard          = std::__make_exception_guard(
         _AllocatorDestroyRangeReverse<_Alloc, _ContiguousIterator>(__alloc, __destruct_first, __result));
     auto __iter = __first;
     while (__iter != __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
       allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move_if_noexcept(*__iter));
-#else
-      allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__iter));
-#endif
       ++__iter;
       ++__result;
     }
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
-  } else {
-    // Casting to void* to suppress clang complaining that this is technically UB.
-    __builtin_memcpy(static_cast<void*>(std::__to_address(__result)),
-                     std::__to_address(__first),
-                     sizeof(_ValueType) * (__last - __first));
   }
 }
 
