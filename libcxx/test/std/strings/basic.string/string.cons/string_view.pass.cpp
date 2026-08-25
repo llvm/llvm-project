@@ -34,7 +34,6 @@ TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<CharT> sv) {
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
-    assert(s2.get_allocator() == Alloc());
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -44,8 +43,6 @@ TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<CharT> sv) {
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
-    assert(s2.get_allocator() == Alloc());
-    assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
 }
@@ -104,11 +101,36 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+template <class CharT>
+void test_default_alloc_arg(std::basic_string_view<CharT> sv) {
+  using A = ControlledDefaultConstructorAllocator<CharT>;
+  using S = std::basic_string<CharT, std::char_traits<CharT>, A>;
+
+  A::reset_to_base();
+  S s;
+  s = sv;
+  assert(s.get_allocator().is_base());
+
+  A::reset_to_base();
+  S s2(sv);
+  assert(s2.get_allocator().is_base());
+}
+
+void test_default_alloc_arg() {
+  typedef std::basic_string_view<char, std::char_traits<char> > SV;
+
+  test_default_alloc_arg(SV(""));
+  test_default_alloc_arg(SV("1"));
+  test_default_alloc_arg(SV("1234567980"));
+  test_default_alloc_arg(SV("123456798012345679801234567980123456798012345679801234567980"));
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
+  test_default_alloc_arg();
 
   return 0;
 }

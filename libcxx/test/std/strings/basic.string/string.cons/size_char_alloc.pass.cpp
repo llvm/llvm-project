@@ -29,7 +29,6 @@ TEST_CONSTEXPR_CXX20 void test(unsigned n, charT c) {
   assert(s2.size() == n);
   for (unsigned i = 0; i < n; ++i)
     assert(s2[i] == c);
-  assert(s2.get_allocator() == Alloc());
   assert(s2.capacity() >= s2.size());
   LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
@@ -56,7 +55,6 @@ TEST_CONSTEXPR_CXX20 void test(Tp n, Tp c) {
   assert(s2.size() == static_cast<std::size_t>(n));
   for (int i = 0; i < n; ++i)
     assert(s2[i] == c);
-  assert(s2.get_allocator() == Alloc());
   assert(s2.capacity() >= s2.size());
 }
 
@@ -103,11 +101,30 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+template <class Tp, class CharT>
+void test_default_alloc_arg(Tp n, CharT c) {
+  using A = ControlledDefaultConstructorAllocator<CharT>;
+  using S = std::basic_string<CharT, std::char_traits<CharT>, A>;
+
+  A::reset_to_base();
+  S s2(n, c);
+  assert(s2.get_allocator().is_base());
+}
+
+void test_default_alloc_arg() {
+  test_default_alloc_arg(0, 'a');
+  test_default_alloc_arg(1, 'a');
+  test_default_alloc_arg(10, 'a');
+  test_default_alloc_arg(100, 'a');
+  test_default_alloc_arg(static_cast<char>(100), static_cast<char>(65));
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
+  test_default_alloc_arg();
 
   return 0;
 }

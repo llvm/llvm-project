@@ -36,7 +36,6 @@ TEST_CONSTEXPR_CXX20 void test(It first, It last) {
     ++it;
     ++i;
   }
-  assert(s2.get_allocator() == Alloc());
   assert(s2.capacity() >= s2.size());
   LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
@@ -102,11 +101,36 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+template <class It>
+void test_default_alloc_arg(It first, It last) {
+  typedef typename std::iterator_traits<It>::value_type charT;
+  using A = ControlledDefaultConstructorAllocator<charT>;
+  using S = std::basic_string<charT, std::char_traits<charT>, A>;
+
+  A::reset_to_base();
+  S s2(first, last);
+  assert(s2.get_allocator().is_base());
+}
+
+void test_default_alloc_arg() {
+  const char* s = "12345678901234567890123456789012345678901234567890";
+
+  test_default_alloc_arg(s, s);
+  test_default_alloc_arg(s, s + 1);
+  test_default_alloc_arg(s, s + 10);
+  test_default_alloc_arg(s, s + 50);
+  test_default_alloc_arg(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s));
+  test_default_alloc_arg(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 1));
+  test_default_alloc_arg(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 10));
+  test_default_alloc_arg(cpp17_input_iterator<const char*>(s), cpp17_input_iterator<const char*>(s + 50));
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
+  test_default_alloc_arg();
 
   return 0;
 }
