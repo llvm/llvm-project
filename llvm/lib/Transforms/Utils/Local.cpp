@@ -2601,7 +2601,6 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
                                        II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
-  NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
   // If the invoke had profile metadata, try converting them for CallInst.

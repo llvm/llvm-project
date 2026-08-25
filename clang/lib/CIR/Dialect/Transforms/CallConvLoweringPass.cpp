@@ -76,11 +76,12 @@ namespace {
 // consumes.  Integer (including `_BitInt` up to 128 bits) / pointer / bool /
 // floating-point scalars are handled, as are struct / union / array aggregates,
 // `_Complex`, and a fixed-width vector whose width is a power of two.  Other
-// vectors, packed records, a padded record reached through a named bit-field
-// access unit, a record holding an empty-for-ABI member that occupies bytes, a
-// union no member of which spans its declared size, and a union with an
-// empty-record member are reported NYI by classifyX86_64Function so an
-// unsupported signature fails the pass instead of being misclassified.
+// vectors, a padded record reached through a named bit-field access unit, a
+// record holding an empty-for-ABI member that occupies bytes or a zero-sized
+// one off its own alignment, a union no member of which spans its declared
+// size, and a union with an empty-record member are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -203,9 +204,8 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
     return isSupportedType(arrTy.getElementType(), dl);
   if (auto recTy = dyn_cast<cir::RecordType>(ty)) {
-    // An incomplete record has no layout to classify, and a packed one needs
-    // pad-aware eightbyte classification this bridge does not implement.
-    if (!recTy.isComplete() || recTy.getPacked())
+    // An incomplete record has no layout to classify.
+    if (!recTy.isComplete())
       return false;
     if (recTy.isUnion()) {
       // The classifier sizes a union's eightbytes from the union itself, which
@@ -245,13 +245,21 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // An `empty` member that occupies bytes is later read as an unnamed access
     // unit.  One that is itself an empty-for-ABI record can occupy bytes by
     // holding a unit of its own, which classic CodeGen reaches through the
-    // member's fields rather than as one unit.
-    for (auto [memberTy, kind] :
-         llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
-      if (kind == cir::RecordMemberKind::Empty &&
-          dl.getTypeSizeInBits(memberTy).getFixedValue() &&
-          memberIsEmptyRecord(memberTy))
+    // member's fields rather than as one unit.  A zero-sized one is dropped
+    // before classification, so a misaligned one never reaches the rule that
+    // sends its record to memory.
+    for (auto [idx, memberTy, kind] :
+         llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
+      if (kind != cir::RecordMemberKind::Empty)
+        continue;
+      if (dl.getTypeSizeInBits(memberTy).getFixedValue()) {
+        if (memberIsEmptyRecord(memberTy))
+          return false;
+      } else if (recTy.getElementOffset(dl, idx) %
+                 dl.getTypeABIAlignment(memberTy)) {
         return false;
+      }
+    }
     return llvm::all_of(recTy.getMembers(),
                         [&](mlir::Type m) { return isSupportedType(m, dl); });
   }

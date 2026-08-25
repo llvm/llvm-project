@@ -269,6 +269,12 @@ public:
     return Result;
   }
 
+  QualType TransformPackIndexingType(TypeLocBuilder &TLB,
+                                     PackIndexingTypeLoc TL) {
+    llvm::SaveAndRestore _1(RemoveNonPackExpansionPacks, false);
+    return inherited::TransformPackIndexingType(TLB, TL);
+  }
+
   bool AlreadyTransformed(QualType T) {
     if (T.isNull())
       return true;
@@ -475,7 +481,8 @@ public:
     return inherited::TraverseStmt(E->getReplacement());
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
     if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl());
         TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -494,7 +501,7 @@ public:
       UsedTemplateArgs.push_back(
           SemaRef.Context.getCanonicalTemplateArgument(Arg));
     }
-    return inherited::TraverseTemplateName(Template);
+    return inherited::TraverseTemplateName(Template, TraverseQualifier);
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {

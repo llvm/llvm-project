@@ -7124,10 +7124,6 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
 
   for (QualType T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
-      // A pack indexing type can appear in a larger pack expansion,
-      // e.g. `Pack...[pack_of_indexes]...`
-      // so we need to temporarily disable substitution of pack elements
-      Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
       QualType Transformed = getDerived().TransformType(T);
       if (Transformed.isNull())
         return QualType();
