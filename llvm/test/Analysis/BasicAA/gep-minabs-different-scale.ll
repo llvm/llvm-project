@@ -5,7 +5,7 @@
 ; Thus, the min abs offset equals to 6. As both size accesses are one byte, 6 >= 1 holds.
 define void @noalias_mul_different_scale(ptr %base, i32 %a, i32 %b) {
 ; CHECK:       Function: noalias_mul_different_scale
-; CHECK-NEXT:    MayAlias:	i8* %gep1, i8* %gep2
+; CHECK-NEXT:    NoAlias:	i8* %gep1, i8* %gep2
   %i = or i32 %a, 1
   %j = or i32 %b, 1
   %mul.idx.i = mul nsw i32 %i, 12
@@ -23,7 +23,7 @@ define void @noalias_mul_different_scale(ptr %base, i32 %a, i32 %b) {
 ; Thus, the min abs offset equals to 4. As both size accesses are one byte, 4 >= 1 holds.
 define void @noalias_shl_different_scale(ptr %base, i32 %a, i32 %b) {
 ; CHECK:       Function: noalias_shl_different_scale
-; CHECK-NEXT:    MayAlias:	i8* %gep1, i8* %gep2
+; CHECK-NEXT:    NoAlias:	i8* %gep1, i8* %gep2
   %i = or i32 %a, 1
   %j = or i32 %b, 1
   %shl.idx = shl nsw i32 %j, 1
@@ -38,7 +38,7 @@ define void @noalias_shl_different_scale(ptr %base, i32 %a, i32 %b) {
 ; Thus, the min abs offset equals to 4. As both size accesses are one byte, 4 >= 1 holds.
 define void @noalias_type_size_different_scale(ptr %base, i32 %a, i32 %b) {
 ; CHECK:       Function: noalias_type_size_different_scale
-; CHECK-NEXT:    MayAlias:	i8* %gep1, i8* %gep2
+; CHECK-NEXT:    NoAlias:	i8* %gep1, i8* %gep2
   %i = or i32 %a, 1
   %j = or i32 %b, 1
   %gep1 = getelementptr inbounds float, ptr %base, i32 %i
@@ -52,7 +52,7 @@ define void @noalias_type_size_different_scale(ptr %base, i32 %a, i32 %b) {
 ; {j, Scale=8, ZExtBits=32}, thus KnownBits are evaluated accordingly.
 define void @noalias_zext_chain(ptr %base, i32 %a, i32 %b) {
 ; CHECK:       Function: noalias_zext_chain
-; CHECK-NEXT:    MayAlias:	i8* %gep1, i8* %gep2
+; CHECK-NEXT:    NoAlias:	i8* %gep1, i8* %gep2
   %i = or i32 %a, 1
   %j = or i32 %b, 1
   %zext.i = zext i32 %i to i64
