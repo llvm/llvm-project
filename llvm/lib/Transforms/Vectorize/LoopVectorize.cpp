@@ -8330,6 +8330,12 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
     Changed |= CFGChanged |=
         simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
 
+  // Loop simplification may change the CFG before processLoop() lazily requests
+  // BlockFrequencyAnalysis. Clear a cached CycleAnalysis so BFI recomputes it
+  // for the simplified CFG.
+  if (CFGChanged && FAM->getCachedResult<CycleAnalysis>(F))
+    FAM->clearAnalysis<CycleAnalysis>(F);
+
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops
   // and can invalidate iterators across the loops.
