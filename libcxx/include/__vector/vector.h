@@ -558,13 +558,42 @@ public:
   }
 #endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+    return erase(__position, __position + 1);
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
+    pointer __pos    = this->__layout_.__begin_ptr() + (__first - begin());
+    auto __hole_size = __last - __first;
+    if (__first != __last) {
+#ifndef _LIBCPP_CXX03_LANG
+      // If the value_type is trivially relocatable, we destroy the range being erased and we relocate the tail
+      // of the vector into the created gap. Otherwise, we use the standard technique with move-assignments.
+      //
+      // We really only need is_nothrow_relocatable, but vector::erase is currently overspecified to use assignment.
+      // We use is_trivially_relocatable unil that is relaxed.
+      if constexpr (__is_trivially_relocatable_v<value_type> &&
+                    __allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                    __allocator_has_trivial_destroy_v<allocator_type, value_type>) {
+        auto __raw_pos  = std::__to_address(__pos);
+        auto __old_size = size();
+        std::__destroy(__raw_pos, __raw_pos + __hole_size);
+        std::__uninitialized_relocate(__raw_pos + __hole_size, std::__to_address(__layout_.__end_ptr()), __raw_pos);
+        __layout_.__set_bound_using_pointer(__layout_.__end_ptr() - __hole_size);
+        __annotate_shrink(__old_size);
+        return __make_iter(__pos);
+      }
+#endif
+      this->__destruct_at_end(std::move(__pos + __hole_size, __layout_.__end_ptr(), __pos));
+    }
+    return __make_iter(__pos);
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
-    size_type __old_size = size();
-    __base_destruct_at_end(this->__layout_.__begin_ptr());
-    __annotate_shrink(__old_size);
+    __destruct_at_end(__layout_.__begin_ptr());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
@@ -717,9 +746,11 @@ private:
       _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
       _NOEXCEPT_(__alloc_traits::is_always_equal::value);
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
     size_type __old_size = size();
-    __base_destruct_at_end(__new_last);
+    std::__allocator_destroy(__layout_.__alloc(), __new_last, __layout_.__end_ptr());
+    __layout_.__set_bound_using_pointer(__new_last);
     __annotate_shrink(__old_size);
   }
 
@@ -775,13 +806,6 @@ private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
-    pointer __soon_to_be_end = __layout_.__end_ptr();
-    while (__new_last != __soon_to_be_end)
-      __alloc_traits::destroy(this->__layout_.__alloc(), std::__to_address(--__soon_to_be_end));
-    __layout_.__set_bound_using_pointer(__new_last);
-  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
     __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
@@ -1095,28 +1119,6 @@ vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
 #if _LIBCPP_STD_VER >= 17
   return back();
 #endif
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::erase(const_iterator __position) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
-  difference_type __ps = __position - cbegin();
-  pointer __p          = this->__layout_.__begin_ptr() + __ps;
-  this->__destruct_at_end(std::move(__p + 1, __layout_.__end_ptr(), __p));
-  return __make_iter(__p);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
-  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
-  pointer __p = this->__layout_.__begin_ptr() + (__first - begin());
-  if (__first != __last) {
-    this->__destruct_at_end(std::move(__p + (__last - __first), __layout_.__end_ptr(), __p));
-  }
-  return __make_iter(__p);
 }
 
 template <class _Tp, class _Allocator>
