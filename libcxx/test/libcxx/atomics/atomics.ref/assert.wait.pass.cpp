@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 
-// undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
+// Failing on linux: undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
 // XFAIL: libcpp-hardening-mode={{extensive|debug}}
 
 // <atomic>

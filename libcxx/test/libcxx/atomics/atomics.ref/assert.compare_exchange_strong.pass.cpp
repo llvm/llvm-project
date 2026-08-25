@@ -8,6 +8,10 @@
 
 // REQUIRES: can-test-hardening-assertions-extensive
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// Failing on linux: undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
+// XFAIL: libcpp-hardening-mode={{extensive|debug}}
+
 // ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 // <atomic>
 
