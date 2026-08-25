@@ -52,30 +52,30 @@ struct TypeDependenceScope {
   enum TypeDependence : uint8_t {
     /// Whether this type contains an unexpanded parameter pack
     /// (for C++11 variadic templates)
-    UnexpandedPack = 1,
+    UnexpandedPack = 1 << 0,
     /// Whether this type somehow involves
     ///   - a template parameter, even if the resolution of the type does not
     ///     depend on a template parameter.
     ///   - or an error.
-    Instantiation = 2,
+    Instantiation = 1 << 1,
     /// Whether this type
     ///   - is a dependent type (C++ [temp.dep.type])
     ///   - or it somehow involves an error, e.g. decltype(recovery-expr)
-    Dependent = 4,
+    Dependent = 1 << 2,
     /// Whether this type is a variably-modified type (C99 6.7.5).
-    VariablyModified = 8,
+    VariablyModified = 1 << 3,
 
     /// Whether this type references an error, e.g. decltype(err-expression)
     /// yields an error type.
-    Error = 16,
+    Error = 1 << 4,
 
     /// Whether this type contains a placeholder for a type attribute
     /// awaiting late parsing, e.g. `int *__counted_by(count)` where
     /// `count` is a later field of the same struct.
-    LateParsedAttr = 32,
+    LateParsedAttr = 1 << 5,
 
     None = 0,
-    All = 63,
+    All = (1 << 6) - 1,
 
     DependentInstantiation = Dependent | Instantiation,
 
