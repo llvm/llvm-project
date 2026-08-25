@@ -969,6 +969,10 @@ std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
 
+  if (opts.OpenCLCPlusPlus)
+    return CIRLang::OpenCLCXX;
+  if (opts.OpenCL)
+    return CIRLang::OpenCLC;
   if (opts.CPlusPlus)
     return CIRLang::CXX;
   if (opts.C99 || opts.C11 || opts.C17 || opts.C23 || opts.C2y ||
