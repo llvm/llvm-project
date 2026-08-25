@@ -985,7 +985,10 @@ add_header_library(
   HDRS
     wait4.h
   DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
     libc.hdr.types.pid_t
+    libc.hdr.types.siginfo_t
     libc.hdr.types.struct_rusage
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common

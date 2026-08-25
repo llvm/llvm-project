@@ -29989,6 +29989,62 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool CandidateFound = false;
   InstructionCost MinCost = SLPCostThreshold.getValue();
 
+  // Collects ActualVF lanes for the window starting at index StartIdx.
+  // Standalone seeds skip the lanes that depend on the already taken ones.
+  auto CollectWindowOps = [&](unsigned StartIdx, unsigned ActualVF,
+                              SmallVectorImpl<Value *> &Ops) {
+    Ops.assign(ActualVF, nullptr);
+    unsigned Idx = 0;
+    SmallPtrSet<const Value *, 8> Taken;
+    for (Value *V : VL.drop_front(StartIdx)) {
+      // Check that a previous iteration of this loop did not delete the
+      // Value.
+      auto *Inst = dyn_cast<Instruction>(V);
+      if (Inst && R.isDeleted(Inst))
+        continue;
+      // The lanes cannot depend on each other, so the seed, fed by the
+      // already taken one, is left for the next window.
+      if (StandaloneSeeds && Inst &&
+          any_of(Inst->operand_values(),
+                 [&](const Value *Op) { return Taken.contains(Op); }))
+        continue;
+      Ops[Idx] = V;
+      if (StandaloneSeeds)
+        Taken.insert(V);
+      ++Idx;
+      if (Idx == ActualVF)
+        break;
+    }
+    return Idx == ActualVF;
+  };
+  // The identical lanes compute the very same value, so the vector node only
+  // duplicates it, and the window, rejected by another attempt in the block,
+  // is not analyzed again.
+  auto IsDuplicateOrAnalyzedWindow = [&](ArrayRef<Value *> Ops) {
+    return R.isAnalyzedBundle(Ops) ||
+           (StandaloneSeeds && all_of(drop_begin(Ops), [&](Value *V) {
+              return cast<Instruction>(Ops.front())
+                  ->isIdenticalTo(cast<Instruction>(V));
+            }));
+  };
+  // Builds the tree for the window and returns its cost, keeping the tree
+  // loaded. Tiny, not fully vectorizable trees are reported as invalid cost.
+  auto AnalyzeWindow = [&](ArrayRef<Value *> Ops) -> InstructionCost {
+    R.buildTree(Ops);
+    if (R.isTreeTinyAndNotFullyVectorizable())
+      return InstructionCost::getInvalid();
+    if (R.isProfitableToReorder()) {
+      R.reorderTopToBottom();
+      R.reorderBottomToTop(
+          !isa<InsertElementInst, InsertValueInst>(Ops.front()));
+    }
+    R.transformNodes();
+    R.computeMinimumValueSizes();
+    InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+    R.buildExternalUses();
+    return R.getTreeCost(TreeCost);
+  };
+
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
        VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1)) {
@@ -30017,40 +30073,12 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       bool NonPow2FullWidth =
           !hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF);
 
-      SmallVector<Value *> Ops(ActualVF, nullptr);
-      unsigned Idx = 0;
-      SmallPtrSet<const Value *, 8> Taken;
-      for (Value *V : VL.drop_front(I)) {
-        // Check that a previous iteration of this loop did not delete the
-        // Value.
-        auto *Inst = dyn_cast<Instruction>(V);
-        if (Inst && R.isDeleted(Inst))
-          continue;
-        // The lanes cannot depend on each other, so the seed, fed by the
-        // already taken one, is left for the next window.
-        if (StandaloneSeeds && Inst &&
-            any_of(Inst->operand_values(),
-                   [&](const Value *Op) { return Taken.contains(Op); }))
-          continue;
-        Ops[Idx] = V;
-        if (StandaloneSeeds)
-          Taken.insert(V);
-        ++Idx;
-        if (Idx == ActualVF)
-          break;
-      }
+      SmallVector<Value *> Ops;
       // Not enough vectorizable instructions - exit.
-      if (Idx != ActualVF)
+      if (!CollectWindowOps(I, ActualVF, Ops))
         break;
 
-      // The identical lanes compute the very same value, so the vector node
-      // only duplicates it, and the window, rejected by another attempt in the
-      // block, is not analyzed again.
-      if (R.isAnalyzedBundle(Ops) ||
-          (StandaloneSeeds && all_of(drop_begin(Ops), [&](Value *V) {
-             return cast<Instruction>(Ops.front())
-                 ->isIdenticalTo(cast<Instruction>(V));
-           }))) {
+      if (IsDuplicateOrAnalyzedWindow(Ops)) {
         if (StandaloneSeeds)
           I += ActualVF - 1;
         continue;
@@ -30059,44 +30087,73 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
 
-      R.buildTree(Ops);
-      if (R.isTreeTinyAndNotFullyVectorizable()) {
+      InstructionCost Cost = AnalyzeWindow(Ops);
+      if (!Cost.isValid()) {
         R.analyzedBundle(Ops);
+        // Rejected trees must not leak their nodes into the seed filtering of
+        // the later attempts.
+        R.deleteTree();
         if (StandaloneSeeds)
           I += ActualVF - 1;
         continue;
       }
-      if (R.isProfitableToReorder()) {
-        R.reorderTopToBottom();
-        R.reorderBottomToTop(
-            !isa<InsertElementInst, InsertValueInst>(Ops.front()));
-      }
-      R.transformNodes();
-      R.computeMinimumValueSizes();
-      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
-      R.buildExternalUses();
-
-      InstructionCost Cost = R.getTreeCost(TreeCost);
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
 
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                         << " for VF=" << ActualVF << "\n");
       if (Cost < -SLPCostThreshold) {
+        ArrayRef<Value *> WinOps = Ops;
+        unsigned WinVF = ActualVF;
+        // The full-width non-power-of-2 window covers the whole list at once,
+        // but the largest power-of-2 window may still be more profitable: the
+        // extra lanes may duplicate work or need an extra register. Compare
+        // the costs before committing.
+        SmallVector<Value *> Pow2Ops;
+        if (NonPow2FullWidth && !MaxVFOnly) {
+          const unsigned Pow2VF =
+              getFloorFullVectorNumberOfElements(*TTI, ScalarTy, ActualVF);
+          if (Pow2VF >= std::max(MinVF, 2u) &&
+              CollectWindowOps(I, Pow2VF, Pow2Ops) &&
+              !IsDuplicateOrAnalyzedWindow(Pow2Ops)) {
+            InstructionCost Pow2Cost = AnalyzeWindow(Pow2Ops);
+            if (Pow2Cost.isValid()) {
+              CandidateFound = true;
+              MinCost = std::min(MinCost, Pow2Cost);
+              LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Pow2Cost
+                                << " for VF=" << Pow2VF << "\n");
+            }
+            if (Pow2Cost.isValid() && Pow2Cost < Cost) {
+              R.analyzedBundle(Ops);
+              WinOps = Pow2Ops;
+              WinVF = Pow2VF;
+              Cost = Pow2Cost;
+            } else {
+              R.analyzedBundle(Pow2Ops);
+              R.deleteTree();
+              // Rebuild the winning non-power-of-2 tree.
+              Cost = AnalyzeWindow(Ops);
+              assert(Cost.isValid() && "Must be vectorizable");
+            }
+          }
+        }
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
-                                            cast<Instruction>(Ops[0]))
+                                            cast<Instruction>(WinOps[0]))
                          << "SLP vectorized with cost " << ore::NV("Cost", Cost)
                          << " and with tree size "
                          << ore::NV("TreeSize", R.getTreeSize()));
 
         R.vectorizeTree();
         // Move to the next bundle.
-        I += VF - 1;
+        I += WinVF - 1;
         NextInst = I + 1;
         Changed = true;
       } else {
         R.analyzedBundle(Ops);
+        // Rejected trees must not leak their nodes into the seed filtering of
+        // the later attempts.
+        R.deleteTree();
         if (StandaloneSeeds && !NonPow2FullWidth)
           I += ActualVF - 1;
       }
@@ -31239,9 +31296,14 @@ public:
         TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
-      // Try to handle shuffled extractelements.
+      // Try to handle shuffled extractelements. Only pure extractelement
+      // groups can be merged: merged groups are skipped for external uses,
+      // and other values would be erased while still used by reduction ops.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && I + 1 < E &&
+          all_of(ReducedVals[I + 1], [&](Value *RV) {
+            return isa<ExtractElementInst>(TrackedVals.at(RV));
+          })) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);

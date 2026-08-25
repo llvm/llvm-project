@@ -95,27 +95,21 @@ define <4 x i64> @scalarize_ctlz_v4i64(<4 x i64> %v)  {
 define <8 x i64> @scalarize_ctlz_v8i64(<8 x i64> %v)  {
 ; SSE2-LABEL: define <8 x i64> @scalarize_ctlz_v8i64(
 ; SSE2-SAME: <8 x i64> [[V:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[V2:%.*]] = extractelement <8 x i64> [[V]], i64 2
-; SSE2-NEXT:    [[V3:%.*]] = extractelement <8 x i64> [[V]], i64 3
-; SSE2-NEXT:    [[V4:%.*]] = extractelement <8 x i64> [[V]], i64 4
-; SSE2-NEXT:    [[V5:%.*]] = extractelement <8 x i64> [[V]], i64 5
-; SSE2-NEXT:    [[V6:%.*]] = extractelement <8 x i64> [[V]], i64 6
-; SSE2-NEXT:    [[V7:%.*]] = extractelement <8 x i64> [[V]], i64 7
 ; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[V]], <8 x i64> poison, <2 x i32> <i32 0, i32 1>
 ; SSE2-NEXT:    [[TMP6:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[TMP1]], i1 false)
-; SSE2-NEXT:    [[C2:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V2]], i1 false)
-; SSE2-NEXT:    [[C3:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V3]], i1 false)
-; SSE2-NEXT:    [[C4:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V4]], i1 false)
-; SSE2-NEXT:    [[C5:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V5]], i1 false)
-; SSE2-NEXT:    [[C6:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V6]], i1 false)
-; SSE2-NEXT:    [[C7:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[V7]], i1 false)
+; SSE2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[V]], <8 x i64> poison, <2 x i32> <i32 2, i32 3>
+; SSE2-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[TMP3]], i1 false)
+; SSE2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> [[V]], <8 x i64> poison, <2 x i32> <i32 4, i32 5>
+; SSE2-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[TMP5]], i1 false)
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i64> [[V]], <8 x i64> poison, <2 x i32> <i32 6, i32 7>
+; SSE2-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[TMP7]], i1 false)
 ; SSE2-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE2-NEXT:    [[R2:%.*]] = insertelement <8 x i64> [[TMP10]], i64 [[C2]], i64 2
-; SSE2-NEXT:    [[R3:%.*]] = insertelement <8 x i64> [[R2]], i64 [[C3]], i64 3
-; SSE2-NEXT:    [[R4:%.*]] = insertelement <8 x i64> [[R3]], i64 [[C4]], i64 4
-; SSE2-NEXT:    [[R5:%.*]] = insertelement <8 x i64> [[R4]], i64 [[C5]], i64 5
-; SSE2-NEXT:    [[R6:%.*]] = insertelement <8 x i64> [[R5]], i64 [[C6]], i64 6
-; SSE2-NEXT:    [[R73:%.*]] = insertelement <8 x i64> [[R6]], i64 [[C7]], i64 7
+; SSE2-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP9]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; SSE2-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE2-NEXT:    [[R73:%.*]] = shufflevector <8 x i64> [[TMP13]], <8 x i64> [[TMP14]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; SSE2-NEXT:    ret <8 x i64> [[R73]]
 ;
 ; SSE4_2-LABEL: define <8 x i64> @scalarize_ctlz_v8i64(
