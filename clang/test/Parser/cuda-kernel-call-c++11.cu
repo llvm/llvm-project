@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -x hip %s
-// RUN: not %clang_cc1 %s -DSLOC_CHECK 2>&1 | FileCheck %s --strict-whitespace
+// RUN: not %clang_cc1 -fsyntax-only %s -DSLOC_CHECK 2>&1 | FileCheck %s --strict-whitespace
 
 template<typename T=int> struct S {};
 template<typename> void f();
@@ -55,18 +55,18 @@ void foobar() {
   // We split <<< into a << followed by a <, check that < has right source
   // location.
   CC.operator<<<int;
-  // CHECK: error: expected '>'
+  // CHECK: [[@LINE-1]]:20: error: expected '>'
   // CHECK-NEXT: CC.operator<<<int;
   // CHECK-NEXT:                  ^
-  // CHECK-NEXT: to match this '<'
+  // CHECK-NEXT: [[@LINE-4]]:16: note: to match this '<'
   // CHECK-NEXT: CC.operator<<<int;
   // CHECK-NEXT:              ^
   CC.template operator<<<int;
-  // CHECK: error: expected '>'
+  // CHECK: [[@LINE-1]]:29: error: expected '>'
   // CHECK-NEXT: CC.template operator<<<int;
   // CHECK-NEXT:                           ^
-  // CHECK-NEXT: to match this '<'
+  // CHECK-NEXT: [[@LINE-4]]:25: note: to match this '<'
   // CHECK-NEXT: CC.template operator<<<int;
-  // CHECK-NEXT:                        ^
+  // CHECK-NEXT:                       ^
 #endif
 }
