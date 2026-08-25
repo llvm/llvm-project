@@ -6184,8 +6184,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_strict_aliasing,
                     !IsWindowsMSVC && !IsUEFI))
     CmdArgs.push_back("-relaxed-aliasing");
-  if (Args.hasFlag(options::OPT_fno_pointer_tbaa, options::OPT_fpointer_tbaa,
-                   false))
+  if (!Args.hasFlag(options::OPT_fpointer_tbaa, options::OPT_fno_pointer_tbaa,
+                    true))
     CmdArgs.push_back("-no-pointer-tbaa");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
                     options::OPT_fno_struct_path_tbaa, true))
