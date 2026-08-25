@@ -403,8 +403,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // it to.
         if (recTy.isUnion()) {
           // Only data members are classified.  An unnamed bit-field's storage
-          // is a member here but contributes no class in classic CodeGen, so
-          // mapping it would pass an argument classic drops.
+          // is a member here but contributes no class, so mapping it would
+          // pass an argument that should be dropped.
           for (auto [fieldTy, kind] :
                llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
             if (cir::holdsDataForABI(fieldTy, kind))
