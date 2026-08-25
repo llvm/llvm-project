@@ -2210,11 +2210,13 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
-    // Widened loads are handled, as cse() only reuses them within a block with
-    // no intervening memory write. Any other memory access is rejected.
+    // Widened loads (including the EVL variant) are handled, as cse() only
+    // reuses them within a block with no intervening memory write. Any other
+    // memory access is rejected.
     if (Def->mayWriteToMemory())
       return false;
-    return !Def->mayReadFromMemory() || isa<VPWidenLoadRecipe>(Def);
+    return !Def->mayReadFromMemory() ||
+           isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
   }
 
   /// Hash the underlying data of \p Def.
@@ -2230,7 +2232,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       return hash_combine(Result, SIVSteps->getInductionOpcode());
     // Fold in the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
-    if (auto *Load = dyn_cast<VPWidenLoadRecipe>(Def))
+    if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(Def)))
       return hash_combine(Result, Load->isConsecutive());
     return Result;
   }
@@ -2258,8 +2260,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         return false;
     // Compare the separately stored consecutive flag. Alignment is left out and
     // handled by cse.
-    if (auto *LL = dyn_cast<VPWidenLoadRecipe>(L))
-      if (LL->isConsecutive() != cast<VPWidenLoadRecipe>(R)->isConsecutive())
+    if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(L)))
+      if (LL->isConsecutive() !=
+          cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(R))->isConsecutive())
         return false;
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
@@ -2298,7 +2301,7 @@ void VPlanTransforms::cse(VPlan &Plan) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
       if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
         continue;
-      bool IsLoad = isa<VPWidenLoadRecipe>(Def);
+      bool IsLoad = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(Def);
       auto [It, Inserted] =
           (IsLoad ? LoadCSEMap : CSEMap).try_emplace(Def, Def);
       if (Inserted)
@@ -2308,12 +2311,12 @@ void VPlanTransforms::cse(VPlan &Plan) {
       if (!VPDT.dominates(V->getParent(), VPBB))
         continue;
       if (IsLoad) {
-        auto *EarlierLoad = cast<VPWidenLoadRecipe>(V);
-        auto *Load = cast<VPWidenLoadRecipe>(Def);
+        auto *EarlierLoad = cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(V));
+        auto *Load = cast<VPWidenMemoryRecipe>(cast<VPRecipeBase>(Def));
         if (EarlierLoad->getAlign() < Load->getAlign()) {
           // Record Load as the candidate for subsequent loads, as it may be
           // reusable where EarlierLoad is not.
-          It->second = Load;
+          It->second = Def;
           continue;
         }
         // Keep only metadata common to both loads on the survivor.

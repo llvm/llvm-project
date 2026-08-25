@@ -3881,6 +3881,9 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadEVLSC)
 
+  /// Returns the opcode of the widened load.
+  unsigned getOpcode() const { return Instruction::Load; }
+
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
 
