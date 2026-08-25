@@ -138,9 +138,7 @@ define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) 
 
 define dso_local void @store_atomic_i128_aligned_seq_cst(i128 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i128_aligned_seq_cst:
-; CHECK:    dmb ish
-; CHECK:    stp x0, x1, [x2]
-; CHECK:    dmb ish
+; CHECK:    stilp x0, x1, [x2]
     store atomic i128 %value, ptr %ptr seq_cst, align 16
     ret void
 }
