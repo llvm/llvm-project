@@ -2279,14 +2279,11 @@ def fp_rnd_rp_imm : FPRndModeImm<"TowardPositive">;
 foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in {
-      // drop empty strings from the modifier list
-      defvar mods = !filter(m, [ftz, sat], !not(!empty(m)));
-      defvar suffix = !listconcat(mods, [t.PtxType]);
       defvar add_intrin =
-        !cast<Intrinsic>(!interleave(!listconcat(["int_nvvm_fadd"], mods), "_"));
+        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret);
 
-      def INT_NVVM_ADD_RN_ # !toupper(!interleave(suffix, "_")) :
-        F_MATH_2_RND_TY<!interleave(!listconcat(["add", "rn"], suffix), "."), t,
+      def INT_NVVM_ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        F_MATH_2_RND_TY<StrJoin<".", ["add", "rn", ftz, sat, t.PtxType]>.ret, t,
                         add_intrin, fp_rnd_rn_imm>;
     }
 

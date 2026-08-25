@@ -7187,28 +7187,27 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
 static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
                                      APFloat::roundingMode RoundingMode) {
   const bool IsFTZ = nvvm::FAddShouldFTZ(IID);
+  const bool IsSat = nvvm::FAddShouldSaturate(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
-  case MVT::f16:
-    if (nvvm::FAddShouldSaturate(IID))
-      return IsFTZ ? NVPTXISD::SUB_RN_FTZ_SAT : NVPTXISD::SUB_RN_SAT;
-    return IsFTZ ? NVPTXISD::SUB_RN_FTZ : NVPTXISD::SUB_RN;
+  case MVT::f16: {
+    static constexpr unsigned SubRNOpcodes[2][2] = {
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_SAT},
+        {NVPTXISD::SUB_RN_FTZ, NVPTXISD::SUB_RN_FTZ_SAT}};
+    return SubRNOpcodes[IsFTZ][IsSat];
+  }
   case MVT::bf16:
     return NVPTXISD::SUB_RN;
-  case MVT::f32:
-    if (!VT.isVector() || nvvm::FAddShouldSaturate(IID))
+  case MVT::f32: {
+    // for f32x2 inputs
+    if (!VT.isVector() || IsSat)
       return 0;
-    switch (RoundingMode) {
-    case APFloat::rmNearestTiesToEven:
-      return IsFTZ ? NVPTXISD::SUB_RN_FTZ : NVPTXISD::SUB_RN;
-    case APFloat::rmTowardZero:
-      return IsFTZ ? NVPTXISD::SUB_RZ_FTZ : NVPTXISD::SUB_RZ;
-    case APFloat::rmTowardNegative:
-      return IsFTZ ? NVPTXISD::SUB_RM_FTZ : NVPTXISD::SUB_RM;
-    case APFloat::rmTowardPositive:
-      return IsFTZ ? NVPTXISD::SUB_RP_FTZ : NVPTXISD::SUB_RP;
-    default:
-      llvm_unreachable("Unexpected fadd rounding mode");
-    }
+    static constexpr unsigned SubF32x2Opcodes[4][2] = {
+        {NVPTXISD::SUB_RZ, NVPTXISD::SUB_RZ_FTZ},  // RZ
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_FTZ},  // RN
+        {NVPTXISD::SUB_RP, NVPTXISD::SUB_RP_FTZ},  // RP
+        {NVPTXISD::SUB_RM, NVPTXISD::SUB_RM_FTZ}}; // RM
+    return SubF32x2Opcodes[static_cast<unsigned>(RoundingMode)][IsFTZ];
+  }
   default:
     return 0;
   }
