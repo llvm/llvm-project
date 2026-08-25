@@ -669,7 +669,7 @@ define <8 x i8> @tbx3_8b(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, 
 ; CHECK-NEXT:    store <8 x i8> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[OUT]]
 ;
-  %out = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(< 8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
+  %out = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
   ret <8 x i8> %out
 }
 

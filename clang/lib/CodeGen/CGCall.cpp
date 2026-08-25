@@ -3259,7 +3259,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         // require parameters to have automatic storage duration. Therefore, the
         // underlying object of this pointer will not be freed during the
         // function's execution.
-        Attrs.addAttribute(llvm::Attribute::NoFree);
+        Attrs.addAttribute(llvm::Attribute::NoFreeObj);
         Attrs.addDereferenceableAttr(
             Context.getTypeSizeInChars(ParamType).getQuantity());
       }

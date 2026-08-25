@@ -284,6 +284,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
     if (!Ptr.isConst())
       return false;
 
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
+      return false;
+
     unsigned N = Ptr.getNumElems();
 
     if (Ptr.elemSize() == 1 /* bytes */) {
@@ -463,8 +466,9 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
 }
 
 OptPrimType Context::classify(QualType T) const {
+  T = T.getCanonicalType();
 
-  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+  if (const auto *BT = dyn_cast<BuiltinType>(T)) {
     auto Kind = BT->getKind();
     if (Kind == BuiltinType::Bool)
       return PT_Bool;
@@ -528,10 +532,7 @@ OptPrimType Context::classify(QualType T) const {
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
-  if (const auto *DT = dyn_cast<DecltypeType>(T))
-    return classify(DT->getUnderlyingType());
-
-  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>())
     return classify(OBT->getUnderlyingType());
 
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
