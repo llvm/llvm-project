@@ -1351,7 +1351,7 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
                                 const Pointer &BasePtr,
                                 const Descriptor *Desc) {
   assert(Desc->isRecord());
-  const Record *R = Desc->ElemRecord;
+  const Record *R = Desc->getElemRecord();
   assert(R);
 
   if (!S.Current->isBottomFrame() && S.Current->hasThisPointer() &&
@@ -1390,7 +1390,7 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
     unsigned N = Desc->getNumElems();
     if (N == 0)
       return true;
-    const Descriptor *ElemDesc = Desc->ElemDesc;
+    const Descriptor *ElemDesc = Desc->getElemDesc();
     assert(ElemDesc->isRecord());
 
     Pointer RP(const_cast<Block *>(B));
@@ -1734,13 +1734,13 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   const Descriptor *D = ThisPtr.getFieldDesc();
   // FIXME: I think this case is not 100% correct. E.g. a pointer into a
   // subobject of a composite array.
-  if (!D->ElemRecord)
+  if (!D->isRecord())
     return true;
 
   if (S.getLangOpts().CPlusPlus26)
     return true;
 
-  if (D->ElemRecord->getNumVirtualBases() == 0)
+  if (D->getElemRecord()->getNumVirtualBases() == 0)
     return true;
 
   S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_virtual_base)

@@ -1222,7 +1222,7 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   CharUnits BaseLayoutOffset =
       Layout.getBaseClassOffset(cast<CXXRecordDecl>(BaseDesc->asDecl()));
 
-  const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
+  const RecordDecl *RD = BaseDesc->getElemRecord()->getDecl();
   QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                               std::nullopt, RD, false);
   return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};

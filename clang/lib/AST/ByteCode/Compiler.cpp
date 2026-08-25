@@ -5106,7 +5106,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
       if (!this->visitZeroArrayInitializer(D->getType(), E))
         return false;
     } else if (D->isRecord()) {
-      if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
+      if (!this->visitZeroRecordInitializer(D->getElemRecord(), E))
         return false;
     } else
       return false;
@@ -8696,7 +8696,7 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 
   // Arrays.
   if (Desc->isArray()) {
-    const Descriptor *ElemDesc = Desc->ElemDesc;
+    const Descriptor *ElemDesc = Desc->getElemDesc();
     assert(ElemDesc);
 
     unsigned N = Desc->getNumElems();
@@ -8719,9 +8719,9 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
     return this->emitDestructionPop(ElemDesc, Loc);
   }
 
-  assert(Desc->ElemRecord);
-  assert(!Desc->ElemRecord->hasTrivialDtor());
-  return this->emitRecordDestructionPop(Desc->ElemRecord, Loc);
+  assert(Desc->isRecord());
+  assert(!Desc->getElemRecord()->hasTrivialDtor());
+  return this->emitRecordDestructionPop(Desc->getElemRecord(), Loc);
 }
 
 /// Create a dummy pointer for the given decl (or expr) and

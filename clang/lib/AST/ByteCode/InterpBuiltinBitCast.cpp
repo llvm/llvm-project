@@ -130,7 +130,7 @@ static Result enumerateData(PtrView P, const Context &Ctx, Bits Offset,
 
   // Records.
   if (FieldDesc->isRecord()) {
-    const Record *R = FieldDesc->ElemRecord;
+    const Record *R = FieldDesc->getElemRecord();
     if (R->getDecl()->isInvalidDecl())
       return Result::Failure;
     const ASTRecordLayout &Layout =

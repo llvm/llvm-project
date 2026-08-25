@@ -150,10 +150,12 @@ struct PtrView {
     return PtrView{Pointee, Base, Base};
   }
 
-  const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
+  const Record *getRecord() const {
+    return getFieldDesc()->getElemRecordOrNull();
+  }
   const Record *getElemRecord() const {
-    const Descriptor *ElemDesc = getFieldDesc()->ElemDesc;
-    return ElemDesc ? ElemDesc->ElemRecord : nullptr;
+    const Descriptor *ElemDesc = getFieldDesc()->getElemDescOrNull();
+    return ElemDesc ? ElemDesc->getElemRecord() : nullptr;
   }
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
 
@@ -176,7 +178,7 @@ struct PtrView {
 
     unsigned Adjust = 0;
     if (Offset != Base) {
-      if (getFieldDesc()->ElemDesc)
+      if (getFieldDesc()->getElemDescOrNull())
         Adjust = sizeof(InlineDescriptor);
       else
         Adjust = sizeof(InitMapPtr);
@@ -208,7 +210,7 @@ struct PtrView {
 
   PtrView atIndex(unsigned Idx) const {
     unsigned Off = Idx * elemSize();
-    if (getFieldDesc()->ElemDesc)
+    if (getFieldDesc()->getElemDescOrNull())
       Off += sizeof(InlineDescriptor);
     else
       Off += sizeof(InitMapPtr);

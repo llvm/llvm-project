@@ -16,13 +16,13 @@
 #include "DeclOrExpr.h"
 #include "InitMap.h"
 #include "PrimType.h"
+#include "Record.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 
 namespace clang {
 namespace interp {
 class Block;
-class Record;
 class SourceInfo;
 struct Descriptor;
 enum PrimType : uint8_t;
@@ -124,6 +124,15 @@ private:
   /// Original declaration, used to emit the error message.
   const DeclOrExpr Source;
   const Type *SourceType = nullptr;
+  const llvm::PointerUnion<const Record *, const Descriptor *>
+      ElemDescOrRecord = nullptr;
+
+public:
+  /// Storage management methods.
+  const BlockCtorFn CtorFn = nullptr;
+  const BlockDtorFn DtorFn = nullptr;
+
+private:
   /// Size of an element, in host bytes.
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
@@ -142,10 +151,6 @@ public:
   static constexpr unsigned MaxArrayElemBytes =
       std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMapPtr);
 
-  /// Pointer to the record, if block contains records.
-  const Record *const ElemRecord = nullptr;
-  /// Descriptor of the array element.
-  const Descriptor *const ElemDesc = nullptr;
   /// The primitive type this descriptor was created for,
   /// or the primitive element type in case this is
   /// a primitive array.
@@ -160,10 +165,6 @@ public:
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
   bool IsConstexprUnknown = false;
-
-  /// Storage management methods.
-  const BlockCtorFn CtorFn = nullptr;
-  const BlockDtorFn DtorFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
   Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, bool IsConst,
@@ -192,6 +193,19 @@ public:
   /// Allocates a dummy descriptor.
   Descriptor(DeclOrExpr D);
 
+  const Descriptor *getElemDesc() const {
+    return cast<const Descriptor *>(ElemDescOrRecord);
+  }
+  const Descriptor *getElemDescOrNull() const {
+    return dyn_cast_if_present<const Descriptor *>(ElemDescOrRecord);
+  }
+  const Record *getElemRecord() const {
+    return cast<const Record *>(ElemDescOrRecord);
+  }
+  const Record *getElemRecordOrNull() const {
+    return dyn_cast_if_present<const Record *>(ElemDescOrRecord);
+  }
+
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
@@ -216,10 +230,6 @@ public:
 
   const RecordDecl *asRecordDecl() const {
     return dyn_cast_if_present<RecordDecl>(asDecl());
-  }
-
-  template <typename T> const T *getAs() const {
-    return dyn_cast_if_present<T>(asDecl());
   }
 
   /// Returns the size of the object without metadata.
@@ -248,21 +258,23 @@ public:
   }
 
   /// Checks if the descriptor is of an array of primitives.
-  bool isPrimitiveArray() const { return IsArray && !ElemDesc; }
+  bool isPrimitiveArray() const { return IsArray && !getElemDescOrNull(); }
   /// Checks if the descriptor is of an array of composites.
-  bool isCompositeArray() const { return IsArray && ElemDesc; }
+  bool isCompositeArray() const { return IsArray && getElemDescOrNull(); }
   /// Checks if the descriptor is of an array of zero size.
   bool isZeroSizeArray() const { return Size == 0; }
   /// Checks if the descriptor is of an array of unknown size.
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord && PrimT; }
+  bool isPrimitive() const {
+    return !IsArray && !getElemRecordOrNull() && PrimT;
+  }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }
   /// Checks if the descriptor is of a record.
-  bool isRecord() const { return !IsArray && ElemRecord; }
+  bool isRecord() const { return !IsArray && getElemRecordOrNull(); }
   /// Checks if the descriptor is of a union.
   bool isUnion() const;
 

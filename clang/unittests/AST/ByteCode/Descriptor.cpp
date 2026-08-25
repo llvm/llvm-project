@@ -63,7 +63,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_TRUE(GlobalDesc->isRecord());
 
   // Test the Record for the struct S.
-  const Record *SRecord = GlobalDesc->ElemRecord;
+  const Record *SRecord = GlobalDesc->getElemRecord();
   ASSERT_TRUE(SRecord);
   ASSERT_TRUE(SRecord->getNumFields() == 5);
   ASSERT_TRUE(SRecord->getNumBases() == 0);
@@ -83,7 +83,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_FALSE(F2->Desc->isCompositeArray());
   ASSERT_TRUE(F2->Desc->isPrimitiveArray());
   ASSERT_FALSE(F2->Desc->isPrimitive());
-  ASSERT_FALSE(F2->Desc->ElemDesc);
+  ASSERT_FALSE(F2->Desc->getElemDescOrNull());
   ASSERT_EQ(F2->Desc->getNumElems(), 4u);
   ASSERT_TRUE(F2->Desc->getElemSize() > 0);
 
@@ -95,7 +95,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_TRUE(F3->Desc->isCompositeArray());
   ASSERT_FALSE(F3->Desc->isPrimitiveArray());
   ASSERT_FALSE(F3->Desc->isPrimitive());
-  ASSERT_TRUE(F3->Desc->ElemDesc);
+  ASSERT_TRUE(F3->Desc->getElemDescOrNull());
   ASSERT_EQ(F3->Desc->getNumElems(), 3u);
   ASSERT_TRUE(F3->Desc->getElemSize() > 0);
 
@@ -109,10 +109,10 @@ TEST(Descriptor, Primitives) {
   ASSERT_TRUE(F4->Desc->isCompositeArray());
   ASSERT_FALSE(F4->Desc->isPrimitiveArray());
   ASSERT_FALSE(F4->Desc->isPrimitive());
-  ASSERT_TRUE(F4->Desc->ElemDesc);
+  ASSERT_TRUE(F4->Desc->getElemDescOrNull());
   ASSERT_EQ(F4->Desc->getNumElems(), 3u);
   ASSERT_TRUE(F4->Desc->getElemSize() > 0);
-  ASSERT_TRUE(F4->Desc->ElemDesc->isPrimitiveArray());
+  ASSERT_TRUE(F4->Desc->getElemDesc()->isPrimitiveArray());
 
   // Fifth field. Zero-size array.
   const Record::Field *F5 = SRecord->getField(4u);
@@ -326,7 +326,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_EQ(PF4.getRecord(), nullptr);
   ASSERT_EQ(PF4.getElemRecord(), nullptr);
   ASSERT_NE(PF4.getField(), nullptr);
-  ASSERT_TRUE(PF4.getFieldDesc()->ElemDesc->isPrimitiveArray());
+  ASSERT_TRUE(PF4.getFieldDesc()->getElemDesc()->isPrimitiveArray());
   // Check contents of field 4 (a primitive array).
   {
     // Pointer to the first element, is of type short[3].

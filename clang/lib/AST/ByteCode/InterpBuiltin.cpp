@@ -2314,7 +2314,7 @@ static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
     // at the decl directly.
     return ASTCtx
         .getTypeSizeInChars(
-            ASTCtx.getCanonicalTagType(Desc->ElemRecord->getDecl()))
+            ASTCtx.getCanonicalTagType(Desc->getElemRecord()->getDecl()))
         .getQuantity();
   }
 
@@ -6985,7 +6985,7 @@ static void zeroAll(PtrView Dest) {
   }
 
   if (Desc->isRecord()) {
-    const Record *R = Desc->ElemRecord;
+    const Record *R = Desc->getElemRecord();
     for (const Record::Field &F : R->fields()) {
       PtrView FieldPtr = Dest.atField(F.Offset);
       zeroAll(FieldPtr);
@@ -7036,8 +7036,8 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
   };
 
   assert(SrcDesc->isRecord());
-  assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
-  const Record *R = DestDesc->ElemRecord;
+  assert(SrcDesc->getElemRecord() == DestDesc->getElemRecord());
+  const Record *R = DestDesc->getElemRecord();
   for (const Record::Field &F : R->fields()) {
     PtrView FP = Src.atField(F.Offset);
 

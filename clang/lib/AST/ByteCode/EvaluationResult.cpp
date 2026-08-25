@@ -47,10 +47,10 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
     DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
     return false;
   }
-  const Descriptor *ElemDesc = BaseDesc->ElemDesc;
+  const Descriptor *ElemDesc = BaseDesc->getElemDesc();
 
   if (ElemDesc->isRecord()) {
-    const Record *R = ElemDesc->ElemRecord;
+    const Record *R = ElemDesc->getElemRecord();
     for (size_t I = 0; I != NumElems; ++I) {
       PtrView ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
@@ -166,8 +166,8 @@ static bool isOrHasPtr(const Descriptor *D) {
   if ((D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() == PT_Ptr)
     return true;
 
-  if (D->ElemRecord)
-    return D->ElemRecord->hasPtrField();
+  if (D->isRecord())
+    return D->getElemRecord()->hasPtrField();
   return false;
 }
 
@@ -189,7 +189,7 @@ static void collectBlocks(PtrView Ptr,
   if (!Desc)
     return;
 
-  if (const Record *R = Desc->ElemRecord) {
+  if (const Record *R = Desc->getElemRecordOrNull()) {
     if (!R->hasPtrField())
       return;
 
@@ -236,7 +236,7 @@ static void collectBlocks(PtrView Ptr,
     return;
   }
 
-  if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
+  if (Desc->isCompositeArray() && isOrHasPtr(Desc->getElemDesc())) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);

@@ -453,9 +453,9 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isCompositeArray())
     OS << " composite-array " << getNumElems();
   else if (isUnion())
-    OS << " union(" << ElemRecord->getName() << ")";
+    OS << " union(" << getElemRecord()->getName() << ")";
   else if (isRecord())
-    OS << " record(" << ElemRecord->getName() << ")";
+    OS << " record(" << getElemRecord()->getName() << ")";
   else if (isPrimitive())
     OS << " primitive " << primTypeToString(getPrimType());
 
@@ -484,9 +484,9 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
     for (unsigned I = 0; I != getNumElems(); ++I) {
       FO += sizeof(InlineDescriptor);
       OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
-      ElemDesc->dumpFull(FO, Indent + 1);
+      getElemDesc()->dumpFull(FO, Indent + 1);
 
-      FO += ElemDesc->getAllocSize();
+      FO += getElemDesc()->getAllocSize();
     }
   } else if (isPrimitiveArray()) {
     OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
@@ -498,9 +498,9 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
       FO += getElemSize();
     }
   } else if (isRecord()) {
-    ElemRecord->dump(OS, Indent + 1, Offset);
+    getElemRecord()->dump(OS, Indent + 1, Offset);
     unsigned I = 0;
-    for (const Record::Field &F : ElemRecord->fields()) {
+    for (const Record::Field &F : getElemRecord()->fields()) {
       OS.indent(Spaces) << "- Field " << I << ": ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
