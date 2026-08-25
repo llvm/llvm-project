@@ -105,7 +105,7 @@ static cl::opt<bool>
                             cl::desc("Should enable CSE in irtranslator"),
                             cl::Optional, cl::init(false));
 
-namespace {
+namespace llvm {
 
 class IRTranslatorImpl {
   /// Interface used to lower the everything related to calls.
@@ -266,6 +266,7 @@ class IRTranslatorImpl {
   // Translate U as a copy of V.
   bool translateCopy(const User &U, const Value &V,
                      MachineIRBuilder &MIRBuilder);
+  bool translateCopy(const User &U, Register Src, MachineIRBuilder &MIRBuilder);
 
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
@@ -850,7 +851,7 @@ public:
                             SSPLayoutInfo *StackProtectorInfo);
 };
 
-} // namespace
+} // namespace llvm
 
 char IRTranslatorLegacy::ID = 0;
 
@@ -883,7 +884,10 @@ static void reportTranslationError(MachineFunction &MF,
 }
 
 IRTranslatorLegacy::IRTranslatorLegacy(CodeGenOptLevel OptLevel)
-    : MachineFunctionPass(ID), OptLevel(OptLevel) {}
+    : MachineFunctionPass(ID), OptLevel(OptLevel),
+      Impl(std::make_unique<IRTranslatorImpl>(OptLevel)) {}
+
+IRTranslatorLegacy::~IRTranslatorLegacy() = default;
 
 #ifndef NDEBUG
 namespace {
@@ -2319,7 +2323,11 @@ bool IRTranslatorImpl::translateSelect(const User &U,
 
 bool IRTranslatorImpl::translateCopy(const User &U, const Value &V,
                                      MachineIRBuilder &MIRBuilder) {
-  Register Src = getOrCreateVReg(V);
+  return translateCopy(U, getOrCreateVReg(V), MIRBuilder);
+}
+
+bool IRTranslatorImpl::translateCopy(const User &U, Register Src,
+                                     MachineIRBuilder &MIRBuilder) {
   auto &Regs = *VMap.getVRegs(U);
   if (Regs.empty()) {
     Regs.push_back(Src);
@@ -2413,7 +2421,7 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
   }
 
   if (cast<GEPOperator>(U).hasAllZeroIndices())
-    return translateCopy(U, Op0, MIRBuilder);
+    return translateCopy(U, BaseReg, MIRBuilder);
 
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
@@ -2505,8 +2513,7 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
     return true;
   }
 
-  MIRBuilder.buildCopy(getOrCreateVReg(U), BaseReg);
-  return true;
+  return translateCopy(U, BaseReg, MIRBuilder);
 }
 
 bool IRTranslatorImpl::translateMemFunc(const CallInst &CI,
@@ -4138,7 +4145,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
       // We are inserting an illegal fixed vector into an illegal
       // fixed vector, use the scalar as it is not a legal vector type
       // in LLT.
-      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+      return translateCopy(U, Vec, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a legal fixed
@@ -4151,7 +4158,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a scalable
       // vector, use a scalar element insert.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -4160,9 +4167,7 @@ bool IRTranslatorImpl::translateInsertVector(const User &U,
     }
   }
 
-  MIRBuilder.buildInsertSubvector(
-      getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
-      getOrCreateVReg(*U.getOperand(1)), CI->getZExtValue());
+  MIRBuilder.buildInsertSubvector(Dst, Vec, Elt, CI->getZExtValue());
   return true;
 }
 
@@ -4217,7 +4222,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
         InputType && InputType->getNumElements() == 1) {
       // We are extracting an illegal fixed vector from an illegal fixed vector,
       // use the scalar as it is not a legal vector type in LLT.
-      return translateCopy(U, *U.getOperand(0), MIRBuilder);
+      return translateCopy(U, Vec, MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a legal fixed
@@ -4230,7 +4235,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a scalable
       // vector, use a scalar element extract.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -4239,9 +4244,7 @@ bool IRTranslatorImpl::translateExtractVector(const User &U,
     }
   }
 
-  MIRBuilder.buildExtractSubvector(getOrCreateVReg(U),
-                                   getOrCreateVReg(*U.getOperand(0)),
-                                   CI->getZExtValue());
+  MIRBuilder.buildExtractSubvector(Res, Vec, CI->getZExtValue());
   return true;
 }
 
@@ -5232,12 +5235,11 @@ bool IRTranslatorImpl::runOnMachineFunction(
 }
 
 bool IRTranslatorLegacy::runOnMachineFunction(MachineFunction &MF) {
-  IRTranslatorImpl Impl(OptLevel);
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
   Function &F = MF.getFunction();
 
   bool ShouldSkipOpts = skipFunction(MF.getFunction());
-  return Impl.runOnMachineFunction(
+  return Impl->runOnMachineFunction(
       MF,
       [&]() {
         TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
@@ -5260,9 +5262,14 @@ bool IRTranslatorLegacy::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<StackProtector>().getLayoutInfo());
 }
 
+IRTranslatorPass::IRTranslatorPass(CodeGenOptLevel OptLevel)
+    : Impl(std::make_unique<IRTranslatorImpl>(OptLevel)) {}
+
+IRTranslatorPass::~IRTranslatorPass() = default;
+IRTranslatorPass::IRTranslatorPass(IRTranslatorPass &&) = default;
+
 PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
-  IRTranslatorImpl Impl(OptLevel);
   const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
   Function &F = MF.getFunction();
 
@@ -5276,7 +5283,7 @@ PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
   if (!MLLI)
     reportFatalUsageError(
         "LibcallLoweringModuleAnalysis must be available for IRTranslator");
-  Impl.runOnMachineFunction(
+  Impl->runOnMachineFunction(
       MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
       ShouldSkipOpts, [&]() { return &FAM.getResult<AAManager>(F); },
       [&]() { return &FAM.getResult<BranchProbabilityAnalysis>(F); },

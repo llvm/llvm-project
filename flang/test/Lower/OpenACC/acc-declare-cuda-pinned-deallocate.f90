@@ -19,5 +19,5 @@ end subroutine
 
 ! CHECK-LABEL: func.func private @{{.*}}_acc_declare_post_dealloc(
 ! CHECK-SAME: %[[POST_DEALLOC_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>)
-! CHECK: acc.getdeviceptr varPtr(%[[POST_DEALLOC_ARG]] : !fir.ref<!fir.box<!fir.heap<f32>>>){{.*}}implicit = true
+! CHECK: acc.getdeviceptr varPtr(%[[POST_DEALLOC_ARG]] : !fir.ref<!fir.box<!fir.heap<f32>>>){{.*}}implicit(true)
 ! CHECK: acc.declare_exit

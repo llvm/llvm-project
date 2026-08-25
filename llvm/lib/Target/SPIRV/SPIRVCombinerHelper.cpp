@@ -34,8 +34,7 @@ SPIRVCombinerHelper::SPIRVCombinerHelper(
 ///           (vXf32 X) (vXf32 Y)))
 ///
 bool SPIRVCombinerHelper::matchLengthToDistance(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(MI).getIntrinsicID() != Intrinsic::spv_length)
+  if (!mi_match(MI, MRI, m_GIntrinsic<Intrinsic::spv_length>()))
     return false;
 
   // First operand of MI is `G_INTRINSIC` so start at operand 2.
@@ -95,9 +94,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
     return false;
 
   // Check if FCMP is a comparison between a dot product and 0.
-  MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (DotInstr->getOpcode() != TargetOpcode::G_INTRINSIC ||
-      cast<GIntrinsic>(DotInstr)->getIntrinsicID() != Intrinsic::spv_fdot) {
+  if (!mi_match(DotReg, MRI, m_GIntrinsic<Intrinsic::spv_fdot>())) {
     Register DotOperand1, DotOperand2;
     // Check for scalar dot product.
     if (!mi_match(DotReg, MRI,
@@ -188,11 +185,6 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
-bool SPIRVCombinerHelper::matchMatrixTranspose(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_transpose;
-}
-
 void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
   Register ResReg = MI.getOperand(0).getReg();
   Register InReg = MI.getOperand(2).getReg();
@@ -217,11 +209,6 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.buildShuffleVector(ResReg, InReg, InReg, Mask);
   MI.eraseFromParent();
-}
-
-bool SPIRVCombinerHelper::matchMatrixMultiply(MachineInstr &MI) const {
-  return MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
-         cast<GIntrinsic>(MI).getIntrinsicID() == Intrinsic::matrix_multiply;
 }
 
 SmallVector<Register, 4>

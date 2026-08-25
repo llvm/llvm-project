@@ -186,15 +186,15 @@ func.func @multireduction_source_conflict() {
 // CHECK-DAG:     %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>}
 // CHECK-SAME:      dense<0.000000e+00> : vector<2x32x32xf16>
 // CHECK:         %[[ISS:.*]] = vector.insert_strided_slice %[[CVT]], %[[CST]]
-// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>, offsets = [0, 0, 0], strides = [1, 1]}
+// CHECK-SAME:      offsets = [0, 0, 0], strides = [1, 1] {layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>}
 // CHECK-SAME:      : vector<16x16xf16> into vector<2x32x32xf16>
 // CHECK:         return
 func.func @insert_strided_slice_source_conflict() {
   %0 = "some_op"()  {layout_result_0 = #xegpu.layout<inst_data = [1, 16]>} : () -> vector<16x16xf16>
   %1 = arith.constant  { layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>}
     dense<0.0> : vector<2x32x32xf16>
-  %2 = vector.insert_strided_slice %0, %1 {offsets = [0, 0, 0], strides = [1, 1],
-    layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>} : vector<16x16xf16> into vector<2x32x32xf16>
+  %2 = vector.insert_strided_slice %0, %1 offsets = [0, 0, 0], strides = [1, 1]
+    {layout_result_0 = #xegpu.layout<inst_data = [1, 16, 16]>} : vector<16x16xf16> into vector<2x32x32xf16>
   return
 }
 

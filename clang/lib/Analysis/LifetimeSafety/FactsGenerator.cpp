@@ -233,9 +233,7 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
       return;
     }
   }
-  auto [FD, Args] = getFunctionCallInfo(CCE);
-  handleFunctionCall(CCE, FD, Args,
-                     /*IsGslConstruction=*/false);
+  handleFunctionCall(CCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
@@ -256,13 +254,10 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   if (isGslPointerType(MCE->getType()) &&
       isa_and_present<CXXConversionDecl>(MCE->getCalleeDecl()) &&
       isGslOwnerType(MCE->getImplicitObjectArgument()->getType())) {
-    auto [FD, Args] = getFunctionCallInfo(MCE);
-    handleFunctionCall(MCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(MCE, /*IsGslConstruction=*/true);
     return;
   }
-  auto [FD, Args] = getFunctionCallInfo(MCE);
-  handleFunctionCall(MCE, FD, Args, /*IsGslConstruction=*/false);
+  handleFunctionCall(MCE, /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
@@ -282,8 +277,7 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
 }
 
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
-  auto [FD, Args] = getFunctionCallInfo(CE);
-  handleFunctionCall(CE, FD, Args);
+  handleFunctionCall(CE);
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -630,8 +624,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  auto [FD, Args] = getFunctionCallInfo(OCE);
-  handleFunctionCall(OCE, FD, Args);
+  handleFunctionCall(OCE);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -904,9 +897,7 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   } else {
     // This could be a new borrow.
     // TODO: Add code example here.
-    auto [FD, Args] = getFunctionCallInfo(CCE);
-    handleFunctionCall(CCE, FD, Args,
-                       /*IsGslConstruction=*/true);
+    handleFunctionCall(CCE, /*IsGslConstruction=*/true);
   }
 }
 
@@ -1090,9 +1081,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
 }
 
 void FactsGenerator::handleFunctionCall(const Expr *Call,
-                                        const FunctionDecl *FD,
-                                        ArrayRef<const Expr *> Args,
                                         bool IsGslConstruction) {
+  FunctionCallInfo CallInfo(Call);
+  if (!CallInfo.FD)
+    return;
+  const FunctionDecl *FD = CallInfo.FD;
+  llvm::ArrayRef<const Expr *> Args = CallInfo.Args;
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);

@@ -24,7 +24,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbankselect"
+#define DEBUG_TYPE "amdgpu-reg-bank-select"
 
 using namespace llvm;
 using namespace AMDGPU;
