@@ -16,6 +16,7 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/CompositePass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LocationSnapshot.h"
 #include "mlir/Transforms/ViewOpGraph.h"
@@ -92,7 +93,9 @@ std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
 /// or maximum number of iterations reached.
 std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
-    int maxIterations = 10);
+    int maxIterations = 10,
+    ConvergenceFailureAction convergenceFailureAction =
+        ConvergenceFailureAction::Warn);
 
 //===----------------------------------------------------------------------===//
 // Registration
