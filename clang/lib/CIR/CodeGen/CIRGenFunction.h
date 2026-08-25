@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -49,6 +50,7 @@ class LoopOp;
 } // namespace mlir
 
 namespace clang {
+class OutlinedFunctionDecl;
 class SYCLKernelCallStmt;
 } // namespace clang
 
@@ -236,6 +238,14 @@ public:
   /// This is usually a cir::FuncOp, but it can also be a cir::GlobalOp for
   /// global initializers.
   mlir::Operation *curFn = nullptr;
+
+  /// While the initializer of a variable with static storage duration is being
+  /// emitted, the region that destructors registered by that initializer belong
+  /// in: the cir.global's own dtor region for a namespace-scope variable, and
+  /// the enclosing cir.local_init's for a function-local static, which has to
+  /// be destroyed in-function under its guard. Null outside such an
+  /// initializer.
+  mlir::Region *curStaticVarDtorRegion = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *> fnArgs;
@@ -728,6 +738,9 @@ public:
     /// True if the variable was emitted as an offload recipe, and thus doesn't
     /// have the same sort of alloca initialization.
     bool emittedAsOffload = false;
+
+    /// True if lifetime op should be used.
+    bool useLifetimeMarkers = false;
 
     mlir::Value nrvoFlag{};
 
@@ -1356,8 +1369,8 @@ public:
     void operator=(const FullExprCleanupScope &) = delete;
   };
 
-  /// Captures the destructor cleanup for a loop's condition variable so that it
-  /// can be emitted into the loop op's per-iteration cleanup region.
+  /// Captures cleanups for a loop's condition variable so that they can be
+  /// emitted into the loop op's per-iteration cleanup region.
   class DeferredLoopConditionCleanup {
     CIRGenFunction &cgf;
     EHScopeStack::stable_iterator depth;
@@ -1377,8 +1390,8 @@ public:
     public:
       explicit CaptureScope(DeferredLoopConditionCleanup &scope)
           : ehStack(scope.cgf.ehStack) {
-        // Capturing wraps only the condition variable's own destructor push,
-        // which emits no nested code, so it can never already be active.
+        // Capture scopes deliberately wrap individual cleanup-producing
+        // operations, so they must never nest.
         assert(!ehStack.isCapturingLoopConditionCleanups() &&
                "loop condition cleanup capturing should not nest");
         if (scope.active)
@@ -1638,6 +1651,9 @@ public:
                                       int64_t alignment,
                                       mlir::Value offsetValue = nullptr);
 
+  bool emitLifetimeStartOp(mlir::Location loc, mlir::Value addr);
+  void emitLifetimeEndOp(mlir::Location loc, mlir::Value addr);
+
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
@@ -1887,8 +1903,7 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CoroEndOp emitCoroEndBuiltinCall(mlir::Location loc,
-                                        mlir::Value nullPtr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
@@ -2307,6 +2322,13 @@ public:
 
   mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
 
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
+
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
@@ -2575,7 +2597,10 @@ public:
   mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
   mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
   mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
-  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &s);
   mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
   mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
   mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);
@@ -2801,6 +2826,15 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+
+  bool shouldEmitLifetimeMarkers = false;
+  /// Set when the current function has a goto/switch that may bypass a local's
+  /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
+  bool fnHasBypassStmt = false;
+
+  bool shouldEmitLifetimeMarkersForAutoVar() const {
+    return shouldEmitLifetimeMarkers && !fnHasBypassStmt;
+  }
 
   class InlinedInheritingConstructorScope {
   public:

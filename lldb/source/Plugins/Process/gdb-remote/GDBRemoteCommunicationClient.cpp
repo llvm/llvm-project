@@ -237,6 +237,12 @@ bool GDBRemoteCommunicationClient::GetAcceleratorPluginsSupported() {
   return m_supports_accelerator_plugins == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetWasmInstanceSupported() {
+  if (m_supports_wasm_instance == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_wasm_instance == eLazyBoolYes;
+}
+
 llvm::Expected<std::vector<AcceleratorActions>>
 GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
   // Get the initial actions (e.g. breakpoints to set) requested by any
@@ -435,6 +441,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_jModulesInfo = true;
     m_supports_multi_mem_read = eLazyBoolCalculate;
     m_supports_multi_breakpoint = eLazyBoolCalculate;
+    m_supports_wasm_instance = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -464,6 +471,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multi_mem_read = eLazyBoolNo;
   m_supports_multi_breakpoint = eLazyBoolNo;
   m_supports_accelerator_plugins = eLazyBoolNo;
+  m_supports_wasm_instance = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -531,6 +539,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_breakpoint = eLazyBoolYes;
       else if (x == "accelerator-plugins+")
         m_supports_accelerator_plugins = eLazyBoolYes;
+      else if (x == "qWasmInstance+")
+        m_supports_wasm_instance = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma

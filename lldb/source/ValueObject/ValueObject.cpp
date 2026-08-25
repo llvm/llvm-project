@@ -765,6 +765,19 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         size_t bytes_read =
             target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
                                error, /*force_live_memory=*/true);
+        if (!error.Success()) {
+          // The live read failed. Fall back to the object file's read-only
+          // sections, but keep the live-memory error to report if the fallback
+          // fails too.
+          Status file_error;
+          size_t file_bytes_read =
+              target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                                 file_error, /*force_live_memory=*/false);
+          if (file_error.Success() || file_bytes_read > 0) {
+            bytes_read = file_bytes_read;
+            error = std::move(file_error);
+          }
+        }
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -811,8 +824,8 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -1228,6 +1241,8 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   }
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
+  if (val_type.IsNullPtrType())
+    return false;
 
   return llvm::createStringError("type cannot be converted to bool");
 }
@@ -1715,8 +1730,8 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -3858,9 +3873,10 @@ bool ValueImpl::IsValid() {
   return target_sp && target_sp->IsValid();
 }
 
-lldb::ValueObjectSP
-ValueImpl::GetSP(Process::StopLocker &stop_locker,
-                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                                     TargetAPIMutex &api_mutex,
+                                     std::unique_lock<TargetAPIMutex> &lock,
+                                     Status &error) {
   if (!m_valobj_sp) {
     error = Status::FromErrorString("invalid value object");
     return m_valobj_sp;
@@ -3876,7 +3892,8 @@ ValueImpl::GetSP(Process::StopLocker &stop_locker,
   if (!target)
     return ValueObjectSP();
 
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+  api_mutex = target->GetAPIMutex();
+  lock = std::unique_lock<TargetAPIMutex>(api_mutex);
 
   ProcessSP process_sp(value_sp->GetProcessSP());
   if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {

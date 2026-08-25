@@ -74,15 +74,15 @@ lldb::ProcessSP ProcessAIXCore::CreateInstance(lldb::TargetSP target_sp,
             if (magic == 0xfeeddb1) {
                 AIXCORE::AIXCore32Header aixcore_header;
                 if(aixcore_header.ParseCoreHeader(data, &offset)) {
-                    process_sp = std::make_shared<ProcessAIXCore>(target_sp, listener_sp,
-                            *crash_file);
+                    process_sp = lldb::ProcessSP(
+                        new ProcessAIXCore(target_sp, listener_sp, *crash_file));
                 }
             }
             else if (magic == 0xfeeddb2) {
                 AIXCORE::AIXCore64Header aixcore_header;
                 if(aixcore_header.ParseCoreHeader(data, &offset)) {
-                    process_sp = std::make_shared<ProcessAIXCore>(target_sp, listener_sp,
-                            *crash_file);
+                    process_sp = lldb::ProcessSP(
+                        new ProcessAIXCore(target_sp, listener_sp, *crash_file));
                 }
             }
         }
@@ -429,22 +429,24 @@ bool ProcessAIXCore::DoUpdateThreadList(ThreadList &old_thread_list,
 void ProcessAIXCore::RefreshStateAfterStop() {}
 
 // Process Memory
-size_t ProcessAIXCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                  Status &error) {
-  if(addr == LLDB_INVALID_ADDRESS)
-      return 0;
+size_t ProcessAIXCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
+  if (addr == LLDB_INVALID_ADDRESS)
+    return 0;
 
   if (lldb::ABISP abi_sp = GetABI())
-      addr = abi_sp->FixAnyAddress(addr);
+    addr = abi_sp->FixAnyAddress(addr);
 
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
   return DoReadMemory(addr, buf, size, error);
 }
 
-size_t ProcessAIXCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Status &error) {
-    ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+size_t ProcessAIXCore::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
+  ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
     if (core_objfile == nullptr)
         return 0;
     // Get the address range

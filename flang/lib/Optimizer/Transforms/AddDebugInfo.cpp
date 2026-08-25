@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -31,6 +32,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/FileSystem.h"
@@ -95,23 +97,23 @@ private:
   void handleOnlyClause(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules);
   void handleRenamesWithoutOnly(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules);
   void handleUseStatements(
       mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
   void buildModuleDebugImportsMap(mlir::ModuleOp module);
   void expandUseStmtForDebug(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
       mlir::SymbolTable *symbolTable,
-      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+      llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
       llvm::StringSet<> &seenModuleNames);
   std::optional<mlir::LLVM::DIImportedEntityAttr> createImportedDeclForGlobal(
       llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
@@ -584,10 +586,12 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   bool isMain = false;
   if (funcName == fir::NameUniquer::doProgramEntry()) {
     isMain = true;
-    mlir::StringAttr bindcName =
-        funcOp->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
-    if (bindcName)
-      funcName = bindcName;
+    // The main program symbol name is uppercased in the cooked character stream
+    // so that it cannot clash with any other symbol. Go through the presentable
+    // name so that the PROGRAM name is spelled the same way here as every other
+    // name in the debug information.
+    funcName =
+        mlir::StringAttr::get(context, fir::getPresentableFunctionName(funcOp));
   }
 
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
@@ -741,8 +745,10 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     });
   };
 
-  // Don't process variables if user asked for line tables only.
-  if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
+  // Don't process variables if user asked for line tables or debug directives
+  // only.
+  if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly ||
+      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
         line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
@@ -783,7 +789,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         subTypeAttr, /*retainedNodes=*/{}, /*annotations=*/{});
 
     // Process USE statements (module globals are already processed)
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedEntities;
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedEntities;
     handleUseStatements(funcOp, spAttr, fileAttr, cuAttr, symbolTable,
                         importedEntities);
 
@@ -857,7 +863,7 @@ AddDebugInfoPass::createImportedDeclForGlobal(
 void AddDebugInfoPass::handleOnlyClause(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
   // Process ONLY symbols (without renames)
   if (auto onlySymbols = useOp.getOnlySymbols()) {
     for (mlir::Attribute attr : *onlySymbols) {
@@ -886,7 +892,7 @@ void AddDebugInfoPass::handleRenamesWithoutOnly(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
   mlir::MLIRContext *context = &getContext();
   llvm::SmallVector<mlir::LLVM::DINodeAttr> childDeclarations;
 
@@ -912,7 +918,7 @@ void AddDebugInfoPass::handleUseStatements(
     mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
   llvm::StringSet<> seenModuleNames;
   funcOp.walk([&](fir::UseStmtOp useOp) {
     expandUseStmtForDebug(useOp, spAttr, fileAttr, cuAttr, symbolTable,
@@ -931,7 +937,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
     fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
     mlir::SymbolTable *symbolTable,
-    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
+    llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities,
     llvm::StringSet<> &seenModuleNames) {
   std::string modName = useOp.getModuleName().str();
   if (seenModuleNames.contains(modName))
@@ -942,7 +948,7 @@ void AddDebugInfoPass::expandUseStmtForDebug(
       getOrCreateModuleAttr(modName, fileAttr, cuAttr, /*line=*/1,
                             /*decl=*/true);
 
-  llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
+  llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> importedModules;
   if (useOp.hasOnlyClause() || useOp.getHasOnlyWithRenames())
     handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
   else if (useOp.hasRenames())
@@ -1031,11 +1037,19 @@ void AddDebugInfoPass::runOnOperation() {
   if (!dwarfDebugFlags.empty())
     producerString += " " + dwarfDebugFlags;
   mlir::StringAttr producer = mlir::StringAttr::get(context, producerString);
+  // A unit that only emits line directives has no .debug_info, so the header
+  // of its compile unit, and with it the label the DWARF 5 accelerator table
+  // points at, is never written. Asking for a name table would have that table
+  // reference a label that does not exist. Clang leaves the name table off for
+  // the same reason.
+  mlir::LLVM::DINameTableKind nameTableKind =
+      debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly
+          ? mlir::LLVM::DINameTableKind::None
+          : mlir::LLVM::DINameTableKind::Default;
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel, debugInfoForProfiling,
-      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      isOptimized, debugLevel, debugInfoForProfiling, nameTableKind,
       splitDwarfFile.empty() ? mlir::StringAttr()
                              : mlir::StringAttr::get(context, splitDwarfFile));
 

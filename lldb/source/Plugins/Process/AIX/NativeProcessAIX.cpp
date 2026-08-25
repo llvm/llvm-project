@@ -327,7 +327,7 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -1280,7 +1280,7 @@ NativeProcessAIX::Syscall(llvm::ArrayRef<uint64_t> args) {
   }
 
   auto restore_mem = llvm::scope_exit(
-      [&] { WriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
+      [&] { DoWriteMemory(exe_addr, memory.data(), memory.size(), bytes_read); });
 
   if (llvm::Error Err = reg_ctx.SetPC(exe_addr).ToError())
     return std::move(Err);
@@ -1293,7 +1293,7 @@ NativeProcessAIX::Syscall(llvm::ArrayRef<uint64_t> args) {
       return std::move(Err);
     }
   }
-  if (llvm::Error Err = WriteMemory(exe_addr, syscall_data.Insn.data(),
+  if (llvm::Error Err = DoWriteMemory(exe_addr, syscall_data.Insn.data(),
                                     syscall_data.Insn.size(), bytes_read)
                             .ToError())
     return std::move(Err);
@@ -1547,8 +1547,10 @@ NativeProcessAIX::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessAIX::ReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   unsigned char *dst = static_cast<unsigned char *>(buf);
   constexpr size_t kMaxPtraceBlockSize = IPCDATA;
   bytes_read = 0;
@@ -1579,7 +1581,7 @@ Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status();
 }
 
-Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
+Status NativeProcessAIX::DoWriteMemory(lldb::addr_t addr, const void *buf,
                                        size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
   size_t remainder;

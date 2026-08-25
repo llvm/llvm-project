@@ -709,7 +709,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 }
 #endif
 
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 TEST(LlvmLibcFPBitsTest, Float128Type) {
   using DFloat128Bits = FPBits<float128>;
 
@@ -777,4 +777,4 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
   DFloat128Bits quiet_nan = DFloat128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128

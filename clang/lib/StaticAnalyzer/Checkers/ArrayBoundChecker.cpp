@@ -75,11 +75,10 @@ public:
   bool isBytes() const { return AsType.isNull(); }
 
   /// Return the element type that is "natural" for reporting out-of-bounds
-  /// memory access to 'Location'.
-  static SizeUnit forSVal(SVal Location, const ASTContext &ACtx) {
-    if (const auto *R = Location.getAsRegion()->getAs<TypedValueRegion>())
-      return SizeUnit(R->getValueType(), ACtx);
-    return bytes();
+  /// memory access to \p ER.
+  static SizeUnit forElementRegion(const ElementRegion *ER,
+                                   const ASTContext &ACtx) {
+    return SizeUnit(ER->getElementType(), ACtx);
   }
 
   /// If `E` is a "clean" array subscript expression, return the type of the
@@ -201,13 +200,14 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
-/// For a given Location that can be represented as a symbolic expression
+/// For a given \p CurRegion that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
 /// NonLoc that specifies the number of CharUnits). Returns nullopt when these
 /// cannot be determined.
 static std::optional<std::pair<const SubRegion *, NonLoc>>
-computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
+computeOffset(ProgramStateRef State, SValBuilder &SVB,
+              const ElementRegion *CurRegion) {
   QualType T = SVB.getArrayIndexType();
   auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc L, NonLoc R) {
     // We will use this utility to add and multiply values.
@@ -216,9 +216,6 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 
   const SubRegion *OwnerRegion = nullptr;
   std::optional<NonLoc> Offset = SVB.makeZeroArrayIndex();
-
-  const ElementRegion *CurRegion =
-      dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
 
   while (CurRegion) {
     const auto Index = CurRegion->getIndex().getAs<NonLoc>();
@@ -281,6 +278,8 @@ static StringRef getPreposition(const bounds::CheckResult &R) {
 
 static BugDescription describeInvalidAccess(bounds::CheckResult Res,
                                             StringRef RegName, SizeUnit SU) {
+  assert(Res.mayBeInvalid());
+
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
   std::optional<int64_t> ExtentN =
       getConcreteValue(Res.getExtentIfMayOverflow());
@@ -334,13 +333,16 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
           std::string(Buf)};
 }
 
-static BugDescription describeTaintBug(StringRef RegName, StringRef OffsetName,
-                                       bool AlsoMentionUnderflow) {
+static BugDescription describeTaintBug(bounds::CheckResult Res,
+                                       StringRef RegName,
+                                       StringRef OffsetName) {
+  assert(Res.mayBeInvalid());
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
+          formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}",
+                  RegName, OffsetName, Res.mayUnderflow() ? " negative" : "",
+                  (Res.mayUnderflow() && Res.mayOverflow()) ? " or" : "",
+                  Res.mayOverflow() ? " too large" : "")};
 }
 
 /// When the access was ambiguous (that is, mayBeInBounds() && mayBeInvalid()),
@@ -412,7 +414,10 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
 void ArrayBoundChecker::handleAccessExpr(const Expr *E,
                                          CheckerContext &C) const {
   ASTContext &ACtx = C.getASTContext();
-  const SVal Location = C.getSVal(E);
+  const ElementRegion *AccessedER =
+      dyn_cast_or_null<ElementRegion>(C.getSVal(E).getAsRegion());
+  if (!AccessedER)
+    return;
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
   //   #define isXXXXX(arg) (LOOKUP_TABLE[arg] & BITMASK_FOR_XXXXX)
@@ -426,7 +431,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   SValBuilder &SVB = C.getSValBuilder();
 
   const std::optional<std::pair<const SubRegion *, NonLoc>> &RawOffset =
-      computeOffset(State, SVB, Location);
+      computeOffset(State, SVB, AccessedER);
 
   if (!RawOffset)
     return;
@@ -474,16 +479,13 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         }
       }
 
-      SizeUnit SU = SizeUnit::forSVal(Location, ACtx);
+      SizeUnit SU = SizeUnit::forElementRegion(AccessedER, ACtx);
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
       reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
       return;
     }
 
-    // FIXME: Remove `Res.mayOverflow()` and provide diagnostics for the case
-    // when the tainted access operation cannot overflow but can underflow.
-    // (This is an NFC commit, so I cannot include this improvement.)
-    if (Res.mayOverflow() && isTainted(State, ByteOffset)) {
+    if (isTainted(State, ByteOffset)) {
       // Diagnostic detail: saying "tainted offset" is always correct, but
       // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
       // nicer to say "tainted index".
@@ -492,9 +494,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
 
-      BugDescription Desc =
-          describeTaintBug(RegName, OffsetName, Res.mayUnderflow());
-      reportOOB(C, State, Desc, ByteOffset, Extent, /*IsTaintBug=*/true);
+      BugDescription Desc = describeTaintBug(Res, RegName, OffsetName);
+      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow(),
+                /*IsTaintBug=*/true);
       return;
     }
 

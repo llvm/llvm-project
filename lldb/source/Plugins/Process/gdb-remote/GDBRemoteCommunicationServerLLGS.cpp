@@ -2193,6 +2193,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
       reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
   if (register_set_name)
     response << "set:" << register_set_name << ';';
+  else
+    response << "set:general;";
 
   if (reg_info->kinds[RegisterKind::eRegisterKindEHFrame] !=
       LLDB_INVALID_REGNUM)

@@ -295,21 +295,18 @@ PRESERVE_NONE bool Ret(InterpState &S) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, S.Current->getFunction());
+  InterpFrame *Caller = S.Current->Caller;
 
-  if (InterpFrame *Caller = S.Current->Caller) {
-    S.PC = S.Current->getRetPC();
-    InterpFrame::free(S.Current);
-    S.Current = Caller;
-    S.Stk.push<T>(Ret);
-  } else {
-    InterpFrame::free(S.Current);
-    S.Current = nullptr;
-    // The topmost frame should come from an EvalEmitter,
-    // which has its own implementation of the Ret<> instruction.
-  }
+  // This only happens via Context::Run().
+  if (!Caller)
+    return true;
 
+  cleanupAfterFunctionCall(S, S.Current->getFunction());
+
+  S.PC = S.Current->getRetPC();
+  InterpFrame::free(S.Current);
+  S.Current = Caller;
+  S.Stk.push<T>(Ret);
   return true;
 }
 
@@ -318,18 +315,16 @@ PRESERVE_NONE inline bool RetVoid(InterpState &S) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 #endif
 
-  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
-    cleanupAfterFunctionCall(S, S.Current->getFunction());
+  InterpFrame *Caller = S.Current->Caller;
+  // This only happens via Context::Run().
+  if (!Caller)
+    return true;
 
-  if (InterpFrame *Caller = S.Current->Caller) {
-    S.PC = S.Current->getRetPC();
-    InterpFrame::free(S.Current);
-    S.Current = Caller;
-  } else {
-    InterpFrame::free(S.Current);
-    S.Current = nullptr;
-  }
+  cleanupAfterFunctionCall(S, S.Current->getFunction());
 
+  S.PC = S.Current->getRetPC();
+  InterpFrame::free(S.Current);
+  S.Current = Caller;
   return true;
 }
 
@@ -1407,7 +1402,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     if (P.isZero())
       continue;
     if (P.pointsToLiteral()) {
-      const Expr *E = P.getDeclDesc()->asExpr();
+      const Expr *E = P.getRootExpr();
       if (isa<StringLiteral>(E)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
@@ -1721,22 +1716,6 @@ bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &Obj = S.Stk.peek<Pointer>();
-  if (!CheckNull(S, OpPC, Obj, CSK_Field))
-    return false;
-  if (!CheckRange(S, OpPC, Obj, CSK_Field))
-    return false;
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckStore(S, OpPC, Field))
-    return false;
-  Field.initialize();
-  Field.deref<T>() = Value;
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression())
     return false;
@@ -1747,21 +1726,6 @@ bool GetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (!CheckLoad(S, OpPC, Field))
     return false;
   S.Stk.push<T>(Field.deref<T>());
-  return true;
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
-  if (S.checkingPotentialConstantExpression())
-    return false;
-  if (!CheckThis(S, OpPC))
-    return false;
-  const T &Value = S.Stk.pop<T>();
-  const Pointer &This = S.Current->getThis();
-  const Pointer &Field = This.atField(I);
-  if (!CheckStore(S, OpPC, Field))
-    return false;
-  Field.deref<T>() = Value;
   return true;
 }
 
@@ -1838,9 +1802,8 @@ bool InitGlobalTemp(InterpState &S, uint32_t I,
   assert(Temp);
 
   const Pointer &Ptr = S.P.getGlobal(I);
-  assert(Ptr.getDeclDesc()->asExpr());
-  S.SeenGlobalTemporaries.push_back(
-      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+  assert(Ptr.getRootExpr());
+  S.SeenGlobalTemporaries.push_back(std::make_pair(Ptr.getRootExpr(), Temp));
 
   Ptr.deref<T>() = S.Stk.pop<T>();
   Ptr.initialize();
@@ -1857,8 +1820,7 @@ inline bool InitGlobalTempComp(InterpState &S,
   assert(Temp);
 
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  S.SeenGlobalTemporaries.push_back(
-      std::make_pair(Ptr.getDeclDesc()->asExpr(), Temp));
+  S.SeenGlobalTemporaries.push_back(std::make_pair(Ptr.getRootExpr(), Temp));
   return true;
 }
 
@@ -2616,27 +2578,25 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     Invalid = true;
   };
 
-  if (Ptr.isBlockPointer()) {
-    uint64_t IOffset = static_cast<uint64_t>(Offset);
-    uint64_t MaxOffset = MaxIndex - Index;
+  uint64_t IOffset = static_cast<uint64_t>(Offset);
+  uint64_t MaxOffset = MaxIndex - Index;
 
-    if constexpr (Op == ArithOp::Add) {
-      // If the new offset would be negative, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -IOffset > Index))
-        DiagInvalidOffset();
+  if constexpr (Op == ArithOp::Add) {
+    // If the new offset would be negative, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -IOffset > Index))
+      DiagInvalidOffset();
 
-      // If the new offset would be out of bounds, bail out.
-      if (Offset.isPositive() && IOffset > MaxOffset)
-        DiagInvalidOffset();
-    } else {
-      // If the new offset would be negative, bail out.
-      if (Offset.isPositive() && Index < IOffset)
-        DiagInvalidOffset();
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isPositive() && IOffset > MaxOffset)
+      DiagInvalidOffset();
+  } else {
+    // If the new offset would be negative, bail out.
+    if (Offset.isPositive() && Index < IOffset)
+      DiagInvalidOffset();
 
-      // If the new offset would be out of bounds, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -IOffset > MaxOffset))
-        DiagInvalidOffset();
-    }
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -IOffset > MaxOffset))
+      DiagInvalidOffset();
   }
 
   if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))
@@ -3012,7 +2972,7 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
       IntegralKind Kind = IntegralKind::Address;
       const void *PtrVal;
       if (Ptr.isDummy()) {
-        if (const Expr *E = Ptr.getDeclDesc()->asExpr()) {
+        if (const Expr *E = Ptr.getRootExpr()) {
           PtrVal = E;
           if (isa<AddrLabelExpr>(E))
             Kind = IntegralKind::LabelAddress;
@@ -3462,11 +3422,6 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!Ptr.isZero() && !Offset.isZero()) {
-    if (!CheckArray(S, OpPC, Ptr))
-      return false;
-  }
-
   if (Offset.isZero()) {
     if (const Descriptor *Desc = Ptr.getFieldDesc();
         Desc && Desc->isArray() && Ptr.getIndex() == 0) {
@@ -3492,11 +3447,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (!Ptr.isZero() && !Offset.isZero()) {
-    if (!CheckArray(S, OpPC, Ptr))
-      return false;
-  }
 
   if (Offset.isZero()) {
     if (const Descriptor *Desc = Ptr.getFieldDesc();

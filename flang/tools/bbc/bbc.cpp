@@ -235,6 +235,10 @@ static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
                                           llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
+    warnOnAllExtensions("pedantic", llvm::cl::desc("warn on all extensions"),
+                        llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
                               llvm::cl::desc("enable do concurrent offload"),
                               llvm::cl::init(false));
@@ -541,6 +545,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     mlir::omp::setOffloadModuleInterfaceAttributes(mlirModule,
                                                    offloadModuleOpts);
     mlir::omp::setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
+    if (!integerWrapAround)
+      setOpenMPIntegerWrapAround(mlirModule, false);
   }
   burnside.lower(parseTree, semanticsContext);
   std::error_code ec;
@@ -692,6 +698,10 @@ int main(int argc, char **argv) {
   }
   if (enableCUDAInit) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDAInit);
+  }
+  if (warnOnAllExtensions) {
+    options.features.WarnOnAllNonstandard();
+    options.features.WarnOnAllUsage();
   }
 
   if (enableDoConcurrentOffload) {

@@ -366,6 +366,11 @@ public:
 
   bool GetAcceleratorPluginsSupported();
 
+  /// Whether the WebAssembly stub can be told which module instance to read
+  /// from, which it advertises with "qWasmInstance+" in its qSupported
+  /// response.
+  bool GetWasmInstanceSupported();
+
   /// Send the "jAcceleratorPluginInitialize" packet and return the actions
   /// requested by each accelerator plugin installed in lldb-server. The packet
   /// is only sent if the lldb-server advertised accelerator plugin support via
@@ -621,6 +626,7 @@ protected:
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
   LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
+  LazyBool m_supports_wasm_instance = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
