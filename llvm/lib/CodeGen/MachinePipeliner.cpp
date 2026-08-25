@@ -1323,6 +1323,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
         }
       } else if (MO.isUse()) {
         // If the register is defined by a Phi, then create a true dependence.
+        if (!Reg.isVirtual())
+          continue;
         MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
         if (DefMI == nullptr)
           continue;
