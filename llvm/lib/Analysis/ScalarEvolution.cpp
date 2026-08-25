@@ -9424,6 +9424,12 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   bool ControllingFiniteLoop = ControlsOnlyExit && loopHasNoAbnormalExits(L) &&
                                loopIsFiniteByAssumption(L);
+
+  // Preserve the original operands
+  SCEVUse OrigLHS = LHS;
+  SCEVUse OrigRHS = RHS;
+  CmpPredicate OrigPred = Pred;
+
   // Simplify the operands before analyzing them.
   (void)SimplifyICmpOperands(Pred, LHS, RHS, /*Depth=*/0);
 
@@ -9519,7 +9525,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     break;
   }
   case ICmpInst::ICMP_SLE:
-  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_ULE: {
+    bool IsSigned = ICmpInst::isSigned(Pred);
+
     // Since the loop is finite, an invariant RHS cannot include the boundary
     // value, otherwise it would loop forever.
     if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
@@ -9534,7 +9542,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       // likely that we use a legal type.
       auto *NewType =
           Type::getIntNTy(OldType->getContext(), OldType->getBitWidth() * 2);
-      if (ICmpInst::isSigned(Pred)) {
+      if (IsSigned) {
         LHS = getSignExtendExpr(LHS, NewType);
         RHS = getSignExtendExpr(RHS, NewType);
       } else {
@@ -9543,12 +9551,46 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       }
     }
     RHS = getAddExpr(getOne(RHS->getType()), RHS);
-    [[fallthrough]];
+    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
+                                    AllowPredicates);
+    if (EL.hasFullInfo())
+      return EL;
+
+    // X < (Y+1) failed to get an exact count. Try the pre-inc form.
+    ExitLimit PreEL = howManyLessThansViaPreInc(
+        OrigLHS, OrigRHS, L, IsSigned, ControlsOnlyExit, AllowPredicates);
+    if (PreEL.hasFullInfo())
+      return PreEL;
+
+    // Neither form found an exact count. Preserve whatever partial (e.g. max)
+    // information the direct analysis produced.
+    if (EL.hasAnyInfo())
+      return EL;
+    if (PreEL.hasAnyInfo())
+      return PreEL;
+    break;
+  }
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: { // while (X < Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
     ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
                                     AllowPredicates);
+    if (EL.hasFullInfo())
+      return EL;
+
+    // SimplifyICmpOperands may have rewritten an original X <= Y into
+    // X < (Y + 1). Retry with the pre-inc form of the original compare.
+    if (OrigPred == ICmpInst::ICMP_ULE || OrigPred == ICmpInst::ICMP_SLE) {
+      ExitLimit PreEL = howManyLessThansViaPreInc(
+          OrigLHS, OrigRHS, L, ICmpInst::isSigned(OrigPred), ControlsOnlyExit,
+          AllowPredicates);
+      if (PreEL.hasFullInfo())
+        return PreEL;
+      if (!EL.hasAnyInfo() && PreEL.hasAnyInfo())
+        EL = PreEL;
+    }
+
+    // Preserve whatever partial (e.g. max) information was found.
     if (EL.hasAnyInfo())
       return EL;
     break;
@@ -13349,6 +13391,45 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
 
   return getUDivCeilSCEV(getConstant(MaxEnd - MinStart) /* Delta */,
                          getConstant(StrideForMaxBECount) /* Step */);
+}
+
+ScalarEvolution::ExitLimit ScalarEvolution::howManyLessThansViaPreInc(
+    const SCEV *LHS, const SCEV *RHS, const Loop *L, bool IsSigned,
+    bool ControlsOnlyExit, bool AllowPredicates) {
+  if (!isLoopInvariant(RHS, L))
+    return getCouldNotCompute();
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  SCEV::NoWrapFlags NoWrapFlag = IsSigned ? SCEV::FlagNSW : SCEV::FlagNUW;
+  if (!AR || AR->getLoop() != L || !AR->isAffine() ||
+      !AR->getType()->isIntegerTy() || !AR->getNoWrapFlags(NoWrapFlag))
+    return getCouldNotCompute();
+
+  const SCEV *Step = AR->getStepRecurrence(*this);
+  const auto *StepC = dyn_cast<SCEVConstant>(Step);
+  if (!StepC || !StepC->getAPInt().isStrictlyPositive() ||
+      !willNotOverflow(Instruction::Sub, IsSigned, AR->getStart(), Step))
+    return getCouldNotCompute();
+
+  const SCEV *PreStart = getMinusSCEV(AR->getStart(), Step);
+  // Do not transfer nowrap flags from the post-inc AddRec to its sibling.
+  const SCEV *PreAR = getAddRecExpr(PreStart, Step, L, SCEV::FlagAnyWrap);
+
+  const APInt &StepV = StepC->getAPInt();
+  auto IsMultipleOfStep = [&](const SCEV *S) {
+    if (StepV.isOne())
+      return true;
+    if (StepV.isPowerOf2())
+      return getMinTrailingZeros(S) >= StepV.logBase2();
+    return getConstantMultiple(S).urem(StepV).isZero();
+  };
+  if (!IsMultipleOfStep(PreAR) || !IsMultipleOfStep(RHS))
+    return getCouldNotCompute();
+
+  // With both sides aligned to Step, this is the unit-stride identity
+  // (X + 1) <= Y  <=>  X < Y, scaled by Step.
+  return howManyLessThans(PreAR, RHS, L, IsSigned, ControlsOnlyExit,
+                          AllowPredicates);
 }
 
 ScalarEvolution::ExitLimit

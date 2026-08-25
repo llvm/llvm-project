@@ -2207,6 +2207,13 @@ private:
   /// CouldNotCompute.
   ExitLimit howFarToNonZero(const SCEV *V, const Loop *L);
 
+  /// Try to compute the number of times a non-strict post-inc comparison
+  /// executes by expressing it as a strict comparison of the pre-inc sibling.
+  ExitLimit howManyLessThansViaPreInc(const SCEV *LHS, const SCEV *RHS,
+                                      const Loop *L, bool IsSigned,
+                                      bool ControlsOnlyExit,
+                                      bool AllowPredicates);
+
   /// Return the number of times an exit condition containing the specified
   /// less-than comparison will execute.  If not computable, return
   /// CouldNotCompute.
