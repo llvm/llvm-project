@@ -22,6 +22,8 @@ RemarksAnalyzer::run(const CapabilityContext &Context) {
         int64_t Count = 0;
         json::Object ByPass;
         json::Object ByType;
+        for (StringRef K : allRemarkTypeKeys())
+          ByType[K] = int64_t(0);
         if (Error E = foreachRemark(
                 Path, [&](const remarks::Remark &R) -> Error {
                   ++Count;
@@ -32,8 +34,8 @@ RemarksAnalyzer::run(const CapabilityContext &Context) {
                   json::Value &PassVal = ByPass[PassKey];
                   PassVal = PassVal.getAsInteger().value_or(0) + 1;
 
-                  StringRef Ty = remarks::typeToStr(R.RemarkType);
-                  json::Value &TypeVal = ByType[Ty.str()];
+                  StringRef Ty = remarkTypeKey(R.RemarkType);
+                  json::Value &TypeVal = ByType[Ty];
                   TypeVal = TypeVal.getAsInteger().value_or(0) + 1;
                   return Error::success();
                 }))

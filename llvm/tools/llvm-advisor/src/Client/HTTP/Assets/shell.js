@@ -15,6 +15,7 @@ const Shell = {
     );
     app.appendChild(wrap);
     app.appendChild(CommandPalette.render());
+    app.appendChild(this.importModal());
 
     // React to state
     State.on('sidebarPinned', v => app.classList.toggle('sb-exp', v));
@@ -22,6 +23,9 @@ const Shell = {
     State.on('commandPaletteOpen', v => {
       document.querySelector('.cmd-overlay')?.classList.toggle('open', v);
       if (v) document.querySelector('.cmd-input')?.focus();
+    });
+    State.on('importModalOpen', v => {
+      document.querySelector('.import-overlay')?.classList.toggle('open', v);
     });
     State.on('route', () => this.updateNav());
     State.on('health', h => this.updateStatus(h));
@@ -54,7 +58,10 @@ const Shell = {
         h('div', { class: 'dropdown', id: 'snapshot-dropdown' },
           h('button', { class: 'dd-trigger', onClick: e => this.toggleDropdown(e) }, 'Snapshot ▾'),
           h('div', { class: 'dd-menu' })
-        )
+        ),
+        h('button', { class: 'dd-trigger', style: { marginLeft: '8px' },
+          title: 'Import a remarks file',
+          onClick: () => State.set('importModalOpen', true) }, '+ Import')
       ),
       h('div', { class: 'topbar-right' },
         h('div', { class: 'status-pill', id: 'status-pill' },
@@ -70,11 +77,93 @@ const Shell = {
     );
   },
 
+  importModal() {
+    const close = () => State.set('importModalOpen', false);
+
+    const status = h('div', { class: 'import-status', style: { marginTop: '12px', fontSize: '12px', minHeight: '18px' } });
+    const fileInput = h('input', { type: 'file', accept: '.yaml,.bitstream,.opt', style: { display: 'none' } });
+
+    const doUpload = async (file) => {
+      if (!file) return;
+      status.textContent = `Uploading ${file.name} (${(file.size / 1024).toFixed(0)} KB)…`;
+      status.style.color = 'var(--text-muted)';
+      const res = await API.importFile(file);
+      if (!res.ok) {
+        status.textContent = `Error: ${res.error}`;
+        status.style.color = 'var(--red)';
+        return;
+      }
+      status.textContent = `Imported. Snapshot ${res.data.snapshot_id.slice(0, 8)} created.`;
+      status.style.color = 'var(--green)';
+      // Refresh snapshot list and navigate to the new snapshot
+      const snaps = await API.snapshots();
+      if (snaps.ok) {
+        const list = Array.isArray(snaps.data) ? snaps.data : [];
+        list.sort((a, b) => (b.created_unix || 0) - (a.created_unix || 0));
+        State.set('snapshots', list);
+        const newSnap = list.find(s => s.id === res.data.snapshot_id);
+        if (newSnap) {
+          State.set('currentSnapshot', newSnap);
+          this.updateSelectors();
+        }
+      }
+      setTimeout(() => { close(); Router.navigate('/'); }, 900);
+    };
+
+    const dropZone = h('div', {
+      class: 'import-dropzone',
+      style: {
+        border: '2px dashed var(--border)', borderRadius: '8px', padding: '32px',
+        textAlign: 'center', cursor: 'pointer', color: 'var(--text-muted)',
+        transition: 'border-color 0.15s, background 0.15s',
+      },
+      onClick: () => fileInput.click(),
+    },
+      h('div', { style: { fontSize: '13px', marginBottom: '4px' } }, 'Drop a remarks file here'),
+      h('div', { style: { fontSize: '11px' } }, 'or click to browse (.yaml, .bitstream)')
+    );
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--accent)';
+      dropZone.style.background = 'var(--bg2)';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = '';
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = 'var(--border)';
+      dropZone.style.background = '';
+      if (e.dataTransfer.files.length) doUpload(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) doUpload(e.target.files[0]);
+    });
+
+    const panel = h('div', { class: 'import-panel', onClick: e => e.stopPropagation() },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } },
+        h('h3', { style: { margin: '0' } }, 'Import Remarks File'),
+        h('button', { class: 'dd-trigger', onClick: close }, '✕')
+      ),
+      dropZone,
+      fileInput,
+      status
+    );
+
+    const overlay = h('div', { class: 'import-overlay', onClick: close }, panel);
+    return overlay;
+  },
+
   sidebar() {
     const items = [
       { icon: 'overview', label: 'Overview', route: '/', shortcut: 'g o' },
       { icon: 'units', label: 'Units', route: '/units', shortcut: 'g u' },
       { icon: 'compare', label: 'Compare', route: '/compare', shortcut: 'g c' },
+      { icon: 'remarks', label: 'Remarks', route: '/remarks', shortcut: 'g r' },
+      { icon: 'heatmap', label: 'Heatmap', route: '/heatmap', shortcut: 'g h' },
+      { icon: 'explorer', label: 'Explorer', route: '/explorer', shortcut: 'g e' },
       { icon: 'settings', label: 'Settings', route: '/settings', shortcut: 'g s' },
     ];
 
@@ -199,6 +288,9 @@ const CommandPalette = {
     { label: 'Go to Overview', shortcut: 'g o', action: () => Router.navigate('/') },
     { label: 'Go to Units', shortcut: 'g u', action: () => Router.navigate('/units') },
     { label: 'Go to Compare', shortcut: 'g c', action: () => Router.navigate('/compare') },
+    { label: 'Go to Remarks', shortcut: 'g r', action: () => Router.navigate('/remarks') },
+    { label: 'Go to Heatmap', shortcut: 'g h', action: () => Router.navigate('/heatmap') },
+    { label: 'Go to Explorer', shortcut: 'g e', action: () => Router.navigate('/explorer') },
     { label: 'Go to Settings', shortcut: 'g s', action: () => Router.navigate('/settings') },
   ],
 

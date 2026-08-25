@@ -3,16 +3,38 @@
     {
       "id": "llvm.remarks.summary",
       "name": "Optimization remarks summary",
-      "version": "1",
+      "version": "2",
       "runner": "builtin.remarks_summary",
       "summary": "remarks summary requires an optimization remarks artifact",
       "readiness": "L1",
       "dependencies": []
     },
     {
+      "id": "llvm.remarks.relational",
+      "name": "Optimization remarks relational view",
+      "version": "1",
+      "runner": "builtin.remarks_relational",
+      "summary": "relational view requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
+      "id": "llvm.remarks.hotspot",
+      "name": "Optimization remarks hotspots",
+      "version": "1",
+      "runner": "builtin.remarks_hotspot",
+      "summary": "hotspot analysis requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
       "id": "llvm.remarks.detail",
       "name": "Optimization remarks detail",
-      "version": "1",
+      "version": "3",
       "runner": "builtin.remarks_detail",
       "summary": "remarks detail requires an optimization remarks artifact",
       "readiness": "L1",

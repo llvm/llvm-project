@@ -97,3 +97,16 @@ json::Value llvm::advisor::errorEnvelope(StringRef Code, StringRef Message) {
                       {"status", "error"},
                       {"error", json::Object{{"code", Code}, {"message", Message}}}};
 }
+
+void llvm::advisor::writeSuccessEnvelope(
+    raw_ostream &OS, function_ref<void(json::OStream &)> WriteData) {
+  json::OStream JOS(OS);
+  JOS.object([&] {
+    JOS.attribute("request_id", uniqueRequestID());
+    JOS.attribute("timestamp_unix", unixNow());
+    JOS.attribute("status", "success");
+    JOS.attributeBegin("data");
+    WriteData(JOS);
+    JOS.attributeEnd();
+  });
+}

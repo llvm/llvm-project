@@ -8,6 +8,9 @@ const CompareView = {
   _results: null,
   _baseSummary: null,
   _candidateSummary: null,
+  _remarksDiff: null,
+  _remarkPage: 0,
+  _remarkPageCount: 1,
 
   async render(params) {
     this._baseId = params.base || null;
@@ -22,6 +25,7 @@ const CompareView = {
 
     container.appendChild(h('div', { id: 'compare-summary-section' }));
     container.appendChild(h('div', { class: 'summary-bar', id: 'compare-summary' }));
+    container.appendChild(h('div', { id: 'compare-remarks-diff' }));
     container.appendChild(h('div', { class: 'section-header' }, 'Unit Changes'));
     container.appendChild(h('div', { id: 'compare-results' }));
 
@@ -56,14 +60,17 @@ const CompareView = {
     const sumSectionEl = document.getElementById('compare-summary-section');
     if (resultsEl) { clearEl(resultsEl); resultsEl.appendChild(h('div', { class: 'text-muted mono', style: { padding: '16px' } }, 'Comparing…')); }
 
-    const [compareRes, baseSumRes, candSumRes] = await Promise.all([
+    const [compareRes, baseSumRes, candSumRes, remDiffRes] = await Promise.all([
       API.compare(this._baseId, this._candidateId),
       API.snapshotSummary(this._baseId).catch(() => ({ ok: false, data: {} })),
       API.snapshotSummary(this._candidateId).catch(() => ({ ok: false, data: {} })),
+      API.compareRemarks(this._baseId, this._candidateId, 0, 100).catch(() => ({ ok: false, data: null })),
     ]);
 
     this._baseSummary = baseSumRes.ok && baseSumRes.data ? baseSumRes.data : {};
     this._candidateSummary = candSumRes.ok && candSumRes.data ? candSumRes.data : {};
+    this._remarksDiff = remDiffRes.ok && remDiffRes.data ? remDiffRes.data : null;
+    this._remarkPage = 0;
 
     if (!compareRes.ok) {
       if (resultsEl) { clearEl(resultsEl); resultsEl.appendChild(UI.errorCard(compareRes.error || 'Compare failed', () => this.runCompare())); }
@@ -73,6 +80,8 @@ const CompareView = {
     this._results = compareRes.data;
     this.renderMatchSummary(summaryEl);
     this.renderSummaryComparison(sumSectionEl);
+    const remDiffEl = document.getElementById('compare-remarks-diff');
+    if (remDiffEl) this.renderRemarksDiff(remDiffEl);
     this.renderResults(resultsEl);
   },
 
@@ -178,6 +187,193 @@ const CompareView = {
     el.appendChild(section);
   },
 
+  renderRemarksDiff(el) {
+    clearEl(el);
+    const diff = this._remarksDiff;
+    if (!diff) return;
+
+    const s = diff.summary || {};
+    const newMissed = s.new_missed || 0;
+    const resolved = s.resolved_missed || 0;
+    const changed = s.functions_changed || 0;
+    const added = s.functions_added || 0;
+    const removed = s.functions_removed || 0;
+
+    if (changed === 0 && newMissed === 0 && resolved === 0) return;
+
+    const section = h('div', { class: 'compare-remarks-section' });
+    section.appendChild(h('h3', { style: { margin: '0 0 10px' } }, 'Optimization Impact'));
+
+    const net = newMissed - resolved;
+    const netColor = net > 0 ? 'var(--orange)' : net < 0 ? 'var(--green)' : 'var(--fg)';
+    const netSign = net > 0 ? '+' : '';
+
+    const impactBar = h('div', { style: { display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' } });
+    if (net !== 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric warn' },
+        h('div', { class: 'label' }, 'Net'),
+        h('div', { class: 'values', style: { color: netColor } }, `${netSign}${formatNumber(net)}`)
+      ));
+    if (newMissed > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'New Missed'),
+        h('div', { class: 'values', style: { color: 'var(--red)' } }, `+${formatNumber(newMissed)}`)
+      ));
+    if (resolved > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Resolved'),
+        h('div', { class: 'values', style: { color: 'var(--green)' } }, `-${formatNumber(resolved)}`)
+      ));
+    impactBar.appendChild(h('div', { class: 'summary-metric' },
+      h('div', { class: 'label' }, 'Functions Changed'),
+      h('div', { class: 'values' }, formatNumber(changed))
+    ));
+    if (added > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Functions Added'),
+        h('div', { class: 'values' }, formatNumber(added))
+      ));
+    if (removed > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Functions Removed'),
+        h('div', { class: 'values' }, formatNumber(removed))
+      ));
+    section.appendChild(impactBar);
+
+    const functions = diff.functions || [];
+    if (!functions.length) { el.appendChild(section); return; }
+
+    const SEVERITY_COLORS = { minor: 'var(--fg3)', moderate: 'var(--orange)', critical: 'var(--red)' };
+    const tbl = h('table', { class: 'top-units-table', style: { width: '100%' } });
+    const thead = h('tr', {},
+      h('th', {}, 'Function'),
+      h('th', { style: { textAlign: 'right' } }, 'Before'),
+      h('th', { style: { textAlign: 'right' } }, 'After'),
+      h('th', { style: { textAlign: 'right' } }, '∆ Missed'),
+      h('th', { style: { textAlign: 'right' } }, '∆ Total'),
+      h('th', { style: { textAlign: 'center' } }, 'Severity'),
+    );
+    tbl.appendChild(h('thead', {}, thead));
+    const tbody = h('tbody', {});
+
+    functions.forEach((fn, idx) => {
+      const delta = fn.delta_missed;
+      const color = delta > 0 ? 'var(--orange)' : delta < 0 ? 'var(--green)' : 'var(--fg)';
+      const sev = fn.severity || 'minor';
+      const sevColor = SEVERITY_COLORS[sev] || 'var(--fg3)';
+      const beforeMissed = fn.before?.missed || 0;
+      const beforePassed = fn.before?.passed || 0;
+      const afterMissed = fn.after?.missed || 0;
+      const afterPassed = fn.after?.passed || 0;
+      const row = h('tr', { style: { cursor: 'pointer' },
+        onClick: () => this._toggleFnDetail(fn, row, tbody, idx)
+      },
+        h('td', { class: 'mono', style: { fontSize: '11px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: fn.name }, fn.name),
+        h('td', { class: 'num', title: `${beforeMissed} missed / ${beforePassed} passed` }, `${formatNumber(beforeMissed)}${beforePassed > 0 ? '/' + formatNumber(beforePassed) : ''}`),
+        h('td', { class: 'num', title: `${afterMissed} missed / ${afterPassed} passed` }, `${formatNumber(afterMissed)}${afterPassed > 0 ? '/' + formatNumber(afterPassed) : ''}`),
+        h('td', { class: 'num', style: { color } }, `${delta >= 0 ? '+' : ''}${formatNumber(delta)}`),
+        h('td', { class: 'num', style: { color: fn.delta_total > 0 ? 'var(--orange)' : fn.delta_total < 0 ? 'var(--green)' : '' } }, `${fn.delta_total >= 0 ? '+' : ''}${formatNumber(fn.delta_total)}`),
+        h('td', { class: 'num', style: { color: sevColor, fontWeight: '600', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.5px' } }, sev),
+      );
+      tbody.appendChild(row);
+    });
+    tbl.appendChild(tbody);
+
+    const wrap = h('div', { class: 'top-units-wrap', style: { maxHeight: '300px', overflow: 'auto' } }, tbl);
+    section.appendChild(wrap);
+
+    const total = diff.total || 0;
+    const pageSize = 100;
+    this._remarkPageCount = Math.max(1, Math.ceil(total / pageSize));
+    if (total > functions.length) {
+      const pager = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', fontSize: '12px' } });
+      const prevBtn = h('button', { class: 'triage-chip', onClick: async () => {
+        if (this._remarkPage <= 0) return;
+        this._remarkPage--;
+        await this._fetchRemarkPage(el);
+      }}, '← Prev');
+      const nextBtn = h('button', { class: 'triage-chip', onClick: async () => {
+        if (this._remarkPage >= this._remarkPageCount - 1) return;
+        this._remarkPage++;
+        await this._fetchRemarkPage(el);
+      }}, 'Next →');
+      const pageLabel = h('span', { class: 'text-muted' }, `Page ${this._remarkPage + 1} of ${this._remarkPageCount} (${formatNumber(total)} changed)`);
+      pager.appendChild(prevBtn); pager.appendChild(pageLabel); pager.appendChild(nextBtn);
+      section.appendChild(pager);
+    }
+
+    el.appendChild(section);
+  },
+
+  async _fetchRemarkPage(el) {
+    const res = await API.compareRemarks(this._baseId, this._candidateId, this._remarkPage * 100, 100);
+    if (res.ok && res.data) { this._remarksDiff = res.data; this.renderRemarksDiff(el); }
+  },
+
+  async _toggleFnDetail(fn, row, tbody, idx) {
+    const existingId = `fn-detail-${idx}`;
+    const existing = tbody.querySelector(`#${existingId}`);
+    if (existing) { existing.remove(); row.classList.remove('expanded'); return; }
+    row.classList.add('expanded');
+    const detailRow = h('tr', { id: existingId });
+    const cell = h('td', { colspan: '5', style: { padding: '8px 12px', background: 'var(--bg2)', fontSize: '11px' } });
+    cell.textContent = 'Loading…';
+    detailRow.appendChild(cell);
+    row.after(detailRow);
+
+    const res = await API.compareFunctionDetail(this._baseId, this._candidateId, fn.name);
+    clearEl(cell);
+    if (!res.ok) { cell.textContent = 'Failed to load detail.'; return; }
+    const d = res.data;
+    const added = d.added || [];
+    const removed = d.removed || [];
+
+    if (!added.length && !removed.length) { cell.textContent = 'No remark-level changes found.'; return; }
+
+    const TYPE_NAMES = { 1: 'passed', 2: 'missed', 3: 'analysis', 6: 'failure' };
+    const TYPE_COLORS = { 1: 'var(--green)', 2: 'var(--orange)', 3: 'var(--teal)', 6: 'var(--red)' };
+
+    const makeEntries = (items, sign, color) => items.map(r => {
+      const hasLoc = r.file && r.line > 0;
+      const locLabel = hasLoc ? `${r.file.split('/').pop()}:${r.line}` : '';
+      const goToExplorer = hasLoc
+        ? (e) => {
+            e.stopPropagation();
+            State.set('currentSnapshot', State.get('snapshots').find(s => s.id === this._candidateId) || null);
+            const qs = new URLSearchParams();
+            qs.set('path', r.file);
+            qs.set('line', String(r.line));
+            if (r.pass) qs.set('pass', r.pass);
+            if (r.name) qs.set('name', r.name);
+            Router.navigate(`/explorer?${qs.toString()}`);
+          }
+        : null;
+      return h('div', {
+        style: { display: 'flex', gap: '8px', padding: '4px 6px', alignItems: 'baseline', cursor: hasLoc ? 'pointer' : 'default', borderRadius: '4px' },
+        onClick: goToExplorer,
+        onMouseEnter: (e) => { if (hasLoc) e.currentTarget.style.background = 'var(--bg)'; },
+        onMouseLeave: (e) => { if (hasLoc) e.currentTarget.style.background = ''; },
+        title: hasLoc ? `Click to open ${locLabel} in Code Explorer` : ''
+      },
+        h('span', { style: { color, fontWeight: '600', minWidth: '16px' } }, sign),
+        h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--fg3)', minWidth: '60px' } }, TYPE_NAMES[r.type] || '?'),
+        h('span', { style: { fontWeight: '500' } }, r.name || ''),
+        h('span', { class: 'text-muted' }, r.pass || ''),
+        h('span', { style: { color: color, fontSize: '10px' } }, `×${Math.abs(r.delta || r.after_count - r.before_count)}`),
+        hasLoc ? h('span', { class: 'text-muted', style: { fontSize: '10px', textDecoration: 'underline' } }, locLabel) : null,
+      );
+    });
+
+    if (removed.length) {
+      cell.appendChild(h('div', { style: { marginBottom: '4px', fontWeight: '600', color: 'var(--red)' } }, 'Removed (resolved):'));
+      makeEntries(removed, '−', 'var(--green)').forEach(e => cell.appendChild(e));
+    }
+    if (added.length) {
+      cell.appendChild(h('div', { style: { marginTop: removed.length ? '8px' : 0, marginBottom: '4px', fontWeight: '600', color: 'var(--red)' } }, 'Added (new):'));
+      makeEntries(added, '+', 'var(--red)').forEach(e => cell.appendChild(e));
+    }
+  },
+
   renderResults(el) {
     if (!el || !this._results) return;
     clearEl(el);
@@ -254,8 +450,7 @@ const CompareView = {
 
   async _loadUnitDetail(detail, change) {
     const matchType = change.match_type || 'changed';
-    const coreCaps = ['llvm.ir.summary', 'llvm.ir.function_stats', 'clang.diag.summary',
-                      'llvm.obj.summary', 'llvm.remarks.summary', 'llvm.debug.summary'];
+    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail'];
 
     const unitId = change.candidate_unit_id || change.base_unit_id;
     const snapId = change.candidate_unit_id ? this._candidateId : this._baseId;

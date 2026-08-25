@@ -1,0 +1,11 @@
+# Test that C++ mangled names in remarks are demangled in relational output.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/demangle.opt.yaml >/dev/null 2>&1
+# RUN: llvm-advisor query --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --snapshot latest --capability llvm.remarks.relational 2>&1 | FileCheck %s
+
+# CHECK: "capability":"llvm.remarks.relational"
+# CHECK: "count":6
+# CHECK-DAG: "file":["src/demangle.cpp"]
+# CHECK-DAG: "function":["entry(int, int)"]
+# CHECK-DAG: "pass":["inline"
+# CHECK-DAG: "name":["Inlined"

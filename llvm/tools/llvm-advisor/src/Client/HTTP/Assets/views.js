@@ -1,3 +1,362 @@
+const RemarksView = {
+  async render() {
+    const snap = State.get('currentSnapshot');
+    const container = h('div', {});
+    container.appendChild(h('div', { class: 'section-header' }, 'Optimization Remarks Explorer'));
+    Shell.renderMain(container);
+
+    if (!snap) {
+      container.appendChild(h('div', { class: 'empty-state' },
+        h('div', {}, 'Select a snapshot first')));
+      return;
+    }
+
+    const skeleton = h('div', { class: 'dashboard-skeleton', style: { padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' } },
+      h('div', { style: { height: '80px', background: 'var(--bg2)', borderRadius: '8px', animation: 'shimmer 1.5s infinite' } }),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' } },
+        h('div', { style: { height: '200px', background: 'var(--bg2)', borderRadius: '8px', animation: 'shimmer 1.5s infinite' } }),
+        h('div', { style: { height: '200px', background: 'var(--bg2)', borderRadius: '8px', animation: 'shimmer 1.5s infinite' } })
+      )
+    );
+    container.appendChild(skeleton);
+
+    const [relRes, queryRes] = await Promise.all([
+      API.get(`/snapshots/${snap.id}/remarks/relational?limit=5000`),
+      API.querySnapshot(snap.id, ['llvm.remarks.summary']),
+    ]);
+
+    if (skeleton.parentNode) skeleton.parentNode.removeChild(skeleton);
+
+    if (!relRes.ok && !queryRes.ok) {
+      container.appendChild(UI.errorCard(
+        'No remarks data available. Capture with llvm.remarks.summary enabled.',
+        () => this.render()
+      ));
+      return;
+    }
+
+    const rel = relRes.ok && relRes.data ? relRes.data : null;
+    const queryUnits = queryRes.ok && Array.isArray(queryRes.data) ? queryRes.data : [];
+
+    // Top-level summary from summary capability
+    const byPass = {}, byType = {};
+    let totalRemarks = 0;
+    queryUnits.forEach(u => {
+      const results = CapabilityData.normalizeResults(u.results || []);
+      results.filter(r => r.capability === 'llvm.remarks.summary').forEach(res => {
+        const v = res.value || {};
+        totalRemarks += Number(v.count || v.remark_count || 0);
+        if (v.by_pass) Object.entries(v.by_pass).forEach(([p, c]) => { byPass[p] = (byPass[p] || 0) + Number(c); });
+        if (v.by_type) Object.entries(v.by_type).forEach(([t, c]) => { byType[t] = (byType[t] || 0) + Number(c); });
+      });
+    });
+
+    // Header stat row
+    const statRow = h('div', { class: 'metric-cards', style: { marginBottom: '18px' } });
+    const actualTotal = (rel && rel.total) ? rel.total : totalRemarks;
+    statRow.appendChild(UI.metric('Total Remarks', actualTotal || totalRemarks));
+    statRow.appendChild(UI.metric('Units', snap.unit_count || queryUnits.length));
+    if (rel) statRow.appendChild(UI.metric('Relational Rows', rel.count || 0));
+    container.appendChild(statRow);
+
+    const grid = h('div', { class: 'overview-grid', style: { marginTop: '0' } });
+
+    // Pass distribution bar chart
+    const passEntries = Object.entries(byPass).sort((a, b) => b[1] - a[1]);
+    if (passEntries.length) {
+      const passData = passEntries.slice(0, 12).map(([label, amount]) => ({ label, amount }));
+      const section = h('div', { class: 'chart-section' },
+        h('h3', {}, 'Remarks by Pass'),
+        UI.barChart(passData)
+      );
+      grid.appendChild(section);
+    }
+
+    // Remark type donut
+    const typeEntries = Object.entries(byType).filter(([, v]) => v > 0);
+    if (typeEntries.length) {
+      const typeData = typeEntries.map(([label, value]) => ({
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        value,
+      }));
+      const donut = UI.donutChart(typeData);
+      if (donut) {
+        grid.appendChild(h('div', { class: 'chart-section' },
+          h('h3', {}, 'By Remark Type'),
+          donut
+        ));
+      }
+    }
+
+    // Per-unit remark distribution (long tail)
+    const unitRemarks = queryUnits.map(u => {
+      const results = CapabilityData.normalizeResults(u.results || []);
+      const rem = results.filter(r => r.capability === 'llvm.remarks.summary')
+        .reduce((s, r) => s + Number(r.value?.count || r.value?.remark_count || 0), 0);
+      return { unit_id: u.unit_id, source_path: u.source_path, remarks: rem };
+    }).filter(u => u.remarks > 0).sort((a, b) => b.remarks - a.remarks);
+
+    if (unitRemarks.length) {
+      const flameItems = unitRemarks.slice(0, 10).map(u => {
+        const path = u.source_path || u.unit_id || '';
+        const file = path.replace(/\\/g, '/').split('/').pop() || path;
+        return { label: file, value: u.remarks };
+      });
+      const section = h('div', { class: 'chart-section' },
+        h('h3', {}, 'Remarks per Unit (top 10)')
+      );
+      const flame = UI.flameBars(flameItems);
+      if (flame) section.appendChild(flame);
+      // Legend with links
+      const legend = h('div', { style: { marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '11px' } });
+      const colors = ['#5B8DB8', '#5DB8A8', '#D4A574', '#9DB86E', '#C97DB8', '#9B7DB8', '#D48B9B', '#6EC9C4', '#5B8DB8', '#D4A574'];
+      unitRemarks.slice(0, 10).forEach((u, i) => {
+        const path = u.source_path || u.unit_id || '';
+        const file = path.replace(/\\/g, '/').split('/').pop() || path;
+        legend.appendChild(h('span', {
+          style: { display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' },
+          onClick: () => Router.navigate(`/units/${encodeURIComponent(u.unit_id)}?snapshot=${encodeURIComponent(snap.id)}`),
+        },
+          h('i', { style: { width: '8px', height: '8px', borderRadius: '2px', background: colors[i], display: 'inline-block', flexShrink: '0' } }),
+          `${file}: ${formatNumber(u.remarks)}`
+        ));
+      });
+      section.appendChild(legend);
+      grid.appendChild(section);
+    }
+
+    container.appendChild(grid);
+
+    // Relational table — top (pass, name) tuples
+    if (rel && rel.columns && rel.strings) {
+      const { columns, strings } = rel;
+      const passes = strings.pass || [];
+      const names = strings.name || [];
+      // Canonical type names — must match remarkTypeKey() in RemarksAnalysisUtils.cpp.
+      // Index matches remarks::Type enum: 0=unknown … 6=failure.
+      const REMARK_TYPES = [
+        'unknown', 'passed', 'missed', 'analysis',
+        'analysis-fp-commute', 'analysis-aliasing', 'failure',
+      ];
+      // Subset shown as individual columns in the table (skip unknown/failure
+      // unless they actually appear, to keep the table compact).
+      const TABLE_TYPE_COLS = [
+        { key: 'missed',             label: 'Missed',     color: 'var(--orange)' },
+        { key: 'passed',             label: 'Passed',     color: 'var(--green)'  },
+        { key: 'analysis',           label: 'Analysis',   color: 'var(--teal)'   },
+        { key: 'analysis-fp-commute',label: 'FP-Commute', color: 'var(--fg3)'    },
+        { key: 'analysis-aliasing',  label: 'Aliasing',   color: 'var(--fg3)'    },
+        { key: 'failure',            label: 'Failure',    color: 'var(--red)'    },
+      ];
+
+      // Count (pass, name) tuples, tallying every type.
+      const tuples = {};
+      const passCols = columns.pass || [];
+      const nameCols = columns.name || [];
+      const typeCols = columns.type || [];
+      for (let i = 0; i < passCols.length; i++) {
+        const p = passes[passCols[i]] || '?';
+        const n = names[nameCols[i]] || '?';
+        const key = `${p}\0${n}`;
+        if (!tuples[key]) tuples[key] = { pass: p, name: n, by_type: {} };
+        const typeName = REMARK_TYPES[typeCols[i]] || 'unknown';
+        tuples[key].by_type[typeName] = (tuples[key].by_type[typeName] || 0) + 1;
+        tuples[key].count = (tuples[key].count || 0) + 1;
+      }
+
+      // Hide columns that are all-zero across the top 20 rows.
+      const top = Object.values(tuples).sort((a, b) => b.count - a.count).slice(0, 20);
+      const visibleCols = TABLE_TYPE_COLS.filter(col =>
+        top.some(t => (t.by_type[col.key] || 0) > 0)
+      );
+
+      if (top.length) {
+        const tableSection = h('div', { class: 'chart-section', style: { marginTop: '18px' } },
+          h('h3', {}, `Top (Pass, Remark) Pairs — ${rel.count} total remarks`)
+        );
+        const thead = h('tr', {},
+          h('th', {}, 'Pass'), h('th', {}, 'Remark'),
+          h('th', { style: { textAlign: 'right' } }, 'Total'),
+          ...visibleCols.map(col => h('th', { style: { textAlign: 'right' } }, col.label))
+        );
+        const table = h('table', { class: 'top-units-table' }, h('thead', {}, thead));
+        const tbody = h('tbody', {});
+        top.forEach(t => {
+          tbody.appendChild(h('tr', {},
+            h('td', { class: 'mono', style: { fontSize: '11px' } }, t.pass),
+            h('td', { style: { fontSize: '11px' } }, t.name),
+            h('td', { class: 'num' }, formatNumber(t.count)),
+            ...visibleCols.map(col => {
+              const v = t.by_type[col.key] || 0;
+              return h('td', { class: 'num', style: { color: v > 0 ? col.color : 'var(--fg3)' } },
+                v > 0 ? formatNumber(v) : '–');
+            })
+          ));
+        });
+        table.appendChild(tbody);
+        tableSection.appendChild(h('div', { class: 'top-units-wrap' }, table));
+        container.appendChild(tableSection);
+      }
+
+      // Full triage grid: server-paginated view of all remarks.
+      container.appendChild(this._renderTriageGrid(snap.id, totalRemarks));
+    }
+  },
+
+  _renderTriageGrid(snapshotId, totalRemarks) {
+    const PAGE_SIZE = 10000;
+    const ROW_H = 26;
+    const VIEWPORT_ROWS = 22;
+    const POOL_SIZE = VIEWPORT_ROWS + 4;
+    const TYPE_NAMES = ['unknown', 'passed', 'missed', 'analysis', 'analysis-fp-commute', 'analysis-aliasing', 'failure'];
+    const TYPE_LABELS = { unknown: 'Unknown', passed: 'Passed', missed: 'Missed', analysis: 'Analysis', 'analysis-fp-commute': 'FP-Commute', 'analysis-aliasing': 'Aliasing', failure: 'Failure' };
+
+    let page = 0, pageCount = 0, serverTotal = 0;
+    let columns = {}, strings = {}, count = 0;
+    const filters = { pass: '', name: '', func: '', source: '', type: '' };
+
+    const wrap = h('div', { class: 'chart-section triage-grid', style: { marginTop: '18px' } });
+    const counter = h('span', { class: 'triage-counter' }, '...');
+    const pageInfo = h('span', { class: 'text-muted', style: { fontSize: '11px' } }, '');
+    wrap.appendChild(h('div', { class: 'triage-header-row' },
+      h('h3', { style: { margin: '0' } }, 'All Remarks'),
+      counter, pageInfo
+    ));
+
+    const filterBar = h('div', { class: 'triage-filter-bar' });
+    const inputs = {};
+    [{ key: 'pass', placeholder: 'pass…' }, { key: 'name', placeholder: 'remark name…' }, { key: 'func', placeholder: 'function…' }, { key: 'source', placeholder: 'source file…' }].forEach(f => {
+      const inp = h('input', { class: 'triage-input', type: 'search', placeholder: f.placeholder });
+      inputs[f.key] = inp;
+      filterBar.appendChild(inp);
+    });
+
+    const typeChipBox = h('div', { class: 'triage-chips' });
+    TYPE_NAMES.forEach((name, enumVal) => {
+      if (name === 'unknown') return;
+      const chip = h('button', { class: `triage-chip triage-chip-${name}` }, TYPE_LABELS[name]);
+      chip.addEventListener('click', () => {
+        if (filters.type === String(enumVal)) { filters.type = ''; chip.classList.remove('on'); }
+        else { filterBar.querySelectorAll('.triage-chip.on').forEach(c => c.classList.remove('on')); filters.type = String(enumVal); chip.classList.add('on'); }
+        page = 0; fetchPage();
+      });
+      typeChipBox.appendChild(chip);
+    });
+    filterBar.appendChild(typeChipBox);
+    wrap.appendChild(filterBar);
+
+    let debounce = null;
+    const onFilterInput = () => {
+      filters.pass = inputs.pass.value; filters.name = inputs.name.value;
+      filters.func = inputs.func.value; filters.source = inputs.source.value;
+      page = 0;
+      clearTimeout(debounce);
+      debounce = setTimeout(fetchPage, 300);
+    };
+    Object.values(inputs).forEach(inp => inp.addEventListener('input', onFilterInput));
+
+    const COLS = [
+      { id: 'unit', label: 'Unit', width: 80, mono: true },
+      { id: 'pass', label: 'Pass', width: 120, mono: true },
+      { id: 'name', label: 'Remark', width: 160 },
+      { id: 'type', label: 'Type', width: 80 },
+      { id: 'function', label: 'Function', width: 250, mono: true },
+      { id: 'source', label: 'Source', width: 200, mono: true },
+      { id: 'hotness', label: 'Hot', width: 60, align: 'right', mono: true },
+    ];
+
+    const colStyle = (col) => col.width ? { width: col.width + 'px', flexShrink: '0' } : { flex: col.flex, minWidth: '0' };
+
+    const tHead = h('div', { class: 'triage-thead', style: { display: 'flex' } });
+    COLS.forEach(col => {
+      tHead.appendChild(h('div', { class: `triage-th${col.align === 'right' ? ' right' : ''}`, style: colStyle(col) }, col.label));
+    });
+    wrap.appendChild(tHead);
+
+    const viewport = h('div', { class: 'triage-viewport', style: { height: `${VIEWPORT_ROWS * ROW_H}px` } });
+    const spacer = h('div', { class: 'triage-spacer' });
+    viewport.appendChild(spacer);
+    const pool = [];
+    for (let p = 0; p < POOL_SIZE; p++) {
+      const row = h('div', { class: 'triage-row', style: { height: ROW_H + 'px', display: 'flex', cursor: 'pointer' } });
+      row.addEventListener('click', () => {
+        const idx = row._idx;
+        if (idx == null || !columns.file) return;
+        const fi = columns.file[idx];
+        if (fi < 0) return;
+        const file = strings.file?.[fi] || '';
+        const line = columns.line[idx];
+        Router.navigate(`/explorer?path=${encodeURIComponent(file)}&line=${line}`);
+      });
+      const cells = COLS.map(col => h('span', { class: `triage-td${col.mono ? ' mono' : ''}${col.align === 'right' ? ' right' : ''}`, style: { ...colStyle(col), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ''));
+      cells.forEach(c => row.appendChild(c));
+      spacer.appendChild(row);
+      pool.push({ row, cells });
+    }
+    wrap.appendChild(viewport);
+
+    const pager = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', fontSize: '12px' } });
+    const prevBtn = h('button', { class: 'triage-chip', onClick: () => { if (page > 0) { page--; fetchPage(); } } }, '← Prev');
+    const nextBtn = h('button', { class: 'triage-chip', onClick: () => { if (page < pageCount - 1) { page++; fetchPage(); } } }, 'Next →');
+    const pageLabel = h('span', { class: 'text-muted' }, '');
+    pager.appendChild(prevBtn); pager.appendChild(pageLabel); pager.appendChild(nextBtn);
+    wrap.appendChild(pager);
+
+    const getCell = (i, colId) => {
+      if (!columns.pass) return null;
+      switch (colId) {
+        case 'unit': return columns.unit ? (strings.unit?.[columns.unit[i]] || '').slice(0, 10) : '';
+        case 'pass': return strings.pass?.[columns.pass[i]] || '';
+        case 'name': return strings.name?.[columns.name[i]] || '';
+        case 'type': return TYPE_LABELS[TYPE_NAMES[columns.type[i]]] || '';
+        case 'function': return columns.function[i] < 0 ? '' : (strings.function?.[columns.function[i]] || '');
+        case 'source': { const fi = columns.file[i]; if (fi < 0) return ''; const f = (strings.file?.[fi] || '').split('/').pop(); return `${f}:${columns.line[i]}`; }
+        case 'hotness': return columns.hotness[i] < 0 ? '' : formatNumber(columns.hotness[i]);
+      }
+    };
+
+    const renderVisible = () => {
+      const len = count;
+      spacer.style.height = `${len * ROW_H}px`;
+      const scrollTop = viewport.scrollTop;
+      const first = Math.max(0, Math.floor(scrollTop / ROW_H));
+      for (let p = 0; p < pool.length; p++) {
+        const idx = first + p;
+        const { row, cells } = pool[p];
+        if (idx >= len) { row.style.display = 'none'; continue; }
+        row.style.display = ''; row.style.top = `${idx * ROW_H}px`; row._idx = idx;
+        COLS.forEach((col, c) => { const v = getCell(idx, col.id) || '–'; cells[c].textContent = v; cells[c].title = v; });
+      }
+    };
+    viewport.addEventListener('scroll', renderVisible, { passive: true });
+
+    const fetchPage = async () => {
+      const offset = page * PAGE_SIZE;
+      let url = `/snapshots/${encodeURIComponent(snapshotId)}/remarks/relational?offset=${offset}&limit=${PAGE_SIZE}`;
+      if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
+      if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.func) url += `&function=${encodeURIComponent(filters.func)}`;
+      if (filters.source) url += `&file=${encodeURIComponent(filters.source)}`;
+      if (filters.type) url += `&type=${filters.type}`;
+      counter.textContent = 'loading...';
+      const res = await API.get(url);
+      if (!res.ok) { counter.textContent = 'error'; return; }
+      const d = res.data;
+      columns = d.columns || {}; strings = d.strings || {};
+      count = d.count || 0; serverTotal = d.total || 0;
+      pageCount = Math.max(1, Math.ceil(serverTotal / PAGE_SIZE));
+      counter.textContent = `${formatNumber(serverTotal)} remarks`;
+      pageLabel.textContent = `Page ${page + 1} of ${formatNumber(pageCount)}`;
+      prevBtn.disabled = page === 0; nextBtn.disabled = page >= pageCount - 1;
+      viewport.scrollTop = 0;
+      renderVisible();
+    };
+
+    fetchPage();
+    return wrap;
+  },
+};
+
 /* ============================================================
    LLVM Advisor — Settings View
    ============================================================ */
@@ -192,5 +551,377 @@ const SettingsView = {
     });
 
     return card;
+  },
+};
+
+/* ============================================================
+   LLVM Advisor — Heatmap View
+   ============================================================ */
+
+const HeatmapView = {
+  async render() {
+    const container = h('div', {});
+
+    const snap = State.get('currentSnapshot');
+    if (!snap) {
+      container.appendChild(UI.emptyCard('No snapshot selected', 'Select a snapshot from the sidebar to view hotspots.'));
+      Shell.renderMain(container);
+      return;
+    }
+
+    const loading = h('div', { class: 'text-muted' }, 'Loading hotspots...');
+    container.appendChild(loading);
+    Shell.renderMain(container);
+
+    const res = await API.querySnapshot(snap.id, ['llvm.remarks.hotspot']);
+    if (!res.ok) {
+      container.innerHTML = '';
+      container.appendChild(UI.errorCard(res.error || 'Failed to load hotspots'));
+      return;
+    }
+
+    const results = Array.isArray(res.data) ? res.data : [];
+    const allHotspots = results.flatMap(unit => {
+      const unitResults = Array.isArray(unit.results) ? unit.results : [];
+      return unitResults.flatMap(r => {
+        if (r.capability === 'llvm.remarks.hotspot' && r.value && r.value.hotspots) {
+          return r.value.hotspots.map(h => ({
+            ...h,
+            unit: unit.source_path || unit.unit_id || '',
+          }));
+        }
+        return [];
+      });
+    });
+
+    container.innerHTML = '';
+
+    if (!allHotspots.length) {
+      container.appendChild(UI.emptyCard('No hotspots found', 'No optimization remark hotspots were detected for this snapshot.'));
+      return;
+    }
+
+    allHotspots.sort((a, b) => (b.max_hotness || 0) - (a.max_hotness || 0));
+
+    const maxHotness = Math.max(...allHotspots.map(h => h.max_hotness || 0), 1);
+    const total = allHotspots.length;
+    const withHotness = allHotspots.filter(h => (h.max_hotness || 0) > 0).length;
+
+    const getStatus = (hotness) => {
+      if (!hotness || maxHotness <= 1) return { label: 'Low', color: '#5DB8A8' };
+      const pct = hotness / maxHotness;
+      if (pct >= 0.8) return { label: 'Critical', color: '#E06C75' };
+      if (pct >= 0.5) return { label: 'High', color: '#D4A574' };
+      if (pct >= 0.2) return { label: 'Medium', color: '#E5C07B' };
+      return { label: 'Low', color: '#5DB8A8' };
+    };
+
+    const statusCounts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    allHotspots.forEach(h => { statusCounts[getStatus(h.max_hotness).label]++; });
+
+    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Hotspots Analysis'));
+
+    const statsRow = h('div', { style: { display: 'flex', gap: '12px', marginBottom: '20px' } });
+    [
+      { label: 'Total Hotspots', value: total, color: 'var(--fg)' },
+      { label: 'With Hotness', value: withHotness, color: 'var(--fg)' },
+      { label: 'Critical', value: statusCounts.Critical, color: '#E06C75' },
+      { label: 'High', value: statusCounts.High, color: '#D4A574' },
+      { label: 'Medium', value: statusCounts.Medium, color: '#E5C07B' },
+      { label: 'Low', value: statusCounts.Low, color: '#5DB8A8' },
+    ].forEach(s => {
+      statsRow.appendChild(h('div', { style: { flex: 1, padding: '10px 14px', background: 'var(--bg2)', borderRadius: '8px', textAlign: 'center' } },
+        h('div', { style: { fontSize: '20px', fontWeight: '700', color: s.color } }, String(s.value)),
+        h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '4px', fontWeight: '500' } }, s.label)
+      ));
+    });
+    container.appendChild(statsRow);
+
+    const tableWrap = h('div', { style: { background: 'var(--bg2)', borderRadius: '8px', overflow: 'hidden' } });
+
+    const header = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--bg3)', fontSize: '11px', fontWeight: '600', color: 'var(--fg3)', textTransform: 'uppercase', letterSpacing: '0.5px' } });
+    header.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } }, ''));
+    header.appendChild(h('div', { style: { width: '200px', minWidth: '160px' } }, 'Function'));
+    header.appendChild(h('div', { style: { width: '160px', minWidth: '120px' } }, 'Location'));
+    header.appendChild(h('div', { style: { flex: 1 } }, 'Hotness'));
+    header.appendChild(h('div', { style: { width: '70px', textAlign: 'center' } }, 'Status'));
+    header.appendChild(h('div', { style: { width: '50px', textAlign: 'right' } }, 'Count'));
+    tableWrap.appendChild(header);
+
+    const rows = h('div', { style: { display: 'flex', flexDirection: 'column' } });
+
+    allHotspots.forEach(hs => {
+      const st = getStatus(hs.max_hotness);
+      const pct = maxHotness > 1 ? ((hs.max_hotness || 0) / maxHotness * 100).toFixed(1) : '0.0';
+      const file = (hs.file || '').split('/').pop() || 'unknown';
+      const loc = hs.line > 0 ? `${file}:${hs.line}` : file;
+
+      const canOpen = !!hs.file;
+      const row = h('div', {
+        style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid var(--border)', cursor: canOpen ? 'pointer' : 'default' },
+        title: canOpen ? `Click to open ${hs.function || 'this function'} in Code Explorer` : 'No source location for this hotspot',
+        onClick: canOpen ? () => {
+          const qs = new URLSearchParams();
+          qs.set('path', hs.file);
+          if (hs.line > 0) qs.set('line', String(hs.line));
+          if (hs.function) qs.set('function', hs.function);
+          Router.navigate(`/explorer?${qs.toString()}`);
+        } : null,
+        onMouseEnter: (e) => { if (canOpen) e.currentTarget.style.background = 'var(--bg3)'; },
+        onMouseLeave: (e) => { if (canOpen) e.currentTarget.style.background = ''; },
+      });
+
+      row.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } },
+        h('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: st.color } })
+      ));
+
+      row.appendChild(h('div', { style: { width: '200px', minWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', fontWeight: '500' } }, hs.function || 'unknown'));
+
+      row.appendChild(h('div', { style: { width: '160px', minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--fg3)' } }, loc));
+
+      const barWrap = h('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '8px' } });
+      const barTrack = h('div', { style: { flex: 1, height: '6px', background: 'var(--bg3)', borderRadius: '3px', overflow: 'hidden' } });
+      const barFill = h('div', { style: { width: `${pct}%`, height: '100%', background: st.color, borderRadius: '3px', transition: 'width 0.3s' } });
+      barTrack.appendChild(barFill);
+      barWrap.appendChild(barTrack);
+      barWrap.appendChild(h('span', { style: { width: '50px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--fg3)' } }, `${pct}%`));
+      row.appendChild(barWrap);
+
+      row.appendChild(h('div', { style: { width: '70px', textAlign: 'center' } },
+        h('span', { style: { display: 'inline-block', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '600', background: st.color + '22', color: st.color } }, st.label)
+      ));
+
+      row.appendChild(h('div', { style: { width: '50px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--fg3)' } }, String(hs.count || 0)));
+
+      rows.appendChild(row);
+    });
+
+    tableWrap.appendChild(rows);
+    container.appendChild(tableWrap);
+  },
+};
+
+/* ============================================================
+   LLVM Advisor — Code Explorer View
+   ============================================================ */
+
+const CodeExplorerView = {
+  _snap: null,
+  _mainEl: null,
+  _filters: { pass: '', name: '', type: '', function: '' },
+
+  async render() {
+    const container = h('div', {});
+    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Code Explorer'));
+    const params = State.get('routeParams') || {};
+    if (params.snapshot_id) {
+      const snaps = State.get('snapshots') || [];
+      this._snap = snaps.find(s => s.id === params.snapshot_id) || null;
+    } else {
+      this._snap = State.get('currentSnapshot');
+    }
+    if (!this._snap) {
+      container.appendChild(UI.emptyCard('No snapshot selected', 'Select a snapshot from the sidebar to explore source files.'));
+      Shell.renderMain(container);
+      return;
+    }
+
+    container.appendChild(h('div', { class: 'text-muted' }, 'Loading file list...'));
+    Shell.renderMain(container);
+
+    const res = await API.sourceFiles(this._snap.id);
+    if (!res.ok) { container.innerHTML = ''; container.appendChild(UI.errorCard(res.error || 'Failed to load files')); return; }
+    const files = Array.isArray(res.data) ? res.data : [];
+    container.innerHTML = '';
+    if (!files.length) { container.appendChild(UI.emptyCard('No source files', 'No source files with remarks found.')); return; }
+
+    const TYPE_NAMES = ['unknown', 'passed', 'missed', 'analysis', 'fp-commute', 'aliasing', 'failure'];
+    const TYPE_LABELS = { passed: 'Passed', missed: 'Missed', analysis: 'Analysis', failure: 'Failure' };
+
+    const wrap = h('div', { style: { display: 'flex', gap: '12px', height: 'calc(100vh - 140px)' } });
+    const sidebar = h('div', { style: { width: '240px', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '6px' } });
+
+    const fileSearch = h('input', { class: 'triage-input', type: 'search', placeholder: 'search files...', style: { width: '100%', flex: 'none' },
+      onInput: (e) => { const q = e.target.value.toLowerCase(); list.querySelectorAll('.explorer-file').forEach(el => { el.style.display = el.dataset.path.toLowerCase().includes(q) ? '' : 'none'; }); }
+    });
+    sidebar.appendChild(fileSearch);
+
+    const list = h('div', { style: { overflow: 'auto', flex: '1' } });
+    files.forEach(f => {
+      const path = f.path || '';
+      const name = path.split('/').pop() || path;
+      const el = h('div', { class: 'explorer-file', 'data-path': path, style: { padding: '5px 8px', cursor: 'pointer', borderRadius: '4px', fontSize: '12px' },
+        onClick: () => { list.querySelectorAll('.explorer-file').forEach(x => x.style.background = ''); el.style.background = 'var(--bg2)'; this._loadFile(path); }
+      },
+        h('div', { style: { fontWeight: '500' } }, name),
+        h('div', { class: 'text-muted mono', style: { fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, path),
+        h('div', { class: 'text-muted', style: { fontSize: '10px' } }, `${f.remarks_count || 0} remarks`)
+      );
+      list.appendChild(el);
+    });
+    sidebar.appendChild(list);
+
+    const mainCol = h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', overflow: 'hidden' } });
+
+    const filterBar = h('div', { style: { display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' } });
+    const passInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter pass...', style: { width: '120px' } });
+    const nameInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter remark...', style: { width: '120px' } });
+    const funcInput = h('input', { class: 'triage-input', type: 'search', placeholder: 'filter function...', style: { width: '140px' } });
+    const typeChips = h('div', { style: { display: 'flex', gap: '4px' } });
+    ['passed', 'missed', 'analysis', 'failure'].forEach((t, idx) => {
+      const enumVal = [1, 2, 3, 6][idx];
+      const chip = h('button', { class: 'triage-chip triage-chip-' + t, style: { fontSize: '11px' } }, TYPE_LABELS[t]);
+      chip.addEventListener('click', () => {
+        if (this._filters.type === String(enumVal)) { this._filters.type = ''; chip.classList.remove('on'); }
+        else { typeChips.querySelectorAll('.on').forEach(c => c.classList.remove('on')); this._filters.type = String(enumVal); chip.classList.add('on'); }
+        this._reloadRemarks();
+      });
+      typeChips.appendChild(chip);
+    });
+    const remarkCount = h('span', { class: 'text-muted', style: { fontSize: '11px', marginLeft: 'auto' } }, '');
+    filterBar.appendChild(passInput); filterBar.appendChild(nameInput); filterBar.appendChild(funcInput); filterBar.appendChild(typeChips); filterBar.appendChild(remarkCount);
+    mainCol.appendChild(filterBar);
+
+    let debounce = null;
+    const onFilter = () => { this._filters.pass = passInput.value; this._filters.name = nameInput.value; this._filters.function = funcInput.value; clearTimeout(debounce); debounce = setTimeout(() => this._reloadRemarks(), 300); };
+    passInput.addEventListener('input', onFilter);
+    nameInput.addEventListener('input', onFilter);
+    funcInput.addEventListener('input', onFilter);
+
+    this._mainEl = h('div', { style: { flex: '1', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)' } });
+    this._remarkCount = remarkCount;
+    mainCol.appendChild(this._mainEl);
+
+    wrap.appendChild(sidebar); wrap.appendChild(mainCol);
+    container.appendChild(wrap);
+
+    const initialPath = params.path || (files.length > 0 ? files[0].path : null);
+    this._scrollToLine = params.line ? parseInt(params.line, 10) : 0;
+
+    this._filters = { pass: params.pass || '', name: params.name || '', type: '', function: params.function || '' };
+    passInput.value = this._filters.pass;
+    nameInput.value = this._filters.name;
+    funcInput.value = this._filters.function;
+
+    if (initialPath) {
+      const match = list.querySelector(`.explorer-file[data-path="${CSS.escape(initialPath)}"]`);
+      if (match) match.style.background = 'var(--bg2)';
+      else if (list.querySelector('.explorer-file')) list.querySelector('.explorer-file').style.background = 'var(--bg2)';
+      this._currentPath = initialPath;
+      this._loadFile(initialPath);
+    }
+  },
+
+  async _loadFile(path) {
+    this._currentPath = path;
+    this._mainEl.innerHTML = '';
+    this._mainEl.appendChild(h('div', { class: 'text-muted', style: { padding: '12px' } }, 'Loading...'));
+
+    const [srcRes, remRes] = await Promise.all([
+      API.source(this._snap.id, path),
+      API.sourceRemarks(this._snap.id, path, this._filters),
+    ]);
+
+    this._mainEl.innerHTML = '';
+    this._sourceLines = srcRes.ok ? (srcRes.data.content || '').split('\n') : [];
+    this._remarks = (remRes.ok && remRes.data) ? remRes.data.remarks || [] : [];
+    this._remarkCount.textContent = `${this._remarks.length} remarks`;
+
+    if (!srcRes.ok && !this._remarks.length) {
+      this._mainEl.appendChild(h('div', { style: { padding: '12px' } }, 'Source file not found and no remarks available.'));
+      return;
+    }
+
+    if (!srcRes.ok) {
+      const warn = h('div', { style: { padding: '8px 12px', background: 'rgba(224,108,117,0.1)', color: '#E06C75', fontSize: '12px', borderRadius: '4px', marginBottom: '8px' } },
+        h('span', { style: { fontWeight: '600' } }, 'Source unavailable: '), 'Only remarks are shown — the original source file was not found.'
+      );
+      this._mainEl.appendChild(warn);
+    }
+
+    this._renderSource();
+  },
+
+  async _reloadRemarks() {
+    if (!this._currentPath) return;
+    const res = await API.sourceRemarks(this._snap.id, this._currentPath, this._filters);
+    this._remarks = (res.ok && res.data) ? res.data.remarks || [] : [];
+    this._remarkCount.textContent = `${this._remarks.length} remarks`;
+    this._renderSource();
+  },
+
+  _renderSource() {
+    const lines = this._sourceLines || [];
+    const remarks = this._remarks || [];
+    const container = this._mainEl;
+    container.innerHTML = '';
+
+    const remarksByLine = {};
+    for (const r of remarks) {
+      if (r.line < 1) continue;
+      if (!remarksByLine[r.line]) remarksByLine[r.line] = [];
+      remarksByLine[r.line].push(r);
+    }
+
+    const TYPE_COLORS = { 1: 'var(--green)', 2: 'var(--orange)', 3: 'var(--teal)', 6: 'var(--red)' };
+    const TYPE_NAMES = { 1: 'passed', 2: 'missed', 3: 'analysis', 6: 'failure' };
+    const TYPE_BG = { 2: 'rgba(255,179,71,0.08)', 6: 'rgba(255,107,110,0.08)' };
+
+    const header = h('div', { style: { padding: '6px 12px', borderBottom: '1px solid var(--border)', fontSize: '12px', display: 'flex', justifyContent: 'space-between' } },
+      h('span', { class: 'mono', style: { fontWeight: '500' } }, (this._currentPath || '').split('/').pop()),
+      h('span', { class: 'text-muted' }, `${Object.keys(remarksByLine).length} lines with remarks`)
+    );
+    container.appendChild(header);
+
+    const codeWrap = h('div', { style: { fontFamily: 'monospace', fontSize: '13px', lineHeight: '20px' } });
+
+    // Determine which lines to render: either all source lines, or just lines that have remarks
+    const maxLine = lines.length;
+    const remarkLines = Object.keys(remarksByLine).map(Number).sort((a, b) => a - b);
+    const allLines = lines.length > 0 ? Array.from({ length: maxLine }, (_, i) => i + 1) : remarkLines;
+
+    allLines.forEach(ln => {
+      const rems = remarksByLine[ln];
+      const has = rems && rems.length > 0;
+      const color = has ? (TYPE_COLORS[rems[0].type] || 'var(--teal)') : '';
+      const rowStyle = { display: 'flex', padding: '0 8px', minHeight: '20px' };
+      if (has) { rowStyle.background = TYPE_BG[rems[0].type] || 'rgba(123,224,214,0.06)'; rowStyle.cursor = 'pointer'; }
+
+      const line = lines.length > 0 ? (lines[ln - 1] || ' ') : '';
+      const badge = has ? h('span', { style: { marginLeft: '8px', fontSize: '10px', padding: '0 4px', borderRadius: '3px', background: color, color: 'var(--bg)', fontWeight: '600' } }, String(rems.length)) : null;
+      const row = h('div', { style: rowStyle },
+        h('span', { style: { width: '44px', textAlign: 'right', paddingRight: '10px', userSelect: 'none', color: has ? color : 'var(--text-muted)', flexShrink: '0' } }, String(ln)),
+        h('span', { style: { flex: '1', whiteSpace: 'pre', overflow: 'hidden' } }, line || ' '),
+        badge
+      );
+
+      if (has) {
+        row.addEventListener('click', () => {
+          const id = `rem-${ln}`;
+          const existing = codeWrap.querySelector(`#${id}`);
+          if (existing) { existing.remove(); return; }
+          const detail = h('div', { id, style: { padding: '4px 12px 4px 56px', background: 'var(--bg2)', borderLeft: '3px solid ' + color, fontSize: '11px' } });
+          rems.forEach(r => {
+            detail.appendChild(h('div', { style: { padding: '2px 0', display: 'flex', gap: '8px', alignItems: 'baseline' } },
+              h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--text-muted)', fontWeight: '600', minWidth: '55px' } }, TYPE_NAMES[r.type] || '?'),
+              h('span', { style: { fontWeight: '500' } }, r.name || ''),
+              h('span', { class: 'text-muted' }, r.pass || ''),
+              r.function ? h('span', { class: 'text-muted' }, `in ${r.function}`) : null,
+              r.hotness != null && r.hotness >= 0 ? h('span', { style: { color: 'var(--orange)', fontSize: '10px' } }, `hot:${r.hotness}`) : null,
+            ));
+          });
+          row.after(detail);
+        });
+      }
+      codeWrap.appendChild(row);
+    });
+    container.appendChild(codeWrap);
+
+    if (this._scrollToLine > 0) {
+      requestAnimationFrame(() => {
+        container.scrollTop = Math.max(0, (this._scrollToLine - 1) * 20 - 100);
+        this._scrollToLine = 0;
+      });
+    }
   },
 };

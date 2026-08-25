@@ -1,0 +1,9 @@
+# Test basic standalone remarks import creates a snapshot and unit.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/example.opt.yaml 2>&1 | FileCheck %s --check-prefix=CREATE
+# RUN: llvm-advisor list --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store | FileCheck %s --check-prefix=SNAPS
+# RUN: llvm-advisor list --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --snapshot latest --store %t.store | FileCheck %s --check-prefix=UNITS
+
+# CREATE: Snapshot {{[0-9a-f]+}} created — 1 file(s)
+# SNAPS: {{[0-9a-f]+}} {{.*}}/Inputs
+# UNITS: {{[0-9a-f]+}} unknown      example.opt

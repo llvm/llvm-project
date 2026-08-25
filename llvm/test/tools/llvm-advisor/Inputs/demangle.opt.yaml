@@ -1,0 +1,104 @@
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: 'src/demangle.cpp', Line: 11, Column: 12 }
+Function:        _Z5entryii
+Args:
+  - String:          ''''
+  - Callee:          _ZN2ns10Calculator3addEii
+    DebugLoc:        { File: 'src/demangle.cpp', Line: 4, Column: 0 }
+  - String:          ''' inlined into '''
+  - Caller:          _Z5entryii
+    DebugLoc:        { File: 'src/demangle.cpp', Line: 9, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '-40'
+  - String:          ', threshold='
+  - Threshold:       '337'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          entry
+  - String:          ':'
+  - Line:            '2'
+  - String:          ':'
+  - Column:          '12'
+  - String:          ';'
+...
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: 'src/demangle.cpp', Line: 11, Column: 26 }
+Function:        _Z5entryii
+Args:
+  - String:          ''''
+  - Callee:          _ZN2ns10Calculator3mulEii
+    DebugLoc:        { File: 'src/demangle.cpp', Line: 5, Column: 0 }
+  - String:          ''' inlined into '''
+  - Caller:          _Z5entryii
+    DebugLoc:        { File: 'src/demangle.cpp', Line: 9, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '-40'
+  - String:          ', threshold='
+  - Threshold:       '337'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          entry
+  - String:          ':'
+  - Line:            '2'
+  - String:          ':'
+  - Column:          '26'
+  - String:          ';'
+...
+--- !Missed
+Pass:            slp-vectorizer
+Name:            NotPossible
+DebugLoc:        { File: 'src/demangle.cpp', Line: 5, Column: 36 }
+Function:        _Z5entryii
+Args:
+  - String:          'Cannot SLP vectorize list: vectorization was impossible'
+  - String:          ' with available vectorization factors'
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: 'src/demangle.cpp', Line: 9, Column: 0 }
+Function:        _Z5entryii
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        _Z5entryii
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        _Z5entryii
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          IMUL32rr
+  - String:          ': '
+  - INST_IMUL32rr:   '2'
+  - String:          "\n"
+  - String:          LEA64_32r
+  - String:          ': '
+  - INST_LEA64_32r:  '1'
+  - String:          "\n"
+  - String:          RET64
+  - String:          ': '
+  - INST_RET64:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: 'src/demangle.cpp', Line: 9, Column: 0 }
+Function:        _Z5entryii
+Args:
+  - NumInstructions: '4'
+  - String:          ' instructions in function'
+...

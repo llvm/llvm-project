@@ -1,0 +1,773 @@
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 14 }
+Function:        sum_of_squares
+Args:
+  - String:          ''''
+  - Callee:          square
+  - String:          ''' inlined into '''
+  - Caller:          sum_of_squares
+    DebugLoc:        { File: 'src/example.c', Line: 5, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '-15030'
+  - String:          ', threshold='
+  - Threshold:       '337'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          sum_of_squares
+  - String:          ':'
+  - Line:            '3'
+  - String:          ':'
+  - Column:          '14'
+  - String:          ';'
+...
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: 'src/example.c', Line: 14, Column: 15 }
+Function:        normalize
+Args:
+  - String:          ''''
+  - Callee:          sum_of_squares
+    DebugLoc:        { File: 'src/example.c', Line: 5, Column: 0 }
+  - String:          ''' inlined into '''
+  - Caller:          normalize
+    DebugLoc:        { File: 'src/example.c', Line: 12, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '0'
+  - String:          ', threshold='
+  - Threshold:       '225'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          normalize
+  - String:          ':'
+  - Line:            '2'
+  - String:          ':'
+  - Column:          '15'
+  - String:          ';'
+...
+--- !Passed
+Pass:            loop-vectorize
+Name:            Vectorized
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        sum_of_squares
+Args:
+  - String:          'vectorized '
+  - String:          ''
+  - String:          'loop (vectorization width: '
+  - VectorizationFactor: '4'
+  - String:          ', interleaved count: '
+  - InterleaveCount: '2'
+  - String:          ')'
+...
+--- !Missed
+Pass:            slp-vectorizer
+Name:            NotPossible
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        sum_of_squares
+Args:
+  - String:          'Cannot SLP vectorize list: vectorization was impossible'
+  - String:          ' with available vectorization factors'
+...
+--- !Passed
+Pass:            loop-vectorize
+Name:            Vectorized
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'vectorized '
+  - String:          ''
+  - String:          'loop (vectorization width: '
+  - VectorizationFactor: '4'
+  - String:          ', interleaved count: '
+  - InterleaveCount: '2'
+  - String:          ')'
+...
+--- !Missed
+Pass:            loop-vectorize
+Name:            VectorizationNotBeneficial
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          the cost-model indicates that vectorization is not beneficial
+...
+--- !Missed
+Pass:            loop-vectorize
+Name:            InterleavingNotBeneficial
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          the cost-model indicates that interleaving is not beneficial
+...
+--- !Missed
+Pass:            slp-vectorizer
+Name:            NotPossible
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        normalize
+Args:
+  - String:          'Cannot SLP vectorize list: vectorization was impossible'
+  - String:          ' with available vectorization factors'
+...
+--- !Passed
+Pass:            loop-unroll
+Name:            PartialUnrolled
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'unrolled loop by a factor of '
+  - UnrollCount:     '2'
+  - String:          ' with run-time trip count'
+...
+--- !Missed
+Pass:            regalloc
+Name:            SpillReloadCopies
+DebugLoc:        { File: 'src/example.c', Line: 5, Column: 1 }
+Function:        sum_of_squares
+Args:
+  - NumVRCopies:     '1'
+  - String:          ' virtual registers copies '
+  - TotalCopiesCost: '3.125000e-01'
+  - String:          ' total copies cost '
+  - String:          generated in function
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: 'src/example.c', Line: 5, Column: 0 }
+Function:        sum_of_squares
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        sum_of_squares
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 24 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+  - String:          TEST64rr
+  - String:          ': '
+  - INST_TEST64rr:   '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CMP64ri32
+  - String:          ': '
+  - INST_CMP64ri32:  '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '2'
+  - String:          "\n"
+  - String:          JMP_1
+  - String:          ': '
+  - INST_JMP_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          RET64
+  - String:          ': '
+  - INST_RET64:      '1'
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PXORrr
+  - String:          ': '
+  - INST_PXORrr:     '2'
+  - String:          "\n"
+  - String:          AND64ri32
+  - String:          ': '
+  - INST_AND64ri32:  '1'
+  - String:          "\n"
+  - String:          MOV64rr
+  - String:          ': '
+  - INST_MOV64rr:    '1'
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PSHUFDri
+  - String:          ': '
+  - INST_PSHUFDri:   '6'
+  - String:          "\n"
+  - String:          PMULUDQrr
+  - String:          ': '
+  - INST_PMULUDQrr:  '4'
+  - String:          "\n"
+  - String:          MOVDQUrm
+  - String:          ': '
+  - INST_MOVDQUrm:   '2'
+  - String:          "\n"
+  - String:          PADDDrr
+  - String:          ': '
+  - INST_PADDDrr:    '2'
+  - String:          "\n"
+  - String:          PUNPCKLDQrr
+  - String:          ': '
+  - INST_PUNPCKLDQrr: '2'
+  - String:          "\n"
+  - String:          ADD64ri32
+  - String:          ': '
+  - INST_ADD64ri32:  '1'
+  - String:          "\n"
+  - String:          CMP64rr
+  - String:          ': '
+  - INST_CMP64rr:    '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PADDDrr
+  - String:          ': '
+  - INST_PADDDrr:    '3'
+  - String:          "\n"
+  - String:          PSHUFDri
+  - String:          ': '
+  - INST_PSHUFDri:   '2'
+  - String:          "\n"
+  - String:          JMP_1
+  - String:          ': '
+  - INST_JMP_1:      '1'
+  - String:          "\n"
+  - String:          MOVPDI2DIrr
+  - String:          ': '
+  - INST_MOVPDI2DIrr: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          ADD32rr
+  - String:          ': '
+  - INST_ADD32rr:    '1'
+  - String:          "\n"
+  - String:          IMUL32rr
+  - String:          ': '
+  - INST_IMUL32rr:   '1'
+  - String:          "\n"
+  - String:          INC64r
+  - String:          ': '
+  - INST_INC64r:     '1'
+  - String:          "\n"
+  - String:          MOV32rm
+  - String:          ': '
+  - INST_MOV32rm:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 0 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CMP64rr
+  - String:          ': '
+  - INST_CMP64rr:    '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 9, Column: 3 }
+Function:        sum_of_squares
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          RET64
+  - String:          ': '
+  - INST_RET64:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: 'src/example.c', Line: 5, Column: 0 }
+Function:        sum_of_squares
+Args:
+  - NumInstructions: '47'
+  - String:          ' instructions in function'
+...
+--- !Missed
+Pass:            regalloc
+Name:            SpillReloadCopies
+DebugLoc:        { File: 'src/example.c', Line: 12, Column: 1 }
+Function:        normalize
+Args:
+  - NumVRCopies:     '2'
+  - String:          ' virtual registers copies '
+  - TotalCopiesCost: '5.078125e-01'
+  - String:          ' total copies cost '
+  - String:          generated in function
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: 'src/example.c', Line: 12, Column: 0 }
+Function:        normalize
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        normalize
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 13, Column: 9 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+  - String:          TEST64rr
+  - String:          ': '
+  - INST_TEST64rr:   '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CMP64ri32
+  - String:          ': '
+  - INST_CMP64ri32:  '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '2'
+  - String:          "\n"
+  - String:          JMP_1
+  - String:          ': '
+  - INST_JMP_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PXORrr
+  - String:          ': '
+  - INST_PXORrr:     '2'
+  - String:          "\n"
+  - String:          AND64ri32
+  - String:          ': '
+  - INST_AND64ri32:  '1'
+  - String:          "\n"
+  - String:          MOV64rr
+  - String:          ': '
+  - INST_MOV64rr:    '1'
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PSHUFDri
+  - String:          ': '
+  - INST_PSHUFDri:   '6'
+  - String:          "\n"
+  - String:          PMULUDQrr
+  - String:          ': '
+  - INST_PMULUDQrr:  '4'
+  - String:          "\n"
+  - String:          MOVDQUrm
+  - String:          ': '
+  - INST_MOVDQUrm:   '2'
+  - String:          "\n"
+  - String:          PADDDrr
+  - String:          ': '
+  - INST_PADDDrr:    '2'
+  - String:          "\n"
+  - String:          PUNPCKLDQrr
+  - String:          ': '
+  - INST_PUNPCKLDQrr: '2'
+  - String:          "\n"
+  - String:          ADD64ri32
+  - String:          ': '
+  - INST_ADD64ri32:  '1'
+  - String:          "\n"
+  - String:          CMP64rr
+  - String:          ': '
+  - INST_CMP64rr:    '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          PADDDrr
+  - String:          ': '
+  - INST_PADDDrr:    '3'
+  - String:          "\n"
+  - String:          PSHUFDri
+  - String:          ': '
+  - INST_PSHUFDri:   '2'
+  - String:          "\n"
+  - String:          JMP_1
+  - String:          ': '
+  - INST_JMP_1:      '1'
+  - String:          "\n"
+  - String:          MOVPDI2DIrr
+  - String:          ': '
+  - INST_MOVPDI2DIrr: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 8, Column: 21 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          ADD32rr
+  - String:          ': '
+  - INST_ADD32rr:    '1'
+  - String:          "\n"
+  - String:          IMUL32rr
+  - String:          ': '
+  - INST_IMUL32rr:   '1'
+  - String:          "\n"
+  - String:          INC64r
+  - String:          ': '
+  - INST_INC64r:     '1'
+  - String:          "\n"
+  - String:          MOV32rm
+  - String:          ': '
+  - INST_MOV32rm:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 7, Column: 0 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CMP64rr
+  - String:          ': '
+  - INST_CMP64rr:    '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 15, Column: 13 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+  - String:          TEST32rr
+  - String:          ': '
+  - INST_TEST32rr:   '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CMP64ri32
+  - String:          ': '
+  - INST_CMP64ri32:  '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          JMP_1
+  - String:          ': '
+  - INST_JMP_1:      '1'
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          AND64ri32
+  - String:          ': '
+  - INST_AND64ri32:  '1'
+  - String:          "\n"
+  - String:          MOV64rr
+  - String:          ': '
+  - INST_MOV64rr:    '1'
+  - String:          "\n"
+  - String:          XOR32rr
+  - String:          ': '
+  - INST_XOR32rr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 17, Column: 22 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CDQ
+  - String:          ': '
+  - INST_CDQ:        '2'
+  - String:          "\n"
+  - String:          IDIV32r
+  - String:          ': '
+  - INST_IDIV32r:    '2'
+  - String:          "\n"
+  - String:          IMUL32rmi
+  - String:          ': '
+  - INST_IMUL32rmi:  '2'
+  - String:          "\n"
+  - String:          MOV32mr
+  - String:          ': '
+  - INST_MOV32mr:    '2'
+  - String:          "\n"
+  - String:          ADD64ri32
+  - String:          ': '
+  - INST_ADD64ri32:  '1'
+  - String:          "\n"
+  - String:          CMP64rr
+  - String:          ': '
+  - INST_CMP64rr:    '1'
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 16, Column: 3 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          JCC_1
+  - String:          ': '
+  - INST_JCC_1:      '1'
+  - String:          "\n"
+  - String:          TEST8ri
+  - String:          ': '
+  - INST_TEST8ri:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 17, Column: 22 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          CDQ
+  - String:          ': '
+  - INST_CDQ:        '1'
+  - String:          "\n"
+  - String:          IDIV32r
+  - String:          ': '
+  - INST_IDIV32r:    '1'
+  - String:          "\n"
+  - String:          IMUL32rmi
+  - String:          ': '
+  - INST_IMUL32rmi:  '1'
+  - String:          "\n"
+  - String:          MOV32mr
+  - String:          ': '
+  - INST_MOV32mr:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: 'src/example.c', Line: 18, Column: 1 }
+Function:        normalize
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      ''
+  - String:          "\n"
+  - String:          RET64
+  - String:          ': '
+  - INST_RET64:      '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: 'src/example.c', Line: 12, Column: 0 }
+Function:        normalize
+Args:
+  - NumInstructions: '71'
+  - String:          ' instructions in function'
+...

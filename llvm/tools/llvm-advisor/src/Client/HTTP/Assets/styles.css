@@ -254,6 +254,9 @@ ul,ol{list-style:none}
 /* Command Palette */
 .cmd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:20vh}
 .cmd-overlay.open{display:flex}
+.import-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:18vh}
+.import-overlay.open{display:flex}
+.import-panel{width:440px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 16px 48px rgba(0,0,0,.12)}
 .cmd-box{width:480px;background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.12)}
 .cmd-input{width:100%;padding:16px;font-family:var(--mono);font-size:14px;background:transparent;border-bottom:1px solid var(--border)}
 .cmd-results{max-height:300px;overflow-y:auto}
@@ -500,6 +503,8 @@ ul,ol{list-style:none}
 /* Compare Summary Section */
 .compare-summary-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
 .compare-summary-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg3);margin-bottom:14px}
+.compare-remarks-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
+.compare-remarks-section h3{font-size:13px;font-weight:600;margin-bottom:10px}
 .compare-health-delta{display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:12px}
 .compare-health-value{font-family:var(--mono);font-size:28px;font-weight:700}
 .compare-health-arrow{font-size:18px}
@@ -664,3 +669,54 @@ html.dark{
 @media(max-width:480px){
   .impact-grid{grid-template-columns:1fr}
 }
+
+/* Triage Grid — virtualised, filterable per-remark table.
+   Lives inside a .chart-section so the outer card chrome is inherited. */
+.triage-grid{padding:16px 18px}
+.triage-header-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.triage-header-row h3{margin:0;font-size:13px}
+.triage-counter{font-family:var(--mono);font-size:11px;color:var(--fg2)}
+.triage-reset{margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;font-size:11px;color:var(--fg2);cursor:pointer}
+.triage-reset:hover{border-color:var(--accent);color:var(--accent)}
+
+.triage-filter-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px}
+.triage-input{flex:1;min-width:120px;padding:5px 8px;font-size:11px;font-family:var(--mono);background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg)}
+.triage-input:focus{outline:none;border-color:var(--accent)}
+.triage-input::placeholder{color:var(--fg3)}
+
+.triage-chips{display:flex;gap:4px;flex-wrap:wrap}
+.triage-chip{font-size:10px;font-family:var(--mono);padding:4px 8px;border-radius:99px;border:1px solid var(--border);background:var(--bg);color:var(--fg2);cursor:pointer;transition:background var(--fast),color var(--fast),border-color var(--fast)}
+.triage-chip:hover{border-color:var(--accent);color:var(--fg)}
+.triage-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.triage-thead{display:flex;align-items:center;border:1px solid var(--border);border-bottom:0;background:var(--bg2);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg3);user-select:none;min-width:max-content;border-radius:var(--r) var(--r) 0 0}
+.triage-th{padding:8px 10px;flex-shrink:0;display:flex;align-items:center;gap:4px}
+.triage-th.right{justify-content:flex-end}
+.triage-th.sortable{cursor:pointer}
+.triage-th.sortable:hover{color:var(--fg)}
+.triage-th.sorted{color:var(--accent)}
+.triage-sort-indicator{font-size:8px;line-height:1}
+
+/* Virtualised body: a fixed-height viewport scrolling over a tall spacer
+   that holds the row pool absolutely-positioned at row * rowHeight. */
+.triage-viewport{position:relative;overflow-y:auto;overflow-x:auto;border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);background:var(--bg)}
+.triage-spacer{position:relative;min-width:max-content}
+.triage-row{position:absolute;left:0;display:flex;align-items:center;border-bottom:1px solid var(--bg2);will-change:top;min-width:max-content}
+.triage-row:hover{background:var(--bg2)}
+.triage-td{padding:0 10px;flex-shrink:0;font-size:11px;line-height:1;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.triage-td.mono{font-family:var(--mono)}
+.triage-td.right{text-align:right}
+.triage-td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.triage-td-missing{color:var(--fg3)}
+
+/* Type pills — color-coded by remarks::Type. */
+.triage-type{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px}
+.triage-type-passed{color:var(--green);background:rgba(90,200,138,.08)}
+.triage-type-missed{color:var(--orange);background:rgba(255,179,71,.10)}
+.triage-type-analysis{color:var(--teal);background:rgba(123,224,214,.10)}
+.triage-type-analysis-fp-commute{color:var(--blue);background:rgba(127,179,232,.10)}
+.triage-type-analysis-aliasing{color:var(--blue);background:rgba(127,179,232,.10)}
+.triage-type-failure{color:var(--red);background:rgba(255,107,110,.10)}
+.triage-type-unknown{color:var(--fg3);background:var(--bg2)}
+
+.triage-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--fg3);font-size:12px;pointer-events:none}

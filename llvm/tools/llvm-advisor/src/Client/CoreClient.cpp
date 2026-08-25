@@ -319,6 +319,14 @@ CoreClient::createSnapshot(StringRef SourceRoot, StringRef BuildRoot,
   return Capture.createSnapshot(SourceRoot, BuildRoot, Capabilities);
 }
 
+Expected<SnapshotRecord>
+CoreClient::importRemarks(ArrayRef<std::string> RemarkPaths,
+                          StringRef SourceRoot,
+                          ArrayRef<std::string> Capabilities) {
+  CaptureCore Capture(*Storage, Registry);
+  return Capture.importRemarks(RemarkPaths, SourceRoot, Capabilities);
+}
+
 SmallVector<SnapshotRecord, 16> CoreClient::listSnapshots() const {
   SnapshotManager Manager(*Storage);
   return Manager.list();

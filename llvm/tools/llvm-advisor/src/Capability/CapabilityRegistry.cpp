@@ -12,6 +12,8 @@
 
 #include "Capability/CapabilityRegistry.h"
 #include "Analysis/IR/RemarksAnalyzer.h"
+#include "Analysis/IR/RemarksRelationalAnalyzer.h"
+#include "Analysis/IR/RemarksHotspotAnalyzer.h"
 #include "Analysis/Inspection/RemarksDetailAnalyzer.h"
 #include "Utils/JSON.h"
 #include "llvm/Support/FileSystem.h"
@@ -219,6 +221,10 @@ CapabilityRegistry::createDeclarativeRunner(const CapabilitySpec &Spec) const {
 void CapabilityRegistry::addBuiltinRunners() {
   consumeError(addRunner("builtin.remarks_summary",
                          std::make_unique<RemarksAnalyzer>()));
+  consumeError(addRunner("builtin.remarks_relational",
+                         std::make_unique<RemarksRelationalAnalyzer>()));
+  consumeError(addRunner("builtin.remarks_hotspot",
+                         std::make_unique<RemarksHotspotAnalyzer>()));
   consumeError(addRunner("builtin.remarks_detail",
                          std::make_unique<RemarksDetailAnalyzer>()));
 }

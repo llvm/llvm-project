@@ -99,64 +99,6 @@ const UnitDetailView = {
     );
   },
 
-  openFunctionExplorer(unit, snapshotId, functionName) {
-    const container = document.getElementById('inline-explorer');
-    if (!container) return;
-    clearEl(container);
-
-    const card = h('div', { class: 'inline-explorer' });
-    const header = h('div', { class: 'inline-explorer-header' },
-      h('span', { class: 'capability-card-title mono' }, functionName),
-      h('button', {
-        class: 'detail-card-close',
-        onClick: () => clearEl(container),
-        title: 'Close'
-      }, '×')
-    );
-
-    const controls = h('div', { class: 'cap-pills' });
-    const body = h('div', { class: 'capability-stack' });
-    const modes = [['remarks', 'Remarks']];
-
-    const loadMode = async (mode, pill) => {
-      Array.from(controls.children).forEach(node => node.classList.remove('available'));
-      if (pill) pill.classList.add('available');
-      clearEl(body);
-      body.appendChild(h('div', { class: 'empty-state' },
-        h('div', {}, `Loading ${mode}`),
-        h('div', { class: 'reason mono' }, functionName)));
-      const res = await API.inspect(mode, {
-        snapshot_id: snapshotId,
-        unit: unit.id,
-        function: functionName,
-      });
-      clearEl(body);
-      if (!res.ok) {
-        body.appendChild(h('div', { class: 'empty-state' },
-          h('div', {}, 'Inspection failed'),
-          h('div', { class: 'reason mono' }, res.error || 'unknown error')));
-        return;
-      }
-      body.appendChild(UI.inspectResult(res.data));
-    };
-
-    modes.forEach(([mode, label], index) => {
-      const pill = h('button', {
-        class: `cap-pill ${index === 0 ? 'available' : ''}`,
-        onClick: () => loadMode(mode, pill),
-      }, label);
-      controls.appendChild(pill);
-      if (index === 0) setTimeout(() => loadMode(mode, pill), 0);
-    });
-
-    card.appendChild(header);
-    card.appendChild(controls);
-    card.appendChild(body);
-    container.appendChild(card);
-
-    // Scroll into view
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  },
 
   renderCapSidebar(sidebar, unit) {
     clearEl(sidebar);
@@ -170,25 +112,6 @@ const UnitDetailView = {
       h('div', { class: 'rail-title' }, 'Coverage'),
       h('div', { class: 'rail-empty' }, 'Loading analysis coverage')
     ));
-    // Function list placeholder in sidebar
-  },
-
-  addSection(parent, title, open, kvPairs) {
-    const section = h('div', { class: 'cap-section' + (open ? ' open' : '') });
-    const header = h('div', { class: 'cap-section-header', onClick: () => section.classList.toggle('open') },
-      h('span', {}, title)
-    );
-    const body = h('div', { class: 'cap-section-body' });
-    kvPairs.forEach(([k, v]) => {
-      body.appendChild(h('div', { class: 'kv' },
-        h('span', { class: 'k' }, k),
-        h('span', { class: 'v' }, v)
-      ));
-    });
-    section.appendChild(header);
-    section.appendChild(body);
-    parent.appendChild(section);
-  },
 
   renderTab(tab, state) {
     if (!state.results.length)
@@ -197,11 +120,20 @@ const UnitDetailView = {
         h('div', { class: 'reason mono' }, 'Querying analyzer results for this unit'));
 
     if (tab === 'Remarks') {
+      const relResult = state.byCapability.get('llvm.remarks.relational');
+      if (relResult && relResult.available && relResult.value && relResult.value.columns) {
+        const v = relResult.value;
+        const rel = { count: v.count || 0, columns: v.columns || {}, strings: v.strings || {} };
+        const total = rel.count || 0;
+        const filtered = new Int32Array(total);
+        for (let i = 0; i < total; i++) filtered[i] = i;
+        return RemarksView._renderTriageGrid(rel, null, filtered, total);
+      }
       const findings = state.results
         .filter(r => r.capability.includes('remarks'))
         .flatMap(r => r.findings);
       if (!findings.length) {
-        return this.emptyTab('No optimization remarks', 'No missed, passed, or analysis remarks were reported for this unit.');
+        return this.emptyTab('No optimization remarks', 'No optimization remarks were reported for this unit.');
       }
       return h('div', { class: 'capability-stack' },
         UI.passTimeline(findings),
@@ -261,7 +193,7 @@ const UnitDetailView = {
     const capRes = await API.capabilities();
     const caps = Array.isArray(capRes.data)
       ? capRes.data.filter(spec => CapabilityData.shouldQueryCapability(spec, 'unit')).map(c => c.id).filter(Boolean)
-      : ['llvm.remarks.summary', 'llvm.remarks.detail'];
+      : ['llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational', 'llvm.remarks.hotspot'];
     const res = await API.queryUnit(unit.id, caps);
     if (!res.ok) {
       if (main) main.appendChild(UI.errorCard(res.error || 'query failed', () => this.render({ id: unit.id, snapshot: unit.snapshot_id || State.get('currentSnapshot')?.id })));

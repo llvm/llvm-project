@@ -25,6 +25,9 @@ std::string llvm::advisor::findRemarksPath(const CapabilityContext &Context) {
 
   // 1. Source-adjacent: replace extension in-place (cmake -save-temps style).
   SmallString<256> FromSource(Context.SourcePath);
+  sys::path::replace_extension(FromSource, "opt.bitstream");
+  if (sys::fs::exists(FromSource))
+    return std::string(FromSource);
   sys::path::replace_extension(FromSource, "opt.yaml");
   if (sys::fs::exists(FromSource))
     return std::string(FromSource);
@@ -36,7 +39,7 @@ std::string llvm::advisor::findRemarksPath(const CapabilityContext &Context) {
     StringRef Stem = sys::path::stem(Context.SourcePath);
 
     // 2. Build-dir/<stem>.opt.yaml — the most common clang layout.
-    for (StringRef Ext : {"opt.yaml", "opt.json"}) {
+    for (StringRef Ext : {"opt.bitstream", "opt.yaml", "opt.json"}) {
       SmallString<256> P(Context.WorkingDirectory);
       sys::path::append(P, Stem);
       sys::path::replace_extension(P, Ext);

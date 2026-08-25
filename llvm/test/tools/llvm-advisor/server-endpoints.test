@@ -1,0 +1,3 @@
+# Test the HTTP endpoints added by the remarks work.
+# RUN: rm -rf %t.store
+# RUN: %python %S/Inputs/test_http_endpoints.py llvm-advisor %S/Inputs/example.opt.yaml %S/Inputs %llvm_src_root/tools/llvm-advisor/config/capabilities

@@ -9,6 +9,7 @@
 #include "Core/CaptureCore.h"
 #include "Analysis/AnalyzerBase.h"
 #include "Analysis/Clang/ClangAnalyzerUtils.h"
+#include "Analysis/RemarksAnalysisUtils.h"
 #include "Capability/CapabilityExecutor.h"
 #include "Capability/CapabilityPlanner.h"
 #include "Capability/CapabilityScheduler.h"
@@ -23,6 +24,49 @@ using namespace llvm;
 using namespace llvm::advisor;
 
 namespace {
+
+/// Infer a source root by scanning the first N remarks and finding the longest
+/// common directory prefix of their source file paths. Returns an empty string
+/// if no common prefix is found or if paths are relative.
+static std::string inferSourceRootFromRemarks(StringRef Path) {
+  SmallVector<std::string, 32> SourcePaths;
+  if (Error E = foreachRemark(Path, [&](const remarks::Remark &R) -> Error {
+        if (R.Loc && !R.Loc->SourceFilePath.empty())
+          SourcePaths.push_back(R.Loc->SourceFilePath.str());
+        if (SourcePaths.size() >= 50)
+          return createStringError(inconvertibleErrorCode(), "sampled");
+        return Error::success();
+      })) {
+    consumeError(std::move(E));
+  }
+
+  if (SourcePaths.empty())
+    return "";
+
+  // Find longest common directory prefix
+  std::string Prefix = sys::path::parent_path(SourcePaths[0]).str();
+  for (size_t I = 1; I < SourcePaths.size() && !Prefix.empty(); ++I) {
+    std::string Parent = sys::path::parent_path(SourcePaths[I]).str();
+    size_t Len = std::min(Prefix.size(), Parent.size());
+    size_t Common = 0;
+    for (size_t J = 0; J < Len; ++J) {
+      if (Prefix[J] != Parent[J])
+        break;
+      Common = J + 1;
+    }
+    Prefix = Prefix.substr(0, Common);
+    // Trim to last directory separator
+    size_t LastSep = Prefix.find_last_of("/\\");
+    if (LastSep != std::string::npos)
+      Prefix = Prefix.substr(0, LastSep);
+  }
+
+  // Only use absolute paths as roots
+  if (!Prefix.empty() && sys::path::is_absolute(Prefix))
+    return Prefix;
+
+  return "";
+}
 
 // Capability categories used to determine which artifacts must be synthesized.
 constexpr StringLiteral IRCapabilities[] = {
@@ -146,7 +190,7 @@ Error synthesizeArtifacts(CapabilityContext &Context, StringRef StoreRoot,
 
   if (NeedsRemarks && findRemarksPath(Context).empty()) {
     SmallString<256> RemarksOut(ArtDir);
-    sys::path::append(RemarksOut, "remarks.opt.yaml");
+    sys::path::append(RemarksOut, "remarks.opt.bitstream");
     if (auto Path = emitOptRemarks(Context, RemarksOut))
       Context.RemarksPath = *Path;
     else
@@ -268,4 +312,106 @@ CaptureCore::createSnapshot(StringRef SourceRoot, StringRef BuildRoot,
   }
 
   return *Snapshot;
+}
+
+Expected<SnapshotRecord>
+CaptureCore::importRemarks(ArrayRef<std::string> RemarkPaths,
+                           StringRef SourceRoot,
+                           ArrayRef<std::string> Capabilities) {
+  if (RemarkPaths.empty())
+    return createStringError(inconvertibleErrorCode(),
+                             "no remark files provided");
+
+  // Pre-flight: validate each file is parseable before creating a snapshot.
+  // This surfaces version-mismatch / corruption errors to the user instead of
+  // silently producing an empty snapshot.
+  for (const std::string &Path : RemarkPaths) {
+    if (!sys::fs::exists(Path))
+      return createStringError(inconvertibleErrorCode(),
+                               Twine("remark file does not exist: ") + Path);
+    int64_t Seen = 0;
+    if (Error E = foreachRemark(Path, [&](const remarks::Remark &) -> Error {
+          ++Seen;
+          return Error::success();
+        }))
+      return joinErrors(
+          createStringError(inconvertibleErrorCode(),
+                            Twine("failed to parse remark file '") + Path +
+                                "': "),
+          std::move(E));
+    if (Seen == 0)
+      return createStringError(
+          inconvertibleErrorCode(),
+          Twine("remark file '") + Path +
+              "' contains no remarks (empty or unrecognized format)");
+  }
+
+  uint64_t Now = std::chrono::duration_cast<std::chrono::seconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+
+  // If no source root was provided, try to infer it from the first remark file.
+  std::string InferredRoot = SourceRoot.str();
+  if (InferredRoot.empty() && !RemarkPaths.empty()) {
+    InferredRoot = inferSourceRootFromRemarks(RemarkPaths[0]);
+  }
+  // Fallback: use the parent directory of the first remark file.
+  if (InferredRoot.empty() && !RemarkPaths.empty()) {
+    InferredRoot = sys::path::parent_path(RemarkPaths[0]).str();
+  }
+
+  SnapshotRecord Snapshot;
+  Snapshot.SourceRoot = InferredRoot;
+  Snapshot.CreatedUnix = Now;
+  Snapshot.ID = computeSnapshotID(InferredRoot, "imported", Now);
+  if (Error Err = Storage.metadata().putSnapshot(Snapshot))
+    return std::move(Err);
+
+  SmallVector<std::string, 8> DefaultCaps = {"llvm.remarks.relational",
+                                             "llvm.remarks.summary"};
+  ArrayRef<std::string> CapsToRun =
+      Capabilities.empty() ? ArrayRef<std::string>(DefaultCaps) : Capabilities;
+
+  CapabilityPlanner Planner(Registry);
+  Expected<SmallVector<CapabilityNode, 16>> Plan = Planner.plan(CapsToRun);
+  if (!Plan)
+    return Plan.takeError();
+  CapabilityScheduler Scheduler;
+  SmallVector<CapabilityNode, 16> Schedule = Scheduler.schedule(*Plan);
+  CapabilityExecutor Executor(Registry, Storage);
+
+  for (const std::string &Path : RemarkPaths) {
+    if (!sys::fs::exists(Path))
+      continue;
+
+    Expected<std::string> ContentHash = hashFile(Path);
+    if (!ContentHash) {
+      consumeError(ContentHash.takeError());
+      continue;
+    }
+
+    StringRef FileName = sys::path::filename(Path);
+    std::string Stem = sys::path::stem(FileName).str();
+
+    UnitRecord Unit;
+    Unit.SnapshotID = Snapshot.ID;
+    Unit.RemarksPath = Path;
+    Unit.SourcePath = Stem;
+    Unit.Language = "unknown";
+    Unit.SourceContentHash = *ContentHash;
+    Unit.CommandFingerprint = hashString("standalone-import");
+    Unit.ID = hashString(Path + "\0" + *ContentHash);
+
+    if (Error Err = Storage.metadata().putUnit(Unit))
+      return std::move(Err);
+
+    CapabilityContext Context = makeContext(Unit);
+    Expected<json::Array> Results = Executor.execute(Schedule, Context);
+    if (!Results) {
+      consumeError(Results.takeError());
+      continue;
+    }
+  }
+
+  return Snapshot;
 }

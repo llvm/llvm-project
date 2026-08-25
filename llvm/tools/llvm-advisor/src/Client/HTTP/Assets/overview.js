@@ -72,7 +72,7 @@ const OverviewView = {
     }
 
     // Query core capabilities only — avoid expensive/unstable capabilities
-    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail'];
+    const coreCaps = ['llvm.remarks.summary', 'llvm.remarks.detail', 'llvm.remarks.relational', 'llvm.remarks.hotspot'];
     const registeredIds = new Set(specs.map(s => s.id));
     const dashboardCaps = coreCaps.filter(id => registeredIds.size === 0 || registeredIds.has(id));
     let aggregate = { metrics: {}, rows: [], errors: 0, warnings: 0, remarks: 0, unavailable: 0, families: [] };

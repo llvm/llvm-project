@@ -1,0 +1,13 @@
+# Test llvm.remarks.relational output schema for a real C example.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/example.opt.yaml >/dev/null 2>&1
+# RUN: llvm-advisor query --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --snapshot latest --capability llvm.remarks.relational 2>&1 | FileCheck %s
+
+# CHECK: "capability":"llvm.remarks.relational"
+# CHECK-DAG: "schema_version":1
+# CHECK-DAG: "count":41
+# CHECK: "strings":{
+# CHECK-DAG: "function":["sum_of_squares","normalize"]
+# CHECK-DAG: "file":["src/example.c"]
+# CHECK-DAG: "pass":["inline","loop-vectorize","slp-vectorizer","loop-unroll","regalloc","prologepilog","asm-printer"]
+# CHECK-DAG: "name":["Inlined","Vectorized","NotPossible","VectorizationNotBeneficial","InterleavingNotBeneficial","PartialUnrolled","SpillReloadCopies","StackSize","InstructionMix","InstructionCount"]

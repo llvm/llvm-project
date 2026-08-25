@@ -1,0 +1,10 @@
+# Test llvm.remarks.hotspot aggregation for a real C example.
+# RUN: rm -rf %t.store
+# RUN: llvm-advisor import --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --source-root %S/Inputs %S/Inputs/example.opt.yaml >/dev/null 2>&1
+# RUN: llvm-advisor query --capability-dir %llvm_src_root/tools/llvm-advisor/config/capabilities --store %t.store --snapshot latest --capability llvm.remarks.hotspot 2>&1 | FileCheck %s
+
+# CHECK: "capability":"llvm.remarks.hotspot"
+# CHECK: "count":15
+# CHECK: "hotspots":[
+# CHECK-DAG: "function":"sum_of_squares"
+# CHECK-DAG: "function":"normalize"

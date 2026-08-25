@@ -8,7 +8,10 @@ const Icons = {
   overview: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg>`,
   units: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg>`,
   compare: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,14 7,6 11,12 15,4 17,8"/></svg>`,
+  remarks: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="10" rx="1.5"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="9.5" x2="11" y2="9.5"/><polyline points="7,13 5,17 10,15 15,17 13,13"/></svg>`,
+  heatmap: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1" fill="rgba(255,100,100,0.3)"/><rect x="11" y="2" width="7" height="7" rx="1" fill="rgba(255,150,50,0.3)"/><rect x="2" y="11" width="7" height="7" rx="1" fill="rgba(255,200,50,0.3)"/><rect x="11" y="11" width="7" height="7" rx="1" fill="rgba(100,200,100,0.3)"/></svg>`,
   settings: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10,2v3M10,15v3M2,10h3M15,10h3M4.2,4.2l2.1,2.1M13.7,13.7l2.1,2.1M4.2,15.8l2.1-2.1M13.7,6.3l2.1-2.1"/></svg>`,
+  explorer: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2,5 H18 M2,9 H14 M2,13 H16 M2,17 H10"/></svg>`,
   search: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8.5" cy="8.5" r="5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>`,
   chevronDown: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,8 10,13 15,8"/></svg>`,
   chevronRight: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8,5 13,10 8,15"/></svg>`,
@@ -107,9 +110,38 @@ const API = {
   capabilities: () => API.get('/capabilities'),
   queryUnit: (unitId, caps) => API.get(`/query/unit/${encodeURIComponent(unitId)}/${(caps || []).join(',')}`),
   querySnapshot: (snapshotId, caps) => API.get(`/query/snapshot/${encodeURIComponent(snapshotId)}/${(caps || []).join(',')}`),
+  sourceFiles: (snapshotId) => API.get(`/snapshots/${encodeURIComponent(snapshotId)}/files`),
+  source: (snapshotId, path) => API.get(`/source?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`),
+  sourceRemarks: (snapshotId, path, filters) => {
+    let url = `/source/remarks?path=${encodeURIComponent(path)}&snapshot_id=${encodeURIComponent(snapshotId)}`;
+    if (filters) {
+      if (filters.pass) url += `&pass=${encodeURIComponent(filters.pass)}`;
+      if (filters.name) url += `&name=${encodeURIComponent(filters.name)}`;
+      if (filters.function) url += `&function=${encodeURIComponent(filters.function)}`;
+      if (filters.type != null && filters.type !== '') url += `&type=${filters.type}`;
+    }
+    return API.get(url);
+  },
   compare: (before, after) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}`),
+  compareRemarks: (before, after, offset, limit) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks?offset=${offset||0}&limit=${limit||100}`),
+  compareFunctionDetail: (before, after, fn) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks/${encodeURIComponent(fn)}`),
   inspect: (mode, body) => API.post(`/inspect/${encodeURIComponent(mode)}`, body),
-  jobs: () => API.get('/jobs'),
+  async importFile(file, sourceRoot) {
+    let url = `${this.base}/import?filename=${encodeURIComponent(file.name)}`;
+    if (sourceRoot) url += `&source_root=${encodeURIComponent(sourceRoot)}`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      });
+      const j = await r.json();
+      if (j.status === 'error') return { ok: false, error: j.error?.message || 'Import failed', data: null };
+      return { ok: true, data: j.data ?? j, error: null };
+    } catch (e) {
+      return { ok: false, error: e.message, data: null };
+    }
+  },
 };
 
 // --- State ---
@@ -127,6 +159,7 @@ const State = {
     detailOpen: false,
     detailContent: null,
     commandPaletteOpen: false,
+    importModalOpen: false,
   },
   get(key) { return this._data[key]; },
   set(key, value) {
@@ -212,7 +245,7 @@ const Keys = {
     if (this._pending === 'g') {
       clearTimeout(this._timeout);
       this._pending = null;
-      const navMap = { o: '/', u: '/units', c: '/compare', s: '/settings' };
+      const navMap = { o: '/', u: '/units', c: '/compare', r: '/remarks', h: '/heatmap', e: '/explorer', s: '/settings' };
       if (navMap[e.key]) { e.preventDefault(); Router.navigate(navMap[e.key]); }
       return;
     }
@@ -336,39 +369,10 @@ const isCorruptedString = (s) => {
 };
 
 const capabilityFriendlyNames = {
-  'llvm.ir.summary': 'IR Summary',
-  'llvm.ir.function_stats': 'IR Function Stats',
-  'llvm.ir.view': 'IR View',
-  'llvm.ir.diff': 'IR Diff',
-  'llvm.ir.passes.list': 'Pass Pipeline',
-  'clang.diag.summary': 'Diagnostics',
-  'clang.template_stats': 'Template Stats',
-  'clang.static_analysis': 'Static Analysis',
   'llvm.remarks.summary': 'Optimization Remarks',
   'llvm.remarks.detail': 'Remark Details',
-  'llvm.remarks.size_diff': 'Remark Size Diff',
-  'llvm.obj.summary': 'Binary Summary',
-  'llvm.obj.sections': 'Binary Sections',
-  'llvm.obj.symbols': 'Binary Symbols',
-  'llvm.debug.detail': 'Debug Info',
-  'llvm.debug.summary': 'Debug Summary',
-  'llvm.cfg': 'Control Flow Graph',
-  'llvm.dom_tree': 'Dominator Tree',
-  'llvm.call_graph': 'Call Graph',
-  'llvm.loop_info': 'Loop Info',
-  'llvm.selection_dag': 'Selection DAG',
-  'llvm.machine_ir': 'Machine IR',
-  'llvm.asm.view': 'Assembly',
-  'llvm.mca.report': 'Machine Code Analyzer',
-  'llvm.exegesis': 'Instruction Benchmarks',
-  'llvm.lto.summary': 'LTO Summary',
-  'llvm.lto.function_stats': 'LTO Function Stats',
-  'llvm.cgdata': 'CG Data',
-  'lld.mapfile': 'Linker Map',
-  'lld.mapfile.diff': 'Linker Map Diff',
-  'offload.binary.inspect': 'Offload Binary',
-  'runtime.correlate': 'Runtime Correlation',
-  'runtime.summary': 'Runtime Summary',
+  'llvm.remarks.relational': 'Relational Remarks',
+  'llvm.remarks.hotspot': 'Remark Hotspots',
   'build.compile_commands': 'Compile Commands',
 };
 
@@ -505,26 +509,15 @@ const ignoredMetricKeys = new Set([
 const CapabilityData = {
   category(capability) {
     const id = String(capability || '');
+    if (id.startsWith('llvm.remarks.')) return 'Remarks';
     if (id.startsWith('build.')) return 'Build';
-    if (id.startsWith('clang.')) return 'Clang';
-    if (id.startsWith('llvm.ir.') || id === 'llvm.inlining.tree' || id.startsWith('llvm.remarks.') || id.startsWith('llvm.pass.')) return 'IR';
-    if (id.startsWith('llvm.obj.') || id.startsWith('llvm.debug.') || id === 'llvm.cgdata' || id.startsWith('lld.mapfile')) return 'Binary';
-    if (id.startsWith('llvm.cfg') || id.startsWith('llvm.dom_tree') || id.startsWith('llvm.call_graph') || id.startsWith('llvm.loop_info') || id.startsWith('llvm.selection_dag') || id.startsWith('llvm.machine_ir') || id.startsWith('llvm.asm.') || id.startsWith('llvm.mca.') || id === 'llvm.exegesis') return 'Inspection';
-    if (id.startsWith('llvm.lto.')) return 'LTO';
-    if (id.startsWith('offload.')) return 'Offload';
-    if (id.startsWith('runtime.')) return 'Runtime';
     return 'Other';
   },
 
   shouldQueryCapability(spec, scope = 'unit') {
     const id = spec?.id || spec?.capability_id || '';
     if (!id) return false;
-    if (id === 'llvm.exegesis') return false;
-    if (id === 'clang.template_stats' || id === 'clang.static_analysis') return false;
-    if (id.startsWith('runtime.')) return false;
-    if (id === 'llvm.ir.diff' || id === 'llvm.remarks.size_diff' || id === 'lld.mapfile.diff')
-      return scope === 'compare';
-    return true;
+    return id.startsWith('llvm.remarks.');
   },
 
   isAvailable(value) {
@@ -618,13 +611,7 @@ const CapabilityData = {
   aggregate(unitResults) {
     const agg = {
       units: 0,
-      instructions: 0,
-      functions: 0,
-      warnings: 0,
-      errors: 0,
       remarks: 0,
-      sections: 0,
-      symbols: 0,
       unavailable: 0,
       metrics: {},
       capabilityCoverage: new Map(),
@@ -667,10 +654,7 @@ const CapabilityData = {
         agg.familyCoverage.set(family, familyEntry);
 
         const v = result.value;
-        const trackExplicitly = new Set([
-          'instructions', 'instruction_count', 'functions', 'function_count',
-          'warnings', 'errors', 'remarks', 'remark_count',
-        ]);
+        const trackExplicitly = new Set(['remarks', 'remark_count']);
         if (result.available) {
           Object.entries(result.metrics || {}).forEach(([key, raw]) => {
             if (typeof raw !== 'number' || !Number.isFinite(raw)) return;
@@ -683,49 +667,16 @@ const CapabilityData = {
             }
           });
         }
-        if (result.capability === 'llvm.ir.summary') {
-          const inst = Number(v.instructions || v.instruction_count || 0);
-          const fns = Number(v.functions || v.function_count || 0);
-          agg.instructions += inst;
-          agg.functions += fns;
-          row.instructions = inst || row.instructions || 0;
-          row.functions = fns || row.functions || 0;
-        }
-        if (result.capability === 'llvm.ir.function_stats') {
-          const total = Array.isArray(v.functions) ? v.functions.reduce((s, f) => s + Number(f.instructions || f.instruction_count || 0), 0) : 0;
-          row.instructions = row.instructions || total;
-          agg.instructions += row.instructions && !(v.instructions || v.instruction_count) ? 0 : Number(v.instructions || v.instruction_count || 0);
-        }
-        if (result.capability === 'clang.diag.summary') {
-          agg.warnings += Number(v.warnings || 0);
-          agg.errors += Number(v.errors || 0);
-          row.warnings = Number(v.warnings || 0);
-          row.errors = Number(v.errors || 0);
-        }
         if (result.capability === 'llvm.remarks.summary') {
           const cnt = Number(v.count || v.remark_count || 0);
           agg.remarks += cnt;
           row.remarks = cnt;
         }
-        if (result.capability === 'llvm.obj.summary') {
-          agg.sections += Number(v.sections || 0);
-          agg.symbols += Number(v.symbols || v.symbol_count || 0);
-          row.sections = Number(v.sections || 0);
-          row.symbols = Number(v.symbols || v.symbol_count || 0);
-        }
       });
       rows.push(row);
     });
     agg.rows = rows;
-    // Override metrics with correctly-tracked per-capability values to avoid
-    // double-counting (e.g. 'functions' from IR vs debug/AST capabilities).
-    if (agg.instructions) agg.metrics.instructions = agg.instructions;
-    if (agg.functions) agg.metrics.functions = agg.functions;
     if (agg.remarks) agg.metrics.remarks = agg.remarks;
-    if (agg.warnings) agg.metrics.warnings = agg.warnings;
-    if (agg.errors) agg.metrics.errors = agg.errors;
-    delete agg.metrics.instruction_count;
-    delete agg.metrics.function_count;
     delete agg.metrics.remark_count;
     agg.capabilities = Array.from(agg.capabilityCoverage.values()).sort((a, b) =>
       a.family === b.family ? a.capability.localeCompare(b.capability) : a.family.localeCompare(b.family)
