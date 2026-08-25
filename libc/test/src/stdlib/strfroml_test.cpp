@@ -17,7 +17,7 @@
   EXPECT_EQ(str_size_needed, static_cast<int>(sizeof(expected_str) - 1));      \
   EXPECT_STREQ(actual_str, expected_str);
 
-struct LlvmLibcStrfromlTest : LIBC_NAMESPACE::testing::ErrnoCheckingTest {};
+using LlvmLibcStrfromlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcStrfromlTest, DecimalFormat) {
   char buff[45];
@@ -82,12 +82,10 @@ TEST_F(LlvmLibcStrfromlTest, HexExponentFormat) {
 }
 
 TEST_F(LlvmLibcStrfromlTest, DecimalExponentFormat) {
-  // Mark as maybe_unused to silence unused variable
-  // warning when long double is not 80-bit
-  [[maybe_unused]] char buff[100];
-  [[maybe_unused]] int result;
-
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+  char buff[100];
+  int result;
+
   result = LIBC_NAMESPACE::strfroml(buff, 90, "%.9e", 1000000000500000000.1L);
   EXPECT_STREQ_LEN(result, buff, "1.000000001e+18");
 
@@ -101,12 +99,10 @@ TEST_F(LlvmLibcStrfromlTest, DecimalExponentFormat) {
 }
 
 TEST_F(LlvmLibcStrfromlTest, DecimalAutoFormat) {
-  // Mark as maybe_unused to silence unused variable
-  // warning when long double is not 80-bit
-  [[maybe_unused]] char buff[100];
-  [[maybe_unused]] int result;
-
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
+  char buff[100];
+  int result;
+
   result =
       LIBC_NAMESPACE::strfroml(buff, 99, "%g", 0xf.fffffffffffffffp+16380L);
   EXPECT_STREQ_LEN(result, buff, "1.18973e+4932");

@@ -17,7 +17,7 @@
   EXPECT_EQ(str_size_needed, static_cast<int>(sizeof(expected_str) - 1));      \
   EXPECT_STREQ(actual_str, expected_str);
 
-struct LlvmLibcStrfromdTest : LIBC_NAMESPACE::testing::ErrnoCheckingTest {};
+using LlvmLibcStrfromdTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcStrfromdTest, DecimalFormat) {
   char buff[500];
