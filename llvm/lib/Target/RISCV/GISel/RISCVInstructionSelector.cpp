@@ -121,8 +121,8 @@ private:
     RISCVMatInt::InstSeq Seq;
     int64_t Lo12 = 0;
   };
-  ComplexRendererFns computeConstAddrPlan(int64_t CVal, bool IsPrefetch,
-                                          Register OrigBase) const;
+  ComplexRendererFns computeConstAddr(int64_t CVal, bool IsPrefetch,
+                                      Register OrigBase) const;
   // Materialize the high part of Plan into a register. If OrigBase is valid,
   // ADD it to the materialized high part (for G_PTR_ADD + large constant).
   Register materializeConstBase(MachineInstrBuilder &MIB,
@@ -670,8 +670,7 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
 
     // Otherwise split the constant into Hi (materialized + added to the base)
     // and Lo12 (folded offset).
-    if (auto Fns =
-            computeConstAddrPlan(RHSC, /*IsPrefetch=*/true, LHS.getReg()))
+    if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/true, LHS.getReg()))
       return Fns;
   }
 
@@ -684,7 +683,7 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
   }
   if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
     int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
-    if (auto Fns = computeConstAddrPlan(CVal, /*IsPrefetch=*/true, Register()))
+    if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/true, Register()))
       return Fns;
   }
 
@@ -1800,8 +1799,8 @@ bool RISCVInstructionSelector::materializeInstSeq(
 }
 
 InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::computeConstAddrPlan(int64_t CVal, bool IsPrefetch,
-                                               Register OrigBase) const {
+RISCVInstructionSelector::computeConstAddr(int64_t CVal, bool IsPrefetch,
+                                           Register OrigBase) const {
   // Split the constant into a materialized high part (the base) and
   // a simm12 low part (the offset). For prefetch the low part
   // must additionally be a multiple of 32 (simm12_lsb00000).
