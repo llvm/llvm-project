@@ -944,6 +944,16 @@ uint64_t ObjCStubsSection::getSize() const {
   return stubSize * symbols.size();
 }
 
+void ObjCStubsSection::sortSymbols(
+    llvm::function_ref<bool(const Defined *, const Defined *)> less) {
+  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
+                      ? target->objcStubsFastSize
+                      : target->objcStubsSmallSize;
+  llvm::stable_sort(symbols, less);
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
+}
+
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
   for (Defined *sym : symbols) {
