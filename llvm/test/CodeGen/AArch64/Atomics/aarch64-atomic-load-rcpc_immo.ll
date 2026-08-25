@@ -958,7 +958,6 @@ define i32 @load_atomic_i32_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i32_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    add x8, x19, #4
 ; SDAG-AVOIDLDAPUR:    ldapr w0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i32_from_gep:
@@ -978,7 +977,6 @@ define i64 @load_atomic_i64_from_gep() {
 ;
 ; SDAG-AVOIDLDAPUR-LABEL: load_atomic_i64_from_gep:
 ; SDAG-AVOIDLDAPUR:    bl init
-; SDAG-AVOIDLDAPUR:    add x8, x19, #8
 ; SDAG-AVOIDLDAPUR:    ldapr x0, [x8]
 ;
 ; SDAG-NOAVOIDLDAPUR-LABEL: load_atomic_i64_from_gep:

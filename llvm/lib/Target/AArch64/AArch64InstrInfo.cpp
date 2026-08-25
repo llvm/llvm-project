@@ -1181,7 +1181,11 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::ADDXri:
   case AArch64::ADDWri:
     // add x, 1 -> csinc.
-    if (!DefMI->getOperand(2).isImm() || DefMI->getOperand(2).getImm() != 1 ||
+    // An ADDXri that materialises a frame index holds a frame index rather
+    // than a register in operand 1, and it can carry any immediate the
+    // addressed object needs, so check for a register before reading one.
+    if (!DefMI->getOperand(1).isReg() || !DefMI->getOperand(2).isImm() ||
+        DefMI->getOperand(2).getImm() != 1 ||
         DefMI->getOperand(3).getImm() != 0)
       return 0;
     SrcReg = DefMI->getOperand(1).getReg();
