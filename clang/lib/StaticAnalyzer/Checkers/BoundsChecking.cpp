@@ -183,11 +183,6 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
   // CHECK UPPER BOUND
   if (Extent) {
-    // In a situation where both underflow and overflow are possible (but the
-    // index is either tainted or known to be invalid), the logic of this
-    // checker will first assume that the offset is non-negative, and then
-    // (with this additional assumption) it will detect an overflow error.
-    // In this situation the warning message should mention both possibilities.
     Comparison CK = Flags.AlsoAcceptEquality ? Comparison::LE : Comparison::LT;
     auto [WithinUpperBound, ExceedsUpperBound] =
         compareValueToThreshold(State, SVB, Offset, *Extent, /*CmpKind=*/CK);
