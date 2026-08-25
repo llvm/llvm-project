@@ -35,6 +35,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
@@ -2333,53 +2334,88 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   return true;
 }
 
-/// Try to fold fptoui(fdiv(uitofp(x),uitofp(y))) to udiv(x,y)
+/// Try to fold fptoui(fdiv(x,y)) to udiv(x,y), where x & y are either uitofp
+/// instructions or fp-constants that exactly represent integers.
 bool VectorCombine::foldFDivToUDiv(Instruction &I) {
-  Instruction *X, *Y;
-  if (!match(&I, m_FPToUI(m_OneUse(m_FDiv(m_OneUse(m_Instruction(X)),
-                                          m_OneUse(m_Instruction(Y)))))))
+  const DataLayout &DL = I.getDataLayout();
+  Value *X, *Y;
+  if (!match(&I, m_FPToUI(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))))))
     return false;
+
+  Type *IntTy = I.getType();
+
+  auto MatchConstOrInst = [&](Value *V, Value *&Src) -> bool {
+    // match uitofp
+    if (match(V, m_OneUse(m_UIToFP(m_Value(Src)))))
+      return Src->getType() == IntTy;
+    // match FP constants that survive FP->integer->FP casts.
+    Constant *C;
+    if (match(V, m_Constant(C))) {
+      Constant *IntC =
+          ConstantFoldCastOperand(Instruction::FPToUI, C, IntTy, DL);
+      if (!IntC)
+        return false;
+      Constant *FloatC =
+          ConstantFoldCastOperand(Instruction::UIToFP, IntC, C->getType(), DL);
+      if (C != FloatC)
+        return false;
+      Src = IntC;
+      return true;
+    }
+    return false;
+  };
+
   Value *SrcX;
-  if (!match(X, m_UIToFP(m_Value(SrcX))))
+  if (!MatchConstOrInst(X, SrcX))
     return false;
   Value *SrcY;
-  if (!match(Y, m_UIToFP(m_Value(SrcY))))
+  if (!MatchConstOrInst(Y, SrcY))
     return false;
 
-  Type *IntTy = SrcX->getType();
-  Type *FloatTy = X->getType();
+  SimplifyQuery S = SQ.getWithInstruction(&I);
 
-  if (IntTy != SrcY->getType() || IntTy != I.getType())
-    return false;
+  TTI::OperandValueInfo OpSrcX = TTI::getOperandInfo(SrcX);
+  TTI::OperandValueInfo OpSrcY = TTI::getOperandInfo(SrcY);
 
   // Require uitofp(x) and uitofp(y) to be exact conversions, i.e. IntWidth
   // must fit within the float type's mantissa precision.
-  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  Type *FloatTy = X->getType();
   unsigned Precision =
       APFloat::semanticsPrecision(FloatTy->getScalarType()->getFltSemantics());
-  if (IntWidth > Precision)
+
+  auto NumActiveBits = [&](Value *V) -> bool {
+    KnownBits KB = computeKnownBits(V, S);
+    unsigned AB = KB.getBitWidth() - KB.countMinLeadingZeros();
+    return AB <= Precision;
+  };
+
+  if (!NumActiveBits(SrcX) || !NumActiveBits(SrcY))
     return false;
 
   // Integer division by zero is UB. We must prove the divisor
   // is known non-zero to safely transform fdiv into udiv.
-  if (!isKnownNonZero(SrcY, SQ.getWithInstruction(&I)))
+  if (!isKnownNonZero(SrcY, S))
     return false;
 
-  // OldCost = fptoui + fdiv + uitofp(x) + uitofp(y)
   InstructionCost OldCost =
       TTI.getInstructionCost(&I, CostKind) +
-      TTI.getArithmeticInstrCost(Instruction::FDiv, FloatTy, CostKind) +
-      TTI.getInstructionCost(X, CostKind) + TTI.getInstructionCost(Y, CostKind);
+      TTI.getArithmeticInstrCost(Instruction::FDiv, FloatTy, CostKind);
+  // Add cost if the src is an uitofp instruction.
+  if (auto *InstX = dyn_cast<Instruction>(X))
+    OldCost += TTI.getInstructionCost(InstX, CostKind);
+  if (auto *InstY = dyn_cast<Instruction>(Y))
+    OldCost += TTI.getInstructionCost(InstY, CostKind);
   // NewCost = udiv
-  InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Instruction::UDiv, IntTy, CostKind);
+  InstructionCost NewCost = TTI.getArithmeticInstrCost(
+      Instruction::UDiv, IntTy, CostKind, OpSrcX, OpSrcY);
 
   LLVM_DEBUG(dbgs() << "Found division of vector float to unsigned integer: "
                     << I << "\n  OldCost: " << OldCost
                     << " vs NewCost: " << NewCost << "\n");
 
-  if (NewCost > OldCost)
+  if (NewCost > OldCost) {
     return false;
+  }
 
   Value *NewInst = Builder.CreateUDiv(SrcX, SrcY);
   replaceValue(I, *NewInst);

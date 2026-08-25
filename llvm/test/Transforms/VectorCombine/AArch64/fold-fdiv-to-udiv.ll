@@ -21,10 +21,7 @@ define <4 x i32> @no_fold_v4i32_to_v4f64(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @fold_v4i32_constant(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @fold_v4i32_constant(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a = uitofp <4 x i32> %x to <4 x double>
@@ -39,10 +36,7 @@ define <4 x i32> @fold_vector_value_tracking(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i32> @fold_vector_value_tracking(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NZ:%.*]] = or <4 x i32> [[Y]], splat (i32 1)
-; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> [[NZ]] to <4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], [[NZ]]
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %nz = or <4 x i32> %y, <i32 1, i32 1, i32 1, i32 1>
@@ -157,10 +151,7 @@ define <vscale x 4 x i32> @no_fold_vscale_nonconstant(<vscale x 4 x i32> %x, <vs
 define <vscale x 4 x i32> @fold_vscale_constant(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @fold_vscale_constant(
 ; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = uitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x double>
-; CHECK-NEXT:    [[B:%.*]] = uitofp <vscale x 4 x i32> splat (i32 2) to <vscale x 4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <vscale x 4 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <vscale x 4 x double> [[R]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <vscale x 4 x i32> [[X]], splat (i32 2)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %a = uitofp <vscale x 4 x i32> %x to <vscale x 4 x double>
@@ -173,10 +164,7 @@ define <vscale x 4 x i32> @fold_vscale_constant(<vscale x 4 x i32> %x) {
 define i32 @fold_scalar_constant(i32 %x) {
 ; CHECK-LABEL: define i32 @fold_scalar_constant(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = uitofp i32 [[X]] to double
-; CHECK-NEXT:    [[B:%.*]] = uitofp i32 3 to double
-; CHECK-NEXT:    [[R:%.*]] = fdiv double [[A]], [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui double [[R]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = udiv i32 [[X]], 3
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %a = uitofp i32 %x to double
@@ -238,9 +226,7 @@ define i32 @fold_scalar_constant_numerator(i32 %y) {
 ; CHECK-LABEL: define i32 @fold_scalar_constant_numerator(
 ; CHECK-SAME: i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NZ:%.*]] = or i32 [[Y]], 1
-; CHECK-NEXT:    [[B:%.*]] = uitofp i32 [[NZ]] to double
-; CHECK-NEXT:    [[R:%.*]] = fdiv double 1.000000e+01, [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = fptoui double [[R]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = udiv i32 10, [[NZ]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %nz = or i32 %y, 1
@@ -253,9 +239,7 @@ define i32 @fold_scalar_constant_numerator(i32 %y) {
 define <4 x i32> @fold_constant_fp_divisor(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i32> @fold_constant_fp_divisor(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %a = uitofp <4 x i32> %x to <4 x double>
@@ -325,9 +309,7 @@ define <2 x i64> @fold_active_bits(<2 x i64> %x) {
 ; CHECK-LABEL: define <2 x i64> @fold_active_bits(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[X_MASKED:%.*]] = and <2 x i64> [[X]], splat (i64 16777215)
-; CHECK-NEXT:    [[X_F:%.*]] = uitofp <2 x i64> [[X_MASKED]] to <2 x float>
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X_F]], <float 3.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    [[RES:%.*]] = fptoui <2 x float> [[DIV]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = udiv <2 x i64> [[X_MASKED]], <i64 3, i64 2>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %x.masked = and <2 x i64> %x, <i64 16777215, i64 16777215>
