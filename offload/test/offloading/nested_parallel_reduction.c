@@ -1,18 +1,10 @@
-// A parallel region nested inside another one gives the wrong answer once the
-// optimizer is turned up. The same source is correct at -O1 and wrong at -O2
-// and -O3, with the same launch geometry and the same Generic-SPMD execution
-// mode in both cases, so the difference is in what the optimizer does to the
-// kernel rather than in how it is launched.
-//
-// Either parallel region on its own is correct at every optimization level; it
-// takes the two of them nested to reproduce. The result does not depend on
-// thread_limit.
+// Both parallel regions have to be nested for this to reproduce, and only at
+// -O2 and above; either one alone is correct at every optimization level.
 
 // RUN: %libomptarget-compileopt-generic
 // RUN: %libomptarget-run-generic | %fcheck-generic
 
 // REQUIRES: gpu
-
 
 #include <stdio.h>
 

@@ -1,16 +1,10 @@
 ; RUN: opt -passes='cgscc(function-attrs),rpo-function-attrs,attributor' \
 ; RUN:     -attributor-assume-closed-world -S < %s | FileCheck %s
 
-; Nothing in this module marks @dispatcher norecurse. rpo-function-attrs adds it:
+; rpo-function-attrs is what marks @dispatcher norecurse here:
 ; addNoRecurseAttrsTopDown only walks a function's uses, never its body, so a
 ; function whose body is an indirect call qualifies as long as every caller is
-; norecurse. The Attributor then replaces that indirect call with a direct call
-; to @outer, and @outer already calls @dispatcher, so @dispatcher is recursive
-; and the attribute is false.
-;
-; TargetFrameLowering::isSafeForNoCSROpt requires norecurse before a function may
-; skip saving callee-saved registers, and AMDGPUResourceUsageAnalysis uses it to
-; decide a call graph has no recursion.
+; norecurse.
 
 @g = external global i32
 
