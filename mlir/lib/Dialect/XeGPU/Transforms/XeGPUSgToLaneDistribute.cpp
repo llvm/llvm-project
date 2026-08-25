@@ -570,6 +570,35 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distSource = adaptor.getSource();
+
+    // Coalesced case: the layout assigns a genuine contiguous chunk on the FCD
+    // via `lane_data[FCD] = D > 1`, and that chunk is the lane's *entire*
+    // per-lane fragment (one round: `lane_layout[FCD] * D == FCD extent`, so
+    // the distributed per-lane vector has exactly D elements). Only then does
+    // the lane own a single run of D contiguous elements
+    // `{base, base+1, ..., base+D-1}`, which the XeVM lowering expects as a
+    // chunked access: a scalar base offset + scalar mask + a `vector<D>` value
+    // (the chunk size is implied by the value type). Take the first offset /
+    // mask of the contiguous group; the remaining offset computations become
+    // dead code and are removed during lowering.
+    //
+    // This must NOT fire for the round-robin case (`lane_data[FCD] = 1`,
+    // multiple rounds, e.g. a reduction source where lane l owns
+    // `{l, l+SG, l+2*SG, ...}`): there the per-lane elements are strided, not
+    // contiguous, so a chunked access would read the wrong elements. That case
+    // has `lane_data[FCD] == 1`, so the guard below excludes it.
+    int64_t laneElems = distResultTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    if (innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+    }
+
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
         distMask, op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
@@ -1093,6 +1122,25 @@ struct SgToLaneStoreScatter
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distDest = adaptor.getDest();
+
+    // Coalesced case (mirrors SgToLaneLoadGather): a genuine contiguous chunk
+    // on the FCD, `lane_data[FCD] = D > 1` covering the lane's entire per-lane
+    // fragment (one round), stores as a chunked access: scalar base offset +
+    // scalar mask + a `vector<D>` value. Take the first offset / mask of the
+    // contiguous group; the dropped offset computations are DCE'd in lowering.
+    // Excludes the round-robin case (`lane_data[FCD] == 1`).
+    int64_t laneElems = distValueTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    if (innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+    }
+
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
                                   distOffsets, distMask, op.getL1HintAttr(),
                                   op.getL2HintAttr(), op.getL3HintAttr(),

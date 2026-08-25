@@ -512,3 +512,57 @@ gpu.module @xevm_module {
     gpu.return
   }
 }
+
+// -----
+// Coalesced gather/scatter: the load/store layout has lane_data[FCD] = 2, i.e.
+// each lane owns 2 *contiguous* elements (one round: lane_layout[FCD] * 2 == 32
+// == FCD extent). Distribution must emit the chunked form the XeVM lowering
+// accepts: a scalar base offset + scalar mask + a value vector<2xf32> (the
+// chunk size is implied by the value type), taking element 0 of the per-lane
+// offsets/mask as the base -- NOT a 2-wide offsets/mask vector. This is driven
+// entirely by lane_data; the dropped offset lanes are DCE'd during lowering.
+gpu.module @xevm_module {
+    // CHECK-LABEL: gpu.func @coalesced_load_store
+    // CHECK: %[[LD:.*]] = xegpu.load %{{.*}}[%[[BASE:.*]]], %{{.*}}  : i64, index, i1 -> vector<2xf32>
+    // CHECK: %[[MUL:.*]] = arith.mulf %[[LD]], %{{.*}} : vector<2xf32>
+    // CHECK: xegpu.store %[[MUL]], %{{.*}}[%[[BASE]]], %{{.*}}  : vector<2xf32>, i64, index, i1
+  gpu.func @coalesced_load_store(%src: i64, %dst: i64) {
+    %step = vector.step : vector<32xindex>
+    %mask = arith.constant dense<true> : vector<32xi1>
+    %v = xegpu.load %src[%step], %mask <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+        : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
+    %c = arith.constant dense<2.0> : vector<32xf32>
+    %p = arith.mulf %v, %c {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<32xf32>
+    xegpu.store %p, %dst[%step], %mask <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}>
+        : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
+    gpu.return
+  }
+}
+
+// -----
+// Coalesced gather/scatter, 2-D: the FCD (innermost dim) carries the contiguous
+// chunk via lane_data = [1, 2] with a unit leading dim, so lane_layout[FCD] * 2
+// == 32 == FCD extent and each lane owns 2 contiguous elements. This must lower
+// to the SAME chunked form as the 1-D case -- scalar base offset + scalar mask
+// + a value vector<2xf32> (the leading unit dim is folded away) -- proving the
+// coalescing is driven by lane_data[FCD], independent of the value rank.
+gpu.module @xevm_module {
+    // CHECK-LABEL: gpu.func @coalesced_load_store_2d
+    // CHECK: %[[LD:.*]] = xegpu.load %{{.*}}[%[[BASE:.*]]], %{{.*}}  : i64, index, i1 -> vector<2xf32>
+    // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LD]] : vector<2xf32> to vector<1x2xf32>
+    // CHECK: %[[MUL:.*]] = arith.mulf %[[CAST]], %{{.*}} : vector<1x2xf32>
+    // CHECK: %[[CAST2:.*]] = vector.shape_cast %[[MUL]] : vector<1x2xf32> to vector<2xf32>
+    // CHECK: xegpu.store %[[CAST2]], %{{.*}}[%[[BASE]]], %{{.*}}  : vector<2xf32>, i64, index, i1
+  gpu.func @coalesced_load_store_2d(%src: i64, %dst: i64) {
+    %step = vector.step : vector<32xindex>
+    %step2d = vector.shape_cast %step : vector<32xindex> to vector<1x32xindex>
+    %mask = arith.constant dense<true> : vector<1x32xi1>
+    %v = xegpu.load %src[%step2d], %mask <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+        : i64, vector<1x32xindex>, vector<1x32xi1> -> vector<1x32xf32>
+    %c = arith.constant dense<2.0> : vector<1x32xf32>
+    %p = arith.mulf %v, %c {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} : vector<1x32xf32>
+    xegpu.store %p, %dst[%step2d], %mask <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+        : vector<1x32xf32>, i64, vector<1x32xindex>, vector<1x32xi1>
+    gpu.return
+  }
+}
