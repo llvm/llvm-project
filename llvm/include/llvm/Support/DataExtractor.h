@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_DATAEXTRACTOR_H
 #define LLVM_SUPPORT_DATAEXTRACTOR_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
@@ -668,6 +669,39 @@ public:
   /// In case of an extraction error, or if the cursor is already in an error
   /// state, zero is returned.
   uint64_t getULEB128(Cursor &C) const { return getULEB128(&C.Offset, &C.Err); }
+
+  /// Extract an arbitrary-precision signed LEB128 value from \a *OffsetPtr.
+  ///
+  /// Extracts a signed LEB128 number from this object's data starting at the
+  /// offset pointed to by \a OffsetPtr, growing the result to as many bits as
+  /// the encoding requires. This differs from getSLEB128(), which is limited to
+  /// 64 bits. The offset pointed to by \a OffsetPtr will be updated with the
+  /// offset of the byte following the last extracted byte.
+  ///
+  /// @param[in,out] OffsetPtr
+  ///     A pointer to an offset within the data that will be advanced by the
+  ///     appropriate number of bytes if the value is extracted correctly. If
+  ///     the offset is out of bounds or there are not enough bytes to extract
+  ///     this value, the offset will be left unmodified.
+  ///
+  /// @param[in,out] Err
+  ///     A pointer to an Error object. Upon return the Error object is set to
+  ///     indicate the result (success/failure) of the function. If the Error
+  ///     object is already set when calling this function, no extraction is
+  ///     performed.
+  ///
+  /// @return
+  ///     The extracted signed integer value, represented with just enough bits
+  ///     to hold it.
+  LLVM_ABI APSInt getSLEB128APSInt(uint64_t *OffsetPtr,
+                                   Error *Err = nullptr) const;
+
+  /// Extract an arbitrary-precision signed LEB128 value from the location
+  /// given by the cursor. In case of an extraction error, or if the cursor
+  /// is already in an error state, a default-constructed APSInt is returned.
+  APSInt getSLEB128APSInt(Cursor &C) const {
+    return getSLEB128APSInt(&C.Offset, &C.Err);
+  }
 
   /// Advance the Cursor position by the given number of bytes. No-op if the
   /// cursor is in an error state.

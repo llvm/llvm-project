@@ -213,6 +213,72 @@ TEST(DataExtractorTest, LEB128_error) {
                         "malformed uleb128, extends past end"));
 }
 
+TEST(DataExtractorTest, SLEB128APSInt) {
+  {
+    // Values that fit within 64 bits should match getSLEB128() exactly.
+    DataExtractor DE(StringRef(leb128data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(2U, Offset);
+    EXPECT_EQ(64U, Result.getBitWidth());
+    EXPECT_EQ(APSInt::get(-7002ULL), Result);
+  }
+
+  {
+    DataExtractor DE(StringRef(bigleb128data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(8U, Offset);
+    EXPECT_EQ(64U, Result.getBitWidth());
+    EXPECT_EQ(APSInt::get(-29839268287359830LL), Result);
+  }
+
+  {
+    // Same idea, at the INT64_MAX/UINT64_MAX boundary: 2^63 is representable
+    // as an unsigned 64-bit value but overflows int64_t.
+    const char twoPow63Data[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+    DataExtractor DE(StringRef(twoPow63Data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(twoPow63Data), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ(1ULL << 63, Result.getZExtValue());
+  }
+
+  {
+    // INT64_MAX + 1 (aka 2^63 + 1): one past the previous boundary.
+    const char twoPow63Plus1Data[] =
+        "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+    DataExtractor DE(StringRef(twoPow63Plus1Data), false);
+    uint64_t Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(twoPow63Plus1Data), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ((1ULL << 63) + 1, Result.getZExtValue());
+  }
+
+  {
+    // A value greater than INT64_MAX (but no greater than UINT64_MAX) does not
+    // fit in the 64-bit accumulator that getSLEB128() uses, so it requires 65
+    // significant bits (64 magnitude bits, plus a 0 sign bit) to encode as a
+    // positive number. getSLEB128() rejects such an encoding outright, while
+    // getSLEB128APSInt() should grow to accommodate it.
+    const char uint64MaxData[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x01";
+    DataExtractor DE(StringRef(uint64MaxData), false);
+    uint64_t Offset = 0;
+    {
+      llvm::Error Err = llvm::Error::success();
+      EXPECT_EQ(0, DE.getSLEB128(&Offset, &Err));
+      EXPECT_THAT_ERROR(std::move(Err), Failed());
+    }
+    Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(uint64MaxData), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ(UINT64_MAX, Result.getZExtValue());
+  }
+}
+
 TEST(DataExtractorTest, Cursor_tell) {
   DataExtractor DE(StringRef("AB"), false);
   DataExtractor::Cursor C(0);
