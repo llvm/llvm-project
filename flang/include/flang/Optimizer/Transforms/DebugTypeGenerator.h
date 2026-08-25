@@ -167,11 +167,4 @@ private:
 
 } // namespace fir
 
-static uint32_t getLineFromLoc(mlir::Location loc) {
-  uint32_t line = 1;
-  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
-    line = fileLoc.getLine();
-  return line;
-}
-
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H

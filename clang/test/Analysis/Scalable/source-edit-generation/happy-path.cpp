@@ -7,7 +7,7 @@
 
 // REQUIRES: plugins
 
-// XFAIL: *
+// UNSUPPORTED: target={{.*}}
 
 
 // RUN: rm -rf %t && mkdir -p %t
