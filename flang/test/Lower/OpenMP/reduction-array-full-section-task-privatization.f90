@@ -103,17 +103,20 @@
 ! TASKLOOP: omp.taskloop.context {{.*}}reduction(byref @add_reduction_byref_box_4x4xi32
 
 ! TASK-MODIFIER-LABEL: func.func @_QPparallel_task_udr_full_section
-! TASK-MODIFIER: omp.parallel reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
-! TASK-MODIFIER: omp.target {{.*}}in_reduction(byref @{{.*}} %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.parallel reduction(mod: task, byref @"_QQFparallel_task_udr_full_sectionop.+_byref_box_4xi32" %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.target {{.*}}in_reduction(byref @"_QQFparallel_task_udr_full_sectionop.+_byref_box_4xi32" %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 
 ! TASK-MODIFIER-LABEL: func.func @_QPsections_task_udr_full_section
-! TASK-MODIFIER: omp.sections reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.sections reduction(mod: task, byref @"_QQFsections_task_udr_full_sectionop.+_byref_box_4xi32" %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 
 ! TASK-MODIFIER-LABEL: func.func @_QPscope_task_udr_full_section
-! TASK-MODIFIER: omp.scope reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.scope reduction(mod: task, byref @"_QQFscope_task_udr_full_sectionop.+_byref_box_4xi32" %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 
 ! TASK-MODIFIER-LABEL: func.func @_QPdo_task_udr_full_section
-! TASK-MODIFIER: omp.wsloop {{.*}}reduction(mod: task, byref @{{.*}} %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+! TASK-MODIFIER: omp.wsloop {{.*}}reduction(mod: task, byref @"_QQFdo_task_udr_full_sectionop.+_byref_box_4xi32" %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
+
+! TASK-MODIFIER-LABEL: func.func @_QPparallel_task_intrinsic_max_element
+! TASK-MODIFIER: omp.parallel reduction(mod: task, byref @max_byref_box_4xi32 %{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 
 !--- task.f90
 subroutine task_full_section(a)
@@ -262,4 +265,11 @@ subroutine do_task_udr_full_section(a)
     a(:) = a(:) + i
   end do
   !$omp end do
+end subroutine
+
+subroutine parallel_task_intrinsic_max_element(a)
+  integer :: a(4)
+  !$omp parallel reduction(task, max : a(2))
+  a(2) = max(a(2), 1)
+  !$omp end parallel
 end subroutine
