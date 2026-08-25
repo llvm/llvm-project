@@ -3501,6 +3501,8 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       Register TrueReg = RI.lookThruCopyLike(Reg, MRI);
       if (TrueReg.isVirtual()) {
         MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
+        if (!DefMIForTrueReg)
+          continue;
         if (DefMIForTrueReg->getOpcode() == PPC::LI ||
             DefMIForTrueReg->getOpcode() == PPC::LI8 ||
             DefMIForTrueReg->getOpcode() == PPC::ADDI ||
