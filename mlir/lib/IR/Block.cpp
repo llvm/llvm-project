@@ -68,6 +68,16 @@ void Block::erase() {
   getParent()->getBlocks().erase(this);
 }
 
+bool Block::isBeforeInBlock(iterator a, iterator b) {
+  if (a == b)
+    return false;
+  if (a == end())
+    return false;
+  if (b == end())
+    return true;
+  return a->isBeforeInBlock(&*b);
+}
+
 /// Returns 'op' if 'op' lies in this block, or otherwise finds the
 /// ancestor operation of 'op' that lies in this block. Returns nullptr if
 /// the latter fails.
