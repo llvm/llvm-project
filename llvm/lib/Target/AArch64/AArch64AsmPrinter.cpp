@@ -3259,8 +3259,8 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
 void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
 
   unsigned StOpc;
-  unsigned Order = MI->getOperand(2).getImm();
-  bool Relaxed = Order == 2;
+  unsigned Relaxed = MI->getOperand(2).getImm();
+  assert(Relaxed < 2 && "Atomic hint relaxed immediate out-of-bounds");
   switch (MI->getOpcode()) {
   case AArch64::ATOMIC_STORE_HINT_B:
     StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
@@ -3268,10 +3268,10 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_H:
     StOpc = Relaxed ? AArch64::STRHHui : AArch64::STLRH;
     break;
-  case AArch64::ATOMIC_STORE_HINT_S:
+  case AArch64::ATOMIC_STORE_HINT_W:
     StOpc = Relaxed ? AArch64::STRWui : AArch64::STLRW;
     break;
-  case AArch64::ATOMIC_STORE_HINT_D:
+  case AArch64::ATOMIC_STORE_HINT_X:
     StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
     break;
   default:
@@ -3294,8 +3294,7 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
 void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
     const MachineInstr *MI) {
   unsigned StOpc;
-  unsigned Order = MI->getOperand(5).getImm();
-  assert(Order == 2 &&
+  assert(MI->getOperand(5).getImm() == 1 &&
          "Atomic store addressing mode only supports relaxed stores");
 
   switch (MI->getOpcode()) {
@@ -3305,11 +3304,17 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
   case AArch64::ATOMIC_STORE_HINT_HroW:
     StOpc = AArch64::STRHHroW;
     break;
-  case AArch64::ATOMIC_STORE_HINT_SroW:
+  case AArch64::ATOMIC_STORE_HINT_WroW:
     StOpc = AArch64::STRWroW;
     break;
-  case AArch64::ATOMIC_STORE_HINT_DroW:
+  case AArch64::ATOMIC_STORE_HINT_XroW:
     StOpc = AArch64::STRXroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroW:
+    StOpc = AArch64::STRSroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroW:
+    StOpc = AArch64::STRDroW;
     break;
   case AArch64::ATOMIC_STORE_HINT_BroX:
     StOpc = AArch64::STRBBroX;
@@ -3317,11 +3322,17 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
   case AArch64::ATOMIC_STORE_HINT_HroX:
     StOpc = AArch64::STRHHroX;
     break;
-  case AArch64::ATOMIC_STORE_HINT_SroX:
+  case AArch64::ATOMIC_STORE_HINT_WroX:
     StOpc = AArch64::STRWroX;
     break;
-  case AArch64::ATOMIC_STORE_HINT_DroX:
+  case AArch64::ATOMIC_STORE_HINT_XroX:
     StOpc = AArch64::STRXroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroX:
+    StOpc = AArch64::STRSroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroX:
+    StOpc = AArch64::STRDroX;
     break;
   default:
     llvm_unreachable("Unexpected atomic hint opcode.");
@@ -3344,8 +3355,7 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
 void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
     const MachineInstr *MI) {
   unsigned StOpc;
-  unsigned Order = MI->getOperand(3).getImm();
-  assert(Order == 2 &&
+  assert(MI->getOperand(3).getImm() == 1 &&
          "Atomic store addressing mode only supports relaxed stores");
 
   switch (MI->getOpcode()) {
@@ -3355,11 +3365,17 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   case AArch64::ATOMIC_STORE_HINT_Hui:
     StOpc = AArch64::STRHHui;
     break;
-  case AArch64::ATOMIC_STORE_HINT_Sui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
     StOpc = AArch64::STRWui;
     break;
-  case AArch64::ATOMIC_STORE_HINT_Dui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
     StOpc = AArch64::STRXui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+    StOpc = AArch64::STRSui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Dui:
+    StOpc = AArch64::STRDui;
     break;
   case AArch64::ATOMIC_STORE_HINT_Bi:
     StOpc = AArch64::STURBBi;
@@ -3367,11 +3383,17 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   case AArch64::ATOMIC_STORE_HINT_Hi:
     StOpc = AArch64::STURHHi;
     break;
-  case AArch64::ATOMIC_STORE_HINT_Si:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
     StOpc = AArch64::STURWi;
     break;
-  case AArch64::ATOMIC_STORE_HINT_Di:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
     StOpc = AArch64::STURXi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Si:
+    StOpc = AArch64::STURSi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Di:
+    StOpc = AArch64::STURDi;
     break;
   default:
     llvm_unreachable("Unexpected atomic hint opcode.");
@@ -4099,26 +4121,34 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   case AArch64::ATOMIC_STORE_HINT_B:
   case AArch64::ATOMIC_STORE_HINT_H:
-  case AArch64::ATOMIC_STORE_HINT_S:
-  case AArch64::ATOMIC_STORE_HINT_D:
+  case AArch64::ATOMIC_STORE_HINT_W:
+  case AArch64::ATOMIC_STORE_HINT_X:
     emitAtomicHintPseudoExpansion(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_BroW:
   case AArch64::ATOMIC_STORE_HINT_HroW:
+  case AArch64::ATOMIC_STORE_HINT_WroW:
+  case AArch64::ATOMIC_STORE_HINT_XroW:
   case AArch64::ATOMIC_STORE_HINT_SroW:
   case AArch64::ATOMIC_STORE_HINT_DroW:
   case AArch64::ATOMIC_STORE_HINT_BroX:
   case AArch64::ATOMIC_STORE_HINT_HroX:
+  case AArch64::ATOMIC_STORE_HINT_WroX:
+  case AArch64::ATOMIC_STORE_HINT_XroX:
   case AArch64::ATOMIC_STORE_HINT_SroX:
   case AArch64::ATOMIC_STORE_HINT_DroX:
     emitAtomicHintPseudoExpansionRO(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_Bui:
   case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
   case AArch64::ATOMIC_STORE_HINT_Sui:
   case AArch64::ATOMIC_STORE_HINT_Dui:
   case AArch64::ATOMIC_STORE_HINT_Bi:
   case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
   case AArch64::ATOMIC_STORE_HINT_Si:
   case AArch64::ATOMIC_STORE_HINT_Di:
     emitAtomicHintPseudoExpansionImm(MI);

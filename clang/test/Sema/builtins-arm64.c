@@ -65,6 +65,8 @@ void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, inv_int, 0); // expected-error {{invalid memory order argument to atomic hint operation ('int' invalid)}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 2, 0); // expected-error {{invalid memory order argument to atomic hint operation (2 invalid)}}
 
-  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, inv_int); // expected-warning {{unrecognised hint type argument to atomic hint operation ('int')}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 3); // expected-warning {{unrecognised hint type argument to atomic hint operation (3)}}
+
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, inv_int); // expected-error {{invalid hint type argument to atomic hint operation ('int')}}
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, "h"); // expected-error {{invalid hint type argument to atomic hint operation ('char *')}}
 }

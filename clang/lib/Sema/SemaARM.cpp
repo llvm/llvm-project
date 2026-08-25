@@ -17,7 +17,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/Support/AArch64AtomicHints.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 
 namespace clang {
 
@@ -343,7 +343,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
            << PtrArg->getType() << 0 << PtrArg->getSourceRange();
   QualType PtrQT = PtrTy->getPointeeType();
 
-  if (!PtrQT->isIntegralType(getASTContext()) && !PtrQT->isFloatingType() &&
+  if (!PtrQT->isIntegralType(Context) && !PtrQT->isFloatingType() &&
       !PtrQT->isMFloat8Type())
     return Diag(TheCall->getBeginLoc(),
                 diag::err_atomic_op_needs_atomic_int_or_fp)
@@ -391,20 +391,19 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
                 diag::err_atomic_hint_has_invalid_memory_order)
            << *MemOrdAP << MemOrdArg->getSourceRange();
 
-  // Arg 3 is the hint type. Only values represented by AArch64AtomicStoreHint
+  // Arg 3 is the hint type. Only values represented by AArch64MemoryHint
   // are valid.
   auto HintArg =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
   std::optional<llvm::APSInt> HintAP = HintArg->getIntegerConstantExpr(Context);
-  if (!HintAP) {
-    Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
+  if (!HintAP || !HintArg->getType()->isIntegralType(Context)) {
+    Diag(TheCall->getBeginLoc(), diag::err_atomic_hint_has_invalid_hint_type)
         << HintArg->getType() << HintArg->getSourceRange();
     return false;
   }
 
   unsigned Hint = HintAP->getZExtValue();
-  if (llvm::getAtomicStoreHintFromMD(Hint) ==
-      llvm::AArch64AtomicStoreHint::HINT_NONE)
+  if (llvm::toAArch64Hint(Hint) == llvm::AArch64MemoryHint::HINT_NONE)
     Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
         << *HintAP << HintArg->getSourceRange();
 
