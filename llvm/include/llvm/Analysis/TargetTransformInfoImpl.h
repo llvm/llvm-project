@@ -612,6 +612,11 @@ public:
   }
 
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
+
+  virtual std::optional<unsigned> getRegisterBudget(const Function &F) const {
+    return std::nullopt;
+  }
+
   virtual bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
     return false;
   }
