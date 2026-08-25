@@ -46,7 +46,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2354,61 +2353,6 @@ getAccLoopDoStmtEval(Fortran::lower::pft::Evaluation &eval) {
   return nullptr;
 }
 
-/// Reject a valued gang/worker/vector clause on a loop that is not associated
-/// with a kernels construct.
-static void checkLoopLevelClauseValueInKernels(
-    fir::FirOpBuilder &builder, mlir::Operation *parentCompute,
-    mlir::Location loc,
-    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs,
-    llvm::StringRef clauseName) {
-  llvm::acc::Directive parentDir = llvm::acc::Directive::ACCD_loop;
-  if (combinedConstructs == mlir::acc::CombinedConstructsType::ParallelLoop)
-    parentDir = llvm::acc::Directive::ACCD_parallel_loop;
-  else if (combinedConstructs == mlir::acc::CombinedConstructsType::SerialLoop)
-    parentDir = llvm::acc::Directive::ACCD_serial_loop;
-  else if (mlir::isa_and_present<mlir::acc::ParallelOp>(parentCompute))
-    parentDir = llvm::acc::Directive::ACCD_parallel_loop;
-  else if (mlir::isa_and_present<mlir::acc::SerialOp>(parentCompute))
-    parentDir = llvm::acc::Directive::ACCD_serial_loop;
-  else if (mlir::acc::isAccRoutine(builder.getFunction().getOperation()))
-    parentDir = llvm::acc::Directive::ACCD_routine;
-
-  llvm::StringRef notAllowed =
-      parentDir == llvm::acc::Directive::ACCD_routine
-          ? "' not allowed in subprogram compiled with "
-          : "' not allowed in ";
-  fir::emitFatalError(
-      loc,
-      llvm::Twine("'") + clauseName + "(value)" + notAllowed +
-          Fortran::parser::ToUpperCaseLetters(
-              llvm::acc::getOpenACCDirectiveName(parentDir).str()) +
-          " directive",
-      /*genCrashDiag=*/false);
-}
-
-/// Reject a valued gang/worker/vector clause when the enclosing kernels
-/// construct already specifies the corresponding size clause.
-static void checkLoopLevelClauseConflictsWithKernels(
-    mlir::Operation *parentCompute, mlir::Location loc,
-    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs,
-    llvm::StringRef loopClauseName, llvm::StringRef kernelsClauseName,
-    llvm::function_ref<bool(mlir::acc::KernelsOp)> hasKernelsClause) {
-  auto kernelsOp =
-      mlir::dyn_cast_if_present<mlir::acc::KernelsOp>(parentCompute);
-  if (!kernelsOp || !hasKernelsClause(kernelsOp))
-    return;
-
-  llvm::StringRef dirName =
-      combinedConstructs == mlir::acc::CombinedConstructsType::KernelsLoop
-          ? "KERNELS LOOP"
-          : "KERNELS";
-  fir::emitFatalError(loc,
-                      llvm::Twine("'") + loopClauseName +
-                          "(value)' not allowed in " + dirName +
-                          " region that has a " + kernelsClauseName + " clause",
-                      /*genCrashDiag=*/false);
-}
-
 static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2440,40 +2384,12 @@ static mlir::acc::LoopOp createLoopOp(
   crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
       builder.getContext(), mlir::acc::DeviceType::None));
 
-  // A valued gang/worker/vector clause is only allowed when the loop is
-  // associated with a kernels construct, and then only when the kernels
-  // construct does not already specify the corresponding size clause.
-  mlir::Operation *parentCompute =
-      mlir::acc::getEnclosingComputeOp(*builder.getBlock()->getParent());
-  bool isKernels =
-      mlir::isa_and_present<mlir::acc::KernelsOp>(parentCompute) ||
-      combinedConstructs == mlir::acc::CombinedConstructsType::KernelsLoop;
-
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *gangClause =
             std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
       if (gangClause->v) {
         const Fortran::parser::AccGangArgList &x = *gangClause->v;
-        // Only the num argument is restricted to kernels. The static and dim
-        // arguments are allowed on any loop.
-        bool hasNumArg =
-            llvm::any_of(x.v, [](const Fortran::parser::AccGangArg &gangArg) {
-              return std::holds_alternative<Fortran::parser::AccGangArg::Num>(
-                  gangArg.u);
-            });
-        if (hasNumArg) {
-          if (!isKernels)
-            checkLoopLevelClauseValueInKernels(builder, parentCompute,
-                                               clauseLocation,
-                                               combinedConstructs, "Gang");
-          else
-            checkLoopLevelClauseConflictsWithKernels(
-                parentCompute, clauseLocation, combinedConstructs, "Gang",
-                "NUM_GANGS", [](mlir::acc::KernelsOp op) {
-                  return !op.getNumGangs().empty();
-                });
-        }
         mlir::SmallVector<mlir::Value> gangValues;
         mlir::SmallVector<mlir::Attribute> gangArgs;
         for (const Fortran::parser::AccGangArg &gangArg : x.v) {
@@ -2522,16 +2438,6 @@ static mlir::acc::LoopOp createLoopOp(
     } else if (const auto *workerClause =
                    std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
       if (workerClause->v) {
-        if (!isKernels)
-          checkLoopLevelClauseValueInKernels(builder, parentCompute,
-                                             clauseLocation, combinedConstructs,
-                                             "Worker");
-        else
-          checkLoopLevelClauseConflictsWithKernels(
-              parentCompute, clauseLocation, combinedConstructs, "Worker",
-              "NUM_WORKERS", [](mlir::acc::KernelsOp op) {
-                return !op.getNumWorkers().empty();
-              });
         mlir::Value workerNumValue = fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(*workerClause->v), stmtCtx));
         for (auto crtDeviceTypeAttr : crtDeviceTypes) {
@@ -2545,16 +2451,6 @@ static mlir::acc::LoopOp createLoopOp(
     } else if (const auto *vectorClause =
                    std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
       if (vectorClause->v) {
-        if (!isKernels)
-          checkLoopLevelClauseValueInKernels(builder, parentCompute,
-                                             clauseLocation, combinedConstructs,
-                                             "Vector");
-        else
-          checkLoopLevelClauseConflictsWithKernels(
-              parentCompute, clauseLocation, combinedConstructs, "Vector",
-              "VECTOR_LENGTH", [](mlir::acc::KernelsOp op) {
-                return !op.getVectorLength().empty();
-              });
         mlir::Value vectorValue = fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(*vectorClause->v), stmtCtx));
         for (auto crtDeviceTypeAttr : crtDeviceTypes) {

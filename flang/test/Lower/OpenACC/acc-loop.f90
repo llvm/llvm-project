@@ -72,6 +72,42 @@ program acc_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
+! A GANG clause with a num argument requires the loop to be associated with a
+! kernels construct, which also makes the loop default to auto.
+  !$acc kernels
+  !$acc loop gang(num: 8)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+
+! CHECK:      [[GANGNUM1:%.*]] = arith.constant 8 : i32
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop gang({num=[[GANGNUM1]] : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
+
+  !$acc loop gang(num: gangNum)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+
+! CHECK:      [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop gang({num=[[GANGNUM2]] : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
+
+ !$acc loop gang(num: gangNum, static: gangStatic)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+  !$acc end kernels
+
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
+
   !$acc loop vector
   DO i = 1, n
     a(i) = b(i)
@@ -82,6 +118,32 @@ program acc_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
+! A VECTOR clause with a value requires the loop to be associated with a
+! kernels construct, which also makes the loop default to auto.
+  !$acc kernels
+  !$acc loop vector(128)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+
+! CHECK:      [[CONSTANT128:%.*]] = arith.constant 128 : i32
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop vector([[CONSTANT128]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
+
+  !$acc loop vector(vectorLength)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+  !$acc end kernels
+
+! CHECK:      [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop vector([[VECTORLENGTH]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
+
 !$acc loop worker
   DO i = 1, n
     a(i) = b(i)
@@ -91,6 +153,21 @@ program acc_loop
 ! CHECK:      acc.loop worker private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
+
+! A WORKER clause with a value requires the loop to be associated with a
+! kernels construct, which also makes the loop default to auto.
+  !$acc kernels
+  !$acc loop worker(128)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+  !$acc end kernels
+
+! CHECK:      [[WORKER128:%.*]] = arith.constant 128 : i32
+! CHECK:      %[[PRIVATE_I:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
+! CHECK:      acc.loop worker([[WORKER128]] : i32) private(%[[PRIVATE_I]] : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:        acc.yield
+! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) auto_
 
   !$acc loop private(c)
   DO i = 1, n
@@ -298,6 +375,16 @@ program acc_loop
   do 100 i=0, n
   100 continue
 ! CHECK: acc.loop
+
+! A GANG clause with a num argument requires the loop to be associated with a
+! kernels construct.
+  !$acc kernels
+  !$acc loop gang device_type(nvidia) gang(8)
+  DO i = 1, n
+  END DO
+  !$acc end kernels
+
+! CHECK: acc.loop gang([#acc.device_type<none>], {num=%c8{{.*}} : i32} [#acc.device_type<nvidia>])
 
   !$acc loop device_type(nvidia, default) gang
   DO i = 1, n

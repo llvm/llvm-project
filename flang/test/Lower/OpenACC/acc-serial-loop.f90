@@ -446,6 +446,9 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
+! A GANG clause with a num argument is only allowed on a loop associated with
+! a kernels construct, so it is covered by acc-kernels-loop.f90 instead.
+
   !$acc serial loop vector
   DO i = 1, n
     a(i) = b(i)
@@ -458,6 +461,9 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
+! A VECTOR clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
+
   !$acc serial loop worker
   DO i = 1, n
     a(i) = b(i)
@@ -469,6 +475,9 @@ subroutine acc_serial_loop
 ! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
+
+! A WORKER clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc serial loop collapse(2)
   DO i = 1, n

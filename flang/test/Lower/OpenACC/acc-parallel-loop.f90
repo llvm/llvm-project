@@ -509,6 +509,9 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
+! A GANG clause with a num argument is only allowed on a loop associated with
+! a kernels construct, so it is covered by acc-kernels-loop.f90 instead.
+
   !$acc parallel loop vector
   DO i = 1, n
     a(i) = b(i)
@@ -520,6 +523,9 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
+
+! A VECTOR clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop worker
   DO i = 1, n
@@ -533,6 +539,9 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
+
+! A WORKER clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop collapse(2)
   DO i = 1, n
