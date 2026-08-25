@@ -21,6 +21,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 
 namespace lld::coff {
@@ -357,6 +358,11 @@ struct Configuration {
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
   BuildIDHash buildIDHash = BuildIDHash::None;
+  llvm::StringRef optRemarksFilename;
+  llvm::StringRef optRemarksPasses;
+  llvm::StringRef optRemarksFormat;
+  bool optRemarksWithHotness = false;
+  std::optional<uint64_t> optRemarksHotnessThreshold = 0;
 };
 
 struct COFFSyncStream : SyncStream {

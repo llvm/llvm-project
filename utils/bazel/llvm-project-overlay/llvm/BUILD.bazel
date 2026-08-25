@@ -86,10 +86,19 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_armv7",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:armv7",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "linux_ppc64le",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:ppc",
+        "@platforms//cpu:ppc64le",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2051,6 +2060,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -2061,6 +2071,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",

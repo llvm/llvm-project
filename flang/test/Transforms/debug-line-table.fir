@@ -28,7 +28,7 @@ module {
 // FULL: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "{{.*}}flang{{.*}}", emissionKind = Full>
 // OPT: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "{{.*}}flang{{.*}}", isOptimized = true, emissionKind = Full>
 // LINETABLE: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "{{.*}}flang{{.*}}", emissionKind = LineTablesOnly>
-// DIRECTIVES: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "{{.*}}flang{{.*}}", emissionKind = DebugDirectivesOnly>
+// DIRECTIVES: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, producer = "{{.*}}flang{{.*}}", emissionKind = DebugDirectivesOnly, nameTableKind = None>
 // CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #di_basic_type, #di_basic_type>
 // CHECK: #[[SB_SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "[[SB_NAME]]", linkageName = "[[SB_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #[[DECL_SUBPROGRAM:.*]] = #llvm.di_subprogram<scope = #di_file, name = "[[DECL_NAME]]", linkageName = "[[DECL_NAME]]", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = Optimized, type = #di_subroutine_type>

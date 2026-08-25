@@ -892,7 +892,7 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
     Result.NoPartialOOB = true;
 
   const SCEV *BoundsDiff;
-  if (ST->has45BitNumRecordsBufferResource()) {
+  if (ST->getBufferResourceNumRecordsWidth() == 45) {
     const SCEV *PtrDiffExt =
         SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
     BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
