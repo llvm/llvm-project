@@ -723,6 +723,13 @@ public:
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
+  /// Attach use-specific no-wrap \p Flags to \p S and record the use.
+  SCEVUse getUseWithFlags(const SCEV *S, SCEVNoWrapFlags Flags) {
+    SCEVUse U(S, Flags);
+    registerFlaggedUse(U);
+    return U;
+  }
+
   /// Return true if the SCEV expression contains an undef value.
   LLVM_ABI bool containsUndefs(const SCEV *S) const;
 
@@ -961,10 +968,10 @@ public:
   ///
   /// In the case that a relevant loop exit value cannot be computed, the
   /// original value V is returned.
-  LLVM_ABI const SCEV *getSCEVAtScope(const SCEV *S, const Loop *L);
+  LLVM_ABI SCEVUse getSCEVAtScope(SCEVUse S, const Loop *L);
 
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
-  LLVM_ABI const SCEV *getSCEVAtScope(Value *V, const Loop *L);
+  LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
 
   /// Test whether entry to the loop is protected by a conditional between LHS
   /// and RHS.  This is used to help avoid max expressions in loop trip
@@ -1920,13 +1927,16 @@ private:
   /// This map contains entries for all the expressions that we attempt to
   /// compute getSCEVAtScope information for, which can be expensive in
   /// extreme cases.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<SCEVUse, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopes;
 
   /// Reverse map for invalidation purposes: Stores of which SCEV and which
   /// loop this is the value-at-scope of.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<SCEVUse, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopesUsers;
+
+  /// Map canonical SCEV to SCEVUse variants created for it.
+  DenseMap<const SCEV *, SmallSetVector<SCEVUse, 2>> FlaggedUses;
 
   /// Memoized computeLoopDisposition results.
   DenseMap<const SCEV *,
@@ -2082,7 +2092,7 @@ private:
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.
-  const SCEV *computeSCEVAtScope(const SCEV *S, const Loop *L);
+  SCEVUse computeSCEVAtScope(SCEVUse S, const Loop *L);
 
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
@@ -2390,7 +2400,14 @@ private:
   void forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs);
 
   /// Helper for forgetMemoizedResults.
-  void forgetMemoizedResultsImpl(const SCEV *S);
+  void forgetMemoizedResultsImpl(SCEVUse S);
+
+  /// If \p U carries use-specific flags, record it as a flagged use of the
+  /// underlying canonical SCEV.
+  void registerFlaggedUse(SCEVUse U) {
+    if (U.hasUseFlags())
+      FlaggedUses[U.getPointer()].insert(U);
+  }
 
   /// Iterate over instructions in \p Worklist and their users. Erase entries
   /// from ValueExprMap and collect SCEV expressions in \p ToForget
