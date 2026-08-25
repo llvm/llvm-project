@@ -9844,6 +9844,11 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_invalid_use_of_managedvar: Error<"invalid use of a __managed__ "
+    "variable">;
+def note_cuda_managed_var_in_glob_init : Note<"__managed__ variable shall not "
+    "be used in initialization of an object with static or thread local "
+    "storage duration">;
 def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
     "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
@@ -13358,7 +13363,7 @@ def warn_invalid_default_version_priority
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
+  "cannot %select{use builtin operator '<=>'|default 'operator<=>'|compute order}1 "
   "because type '%0' was not found; include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "

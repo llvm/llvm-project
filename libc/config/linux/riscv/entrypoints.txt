@@ -383,6 +383,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/sysinfo.h entrypoints
+    # Disabled due to QEMU test failures.
+    # libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -706,12 +710,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogbl
     libc.src.math.iscanonical
     libc.src.math.iscanonicalf
+    libc.src.math.iscanonicalf128
     libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
+    libc.src.math.isnanf128
     libc.src.math.isnanl
     libc.src.math.issignaling
     libc.src.math.issignalingf
+    libc.src.math.issignalingf128
     libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
@@ -721,6 +728,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -739,6 +747,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logf
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
@@ -776,6 +785,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.round
     libc.src.math.roundeven
@@ -819,6 +829,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
@@ -1010,14 +1021,9 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
-    libc.src.math.iscanonicalf128
-    libc.src.math.isnanf128
-    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
-    libc.src.math.llrintf128
     libc.src.math.logbf128
-    libc.src.math.lrintf128
     libc.src.math.modff128
     libc.src.math.nanf128
     libc.src.math.nextafterf128
@@ -1025,14 +1031,12 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.nextupf128
     libc.src.math.remainderf128
     libc.src.math.remquof128
-    libc.src.math.rintf128
     libc.src.math.scalblnf128
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
-    libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
   )
@@ -1299,6 +1303,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
@@ -1512,6 +1517,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1525,6 +1531,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # locale.h entrypoints
     libc.src.locale.localeconv

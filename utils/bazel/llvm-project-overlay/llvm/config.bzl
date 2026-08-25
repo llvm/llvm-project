@@ -28,8 +28,6 @@ def native_arch_defines(arch, triple):
 
 posix_defines = [
     "LLVM_ON_UNIX=1",
-    r'LTDL_SHLIB_EXT=\".so\"',
-    r'LLVM_PLUGIN_EXT=\".so\"',
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
@@ -44,6 +42,11 @@ posix_defines = [
     "HAVE_SYSEXITS_H=1",
     "HAVE_SYS_IOCTL_H=1",
     "HAVE_UNISTD_H=1",
+]
+
+posix_so_defines = posix_defines + [
+    r'LTDL_SHLIB_EXT=\".so\"',
+    r'LLVM_PLUGIN_EXT=\".so\"',
 ]
 
 emscripten_defines = [
@@ -81,7 +84,7 @@ mallinfo_defines = select({
     "//conditions:default": [],
 })
 
-linux_defines = posix_defines + fenv_defines + [
+linux_defines = posix_so_defines + fenv_defines + [
     "_GNU_SOURCE",
     "HAVE_GETAUXVAL=1",
     "HAVE_SBRK=1",
@@ -89,6 +92,8 @@ linux_defines = posix_defines + fenv_defines + [
 ]
 
 macos_defines = posix_defines + fenv_defines + [
+    r'LTDL_SHLIB_EXT=\".dylib\"',
+    r'LLVM_PLUGIN_EXT=\".dylib\"',
     "HAVE_MACH_MACH_H=1",
     "HAVE_MALLOC_MALLOC_H=1",
     "HAVE_MALLOC_ZONE_STATISTICS=1",
@@ -110,13 +115,14 @@ win32_defines = [
     # LLVM features
     r'LTDL_SHLIB_EXT=\".dll\"',
     r'LLVM_PLUGIN_EXT=\".dll\"',
+    "LLVM_ENABLE_THREADS=1",
 ] + fenv_defines
 
 # TODO: We should switch to platforms-based config settings to make this easier
 # to express.
 os_defines = select({
     "@platforms//os:emscripten": emscripten_defines,
-    "@platforms//os:freebsd": posix_defines + fenv_defines,
+    "@platforms//os:freebsd": posix_so_defines + fenv_defines,
     "@platforms//os:macos": macos_defines,
     "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
@@ -131,11 +137,21 @@ builtin_thread_pointer = select({
     "//conditions:default": [],
 })
 
+windows_prefer_forward_slash = select({
+    Label("//llvm:is_windows_clang_mingw"): ["LLVM_WINDOWS_PREFER_FORWARD_SLASH=1"],
+    "//conditions:default": ["LLVM_WINDOWS_PREFER_FORWARD_SLASH=0"],
+})
+
 # TODO: We should split out host vs. target here.
-llvm_config_defines = os_defines + builtin_thread_pointer + select({
+llvm_config_defines = os_defines + builtin_thread_pointer + windows_prefer_forward_slash + select({
+    Label("//llvm:is_aarch64_windows_clang_mingw"): native_arch_defines("AArch64", "aarch64-w64-windows-gnu"),
+    Label("//llvm:is_aarch64_windows_clang_cl"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
+    Label("//llvm:is_aarch64_windows_msvc"): native_arch_defines("AArch64", "aarch64-pc-windows-msvc"),
+    Label("//llvm:is_x86_64_windows_clang_mingw"): native_arch_defines("X86", "x86_64-w64-windows-gnu"),
     Label("//llvm:darwin_arm64"): native_arch_defines("AArch64", "arm64-apple-darwin"),
     Label("//llvm:darwin_x86_64"): native_arch_defines("X86", "x86_64-unknown-darwin"),
     Label("//llvm:linux_aarch64"): native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
+    Label("//llvm:linux_armv7"): native_arch_defines("ARM", "armv7-linux-gnueabihf"),
     Label("//llvm:linux_ppc64le"): native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
     Label("//llvm:linux_riscv64"): native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
     Label("//llvm:linux_s390x"): native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
