@@ -53,13 +53,12 @@
 // Between them the two images still offer both kernels of the translation unit,
 // and the split program links and runs as one image did.
 // RUN: FileCheck %s --check-prefix=MAIN-IMAGE --input-file=%t/main.split.image
-// RUN: %clangxx -fsycl -fno-sycl-rdc -nolibsycl %t/main.split.o %t/second.o \
-// RUN:   -o %t/nordc-split
+// RUN: %clangxx -fsycl -nolibsycl %t/main.split.o %t/second.o -o %t/nordc-split
 // RUN: %t/nordc-split | FileCheck %s --check-prefix=NORDC-OUT
 
 // Both images are registered before the other static initializers of the
 // program run, and unregistered after main returns.
-// RUN: %clangxx -fsycl -fno-sycl-rdc -nolibsycl %t/main.o %t/second.o -o %t/nordc
+// RUN: %clangxx -fsycl -nolibsycl %t/main.o %t/second.o -o %t/nordc
 // RUN: %t/nordc | FileCheck %s --check-prefix=NORDC-OUT
 // NORDC-OUT: registered image 1
 // NORDC-OUT-NEXT: registered image 2
@@ -73,8 +72,7 @@
 // RUN: %clangxx -fsycl -fsycl-rdc -c %s -o %t/main.rdc.o
 // RUN: %clangxx -fsycl -fsycl-rdc -c \
 // RUN:   %S/Inputs/sycl-nordc-registration-second-tu.cpp -o %t/second.rdc.o
-// RUN: %clangxx -fsycl -fsycl-rdc -nolibsycl %t/main.rdc.o %t/second.rdc.o \
-// RUN:   -o %t/rdc
+// RUN: %clangxx -fsycl -nolibsycl %t/main.rdc.o %t/second.rdc.o -o %t/rdc
 // RUN: %t/rdc | FileCheck %s --check-prefix=RDC-OUT
 // RDC-OUT: registered image 1
 // RDC-OUT-NEXT: static initializer sees 1
