@@ -77,11 +77,11 @@ namespace {
 // bool / floating-point scalars are handled, as are struct / union / array
 // aggregates, `_Complex`, and a fixed-width vector whose width is a power
 // of two.  Other vectors, a padded record reached through a named bit-field
-// access unit, a record holding an empty-for-ABI member that occupies
-// bytes or a zero-sized one off its own alignment, a union no member of
-// which spans its declared size, and a union whose only spanning member is
-// a bit-field access unit are reported NYI by classifyX86_64Function so an
-// unsupported signature fails the pass instead of being misclassified.
+// access unit, a record holding an empty-for-ABI member that occupies bytes
+// or a zero-sized one off its own alignment, a union no member of which spans
+// its declared size, and a union with a bit-field access unit no spanning
+// member of which supplies data are reported NYI by classifyX86_64Function
+// so an unsupported signature fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -240,9 +240,13 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         // itself or another member.
         llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
         if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
-            !llvm::any_of(members, [&](mlir::Type m) {
-              return spansRecord(m) && !memberIsEmptyRecord(m);
-            }))
+            !llvm::any_of(llvm::zip_equal(members, kinds),
+                          [&](const auto &pair) {
+                            auto [memberTy, kind] = pair;
+                            return spansRecord(memberTy) &&
+                                   cir::holdsDataForABI(memberTy, kind) &&
+                                   !memberIsEmptyRecord(memberTy);
+                          }))
           return false;
       }
     } else if (recTy.getPadded() && reachesNamedBitFieldUnit(recTy)) {
