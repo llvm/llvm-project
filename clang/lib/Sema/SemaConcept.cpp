@@ -2005,7 +2005,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
       break;
     }
   } else if (auto *RE = dyn_cast<RequiresExpr>(SubstExpr)) {
-    S.DiagnoseUnsatisfiedRequiresExpr(RE);
+    S.DiagnoseUnsatisfiedRequiresExpr(RE, First);
     return;
   } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(SubstExpr)) {
     // Drill down concept ids treated as atomic constraints

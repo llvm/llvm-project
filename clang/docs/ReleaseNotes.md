@@ -421,6 +421,8 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Clang now diagnoses more details when a constraint evaluates to false.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
