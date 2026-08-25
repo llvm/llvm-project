@@ -25,16 +25,16 @@
 // SINGLEHEADER: "-cc1"
 // SINGLEHEADER: "-emit-pch"
 // SINGLEHEADER: "-o"
-// SINGLEHEADER: tmp1.pch
+// SINGLEHEADER: tmp1.pch"
 
 
 // Multiple header files input compiles to one .pch each even without --precompile
 // RUN: %clang %S/Inputs/header1.h %S/Inputs/header2.h -### 2>&1 | FileCheck %s --check-prefix=MULTIHEADER
 // MULTIHEADER: "-cc1"
-// MULTIHEADER: -emit-pch
+// MULTIHEADER: "-emit-pch"
 // MULTIHEADER: "-o"
 // MULTIHEADER: header1.h.pch"
 // MULTIHEADER: "-cc1"
-// MULTIHEADER: -emit-pch
+// MULTIHEADER: "-emit-pch"
 // MULTIHEADER: "-o"
 // MULTIHEADER: header2.h.pch"
