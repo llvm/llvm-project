@@ -15,49 +15,51 @@
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone in {
-  def VABS_V : VALUVs2<0b010010, 0b10000, OPMVV, "vabs.v">;
+  def VABD_VV  : VALUVV<0b010101, OPMVV, "vabd.vv">;
+  def VABD_VX  : VALUVX<0b010101, OPMVX, "vabd.vx">;
+  def VABDU_VV : VALUVV<0b010110, OPMVV, "vabdu.vv">;
+  def VABDU_VX : VALUVX<0b010110, OPMVX, "vabdu.vx">;
 
-  def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
-  def VABDU_VV : VALUVV<0b010011, OPMVV, "vabdu.vv">;
-
-  let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV in {
-    def VWABDA_VV  : VALUVV<0b010101, OPMVV, "vwabda.vv">;
-    def VWABDAU_VV : VALUVV<0b010110, OPMVV, "vwabdau.vv">;
-  } // Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV
+  let Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2,
+      VS1VS2Constraint = WidenV in {
+    def VWABDA_VV  : VALUVV<0b111101, OPIVV, "vwabda.vv">;
+    def VWABDA_VX  : VALUVX<0b111101, OPIVX, "vwabda.vx">;
+    def VWABDAU_VV : VALUVV<0b111110, OPIVV, "vwabdau.vv">;
+    def VWABDAU_VX : VALUVX<0b111110, OPIVX, "vwabdau.vx">;
+  } // Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2,
+    // VS1VS2Constraint = WidenV
 } // Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone
+
+let Predicates = [HasStdExtZvabd] in {
+  def : InstAlias<"vabs.v $vd, $vs$vm",
+                  (VABD_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+  def : InstAlias<"vabs.v $vd, $vs",
+                  (VABD_VX VR:$vd, VR:$vs, X0, zero_reg)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Pseudos
 //===----------------------------------------------------------------------===//
-multiclass PseudoVABS {
-  foreach m = MxList in {
-    defvar mx = m.MX;
-    let VLMul = m.value in {
-      def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
-                       SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
-      def "_V_" # mx # "_MASK" :
-        VPseudoUnaryMask<m.vrclass, m.vrclass>,
-        RISCVMaskedPseudo<MaskIdx=2>,
-        SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
-    }
-  }
-}
-
-multiclass VPseudoVWABD_VV {
+multiclass VPseudoVWABD_VV_VX {
   foreach m = MxListW in {
     defvar mx = m.MX;
     defm "" : VPseudoTernaryW_VV<m, Commutable = 1>,
               SchedTernary<"WriteVIWMulAddV", "ReadVIWMulAddV",
                            "ReadVIWMulAddV", "ReadVIWMulAddV", mx>;
+    defvar constraint = "@earlyclobber $rd";
+    defm "_VX" : VPseudoTernaryWithPolicy<m.wvrclass, m.vrclass, GPR, m,
+                                           constraint,
+                                           TargetConstraintType = 3>,
+                  SchedTernary<"WriteVIWMulAddX", "ReadVIWMulAddV",
+                               "ReadVIWMulAddV", "ReadVIWMulAddX", mx>;
   }
 }
 
 let Predicates = [HasStdExtZvabd] in {
-  defm PseudoVABS : PseudoVABS;
-  defm PseudoVABD : VPseudoVALU_VV<Commutable = 1>;
-  defm PseudoVABDU : VPseudoVALU_VV<Commutable = 1>;
-  defm PseudoVWABDA : VPseudoVWABD_VV;
-  defm PseudoVWABDAU : VPseudoVWABD_VV;
+  defm PseudoVABD : VPseudoVALU_VV_VX<Commutable = 1>;
+  defm PseudoVABDU : VPseudoVALU_VV_VX<Commutable = 1>;
+  defm PseudoVWABDA : VPseudoVWABD_VV_VX;
+  defm PseudoVWABDAU : VPseudoVWABD_VV_VX;
 } // Predicates = [HasStdExtZvabd]
 
 //===----------------------------------------------------------------------===//
@@ -71,36 +73,93 @@ def rvv_vwabda_vl  : RVSDNode<"VWABDA_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommuta
 def rvv_vwabdau_vl : RVSDNode<"VWABDAU_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
 } // let HasPassthruOp = true, HasMaskOp = true
 
-// These instructions are defined for SEW=8 and SEW=16, otherwise the instruction
-// encoding is reserved.
-defvar ABDIntVectors = !filter(vti, AllIntegerVectors, !or(!eq(vti.SEW, 8),
-                                                           !eq(vti.SEW, 16)));
+// The widening instructions are defined for SEW=8 and SEW=16, otherwise the
+// instruction encoding is reserved.
 defvar ABDAIntVectors = !filter(vtiTowti, AllWidenableIntVectors,
                                           !or(!eq(vtiTowti.Vti.SEW, 8),
                                               !eq(vtiTowti.Vti.SEW, 16)));
 
-let Predicates = [HasStdExtZvabd] in {
-defm : VPatBinarySDNode_VV<abds, "PseudoVABD", ABDIntVectors>;
-defm : VPatBinarySDNode_VV<abdu, "PseudoVABDU", ABDIntVectors>;
-
-defm : VPatBinaryVL_VV<riscv_abds_vl, "PseudoVABD", ABDIntVectors>;
-defm : VPatBinaryVL_VV<riscv_abdu_vl, "PseudoVABDU", ABDIntVectors>;
-
-defm : VPatUnaryV_V<"int_riscv_vabs", "PseudoVABS", AllIntegerVectors>;
-defm : VPatBinaryV_VV<"int_riscv_vabd", "PseudoVABD", ABDIntVectors>;
-defm : VPatBinaryV_VV<"int_riscv_vabdu", "PseudoVABDU", ABDIntVectors>;
-defm : VPatTernaryW_VV<"int_riscv_vwabda", "PseudoVWABDA", ABDAIntVectors>;
-defm : VPatTernaryW_VV<"int_riscv_vwabdau", "PseudoVWABDAU", ABDAIntVectors>;
-
-foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
-            (!cast<Instruction>("PseudoVABS_V_"#vti.LMul.MX)
-                    (vti.Vector (IMPLICIT_DEF)),
-                    vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+multiclass VPatTernaryW_VX_VS2First<string intrinsic, string instruction,
+                                    list<VTypeInfoToWide> vtilist> {
+  foreach vtiTowti = vtilist in {
+    defvar vti = vtiTowti.Vti;
+    defvar wti = vtiTowti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction,
+                                 "V"#vti.ScalarSuffix,
+                                 wti.Vector, vti.Vector, vti.Scalar,
+                                 vti.Mask, vti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.RegClass,
+                                 vti.ScalarRegClass>;
+  }
 }
 
-defm : VPatUnaryVL_V<riscv_abs_vl, "PseudoVABS", HasStdExtZvabd>;
+multiclass VPatWidenABDVL_VV_VX<SDNode op, string instruction> {
+  defm : VPatWidenMultiplyAddVL_VV<op, instruction, ABDAIntVectors>;
+  foreach vtiTowti = ABDAIntVectors in {
+    defvar vti = vtiTowti.Vti;
+    defvar wti = vtiTowti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in
+    def : Pat<(op (SplatPat XLenVT:$rs1),
+                  (vti.Vector vti.RegClass:$rs2),
+                  (wti.Vector wti.RegClass:$rd),
+                  (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>(instruction#"_VX_"#vti.LMul.MX#"_MASK")
+                  wti.RegClass:$rd, vti.RegClass:$rs2,
+                  vti.ScalarRegClass:$rs1, (vti.Mask VMV0:$vm), GPR:$vl,
+                  vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
 
-defm : VPatWidenMultiplyAddVL_VV<rvv_vwabda_vl, "PseudoVWABDA", ABDAIntVectors>;
-defm : VPatWidenMultiplyAddVL_VV<rvv_vwabdau_vl, "PseudoVWABDAU", ABDAIntVectors>;
+let Predicates = [HasStdExtZvabd] in {
+defm : VPatBinarySDNode_VV_VX<abds, "PseudoVABD", AllIntegerVectors>;
+defm : VPatBinarySDNode_VV_VX<abdu, "PseudoVABDU", AllIntegerVectors>;
+
+defm : VPatBinaryVL_VV_VX<riscv_abds_vl, "PseudoVABD", AllIntegerVectors>;
+defm : VPatBinaryVL_VV_VX<riscv_abdu_vl, "PseudoVABDU", AllIntegerVectors>;
+
+defm : VPatBinaryV_VV_VX<"int_riscv_vabd", "PseudoVABD", AllIntegerVectors>;
+defm : VPatBinaryV_VV_VX<"int_riscv_vabdu", "PseudoVABDU", AllIntegerVectors>;
+defm : VPatTernaryW_VV<"int_riscv_vwabda", "PseudoVWABDA", ABDAIntVectors>;
+defm : VPatTernaryW_VV<"int_riscv_vwabdau", "PseudoVWABDAU", ABDAIntVectors>;
+defm : VPatTernaryW_VX_VS2First<"int_riscv_vwabda", "PseudoVWABDA",
+                                 ABDAIntVectors>;
+defm : VPatTernaryW_VX_VS2First<"int_riscv_vwabdau", "PseudoVWABDAU",
+                                 ABDAIntVectors>;
+
+foreach vti = AllIntegerVectors in {
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
+    def : Pat<(vti.Vector (!cast<Intrinsic>("int_riscv_vabs")
+                           (vti.Vector vti.RegClass:$passthru),
+                           (vti.Vector vti.RegClass:$rs2), VLOpFrag)),
+              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
+                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
+                  GPR:$vl, vti.Log2SEW, TU_MU)>;
+    def : Pat<(vti.Vector (!cast<Intrinsic>("int_riscv_vabs_mask")
+                           (vti.Vector vti.RegClass:$passthru),
+                           (vti.Vector vti.RegClass:$rs2),
+                           (vti.Mask VMV0:$vm), VLOpFrag,
+                           (XLenVT timm:$policy))),
+              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX#"_MASK")
+                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
+                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
+                  (XLenVT timm:$policy))>;
+    def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
+              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
+                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                  (XLenVT X0), vti.AVL, vti.Log2SEW, TA_MA)>;
+    def : Pat<(riscv_abs_vl (vti.Vector vti.RegClass:$rs2),
+                             (vti.Vector vti.RegClass:$passthru),
+                             (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX#"_MASK")
+                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
+                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
+                  TAIL_AGNOSTIC)>;
+  }
+}
+
+defm : VPatWidenABDVL_VV_VX<rvv_vwabda_vl, "PseudoVWABDA">;
+defm : VPatWidenABDVL_VV_VX<rvv_vwabdau_vl, "PseudoVWABDAU">;
 } // Predicates = [HasStdExtZvabd]

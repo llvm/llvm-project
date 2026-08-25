@@ -836,6 +836,29 @@ let TargetPrefix = "riscv" in {
     let ScalarOperand = 1;
     let VLOperand = 4;
   }
+  // UnMasked Widening Vector Absolute-Difference-Accumulate operations,
+  // its first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, vl, policy)
+  class RISCVTernaryWideVS2FirstUnMasked
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                      llvm_anyint_ty, LLVMMatchType<3>],
+                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // Masked Widening Vector Absolute-Difference-Accumulate operations,
+  // its first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, mask, vl, policy)
+  class RISCVTernaryWideVS2FirstMasked
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                      llvm_anyint_ty, LLVMMatchType<3>],
+                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
   // UnMasked Widening Vector Multiply-Add operations, its first operand can not be undef.
   // Input: (vector_in, vector_in/scalar, vector_in, frm, vl, policy)
   class RISCVTernaryWideUnMaskedRoundingMode
@@ -1308,6 +1331,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVTernaryWide {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryWideMasked;
+  }
+  multiclass RISCVTernaryWideVS2First {
+    def "int_riscv_" # NAME : RISCVTernaryWideVS2FirstUnMasked;
+    def "int_riscv_" # NAME # "_mask" : RISCVTernaryWideVS2FirstMasked;
   }
   multiclass RISCVTernaryWideRoundingMode {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMaskedRoundingMode;
@@ -1934,10 +1961,10 @@ let TargetPrefix = "riscv" in {
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in {
   defm vabs    : RISCVUnaryAA;
-  defm vabd    : RISCVBinaryAAA;
-  defm vabdu   : RISCVBinaryAAA;
-  defm vwabda  : RISCVTernaryWide;
-  defm vwabdau : RISCVTernaryWide;
+  defm vabd    : RISCVBinaryAAX;
+  defm vabdu   : RISCVBinaryAAX;
+  defm vwabda  : RISCVTernaryWideVS2First;
+  defm vwabdau : RISCVTernaryWideVS2First;
 } // TargetPrefix = "riscv"
 
 // Zvzip - Reordering Structured Data in Vector Registers

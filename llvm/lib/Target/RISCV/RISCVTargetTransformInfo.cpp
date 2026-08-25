@@ -1591,10 +1591,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::abs: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      // vabs.v v10, v8
+      // vabs.v v10, v8 (alias for vabd.vx v10, v8, zero)
       if (ST->hasStdExtZvabd())
         return LT.first *
-               getRISCVInstructionCost({RISCV::VABS_V}, LT.second, CostKind);
+               getRISCVInstructionCost({RISCV::VABD_VX}, LT.second, CostKind);
 
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
