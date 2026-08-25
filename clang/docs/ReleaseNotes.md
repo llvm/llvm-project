@@ -238,6 +238,11 @@ features cannot lower the translation-unit ABI level;
 
 - More consistent rendering of Unicode characters in diagnostic messages.
 
+- Fixed `-Wunused-parameter` to diagnose coroutine parameters that are only
+  considered during allocation function lookup or promise object
+  initialization, while not diagnosing parameters passed to the selected
+  allocation function or promise constructor. (#GH217501)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -249,11 +254,6 @@ features cannot lower the translation-unit ABI level;
   This new coverage is added under the subgroup `-Wunused-but-set-global`,
   allowing it to be disabled independently with `-Wno-unused-but-set-global`.
   (#GH148361)
-
-- `-Wunused-template` is now part of `-Wunused` (which is enabled by `-Wall`).
-  It diagnoses unused function and variable templates with internal linkage,
-  which in a header is a latent ODR hazard. It can be disabled with
-  `-Wno-unused-template`. (#GH202945)
 
 - Added `-Wlifetime-safety` to enable lifetime safety analysis,
   a CFG-based intra-procedural analysis that detects use-after-free and related
@@ -416,6 +416,8 @@ features cannot lower the translation-unit ABI level;
 - `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
   later, matching the behavior in C++11 through C++17. (#GH161689)
 
+- Clang now diagnoses more details when a constraint evaluates to false.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -434,6 +436,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
+- Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
