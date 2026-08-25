@@ -3357,8 +3357,8 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
   assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
            GR.getScalarOrVectorComponentCount(VecType) > 1) ||
           VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
-              "dot product requires either a vector of at least 2 components or"
-              " the SPV_EXT_long vector extension.");
+         "dot product requires either a vector of at least 2 components or"
+         " the SPV_EXT_long vector extension.");
 
   [[maybe_unused]] SPIRVTypeInst EltType =
       GR.getScalarOrVectorComponentType(VecType);
@@ -3419,8 +3419,8 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
   assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
            GR.getScalarOrVectorComponentCount(VecType) > 1) ||
           VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
-              "dot product requires either a vector of at least 2 components "
-              "or the SPV_EXT_long_vector extension.");
+         "dot product requires either a vector of at least 2 components "
+         "or the SPV_EXT_long_vector extension.");
 
   Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
