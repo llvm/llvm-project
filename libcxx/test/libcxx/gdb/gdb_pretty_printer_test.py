@@ -16,7 +16,9 @@ See gdb_pretty_printer_test.sh.cpp on how to write a test case.
 
 from __future__ import print_function
 import json
+import os
 import re
+import tempfile
 import gdb
 import sys
 
@@ -30,7 +32,199 @@ test_failures = 0
 # we exit.
 has_run_tests = False
 
-has_execute_mi = getattr(gdb, "execute_mi", None) is not None
+
+# Parser for GDB<14.2. Expected input formats:
+# ^done
+# ^done,numchild="1",children=[child={name="value.private",exp="private",numchild="1",value="",thread-id="1"}],has_more="0"
+# ^error,msg="Undefined MI command: rubbish"
+# See https://sourceware.org/gdb/current/onlinedocs/gdb.html/GDB_002fMI-Result-Records.html
+def _parse_mi_record_legacy(rec):
+    m = re.match(r"^\^([a-z]+)(?:,(.*))?$", rec)
+    if not m:
+        raise gdb.error("Failed to parse MI result line: " + rec)
+    code, rest = m.group(1), m.group(2)
+    if not rest:
+        return (code, {})
+    s = rest
+    idx, L = 0, len(s)
+
+    def skip():
+        nonlocal idx
+        while idx < L and s[idx].isspace():
+            idx += 1
+
+    def iden():
+        nonlocal idx
+        start = idx
+        while idx < L and re.match(r"[A-Za-z0-9_.-]", s[idx]):
+            idx += 1
+        return s[start:idx]
+
+    def parse_str():
+        nonlocal idx
+        idx += 1
+        out = []
+        while idx < L:
+            ch = s[idx]
+            if ch == '"':
+                idx += 1
+                return "".join(out)
+            if ch == "\\":
+                idx += 1
+                if idx >= L:
+                    break
+                e = s[idx]
+                idx += 1
+                out.append(
+                    {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\"}.get(e, e)
+                )
+            else:
+                out.append(ch)
+                idx += 1
+        return "".join(out)
+
+    def value():
+        nonlocal idx
+        skip()
+        if idx >= L:
+            return None
+        ch = s[idx]
+        if ch == '"':
+            return parse_str()
+        if ch == "{":
+            return parse_tuple()
+        if ch == "[":
+            return parse_array()
+        raise gdb.error(
+            "Unexpected characted {} while parsing MI result line: {}".format(ch, rec)
+        )
+
+    def parse_tuple():
+        nonlocal idx
+        idx += 1
+        res = {}
+        skip()
+        while idx < L and s[idx] != "}":
+            k = iden()
+            if idx < L and s[idx] == "=":
+                idx += 1
+                res[k] = value()
+            else:
+                v = value()
+                res[k or str(len(res))] = v
+            skip()
+            if idx < L and s[idx] == ",":
+                idx += 1
+            skip()
+        if idx < L and s[idx] == "}":
+            idx += 1
+        return res
+
+    def parse_array():
+        nonlocal idx
+        idx += 1
+        arr = []
+        skip()
+        while idx < L and s[idx] != "]":
+            save = idx
+            k = iden()
+            if k and idx < L and s[idx] == "=":
+                idx += 1
+                arr.append({k: value()})
+            else:
+                idx = save
+                arr.append(value())
+            skip()
+            if idx < L and s[idx] == ",":
+                idx += 1
+            skip()
+        if idx < L and s[idx] == "]":
+            idx += 1
+        if arr and all(isinstance(x, dict) and len(x) == 1 for x in arr):
+            keys = [next(iter(x)) for x in arr]
+            if all(k == keys[0] for k in keys):
+                arr = [x[keys[0]] for x in arr]
+        return arr
+
+    res = {}
+    while idx < L:
+        skip()
+        n = iden()
+        if not n:
+            break
+        if idx < L and s[idx] == "=":
+            idx += 1
+            res[n] = value()
+        else:
+            res[n] = value()
+        skip()
+        if idx < L and s[idx] == ",":
+            idx += 1
+    return (code, res)
+
+
+def execute_mi(*args, collect_output=False):
+    # gdb.execute_mi is available in GDB 14.2 or later
+    if hasattr(gdb, "execute_mi"):
+        r = gdb.execute_mi(*args)
+        return r if collect_output else None
+
+    # for older GDB: call `interpreter-exec mi2 "-cmd args..."` and parse result like:
+    # ^done,numchild="1",children=[child={name="value.private" ...
+    mi_command = " ".join(args)
+    gdb_command = 'interpreter-exec mi2 "{}"'.format(" ".join(args))
+
+    if not collect_output:
+        gdb.execute(gdb_command)
+        return
+
+    # gdb.execute("interpreter-exec mi2 ...") ignores flag to_string=True:
+    # see https://sourceware.org/bugzilla/show_bug.cgi?id=12886
+    # To get output of MI command, we use temporary file.
+    # "interpreter-exec mi2" also ignores "set logging file ...".
+    # It only prints to stdout, so we:
+    # 1) flush the existing stdout
+    # 2) redirect the stdout to our temporary file
+    # 3) execute the MI command and flush gdb output
+    # 4) restore the original stdout file descriptor
+    # 5) rewind and read our temporary file
+    result_line = ""
+    with tempfile.NamedTemporaryFile(mode="w+") as tmp_file:
+        stdout_fd = sys.__stdout__.fileno()
+        saved_stdout_fd = os.dup(stdout_fd)
+
+        try:
+            sys.__stdout__.flush()
+            os.dup2(tmp_file.fileno(), stdout_fd)
+            gdb.execute(gdb_command)
+        finally:
+            gdb.flush(gdb.STDOUT)
+            os.dup2(saved_stdout_fd, stdout_fd)
+            os.close(saved_stdout_fd)
+
+        tmp_file.seek(0)
+        result_line = tmp_file.read().splitlines()[0]
+
+    if not result_line:
+        raise gdb.error("No GDB/MI output for: " + mi_command)
+
+    match = re.match(r"\^([a-zA-Z-]+)(?:,(.*))?$", result_line)
+
+    if not match:
+        raise gdb.error("Failed to parse MI result line: " + result_line)
+
+    code, payload = _parse_mi_record_legacy(result_line)
+
+    if code == "error":
+        msg = payload.get("msg", "Unknown MI error")
+        raise gdb.error("GDB/MI Error: " + msg)
+
+    return payload
+
+
+def execute_expression(expression):
+    r = execute_mi("-data-evaluate-expression " + expression)
+    return r["value"]
 
 
 class CheckResult(gdb.Command):
@@ -56,11 +250,7 @@ class CheckResult(gdb.Command):
 
             frame_name = compare_frame.name()
             if frame_name.startswith("CompareListChildren"):
-                if has_execute_mi:
-                    value = self._get_children(compare_frame)
-                else:
-                    print("SKIPPED: " + test_loc_str)
-                    return
+                value = self._get_children(compare_frame)
             else:
                 value = self._get_value(compare_frame, testcase_frame)
 
@@ -93,9 +283,11 @@ class CheckResult(gdb.Command):
 
     def _get_children(self, compare_frame):
         compare_frame.select()
-        gdb.execute_mi("-var-create", "value", "*", "value")
-        r = gdb.execute_mi("-var-list-children", "--simple-values", "value")
-        gdb.execute_mi("-var-delete", "value")
+        execute_mi("-var-create", "value", "*", "value")
+        r = execute_mi(
+            "-var-list-children", "--simple-values", "value", collect_output=True
+        )
+        execute_mi("-var-delete", "value")
         children = r["children"]
         if r["displayhint"] == "map":
             r = [
@@ -144,8 +336,7 @@ def exit_handler(event=None):
 gdb.execute("set height 0")
 gdb.execute("set python print-stack full")
 
-if has_execute_mi:
-    gdb.execute_mi("-enable-pretty-printing")
+execute_mi("-enable-pretty-printing")
 
 test_failures = 0
 CheckResult()
