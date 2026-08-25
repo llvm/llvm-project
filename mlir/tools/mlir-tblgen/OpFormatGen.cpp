@@ -2343,7 +2343,7 @@ static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 /// {1}: The name of the enum attributes symbolToString function.
 static const char *enumAttrBeginPrinterCode = R"(
   {
-    auto caseValue = {0}();
+    auto caseValue = {0};
     auto caseValueStr = {1}(caseValue);
 )";
 
@@ -2392,6 +2392,129 @@ static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
     body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
+}
+
+static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
+                               MethodBody &body, StringRef valueExpression);
+
+/// Generate the key-value printer used by the default `prop-dict` printer.
+static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
+                                       OpClass &opClass) {
+  if (!fmt.hasPropDict || !fmt.useProperties || op.hasCustomPropertiesPrinter())
+    return;
+
+  bool hasPrintableField =
+      !op.getProperties().empty() ||
+      llvm::any_of(
+          op.getAttributes(),
+          [](const auto &attr) { return !attr.attr.isDerivedAttr(); }) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+       fmt.allOperands) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+       fmt.allResultTypes);
+  if (!hasPrintableField)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::MLIRContext *", "_odsContext");
+  paramList.emplace_back("::mlir::OpAsmPrinter &", "_odsPrinter");
+  paramList.emplace_back("const Properties &", "prop");
+  paramList.emplace_back("::mlir::ArrayRef<::llvm::StringRef>", "elidedProps");
+  Method *method = opClass.addStaticMethod(
+      "void", "_odsPrintPropertiesAsKeyValueList", std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+bool first = true;
+auto printKey = [&](::llvm::StringRef name) {
+  _odsPrinter << (first ? " <" : ", ") << name << " = ";
+  first = false;
+};
+auto shouldPrint = [&](::llvm::StringRef name) {
+  return !::llvm::is_contained(elidedProps, name);
+};
+)decl";
+
+  auto genSegmentSizesPrinter = [&](StringRef name) {
+    body << "if (shouldPrint(\"" << name << "\")) {\n"
+         << "  printKey(\"" << name << "\");\n"
+         << "  _odsPrinter << \"[\";\n"
+         << "  ::llvm::interleaveComma(prop." << name << ", _odsPrinter);\n"
+         << "  _odsPrinter << \"]\";\n"
+         << "}\n";
+  };
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands)
+    genSegmentSizesPrinter("operandSegmentSizes");
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes)
+    genSegmentSizesPrinter("resultSegmentSizes");
+
+  for (const NamedProperty &namedProperty : op.getProperties()) {
+    const Property &property = namedProperty.prop;
+    body << "if (shouldPrint(\"" << namedProperty.name << "\")) {\n"
+         << "  printKey(\"" << namedProperty.name << "\");\n";
+    FmtContext printerContext;
+    printerContext.addSubst("_printer", "_odsPrinter");
+    printerContext.addSubst("_ctxt", "_odsContext");
+    printerContext.addSubst("_storage", "prop." + namedProperty.name);
+    if (property.usesDefaultParser()) {
+      body << "  if constexpr (::mlir::detail::HasKeyValueFieldParser<"
+              "std::remove_cv_t<std::remove_reference_t<decltype(prop."
+           << namedProperty.name << ")>>>::value) {\n"
+           << "    " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n"
+           << "  } else {\n"
+           << "    auto propertyAttr = [&]() -> ::mlir::Attribute {\n";
+      FmtContext conversionContext;
+      conversionContext.addSubst("_ctxt", "_odsContext");
+      conversionContext.addSubst("_storage", "prop." + namedProperty.name);
+      body << tgfmt(property.getConvertToAttributeCall(), &conversionContext)
+           << "\n"
+           << "    }();\n"
+           << "    _odsPrinter.printAttribute(propertyAttr);\n"
+           << "  }\n";
+    } else {
+      body << "  " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n";
+    }
+    body << "}\n";
+  }
+
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+    StringRef name = namedAttr.name;
+    body << "if (shouldPrint(\"" << name << "\")";
+    if (namedAttr.attr.isOptional() || namedAttr.attr.hasDefaultValue())
+      body << " && prop." << name;
+    body << ") {\n"
+         << "  printKey(\"" << name << "\");\n";
+
+    if (canFormatEnumAttr(&namedAttr)) {
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression);
+    } else if (shouldFormatSymbolNameAttr(&namedAttr)) {
+      body << "  _odsPrinter.printSymbolName(prop." << name
+           << ".getValue());\n";
+    } else {
+      AttributeVariable attrVariable(&namedAttr);
+      if (attrVariable.getTypeBuilder())
+        body << "  _odsPrinter.printAttributeWithoutType(prop." << name
+             << ");\n";
+      else if (attrVariable.shouldBeQualified() ||
+               namedAttr.attr.getStorageType() == "::mlir::Attribute")
+        body << "  _odsPrinter.printAttribute(prop." << name << ");\n";
+      else
+        body << "  _odsPrinter.printStrippedAttrOrType(prop." << name << ");\n";
+    }
+    body << "}\n";
+  }
+  body << "if (!first)\n"
+          "  _odsPrinter << \">\";\n";
 }
 
 /// Generate the printer for the 'prop-dict' directive.
@@ -2633,15 +2756,20 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body) {
+                               MethodBody &body,
+                               StringRef valueExpression = {}) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
   bool dereferenceGetter =
       var->attr.isOptional() && !var->attr.hasDefaultValue();
 
-  body << formatv(enumAttrBeginPrinterCode,
-                  (dereferenceGetter ? "*" : "") + op.getGetterName(var->name),
+  std::string caseValue = valueExpression.empty()
+                              ? op.getGetterName(var->name) + "()"
+                              : valueExpression.str();
+  if (dereferenceGetter)
+    caseValue = "*(" + caseValue + ")";
+  body << formatv(enumAttrBeginPrinterCode, caseValue,
                   enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
@@ -3051,6 +3179,8 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   bool shouldEmitSpace = true, lastWasPunctuation = false;
   for (FormatElement *element : elements)
     genElementPrinter(element, body, op, shouldEmitSpace, lastWasPunctuation);
+
+  genKeyValuePropDictPrinter(*this, op, opClass);
 }
 
 //===----------------------------------------------------------------------===//
