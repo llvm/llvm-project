@@ -665,30 +665,33 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
-    const  unsigned DefaultAccumOffset = ~0u;
+    const unsigned DefaultAccumOffset = ~0u;
 
     // TODO: The lower bound should probably force the number of required
     // registers up, overriding amdgpu-waves-per-eu.
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
-    VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",DefaultAccumOffset);
+    VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",
+                                              DefaultAccumOffset);
     if (VGPRCap == DefaultAccumOffset) {
       MaxNumVGPRs = MaxVectorRegs / 2;
-    }
-    else {
+    } else {
       MaxNumVGPRs = alignDown(VGPRCap, 4);
     }
     if (MinNumAGPRs == DefaultNumAGPR.first) {
-       MaxNumAGPRs = MaxVectorRegs / 2;
-       MinNumAGPRs = 0;
+      MaxNumAGPRs = MaxVectorRegs / 2;
+      MinNumAGPRs = 0;
     } else {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
       MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
-      // Since we can't know for sure how many availible AGPRs we have, an unset MaxNumAGPRs does not imply that we can use MaxVectorRegs - MaxNumVGPRs number of AGPRs
-      if (MaxNumAGPRs == DefaultNumAGPR.second && !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+      // Since we can't know for sure how many availible AGPRs we have, an unset
+      // MaxNumAGPRs does not imply that we can use MaxVectorRegs - MaxNumVGPRs
+      // number of AGPRs
+      if (MaxNumAGPRs == DefaultNumAGPR.second &&
+          !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
         MaxNumAGPRs = MinNumAGPRs;
     }
     // Clamp values to be inbounds of our limits, and ensure min <= max.
