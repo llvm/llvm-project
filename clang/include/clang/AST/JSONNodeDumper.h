@@ -383,7 +383,23 @@ public:
 };
 
 class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
+  using Base = ASTNodeTraverser<JSONDumper, JSONNodeDumper>;
+
   JSONNodeDumper NodeDumper;
+
+  void dumpFunctionTypeParameters(const TypeSourceInfo *TSI) {
+    if (!TSI)
+      return;
+
+    for (TypeLoc TL = TSI->getTypeLoc(); !TL.isNull();
+         TL = TL.getNextTypeLoc()) {
+      if (auto FTL = TL.getAs<FunctionProtoTypeLoc>()) {
+        for (const auto *Param : FTL.getParams())
+          Visit(Param);
+        return;
+      }
+    }
+  }
 
   template <typename SpecializationDecl>
   void writeTemplateDeclSpecialization(const SpecializationDecl *SD,
@@ -461,6 +477,14 @@ public:
   }
   void VisitVarTemplateDecl(const VarTemplateDecl *VTD) {
     writeTemplateDecl(VTD, false);
+  }
+  void VisitTypedefDecl(const TypedefDecl *TD) {
+    Base::VisitTypedefDecl(TD);
+    dumpFunctionTypeParameters(TD->getTypeSourceInfo());
+  }
+  void VisitTypeAliasDecl(const TypeAliasDecl *TAD) {
+    Base::VisitTypeAliasDecl(TAD);
+    dumpFunctionTypeParameters(TAD->getTypeSourceInfo());
   }
 };
 

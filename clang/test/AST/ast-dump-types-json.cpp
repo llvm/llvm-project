@@ -402,6 +402,31 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "ParmVarDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 489,
+// CHECK-NEXT:     "col": 46,
+// CHECK-NEXT:     "tokLen": 1
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 477,
+// CHECK-NEXT:      "col": 34,
+// CHECK-NEXT:      "tokLen": 5
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 489,
+// CHECK-NEXT:      "col": 46,
+// CHECK-NEXT:      "tokLen": 1
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "name": "c",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "const char *"
+// CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
