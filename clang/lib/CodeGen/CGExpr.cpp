@@ -29,6 +29,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/MatrixUtils.h"
@@ -53,6 +54,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
@@ -1282,10 +1285,361 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
   return nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+// One-past-the-end validity for -fsanitize=array-bounds
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Records, for each expression -fsanitize=array-bounds may check, whether the
+/// context requires the object it designates -- or, for pointer type, the object
+/// it points to -- to exist. An index equal to the bound is valid exactly when it
+/// does not: `a + N` is a valid pointer value and `&a[N]` a legal way to spell it
+/// (C99 6.5.6p8, 6.5.3.2p3), so requiring `index < bound` everywhere would reject
+/// conforming code.
+///
+///   x = a[i];       reads it       -> icmp ult
+///   a[i] = 0;       writes it      -> icmp ult
+///   p = &a[i];      address only   -> icmp ule
+///
+/// The same subtree, three answers, so the answer belongs to the context. It is
+/// computed as an inherited attribute: one bit handed down, with each edge either
+/// asserting the requirement (a load, an assignment's target, the base of a
+/// member access), clearing it (a subscript's index, a comma's left operand, a
+/// value-changing conversion) or propagating it (`&`, `*`, parentheses, and casts
+/// that change only the type; C99 6.5.3.2p3 makes `&*p` mean `p`).
+///
+/// A node kind with no handler falls through to VisitStmt, which clears. That
+/// direction is deliberate: an unmodelled construct loses a check rather than
+/// reporting one the language permits.
+class DesignatedObjectRequirement
+    : public ConstEvaluatedExprVisitor<DesignatedObjectRequirement> {
+  using Base = ConstEvaluatedExprVisitor<DesignatedObjectRequirement>;
+
+  /// Where the answers are recorded.
+  CodeGenFunction::BoundsCheckRequirementMap &Answers;
+  /// Does the context of the node currently being visited require the object it
+  /// designates to exist?
+  bool ObjectMustExist = false;
+
+  /// Records the answer for \p E by union: a node can be reached twice, since a
+  /// default argument's expression is shared by every call that uses it and
+  /// `x ?: y` reaches its common expression as both condition and result. One
+  /// evaluation serves every use, so any context that requires the object wins.
+  void record(const Expr *E) { Answers[E] |= ObjectMustExist; }
+
+  void visitWith(const Stmt *S, bool MustExist) {
+    if (!S)
+      return;
+    llvm::SaveAndRestore<bool> SavedRequirement(ObjectMustExist, MustExist);
+    Base::Visit(S);
+  }
+
+public:
+  DesignatedObjectRequirement(const ASTContext &Ctx,
+                              CodeGenFunction::BoundsCheckRequirementMap &A)
+      : Base(Ctx), Answers(A) {}
+
+  /// Walk \p Root and record an answer for every expression in it that a bounds
+  /// check can be emitted for. \p MustExist is what the context asks of \p Root
+  /// itself; a statement is asked nothing, an initializer may be asked for the
+  /// object by what it initializes.
+  void computeIn(const Stmt *Root, bool MustExist) {
+    visitWith(Root, MustExist);
+  }
+
+  void VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    record(E);
+    visitWith(E->getBase(), ObjectMustExist);
+    visitWith(E->getIdx(), /*MustExist=*/false);
+  }
+
+  void VisitParenExpr(const ParenExpr *E) {
+    visitWith(E->getSubExpr(), ObjectMustExist);
+  }
+
+  /// Keyed on the cast kind, so an explicit cast is exactly as transparent as
+  /// the implicit conversion it spells; this covers all of CastExpr's
+  /// subclasses, including the C++ named casts.
+  void VisitCastExpr(const CastExpr *E) {
+    switch (E->getCastKind()) {
+    case CK_LValueToRValue:
+      // This conversion is the read.
+      visitWith(E->getSubExpr(), /*MustExist=*/true);
+      return;
+    case CK_DerivedToBase:
+    case CK_UncheckedDerivedToBase:
+    case CK_BaseToDerived:
+      // As a glvalue conversion this designates a base (or derived) class
+      // subobject of the operand's object ([expr.static.cast]p2), so that
+      // object has to exist. The pointer form is address arithmetic on a value
+      // that may be one past the end, so it inherits instead.
+      visitWith(E->getSubExpr(), E->isGLValue() ? true : ObjectMustExist);
+      return;
+    case CK_NoOp:
+    case CK_BitCast:
+    case CK_LValueBitCast:
+    case CK_LValueToRValueBitCast:
+    case CK_AddressSpaceConversion:
+    case CK_ArrayToPointerDecay:
+      // A change of type, not of what is designated. Decay included: `p = a2[i]`
+      // only forms an address.
+      visitWith(E->getSubExpr(), ObjectMustExist);
+      return;
+    default:
+      // A value-changing conversion; its operand was already loaded by a
+      // CK_LValueToRValue below, so nothing here designates storage.
+      visitWith(E->getSubExpr(), /*MustExist=*/false);
+      return;
+    }
+  }
+
+  void VisitUnaryOperator(const UnaryOperator *E) {
+    switch (E->getOpcode()) {
+    case UO_AddrOf:
+    case UO_Deref:
+    case UO_Extension:
+      visitWith(E->getSubExpr(), ObjectMustExist);
+      return;
+    case UO_Real:
+    case UO_Imag:
+      // Names storage inside the object, so that object must exist
+      // (6.3.2.1p1); 6.5.3.2p3 exempts `*` and `[]` only.
+      visitWith(E->getSubExpr(), /*MustExist=*/true);
+      return;
+    case UO_PreInc:
+    case UO_PreDec:
+    case UO_PostInc:
+    case UO_PostDec:
+      visitWith(E->getSubExpr(), /*MustExist=*/true);
+      return;
+    default:
+      visitWith(E->getSubExpr(), /*MustExist=*/false);
+      return;
+    }
+  }
+
+  /// Covers CompoundAssignOperator too.
+  void VisitBinaryOperator(const BinaryOperator *E) {
+    if (E->isAssignmentOp()) {
+      visitWith(E->getLHS(), /*MustExist=*/true);
+      visitWith(E->getRHS(), /*MustExist=*/false);
+      return;
+    }
+    if (E->getOpcode() == BO_Comma) {
+      visitWith(E->getLHS(), /*MustExist=*/false);
+      visitWith(E->getRHS(), ObjectMustExist);
+      return;
+    }
+    if (E->isAdditiveOp() && E->getType()->isPointerType()) {
+      // `a[i]` is `*(a + i)` (C99 6.5.2.1p2), and a check is emitted here too.
+      record(E);
+      bool LHSIsPointer = E->getLHS()->getType()->isPointerType();
+      visitWith(LHSIsPointer ? E->getLHS() : E->getRHS(), ObjectMustExist);
+      visitWith(LHSIsPointer ? E->getRHS() : E->getLHS(), /*MustExist=*/false);
+      return;
+    }
+    if (E->isPtrMemOp()) {
+      // `E1.*E2` designates a member of the object E1 designates
+      // ([expr.mptr.oper]p4), the same rule as MemberExpr's base.
+      visitWith(E->getLHS(), /*MustExist=*/true);
+      visitWith(E->getRHS(), /*MustExist=*/false);
+      return;
+    }
+    visitWith(E->getLHS(), /*MustExist=*/false);
+    visitWith(E->getRHS(), /*MustExist=*/false);
+  }
+
+  void VisitMemberExpr(const MemberExpr *E) {
+    // Naming a data member designates storage inside the object (C99 6.5.2.3p3,
+    // [expr.ref]p6); 6.5.3.2p3 exempts `*` and `[]`, never `.`. A static member
+    // or a member function names no subobject; VisitCXXMemberCallExpr covers a
+    // call's object.
+    const ValueDecl *MD = E->getMemberDecl();
+    visitWith(E->getBase(), isa<FieldDecl>(MD) || isa<IndirectFieldDecl>(MD));
+  }
+
+  void VisitExtVectorElementExpr(const ExtVectorElementExpr *E) {
+    visitWith(E->getBase(), /*MustExist=*/true);
+  }
+
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
+    // For the GNU `x ?: y` form the common expression is evaluated once and is
+    // both the condition and the result, so it inherits; getCond() and
+    // getTrueExpr() only reach it through an OpaqueValueExpr.
+    if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
+      visitWith(BCO->getCommon(), ObjectMustExist);
+    visitWith(E->getCond(), /*MustExist=*/false);
+    visitWith(E->getTrueExpr(), ObjectMustExist);
+    visitWith(E->getFalseExpr(), ObjectMustExist);
+  }
+
+  void VisitChooseExpr(const ChooseExpr *E) {
+    // Only the selected arm is evaluated, and it is what the expression yields.
+    if (!E->isConditionDependent())
+      visitWith(E->getChosenSubExpr(), ObjectMustExist);
+  }
+
+  void VisitGenericSelectionExpr(const GenericSelectionExpr *E) {
+    if (!E->isResultDependent())
+      visitWith(E->getResultExpr(), ObjectMustExist);
+  }
+
+  void VisitCallExpr(const CallExpr *E) {
+    // __builtin_addressof(x) is `&x`: a reference parameter, but only an address
+    // is formed. EmitPointerWithAlignment excepts the same three.
+    switch (E->getBuiltinCallee()) {
+    default:
+      break;
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof:
+      visitWith(E->getArg(0), ObjectMustExist);
+      return;
+    }
+
+    // An argument still a glvalue here is bound to a reference parameter, which
+    // requires the object ([dcl.ref]p5); EmitCallArg asserts that equivalence.
+    // One passed by value carries its own conversion.
+    //
+    // Overriding this also drops EvaluatedExprVisitor's skip for unevaluated
+    // builtin calls, deliberately: CodeGen still emits checks inside them.
+    visitWith(E->getCallee(), /*MustExist=*/false);
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      visitWith(E->getArg(I), E->getArg(I)->isGLValue());
+  }
+
+  void VisitCXXMemberCallExpr(const CXXMemberCallExpr *E) {
+    // Calling a non-static member function requires an object
+    // ([class.mfct.non-static]p2).
+    visitWith(E->getImplicitObjectArgument(), /*MustExist=*/true);
+    // The callee still has to be walked: for `(x->*pm)()` it is a `->*` whose
+    // right operand is an expression of its own that
+    // getImplicitObjectArgument() does not cover.
+    visitWith(E->getCallee(), /*MustExist=*/false);
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      visitWith(E->getArg(I), E->getArg(I)->isGLValue());
+  }
+
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *E) {
+    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(E->getDirectCallee());
+    if (!MD || !MD->isInstance()) {
+      // A non-member operator; every argument binds to a parameter of its own.
+      visitWith(E->getCallee(), /*MustExist=*/false);
+      for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+        visitWith(E->getArg(I), E->getArg(I)->isGLValue());
+      return;
+    }
+
+    // A trivial copy or move assignment copies the right operand, so it is
+    // read; this mirrors the TCK_Load in
+    // CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr for the same case.
+    bool TrivialForCodegen =
+        MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion());
+    bool TrivialAssignment =
+        TrivialForCodegen &&
+        (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
+        !MD->getParent()->mayInsertExtraPadding();
+
+    visitWith(E->getCallee(), /*MustExist=*/false);
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      visitWith(E->getArg(I),
+                /*MustExist=*/I == 0 || (TrivialAssignment && I == 1) ||
+                    E->getArg(I)->isGLValue());
+  }
+
+  void VisitCXXConstructExpr(const CXXConstructExpr *E) {
+    // Copy- or move-constructing from an element binds the constructor's
+    // reference parameter to it, so the element has to exist ([dcl.ref]p5).
+    // This is the shape both a by-value argument and a copy-initialization
+    // take, including when the copy is trivial and CodeGen emits no call.
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      visitWith(E->getArg(I), E->getArg(I)->isGLValue());
+  }
+
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
+    // The expression belongs to the callee's parameter rather than to this
+    // node's children, so reaching it takes an explicit edge. The demand is
+    // the one that parameter placed on the argument.
+    visitWith(E->getExpr(), ObjectMustExist);
+  }
+
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+    // As for a default argument: the expression belongs to the field, not to
+    // this node's children, and the demand is the one the member's declared
+    // type placed on its initializer.
+    visitWith(E->getExpr(), ObjectMustExist);
+  }
+
+  void VisitReturnStmt(const ReturnStmt *S) {
+    // Judged as an argument and an initializer are: a returned glvalue is bound
+    // to a reference return type and so requires the object ([dcl.ref]p5),
+    // where a returned value carries a conversion of its own.
+    if (const Expr *RV = S->getRetValue())
+      visitWith(RV, RV->isGLValue());
+  }
+
+  void VisitDeclStmt(const DeclStmt *S) {
+    // Walk everything the statement holds with no demand of its own -- a
+    // variable-length array bound, or an initializer that reads through a
+    // conversion of its own -- then judge each initializer as an argument and a
+    // member initializer are judged: one left as a glvalue is bound to a
+    // reference variable and requires the object ([dcl.ref]p5).
+    VisitStmt(S);
+    for (const Decl *D : S->decls())
+      if (const auto *VD = dyn_cast<VarDecl>(D))
+        if (VD->hasInit() && VD->getInit()->isGLValue())
+          visitWith(VD->getInit(), /*MustExist=*/true);
+  }
+
+  void VisitExprWithCleanups(const ExprWithCleanups *E) {
+    // Transparent: the cleanups are for temporaries the subexpression built,
+    // and the value is the subexpression's.
+    visitWith(E->getSubExpr(), ObjectMustExist);
+  }
+
+  void VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children())
+      visitWith(Child, /*MustExist=*/false);
+  }
+};
+} // namespace
+
+bool CodeGenFunction::mustElementExist(const Expr *E) {
+  // A vector element cannot have its address taken, so a vector subscript is
+  // always an access. This cannot be answered from the context: subscripting a
+  // vector rvalue is itself a prvalue, with no conversion above it to ask.
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    QualType BaseTy = ASE->getBase()->getType();
+    if (BaseTy->isVectorType() || BaseTy->isSveVLSBuiltinType())
+      return true;
+  }
+
+  // No entry means the walk never reached E, so the answer is unknown and the
+  // check is left permissive. -debug-only=array-bounds reports those.
+  auto It = BoundsCheckRequirements.find(E);
+  DEBUG_WITH_TYPE("array-bounds", {
+    if (It == BoundsCheckRequirements.end())
+      llvm::dbgs() << "array-bounds: no requirement computed for "
+                   << E->getStmtClassName() << " at "
+                   << E->getExprLoc().printToString(
+                          getContext().getSourceManager())
+                   << "\n";
+  });
+  return It != BoundsCheckRequirements.end() && It->second;
+}
+
+void CodeGenFunction::computeBoundsCheckRequirements(const Stmt *Root,
+                                                     bool RootRequires) {
+  if (!Root || !SanOpts.has(SanitizerKind::ArrayBounds))
+    return;
+  DesignatedObjectRequirement(getContext(), BoundsCheckRequirements)
+      .computeIn(Root, RootRequires);
+}
+
 void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
                                       const Expr *ArrayExprBase,
                                       llvm::Value *IndexVal, QualType IndexType,
-                                      bool Accessed) {
+                                      bool MustExist) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
@@ -1295,7 +1649,7 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
       *this, ArrayExprBase, ArrayExprBaseType, StrictFlexArraysLevel);
 
   EmitBoundsCheckImpl(ArrayExpr, ArrayExprBaseType, IndexVal, IndexType,
-                      BoundsVal, getContext().getSizeType(), Accessed);
+                      BoundsVal, getContext().getSizeType(), MustExist);
 }
 
 void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
@@ -1303,7 +1657,7 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
                                           llvm::Value *IndexVal,
                                           QualType IndexType,
                                           llvm::Value *BoundsVal,
-                                          QualType BoundsType, bool Accessed) {
+                                          QualType BoundsType, bool MustExist) {
   if (!BoundsVal)
     return;
 
@@ -1329,8 +1683,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
       EmitCheckTypeDescriptor(IndexType),
   };
 
-  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexInst, BoundsInst)
-                                : Builder.CreateICmpULE(IndexInst, BoundsInst);
+  llvm::Value *Check = MustExist ? Builder.CreateICmpULT(IndexInst, BoundsInst)
+                                 : Builder.CreateICmpULE(IndexInst, BoundsInst);
 
   if (BoundsSigned) {
     // Don't allow a negative bounds.
@@ -1700,11 +2054,10 @@ bool CodeGenFunction::IsWrappedCXXThis(const Expr *Obj) {
 }
 
 LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
-  LValue LV;
-  if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
-    LV = EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E), /*Accessed*/true);
-  else
-    LV = EmitLValue(E);
+  // Whether an index one past the last element is valid is a property of the
+  // enclosing context, answered by mustElementExist(); there is nothing to
+  // reconstruct from the expression handed to us here.
+  LValue LV = EmitLValue(E);
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
@@ -4957,7 +5310,7 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
 /// similar to emit the correct GEP.
 void CodeGenFunction::EmitCountedByBoundsChecking(
     const Expr *ArrayExpr, QualType ArrayType, Address ArrayInst,
-    QualType IndexType, llvm::Value *IndexVal, bool Accessed,
+    QualType IndexType, llvm::Value *IndexVal, bool MustExist,
     bool FlexibleArray) {
   const auto *ME = dyn_cast<MemberExpr>(ArrayExpr->IgnoreImpCasts());
   if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
@@ -5001,12 +5354,11 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
-                        CountFD->getType(), Accessed);
+                        CountFD->getType(), MustExist);
   }
 }
 
-LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
-                                               bool Accessed) {
+LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
   llvm::Value *IdxPre =
@@ -5024,7 +5376,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     SignedIndices |= IdxSigned;
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
-      EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, Accessed);
+      EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, mustElementExist(E));
 
     // Extend or truncate the index type to 32 or 64-bits.
     if (Promote && Idx->getType() != IntPtrTy)
@@ -5137,18 +5489,16 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     // "gep x, i" here.  Emit one "gep A, 0, i".
     assert(Array->getType()->isArrayType() &&
            "Array to pointer decay must have array source type!");
-    LValue ArrayLV;
-    // For simple multidimensional array indexing, set the 'accessed' flag for
-    // better bounds-checking of the base expression.
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
-    else
-      ArrayLV = EmitLValue(Array);
+    // The 'accessed' flag this used to force is now answered by
+    // mustElementExist(), which asserts the demand for a decayed subscript
+    // base.
+    LValue ArrayLV = EmitLValue(Array);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
       EmitCountedByBoundsChecking(Array, Array->getType(), ArrayLV.getAddress(),
-                                  E->getIdx()->getType(), Idx, Accessed,
+                                  E->getIdx()->getType(), Idx,
+                                  mustElementExist(E),
                                   /*FlexibleArray=*/true);
 
     // Propagate the alignment from the array itself to the result.
@@ -5202,7 +5552,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
           CE && CE->getCastKind() == CK_LValueToRValue)
         EmitCountedByBoundsChecking(CE, ptrType, Address::invalid(),
-                                    E->getIdx()->getType(), Idx, Accessed,
+                                    E->getIdx()->getType(), Idx,
+                                    mustElementExist(E),
                                     /*FlexibleArray=*/false);
     }
   }
@@ -5438,13 +5789,10 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     // "gep x, i" here.  Emit one "gep A, 0, i".
     assert(Array->getType()->isArrayType() &&
            "Array to pointer decay must have array source type!");
-    LValue ArrayLV;
-    // For simple multidimensional array indexing, set the 'accessed' flag for
-    // better bounds-checking of the base expression.
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
-    else
-      ArrayLV = EmitLValue(Array);
+    // The 'accessed' flag this used to force is now answered by
+    // mustElementExist(), which asserts the demand for a decayed subscript
+    // base.
+    LValue ArrayLV = EmitLValue(Array);
 
     // Propagate the alignment from the array itself to the result.
     EltPtr = emitArraySubscriptGEP(
