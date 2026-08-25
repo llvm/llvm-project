@@ -129,7 +129,7 @@ entry:
 
 define signext i8 @pass_char(i8 signext %arg) {
 ; CHECK-LABEL: pass_char DS 0H
-; CHECK:         lgb 3,
+; CHECK:         lgbr 3,1
 ; CHECK-NEXT:    b 2(7)
 entry:
   ret i8 %arg
@@ -137,7 +137,7 @@ entry:
 
 define signext i16 @pass_short(i16 signext %arg) {
 ; CHECK-LABEL: pass_short DS 0H
-; CHECK:         lgh 3,
+; CHECK:         lghr 3,1
 ; CHECK-NEXT:    b 2(7)
 entry:
   ret i16 %arg
@@ -164,7 +164,8 @@ entry:
 
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
 ; CHECK-LABEL: pass_integrals0 DS 0H
-; CHECK:         agfr 3,2
+; CHECK:         lgfr 3,2
+; CHECK-NEXT:    ag 3,2200(4)
 ; CHECK-NEXT:    b 2(7)
 entry:
   %N = sext i32 %arg1 to i64

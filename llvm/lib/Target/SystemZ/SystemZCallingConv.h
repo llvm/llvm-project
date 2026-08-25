@@ -150,15 +150,18 @@ inline bool CC_XPLINK_Promote_i32(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
       // three are taken, this arg goes to an 8-byte stack slot.  The caller
       // stores a sign-extended i64 in that slot (value in bytes 6-7), so we
       // must use LocVT=i64 to load all 8 bytes correctly.
-      // We probe the 64-bit register aliases: AllocateReg marks all aliases,
-      // so if R1D is allocated (by a prior i64/ptr arg) R1L is also marked.
-      static const MCPhysReg GPR64s[] = {SystemZ::R1D, SystemZ::R2D,
-                                         SystemZ::R3D};
-      if (State.getFirstUnallocated(GPR64s) < 3) {
+      // Keep LocVT=i32 (GR32 live-in) only if a GR32 register is still free.
+      // XPLINK64 assigns i32 to R1L/R2L/R3L; if all three are taken this arg
+      // goes to an 8-byte stack slot where the value lives in bytes 6-7 (the
+      // caller stores a sign-extended i64).  In that case we must use
+      // LocVT=i64 so the 8-byte slot is loaded correctly.
+      static const MCPhysReg GPR32s[] = {SystemZ::R1L, SystemZ::R2L,
+                                         SystemZ::R3L};
+      if (State.getFirstUnallocated(GPR32s) < 3) {
         LocInfo = CCValAssign::AExt;
         return false;
       }
-      // All GR64s (and their GR32 aliases) taken — stack path: promote to i64.
+      // All GR32s taken — stack path: promote to i64.
     }
     // i32 formal (or stack-bound i8/i16): promote to GR64 via AExt.
     LocVT = MVT::i64;
