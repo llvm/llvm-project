@@ -2213,11 +2213,26 @@ cc_library(
     ],
 )
 
+# Bazel equivalent of CMake's configure_file / GN's write_cmake_config, so the
+# same *.inc.in template can be expanded by all three build systems.
+py_binary(
+    name = "configure_file",
+    srcs = ["configure_file.py"],
+)
+
 genrule(
     name = "instrumentor_variables_gen",
-    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
+    srcs = [
+        "include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h",
+        "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
+    ],
     outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
-    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+    cmd = ("$(execpath :configure_file)" +
+           " --template $(execpath include/llvm/Transforms/IPO/InstrumentorVariables.inc.in)" +
+           " --substitution-file LLVM_INSTRUMENTOR_RUNTIME_HELPER=" +
+           "$(execpath include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h)" +
+           " --out $@"),
+    tools = [":configure_file"],
 )
 
 cc_library(
