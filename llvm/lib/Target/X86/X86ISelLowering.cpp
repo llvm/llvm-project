@@ -22987,13 +22987,15 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
     // instead of in the vector domain, since SHL has better throughput
     // than a vector shift.
     SDValue Wide = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
-    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide, DAG.getShiftAmountConstant(16, MVT::i32, DL));
+    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide,
+                       DAG.getShiftAmountConstant(16, MVT::i32, DL));
     Res = DAG.getBitcast(MVT::f32, Wide);
   } else {
     // Shift the bf16 bits into the high half of the f32.
     SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
     Vec = DAG.getBitcast(MVT::v4i32, Vec);
-    Vec = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
+    Vec =
+        getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
     Vec = DAG.getBitcast(MVT::v4f32, Vec);
     Res = DAG.getExtractVectorElt(DL, MVT::f32, Vec, 0);
   }
