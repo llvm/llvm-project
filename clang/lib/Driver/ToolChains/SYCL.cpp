@@ -134,7 +134,7 @@ void SYCLToolChain::addClangTargetOptions(
        getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
-    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+    CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
   }
 }
 
