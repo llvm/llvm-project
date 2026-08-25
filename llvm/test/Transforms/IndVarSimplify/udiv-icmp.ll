@@ -11,10 +11,9 @@ define i1 @quotient_eq_zero(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -46,10 +45,9 @@ define i1 @quotient_ule_zero(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -81,10 +79,9 @@ define i1 @quotient_ult_one(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -116,10 +113,9 @@ define i1 @quotient_ne_zero(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -151,10 +147,9 @@ define i1 @quotient_ugt_zero(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -186,10 +181,9 @@ define i1 @quotient_uge_one(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -221,10 +215,9 @@ define i1 @constant_on_left(i64 %a, i64 %b) {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ true, %[[LOOP]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP_LCSSA]], %[[EXIT_LOOPEXIT]] ]

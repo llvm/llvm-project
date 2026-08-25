@@ -21,15 +21,53 @@ define void @openmp_loop(
 ; CHECK-NEXT:    [[SKIP_INNER:%.*]] = icmp ult i64 [[NUMERATOR]], [[DENOMINATOR]]
 ; CHECK-NEXT:    br i1 [[SKIP_INNER]], label %[[OUTER_LATCH]], label %[[INNER_EPIL_PREHEADER:.*]]
 ; CHECK:       [[INNER_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[QUOTIENT]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[QUOTIENT]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[INNER_EPIL_PREHEADER1:.*]], label %[[INNER_PREHEADER_NEW:.*]]
+; CHECK:       [[INNER_PREHEADER_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[QUOTIENT]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[INNER_EPIL:.*]]
 ; CHECK:       [[INNER_EPIL]]:
-; CHECK-NEXT:    [[COUNT_EPIL:%.*]] = phi i64 [ [[NEXT_EPIL:%.*]], %[[INNER_EPIL]] ], [ [[QUOTIENT]], %[[INNER_EPIL_PREHEADER]] ]
-; CHECK-NEXT:    [[OFFSET_EPIL:%.*]] = phi i64 [ [[NEXT_OFFSET_EPIL:%.*]], %[[INNER_EPIL]] ], [ 0, %[[INNER_EPIL_PREHEADER]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i64 [ [[QUOTIENT]], %[[INNER_PREHEADER_NEW]] ], [ [[NEXT_7:%.*]], %[[INNER_EPIL]] ]
+; CHECK-NEXT:    [[OFFSET:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER_NEW]] ], [ [[NEXT_OFFSET_7:%.*]], %[[INNER_EPIL]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER_NEW]] ], [ [[NITER_NEXT_7:%.*]], %[[INNER_EPIL]] ]
+; CHECK-NEXT:    [[NEXT_OFFSET:%.*]] = add i64 [[OFFSET]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_1:%.*]] = add i64 [[NEXT_OFFSET]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_2:%.*]] = add i64 [[NEXT_OFFSET_1]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_3:%.*]] = add i64 [[NEXT_OFFSET_2]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_4:%.*]] = add i64 [[NEXT_OFFSET_3]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_5:%.*]] = add i64 [[NEXT_OFFSET_4]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_OFFSET_6:%.*]] = add i64 [[NEXT_OFFSET_5]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NEXT_7]] = add i64 [[COUNT]], -8
+; CHECK-NEXT:    [[NEXT_OFFSET_7]] = add i64 [[NEXT_OFFSET_6]], [[DENOMINATOR]]
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[INNER_EPIL]], label %[[OUTER_LATCH_LOOPEXIT_UNR_LCSSA:.*]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[COUNT_UNR:%.*]] = phi i64 [ [[NEXT_7]], %[[INNER_EPIL]] ]
+; CHECK-NEXT:    [[OFFSET_UNR:%.*]] = phi i64 [ [[NEXT_OFFSET_7]], %[[INNER_EPIL]] ]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[INNER_EPIL_PREHEADER1]], label %[[OUTER_LATCH_LOOPEXIT1:.*]]
+; CHECK:       [[INNER_EPIL_PREHEADER1]]:
+; CHECK-NEXT:    [[COUNT_EPIL_INIT:%.*]] = phi i64 [ [[QUOTIENT]], %[[INNER_EPIL_PREHEADER]] ], [ [[COUNT_UNR]], %[[OUTER_LATCH_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[OFFSET_EPIL_INIT:%.*]] = phi i64 [ 0, %[[INNER_EPIL_PREHEADER]] ], [ [[OFFSET_UNR]], %[[OUTER_LATCH_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
+; CHECK-NEXT:    br label %[[INNER_EPIL1:.*]]
+; CHECK:       [[INNER_EPIL1]]:
+; CHECK-NEXT:    [[COUNT_EPIL:%.*]] = phi i64 [ [[NEXT_EPIL:%.*]], %[[INNER_EPIL1]] ], [ [[COUNT_EPIL_INIT]], %[[INNER_EPIL_PREHEADER1]] ]
+; CHECK-NEXT:    [[OFFSET_EPIL:%.*]] = phi i64 [ [[NEXT_OFFSET_EPIL:%.*]], %[[INNER_EPIL1]] ], [ [[OFFSET_EPIL_INIT]], %[[INNER_EPIL_PREHEADER1]] ]
+; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[INNER_EPIL_PREHEADER1]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[INNER_EPIL1]] ]
 ; CHECK-NEXT:    [[NEXT_EPIL]] = add i64 [[COUNT_EPIL]], -1
 ; CHECK-NEXT:    [[NEXT_OFFSET_EPIL]] = add i64 [[OFFSET_EPIL]], [[DENOMINATOR]]
 ; CHECK-NEXT:    [[CONTINUE_EPIL:%.*]] = icmp ugt i64 [[COUNT_EPIL]], 1
-; CHECK-NEXT:    br i1 [[CONTINUE_EPIL]], label %[[INNER_EPIL]], label %[[OUTER_LATCH_LOOPEXIT:.*]]
+; CHECK-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
+; CHECK-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
+; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[INNER_EPIL1]], label %[[OUTER_LATCH_LOOPEXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_LOOPEXIT1]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT1]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    call void @barrier()
@@ -86,20 +124,45 @@ define void @udiv_entry_guard_reduced(ptr %denominator_ptr) {
 ; CHECK-NEXT:    br label %[[OUTER_LOOPEXIT:.*]]
 ; CHECK:       [[OUTER_LOOPEXIT1:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_BACKEDGE:.*]]
+; CHECK:       [[OUTER_BACKEDGE]]:
+; CHECK-NEXT:    br label %[[OUTER_BACKEDGE1:.*]]
 ; CHECK:       [[OUTER_LOOPEXIT]]:
 ; CHECK-NEXT:    [[DENOMINATOR:%.*]] = load i64, ptr [[DENOMINATOR_PTR]], align 4
 ; CHECK-NEXT:    [[QUOTIENT:%.*]] = udiv i64 35, [[DENOMINATOR]]
 ; CHECK-NEXT:    [[SKIP_INNER:%.*]] = icmp ult i64 35, [[DENOMINATOR]]
-; CHECK-NEXT:    br i1 [[SKIP_INNER]], label %[[OUTER_BACKEDGE]], label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[OUTER_BACKEDGE]]:
+; CHECK-NEXT:    br i1 [[SKIP_INNER]], label %[[OUTER_BACKEDGE1]], label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[OUTER_BACKEDGE1]]:
 ; CHECK-NEXT:    br label %[[OUTER_LOOPEXIT]]
 ; CHECK:       [[INNER_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[QUOTIENT]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[QUOTIENT]], 7
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[INNER_PROL_PREHEADER:.*]], label %[[INNER_PROL_LOOPEXIT:.*]]
+; CHECK:       [[INNER_PROL_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_PROL:.*]]
 ; CHECK:       [[INNER_PROL]]:
-; CHECK-NEXT:    [[COUNT_PROL:%.*]] = phi i64 [ [[NEXT_PROL:%.*]], %[[INNER_PROL]] ], [ [[QUOTIENT]], %[[INNER_PREHEADER]] ]
+; CHECK-NEXT:    [[COUNT_PROL:%.*]] = phi i64 [ [[NEXT_PROL:%.*]], %[[INNER_PROL]] ], [ [[QUOTIENT]], %[[INNER_PROL_PREHEADER]] ]
+; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, %[[INNER_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], %[[INNER_PROL]] ]
 ; CHECK-NEXT:    [[NEXT_PROL]] = add i64 [[COUNT_PROL]], -1
 ; CHECK-NEXT:    [[CONTINUE_PROL:%.*]] = icmp ugt i64 [[COUNT_PROL]], 1
-; CHECK-NEXT:    br i1 [[CONTINUE_PROL]], label %[[INNER_PROL]], label %[[OUTER_LOOPEXIT1]]
+; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
+; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label %[[INNER_PROL]], label %[[INNER_PROL_LOOPEXIT_UNR_LCSSA:.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[INNER_PROL_LOOPEXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[COUNT_UNR_PH:%.*]] = phi i64 [ [[NEXT_PROL]], %[[INNER_PROL]] ]
+; CHECK-NEXT:    br label %[[INNER_PROL_LOOPEXIT]]
+; CHECK:       [[INNER_PROL_LOOPEXIT]]:
+; CHECK-NEXT:    [[COUNT_UNR:%.*]] = phi i64 [ [[QUOTIENT]], %[[INNER_PREHEADER]] ], [ [[COUNT_UNR_PH]], %[[INNER_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_BACKEDGE]], label %[[INNER_PREHEADER_NEW:.*]]
+; CHECK:       [[INNER_PREHEADER_NEW]]:
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i64 [ [[COUNT_UNR]], %[[INNER_PREHEADER_NEW]] ], [ [[NEXT_7:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[NEXT_6:%.*]] = add i64 [[COUNT]], -7
+; CHECK-NEXT:    [[NEXT_7]] = add i64 [[COUNT]], -8
+; CHECK-NEXT:    [[CONTINUE_7:%.*]] = icmp ugt i64 [[NEXT_6]], 1
+; CHECK-NEXT:    br i1 [[CONTINUE_7]], label %[[INNER]], label %[[OUTER_LOOPEXIT1]]
 ;
 entry:
   br label %outer
@@ -116,3 +179,8 @@ inner:                                            ; preds = %inner, %outer
   %continue = icmp ugt i64 %count, 1
   br i1 %continue, label %inner, label %outer
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+;.
