@@ -6441,9 +6441,8 @@ static llvm::GEPNoWrapFlags
 inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
                  llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
   llvm::GEPNoWrapFlags NW;
-  auto *AT = dyn_cast<llvm::ArrayType>(SrcTy);
-  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice && AT &&
-                    AT->getElementType()->isArrayTy() &&
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice &&
+                    isa<llvm::ArrayType>(SrcTy) &&
                     !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
   if (!SectionGEP)
     NW = llvm::GEPNoWrapFlags::inBounds();
