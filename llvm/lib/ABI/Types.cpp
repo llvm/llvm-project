@@ -16,7 +16,6 @@ bool RecordType::isEmpty() const {
   if (hasFlexibleArrayMember())
     return false;
 
-  // Direct virtual bases are not included in the base class list.
   for (const FieldInfo &Base : getBaseClasses()) {
     const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
     if (!BaseRT || !BaseRT->isEmpty())
