@@ -317,6 +317,8 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
   // discriminator would end up getting zero samples. This could in turn undo
   // the sample distribution effort done by previous BFI maintenance and the
   // probe distribution factor work for pseudo probes.
+  if (!Reader)
+    return false;
   if (!Reader->profileIsFS())
     return false;
 
