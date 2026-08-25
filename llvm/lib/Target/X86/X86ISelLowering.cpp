@@ -22978,10 +22978,8 @@ static SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) {
 SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Src = Op.getOperand(0);
-  // Operand is usually already softened to i16 by type legalization.
-  if (Src.getValueType() == MVT::bf16)
-    Src = DAG.getBitcast(MVT::i16, Src);
+  // Bitcast incase the Operand has not been legalized into a i16 already
+  SDValue Src = DAG.getBitcast(MVT::i16, Op.getOperand(0));
 
   SDValue Res;
   if (!Subtarget.hasFP16() && ISD::isNormalLoad(Src.getNode())) {
@@ -22990,7 +22988,7 @@ SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
     // instead of in the vector domain, since SHL has better throughput
     // than a vector shift.
     SDValue Wide = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
-    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide, DAG.getConstant(16, DL, MVT::i32));
+    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide, DAG.getShiftAmountConstant(16, MVT::i32, DL));
     Res = DAG.getBitcast(MVT::f32, Wide);
   } else {
     // Shift the bf16 bits into the high half of the f32.
