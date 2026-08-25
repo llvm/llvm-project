@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
 #include <__cmath/special_functions.h>
+#include <__config>
+#include <cerrno>
+#include <cfenv>
 #include <cmath>
-#include <optional>
-#include <type_traits>
+#include <limits>
 
 // GCC defines __STDCPP_FLOATnn_T__ whenever the _Floatnn extended types exist at the
 // language level, independent of the standard library. libc++ currently ships no
@@ -45,6 +46,16 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
 namespace __math {
+
+// Boost.Math computes; the per-function wrappers below add the standard's error rules.
+// Notes that apply to all of them:
+//  - underflow is left alone: C 7.12.1/5 makes both the ERANGE and the flag
+//    implementation-defined there, and Boost's underflow policy defaults to ignore.
+//  - C 7.12.1/1 ("as if a single operation") is not implemented: intermediate flags from
+//    Boost's recurrences leak into the caller's environment.
+//  - promotion: Boost's default promote_float=true computes float inputs in double and
+//    rounds once -- more accurate and overflow-resistant, matching the existing
+//    std::hermite(float) approach. We keep it.
 namespace {
 // Error policy for all Boost.Math calls: report domain/pole/overflow/evaluation
 // errors via errno (errno_on_error) instead of throwing. Boost sets errno to
@@ -57,52 +68,90 @@ using __policy =
                   __bmp::overflow_error<__bmp::errno_on_error>,
                   __bmp::evaluation_error<__bmp::errno_on_error>>;
 
+// Reports a domain error and returns the value libc++ hands back for one.
+//
+// C 7.12.1/2, imported by [cmath.syn]/1: errno acquires EDOM when math_errhandling &
+// MATH_ERRNO, "invalid" is raised when math_errhandling & MATH_ERREXCEPT, and the
+// returned value is implementation-defined. Both channels are used unconditionally
+// because math_errhandling describes the caller's translation unit, which this
+// out-of-line definition cannot see. FE_INVALID is optional -- picolibc without
+// hardware floating point does not define it.
 template <class _Ret>
-std::optional<_Ret> __check_nan() {
-  return std::nullopt;
+_Ret __report_domain_error() {
+  errno = EDOM;
+#  ifdef FE_INVALID
+  std::feraiseexcept(FE_INVALID);
+#  endif
+  return std::numeric_limits<_Ret>::quiet_NaN();
 }
 
-template <class _Ret, class _Arg, class... _Args>
-std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
-  if constexpr (std::is_floating_point_v<_Arg>)
-    if (std::isnan(__arg))
-      return __arg;
-  return __check_nan<_Ret>(__args...);
-}
-
-// Shared back-end for the C++17 mathematical special functions ([sf.cmath]).
-// Boost.Math is the compute kernel; this wrapper enforces the standard's
-// error-reporting rules ([sf.cmath.general]):
-//   1. NaN argument -> return NaN, do NOT report a domain error (the
-//      __check_nan pre-filter below).
-//   2. domain/range error -> reported via errno only: Boost's errno_on_error
-//      policy sets errno = EDOM (domain/pole/evaluation) or ERANGE (overflow).
-//      The <cfenv> floating-point-exception side of math_errhandling
-//      (MATH_ERREXCEPT) is intentionally not mirrored, matching the shipped
-//      std::hermite and libstdc++'s special-function implementations.
-// Promotion: Boost's default promote_float=true computes float inputs in double
-// and rounds once -- more accurate and overflow-resistant, matching the
-// existing std::hermite(float) approach. We keep it.
-template <class _Func, class... _Args, class _Ret = std::invoke_result_t<_Func, _Args...>>
-_Ret __invoke_boost_math(_Func __f, _Args... __args) {
-  if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
-    return *__maybe_nan;
-
-  return __f(__args..., __policy{});
+// Reports a range error from overflow and returns __value, which the caller supplies as
+// the correctly signed HUGE_VAL (an infinity on IEEE 754 targets), per C 7.12.1/4. No
+// Boost policy raises floating-point exceptions, so the flag is ours to raise; Boost's
+// own overflow detection sets ERANGE too, and the two channels have to agree. A pole would
+// want FE_DIVBYZERO instead, and Boost's policies cannot tell the two apart (both map to
+// ERANGE) -- none of the functions implemented so far has one.
+template <class _Ret>
+_Ret __report_overflow(_Ret __value) {
+  errno = ERANGE;
+#  ifdef FE_OVERFLOW
+  std::feraiseexcept(FE_OVERFLOW);
+#  endif
+  return __value;
 }
 } // namespace
 
 // assoc_laguerre
-float __assoc_laguerre(unsigned __n, unsigned __m, float __x) noexcept {
-  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+namespace {
+template <class _Real>
+_Real __assoc_laguerre_impl(unsigned __n, unsigned __m, _Real __x) {
+  // [sf.cmath.general]/1: a NaN argument returns a NaN and reports no domain error. It is
+  // returned unchanged, so a signaling NaN stays signaling. IEEE 754 would raise "invalid"
+  // for it -- and the comparisons below can too, since the relational operators may signal
+  // for unordered operands (C 7.12.14) -- which [sf.cmath] neither requires nor forbids
+  // for a NaN argument. Quiet NaNs, the case that matters, reach neither.
+  if (std::isnan(__x))
+    return __x;
+
+  // [sf.cmath.assoc.laguerre] Returns: states the domain as x >= 0, so a negative
+  // argument -- -inf included ([sf.cmath.general]/2) -- is a domain error
+  // ([sf.cmath.general]/1.1). Boost evaluates such an argument happily, so the check has
+  // to live here.
+  if (__x < 0)
+    return __report_domain_error<_Real>();
+
+  // x == +inf is in the domain. The leading term of L^m_n is (-1)^n x^n / n!, so the value
+  // there is 1 for n == 0 and (-1)^n * inf otherwise. That is not a range error: the
+  // mathematical result is itself infinite. Answered here because Boost's recurrence is
+  // not infinity-safe (it forms inf - inf for n >= 3) and its narrowing cast reports a
+  // spurious ERANGE for an infinite value.
+  if (std::isinf(__x))
+    return __n == 0 ? _Real(1) : (__n % 2 == 0 ? __x : -__x);
+
+  _Real __result = boost::math::laguerre(__n, __m, __x, __policy{});
+
+  // A non-finite result from finite arguments is a range error from overflow (C 7.12.1/4).
+  // Boost runs the recurrence in the result type, so a value on the way to L^m_n that does
+  // not fit becomes an infinity and, two steps further, inf - inf == NaN. Past its largest
+  // root L^m_n has the sign of its leading term, so both cases are overflowed values with
+  // a known sign rather than undefined ones.
+  if (!std::isfinite(__result)) {
+    _Real __inf = std::numeric_limits<_Real>::infinity();
+    return __report_overflow(__n % 2 == 0 ? __inf : -__inf);
+  }
+
+  return __result;
 }
+} // namespace
+
+float __assoc_laguerre(unsigned __n, unsigned __m, float __x) noexcept { return __assoc_laguerre_impl(__n, __m, __x); }
 
 double __assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
-  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+  return __assoc_laguerre_impl(__n, __m, __x);
 }
 
 long double __assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexcept {
-  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+  return __assoc_laguerre_impl(__n, __m, __x);
 }
 
 } // namespace __math

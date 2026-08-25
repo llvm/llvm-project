@@ -41,8 +41,33 @@ void test_floating_point(Func assoc_laguerre) {
   assert(between(-0.01, assoc_laguerre(2, 2, Float(2)), 0.01));
   assert(between(60.124, assoc_laguerre(2, 10, Float(0.5)), 60.126));
 
-  // a negative argument is in the domain (no domain error)
-  check_no_domain_error([&] { assert(between(1.99, assoc_laguerre(1, 0, Float(-1)), 2.01)); });
+  // [sf.cmath.assoc.laguerre] Returns: states the domain as x >= 0, so a negative
+  // argument is a domain error ([sf.cmath.general]/1.1)
+  check_domain_error([&] { assoc_laguerre(1, 0, Float(-1)); });
+
+  // [sf.cmath.general]/2 leaves both infinities in the domain unless the Returns:
+  // element excludes them, and x >= 0 excludes -inf but not +inf. The leading term of
+  // L^m_n is (-1)^n x^n / n!, so L^m_n(+inf) is 1 for n == 0 and (-1)^n * inf otherwise.
+  if constexpr (std::numeric_limits<Float>::has_infinity) {
+    const Float inf = std::numeric_limits<Float>::infinity();
+
+    check_domain_error([&] { assoc_laguerre(1, 0, -inf); });
+
+    check_no_domain_error([&] { assert(assoc_laguerre(0, 0, inf) == Float(1)); });
+    check_no_domain_error([&] { assert(assoc_laguerre(1, 0, inf) == -inf); });
+    check_no_domain_error([&] { assert(assoc_laguerre(2, 0, inf) == inf); });
+    check_no_domain_error([&] { assert(assoc_laguerre(3, 5, inf) == -inf); });
+
+    // An infinity produced from finite arguments is a range error, not a domain error:
+    // errno == ERANGE and the value is +-HUGE_VAL, again with the sign of the leading
+    // term (C 7.12.1/4).
+    const Float max = std::numeric_limits<Float>::max();
+
+    check_range_error([&] { assert(assoc_laguerre(2, 0, max) == inf); });
+    check_range_error([&] { assert(assoc_laguerre(3, 0, max) == -inf); });
+    check_range_error([&] { assert(assoc_laguerre(4, 1, max) == inf); });
+    check_range_error([&] { assert(assoc_laguerre(5, 1, max) == -inf); });
+  }
 
   // NaN argument -> NaN result, without a domain error ([sf.cmath.general]/1)
   [[maybe_unused]] auto test_nan = [&](Float nan) {
