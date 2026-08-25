@@ -2320,19 +2320,27 @@ isRewriteCandidateMAI(const MachineInstr *MI, const SIInstrInfo *TII,
   return TII->isMAI(*MI) && RewriteCandsSet.contains(MI);
 }
 
+// True if \p OpRC (an operand's register-class constraint) admits the AGPR
+// form we would emit for it, i.e. the AGPR equivalent of its VGPR class is a
+// legal choice. An AV/agnostic constraint passes; a plain-VGPR one does not.
+static bool operandAcceptsAGPRForm(const TargetRegisterClass *OpRC,
+                                   const SIRegisterInfo *SRI) {
+  if (!OpRC)
+    return false;
+  const TargetRegisterClass *AGPRForm = SRI->getEquivalentAGPRClass(OpRC);
+  return AGPRForm && SRI->getCommonSubClass(OpRC, AGPRForm);
+}
+
 static bool canWriteAGPR(const MachineInstr *MI, const SIInstrInfo *TII,
                          const SIRegisterInfo *SRI) {
-  // A writer can write its result into an AGPR lane iff its def operand's
-  // register-class constraint admits AGPRs (AV/agnostic classes do, plain VGPR
-  // classes don't). COPY is a generic opcode with no operand constraint, so
-  // special-case it.
+  // COPY is a generic opcode with no operand constraint, so it can produce an
+  // AGPR result.
   if (MI->isCopy())
     return true;
   const MCInstrDesc &Desc = MI->getDesc();
   if (Desc.getNumDefs() == 0)
     return false;
-  const TargetRegisterClass *DefRC = TII->getRegClass(Desc, 0);
-  return DefRC && SRI->hasAGPRs(DefRC);
+  return operandAcceptsAGPRForm(TII->getRegClass(Desc, 0), SRI);
 }
 
 static bool useAcceptsAGPR(const MachineOperand *Use, const SIInstrInfo *TII,
@@ -2341,10 +2349,8 @@ static bool useAcceptsAGPR(const MachineOperand *Use, const SIInstrInfo *TII,
   // COPY is a generic opcode with no operand constraint; it can read an AGPR.
   if (UseMI->isCopy())
     return true;
-  // The use's static register-class constraint must admit AGPRs.
-  const TargetRegisterClass *UseRC =
-      UseMI->getRegClassConstraint(Use->getOperandNo(), TII, SRI);
-  return UseRC && SRI->hasAGPRs(UseRC);
+  return operandAcceptsAGPRForm(
+      UseMI->getRegClassConstraint(Use->getOperandNo(), TII, SRI), SRI);
 }
 
 bool RewriteMFMAFormStage::isRecolorSafe(
@@ -2830,6 +2836,18 @@ bool RewriteMFMAFormStage::rewrite(
       const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
       MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
       RedefMap[DstReg] = MappedReg;
+
+      // The candidate MFMA's def operand is redirected to MappedReg (which is
+      // reclassified to AGPR form), so the original dst reg loses its full-lane
+      // def. Bridge the AGPR-form result back into the original VGPR reg right
+      // after the MFMA so any later partial redef and downstream use still see
+      // a dominating full-lane def.
+      MachineInstrBuilder Bridge =
+          BuildMI(*MI->getParent(), std::next(MI->getIterator()),
+                  MI->getDebugLoc(), TII->get(TargetOpcode::COPY))
+              .addDef(DstReg, {}, 0)
+              .addUse(MappedReg, {}, 0);
+      DAG.LIS->InsertMachineInstrInMaps(*Bridge);
     }
 
     if (!DstUseDefsReplace.empty()) {
