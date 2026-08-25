@@ -108,9 +108,6 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_def_cfa_offset -16
-; CHECK-NEXT:    .cfi_restore w30
-; CHECK-NEXT:    .cfi_restore w29
 
 ; COMPAT-NEXT:   adrp x16, .Ltmp1
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp1
@@ -131,6 +128,9 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
 ; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset -16
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    b callee_stack0
   tail call swifttailcc void @callee_stack0()
   ret void
@@ -245,9 +245,6 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; CHECK-NEXT:          .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:          ldp     x29, x30, [sp], #16
 ; CHECK-NEXT:          .cfi_def_cfa_offset 0
-; CHECK-NEXT:          .cfi_def_cfa_offset -80
-; CHECK-NEXT:          .cfi_restore w30
-; CHECK-NEXT:          .cfi_restore w29
 
 ; COMPAT-NEXT:         adrp    x16, .Ltmp3
 ; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
@@ -268,6 +265,9 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; PAUTH-NEXT:          .cfi_negate_ra_state
 
 ; CHECK-NEXT:          add     sp, sp, #80
+; CHECK-NEXT:          .cfi_def_cfa_offset -80
+; CHECK-NEXT:          .cfi_restore w30
+; CHECK-NEXT:          .cfi_restore w29
 ; CHECK-NEXT:          ret
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:          .cfi_restore_state
@@ -275,9 +275,6 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; CHECK-NEXT:          .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:          ldp     x29, x30, [sp], #16
 ; CHECK-NEXT:          .cfi_def_cfa_offset 0
-; CHECK-NEXT:          .cfi_def_cfa_offset -80
-; CHECK-NEXT:          .cfi_restore w30
-; CHECK-NEXT:          .cfi_restore w29
 
 ; COMPAT-NEXT:         adrp    x16, .Ltmp3
 ; COMPAT-NEXT:         add     x16, x16, :lo12:.Ltmp3
@@ -298,6 +295,9 @@ define swifttailcc void @crash_tc(i1 %c, [8 x i64] %pad, i64 %x) "branch-protect
 ; PAUTH-NEXT:          .cfi_negate_ra_state
 
 ; CHECK-NEXT:          add     sp, sp, #80
+; CHECK-NEXT:          .cfi_def_cfa_offset -80
+; CHECK-NEXT:          .cfi_restore w30
+; CHECK-NEXT:          .cfi_restore w29
 ; CHECK-NEXT:          b       callee_stack0
 
 entry:

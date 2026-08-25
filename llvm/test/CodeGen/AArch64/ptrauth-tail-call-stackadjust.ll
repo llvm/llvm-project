@@ -21,9 +21,9 @@ define swifttailcc void @test_frame_and_args(%large_struct %s) #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl _external_func
 ; CHECK-NEXT:    ldr x30, [sp, #64] ; 8-byte Reload
-; CHECK-NEXT:    add x16, sp, #80
-; CHECK-NEXT:    autib x30, x16
 ; CHECK-NEXT:    add sp, sp, #144
+; CHECK-NEXT:    sub x16, sp, #64
+; CHECK-NEXT:    autib x30, x16
 ; CHECK-NEXT:    ret
 entry:
   %local1 = alloca [32 x i8], align 8
@@ -56,14 +56,53 @@ define swifttailcc void @test_frame_and_large_args(%large_struct2 %s) #0 {
 ; CHECK-NEXT:    ldp x28, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-NEXT:    add x16, sp, #48
 ; CHECK-NEXT:    autib x30, x16
-; CHECK-NEXT:    add sp, sp, #688
 ; CHECK-NEXT:    add sp, sp, #1, lsl #12 ; =4096
+; CHECK-NEXT:    add sp, sp, #688
 ; CHECK-NEXT:    ret
 entry:
   %local1 = alloca [32 x i8], align 8
   call void @llvm.lifetime.start.p0(i64 32, ptr %local1)
   call void @external_func()
   call void @llvm.lifetime.end.p0(i64 32, ptr %local1)
+  ret void
+}
+
+declare swifttailcc void @callee_stack0()
+declare void @use(ptr)
+
+define swifttailcc void @test_frame_and_args_split_by_csr_reload([8 x i64], i64 %x) "sign-return-address"="all" "frame-pointer"="all" uwtable(async) {
+; CHECK-LABEL: test_frame_and_args_split_by_csr_reload:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    paciasp
+; CHECK-NEXT:    str x28, [sp, #-32]! ; 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w28, -32
+; CHECK-NEXT:    sub sp, sp, #1, lsl #12 ; =4096
+; CHECK-NEXT:    sub sp, sp, #3904
+; CHECK-NEXT:    mov x0, sp
+; CHECK-NEXT:    bl _use
+; CHECK-NEXT:    add sp, sp, #1, lsl #12 ; =4096
+; CHECK-NEXT:    add sp, sp, #3904
+; CHECK-NEXT:    .cfi_def_cfa wsp, 32
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp], #32 ; 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    autiasp
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset -16
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    .cfi_restore w28
+; CHECK-NEXT:    b _callee_stack0
+entry:
+  %buf = alloca [8000 x i8], align 16
+  call void @use(ptr %buf)
+  tail call swifttailcc void @callee_stack0()
   ret void
 }
 
