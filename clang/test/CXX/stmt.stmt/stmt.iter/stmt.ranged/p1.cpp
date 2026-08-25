@@ -154,6 +154,9 @@ void g() {
   for (thread_local int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'thread_local'}}
   for (register int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'register'}} expected-warning 0-1{{register}} expected-error 0-1{{register}}
   for (constexpr int a : X::C()) {} // OK per CWG issue #1204.
+  for (constexpr int a : A()) {} // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} expected-note {{range-based for loop variable is initialized on each iteration from the loop's iterator, whose value is not known at compile time}}
+  int arr[] = {1, 2, 3};
+  for (constexpr int a : arr) {} // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} expected-note {{range-based for loop variable is initialized on each iteration}}
 
   for (auto u : X::NoBeginADL()) { // expected-error {{invalid range expression of type 'X::NoBeginADL'; no viable 'begin' function available}}
   }

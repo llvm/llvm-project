@@ -429,6 +429,11 @@ features cannot lower the translation-unit ABI level;
   loop variable cannot be initialized by a constant expression, instead of
   a note about the compiler-synthesized `__begin` variable. (#GH211926)
 
+- When a `constexpr` range-based for loop variable cannot be initialized by a
+  constant expression, Clang now explains in a note that the loop variable is
+  initialized from the loop's iterator, instead of referring to the
+  compiler-synthesized `__begin` variable. (#GH211926)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

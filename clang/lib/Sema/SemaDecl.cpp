@@ -15058,23 +15058,6 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
-/// Determine whether the initializer of a range-based for loop variable reads
-/// one of the loop's implicit non-constexpr iterator variables ('__begin1').
-static bool initReadsForRangeImplicitVar(const Expr *Init) {
-  SmallVector<const Stmt *, 8> Worklist = {Init};
-  while (!Worklist.empty()) {
-    const Stmt *S = Worklist.pop_back_val();
-    if (!S)
-      continue;
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(S))
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        if (VD->isCXXForRangeImplicitVar() && !VD->isConstexpr())
-          return true;
-    Worklist.append(S->child_begin(), S->child_end());
-  }
-  return false;
-}
-
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
@@ -15287,24 +15270,18 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     if (HasConstInit) {
       // FIXME: Consider replacing the initializer with a ConstantExpr.
     } else if (var->isConstexpr()) {
-      if (var->isCXXForRangeDecl() && initReadsForRangeImplicitVar(Init)) {
-        Diag(var->getLocation(), diag::err_for_range_constexpr_loop_var)
-            << var << Init->getSourceRange();
-        var->setInvalidDecl();
-      } else {
-        SourceLocation DiagLoc = var->getLocation();
-        // If the note doesn't add any useful information other than a source
-        // location, fold it into the primary diagnostic.
-        if (Notes.size() == 1 && Notes[0].second.getDiagID() ==
-                                     diag::note_invalid_subexpr_in_const_expr) {
-          DiagLoc = Notes[0].first;
-          Notes.clear();
-        }
-        Diag(DiagLoc, diag::err_constexpr_var_requires_const_init)
-            << var << Init->getSourceRange();
-        for (unsigned I = 0, N = Notes.size(); I != N; ++I)
-          Diag(Notes[I].first, Notes[I].second);
+      SourceLocation DiagLoc = var->getLocation();
+      // If the note doesn't add any useful information other than a source
+      // location, fold it into the primary diagnostic.
+      if (Notes.size() == 1 && Notes[0].second.getDiagID() ==
+                                   diag::note_invalid_subexpr_in_const_expr) {
+        DiagLoc = Notes[0].first;
+        Notes.clear();
       }
+      Diag(DiagLoc, diag::err_constexpr_var_requires_const_init)
+          << var << Init->getSourceRange();
+      for (unsigned I = 0, N = Notes.size(); I != N; ++I)
+        Diag(Notes[I].first, Notes[I].second);
     } else if (GlobalStorage && var->hasAttr<ConstInitAttr>()) {
       auto *Attr = var->getAttr<ConstInitAttr>();
       Diag(var->getLocation(), diag::err_require_constant_init_failed)

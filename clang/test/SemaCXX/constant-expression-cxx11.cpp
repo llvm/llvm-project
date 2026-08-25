@@ -1943,6 +1943,10 @@ namespace InitializerList {
     constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
     static_assert(il.begin()[1] == 2.0, "");
   }
+
+  void constexpr_loop_var() {
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{range-based for loop variable is initialized on each iteration from the loop's iterator, whose value is not known at compile time}}
+  }
 }
 
 namespace StmtExpr {
