@@ -3513,16 +3513,23 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // integer types rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
-  // Only whole-dword, non-extending/non-truncating accesses are implemented.
-  // Reject anything else with a diagnostic instead of failing to legalize
-  // (sub-dword support lands in a later change).
+  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
+  // implemented. Reject anything else with a diagnostic instead of failing to
+  // legalize (sub-dword support lands in a later change).
+  //
+  // The alignment is checked here rather than in the size predicate: the index
+  // built below is the pointer shifted right by two, which discards the low two
+  // bits rather than accounting for them, so an under-aligned access would
+  // silently reach the dword containing the address instead of the bytes asked
+  // for. That is a property of how the address is formed, not of the size.
   if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
-                                    ValSize)) {
+                                    ValSize) ||
+      MMO.getAlign() < Align(4)) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "whole-dword loads and stores are implemented",
+        "dword-aligned whole-dword loads and stores are implemented",
         MI.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);

@@ -13494,17 +13494,17 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   EVT MemVT = MemOp->getMemoryVT();
   unsigned BitWidth = MemVT.getSizeInBits();
 
-  // Only whole-dword, non-extending/non-truncating accesses are implemented.
-  // Reject anything else with a diagnostic (replacing the value with poison)
-  // instead of failing instruction selection. Both callers - operation
-  // legalization and the pre-ISel combine - replace the node with this result,
-  // so the diagnostic is emitted exactly once.
+  // Only dword-aligned whole-dword, non-extending/non-truncating accesses are
+  // implemented. Reject anything else with a diagnostic (replacing the value
+  // with poison) instead of failing instruction selection. Both callers -
+  // operation legalization and the pre-ISel combine - replace the node with
+  // this result, so the diagnostic is emitted exactly once.
   auto reportUnsupported = [&]() -> SDValue {
     const Function &F = DAG.getMachineFunction().getFunction();
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
-        "whole-dword loads and stores are implemented",
+        "dword-aligned whole-dword loads and stores are implemented",
         DL.getDebugLoc()));
     if (isa<StoreSDNode>(MemOp))
       return MemOp->getChain();
@@ -13513,6 +13513,13 @@ SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
   };
 
   if (BitWidth < 32)
+    return reportUnsupported();
+
+  // The dword index built below is the pointer shifted right by two, which
+  // discards the low two bits rather than accounting for them, so an
+  // under-aligned access would silently reach the dword containing the address
+  // instead of the bytes asked for.
+  if (MemOp->getAlign() < Align(4))
     return reportUnsupported();
   if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
     if (Load->getExtensionType() != ISD::NON_EXTLOAD)
