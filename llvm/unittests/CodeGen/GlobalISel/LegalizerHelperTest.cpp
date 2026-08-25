@@ -1913,11 +1913,11 @@ TEST_F(AArch64GISelMITest, WidenScalarFlags) {
   auto Two8 = B.buildConstant(S8, 2);
   auto One16 = B.buildConstant(S16, 1);
 
-  SmallVector<MachineInstr *, 3> NoWrapOps;
-  for (unsigned Opcode :
-       {TargetOpcode::G_ADD, TargetOpcode::G_SUB, TargetOpcode::G_MUL})
-    NoWrapOps.push_back(
-        B.buildInstr(Opcode, {S8}, {One8, Two8}, NoWrapFlags).getInstr());
+  MachineInstr *NoWrapOps[] = {
+      B.buildAdd(S8, One8, Two8, NoWrapFlags).getInstr(),
+      B.buildSub(S8, Two8, One8, NoWrapFlags).getInstr(),
+      B.buildMul(S8, One8, Two8, NoWrapFlags).getInstr(),
+  };
   auto Or = B.buildOr(S8, One8, Two8, MachineInstr::Disjoint);
   auto ShlValue = B.buildShl(S8, One8, One8, NoWrapFlags);
   auto ShlAmount = B.buildShl(S16, One16, One8, NoWrapFlags);
