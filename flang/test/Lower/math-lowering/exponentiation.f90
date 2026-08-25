@@ -1,8 +1,8 @@
-! RUN: bbc -emit-fir %s -o - --math-runtime=fast | FileCheck --check-prefixes=ALL,FAST %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=fast -ffp-sum-reassociation=false | FileCheck --check-prefixes=ALL,FAST %s
 ! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast %s -o - | FileCheck --check-prefixes=ALL,FAST %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed | FileCheck --check-prefixes=ALL,RELAXED %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=relaxed -ffp-sum-reassociation=false | FileCheck --check-prefixes=ALL,RELAXED %s
 ! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed %s -o - | FileCheck --check-prefixes=ALL,RELAXED %s
-! RUN: bbc -emit-fir %s -o - --math-runtime=precise | FileCheck --check-prefixes=ALL,PRECISE %s
+! RUN: bbc -emit-fir %s -o - --math-runtime=precise -ffp-sum-reassociation=false | FileCheck --check-prefixes=ALL,PRECISE %s
 ! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise %s -o - | FileCheck --check-prefixes=ALL,PRECISE %s
 
 function test_real4(x, y, s, i, k)

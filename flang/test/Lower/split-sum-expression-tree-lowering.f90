@@ -1,6 +1,9 @@
-! RUN: %flang_fc1 -emit-hlfir -ffp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
-! RUN: %flang_fc1 -emit-hlfir -fno-fp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -O0 -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -O1 -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: %flang_fc1 -emit-hlfir -O0 -ffp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: %flang_fc1 -emit-hlfir -O1 -fno-fp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: bbc -emit-hlfir -ffp-sum-reassociation=false -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
 
 ! Default:   (((x + a*b) + c*d) + e*f)
 ! Rewritten: ((c*d + e*f) + (x + a*b))
