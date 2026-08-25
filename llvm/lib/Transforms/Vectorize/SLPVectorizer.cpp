@@ -31099,9 +31099,14 @@ public:
         TrackedToOrig.push_back(ReducedVal);
       }
       bool ShuffledExtracts = false;
-      // Try to handle shuffled extractelements.
+      // Try to handle shuffled extractelements. Only pure extractelement
+      // groups can be merged: merged groups are skipped for external uses,
+      // and other values would be erased while still used by reduction ops.
       if (S && S.getOpcode() == Instruction::ExtractElement &&
-          !S.isAltShuffle() && I + 1 < E) {
+          !S.isAltShuffle() && I + 1 < E &&
+          all_of(ReducedVals[I + 1], [&](Value *RV) {
+            return isa<ExtractElementInst>(TrackedVals.at(RV));
+          })) {
         SmallVector<Value *> CommonCandidates(Candidates);
         for (Value *RV : ReducedVals[I + 1]) {
           Value *RdxVal = TrackedVals.at(RV);
