@@ -100,6 +100,8 @@ class TestVarPath(TestBase):
         self.verify_point(frame, "pt_ptr[0]", "Point", 3030, 4040)
         self.verify_point(frame, "pt_ptr[1]", "Point", 5050, 6060)
         # Test arrays
+        v_helper = frame.var("points")
+        self.assertSuccess(v_helper.GetError(), "Make sure we find 'points'")
         v = frame.GetValueForVariablePath("points")
         self.assertSuccess(v.GetError(), "Make sure we find 'points'")
         self.verify_point(frame, "points[0]", "Point", 1010, 2020)
@@ -121,3 +123,68 @@ class TestVarPath(TestBase):
             self.assertTrue(
                 v.GetError().Fail(), "Make sure we don't find 'pt_sp->not_valid_child'"
             )
+
+    def test_frame_var_use_dynamic(self):
+        """Test `SBFrame.GetValueForVariablePath` return the current value and variable type."""
+        self.build()
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
+        frame: lldb.SBFrame = thread.GetFrameAtIndex(0)
+
+        # Verify concrete types.
+        concrete = [
+            ("shape", "Shape"),
+            ("shape_ref", "Shape &"),
+            ("shape_ptr", "Shape *"),
+            ("circle", "Circle"),
+            ("circle_ref", "Circle &"),
+            ("circle_ptr", "Circle *"),
+        ]
+        for name, expected_type in concrete:
+            for mode in (lldb.eNoDynamicValues, lldb.eDynamicDontRunTarget):
+                val: lldb.SBValue = frame.GetValueForVariablePath(name, mode)
+                self.assertSuccess(val.GetError(), f"Make sure we find {name!r}")
+                self.assertEqual(val.GetTypeName(), expected_type)
+
+                # Test the helper.
+                val: lldb.SBValue = frame.var(name, mode)
+                self.assertTrue(val.GetError().Success(), f"Make sure we find {name!r}")
+                self.assertEqual(val.GetTypeName(), expected_type)
+
+        # Verify dynamic types.
+        polymorphic = [
+            ("circle_as_shape_ref", "Shape &", "Circle &"),
+            ("circle_as_shape_ptr", "Shape *", "Circle *"),
+            ("circle_as_drawable_ref", "Drawable &", "Circle &"),
+            ("circle_as_drawable_ptr", "Drawable *", "Circle *"),
+        ]
+        for name, static_type, dynamic_type in polymorphic:
+            static = frame.GetValueForVariablePath(name, lldb.eNoDynamicValues)
+            static_helper: lldb.SBValue = frame.var(name, lldb.eNoDynamicValues)
+            for val in (static, static_helper):
+                self.assertSuccess(val.GetError(), f"find {name!r} (static)")
+                self.assertEqual(static_type, val.GetTypeName())
+                self.assertNotIn("Circle", val.GetTypeName())
+                self.assertFalse(
+                    val.GetChildMemberWithName("circle_val").IsValid(),
+                    f"{name!r} should not expose circle_val under eNoDynamicValues",
+                )
+
+            dynamic = frame.GetValueForVariablePath(name, lldb.eDynamicDontRunTarget)
+            dynamic_helper: lldb.SBValue = frame.var(name, lldb.eDynamicDontRunTarget)
+            for val in (dynamic, dynamic_helper):
+                self.assertSuccess(val.GetError(), f"find {name!r} (dynamic)")
+                self.assertEqual(
+                    dynamic_type,
+                    val.GetTypeName(),
+                    f"'{name}' should resolve to Circle under eDynamicDontRunTarget",
+                )
+                circle_val = val.GetChildMemberWithName("circle_val")
+                self.assertTrue(
+                    circle_val.IsValid(),
+                    f"{name!r} should expose circle_val under eDynamicDontRunTarget",
+                )
+
+                # Verify we can fetch the child from the static type.
+                self.assertEqual(circle_val.GetValueAsSigned(), 20)
