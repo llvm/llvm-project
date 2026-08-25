@@ -33,20 +33,20 @@ define <2 x i64> @masked_load_variable(ptr %p, <2 x i1> %mask, <2 x i64> %passth
 define <2 x i64> @masked_load_constant(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LABEL: @masked_load_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8, !tbaa [[TBAA19:![0-9]+]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[PASSTHRU:%.*]], i64 [[TMP2]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
-  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !tbaa.struct !27, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
 define <2 x i64> @masked_load_all_true(ptr %p) {
 ; CHECK-LABEL: @masked_load_all_true(
-; CHECK-NEXT:    [[RET:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8, !range [[RNG7]], !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[RET:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8, !range [[RNG7]], !tbaa.struct [[TBAA_STRUCT21:![0-9]+]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    ret <2 x i64> [[RET]]
 ;
-  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> poison), !prof !16, !range !12, !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> poison), !tbaa.struct !27, !prof !16, !range !12, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
@@ -59,7 +59,7 @@ define void @masked_store_variable(ptr %p, <2 x i1> %mask, <2 x i64> %value) {
 ; CHECK:       cond.store:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP4]], align 8, !tbaa [[TBAA4]], !alias.scope [[META9]], !noalias [[META9]], !nontemporal [[META12]], !llvm.mem.parallel_loop_access [[META13]], !llvm.access.group [[META13]], !annotation [[META14]], !nosanitize [[META8]], !mmra [[META15]], !noalias.addrspace [[META16]], !mem.cache_hint [[META19:![0-9]+]]
+; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP4]], align 8, !tbaa [[TBAA4]], !alias.scope [[META9]], !noalias [[META9]], !nontemporal [[META12]], !llvm.mem.parallel_loop_access [[META13]], !llvm.access.group [[META13]], !annotation [[META14]], !nosanitize [[META8]], !mmra [[META15]], !noalias.addrspace [[META16]], !mem.cache_hint [[META22:![0-9]+]]
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
@@ -68,7 +68,7 @@ define void @masked_store_variable(ptr %p, <2 x i1> %mask, <2 x i64> %value) {
 ; CHECK:       cond.store1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[VALUE]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 1
-; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP8]], align 8, !tbaa [[TBAA4]], !alias.scope [[META9]], !noalias [[META9]], !nontemporal [[META12]], !llvm.mem.parallel_loop_access [[META13]], !llvm.access.group [[META13]], !annotation [[META14]], !nosanitize [[META8]], !mmra [[META15]], !noalias.addrspace [[META16]], !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP8]], align 8, !tbaa [[TBAA4]], !alias.scope [[META9]], !noalias [[META9]], !nontemporal [[META12]], !llvm.mem.parallel_loop_access [[META13]], !llvm.access.group [[META13]], !annotation [[META14]], !nosanitize [[META8]], !mmra [[META15]], !noalias.addrspace [[META16]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void
@@ -81,19 +81,19 @@ define void @masked_store_constant(ptr %p, <2 x i64> %value) {
 ; CHECK-LABEL: @masked_store_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 1
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP2]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP2]], align 8, !tbaa [[TBAA19]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.store.v2i64.p0(<2 x i64> %value, ptr %p, i32 8, <2 x i1> <i1 false, i1 true>), !mem.cache_hint !1
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %value, ptr %p, i32 8, <2 x i1> <i1 false, i1 true>), !tbaa.struct !27, !mem.cache_hint !1
   ret void
 }
 
 define void @masked_store_all_true(ptr %p, <2 x i64> %value) {
 ; CHECK-LABEL: @masked_store_all_true(
-; CHECK-NEXT:    store <2 x i64> [[VALUE:%.*]], ptr [[P:%.*]], align 8, !DIAssignID [[DIASSIGNID20:![0-9]+]], !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store <2 x i64> [[VALUE:%.*]], ptr [[P:%.*]], align 8, !tbaa.struct [[TBAA_STRUCT21]], !DIAssignID [[DIASSIGNID23:![0-9]+]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.store.v2i64.p0(<2 x i64> %value, ptr %p, i32 8, <2 x i1> <i1 true, i1 true>), !DIAssignID !26, !mem.cache_hint !1
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %value, ptr %p, i32 8, <2 x i1> <i1 true, i1 true>), !tbaa.struct !27, !DIAssignID !26, !mem.cache_hint !1
   ret void
 }
 
@@ -105,7 +105,7 @@ define <2 x i64> @masked_gather_variable(<2 x ptr> %p, <2 x i1> %mask, <2 x i64>
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.load:
 ; CHECK-NEXT:    [[PTR0:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 0
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, ptr [[PTR0]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, ptr [[PTR0]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[RES0:%.*]] = insertelement <2 x i64> [[PASSTHRU:%.*]], i64 [[LOAD0]], i64 0
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
@@ -115,25 +115,25 @@ define <2 x i64> @masked_gather_variable(<2 x ptr> %p, <2 x i1> %mask, <2 x i64>
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.load1:
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P]], i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x i64> [[RES_PHI_ELSE]], i64 [[LOAD1]], i64 1
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i64> [ [[RES1]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
 ; CHECK-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]]
 ;
-  %ret = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %p, i32 8, <2 x i1> %mask, <2 x i64> %passthru), !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %p, i32 8, <2 x i1> %mask, <2 x i64> %passthru), !tbaa.struct !27, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
 define <2 x i64> @masked_gather_constant(<2 x ptr> %p, <2 x i64> %passthru) {
 ; CHECK-LABEL: @masked_gather_constant(
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x i64> [[PASSTHRU:%.*]], i64 [[LOAD1]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[RES1]]
 ;
-  %ret = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %p, i32 8, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %p, i32 8, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !tbaa.struct !27, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
@@ -146,7 +146,7 @@ define void @masked_scatter_variable(<2 x ptr> %p, <2 x i1> %mask, <2 x i64> %va
 ; CHECK:       cond.store:
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 0
 ; CHECK-NEXT:    [[PTR0:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 0
-; CHECK-NEXT:    store i64 [[ELT0]], ptr [[PTR0]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[ELT0]], ptr [[PTR0]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i2 [[SCALAR_MASK]], -2
@@ -155,12 +155,12 @@ define void @masked_scatter_variable(<2 x ptr> %p, <2 x i1> %mask, <2 x i64> %va
 ; CHECK:       cond.store1:
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x i64> [[VALUE]], i64 1
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P]], i64 1
-; CHECK-NEXT:    store i64 [[ELT1]], ptr [[PTR1]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[ELT1]], ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> %mask), !mem.cache_hint !1
+  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> %mask), !tbaa.struct !27, !mem.cache_hint !1
   ret void
 }
 
@@ -168,10 +168,10 @@ define void @masked_scatter_constant(<2 x ptr> %p, <2 x i64> %value) {
 ; CHECK-LABEL: @masked_scatter_constant(
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 1
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 1
-; CHECK-NEXT:    store i64 [[ELT1]], ptr [[PTR1]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[ELT1]], ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> <i1 false, i1 true>), !mem.cache_hint !1
+  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %value, <2 x ptr> %p, i32 8, <2 x i1> <i1 false, i1 true>), !tbaa.struct !27, !mem.cache_hint !1
   ret void
 }
 
@@ -200,19 +200,19 @@ define <2 x i64> @masked_expandload_variable(ptr %p, <2 x i1> %mask, <2 x i64> %
 ; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i64> [ [[TMP9]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ]
 ; CHECK-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]]
 ;
-  %ret = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p, <2 x i1> %mask, <2 x i64> %passthru), !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p, <2 x i1> %mask, <2 x i64> %passthru), !tbaa.struct !27, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
 define <2 x i64> @masked_expandload_constant(ptr %p, <2 x i64> %passthru) {
 ; CHECK-LABEL: @masked_expandload_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[TMP1]], align 1, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[TMP1]], align 1, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[RES1:%.*]] = insertelement <2 x i64> poison, i64 [[LOAD1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[RES1]], <2 x i64> [[PASSTHRU:%.*]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
-  %ret = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !mem.cache_hint !0
+  %ret = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr %p, <2 x i1> <i1 false, i1 true>, <2 x i64> %passthru), !tbaa.struct !27, !mem.cache_hint !0
   ret <2 x i64> %ret
 }
 
@@ -224,7 +224,7 @@ define void @masked_compressstore_variable(ptr %p, <2 x i1> %mask, <2 x i64> %va
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.store:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 0
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[P:%.*]], align 1, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP3]], ptr [[P:%.*]], align 1, !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 1
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
@@ -234,12 +234,12 @@ define void @masked_compressstore_variable(ptr %p, <2 x i1> %mask, <2 x i64> %va
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.store1:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[VALUE]], i64 1
-; CHECK-NEXT:    store i64 [[TMP7]], ptr [[PTR_PHI_ELSE]], align 1, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP7]], ptr [[PTR_PHI_ELSE]], align 1, !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> %value, ptr %p, <2 x i1> %mask), !mem.cache_hint !1
+  call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> %value, ptr %p, <2 x i1> %mask), !tbaa.struct !27, !mem.cache_hint !1
   ret void
 }
 
@@ -247,10 +247,10 @@ define void @masked_compressstore_constant(ptr %p, <2 x i64> %value) {
 ; CHECK-LABEL: @masked_compressstore_constant(
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x i64> [[VALUE:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0
-; CHECK-NEXT:    store i64 [[ELT1]], ptr [[TMP1]], align 1, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[ELT1]], ptr [[TMP1]], align 1, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> %value, ptr %p, <2 x i1> <i1 false, i1 true>), !mem.cache_hint !1
+  call void @llvm.masked.compressstore.v2i64.p0(<2 x i64> %value, ptr %p, <2 x i1> <i1 false, i1 true>), !tbaa.struct !27, !mem.cache_hint !1
   ret void
 }
 
@@ -260,35 +260,35 @@ define void @masked_histogram_variable(<2 x ptr> %p, i64 %inc, <2 x i1> %mask) {
 ; CHECK-NEXT:    br i1 [[MASK0]], label [[COND_HISTOGRAM_UPDATE:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.histogram.update:
 ; CHECK-NEXT:    [[PTR0:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 0
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, ptr [[PTR0]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, ptr [[PTR0]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LOAD0]], [[INC:%.*]]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[PTR0]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[PTR0]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[MASK1:%.*]] = extractelement <2 x i1> [[MASK]], i64 1
 ; CHECK-NEXT:    br i1 [[MASK1]], label [[COND_HISTOGRAM_UPDATE1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.histogram.update1:
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P]], i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[LOAD1]], [[INC]]
-; CHECK-NEXT:    store i64 [[TMP2]], ptr [[PTR1]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP2]], ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %p, i64 %inc, <2 x i1> %mask), !mem.cache_hint !0
+  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %p, i64 %inc, <2 x i1> %mask), !tbaa.struct !27, !mem.cache_hint !0
   ret void
 }
 
 define void @masked_histogram_constant(<2 x ptr> %p, i64 %inc) {
 ; CHECK-LABEL: @masked_histogram_constant(
 ; CHECK-NEXT:    [[PTR1:%.*]] = extractelement <2 x ptr> [[P:%.*]], i64 1
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !mem.cache_hint [[META17]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META17]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LOAD1]], [[INC:%.*]]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[PTR1]], align 8, !mem.cache_hint [[META19]]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[PTR1]], align 8, !tbaa [[TBAA4]], !mem.cache_hint [[META22]]
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %p, i64 %inc, <2 x i1> <i1 false, i1 true>), !mem.cache_hint !0
+  call void @llvm.experimental.vector.histogram.add.v2p0.i64(<2 x ptr> %p, i64 %inc, <2 x i1> <i1 false, i1 true>), !tbaa.struct !27, !mem.cache_hint !0
   ret void
 }
 
@@ -300,7 +300,7 @@ define <2 x float> @masked_load_fpmath(ptr %p, <2 x i1> %mask, <2 x float> %pass
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]]
 ; CHECK:       cond.load:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[P:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4, !fpmath [[META21:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4, !fpmath [[META24:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[PASSTHRU:%.*]], float [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
@@ -310,7 +310,7 @@ define <2 x float> @masked_load_fpmath(ptr %p, <2 x i1> %mask, <2 x float> %pass
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]]
 ; CHECK:       cond.load1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[P]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP8]], align 4, !fpmath [[META21]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP8]], align 4, !fpmath [[META24]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[RES_PHI_ELSE]], float [[TMP9]], i64 1
 ; CHECK-NEXT:    br label [[ELSE2]]
 ; CHECK:       else2:
@@ -323,28 +323,28 @@ define <2 x float> @masked_load_fpmath(ptr %p, <2 x i1> %mask, <2 x float> %pass
 
 define <2 x i64> @masked_load_debug(ptr %p, <2 x i1> %mask, <2 x i64> %passthru) !dbg !23 {
 ; CHECK-LABEL: @masked_load_debug(
-; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2, !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0, !dbg [[DBG24]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]], !dbg [[DBG24]]
+; CHECK-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2, !dbg [[DBG27:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0, !dbg [[DBG27]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[COND_LOAD:%.*]], label [[ELSE:%.*]], !dbg [[DBG27]]
 ; CHECK:       cond.load:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[PASSTHRU:%.*]], i64 [[TMP4]], i64 0, !dbg [[DBG24]]
-; CHECK-NEXT:    br label [[ELSE]], !dbg [[DBG24]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i32 0, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[PASSTHRU:%.*]], i64 [[TMP4]], i64 0, !dbg [[DBG27]]
+; CHECK-NEXT:    br label [[ELSE]], !dbg [[DBG27]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <2 x i64> [ [[TMP5]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ], !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i2 [[SCALAR_MASK]], -2, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i2 [[TMP6]], 0, !dbg [[DBG24]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]], !dbg [[DBG24]]
+; CHECK-NEXT:    [[RES_PHI_ELSE:%.*]] = phi <2 x i64> [ [[TMP5]], [[COND_LOAD]] ], [ [[PASSTHRU]], [[TMP0:%.*]] ], !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i2 [[SCALAR_MASK]], -2, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i2 [[TMP6]], 0, !dbg [[DBG27]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[COND_LOAD1:%.*]], label [[ELSE2:%.*]], !dbg [[DBG27]]
 ; CHECK:       cond.load1:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 1, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8, !dbg [[DBG24]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[RES_PHI_ELSE]], i64 [[TMP9]], i64 1, !dbg [[DBG24]]
-; CHECK-NEXT:    br label [[ELSE2]], !dbg [[DBG24]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[P]], i32 1, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[RES_PHI_ELSE]], i64 [[TMP9]], i64 1, !dbg [[DBG27]]
+; CHECK-NEXT:    br label [[ELSE2]], !dbg [[DBG27]]
 ; CHECK:       else2:
-; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i64> [ [[TMP10]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ], !dbg [[DBG24]]
-; CHECK-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]], !dbg [[DBG25:![0-9]+]]
+; CHECK-NEXT:    [[RES_PHI_ELSE3:%.*]] = phi <2 x i64> [ [[TMP10]], [[COND_LOAD1]] ], [ [[RES_PHI_ELSE]], [[ELSE]] ], !dbg [[DBG27]]
+; CHECK-NEXT:    ret <2 x i64> [[RES_PHI_ELSE3]], !dbg [[DBG28:![0-9]+]]
 ;
   %ret = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %p, i32 8, <2 x i1> %mask, <2 x i64> %passthru), !dbg !24
   ret <2 x i64> %ret, !dbg !25
@@ -389,6 +389,9 @@ declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 !24 = !DILocation(line: 2, column: 1, scope: !23)
 !25 = !DILocation(line: 3, column: 1, scope: !23)
 !26 = distinct !DIAssignID()
+!27 = !{i64 0, i64 8, !3, i64 8, i64 8, !28}
+!28 = !{!29, !29, i64 0}
+!29 = !{!"second long", !5, i64 0}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(read) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -415,11 +418,14 @@ declare <2 x float> @llvm.masked.load.v2f32.p0(ptr, i32, <2 x i1>, <2 x float>)
 ; CHECK: [[META16]] = !{i32 1, i32 2}
 ; CHECK: [[META17]] = !{i32 0, [[META18:![0-9]+]]}
 ; CHECK: [[META18]] = !{!"test.cache.hint", !"value"}
-; CHECK: [[META19]] = !{i32 1, [[META18]]}
-; CHECK: [[DIASSIGNID20]] = distinct !DIAssignID()
-; CHECK: [[META21]] = !{float 2.500000e+00}
-; CHECK: [[META22:![0-9]+]] = distinct !DISubprogram(name: "masked_load_debug", scope: [[META1]], file: [[META1]], line: 1, type: [[META23:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition, unit: [[META0]])
-; CHECK: [[META23]] = !DISubroutineType(types: [[META8]])
-; CHECK: [[DBG24]] = !DILocation(line: 2, column: 1, scope: [[META22]])
-; CHECK: [[DBG25]] = !DILocation(line: 3, column: 1, scope: [[META22]])
+; CHECK: [[TBAA19]] = !{[[META20:![0-9]+]], [[META20]], i64 0}
+; CHECK: [[META20]] = !{!"second long", [[META6]], i64 0}
+; CHECK: [[TBAA_STRUCT21]] = !{i64 0, i64 8, [[TBAA4]], i64 8, i64 8, [[TBAA19]]}
+; CHECK: [[META22]] = !{i32 1, [[META18]]}
+; CHECK: [[DIASSIGNID23]] = distinct !DIAssignID()
+; CHECK: [[META24]] = !{float 2.500000e+00}
+; CHECK: [[META25:![0-9]+]] = distinct !DISubprogram(name: "masked_load_debug", scope: [[META1]], file: [[META1]], line: 1, type: [[META26:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition, unit: [[META0]])
+; CHECK: [[META26]] = !DISubroutineType(types: [[META8]])
+; CHECK: [[DBG27]] = !DILocation(line: 2, column: 1, scope: [[META25]])
+; CHECK: [[DBG28]] = !DILocation(line: 3, column: 1, scope: [[META25]])
 ;.
