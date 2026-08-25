@@ -388,6 +388,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -1309,6 +1312,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_getstack_np
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
     libc.src.pthread.pthread_join
@@ -1526,6 +1530,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1539,6 +1544,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # locale.h entrypoints
     libc.src.locale.localeconv

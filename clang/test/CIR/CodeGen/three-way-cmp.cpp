@@ -1,12 +1,10 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefix=BEFORE,BOTH
-// RUN: FileCheck %s --input-file=%t.cir --check-prefix=AFTER
+// RUN: FileCheck %s --input-file=%t.cir --check-prefix=FINAL
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER,BOTH
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t.ll 2>&1
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %s -o %t.ll 2>&1
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o %t-og.ll 2>&1
@@ -40,12 +38,32 @@ auto three_way_strong(int x, int y) {
 // AFTER:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering{{.*}}
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Astrong_ordering{{.*}}
 
-// LLVM:  %[[LHS:.*]] = load i32, ptr %{{.*}}, align 4
-// LLVM-NEXT:  %[[RHS:.*]] = load i32, ptr %{{.*}}, align 4
-// LLVM-NEXT:  %[[CMP_LT:.*]] = icmp slt i32 %[[LHS]], %[[RHS]]
-// LLVM-NEXT:  %[[SEL_LT_GT:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 1
-// LLVM-NEXT:  %[[CMP_EQ:.*]] = icmp eq i32 %[[LHS]], %[[RHS]]
-// LLVM-NEXT:  %[[RES:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 %[[SEL_LT_GT]]
+//      FINAL:   cir.func {{.*}} @_Z16three_way_strongii{{.*}} -> !s8i
+//      FINAL:   %[[RETVAL:.*]] = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
+// FINAL-NEXT:   cir.store %[[RETVAL]], %[[COERCE:.*]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+// FINAL-NEXT:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering> -> !cir.ptr<!s8i>
+// FINAL-NEXT:   %[[COERCED:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!s8i>, !s8i
+// FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
+
+// LLVM: define dso_local i8 @_Z16three_way_strongii(i32 noundef %[[X:.*]], i32 noundef %[[Y:.*]])
+// LLVM:   %[[COERCE:.*]] = alloca %"class.std::__1::strong_ordering", align 1
+// LLVM:   %[[X_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[Y_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::strong_ordering", align 1
+// LLVM:   store i32 %[[X]], ptr %[[X_ADDR]], align 4
+// LLVM-NEXT:   store i32 %[[Y]], ptr %[[Y_ADDR]], align 4
+// LLVM-NEXT:   %[[LHS:.*]] = load i32, ptr %[[X_ADDR]], align 4
+// LLVM-NEXT:   %[[RHS:.*]] = load i32, ptr %[[Y_ADDR]], align 4
+// LLVM-NEXT:   %[[CMP_LT:.*]] = icmp slt i32 %[[LHS]], %[[RHS]]
+// LLVM-NEXT:   %[[SEL_LT_GT:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 1
+// LLVM-NEXT:   %[[CMP_EQ:.*]] = icmp eq i32 %[[LHS]], %[[RHS]]
+// LLVM-NEXT:   %[[RES:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 %[[SEL_LT_GT]]
+// LLVM-NEXT:   %[[VALUE_GEP:.*]] = getelementptr inbounds nuw %"class.std::__1::strong_ordering", ptr %[[RETVAL]], i32 0, i32 0
+// LLVM-NEXT:   store i8 %[[RES]], ptr %[[VALUE_GEP]], align 1
+// LLVM-NEXT:   %[[RETVAL_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RETVAL]], align 1
+// LLVM-NEXT:   store %"class.std::__1::strong_ordering" %[[RETVAL_LOAD]], ptr %[[COERCE]], align 1
+// LLVM-NEXT:   %[[COERCED:.*]] = load i8, ptr %[[COERCE]], align 1
+// LLVM-NEXT:   ret i8 %[[COERCED]]
 
 // OGCG:  %[[LHS:.*]] = load i32, ptr %{{.*}}, align 4
 // OGCG-NEXT:  %[[RHS:.*]] = load i32, ptr %{{.*}}, align 4
@@ -78,14 +96,34 @@ auto three_way_partial(float x, float y) {
 // AFTER:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>, !rec_std3A3A__13A3Apartial_ordering{{.*}}
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Apartial_ordering{{.*}}
 
-// LLVM:  %[[LHS:.*]] = load float, ptr %{{.*}}, align 4
-// LLVM:  %[[RHS:.*]] = load float, ptr %{{.*}}, align 4
-// LLVM:  %[[CMP_EQ:.*]] = fcmp oeq float %[[LHS]], %[[RHS]]
-// LLVM:  %[[SEL_EQ_UN:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 -127
-// LLVM:  %[[CMP_GT:.*]] = fcmp ogt float %[[LHS]], %[[RHS]]
-// LLVM:  %[[SEL_GT_EQUN:.*]] = select i1 %[[CMP_GT]], i8 1, i8 %[[SEL_EQ_UN]]
-// LLVM:  %[[CMP_LT:.*]] = fcmp olt float %[[LHS]], %[[RHS]]
-// LLVM:  %[[RES:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 %[[SEL_GT_EQUN]]
+//      FINAL:   cir.func {{.*}} @_Z17three_way_partialff{{.*}} -> !s8i
+//      FINAL:   %[[RETVAL:.*]] = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>, !rec_std3A3A__13A3Apartial_ordering
+// FINAL-NEXT:   cir.store %[[RETVAL]], %[[COERCE:.*]] : !rec_std3A3A__13A3Apartial_ordering, !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>
+// FINAL-NEXT:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering> -> !cir.ptr<!s8i>
+// FINAL-NEXT:   %[[COERCED:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!s8i>, !s8i
+// FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
+
+// LLVM: define dso_local i8 @_Z17three_way_partialff(float noundef %[[X:.*]], float noundef %[[Y:.*]])
+// LLVM:   %[[COERCE:.*]] = alloca %"class.std::__1::partial_ordering", align 1
+// LLVM:   %[[X_ADDR:.*]] = alloca float, align 4
+// LLVM:   %[[Y_ADDR:.*]] = alloca float, align 4
+// LLVM:   %[[RETVAL:.*]] = alloca %"class.std::__1::partial_ordering", align 1
+// LLVM:   store float %[[X]], ptr %[[X_ADDR]], align 4
+// LLVM-NEXT:   store float %[[Y]], ptr %[[Y_ADDR]], align 4
+// LLVM-NEXT:   %[[LHS:.*]] = load float, ptr %[[X_ADDR]], align 4
+// LLVM-NEXT:   %[[RHS:.*]] = load float, ptr %[[Y_ADDR]], align 4
+// LLVM-NEXT:   %[[CMP_EQ:.*]] = fcmp oeq float %[[LHS]], %[[RHS]]
+// LLVM-NEXT:   %[[SEL_EQ_UN:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 -127
+// LLVM-NEXT:   %[[CMP_GT:.*]] = fcmp ogt float %[[LHS]], %[[RHS]]
+// LLVM-NEXT:   %[[SEL_GT_EQUN:.*]] = select i1 %[[CMP_GT]], i8 1, i8 %[[SEL_EQ_UN]]
+// LLVM-NEXT:   %[[CMP_LT:.*]] = fcmp olt float %[[LHS]], %[[RHS]]
+// LLVM-NEXT:   %[[RES:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 %[[SEL_GT_EQUN]]
+// LLVM-NEXT:   %[[VALUE_GEP:.*]] = getelementptr inbounds nuw %"class.std::__1::partial_ordering", ptr %[[RETVAL]], i32 0, i32 0
+// LLVM-NEXT:   store i8 %[[RES]], ptr %[[VALUE_GEP]], align 1
+// LLVM-NEXT:   %[[RETVAL_LOAD:.*]] = load %"class.std::__1::partial_ordering", ptr %[[RETVAL]], align 1
+// LLVM-NEXT:   store %"class.std::__1::partial_ordering" %[[RETVAL_LOAD]], ptr %[[COERCE]], align 1
+// LLVM-NEXT:   %[[COERCED:.*]] = load i8, ptr %[[COERCE]], align 1
+// LLVM-NEXT:   ret i8 %[[COERCED]]
 
 // OGCG:  %[[LHS:.*]] = load float, ptr %{{.*}}, align 4
 // OGCG:  %[[RHS:.*]] = load float, ptr %{{.*}}, align 4
@@ -156,32 +194,43 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH: %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH: cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
   std::strong_ordering g = (m1 <=> m2);
-  // LLVM: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_(%struct.HasMember %{{.*}}, %struct.HasMember %{{.*}}) #0 {
+
+  // LLVM: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_() #0 {
+  // LLVM:   %[[RETVAL:.*]] = alloca i8, align 1
   // LLVM:   %[[M1_ALLOCA:.*]] = alloca %struct.HasMember
   // LLVM:   %[[M2_ALLOCA:.*]] = alloca %struct.HasMember
   // LLVM:   %[[G_ALLOCA:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[CALL_RES:.*]] = call %"class.std::__1::strong_ordering" @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
-  // LLVM:   store %"class.std::__1::strong_ordering" %[[CALL_RES]], ptr %[[G_ALLOCA]]
+  // LLVM:   store %struct.HasMember poison, ptr %[[M1_ALLOCA]]
+  // LLVM:   store %struct.HasMember poison, ptr %[[M2_ALLOCA]]
+  // LLVM:   %[[CALL_RES:.*]] = call i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}%[[M1_ALLOCA]], ptr {{.*}}%[[M2_ALLOCA]])
+  // LLVM:   store i8 %[[CALL_RES]], ptr %[[RETVAL]]
+  // LLVM:   %[[RETVAL_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RETVAL]]
+  // LLVM:   store %"class.std::__1::strong_ordering" %[[RETVAL_LOAD]], ptr %[[G_ALLOCA]]
   // LLVM:   ret void
   // LLVM: }
 
-  // LLVM: define {{.*}} @_ZNK9HasMemberssERKS_(ptr {{.*}}, ptr {{.*}})
-  // LLVM:   %[[TMP_SO:.*]] = alloca %"class.std::__1::strong_ordering"
-  // LLVM:   %[[RET_ALLOCA:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM: define {{.*}} i8 @_ZNK9HasMemberssERKS_(ptr {{.*}}, ptr {{.*}})
+  // LLVM:   %[[CMP_COPY:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[CMP_TEMP:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[VALUE_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[RET_SLOT_FALSE:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[RET_SLOT_TRUE:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_ALLOCA:.*]] = alloca ptr
   // LLVM:   %[[RHS_ALLOCA:.*]] = alloca ptr
-  // LLVM:   %[[TMP_SO2:.*]] = alloca %"class.std::__1::strong_ordering"
+  // LLVM:   %[[RESULT_SLOT:.*]] = alloca %"class.std::__1::strong_ordering"
   // LLVM:   %[[LHS_LOAD:.*]] = load ptr, ptr %[[LHS_ALLOCA]]
+  // LLVM:   br label %[[ENTRY_CONT:.*]]
   //
+  // LLVM: [[ENTRY_CONT]]:
   // LLVM:   %[[RHS_LOAD:.*]] = load ptr, ptr %[[RHS_ALLOCA]]
-  // LLVM:   %[[EQ_RES:.*]] = call noundef i1 @_ZNK6MembereqERKS_(ptr {{.*}}%[[LHS_LOAD]], ptr {{.*}}%[[RHS_LOAD]])
+  // LLVM:   %[[EQ_RES:.*]] = call noundef zeroext i1 @_ZNK6MembereqERKS_(ptr {{.*}}%[[LHS_LOAD]], ptr {{.*}}%[[RHS_LOAD]])
   // LLVM:   br i1 %[[EQ_RES]], label %[[EQ_TRUE:.*]], label %[[EQ_FALSE:.*]]
   //
   // LLVM: [[EQ_TRUE]]:
-  // LLVM:   br label %20
+  // LLVM:   br label %[[AFTER_CMPS:.*]]
   //
   // LLVM: [[EQ_FALSE]]:
-  // LLVM:   %[[LT_RES:.*]] = call noundef i1 @_ZNK6MemberltERKS_(ptr {{.*}}%[[LHS_LOAD]], ptr {{.*}}%[[RHS_LOAD]])
+  // LLVM:   %[[LT_RES:.*]] = call noundef zeroext i1 @_ZNK6MemberltERKS_(ptr {{.*}}%[[LHS_LOAD]], ptr {{.*}}%[[RHS_LOAD]])
   // LLVM:   br i1 %[[LT_RES]], label %[[LT_TRUE:.*]], label %[[LT_FALSE:.*]]
   //
   // LLVM: [[LT_TRUE]]:
@@ -192,34 +241,40 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   //
   // LLVM: [[AFTER_LT]]:
   // LLVM:   %[[LT_RES_PHI:.*]] = phi ptr [ @_ZNSt3__115strong_ordering7greaterE, %[[LT_FALSE]] ], [ @_ZNSt3__115strong_ordering4lessE, %[[LT_TRUE]] ]
-  // LLVM:   br label %[[AFTER_LT_CTD:.*]]
+  // LLVM:   br label %[[LT_CONT:.*]]
   //
-  // LLVM: [[AFTER_LT_CTD]]:
-  // LLVM:   br label %[[AFTER_CMPS:.*]]
+  // LLVM: [[LT_CONT]]:
+  // LLVM:   br label %[[AFTER_CMPS]]
   //
   // LLVM: [[AFTER_CMPS]]:
-  // LLVM:   %[[CMP_RES:.*]] = phi ptr [ %[[LT_RES_PHI]], %[[AFTER_LT_CTD]] ], [ @_ZNSt3__115strong_ordering5equalE, %[[EQ_TRUE]] ]
-  // LLVM:   br label %[[AFTER_CMPS_CTD:.*]]
+  // LLVM:   %[[CMP_RES:.*]] = phi ptr [ %[[LT_RES_PHI]], %[[LT_CONT]] ], [ @_ZNSt3__115strong_ordering5equalE, %[[EQ_TRUE]] ]
+  // LLVM:   br label %[[COPY_BLOCK:.*]]
   //
-  // LLVM: [[AFTER_CMPS_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RET_ALLOCA]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
-  // LLVM:   %[[RET_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RET_ALLOCA]]
-  // LLVM:   %[[SO_NE_RES:.*]] = call noundef i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(%"class.std::__1::strong_ordering" %[[RET_LOAD]],
+  // LLVM: [[COPY_BLOCK]]:
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_COPY]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[CMP_TEMP]], ptr align 1 %[[CMP_COPY]], i64 1, i1 false)
+  // LLVM:   %[[CMP_TEMP_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[CMP_TEMP]]
+  // LLVM:   store %"class.std::__1::strong_ordering" %[[CMP_TEMP_LOAD]], ptr %[[VALUE_SLOT]]
+  // LLVM:   %[[CMP_I8:.*]] = load i8, ptr %[[VALUE_SLOT]]
+  // LLVM:   %[[SO_NE_RES:.*]] = call noundef zeroext i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(i8 %[[CMP_I8]], i64 0, i64 0)
   // LLVM:   br i1 %[[SO_NE_RES]], label %[[SO_NE_RES_TRUE:.*]], label %[[SO_NE_RES_FALSE:.*]]
   //
   // LLVM: [[SO_NE_RES_TRUE]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
-  // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
-  // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RESULT_SLOT]], ptr align 1 %[[CMP_COPY]], i64 1, i1 false)
+  // LLVM:   %[[RESULT_TRUE:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RESULT_SLOT]]
+  // LLVM:   store %"class.std::__1::strong_ordering" %[[RESULT_TRUE]], ptr %[[RET_SLOT_TRUE]]
+  // LLVM:   %[[RES_TRUE:.*]] = load i8, ptr %[[RET_SLOT_TRUE]]
+  // LLVM:   ret i8 %[[RES_TRUE]]
   //
   // LLVM: [[SO_NE_RES_FALSE]]:
   // LLVM:   br label %[[SO_NE_RES_FALSE_CTD:.*]]
   //
   // LLVM: [[SO_NE_RES_FALSE_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
-  // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
-  // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RESULT_SLOT]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
+  // LLVM:   %[[RESULT_FALSE:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RESULT_SLOT]]
+  // LLVM:   store %"class.std::__1::strong_ordering" %[[RESULT_FALSE]], ptr %[[RET_SLOT_FALSE]]
+  // LLVM:   %[[RES_FALSE:.*]] = load i8, ptr %[[RET_SLOT_FALSE]]
+  // LLVM:   ret i8 %[[RES_FALSE]]
   // LLVM: }
 
   // OGCG: define {{.*}}void @_Z19use_pseudo_ordering9HasMemberS_()
