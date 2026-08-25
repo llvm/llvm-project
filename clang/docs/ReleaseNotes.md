@@ -532,6 +532,7 @@ features cannot lower the translation-unit ABI level;
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+- Fixed an assertion failure when instantiating a late-parsed function template defined in an earlier translation unit with -fdelayed-template-parsing. (#GH217073)
 
 #### Bug Fixes to AST Handling
 
