@@ -706,25 +706,6 @@ TEST_F(WalkUsedTest, MacroConcat) {
             Contains(Pair(Code.point("xyz"), UnorderedElementsAre(Header)))));
 }
 
-TEST(FixIncludes, MissingIncludesSortingAndGrouping) {
-  AnalysisResults Results;
-  Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
-  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
-  Results.Missing.push_back({"<foo>", Header("<foo>")});
-
-  format::FormatStyle Style = format::getLLVMStyle();
-  Style.Language = format::FormatStyle::LK_Cpp;
-
-  std::string Code = R"cpp(
-void bar();
-)cpp";
-
-  std::string Fixed = fixIncludes(Results, "test.cc", Code, Style);
-  EXPECT_EQ(
-      Fixed,
-      "\n#include \"a.h\"\n#include \"b.h\"\n#include <foo>\nvoid bar();\n");
-}
-
 TEST(FixIncludes, MainHeaderGrouping) {
   AnalysisResults Results;
   Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
@@ -781,6 +762,25 @@ TEST(FixIncludes, MultipleInsertionsSameOffset) {
   // Should concatenate them without conflict errors in Replacements::add
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
             "#include \"a.h\"\n#include \"b.h\"\n");
+}
+
+TEST(FixIncludes, MissingIncludesSortingAndGrouping) {
+  AnalysisResults Results;
+  Results.Missing.push_back({"\"b.h\"", Header("\"b.h\"")});
+  Results.Missing.push_back({"\"a.h\"", Header("\"a.h\"")});
+  Results.Missing.push_back({"<foo>", Header("<foo>")});
+
+  format::FormatStyle Style = format::getLLVMStyle();
+  Style.Language = format::FormatStyle::LK_Cpp;
+
+  std::string Code = R"cpp(
+void bar();
+)cpp";
+
+  std::string Fixed = fixIncludes(Results, "test.cc", Code, Style);
+  EXPECT_EQ(
+      Fixed,
+      "\n#include \"a.h\"\n#include \"b.h\"\n#include <foo>\nvoid bar();\n");
 }
 
 } // namespace
