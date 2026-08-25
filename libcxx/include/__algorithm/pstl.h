@@ -989,6 +989,31 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
 }
 
 template <class _ExecutionPolicy,
+          class _RandomAccessIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
+is_heap_until(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "is_heap_until requires RandomAccessIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__is_heap_until, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), less{});
+}
+
+template <class _ExecutionPolicy,
+          class _RandomAccessIterator,
+          class _Comp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _RandomAccessIterator
+is_heap_until(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "is_heap_until requires RandomAccessIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__is_heap_until, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
