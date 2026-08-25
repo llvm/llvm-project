@@ -1,31 +1,32 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -verify %s
 
-void clang_analyzer_checkInlined(bool);
+void clang_analyzer_dump(const char *);
+void clang_analyzer_dump(const bool);
 void clang_analyzer_eval(bool);
 
-typedef void (*Callback)(unsigned);
-typedef void (&CallbackRef)(unsigned);
+using Callback = void (*)(const char *);
+using CallbackRef = void (&)(const char *);
 
 static int Storage;
 
-static void pointerTarget(unsigned Value) {
+static void pointerTarget(const char *Value) {
   int *Ptr = nullptr;
 
-  if (Value == 1)
+  if (Value)
     Ptr = &Storage;
 
-  clang_analyzer_checkInlined(Value == 1); // expected-warning{{TRUE}}
+  clang_analyzer_dump(Value); // expected-warning{{"pointer"}}
   *Ptr = 0;
 }
 
-static void referenceTarget(unsigned Value) {
+static void referenceTarget(const char *Value) {
   int *Ptr = nullptr;
 
-  if (Value == 1)
+  if (Value)
     Ptr = &Storage;
 
-  clang_analyzer_checkInlined(Value == 1); // expected-warning{{TRUE}}
+  clang_analyzer_dump(Value); // expected-warning{{"reference"}}
   *Ptr = 0;
 }
 
@@ -37,12 +38,15 @@ static CallbackRef Reference = referenceTarget;
 
 extern CallbackRef ExternalReference;
 
+void myGlobalFn();
+static const bool Truthy = &myGlobalFn;
+
 void testPointers(unsigned Value) {
   if (Value != 1)
     return;
 
   clang_analyzer_eval(ConstPointer == pointerTarget); // expected-warning{{TRUE}}
-  ConstPointer(Value);
+  ConstPointer("pointer");
   clang_analyzer_eval(AddressPointer == pointerTarget); // expected-warning{{TRUE}}
   clang_analyzer_eval(CastPointer == pointerTarget); // expected-warning{{TRUE}}
   clang_analyzer_eval(MutablePointer == pointerTarget); // expected-warning{{UNKNOWN}}
@@ -53,7 +57,7 @@ void testReference(unsigned Value) {
     return;
 
   clang_analyzer_eval(Reference == referenceTarget); // expected-warning{{TRUE}}
-  Reference(Value);
+  Reference("reference");
 }
 
 void testExternalReference() {
@@ -61,4 +65,10 @@ void testExternalReference() {
 
   Callback Before = ExternalReference;
   clang_analyzer_eval(ExternalReference == Before); // expected-warning{{TRUE}}
+}
+
+// Verify that a function pointer converted to ool is modeled as `true`,
+// not as FunctionCodeRegion.
+void testBoolInitializer() {
+  clang_analyzer_dump(Truthy); // expected-warning{{1 U1b}}
 }

@@ -2411,11 +2411,11 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
   if (isa<StackArgumentsSpaceRegion>(MS))
     return svalBuilder.getRegionValueSymbolVal(R);
 
-  // Is 'VD' declared constant, or is it a global function reference whose
-  // binding is necessarily immutable?  If so, retrieve the value from its
-  // initializer.
+  // Is 'VD' declared constant, or is it a function reference whose
+  // binding is necessarily immutable?  If so, retrieve the value
+  // from its initializer.
   if (VD->getType().isConstQualified() ||
-      (VD->hasGlobalStorage() && VD->getType()->isFunctionReferenceType())) {
+      VD->getType()->isFunctionReferenceType()) {
     if (const Expr *Init = VD->getAnyInitializer()) {
       if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
