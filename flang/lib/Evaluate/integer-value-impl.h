@@ -262,7 +262,7 @@ public:
     case 16:
       return f(I128{});
     default:
-      llvm_unreachable("unsupported integer width");
+      DIE("unsupported integer width");
     }
   }
 
@@ -283,7 +283,7 @@ public:
     case 6:
       return f(std::get<I128>(storage_));
     default:
-      llvm_unreachable("operation on uninitialized IntegerValueImpl");
+      DIE("operation on uninitialized IntegerValueImpl");
     }
   }
 

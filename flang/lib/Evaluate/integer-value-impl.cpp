@@ -44,8 +44,8 @@ LLVM_DUMP_METHOD void IntegerValueImpl::dump() const {
 
 int IntegerValueImpl::kind() const {
   if (IsMonostate()) {
-    llvm_unreachable("default-initialized value representing 0 with unknown "
-                     "width does not know its kind");
+    DIE("default-initialized value representing 0 with unknown "
+        "width does not know its kind");
     return 0;
   }
   return withWord(
@@ -72,7 +72,7 @@ bool IntegerValueImpl::operator==(const IntegerValueImpl &y) const {
     return true;
   }
   if (IsMonostate() != y.IsMonostate() || bits() != y.bits()) {
-    llvm_unreachable("uncomparable integers");
+    DIE("uncomparable integers");
     return false;
   }
   return withWord([&](const auto &x) -> bool {
@@ -151,7 +151,7 @@ Fortran::common::int128_t IntegerValueImpl::ToInt128() const {
 
 Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("uncomparable ints");
+    DIE("uncomparable ints");
     return Ordering::Equal;
   }
   return withWord([&](const auto &x) -> Ordering {
@@ -162,7 +162,7 @@ Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {
 
 Ordering IntegerValueImpl::CompareUnsigned(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("uncomparable ints; cast bitwidth first");
+    DIE("uncomparable ints; cast bitwidth first");
     return Ordering::Equal;
   }
   return withWord([&](const auto &x) -> Ordering {
@@ -173,7 +173,7 @@ Ordering IntegerValueImpl::CompareUnsigned(const IntegerValueImpl &y) const {
 
 Ordering IntegerValueImpl::CompareToZeroSigned() const {
   if (IsMonostate()) {
-    llvm_unreachable("uncomparable ints");
+    DIE("uncomparable ints");
     return Ordering::Equal;
   }
   return withWord([](const auto &x) { return x.CompareToZeroSigned(); });
@@ -202,7 +202,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ABS() const {
 typename IntegerValueImpl::ValueWithCarry IntegerValueImpl::AddUnsigned(
     const IntegerValueImpl &y, bool carryIn) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return ValueWithCarry{};
   }
   return withWord([&](const auto &x) -> ValueWithCarry {
@@ -215,7 +215,7 @@ typename IntegerValueImpl::ValueWithCarry IntegerValueImpl::AddUnsigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::AddSigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return ValueWithOverflow{};
   }
   return withWord([&](const auto &x) -> ValueWithOverflow {
@@ -228,7 +228,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::AddSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return ValueWithOverflow{};
   }
   return withWord([&](const auto &x) -> ValueWithOverflow {
@@ -241,7 +241,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return ValueWithOverflow{};
   }
   // DIM(X,Y) = MAX(X-Y, 0)
@@ -254,7 +254,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
     const IntegerValueImpl &sign) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return ValueWithOverflow{};
   }
   bool toNegative{sign.IsNegative()};
@@ -270,7 +270,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return Product{};
   }
   return withWord([&](const auto &x) -> Product {
@@ -284,7 +284,7 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return Product{};
   }
   return withWord([&](const auto &x) -> Product {
@@ -297,7 +297,7 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
 typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return QuotientWithRemainder{};
   }
   return withWord([&](const auto &x) -> QuotientWithRemainder {
@@ -311,7 +311,7 @@ typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
 typename IntegerValueImpl::QuotientWithRemainder
 IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return QuotientWithRemainder{};
   }
   return withWord([&](const auto &x) -> QuotientWithRemainder {
@@ -325,7 +325,7 @@ IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
     const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return ValueWithOverflow{};
   }
   return withWord([&](const auto &x) -> ValueWithOverflow {
@@ -338,7 +338,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
 typename IntegerValueImpl::PowerWithErrors IntegerValueImpl::Power(
     const IntegerValueImpl &e) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return PowerWithErrors{};
   }
   return withWord([&](const auto &x) -> PowerWithErrors {
@@ -350,7 +350,7 @@ typename IntegerValueImpl::PowerWithErrors IntegerValueImpl::Power(
 
 IntegerValueImpl IntegerValueImpl::NOT() const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([](const auto &x) { return FromWord(x.NOT()); });
@@ -358,7 +358,7 @@ IntegerValueImpl IntegerValueImpl::NOT() const {
 
 IntegerValueImpl IntegerValueImpl::IAND(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatiable ints");
+    DIE("incompatiable ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {
@@ -369,7 +369,7 @@ IntegerValueImpl IntegerValueImpl::IAND(const IntegerValueImpl &y) const {
 
 IntegerValueImpl IntegerValueImpl::IOR(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {
@@ -380,7 +380,7 @@ IntegerValueImpl IntegerValueImpl::IOR(const IntegerValueImpl &y) const {
 
 IntegerValueImpl IntegerValueImpl::IEOR(const IntegerValueImpl &y) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {
@@ -392,7 +392,7 @@ IntegerValueImpl IntegerValueImpl::IEOR(const IntegerValueImpl &y) const {
 IntegerValueImpl IntegerValueImpl::MERGE_BITS(
     const IntegerValueImpl &y, const IntegerValueImpl &mask) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {
@@ -403,7 +403,7 @@ IntegerValueImpl IntegerValueImpl::MERGE_BITS(
 
 IntegerValueImpl IntegerValueImpl::SHIFTL(int count) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.SHIFTL(count)); });
@@ -411,7 +411,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTL(int count) const {
 
 IntegerValueImpl IntegerValueImpl::SHIFTR(int count) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.SHIFTR(count)); });
@@ -419,7 +419,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTR(int count) const {
 
 IntegerValueImpl IntegerValueImpl::SHIFTA(int count) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.SHIFTA(count)); });
@@ -427,7 +427,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTA(int count) const {
 
 IntegerValueImpl IntegerValueImpl::ISHFTC(int count, int size) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) {
@@ -438,7 +438,7 @@ IntegerValueImpl IntegerValueImpl::ISHFTC(int count, int size) const {
 
 IntegerValueImpl IntegerValueImpl::IBITS(int pos, int size) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.IBITS(pos, size)); });
@@ -446,7 +446,7 @@ IntegerValueImpl IntegerValueImpl::IBITS(int pos, int size) const {
 
 IntegerValueImpl IntegerValueImpl::IBSET(int pos) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.IBSET(pos)); });
@@ -454,7 +454,7 @@ IntegerValueImpl IntegerValueImpl::IBSET(int pos) const {
 
 IntegerValueImpl IntegerValueImpl::IBCLR(int pos) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   return withWord([&](const auto &x) { return FromWord(x.IBCLR(pos)); });
@@ -463,7 +463,7 @@ IntegerValueImpl IntegerValueImpl::IBCLR(int pos) const {
 IntegerValueImpl IntegerValueImpl::DSHIFTL(
     const IntegerValueImpl &fill, int count) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   // DSHIFTL(I,J) shifts I:J left; the second argument is the right fill.
@@ -476,7 +476,7 @@ IntegerValueImpl IntegerValueImpl::DSHIFTL(
 IntegerValueImpl IntegerValueImpl::DSHIFTR(
     const IntegerValueImpl &v2, int count) const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
   // DSHIFTR(I,J) shifts I:J right; the *first* argument (this) is the left
@@ -498,7 +498,7 @@ bool IntegerValueImpl::BTEST(int pos) const {
 
 int IntegerValueImpl::LEADZ() const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return 0;
   }
   return withWord([](const auto &x) { return x.LEADZ(); });
@@ -506,7 +506,7 @@ int IntegerValueImpl::LEADZ() const {
 
 int IntegerValueImpl::TRAILZ() const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return 0;
   }
   return withWord([](const auto &x) { return x.TRAILZ(); });
@@ -521,7 +521,7 @@ int IntegerValueImpl::POPCNT() const {
 
 bool IntegerValueImpl::POPPAR() const {
   if (IsMonostate()) {
-    llvm_unreachable("incompatible ints");
+    DIE("incompatible ints");
     return false;
   }
   return withWord([](const auto &x) { return x.POPPAR(); });

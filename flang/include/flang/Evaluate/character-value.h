@@ -204,7 +204,7 @@ public:
     case 4:
       return f(char32_t{});
     default:
-      llvm_unreachable("unsupported character kind/monostate");
+      DIE("unsupported character kind/monostate");
     }
   }
 
@@ -217,7 +217,7 @@ public:
     case 4:
       return f(*AsU32String());
     default:
-      llvm_unreachable("unsupported kind/monostate");
+      DIE("unsupported kind/monostate");
     }
   }
 

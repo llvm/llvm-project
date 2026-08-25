@@ -231,7 +231,7 @@ public:
     case 16:
       return f(RealValueImpl::R16{});
     default:
-      llvm_unreachable("arbitrary bits not yet supported");
+      DIE("arbitrary bits not yet supported");
     }
   }
 
@@ -250,7 +250,7 @@ public:
     case 6:
       return f(std::get<R16>(storage_));
     default:
-      llvm_unreachable("operation on uninitialized RealValueImpl");
+      DIE("operation on uninitialized RealValueImpl");
     }
   }
 
