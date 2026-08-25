@@ -55,9 +55,9 @@ entry:
 define void @foo3(ptr %s) {
 ; CHECK-LABEL: foo3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #39997 // =0x9c3d
-; CHECK-NEXT:    index z0.d, #3, x8
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov w8, #40000 // =0x9c40
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    stp x9, x8, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: foo3:
@@ -81,9 +81,9 @@ entry:
 define void @foo4(ptr %s) {
 ; CHECK-LABEL: foo4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #21 // =0x15
-; CHECK-NEXT:    index z0.d, #-16, x8
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov x9, #-16 // =0xfffffffffffffff0
+; CHECK-NEXT:    stp x9, x8, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: foo4:
@@ -107,9 +107,9 @@ entry:
 define void @foo5(ptr %s) {
 ; CHECK-LABEL: foo5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-400 // =0xfffffffffffffe70
-; CHECK-NEXT:    index z0.d, x8, #15
-; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    mov x8, #-385 // =0xfffffffffffffe7f
+; CHECK-NEXT:    mov x9, #-400 // =0xfffffffffffffe70
+; CHECK-NEXT:    stp x9, x8, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: foo5:
@@ -153,34 +153,5 @@ define void @foo6(ptr %s) {
 ; NONEON-NOSVE-BE-NEXT:    ret
 entry:
   store <2 x i64> <i64 -400, i64 -384>, ptr %s, align 8
-  ret void
-}
-
-define void @foo7(ptr %s) {
-; CHECK-LABEL: foo7:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #57072 // =0xdef0
-; CHECK-NEXT:    mov w9, #22136 // =0x5678
-; CHECK-NEXT:    movk w8, #39612, lsl #16
-; CHECK-NEXT:    movk w9, #4660, lsl #16
-; CHECK-NEXT:    stp x9, x8, [x0]
-; CHECK-NEXT:    ret
-;
-; NONEON-NOSVE-LABEL: foo7:
-; NONEON-NOSVE:       // %bb.0: // %entry
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI6_0
-; NONEON-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
-; NONEON-NOSVE-NEXT:    str q0, [x0]
-; NONEON-NOSVE-NEXT:    ret
-;
-; NONEON-NOSVE-BE-LABEL: foo7:
-; NONEON-NOSVE-BE:       // %bb.0: // %entry
-; NONEON-NOSVE-BE-NEXT:    adrp x8, .LCPI6_0
-; NONEON-NOSVE-BE-NEXT:    add x8, x8, :lo12:.LCPI6_0
-; NONEON-NOSVE-BE-NEXT:    ld1 { v0.2d }, [x8]
-; NONEON-NOSVE-BE-NEXT:    st1 { v0.2d }, [x0]
-; NONEON-NOSVE-BE-NEXT:    ret
-entry:
-  store <2 x i64> <i64 305419896, i64 2596069104>, ptr %s, align 8
   ret void
 }

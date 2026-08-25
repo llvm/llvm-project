@@ -27809,19 +27809,18 @@ static SDValue splitStoreConstVector128(StoreSDNode *ST,
       DCI.getDAGCombineLevel() != BeforeLegalizeTypes)
     return SDValue();
 
-  // If SVE is supported, we stop if the pair's arithmetic sequence has a start
-  // or step value that could fit inside 5 bit imm. This is so that the build
-  // vector can later be rewritten as a SVE index instruction.
+  // If SVE is supported, we stop if the pair can be represented by a single
+  // index instruction with two imm5 values.
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
     auto SeqInfo = BVN->isArithmeticSequence();
-    if (!SeqInfo || SeqInfo->first.isSignedIntN(5) ||
-        SeqInfo->second.isSignedIntN(5))
+    if (!SeqInfo ||
+        (SeqInfo->first.isSignedIntN(5) && SeqInfo->second.isSignedIntN(5)))
       return SDValue();
   }
 
-  // For non-SVE targets, continue if both values fit inside mov immediates.
-  else if (!AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(0), 64) ||
-           !AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(1), 64)) {
+  // Continue if both values fit inside mov immediates.
+  if (!AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(0), 64) ||
+      !AArch64_AM::isAnyMOVWMovAlias(Value.getConstantOperandVal(1), 64)) {
     return SDValue();
   }
 
