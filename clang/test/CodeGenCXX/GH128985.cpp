@@ -173,3 +173,21 @@ void f10() {
 #embed <embed-data.txt> limit(4)
   };
 }
+
+// CHECK-LABEL: define {{.*}}void @_Z3f11i(
+// CHECK: icmp ult i64 %{{.*}}, 4
+// CHECK: %[[A11:.*]] = call {{.*}}ptr @_Znam(i64 {{.*}})
+// CHECK: store float 4.800000e+01, ptr %[[A11]]
+// CHECK: %[[F11E1:.*]] = getelementptr inbounds float, ptr %[[A11]], i64 1
+// CHECK: store float 4.900000e+01, ptr %[[F11E1]]
+// CHECK: %[[F11E2:.*]] = getelementptr inbounds float, ptr %[[F11E1]], i64 1
+// CHECK: store float 5.000000e+01, ptr %[[F11E2]]
+// CHECK: %[[F11E3:.*]] = getelementptr inbounds float, ptr %[[F11E2]], i64 1
+// CHECK: store float 5.100000e+01, ptr %[[F11E3]]
+// CHECK: %[[F11REST:.*]] = sub i64 %{{.*}}, 16
+// CHECK: call void @llvm.memset.p0.i64(ptr align 4 %{{.*}}, i8 0, i64 %[[F11REST]], i1 false)
+void f11(int x) {
+  float *p = new float[x]{
+#embed <embed-data.txt> limit(4)
+  };
+}

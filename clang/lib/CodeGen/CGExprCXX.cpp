@@ -1156,11 +1156,14 @@ void CodeGenFunction::EmitNewArrayInitializer(
       }
       // An EmbedExpr can initialize more than one array element.
       if (const auto *EmbedS = dyn_cast<EmbedExpr>(IE->IgnoreParenImpCasts())) {
-        for (const IntegerLiteral *DataElement :
-             EmbedS->underlying_data_elements()) {
+        const StringLiteral *SL = EmbedS->getDataStringLiteral();
+        llvm::Type *DataTy = ConvertType(EmbedS->getType());
+        for (unsigned I = EmbedS->getStartingElementPos(),
+                      End = I + EmbedS->getDataElementCount();
+             I != End; ++I) {
           llvm::Value *Val = EmitScalarConversion(
-              Builder.getInt(DataElement->getValue()), DataElement->getType(),
-              ElementType, DataElement->getExprLoc());
+              llvm::ConstantInt::get(DataTy, SL->getCodeUnit(I)),
+              EmbedS->getType(), ElementType, EmbedS->getLocation());
           EmitStoreOfScalar(Val, MakeAddrLValue(CurPtr, ElementType),
                             /*isInit=*/true);
           AdvanceToNextElement();
