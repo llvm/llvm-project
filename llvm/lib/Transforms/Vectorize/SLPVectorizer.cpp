@@ -13655,6 +13655,19 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI,
                                        const TTI::TargetCostKind CostKind);
 
+/// \returns true if contracting \p FMul into an fma with its user is worth more
+/// than a vector node over the multiplication. canConvertToFMA prices both
+/// sides of the contraction as scalars, so on targets that do not always want
+/// an fma the answer is left to the vector node whenever it has operand loads
+/// to widen.
+static bool preferFMAOverVectorNode(const Value *FMul,
+                                    const TargetTransformInfo &TTI) {
+  if (TTI.enableAggressiveFMAFusion(FMul->getType()))
+    return true;
+  const auto *I = dyn_cast<Instruction>(FMul);
+  return !I || none_of(I->operands(), IsaPred<LoadInst>);
+}
+
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
@@ -33063,7 +33076,8 @@ bool SLPVectorizerPass::tryToVectorize(
        I->getOpcode() == Instruction::FSub) &&
       canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
                       R.getCostKind())
-          .isValid()) {
+          .isValid() &&
+      preferFMAOverVectorNode(I->getOperand(0), *TTI)) {
     FMACandidates.insert(I);
     return false;
   }
@@ -34334,7 +34348,8 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // The multiplication is contracted into the scalar FMA with its user, the
     // vector node breaks the contraction.
-    if (I.getOpcode() == Instruction::FMul) {
+    if (I.getOpcode() == Instruction::FMul &&
+        preferFMAOverVectorNode(&I, *TTI)) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
           S && S.isAddSubLikeOp() &&

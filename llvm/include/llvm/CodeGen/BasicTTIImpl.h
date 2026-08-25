@@ -393,6 +393,10 @@ public:
         E, AddressSpace, Alignment, MachineMemOperand::MONone, Fast);
   }
 
+  bool enableAggressiveFMAFusion(Type *Ty) const override {
+    return getTLI()->enableAggressiveFMAFusion(EVT::getEVT(Ty));
+  }
+
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();

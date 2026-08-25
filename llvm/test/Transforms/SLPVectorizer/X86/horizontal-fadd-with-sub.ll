@@ -108,20 +108,17 @@ define double @fneg_chain_2(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: define double @fneg_chain_2(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[Z:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X8:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
-; CHECK-NEXT:    [[Y8:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 8
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y0:%.*]] = load double, ptr [[Y]], align 8
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz contract double [[Y0]], [[X0]]
-; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X8]], align 8
-; CHECK-NEXT:    [[Y1:%.*]] = load double, ptr [[Y8]], align 8
-; CHECK-NEXT:    [[MUL5:%.*]] = fmul reassoc nsz contract double [[Y1]], [[X1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP6]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[Z]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc nsz contract <2 x double> [[TMP3]]
+; CHECK-NEXT:    [[MUL:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[T:%.*]] = fadd reassoc nsz contract double [[MUL]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc nsz contract double [[T]], [[TMP4]]
+; CHECK-NEXT:    [[MUL5:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract double [[T2]], [[MUL5]]
 ; CHECK-NEXT:    ret double [[TMP5]]
 ;

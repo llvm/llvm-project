@@ -435,6 +435,8 @@ public:
 
   virtual bool enableOrderedReductions() const { return false; }
 
+  virtual bool enableAggressiveFMAFusion(Type *Ty) const { return false; }
+
   virtual bool hasDivRemOp(Type *DataType, bool IsSigned) const {
     return false;
   }

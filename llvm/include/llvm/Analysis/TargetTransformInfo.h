@@ -982,6 +982,11 @@ public:
   /// Return true if we should be enabling ordered reductions for the target.
   LLVM_ABI bool enableOrderedReductions() const;
 
+  /// Return true if the target always benefits from contracting an fmul and an
+  /// fadd of type \p Ty into an fma, even when the contraction blocks another
+  /// transformation. Mirrors TargetLowering::enableAggressiveFMAFusion.
+  LLVM_ABI bool enableAggressiveFMAFusion(Type *Ty) const;
+
   /// Return true if the target has a unified operation to calculate division
   /// and remainder. If so, the additional implicit multiplication and
   /// subtraction required to calculate a remainder from division are free. This
