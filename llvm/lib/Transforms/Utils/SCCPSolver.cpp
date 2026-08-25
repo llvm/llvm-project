@@ -1870,6 +1870,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   SmallVector<Constant *, 8> Operands;
   Operands.reserve(I.getNumOperands());
+  bool PtrMayHaveDifferentProvenance = PtrState.mayHaveDifferentProvenance();
 
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
     const ValueLatticeElement &State = getValueState(I.getOperand(i));
@@ -1889,7 +1890,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     // The pointer operand's lattice has found to be a constant, however, the
     // returned pointer of the GEP may not be freely substituted, as it may have
     // been derived from a pointer with potentially different provenance.
-    if (PtrState.mayHaveDifferentProvenance())
+    if (PtrMayHaveDifferentProvenance)
       ValueState[&I].setMayHaveDifferentProvenance(true);
   } else
     markOverdefined(&I);

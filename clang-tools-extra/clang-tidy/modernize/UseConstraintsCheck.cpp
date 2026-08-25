@@ -186,16 +186,13 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
                 LastTemplateParam->getTypeSourceInfo()->getTypeLoc()),
             LastTemplateParam};
   }
-  if (const auto *LastTemplateParam =
-          dyn_cast<TemplateTypeParmDecl>(LastParam)) {
-    if (LastTemplateParam->hasDefaultArgument() &&
-        LastTemplateParam->getIdentifier() == nullptr) {
-      return {
-          matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
-                                          .getTypeSourceInfo()
-                                          ->getTypeLoc()),
-          LastTemplateParam};
-    }
+  if (const auto *LastTemplateParam = dyn_cast<TemplateTypeParmDecl>(LastParam);
+      LastTemplateParam && LastTemplateParam->hasDefaultArgument() &&
+      LastTemplateParam->getIdentifier() == nullptr) {
+    return {matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
+                                            .getTypeSourceInfo()
+                                            ->getTypeLoc()),
+            LastTemplateParam};
   }
   return {};
 }

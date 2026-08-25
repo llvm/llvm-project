@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_f64 : !fir.ref<f64>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_f64 byref_element_type({{.*}}) : !fir.ref<f64>
 ! CHECK-SAME:    alloc {
 ! CHECK:            %[[REF:.*]] = fir.alloca f64
 ! CHECK:            omp.yield(%[[REF:.*]] : !fir.ref<f64>)
@@ -20,7 +20,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<f64>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_i64 : !fir.ref<i64>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_i64 byref_element_type({{.*}}) : !fir.ref<i64>
 ! CHECK-SAME:    alloc {
 ! CHECK:            %[[REF:.*]] = fir.alloca i64
 ! CHECK:            omp.yield(%[[REF:.*]] : !fir.ref<i64>)
@@ -39,7 +39,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<i64>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_f32 : !fir.ref<f32>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_f32 byref_element_type({{.*}}) : !fir.ref<f32>
 ! CHECK-SAME:    alloc {
 ! CHECK:           %[[REF:.*]] = fir.alloca f32
 ! CHECK:           omp.yield(%[[REF]] : !fir.ref<f32>)
@@ -58,7 +58,7 @@
 ! CHECK:           omp.yield(%[[ARG0]] : !fir.ref<f32>)
 ! CHECK:         }
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_i32 : !fir.ref<i32>
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_i32 byref_element_type({{.*}}) : !fir.ref<i32>
 ! CHECK-SAME:    alloc {
 ! CHECK:           %[[REF:.*]] = fir.alloca i32
 ! CHECK:           omp.yield(%[[REF]] : !fir.ref<i32>)

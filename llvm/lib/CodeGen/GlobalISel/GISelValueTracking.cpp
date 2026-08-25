@@ -407,6 +407,12 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setHighBits(MaxValue.countl_zero());
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    const Function &F = getMachineFunction().getFunction();
+    const APInt &Multiplier = MI.getOperand(1).getCImm()->getValue();
+    Known = getVScaleRange(&F, BitWidth).multiply(Multiplier).toKnownBits();
+    break;
+  }
   case TargetOpcode::G_CONSTANT: {
     Known = KnownBits::makeConstant(MI.getOperand(1).getCImm()->getValue());
     break;
@@ -843,10 +849,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
-    unsigned DstIdx = 0;
-    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
-         ++DstIdx)
-      ;
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
 
     APInt SubDemandedElts = DemandedElts;
     if (SrcTy.isVector()) {
@@ -1062,6 +1065,20 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
       Known = Known.intersectWith(Known2);
     }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    APInt DemandedSrcElts;
+    if (SrcTy.isScalableVector()) {
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      uint64_t Idx = MI.getOperand(2).getImm();
+      unsigned NumSrcElts = SrcTy.getNumElements();
+      DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    }
+    computeKnownBitsImpl(SrcReg, Known, DemandedSrcElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
@@ -1797,26 +1814,33 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
     const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
-    const bool WantPositive = Opcode == TargetOpcode::G_FREM &&
-                              (InterestedClasses & fcPositive) != fcNone;
+    const bool WantPositive = (InterestedClasses & fcPositive) != fcNone;
     if (!WantNan && !WantNegative && !WantPositive) {
       break;
     }
 
     KnownFPClass KnownLHS, KnownRHS;
+    const bool IsFDiv = Opcode == TargetOpcode::G_FDIV;
+    FPClassTest InterestedRHS =
+        IsFDiv ? fcAllFlags : fcNan | fcInf | fcZero | fcNegative;
 
-    computeKnownFPClass(RHS, DemandedElts, fcNan | fcInf | fcZero | fcNegative,
-                        KnownRHS, Depth + 1);
+    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Depth + 1);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNever(fcNegative) ||
-                               KnownRHS.isKnownNever(fcPositive);
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN();
+    if (IsFDiv) {
+      KnowSomethingUseful |=
+          KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
+          KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
+    } else {
+      KnowSomethingUseful |= KnownRHS.isKnownNever(fcNegative) ||
+                             KnownRHS.isKnownNever(fcPositive);
+    }
 
-    if (KnowSomethingUseful || WantPositive) {
+    if (KnowSomethingUseful || (!IsFDiv && WantPositive)) {
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Depth + 1);
     }
 
-    if (Opcode == TargetOpcode::G_FDIV) {
+    if (IsFDiv) {
       Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     } else {
       // Inf REM x and x REM 0 produce NaN.
@@ -2416,6 +2440,23 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
+    auto MaybeAmt =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+    FirstAnswer =
+        SignBitsOps::rot(Tmp, TyBits, MaybeAmt, Opcode == TargetOpcode::G_ROTR);
+    break;
+  }
+  case TargetOpcode::G_SAVGFLOOR:
+  case TargetOpcode::G_SAVGCEIL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    FirstAnswer = computeNumSignBitsMin(Src1, Src2, DemandedElts, Depth + 1);
+    break;
+  }
   case TargetOpcode::G_SREM: {
     // The sign bit is the LHS's sign bit, except when the result of the
     // remainder is zero. The magnitude of the result should be less than or
@@ -2557,6 +2598,36 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits - 1; // Every always-zero bit is a sign bit.
     break;
   }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    unsigned NumOps = MI.getNumOperands();
+    Register SrcReg = MI.getOperand(NumOps - 1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    if ((SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType()) ||
+        (SrcTy.isScalar() && DstTy.isVector()))
+      break;
+
+    // Figure out the result operand index
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
+
+    APInt SubDemandedElts = DemandedElts;
+    unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    if (SrcTy.isVector()) {
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    unsigned SrcOpKnown =
+        computeNumSignBits(SrcReg, SubDemandedElts, Depth + 1);
+    if (SrcTy.isVector()) {
+      FirstAnswer = SrcOpKnown;
+    } else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits) {
+      FirstAnswer = SrcOpKnown >= (MI.getNumOperands() - DstIdx - 1) * TyBits
+                        ? TyBits
+                        : SrcOpKnown % TyBits;
+    }
+    break;
+  }
   case TargetOpcode::G_BUILD_VECTOR: {
     // Collect the known bits that are shared by every demanded vector element.
     FirstAnswer = TyBits;
@@ -2597,6 +2668,20 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         break;
     }
     break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    // Offset the demanded elts by the subvector index.
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    APInt DemandedSrcElts;
+    if (SrcTy.isScalableVector()) {
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      uint64_t Idx = MI.getOperand(2).getImm();
+      unsigned NumSrcElts = SrcTy.getNumElements();
+      DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    }
+    return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1);
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector

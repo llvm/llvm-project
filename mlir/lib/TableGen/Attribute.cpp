@@ -52,7 +52,9 @@ bool Attribute::isSymbolRefAttr() const {
   return isSubClassOf("SymbolRefAttr") || isSubClassOf("FlatSymbolRefAttr");
 }
 
-bool Attribute::isEnumAttr() const { return isSubClassOf("EnumAttrInfo"); }
+bool Attribute::isEnumAttr() const {
+  return isSubClassOf("EnumAttrInfo") || isSubClassOf("EnumAttr");
+}
 
 StringRef Attribute::getStorageType() const {
   const auto *init = def->getValueInit("storageType");

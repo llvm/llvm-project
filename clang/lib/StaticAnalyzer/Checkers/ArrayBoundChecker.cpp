@@ -75,11 +75,10 @@ public:
   bool isBytes() const { return AsType.isNull(); }
 
   /// Return the element type that is "natural" for reporting out-of-bounds
-  /// memory access to 'Location'.
-  static SizeUnit forSVal(SVal Location, const ASTContext &ACtx) {
-    if (const auto *R = Location.getAsRegion()->getAs<TypedValueRegion>())
-      return SizeUnit(R->getValueType(), ACtx);
-    return bytes();
+  /// memory access to \p ER.
+  static SizeUnit forElementRegion(const ElementRegion *ER,
+                                   const ASTContext &ACtx) {
+    return SizeUnit(ER->getElementType(), ACtx);
   }
 
   /// If `E` is a "clean" array subscript expression, return the type of the
@@ -201,13 +200,14 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
-/// For a given Location that can be represented as a symbolic expression
+/// For a given \p CurRegion that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
 /// NonLoc that specifies the number of CharUnits). Returns nullopt when these
 /// cannot be determined.
 static std::optional<std::pair<const SubRegion *, NonLoc>>
-computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
+computeOffset(ProgramStateRef State, SValBuilder &SVB,
+              const ElementRegion *CurRegion) {
   QualType T = SVB.getArrayIndexType();
   auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc L, NonLoc R) {
     // We will use this utility to add and multiply values.
@@ -216,9 +216,6 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 
   const SubRegion *OwnerRegion = nullptr;
   std::optional<NonLoc> Offset = SVB.makeZeroArrayIndex();
-
-  const ElementRegion *CurRegion =
-      dyn_cast_or_null<ElementRegion>(Location.getAsRegion());
 
   while (CurRegion) {
     const auto Index = CurRegion->getIndex().getAs<NonLoc>();
@@ -411,21 +408,25 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
 
 void ArrayBoundChecker::handleAccessExpr(const Expr *E,
                                          CheckerContext &C) const {
-  const SVal Location = C.getSVal(E);
+  ASTContext &ACtx = C.getASTContext();
+  const ElementRegion *AccessedER =
+      dyn_cast_or_null<ElementRegion>(C.getSVal(E).getAsRegion());
+  if (!AccessedER)
+    return;
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
   //   #define isXXXXX(arg) (LOOKUP_TABLE[arg] & BITMASK_FOR_XXXXX)
   // and incomplete analysis of these leads to false positives. As even
   // accurate reports would be confusing for the users, just disable reports
   // from these macros:
-  if (isFromCtypeMacro(E, C.getASTContext()))
+  if (isFromCtypeMacro(E, ACtx))
     return;
 
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
 
   const std::optional<std::pair<const SubRegion *, NonLoc>> &RawOffset =
-      computeOffset(State, SVB, Location);
+      computeOffset(State, SVB, AccessedER);
 
   if (!RawOffset)
     return;
@@ -446,10 +447,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
-      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
-      /*AcceptPastTheEnd=*/isa<ArraySubscriptExpr>(E) &&
-          isInAddressOf(E, C.getASTContext()),
-  };
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C)};
 
   bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
@@ -464,7 +462,19 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
     if (!Res.mayBeInBounds()) {
-      SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
+      if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, ACtx) && Extent) {
+        // Recognize and accept the idiomatic `&array[size]` expression that
+        // forms the past-the-end pointer without actually dereferencing it.
+        auto [EqualsToThreshold, NotEqualToThreshold] =
+            bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
+                                            /*CheckEquality=*/true);
+        if (EqualsToThreshold && !NotEqualToThreshold) {
+          C.addTransition(EqualsToThreshold);
+          return;
+        }
+      }
+
+      SizeUnit SU = SizeUnit::forElementRegion(AccessedER, ACtx);
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
       reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
       return;
