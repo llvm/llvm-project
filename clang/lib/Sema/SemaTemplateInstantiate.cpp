@@ -24,6 +24,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2673,35 +2674,30 @@ QualType TemplateInstantiator::TransformSubstBuiltinTemplatePackType(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 createSubstDiag(Sema &S, TemplateDeductionInfo &Info,
-                Sema::EntityPrinter Printer) {
-  SmallString<128> Message;
+                llvm::PointerUnion<const ParmVarDecl *, const Expr *,
+                                   const TypeSourceInfo *>
+                    Entity) {
   SourceLocation ErrorLoc;
+  const ASTContext &C = S.Context;
+  ASTPartialDiagnostic *Diag = nullptr;
   if (Info.hasSFINAEDiagnostic()) {
     PartialDiagnosticAt PDA(SourceLocation(),
                             PartialDiagnostic::NullDiagnostic{});
     Info.takeSFINAEDiagnostic(PDA);
-    PDA.second.EmitToString(S.getDiagnostics(), Message);
     ErrorLoc = PDA.first;
+    Diag = ASTPartialDiagnostic::Create(C, PDA.second);
   } else {
     ErrorLoc = Info.getLocation();
   }
-  SmallString<128> Entity;
-  llvm::raw_svector_ostream OS(Entity);
-  Printer(OS);
-  const ASTContext &C = S.Context;
-  return new (C) concepts::Requirement::SubstitutionDiagnostic{
-      C.backupStr(Entity), ErrorLoc, C.backupStr(Message)};
+  return new (C)
+      concepts::Requirement::SubstitutionDiagnostic{Entity, ErrorLoc, Diag};
 }
 
 concepts::Requirement::SubstitutionDiagnostic *
-Sema::createSubstDiagAt(SourceLocation Location, EntityPrinter Printer) {
-  SmallString<128> Entity;
-  llvm::raw_svector_ostream OS(Entity);
-  Printer(OS);
+Sema::createSubstDiagAt(SourceLocation Location, Expr *E) {
   const ASTContext &C = Context;
   return new (C) concepts::Requirement::SubstitutionDiagnostic{
-      /*SubstitutedEntity=*/C.backupStr(Entity),
-      /*DiagLoc=*/Location, /*DiagMessage=*/StringRef()};
+      /*Entity=*/E, /*DiagLoc=*/Location, /*Diag=*/nullptr};
 }
 
 ExprResult TemplateInstantiator::TransformRequiresTypeParams(
@@ -2725,8 +2721,8 @@ ExprResult TemplateInstantiator::TransformRequiresTypeParams(
     ParmVarDecl *FailedDecl = Params[ErrorIdx];
     // Add a 'failed' Requirement to contain the error that caused the failure
     // here.
-    TransReqs.push_back(RebuildTypeRequirement(createSubstDiag(
-        SemaRef, Info, [&](llvm::raw_ostream &OS) { OS << *FailedDecl; })));
+    TransReqs.push_back(
+        RebuildTypeRequirement(createSubstDiag(SemaRef, Info, FailedDecl)));
     return getDerived().RebuildRequiresExpr(KWLoc, Body, RE->getLParenLoc(),
                                             TransParams, RE->getRParenLoc(),
                                             TransReqs, RBraceLoc);
@@ -2755,10 +2751,8 @@ TemplateInstantiator::TransformTypeRequirement(concepts::TypeRequirement *Req) {
     return nullptr;
   TypeSourceInfo *TransType = TransformType(Req->getType());
   if (!TransType || Trap.hasErrorOccurred())
-    return RebuildTypeRequirement(createSubstDiag(SemaRef, Info,
-        [&] (llvm::raw_ostream& OS) {
-            Req->getType()->getType().print(OS, SemaRef.getPrintingPolicy());
-        }));
+    return RebuildTypeRequirement(
+        createSubstDiag(SemaRef, Info, Req->getType()));
   return RebuildTypeRequirement(TransType);
 }
 
@@ -2784,9 +2778,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
         TransExprRes.get()->hasPlaceholderType())
       TransExprRes = SemaRef.CheckPlaceholderExpr(TransExprRes.get());
     if (TransExprRes.isInvalid() || Trap.hasErrorOccurred())
-      TransExpr = createSubstDiag(SemaRef, Info, [&](llvm::raw_ostream &OS) {
-        E->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
-      });
+      TransExpr = createSubstDiag(SemaRef, Info, E);
     else
       TransExpr = TransExprRes.get();
   }
@@ -2808,11 +2800,9 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
       return nullptr;
     TemplateParameterList *TPL = TransformTemplateParameterList(OrigTPL);
     if (!TPL || Trap.hasErrorOccurred())
-      TransRetReq.emplace(createSubstDiag(SemaRef, Info,
-          [&] (llvm::raw_ostream& OS) {
-              RetReq.getTypeConstraint()->getImmediatelyDeclaredConstraint()
-                  ->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
-          }));
+      TransRetReq.emplace(createSubstDiag(
+          SemaRef, Info,
+          RetReq.getTypeConstraint()->getImmediatelyDeclaredConstraint()));
     else {
       TPLInst.Clear();
       TransRetReq.emplace(TPL);
@@ -2835,14 +2825,10 @@ TemplateInstantiator::TransformNestedRequirement(
 
   ConstraintSatisfaction Satisfaction;
 
-  auto NestedReqWithDiag = [&C, this](Expr *E,
-                                      ConstraintSatisfaction Satisfaction) {
+  auto NestedReqWithDiag = [&C](Expr *E, ConstraintSatisfaction Satisfaction) {
     Satisfaction.IsSatisfied = false;
-    SmallString<128> Entity;
-    llvm::raw_svector_ostream OS(Entity);
-    E->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
     return new (C) concepts::NestedRequirement(
-        SemaRef.Context, C.backupStr(Entity), std::move(Satisfaction));
+        E, ASTConstraintSatisfaction::Create(C, Satisfaction));
   };
 
   if (Req->hasInvalidConstraint()) {

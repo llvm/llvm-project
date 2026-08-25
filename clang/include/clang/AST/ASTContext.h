@@ -903,10 +903,10 @@ public:
   }
   void Deallocate(void *Ptr) const {}
 
-  llvm::StringRef backupStr(llvm::StringRef S) const {
+  StringRef backupStr(StringRef S) const {
     char *Buf = new (*this) char[S.size()];
     llvm::copy(S, Buf);
-    return llvm::StringRef(Buf, S.size());
+    return StringRef(Buf, S.size());
   }
 
   /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList

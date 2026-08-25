@@ -487,6 +487,81 @@ void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
   Code = serialization::EXPR_DEPENDENT_COAWAIT;
 }
 
+static void addPartialDiagnostic(ASTRecordWriter &Record,
+                                 const PartialDiagnostic &PD) {
+  Record.push_back(PD.getDiagID());
+  const DiagnosticStorage *S = PD.hasStorage() ? PD.getStorage() : nullptr;
+  unsigned NumArgs = S ? S->NumDiagArgs : 0;
+  Record.push_back(NumArgs);
+  using ArgumentKind = DiagnosticsEngine::ArgumentKind;
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    auto K = (ArgumentKind)S->DiagArgumentsKind[I];
+    uint64_t Val = S->DiagArgumentsVal[I];
+    Record.push_back(K);
+    switch (K) {
+    case ArgumentKind::ak_std_string:
+      Record.AddString(S->DiagArgumentsStr[I]);
+      break;
+    case ArgumentKind::ak_c_string:
+      Record.AddString(reinterpret_cast<const char *>(Val));
+      break;
+    case ArgumentKind::ak_sint:
+    case ArgumentKind::ak_uint:
+    case ArgumentKind::ak_tokenkind:
+    case ArgumentKind::ak_addrspace:
+    case ArgumentKind::ak_qual:
+      Record.push_back(Val);
+      break;
+    case ArgumentKind::ak_qualtype:
+      Record.AddTypeRef(
+          QualType::getFromOpaquePtr(reinterpret_cast<void *>(Val)));
+      break;
+    case ArgumentKind::ak_declarationname:
+      Record.AddDeclarationName(DeclarationName::getFromOpaqueInteger(Val));
+      break;
+    case ArgumentKind::ak_nameddecl:
+      Record.AddDeclRef(reinterpret_cast<NamedDecl *>(Val));
+      break;
+    case ArgumentKind::ak_nestednamespec:
+      Record.AddNestedNameSpecifier(NestedNameSpecifier::getFromVoidPointer(
+          reinterpret_cast<void *>(Val)));
+      break;
+    case ArgumentKind::ak_declcontext:
+      Record.AddDeclRef(
+          Decl::castFromDeclContext(reinterpret_cast<DeclContext *>(Val)));
+      break;
+    case ArgumentKind::ak_attr:
+      Record.AddAttr(reinterpret_cast<Attr *>(Val));
+      break;
+    case ArgumentKind::ak_expr:
+      Record.AddStmt(reinterpret_cast<Expr *>(Val));
+      break;
+    case ArgumentKind::ak_identifierinfo:
+      Record.AddIdentifierRef(reinterpret_cast<IdentifierInfo *>(Val));
+      break;
+    case ArgumentKind::ak_qualtype_pair:
+    case ArgumentKind::ak_attr_info:
+      llvm_unreachable("unexpected diagnostic argument kind");
+    }
+  }
+  unsigned NumRanges = S ? S->DiagRanges.size() : 0;
+  Record.push_back(NumRanges);
+  for (unsigned I = 0; I != NumRanges; ++I) {
+    Record.AddSourceRange(S->DiagRanges[I].getAsRange());
+    Record.push_back(S->DiagRanges[I].isTokenRange());
+  }
+  // FIXME: Do we need to serialize FixItHints?
+}
+
+static void addASTPartialDiagnostic(ASTRecordWriter &Record,
+                                    const ASTPartialDiagnostic *PD) {
+  Record.push_back(PD != nullptr);
+  if (!PD)
+    return;
+  PartialDiagnostic::DiagStorageAllocator Alloc;
+  addPartialDiagnostic(Record, PD->getPartialDiagnostic(Alloc));
+}
+
 static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
@@ -499,7 +574,7 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
               DetailRecord)) {
         Record.push_back(/*Kind=*/0);
         Record.AddSourceLocation(Diag->first);
-        Record.AddString(Diag->second);
+        addASTPartialDiagnostic(Record, Diag->second);
         continue;
       }
       if (auto *E = dyn_cast<const Expr *>(DetailRecord)) {
@@ -514,13 +589,21 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   }
 }
 
-static void
-addSubstitutionDiagnostic(
+static void addSubstitutionDiagnostic(
     ASTRecordWriter &Record,
-    const concepts::Requirement::SubstitutionDiagnostic *D) {
-  Record.AddString(D->SubstitutedEntity);
-  Record.AddSourceLocation(D->DiagLoc);
-  Record.AddString(D->DiagMessage);
+    const concepts::Requirement::SubstitutionDiagnostic *Diag) {
+  if (auto *D = dyn_cast<const ParmVarDecl *>(Diag->Entity)) {
+    Record.push_back(0);
+    Record.AddDeclRef(D);
+  } else if (auto *E = dyn_cast<const Expr *>(Diag->Entity)) {
+    Record.push_back(1);
+    Record.AddStmt(const_cast<Expr *>(E));
+  } else if (auto *TSI = dyn_cast<const TypeSourceInfo *>(Diag->Entity)) {
+    Record.push_back(2);
+    Record.AddTypeSourceInfo(const_cast<TypeSourceInfo *>(TSI));
+  }
+  Record.AddSourceLocation(Diag->DiagLoc);
+  addASTPartialDiagnostic(Record, Diag->Diag);
 }
 
 void ASTStmtWriter::VisitConceptSpecializationExpr(
@@ -587,7 +670,7 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
       Record.push_back(concepts::Requirement::RK_Nested);
       Record.push_back(NestedReq->hasInvalidConstraint());
       if (NestedReq->hasInvalidConstraint()) {
-        Record.AddString(NestedReq->getInvalidConstraintEntity());
+        Record.AddStmt(NestedReq->getInvalidConstraintEntity());
         addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       } else {
         Record.AddStmt(NestedReq->getConstraintExpr());

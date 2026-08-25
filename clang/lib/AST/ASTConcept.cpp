@@ -31,14 +31,74 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
   else if (const auto *Concept =
                llvm::dyn_cast<const ConceptReference *>(Detail))
     new (TrailingObject) UnsatisfiedConstraintRecord(Concept);
-  else {
-    auto &SubstitutionDiagnostic =
-        *cast<const clang::ConstraintSubstitutionDiagnostic *>(Detail);
-    StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
-    auto *NewSubstDiag = new (C) clang::ConstraintSubstitutionDiagnostic(
-        SubstitutionDiagnostic.first, Message);
-    new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
+  else
+    new (TrailingObject)
+        UnsatisfiedConstraintRecord(new (C) ConstraintSubstitutionDiagnostic(
+            *cast<const ConstraintSubstitutionDiagnostic *>(Detail)));
+}
+
+ASTPartialDiagnostic *
+ASTPartialDiagnostic::Create(const ASTContext &C, const PartialDiagnostic &PD) {
+  unsigned NumArgs = 0, NumRanges = 0;
+  if (PD.hasStorage()) {
+    const DiagnosticStorage *S = PD.getStorage();
+    NumArgs = S->NumDiagArgs;
+    NumRanges = S->DiagRanges.size();
   }
+  void *Mem = C.Allocate(totalSizeToAlloc<uint64_t, uint32_t, CharSourceRange>(
+                             NumArgs, NumArgs, NumRanges),
+                         alignof(ASTPartialDiagnostic));
+  return new (Mem) ASTPartialDiagnostic(C, PD, NumArgs, NumRanges);
+}
+
+ASTPartialDiagnostic::ASTPartialDiagnostic(const ASTContext &C,
+                                           const PartialDiagnostic &PD,
+                                           unsigned NumArgs, unsigned NumRanges)
+    : DiagID(PD.getDiagID()), NumArgs(NumArgs), NumRanges(NumRanges) {
+  if (!NumArgs && !NumRanges)
+    return;
+  const DiagnosticStorage *S = PD.getStorage();
+  uint64_t *Values = getTrailingObjects<uint64_t>();
+  uint32_t *KindLengths = getTrailingObjects<uint32_t>();
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    auto Kind = (DiagnosticsEngine::ArgumentKind)S->DiagArgumentsKind[I];
+    if (Kind == DiagnosticsEngine::ak_std_string ||
+        Kind == DiagnosticsEngine::ak_c_string) {
+      StringRef Text =
+          C.backupStr(Kind == DiagnosticsEngine::ak_std_string
+                          ? StringRef(S->DiagArgumentsStr[I])
+                          : StringRef(reinterpret_cast<const char *>(
+                                S->DiagArgumentsVal[I])));
+      assert(Text.size() < (1u << (32 - KindBits)) && "argument text too long");
+      Values[I] = reinterpret_cast<uint64_t>(Text.data());
+      KindLengths[I] =
+          DiagnosticsEngine::ak_std_string | (Text.size() << KindBits);
+    } else {
+      Values[I] = S->DiagArgumentsVal[I];
+      KindLengths[I] = Kind;
+    }
+  }
+  llvm::copy(S->DiagRanges, getTrailingObjects<CharSourceRange>());
+}
+
+PartialDiagnostic ASTPartialDiagnostic::getPartialDiagnostic(
+    PartialDiagnostic::DiagStorageAllocator &Alloc) const {
+  PartialDiagnostic PD(DiagID, Alloc);
+  const uint64_t *Values = getTrailingObjects<uint64_t>();
+  const uint32_t *KindLengths = getTrailingObjects<uint32_t>();
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    auto Kind = (DiagnosticsEngine::ArgumentKind)(KindLengths[I] &
+                                                  ((1u << KindBits) - 1));
+    if (Kind == DiagnosticsEngine::ak_std_string)
+      PD.AddString(StringRef(reinterpret_cast<const char *>(Values[I]),
+                             KindLengths[I] >> KindBits));
+    else
+      PD.AddTaggedVal(Values[I], Kind);
+  }
+  for (const CharSourceRange &R :
+       getTrailingObjects<CharSourceRange>(NumRanges))
+    PD.AddSourceRange(R);
+  return PD;
 }
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(

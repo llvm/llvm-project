@@ -3853,7 +3853,7 @@ public:
   }
 
   concepts::NestedRequirement *
-  RebuildNestedRequirement(StringRef InvalidConstraintEntity,
+  RebuildNestedRequirement(Expr *InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
     return SemaRef.BuildNestedRequirement(InvalidConstraintEntity,
                                           Satisfaction);

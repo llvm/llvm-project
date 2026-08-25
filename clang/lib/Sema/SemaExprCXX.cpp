@@ -8125,12 +8125,8 @@ Sema::BuildExprRequirement(
       // FIXME: Capture diagnostics from the SFINAE trap and store them in the
       // requirement.
       return new (Context) concepts::ExprRequirement(
-          createSubstDiagAt(IDC->getExprLoc(),
-                            [&](llvm::raw_ostream &OS) {
-                              IDC->printPretty(OS, /*Helper=*/nullptr,
-                                               getPrintingPolicy());
-                            }),
-          IsSimple, NoexceptLoc, ReturnTypeRequirement);
+          createSubstDiagAt(IDC->getExprLoc(), IDC), IsSimple, NoexceptLoc,
+          ReturnTypeRequirement);
     }
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
@@ -8180,8 +8176,8 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
 }
 
 concepts::NestedRequirement *
-Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                       const ASTConstraintSatisfaction &Satisfaction) {
+Sema::BuildNestedRequirement(Expr *InvalidConstraintEntity,
+                             const ASTConstraintSatisfaction &Satisfaction) {
   return new (Context) concepts::NestedRequirement(
       InvalidConstraintEntity,
       ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));

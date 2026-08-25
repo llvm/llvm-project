@@ -165,7 +165,7 @@ static_assert(requires { typename Z<int>; });
 namespace std_example {
   template<typename T, typename T::type = 0> struct S;
   // expected-note@-1 {{because 'typename S<T>' would be invalid: no type named 'type' in 'std_example::has_inner}}
-  template<typename T> using Ref = T&; // expected-note{{because 'typename Ref<T>' would be invalid: cannot form a reference to 'void'}}
+  template<typename T> using Ref = T&; // expected-note{{because 'typename Ref<T>' (aka 'T &') would be invalid: cannot form a reference to 'void'}}
   template<typename T> concept C1 =
     requires {
       typename T::inner;

@@ -821,6 +821,80 @@ void ASTStmtReader::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
   E->setRParenLoc(readSourceLocation());
 }
 
+static PartialDiagnostic
+readPartialDiagnostic(ASTRecordReader &Record,
+                      PartialDiagnostic::DiagStorageAllocator &Alloc) {
+  unsigned DiagID = Record.readUInt32();
+  PartialDiagnostic PD(DiagID, Alloc);
+  unsigned NumArgs = Record.readInt();
+  using ArgumentKind = DiagnosticsEngine::ArgumentKind;
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    auto K = static_cast<ArgumentKind>(Record.readInt());
+    switch (K) {
+    case ArgumentKind::ak_std_string:
+    case ArgumentKind::ak_c_string:
+      PD.AddString(Record.readString());
+      break;
+    case ArgumentKind::ak_sint:
+    case ArgumentKind::ak_uint:
+    case ArgumentKind::ak_tokenkind:
+    case ArgumentKind::ak_addrspace:
+    case ArgumentKind::ak_qual:
+      PD.AddTaggedVal(Record.readUInt64(), K);
+      break;
+    case ArgumentKind::ak_qualtype:
+      PD.AddTaggedVal(
+          reinterpret_cast<uint64_t>(Record.readType().getAsOpaquePtr()), K);
+      break;
+    case ArgumentKind::ak_declarationname:
+      PD.AddTaggedVal(Record.readDeclarationName().getAsOpaqueInteger(), K);
+      break;
+    case ArgumentKind::ak_nameddecl:
+      PD.AddTaggedVal(
+          reinterpret_cast<uint64_t>(Record.readDeclAs<NamedDecl>()), K);
+      break;
+    case ArgumentKind::ak_nestednamespec:
+      PD.AddTaggedVal(reinterpret_cast<uint64_t>(
+                          Record.readNestedNameSpecifier().getAsVoidPointer()),
+                      K);
+      break;
+    case ArgumentKind::ak_declcontext:
+      PD.AddTaggedVal(reinterpret_cast<uint64_t>(
+                          Decl::castToDeclContext(Record.readDecl())),
+                      K);
+      break;
+    case ArgumentKind::ak_attr:
+      PD.AddTaggedVal(reinterpret_cast<uint64_t>(Record.readAttr()), K);
+      break;
+    case ArgumentKind::ak_expr:
+      PD.AddTaggedVal(reinterpret_cast<uint64_t>(Record.readExpr()), K);
+      break;
+    case ArgumentKind::ak_identifierinfo:
+      PD.AddTaggedVal(reinterpret_cast<uint64_t>(Record.readIdentifier()), K);
+      break;
+    case ArgumentKind::ak_qualtype_pair:
+    case ArgumentKind::ak_attr_info:
+      llvm_unreachable("unexpected diagnostic argument kind");
+    }
+  }
+  unsigned NumRanges = Record.readInt();
+  for (unsigned I = 0; I != NumRanges; ++I) {
+    SourceRange SR = Record.readSourceRange();
+    bool IsTokenRange = Record.readInt();
+    PD.AddSourceRange(CharSourceRange(SR, IsTokenRange));
+  }
+  // FIXME: Do we need to serialize FixItHints?
+  return PD;
+}
+
+static ASTPartialDiagnostic *readASTPartialDiagnostic(const ASTContext &C,
+                                                      ASTRecordReader &Record) {
+  if (!Record.readInt())
+    return nullptr;
+  PartialDiagnostic::DiagStorageAllocator Alloc;
+  return ASTPartialDiagnostic::Create(C, readPartialDiagnostic(Record, Alloc));
+}
+
 static ConstraintSatisfaction
 readConstraintSatisfaction(ASTRecordReader &Record) {
   ConstraintSatisfaction Satisfaction;
@@ -832,11 +906,10 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
       auto Kind = Record.readInt();
       if (Kind == 0) {
-        SourceLocation DiagLocation = Record.readSourceLocation();
-        StringRef DiagMessage = C.backupStr(Record.readString());
-
-        Satisfaction.Details.emplace_back(new (
-            C) ConstraintSubstitutionDiagnostic(DiagLocation, DiagMessage));
+        SourceLocation Loc = Record.readSourceLocation();
+        auto *Diag = readASTPartialDiagnostic(C, Record);
+        Satisfaction.Details.emplace_back(
+            new (C) ConstraintSubstitutionDiagnostic(Loc, Diag));
       } else if (Kind == 1) {
         Satisfaction.Details.emplace_back(Record.readExpr());
       } else {
@@ -862,13 +935,21 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
 static concepts::Requirement::SubstitutionDiagnostic *
 readSubstitutionDiagnostic(ASTRecordReader &Record) {
   const ASTContext &C = Record.getContext();
-  StringRef SubstitutedEntity = C.backupStr(Record.readString());
+  unsigned Type = Record.readUInt32();
+  llvm::PointerUnion<const ParmVarDecl *, const Expr *, const TypeSourceInfo *>
+      Entity;
+  if (Type == 0) {
+    Entity = cast<ParmVarDecl>(Record.readNamedDeclRef());
+  } else if (Type == 1) {
+    Entity = Record.readExpr();
+  } else if (Type == 2) {
+    Entity = Record.readTypeSourceInfo();
+  }
   SourceLocation DiagLoc = Record.readSourceLocation();
-  StringRef DiagMessage = C.backupStr(Record.readString());
-
+  ASTPartialDiagnostic *Diagnostic = readASTPartialDiagnostic(C, Record);
   return new (Record.getContext())
-      concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
-                                                    DiagMessage};
+      concepts::Requirement::SubstitutionDiagnostic{Entity, DiagLoc,
+                                                    Diagnostic};
 }
 
 void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
@@ -953,10 +1034,11 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
         ASTContext &C = Record.getContext();
         bool HasInvalidConstraint = Record.readInt();
         if (HasInvalidConstraint) {
-          StringRef InvalidConstraint = C.backupStr(Record.readString());
+          Expr *InvalidConstraint = Record.readExpr();
+          auto Satisfaction = readConstraintSatisfaction(Record);
           R = new (C) concepts::NestedRequirement(
-              Record.getContext(), InvalidConstraint,
-              readConstraintSatisfaction(Record));
+              InvalidConstraint,
+              ASTConstraintSatisfaction::Create(C, Satisfaction));
           break;
         }
         Expr *E = Record.readExpr();

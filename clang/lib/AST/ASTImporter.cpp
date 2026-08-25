@@ -1073,6 +1073,104 @@ StringRef ASTNodeImporter::ImportASTStringRef(StringRef FromStr) {
   return StringRef(ToStore, FromStr.size());
 }
 
+template <>
+Expected<ASTPartialDiagnostic *>
+ASTNodeImporter::import(ASTPartialDiagnostic *From) {
+  if (!From)
+    return nullptr;
+
+  PartialDiagnostic::DiagStorageAllocator Allocator;
+  PartialDiagnostic FromPD = From->getPartialDiagnostic(Allocator);
+  PartialDiagnostic ToPD(FromPD.getDiagID(), Allocator);
+  using ArgumentKind = DiagnosticsEngine::ArgumentKind;
+  if (const DiagnosticStorage *S =
+          FromPD.hasStorage() ? FromPD.getStorage() : nullptr) {
+    for (unsigned I = 0; I != S->NumDiagArgs; ++I) {
+      auto K = (ArgumentKind)S->DiagArgumentsKind[I];
+      uint64_t Val = S->DiagArgumentsVal[I];
+      switch (K) {
+      case ArgumentKind::ak_std_string:
+        ToPD.AddString(S->DiagArgumentsStr[I]);
+        break;
+      case ArgumentKind::ak_qualtype: {
+        Expected<QualType> ToQT =
+            import(QualType::getFromOpaquePtr(reinterpret_cast<void *>(Val)));
+        if (!ToQT)
+          return ToQT.takeError();
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(ToQT->getAsOpaquePtr()),
+                          K);
+        break;
+      }
+      case ArgumentKind::ak_declarationname: {
+        Expected<DeclarationName> ToName =
+            import(DeclarationName::getFromOpaqueInteger(Val));
+        if (!ToName)
+          return ToName.takeError();
+        ToPD.AddTaggedVal(ToName->getAsOpaqueInteger(), K);
+        break;
+      }
+      case ArgumentKind::ak_nameddecl: {
+        auto ToDecl = import(reinterpret_cast<NamedDecl *>(Val));
+        if (!ToDecl)
+          return ToDecl.takeError();
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(*ToDecl), K);
+        break;
+      }
+      case ArgumentKind::ak_declcontext: {
+        auto ToDecl = import(
+            Decl::castFromDeclContext(reinterpret_cast<DeclContext *>(Val)));
+        if (!ToDecl)
+          return ToDecl.takeError();
+        ToPD.AddTaggedVal(
+            reinterpret_cast<uint64_t>(Decl::castToDeclContext(*ToDecl)), K);
+        break;
+      }
+      case ArgumentKind::ak_nestednamespec: {
+        Expected<NestedNameSpecifier> ToNNS =
+            import(NestedNameSpecifier::getFromVoidPointer(
+                reinterpret_cast<void *>(Val)));
+        if (!ToNNS)
+          return ToNNS.takeError();
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(ToNNS->getAsVoidPointer()),
+                          K);
+        break;
+      }
+      case ArgumentKind::ak_attr: {
+        auto ToAttr = import(reinterpret_cast<Attr *>(Val));
+        if (!ToAttr)
+          return ToAttr.takeError();
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(*ToAttr), K);
+        break;
+      }
+      case ArgumentKind::ak_expr: {
+        auto ToExpr = import(reinterpret_cast<Expr *>(Val));
+        if (!ToExpr)
+          return ToExpr.takeError();
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(*ToExpr), K);
+        break;
+      }
+      case ArgumentKind::ak_identifierinfo:
+        ToPD.AddTaggedVal(reinterpret_cast<uint64_t>(Importer.Import(
+                              reinterpret_cast<IdentifierInfo *>(Val))),
+                          K);
+        break;
+      default:
+        ToPD.AddTaggedVal(Val, K);
+        break;
+      }
+    }
+    for (const CharSourceRange &R : S->DiagRanges) {
+      Expected<SourceRange> ToRange = import(R.getAsRange());
+      if (!ToRange)
+        return ToRange.takeError();
+      ToPD.AddSourceRange(R.isTokenRange()
+                              ? CharSourceRange::getTokenRange(*ToRange)
+                              : CharSourceRange::getCharRange(*ToRange));
+    }
+  }
+  return ASTPartialDiagnostic::Create(Importer.getToContext(), ToPD);
+}
+
 Error ASTNodeImporter::ImportConstraintSatisfaction(
     const ASTConstraintSatisfaction &FromSat, ConstraintSatisfaction &ToSat) {
   ToSat.IsSatisfied = FromSat.IsSatisfied;
@@ -1090,16 +1188,17 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
           return ToCROrErr.takeError();
         ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
-        auto Pair =
+        auto *Pair =
             Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
-
-        ExpectedSLoc ToPairFirst = import(Pair->first);
-        if (!ToPairFirst)
-          return ToPairFirst.takeError();
-        StringRef ToPairSecond = ImportASTStringRef(Pair->second);
-        ToSat.Details.emplace_back(new (Importer.getToContext())
-                                       ConstraintSubstitutionDiagnostic{
-                                           ToPairFirst.get(), ToPairSecond});
+        ExpectedSLoc ToLoc = import(Pair->first);
+        if (!ToLoc)
+          return ToLoc.takeError();
+        auto ToDiag = import(Pair->second);
+        if (!ToDiag)
+          return ToDiag.takeError();
+        ToSat.Details.emplace_back(
+            new (Importer.getToContext())
+                ConstraintSubstitutionDiagnostic(*ToLoc, *ToDiag));
       }
     }
   }
@@ -1110,14 +1209,33 @@ template <>
 Expected<concepts::Requirement::SubstitutionDiagnostic *>
 ASTNodeImporter::import(
     concepts::Requirement::SubstitutionDiagnostic *FromDiag) {
-  StringRef ToEntity = ImportASTStringRef(FromDiag->SubstitutedEntity);
+  llvm::PointerUnion<const ParmVarDecl *, const Expr *, const TypeSourceInfo *>
+      Entity;
+  if (auto *D = dyn_cast<const ParmVarDecl *>(FromDiag->Entity)) {
+    auto ToEntity = import(D);
+    if (!ToEntity)
+      return ToEntity.takeError();
+    Entity = *ToEntity;
+  } else if (auto *E = dyn_cast<const Expr *>(FromDiag->Entity)) {
+    auto ToEntity = import(E);
+    if (!ToEntity)
+      return ToEntity.takeError();
+    Entity = *ToEntity;
+  } else if (auto *TSI = dyn_cast<const TypeSourceInfo *>(FromDiag->Entity)) {
+    auto ToEntity = import(TSI);
+    if (!ToEntity)
+      return ToEntity.takeError();
+    Entity = *ToEntity;
+  }
   ExpectedSLoc ToLoc = import(FromDiag->DiagLoc);
   if (!ToLoc)
     return ToLoc.takeError();
-  StringRef ToDiagMessage = ImportASTStringRef(FromDiag->DiagMessage);
+  auto ToDiag = import(FromDiag->Diag);
+  if (!ToDiag)
+    return ToDiag.takeError();
   return new (Importer.getToContext())
-      concepts::Requirement::SubstitutionDiagnostic{ToEntity, ToLoc.get(),
-                                                    ToDiagMessage};
+      concepts::Requirement::SubstitutionDiagnostic{Entity, ToLoc.get(),
+                                                    *ToDiag};
 }
 
 Expected<concepts::Requirement *>
@@ -1204,12 +1322,14 @@ ASTNodeImporter::ImportNestedRequirement(concepts::NestedRequirement *From) {
   const ASTConstraintSatisfaction &FromSatisfaction =
       From->getConstraintSatisfaction();
   if (From->hasInvalidConstraint()) {
-    StringRef ToEntity = ImportASTStringRef(From->getInvalidConstraintEntity());
+    auto ToEntity = import(From->getInvalidConstraintEntity());
+    if (!ToEntity)
+      return ToEntity.takeError();
     ASTConstraintSatisfaction *ToSatisfaction =
         ASTConstraintSatisfaction::Rebuild(Importer.getToContext(),
                                            FromSatisfaction);
     return new (Importer.getToContext())
-        NestedRequirement(ToEntity, ToSatisfaction);
+        NestedRequirement(*ToEntity, ToSatisfaction);
   } else {
     ExpectedExpr ToExpr = import(From->getConstraintExpr());
     if (!ToExpr)

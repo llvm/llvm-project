@@ -533,6 +533,7 @@ public:
 
 class ConstraintSatisfactionChecker {
   Sema &S;
+  ASTContext &Context;
   const NamedDecl *Template;
   const ConceptReference *TopLevelConceptId;
   SourceLocation TemplateNameLoc;
@@ -598,22 +599,14 @@ public:
                                 UnsignedOrNone PackSubstitutionIndex,
                                 ConstraintSatisfaction &Satisfaction,
                                 bool BuildExpression)
-      : S(SemaRef), Template(Template), TopLevelConceptId(TopLevelConceptId),
-        TemplateNameLoc(TemplateNameLoc),
+      : S(SemaRef), Context(SemaRef.getASTContext()), Template(Template),
+        TopLevelConceptId(TopLevelConceptId), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
         Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
   ExprResult Evaluate(const NormalizedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
 };
-
-StringRef allocateStringFromConceptDiagnostic(const Sema &S,
-                                              const PartialDiagnostic Diag) {
-  SmallString<128> DiagString;
-  DiagString = ": ";
-  Diag.EmitToString(S.getDiagnostics(), DiagString);
-  return S.getASTContext().backupStr(DiagString);
-}
 
 } // namespace
 
@@ -657,16 +650,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
       PartialDiagnosticAt SubstDiag{SourceLocation(),
                                     PartialDiagnostic::NullDiagnostic()};
       Info.takeSFINAEDiagnostic(SubstDiag);
-      // FIXME: This is an unfortunate consequence of there
-      //  being no serialization code for PartialDiagnostics and the fact
-      //  that serializing them would likely take a lot more storage than
-      //  just storing them as strings. We would still like, in the
-      //  future, to serialize the proper PartialDiagnostic as serializing
-      //  it as a string defeats the purpose of the diagnostic mechanism.
       Satisfaction.Details.emplace_back(
-          new (S.Context) ConstraintSubstitutionDiagnostic{
+          new (Context) ConstraintSubstitutionDiagnostic(
               SubstDiag.first,
-              allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
+              ASTPartialDiagnostic::Create(Context, SubstDiag.second)));
       Satisfaction.IsSatisfied = false;
       return ExprEmpty();
     }
@@ -823,11 +810,11 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = true;
 
-    PartialDiagnostic Msg = S.PDiag(diag::note_constraint_references_error);
     Satisfaction.Details.emplace_back(
-        new (S.Context) ConstraintSubstitutionDiagnostic{
+        new (Context) ConstraintSubstitutionDiagnostic(
             SubstitutedAtomicExpr.get()->getBeginLoc(),
-            allocateStringFromConceptDiagnostic(S, Msg)});
+            ASTPartialDiagnostic::Create(
+                Context, S.PDiag(diag::note_constraint_references_error))));
     return SubstitutedAtomicExpr;
   }
 
@@ -1066,17 +1053,11 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     PartialDiagnosticAt SubstDiag{SourceLocation(),
                                   PartialDiagnostic::NullDiagnostic()};
     Info.takeSFINAEDiagnostic(SubstDiag);
-    // FIXME: This is an unfortunate consequence of there
-    //  being no serialization code for PartialDiagnostics and the fact
-    //  that serializing them would likely take a lot more storage than
-    //  just storing them as strings. We would still like, in the
-    //  future, to serialize the proper PartialDiagnostic as serializing
-    //  it as a string defeats the purpose of the diagnostic mechanism.
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
-        new (S.Context) ConstraintSubstitutionDiagnostic{
+        new (Context) ConstraintSubstitutionDiagnostic(
             SubstDiag.first,
-            allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
+            ASTPartialDiagnostic::Create(Context, SubstDiag.second)));
     return ExprError();
   }
 
@@ -1835,6 +1816,37 @@ bool Sema::CheckFunctionTemplateConstraints(
                                      PointOfInstantiation, Satisfaction);
 }
 
+template <class DiagnoseBuilder, class Type>
+static void DiagnoseEntity(DiagnoseBuilder &DB, Type Entity) {
+  if (auto *D = dyn_cast<const ParmVarDecl *>(Entity)) {
+    DB << D;
+  } else if (auto *E = dyn_cast<const Expr *>(Entity)) {
+    DB << E;
+  } else if (auto *TSI = dyn_cast<const TypeSourceInfo *>(Entity)) {
+    DB << TSI->getType();
+  }
+}
+
+namespace {
+struct DiagnoseSubstitutionDiagnostic {
+  Sema &SemaRef;
+  const ASTPartialDiagnostic &PD;
+  DiagnoseSubstitutionDiagnostic(Sema &SemaRef, const ASTPartialDiagnostic &PD)
+      : SemaRef(SemaRef), PD(PD) {}
+
+  friend const StreamingDiagnostic &
+  operator<<(const StreamingDiagnostic &Diag,
+             const DiagnoseSubstitutionDiagnostic &This) {
+    SmallString<128> StringBuf;
+    This.PD
+        .getPartialDiagnostic(This.SemaRef.getASTContext().getDiagAllocator())
+        .EmitToString(This.SemaRef.getDiagnostics(), StringBuf);
+    Diag << StringBuf;
+    return Diag;
+  }
+};
+} // namespace
+
 static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::ExprRequirement *Req,
                                            bool First) {
@@ -1846,15 +1858,14 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
     break;
   case concepts::ExprRequirement::SS_ExprSubstitutionFailure: {
     auto *SubstDiag = Req->getExprSubstitutionDiagnostic();
-    if (!SubstDiag->DiagMessage.empty())
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_expr_requirement_expr_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity
-          << SubstDiag->DiagMessage;
-    else
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_expr_requirement_expr_unknown_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity;
+    unsigned DiagId =
+        SubstDiag->Diag
+            ? diag::note_expr_requirement_expr_substitution_error
+            : diag::note_expr_requirement_expr_unknown_substitution_error;
+    auto DB = S.Diag(SubstDiag->DiagLoc, DiagId) << (int)First;
+    DiagnoseEntity(DB, SubstDiag->Entity);
+    if (SubstDiag->Diag)
+      DB << DiagnoseSubstitutionDiagnostic(S, *SubstDiag->Diag);
     break;
   }
   case concepts::ExprRequirement::SS_NoexceptNotMet:
@@ -1864,17 +1875,15 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
   case concepts::ExprRequirement::SS_TypeRequirementSubstitutionFailure: {
     auto *SubstDiag =
         Req->getReturnTypeRequirement().getSubstitutionDiagnostic();
-    if (!SubstDiag->DiagMessage.empty())
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_expr_requirement_type_requirement_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity
-          << SubstDiag->DiagMessage;
-    else
-      S.Diag(
-          SubstDiag->DiagLoc,
-          diag::
-              note_expr_requirement_type_requirement_unknown_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity;
+    unsigned DiagId =
+        SubstDiag->Diag
+            ? diag::note_expr_requirement_type_requirement_substitution_error
+            : diag::
+                  note_expr_requirement_type_requirement_unknown_substitution_error;
+    auto DB = S.Diag(SubstDiag->DiagLoc, DiagId) << (int)First;
+    DiagnoseEntity(DB, SubstDiag->Entity);
+    if (SubstDiag->Diag)
+      DB << DiagnoseSubstitutionDiagnostic(S, *SubstDiag->Diag);
     break;
   }
   case concepts::ExprRequirement::SS_ConstraintsNotSatisfied: {
@@ -1899,14 +1908,14 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
     return;
   case concepts::TypeRequirement::SS_SubstitutionFailure: {
     auto *SubstDiag = Req->getSubstitutionDiagnostic();
-    if (!SubstDiag->DiagMessage.empty())
-      S.Diag(SubstDiag->DiagLoc, diag::note_type_requirement_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity
-          << SubstDiag->DiagMessage;
-    else
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_type_requirement_unknown_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity;
+    unsigned DiagId =
+        SubstDiag->Diag
+            ? diag::note_type_requirement_substitution_error
+            : diag::note_type_requirement_unknown_substitution_error;
+    auto DB = S.Diag(SubstDiag->DiagLoc, DiagId) << (int)First;
+    DiagnoseEntity(DB, SubstDiag->Entity);
+    if (SubstDiag->Diag)
+      DB << DiagnoseSubstitutionDiagnostic(S, *SubstDiag->Diag);
     return;
   }
   default:
@@ -2062,10 +2071,11 @@ static void diagnoseUnsatisfiedConstraintExpr(
               .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
-          << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
+          << (int)First << Req->getInvalidConstraintEntity()
+          << DiagnoseSubstitutionDiagnostic(S, *Diag->second);
     else
       S.Diag(Diag->first, diag::note_substituted_constraint_expr_is_ill_formed)
-          << Diag->second;
+          << DiagnoseSubstitutionDiagnostic(S, *Diag->second);
     return;
   }
   if (const auto *Concept = dyn_cast<const ConceptReference *>(Record)) {

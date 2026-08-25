@@ -3196,7 +3196,7 @@ def err_template_arg_list_constraints_not_satisfied : Error<
   "constraints not satisfied for %select{class template|function template|variable template|alias template|"
   "template template parameter|template}0 %1%2">;
 def note_substituted_constraint_expr_is_ill_formed : Note<
-  "because substituted constraint expression is ill-formed%0">;
+  "because substituted constraint expression is ill-formed: %0">;
 def note_constraint_references_error
     : Note<"constraint depends on a previously diagnosed expression">;
 def note_atomic_constraint_evaluated_to_false
@@ -3221,27 +3221,27 @@ def err_reference_to_function_with_unsatisfied_constraints : Error<
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
 def note_expr_requirement_expr_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid: %2">;
+  "%select{and|because}0 %1 would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid">;
+  "%select{and|because}0 %1 would be invalid">;
 def note_expr_requirement_noexcept_not_met
     : Note<"%select{and|because}0 %1 may throw an exception">;
 def note_expr_requirement_type_requirement_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid: %2">;
+  "%select{and|because}0 %1 would be invalid: %2">;
 def note_expr_requirement_type_requirement_unknown_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid">;
+  "%select{and|because}0 %1 would be invalid">;
 def note_expr_requirement_constraints_not_satisfied
     : Note<"%select{and|because}0 type constraint %1 was not satisfied:">;
 def note_expr_requirement_constraints_not_satisfied_simple : Note<
   "%select{and|because}0 %1 does not satisfy %2:">;
 def note_type_requirement_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid: %2">;
+  "%select{and|because}0 %1 would be invalid: %2">;
 def note_type_requirement_unknown_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid">;
+  "%select{and|because}0 %1 would be invalid">;
 def note_nested_requirement_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid%2">;
+  "%select{and|because}0 %1 would be invalid: %2">;
 def note_nested_requirement_unknown_substitution_error : Note<
-  "%select{and|because}0 '%1' would be invalid">;
+  "%select{and|because}0 %1 would be invalid">;
 def note_ambiguous_atomic_constraints : Note<
   "similar constraint expressions not considered equivalent; constraint "
   "expressions cannot be considered equivalent unless they originate from the "

@@ -185,12 +185,13 @@ private:
   bool Satisfied : 1;
 public:
   struct SubstitutionDiagnostic {
-    StringRef SubstitutedEntity;
-    // FIXME: Store diagnostics semantically and not as prerendered strings.
-    //  Fixing this probably requires serialization of PartialDiagnostic
-    //  objects.
+    llvm::PointerUnion<const ParmVarDecl *, const Expr *,
+                       const TypeSourceInfo *>
+        Entity;
     SourceLocation DiagLoc;
-    StringRef DiagMessage;
+    /// The captured substitution-failure diagnostic, or null if none was
+    /// available (an "unknown substitution error").
+    ASTPartialDiagnostic *Diag;
   };
 
   Requirement(RequirementKind Kind, bool IsDependent,
@@ -435,7 +436,6 @@ class NestedRequirement : public Requirement {
   Expr *Constraint = nullptr;
   const ASTConstraintSatisfaction *Satisfaction = nullptr;
   bool HasInvalidConstraint = false;
-  StringRef InvalidConstraintEntity;
 
 public:
   friend ASTStmtReader;
@@ -458,25 +458,20 @@ public:
         Constraint(Constraint),
         Satisfaction(ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
 
-  NestedRequirement(StringRef InvalidConstraintEntity,
+  NestedRequirement(Expr *InvalidConstraintEntity,
                     const ASTConstraintSatisfaction *Satisfaction)
       : Requirement(RK_Nested,
                     /*IsDependent=*/false,
-                    /*ContainsUnexpandedParameterPack*/ false,
+                    /*ContainsUnexpandedParameterPack=*/false,
                     Satisfaction->IsSatisfied),
-        Satisfaction(Satisfaction), HasInvalidConstraint(true),
-        InvalidConstraintEntity(InvalidConstraintEntity) {}
-
-  NestedRequirement(ASTContext &C, StringRef InvalidConstraintEntity,
-                    const ConstraintSatisfaction &Satisfaction)
-      : NestedRequirement(InvalidConstraintEntity,
-                          ASTConstraintSatisfaction::Create(C, Satisfaction)) {}
+        Constraint(InvalidConstraintEntity), Satisfaction(Satisfaction),
+        HasInvalidConstraint(true) {}
 
   bool hasInvalidConstraint() const { return HasInvalidConstraint; }
 
-  StringRef getInvalidConstraintEntity() {
+  Expr *getInvalidConstraintEntity() {
     assert(hasInvalidConstraint());
-    return InvalidConstraintEntity;
+    return Constraint;
   }
 
   Expr *getConstraintExpr() const {
