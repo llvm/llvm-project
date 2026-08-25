@@ -260,12 +260,11 @@ public:
   }
 
   void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
-                  MCContext *Ctx,
-                  const MCOperand &LinkReg = MCOperand()) const {
+                  MCContext *Ctx, MCRegister LinkReg = MCRegister()) const {
     Inst.setOpcode(Opcode);
     Inst.clear();
     if (LinkReg.isValid())
-      Inst.addOperand(LinkReg);
+      Inst.addOperand(MCOperand::createReg(LinkReg));
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
         MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
@@ -287,8 +286,7 @@ public:
     if (LinkReg == RISCV::X1)
       createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
     else
-      createCall(RISCV::PseudoCALLReg, Inst, Target, Ctx,
-                 MCOperand::createReg(LinkReg));
+      createCall(RISCV::PseudoCALLReg, Inst, Target, Ctx, LinkReg);
   }
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
