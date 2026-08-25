@@ -776,7 +776,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         IsSigned, DL);
   int64_t Offset1 = ADec.Offset;
   int64_t Offset2 = BDec.Offset;
-  Offset1 *= -1;
+  if (MulOverflow(Offset1, int64_t(-1), Offset1))
+    return {};
 
   auto &VariablesA = ADec.Vars;
   auto &VariablesB = BDec.Vars;
