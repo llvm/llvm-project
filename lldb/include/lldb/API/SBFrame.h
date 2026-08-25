@@ -182,16 +182,19 @@ public:
   // expression result and is not a constant object like
   // SBFrame::EvaluateExpression(...) returns, but a child object of the
   // variable value.
-  lldb::SBValue
-  GetValueForVariablePath(const char *var_expr_cstr,
-                          DynamicValueType use_dynamic,
-                          lldb::DILMode mode = lldb::eDILModeFull);
+  lldb::SBValue GetValueForVariablePath(const char *var_path,
+                                        DynamicValueType use_dynamic);
 
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.
-  lldb::SBValue
-  GetValueForVariablePath(const char *var_path,
-                          lldb::DILMode mode = lldb::eDILModeFull);
+  lldb::SBValue GetValueForVariablePath(const char *var_path);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode,
+                                                DynamicValueType use_dynamic);
+
+  lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
+                                                lldb::DILMode mode);
 
   /// Find variables, register sets, registers, or persistent variables using
   /// the frame as the scope.

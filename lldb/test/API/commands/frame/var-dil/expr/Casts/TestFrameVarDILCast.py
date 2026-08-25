@@ -303,8 +303,8 @@ class TestFrameVarDILCast(TestBase):
 
         # Check that casts are not allowed in both simple and legacy modes
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
 

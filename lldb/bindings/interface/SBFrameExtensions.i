@@ -44,6 +44,11 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
             '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
             a value that represents the variable expression path'''
             return self.GetValueForVariablePath(var_expr_path)
+        
+        def var_with_mode(self, var_path: str, mode: int, use_dynamic = None, /):
+            if use_dynamic is None:
+                return self.GetValueForVariablePathWithMode(var_path, mode)
+            return self.GetValueForVariablePathWithMode(var_path, mode, use_dynamic)
 
         def get_registers_access(self):
             class registers_access(object):
