@@ -155,6 +155,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  grp
+  ../libc/include/grp.yaml
+  grp.h
+  DEPENDS
+    .llvm-libc-types.struct_group
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.size_t
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   libgen
   ../libc/include/libgen.yaml
   libgen.h
