@@ -97,17 +97,22 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
       !Def->getParent()->isSuccessor(Insert->getParent()))
     return {};
 
-  SmallDenseSet<std::pair<const DILocalVariable *, const DILocation *>, 4>
-      OurVars;
+  SmallDenseSet<DebugVariable, 4> OurVars;
   for (MachineInstr *DV : DbgValues)
-    OurVars.insert({DV->getDebugVariable(), DV->getDebugLoc()->getInlinedAt()});
-  auto IsRelevantDbgValue = [&](const MachineInstr &MI) {
-    return MI.isDebugValue() &&
-           OurVars.count(
-               {MI.getDebugVariable(), MI.getDebugLoc()->getInlinedAt()});
-  };
+    OurVars.insert(DebugVariable(DV->getDebugVariable(),
+                                 DV->getDebugExpression(),
+                                 DV->getDebugLoc()->getInlinedAt()));
 
-  SmallVector<MachineInstr *, 8> DbgValuesInBetween;
+  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
+      SeenDbgVarToDbgValues;
+  auto RecordDbgValue = [&](MachineInstr &MI) {
+    if (!MI.isDebugValue())
+      return;
+    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+                      MI.getDebugLoc()->getInlinedAt());
+    if (OurVars.count(Var) && !llvm::is_contained(DbgValues, &MI))
+      SeenDbgVarToDbgValues[Var].push_back(&MI);
+  };
 
   if (Def->getParent() == Insert->getParent()) {
     // Search both ways to quickly determine whether Insert follows Def.
@@ -123,8 +128,7 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
           DefFirst = true;
           break;
         }
-        if (IsRelevantDbgValue(*Down))
-          DbgValuesInBetween.push_back(&*Down);
+        RecordDbgValue(*Down);
         ++Down;
       }
       if (Up != UpBegin) {
@@ -141,28 +145,12 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
     // 'Insert BB's begin~Insert'
     for (MachineBasicBlock::iterator MI = std::next(Def->getIterator()),
                                      ME = Def->getParent()->end();
-         MI != ME; ++MI) {
-      if (IsRelevantDbgValue(*MI))
-        DbgValuesInBetween.push_back(&*MI);
-    }
+         MI != ME; ++MI)
+      RecordDbgValue(*MI);
     for (MachineBasicBlock::iterator MI = Insert->getParent()->begin(),
                                      ME = Insert->getIterator();
-         MI != ME; ++MI) {
-      if (IsRelevantDbgValue(*MI))
-        DbgValuesInBetween.push_back(&*MI);
-    }
-  }
-
-  // Gather DebugVariables that are seen between Def and Insert, excluding our
-  // own DBG_VALUEs in DbgValues.
-  SmallDenseMap<DebugVariable, SmallVector<MachineInstr *, 2>>
-      SeenDbgVarToDbgValues;
-  for (auto *DV : DbgValuesInBetween) {
-    if (!llvm::is_contained(DbgValues, DV)) {
-      DebugVariable Var(DV->getDebugVariable(), DV->getDebugExpression(),
-                        DV->getDebugLoc()->getInlinedAt());
-      SeenDbgVarToDbgValues[Var].push_back(DV);
-    }
+         MI != ME; ++MI)
+      RecordDbgValue(*MI);
   }
 
   // Gather sinkable DBG_VALUEs. We should not sink a DBG_VALUE if there is
