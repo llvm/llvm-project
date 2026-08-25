@@ -16376,7 +16376,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                     NumLoops, AStmt, nullptr, nullptr);
+                                     NumLoops, AStmt, nullptr, nullptr,
+                                     nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -16419,12 +16420,14 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     Expr *CountExpr = Refs[I];
     if (!CountExpr)
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
     std::optional<llvm::APSInt> OptVal =
         CountExpr->getIntegerConstantExpr(Context);
     if (!OptVal || OptVal->isNegative())
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
     CountValues[I] = OptVal->getZExtValue();
   }
 
@@ -16568,7 +16571,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
                                    AStmt, SplitStmt,
-                                   buildPreInits(Context, PreInits));
+                                   buildPreInits(Context, PreInits),
+                                   buildLoopFinalization(Context, LoopHelpers));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
