@@ -102,12 +102,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const;
 
-  /// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
-  /// expected to fuse during instruction selection. \p Ty is the type the
-  /// fused operation runs on.
-  bool canFuseFMulWithFAddSub(Type *Ty, const Instruction *FMul,
-                              const Instruction *FAddSub) const;
-
   /// \returns true if V might be divergent even when all of its operands
   /// are uniform.
   bool isSourceOfDivergence(const Value *V) const;

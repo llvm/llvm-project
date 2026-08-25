@@ -522,11 +522,15 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-bool GCNTTIImpl::canFuseFMulWithFAddSub(Type *Ty, const Instruction *FMul,
-                                        const Instruction *FAddSub) const {
-  const unsigned Opc = FAddSub->getOpcode();
-  if (Opc != Instruction::FAdd && Opc != Instruction::FSub)
-    return false;
+/// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
+/// expected to fuse during instruction selection. \p Ty is the type the fused
+/// operation runs on.
+static bool canFuseFMulWithFAddSub(const SITargetLowering *TLI, Type *Ty,
+                                   const Instruction *FMul,
+                                   const Instruction *FAddSub) {
+  assert((FAddSub->getOpcode() == Instruction::FAdd ||
+          FAddSub->getOpcode() == Instruction::FSub) &&
+         "Expected an fadd or an fsub");
 
   // The mad forms fuse exactly without fast-math flags but flush denormals.
   // An fma forms only when it is not slower than the separate operations.
@@ -604,10 +608,14 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation.
-    if (CxtI && CxtI->hasOneUse())
-      if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin()))
-        if (canFuseFMulWithFAddSub(Ty, CxtI, FAdd))
-          return TargetTransformInfo::TCC_Free;
+    if (CxtI && CxtI->hasOneUse()) {
+      const auto *FAddSub = dyn_cast<BinaryOperator>(*CxtI->user_begin());
+      if (FAddSub &&
+          (FAddSub->getOpcode() == Instruction::FAdd ||
+           FAddSub->getOpcode() == Instruction::FSub) &&
+          canFuseFMulWithFAddSub(TLI, Ty, CxtI, FAddSub))
+        return TargetTransformInfo::TCC_Free;
+    }
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
@@ -1498,7 +1506,8 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
     for (Use &Op : I->operands()) {
       auto *FMul = dyn_cast<Instruction>(Op.get());
       if (!FMul || FMul->getOpcode() != Instruction::FMul ||
-          !FMul->hasOneUse() || !canFuseFMulWithFAddSub(I->getType(), FMul, I))
+          !FMul->hasOneUse() ||
+          !canFuseFMulWithFAddSub(TLI, I->getType(), FMul, I))
         continue;
       // The fused operand. Sink it when it sits in another block, then stop.
       if (FMul->getParent() != I->getParent())
