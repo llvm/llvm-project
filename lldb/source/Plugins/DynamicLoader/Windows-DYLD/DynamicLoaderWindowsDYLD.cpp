@@ -11,6 +11,7 @@
 #include "MSVCRTCFrameRecognizer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -148,13 +149,33 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   // Try to fetch the load address of the file from the process, since there
   // could be randomization of the load address.
   lldb::addr_t load_addr = GetLoadAddress(executable);
-  if (load_addr == LLDB_INVALID_ADDRESS)
-    return;
+  if (load_addr == LLDB_INVALID_ADDRESS) {
+    // If the load address couldn't be determined (e.g. for a remote gdbstub
+    // target), fall back to the preferred load address/image base from the
+    // file if the process is live.
+    // This is a best-effort guess, if the image isn't loaded there the
+    // sections will have incorrect addresses and the slide will have to be
+    // specified manually.
 
-  // Request the process base address.
-  lldb::addr_t image_base = m_process->GetImageInfoAddress();
-  if (image_base == load_addr)
-    return;
+    if (!m_process->IsLiveDebugSession())
+      return;
+
+    ObjectFile *object_file = executable->GetObjectFile();
+    if (!object_file)
+      return;
+
+    load_addr = object_file->GetBaseAddress().GetFileAddress();
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      return;
+
+    executable->ReportWarning(
+        "failed to get load address, assuming image base at {0:x}", load_addr);
+  } else {
+    // Request the process base address.
+    lldb::addr_t image_base = m_process->GetImageInfoAddress();
+    if (image_base == load_addr)
+      return;
+  }
 
   // Rebase the process's modules if there is a mismatch.
   UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
