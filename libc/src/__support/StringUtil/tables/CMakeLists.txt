@@ -48,7 +48,7 @@ add_header_library(
   HDRS
     stdc_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -57,7 +57,7 @@ add_header_library(
   HDRS
     posix_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
@@ -66,7 +66,7 @@ add_header_library(
   HDRS
     linux_extension_signals.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.__support.StringUtil.message_mapper
 )
 

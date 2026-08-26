@@ -25,9 +25,11 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -343,41 +345,52 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-/// Build the input as a sized array of pointers so that it can be launched by
-/// the offloading runtime.
+/// CUDA passes the arguments with a level of indirection. For example, a
+/// (void*, short, void*) is passed as {void **, short *, void **} to the launch
+/// function. For the LLVM/Offload launch we include the number of arguments and
+/// their size. Thus, we pass {{void **, short*, void **}, 3, {sizeof(void*),
+/// sizeof(short), sizeof(void*)}}.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
-  SmallVector<llvm::Type *> ArgTypes, KernelLaunchParamsTypes;
-  for (auto &Arg : Args)
-    ArgTypes.push_back(CGF.ConvertTypeForMem(Arg->getType()));
-  llvm::StructType *KernelArgsTy = llvm::StructType::create(ArgTypes);
-  llvm::Type *KernelArgsPtrsTy = llvm::ArrayType::get(PtrTy, Args.size());
+  SmallVector<llvm::Type *> KernelLaunchParamsTypes;
 
-  auto *Int32Ty = CGF.Builder.getInt32Ty();
-  KernelLaunchParamsTypes.push_back(Int32Ty);
+  auto *Int64Ty = CGF.Builder.getInt64Ty();
+  KernelLaunchParamsTypes.push_back(PtrTy);
+  KernelLaunchParamsTypes.push_back(Int64Ty);
   KernelLaunchParamsTypes.push_back(PtrTy);
 
   llvm::StructType *KernelLaunchParamsTy =
       llvm::StructType::create(KernelLaunchParamsTypes);
-  Address KernelArgs = CGF.CreateTempAllocaWithoutCast(
-      KernelArgsTy, CharUnits::fromQuantity(16), "kernel_args");
-  Address KernelArgsPtrs = CGF.CreateTempAllocaWithoutCast(
-      KernelArgsPtrsTy, CharUnits::fromQuantity(16), "kernel_args_ptrs");
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
+  Address KernelArgs = CGF.CreateTempAlloca(
+      PtrTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_args",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
+  Address KernelArgSizes = CGF.CreateTempAlloca(
+      SizeTy, LangAS::Default, CharUnits::fromQuantity(16), "kernel_arg_sizes",
+      llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
 
-  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, Args.size()),
+  CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
-  CGF.Builder.CreateStore(KernelArgsPtrs.emitRawPointer(CGF),
+  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, Args.size()),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
+  CGF.Builder.CreateStore(KernelArgSizes.emitRawPointer(CGF),
+                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
-    auto *ArgVal = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Args[i]));
-    Address ArgAddr = CGF.Builder.CreateStructGEP(KernelArgs, i);
-    CGF.Builder.CreateStore(ArgVal, ArgAddr);
-    CGF.Builder.CreateStore(ArgAddr.emitRawPointer(CGF),
-                            CGF.Builder.CreateConstArrayGEP(KernelArgsPtrs, i));
+    llvm::Value *VarPtr = CGF.GetAddrOfLocalVar(Args[i]).emitRawPointer(CGF);
+    llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, PtrTy);
+    CGF.Builder.CreateDefaultAlignedStore(
+        VoidVarPtr, CGF.Builder.CreateConstGEP1_32(
+                        PtrTy, KernelArgs.emitRawPointer(CGF), i));
+
+    auto ArgSize = CGM.getDataLayout().getTypeAllocSize(
+        CGM.getTypes().ConvertType(Args[i]->getType()));
+    CGF.Builder.CreateDefaultAlignedStore(
+        llvm::ConstantInt::get(SizeTy, ArgSize),
+        CGF.Builder.CreateConstGEP1_32(SizeTy,
+                                       KernelArgSizes.emitRawPointer(CGF), i));
   }
 
   return KernelLaunchParams;
@@ -406,8 +419,9 @@ Address CGNVCUDARuntime::prepareKernelArgs(CodeGenFunction &CGF,
 // array and kernels are launched using cudaLaunchKernel().
 void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                                             FunctionArgList &Args) {
+  bool UsesLLVMOffloading = CGF.getLangOpts().OffloadViaLLVM;
   // Build the shadow stack entry at the very start of the function.
-  Address KernelArgs = CGF.getLangOpts().OffloadViaLLVM
+  Address KernelArgs = UsesLLVMOffloading
                            ? prepareKernelArgsLLVMOffload(CGF, Args)
                            : prepareKernelArgs(CGF, Args);
 
@@ -585,9 +599,9 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
     }
     if (auto *I = dyn_cast<llvm::Instruction>(U)) {
       llvm::Value *OldV = Var;
-      llvm::Instruction *NewV = new llvm::LoadInst(
-          Var->getType(), ManagedVar, "ld.managed", false,
-          llvm::Align(Var->getAlignment()), I->getIterator());
+      llvm::Instruction *NewV =
+          new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed", false,
+                             Var->getAlign().valueOrOne(), I->getIterator());
       WorkItem.pop_back();
       // Replace constant expressions directly or indirectly using the managed
       // variable with instructions.
@@ -717,7 +731,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             Var,
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
-            llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+            llvm::ConstantInt::get(IntTy,
+                                   Var->getAlign().valueOrOne().value())};
         if (!Var->isDeclaration())
           Builder.CreateCall(RegisterManagedVar, Args);
       } else {
@@ -829,7 +844,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   bool IsHIP = CGM.getLangOpts().HIP;
   bool IsCUDA = CGM.getLangOpts().CUDA;
   // No need to generate ctors/dtors if there is no GPU binary.
-  StringRef CudaGpuBinaryFileName = CGM.getCodeGenOpts().CudaGpuBinaryFileName;
+  StringRef CudaGpuBinaryFileName =
+      CGM.getCodeGenOpts().OffloadBinaryToEmbedFile;
   if (CudaGpuBinaryFileName.empty() && !IsHIP)
     return nullptr;
   if ((IsHIP || (IsCUDA && !RelocatableDeviceCode)) && EmittedKernels.empty() &&
@@ -988,7 +1004,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       GpuBinaryHandle->setVisibility(llvm::GlobalValue::HiddenVisibility);
     Address GpuBinaryAddr(
         GpuBinaryHandle, PtrTy,
-        CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+        CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
     {
       auto *HandleValue = CtorBuilder.CreateLoad(GpuBinaryAddr);
       llvm::Constant *Zero =
@@ -1040,9 +1056,19 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     }
   } else {
     // Generate a unique module ID.
+    // Note that this is unique in a build (with some collision probability
+    // inherent to MD5 hashing) as long as each compilation sees modules with
+    // different `SourceFileName`s. Builds using absolute paths or paths
+    // relative to the same base path should be OK. This is similar to the
+    // guarantees for ThinLTO and GlobalValue's GUID.
+    // If desired, a stronger uniqueness guarantee could be computed (with a
+    // small refactoring) with `llvm::getUniqueModuleId`, which hashes the
+    // module content (and, therefore, a compile-time tradeoff).
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
-    OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
+    OS << ModuleIDPrefix
+       << llvm::format("%" PRIx64,
+                       llvm::MD5Hash(TheModule.getSourceFileName()));
     llvm::Constant *ModuleIDConstant = makeConstantArray(
         std::string(ModuleID), "", ModuleIDSectionName, 32, /*AddNull=*/true);
 
@@ -1121,7 +1147,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 
   Address GpuBinaryAddr(
       GpuBinaryHandle, GpuBinaryHandle->getValueType(),
-      CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+      CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
   auto *HandleValue = DtorBuilder.CreateLoad(GpuBinaryAddr);
   // There is only one HIP fat binary per linked module, however there are
   // multiple destructor functions. Make sure the fat binary is unregistered
@@ -1270,9 +1296,6 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;
-  // For now, just spoof this as OpenMP because that's the runtime it uses.
-  if (CGM.getLangOpts().OffloadViaLLVM)
-    Kind = llvm::object::OffloadKind::OFK_OpenMP;
 
   llvm::Module &M = CGM.getModule();
   for (KernelInfo &I : EmittedKernels)
@@ -1304,7 +1327,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/I.Var->getAlignment(), ManagedVar);
+            /*Data=*/I.Var->getAlign().valueOrOne().value(), ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
@@ -1467,8 +1490,9 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     }
     return nullptr;
   }
-  if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
+  if (!CGM.getLangOpts().CUDANVCCABI &&
+      (CGM.getLangOpts().OffloadViaLLVM ||
+       (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode)))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

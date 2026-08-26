@@ -9,10 +9,13 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -120,5 +123,96 @@ TEST_P(ShowLevelNoLocationTest, LevelPrefixRespected) {
 
 INSTANTIATE_TEST_SUITE_P(ShowLevelNoLocation, ShowLevelNoLocationTest,
                          ::testing::Bool());
+
+// Creates a virtual file with the given contents and returns its FileID.
+static FileID makeFile(FileManager &FileMgr, SourceManager &SrcMgr,
+                       StringRef Path, StringRef Contents) {
+  FileEntryRef FE = FileMgr.getVirtualFileRef(
+      Path, /*Size=*/static_cast<off_t>(Contents.size()),
+      /*ModificationTime=*/0);
+  SmallVector<char, 64> Buffer(Contents.begin(), Contents.end());
+  SrcMgr.overrideFileContents(FE, std::make_unique<SmallVectorMemoryBuffer>(
+                                      std::move(Buffer), Path,
+                                      /*RequiresNullTerminator=*/false));
+  return SrcMgr.createFileID(FE, SourceLocation(), SrcMgr::C_User);
+}
+
+TEST(DiagnosticRenderer, GetExpansionRangeInFileTest) {
+  FileSystemOptions FSOpts;
+  FileManager FileMgr(FSOpts);
+  DiagnosticOptions DiagEngineOpts;
+  DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagEngineOpts,
+                               new IgnoringDiagConsumer());
+  SourceManager SM(DiagEngine, FileMgr);
+
+  FileID FID = makeFile(FileMgr, SM, "main.cpp", "some\nsource\ncode\n");
+  FileID OtherFID = makeFile(FileMgr, SM, "other.cpp", "other\n");
+  SM.setMainFileID(FID);
+
+  auto Loc = [&](unsigned Line, unsigned Col) {
+    return SM.translateLineCol(FID, Line, Col);
+  };
+
+  const SourceLocation L1C1 = Loc(/*Line=*/1, /*Col=*/1);
+  const SourceLocation L1C3 = Loc(/*Line=*/1, /*Col=*/3);
+
+  // An invalid range is rejected.
+  EXPECT_FALSE(getExpansionRangeInFile(CharSourceRange(), FID, SM));
+
+  // A char range stays a char range.
+  std::optional<CharSourceRange> CharR = getExpansionRangeInFile(
+      CharSourceRange::getCharRange(L1C1, L1C3), FID, SM);
+  ASSERT_TRUE(CharR);
+  EXPECT_TRUE(CharR->isCharRange());
+
+  // A token range stays a token range.
+  std::optional<CharSourceRange> TokR = getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(L1C1, L1C3), FID, SM);
+  ASSERT_TRUE(TokR);
+  EXPECT_TRUE(TokR->isTokenRange());
+
+  // A reversed range (begin lies after end) is rejected.
+  EXPECT_FALSE(getExpansionRangeInFile(
+      CharSourceRange::getCharRange(L1C3, L1C1), FID, SM));
+
+  // The endpoints are compared as-is, so a reversed token range is rejected
+  // too, even though extending its end token would order the offsets.
+  EXPECT_FALSE(getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(L1C3, L1C1), FID, SM));
+
+  // A range with an endpoint in another file is rejected.
+  SourceLocation OtherLoc = SM.getLocForStartOfFile(OtherFID);
+  EXPECT_FALSE(getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(L1C1, OtherLoc), FID, SM));
+
+  {
+    const SourceLocation L2C1 = Loc(/*Line=*/2, /*Col=*/1);
+    const SourceLocation L2C6 = Loc(/*Line=*/2, /*Col=*/6);
+
+    // Pretend that "source" expands "some".
+    SourceLocation MacroLoc = SM.createExpansionLoc(
+        /*SpellingLoc=*/L1C1, /*ExpansionLocStart=*/L2C1,
+        /*ExpansionLocEnd=*/L2C6, /*Length=*/4);
+    ASSERT_TRUE(MacroLoc.isMacroID());
+    ASSERT_EQ(SM.getSpellingLoc(MacroLoc), L1C1);
+    ASSERT_EQ(SM.getExpansionLoc(MacroLoc), L2C1);
+
+    // A macro-expanded range is remapped to its expansion in the file.
+    // A location inside the macro maps back to that file range.
+    auto MacroToken = CharSourceRange::getTokenRange(MacroLoc, MacroLoc);
+    auto MacroR = getExpansionRangeInFile(MacroToken, FID, SM);
+    ASSERT_TRUE(MacroR);
+    EXPECT_EQ(SM.getFileID(MacroR->getBegin()), FID);
+    EXPECT_EQ(SM.getFileID(MacroR->getEnd()), FID);
+
+    // The range is a file range.
+    EXPECT_TRUE(MacroR->getBegin().isFileID());
+    EXPECT_TRUE(MacroR->getEnd().isFileID());
+
+    // The range is the expansion range.
+    EXPECT_EQ(MacroR->getBegin(), L2C1);
+    EXPECT_EQ(MacroR->getEnd(), L2C6);
+  }
+}
 
 } // anonymous namespace

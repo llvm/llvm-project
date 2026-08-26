@@ -41,7 +41,7 @@ class MultiDocResponder(MockGDBServerResponder):
         )
 
 
-class TestXMLRegisterFlags(GDBRemoteTestBase):
+class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
     def setup_multidoc_test(self, docs):
         self.server.responder = MultiDocResponder(docs)
         target = self.dbg.CreateTarget("")
@@ -194,10 +194,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (msb = 1, lsb = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (msb = 1, lsb = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "       = (msb = 1, lsb = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "       = (msb = 1, lsb = 1)"
             ],
         )
 
@@ -237,10 +237,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read r0 fpc",
             substrs=[
-                "      r0 = 0x77777777eeeeeeee\n"
-                "         = (msb = 0, lsb = 0)\n"
-                "     fpc = 0x7777eeee\n"
-                "         = (msb = 0, lsb = 0)\n"
+                "   r0 = 0x77777777eeeeeeee\n"
+                "      = (msb = 0, lsb = 0)\n"
+                "  fpc = 0x7777eeee\n"
+                "      = (msb = 0, lsb = 0)\n"
             ],
         )
 
@@ -266,10 +266,10 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr x0",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = (correct = 1)\n"
-                "      x0 = 0xeeeeeeee77777777\n"
-                "         = (foo = 1)"
+                "  cpsr = 0xeeee7777\n"
+                "       = (correct = 1)\n"
+                "    x0 = 0xeeeeeeee77777777\n"
+                "       = (foo = 1)"
             ],
         )
 
@@ -450,13 +450,13 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register read cpsr",
             substrs=[
-                "    cpsr = 0xeeee7777\n"
-                "         = {\n"
-                "             this_is_a_long_field_3 = 0\n"
-                "             this_is_a_long_field_2 = 1\n"
-                "             this_is_a_long_field_1 = 1\n"
-                "             this_is_a_long_field_0 = 1\n"
-                "           }"
+                "  cpsr = 0xeeee7777\n"
+                "       = {\n"
+                "           this_is_a_long_field_3 = 0\n"
+                "           this_is_a_long_field_2 = 1\n"
+                "           this_is_a_long_field_1 = 1\n"
+                "           this_is_a_long_field_0 = 1\n"
+                "         }"
             ],
         )
 
@@ -547,7 +547,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
                 "core-2.xml": dedent(
                     """\
                 <?xml version="1.0"?>
-                <feature name="org.gnu.gdb.aarch64.core">
+                <feature name="org.gnu.gdb.aarch64.system">
                   <flags id="cpsr_flags" size="4">
                     <field name="C" start="0" end="0"/>
                   </flags>
@@ -562,7 +562,51 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
-    def test_xml_includes_flags_redefined(self):
+    def test_xml_type_ids_scoped_to_feature(self):
+        self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+                <?xml version="1.0"?>
+                <target version="1.0">
+                  <architecture>aarch64</architecture>
+                  <feature name="feature.a">
+                    <enum id="shared_enum" size="8">
+                      <evalue name="enum_a" value="1"/>
+                    </enum>
+                    <flags id="shared_flags" size="8">
+                      <field name="field_a" start="0" end="0"
+                             type="shared_enum"/>
+                    </flags>
+                    <reg name="x0" regnum="0" bitsize="64"
+                         type="shared_flags"/>
+                  </feature>
+                  <feature name="feature.b">
+                    <enum id="shared_enum" size="4">
+                      <evalue name="enum_b" value="1"/>
+                    </enum>
+                    <flags id="shared_flags" size="4">
+                      <field name="field_b" start="0" end="0"
+                             type="shared_enum"/>
+                    </flags>
+                    <reg name="cpsr" regnum="33" bitsize="32"
+                         type="shared_flags"/>
+                  </feature>
+                  <feature name="feature.c">
+                    <reg name="pc" bitsize="64" type="shared_flags"/>
+                  </feature>
+                </target>"""
+                ),
+            }
+        )
+
+        self.expect("register read x0", substrs=["(field_a = enum_a)"])
+        self.expect("register read cpsr", substrs=["(field_b = enum_b)"])
+        self.expect("register read pc", substrs=["("], matching=False)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_xml_type_kinds_scoped_to_included_feature(self):
         self.setup_multidoc_test(
             {
                 "target.xml": dedent(
@@ -574,42 +618,44 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
                  <xi:include href="core-2.xml"/>
                </target>"""
                 ),
-                # Treating xi:include as a textual include, my_flags is first defined
-                # in core.xml. The second definition in core-2.xml
-                # is ignored.
+                # Type IDs are local to the feature that defines them.
                 "core.xml": dedent(
                     """\
                 <?xml version="1.0"?>
                 <feature name="org.gnu.gdb.aarch64.core">
-                  <flags id="my_flags" size="8">
-                    <field name="correct" start="0" end="0"/>
+                  <enum id="shared_type" size="8">
+                    <evalue name="correct" value="1"/>
+                  </enum>
+                  <flags id="x0_flags" size="8">
+                    <field name="field" start="0" end="0"
+                           type="shared_type"/>
                   </flags>
                   <reg name="pc" bitsize="64"/>
-                  <reg name="x0" regnum="0" bitsize="64" type="my_flags"/>
+                  <reg name="x0" regnum="0" bitsize="64" type="x0_flags"/>
                 </feature>"""
                 ),
-                # The my_flags here is ignored, so x1 will use the my_flags from above.
                 "core-2.xml": dedent(
                     """\
                 <?xml version="1.0"?>
-                <feature name="org.gnu.gdb.aarch64.core">
-                  <flags id="my_flags" size="8">
+                <feature name="org.gnu.gdb.aarch64.system">
+                  <flags id="shared_type" size="4">
                     <field name="incorrect" start="0" end="0"/>
                   </flags>
-                  <reg name="x1" regnum="33" bitsize="64" type="my_flags"/>
+                  <reg name="cpsr" regnum="33" bitsize="32"
+                       type="shared_type"/>
                 </feature>
             """
                 ),
             }
         )
 
-        self.expect("register read x0", substrs=["(correct = 1)"])
-        self.expect("register read x1", substrs=["(correct = 1)"])
+        self.expect("register read x0", substrs=["(field = correct)"])
+        self.expect("register read cpsr", substrs=["(incorrect = 1)"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_flags_in_register_info(self):
-        # See RegisterFlags for comprehensive formatting tests.
+        # See RegisterTypeFlags for comprehensive formatting tests.
         self.setup_flags_test(
             '<field name="D" start="0" end="7"/>'
             '<field name="C" start="8" end="15"/>'

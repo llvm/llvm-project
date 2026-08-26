@@ -98,7 +98,13 @@ getScalarConstantAttrFromDenseSplat(Value input) {
   if (!splatAttr || !splatAttr.isSplat())
     return std::nullopt;
 
-  return splatAttr.getSplatValue<TypedAttr>();
+  // Not every element type has a TypedAttr splat value: a complex splat, for
+  // one, is an ArrayAttr. Decline the fold instead of asserting in the cast.
+  auto splatValue = dyn_cast<TypedAttr>(splatAttr.getSplatValue<Attribute>());
+  if (!splatValue)
+    return std::nullopt;
+
+  return splatValue;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2355,6 +2361,10 @@ LogicalResult BroadcastOp::verify() {
                            << " is out of range. expected range: [0, "
                            << initRank - 1 << "], got: " << dim;
   }
+
+  DenseSet<int64_t> uniquedDims(llvm::from_range, dimensionsRef);
+  if (uniquedDims.size() != dimensionsRef.size())
+    return emitOpError() << "dimensions should not contain duplicates";
 
   // Mapping from input dims to init dims.
   SmallVector<int64_t> dimMap;

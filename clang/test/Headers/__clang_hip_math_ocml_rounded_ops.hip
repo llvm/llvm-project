@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h      \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
-// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -o - \
+// RUN:   -triple amdgpu9.06-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN: -emit-llvm %s -fcuda-is-device -O1 -o - \
 // RUN:   -D__HIPCC_RTC__ -DOCML_BASIC_ROUNDED_OPERATIONS | FileCheck %s
 
 // CHECK-LABEL: @test___fadd_rd(

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.01 < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}fdiv_f64:

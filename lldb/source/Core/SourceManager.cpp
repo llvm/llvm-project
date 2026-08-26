@@ -296,12 +296,12 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         // Display caret cursor.
         std::string src_line;
         last_file_sp->GetLine(line, src_line);
-        s->Printf("    \t");
+        s->PutCString("    \t");
         // Insert a space for every non-tab character in the source line.
         for (size_t i = 0; i + 1 < column && i < src_line.length(); ++i)
           s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
         // Now add the caret.
-        s->Printf("^\n");
+        s->PutCString("^\n");
       }
       if (this_line_size == 0) {
         m_last_line = UINT32_MAX;

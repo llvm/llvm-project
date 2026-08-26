@@ -259,7 +259,8 @@ public:
   /// appropriate method.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseTemplateName(TemplateName Template);
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true);
 
   /// Recursively visit a template argument and dispatch to the
   /// appropriate method for the argument type.
@@ -871,12 +872,14 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
+bool RecursiveASTVisitor<Derived>::TraverseTemplateName(
+    TemplateName Template, bool TraverseQualifier) {
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
-    TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
+    if (TraverseQualifier)
+      TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
   } else if (QualifiedTemplateName *QTN =
                  Template.getAsQualifiedTemplateName()) {
-    if (QTN->getQualifier()) {
+    if (TraverseQualifier && QTN->getQualifier()) {
       TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
     }
   }
@@ -1164,6 +1167,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
   TRY_TO(TraverseType(T->desugar()));
 })
 
+DEF_TRAVERSE_TYPE(LateParsedAttrType,
+                  { TRY_TO(TraverseType(T->getWrappedType())); })
+
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1206,24 +1212,12 @@ DEF_TRAVERSE_TYPE(DependentNameType, {
 })
 
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
 DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
-  if (TraverseQualifier) {
-    TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  } else {
-    // FIXME: Try to preserve the rest of the template name.
-    TRY_TO(TraverseTemplateName(TemplateName(
-        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
-  }
+  TRY_TO(TraverseTemplateName(T->getTemplateName(), TraverseQualifier));
   TRY_TO(TraverseType(T->getDeducedType()));
 })
 
@@ -1522,6 +1516,9 @@ DEF_TRAVERSE_TYPELOC(AttributedType,
 DEF_TRAVERSE_TYPELOC(CountAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
+DEF_TRAVERSE_TYPELOC(LateParsedAttrType,
+                     { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
+
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
@@ -1559,10 +1556,8 @@ DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
   if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(TraverseTemplateName(
-      TemplateName(TL.getTypePtr()->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(TL.getTypePtr()->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
     TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
@@ -1574,10 +1569,8 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 
   const auto *T = TL.getTypePtr();
-  // FIXME: Try to preserve the rest of the template name.
-  TRY_TO(
-      TraverseTemplateName(TemplateName(T->getTemplateName().getAsTemplateDecl(
-          /*IgnoreDeduced=*/true))));
+  TRY_TO(TraverseTemplateName(T->getTemplateName(),
+                              /*TraverseQualifier=*/false));
 
   TRY_TO(TraverseType(T->getDeducedType()));
 })
@@ -1733,17 +1726,15 @@ DEF_TRAVERSE_DECL(FriendDecl, {
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {
+  const TemplateName Template = D->getFriendTemplateName();
   if (D->getFriendType())
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
+  else if (!Template.isNull())
+    TRY_TO(TraverseTemplateName(Template));
   else
     TRY_TO(TraverseDecl(D->getFriendDecl()));
-  for (unsigned I = 0, E = D->getNumTemplateParameters(); I < E; ++I) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(I);
-    for (TemplateParameterList::iterator ITPL = TPL->begin(), ETPL = TPL->end();
-         ITPL != ETPL; ++ITPL) {
-      TRY_TO(TraverseDecl(*ITPL));
-    }
-  }
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+    TRY_TO(TraverseTemplateParameterListHelper(TPL));
 })
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})
@@ -1908,6 +1899,14 @@ DEF_TRAVERSE_DECL(UsingDirectiveDecl, {
 DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
+
+DEF_TRAVERSE_DECL(CXXExpansionStmtDecl, {
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
+
+  TRY_TO(TraverseStmt(D->getExpansionPattern()));
+})
 
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlist()) {
@@ -2561,6 +2560,11 @@ DEF_TRAVERSE_STMT(CXXCatchStmt, {
   // children() iterates over the handler block.
 })
 
+DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {
+  TRY_TO(TraverseDecl(S->getCatchParamDecl()));
+  // children() iterates over the handler block.
+})
+
 DEF_TRAVERSE_STMT(DeclStmt, {
   for (auto *I : S->decls()) {
     TRY_TO(TraverseDecl(I));
@@ -2590,7 +2594,6 @@ DEF_TRAVERSE_STMT(IndirectGotoStmt, {})
 DEF_TRAVERSE_STMT(LabelStmt, {})
 DEF_TRAVERSE_STMT(AttributedStmt, {})
 DEF_TRAVERSE_STMT(NullStmt, {})
-DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtFinallyStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtSynchronizedStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtThrowStmt, {})
@@ -2628,6 +2631,12 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
     TRY_TO(TraverseTemplateArgumentLocsHelper(S->getTemplateArgs(),
                                               S->getNumTemplateArgs()));
   }
+})
+
+DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
+  TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+  TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
+                                            S->getNumTemplateArgs()));
 })
 
 DEF_TRAVERSE_STMT(DeclRefExpr, {
@@ -3161,6 +3170,10 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
     TRY_TO(TraverseConceptRequirement(Req));
 })
 
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
+DEF_TRAVERSE_STMT(CXXExpansionSelectExpr, {})
+
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
 DEF_TRAVERSE_STMT(FixedPointLiteral, {})
@@ -3301,7 +3314,10 @@ DEF_TRAVERSE_STMT(OMPDepobjDirective,
 DEF_TRAVERSE_STMT(OMPScanDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
-DEF_TRAVERSE_STMT(OMPOrderedDirective,
+DEF_TRAVERSE_STMT(OMPOrderedStandaloneDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPOrderedBlockAssocDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPAtomicDirective,
@@ -3501,8 +3517,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFinalClause(OMPFinalClause *C) {
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  if (auto *E = C->getDimsModifierExpr())
+    TRY_TO(VisitStmt(E));
+  TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
-  TRY_TO(TraverseStmt(C->getNumThreads()));
   return true;
 }
 
@@ -3689,6 +3707,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPWriteClause(OMPWriteClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPUpdateClause(OMPUpdateClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *) {
   return true;
 }
 
@@ -4082,6 +4106,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNumTeamsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPThreadLimitClause(
     OMPThreadLimitClause *C) {
+  if (auto *E = C->getModifierExpr())
+    TRY_TO(VisitStmt(E));
   TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
   return true;

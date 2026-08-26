@@ -71,6 +71,11 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  Register
+  findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                   Register PreferredReg,
+                                   Register DontUseReg = Register()) const;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
@@ -85,6 +90,8 @@ public:
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
                      uint64_t ProbeSize, bool DynAllocation,
                      MachineInstr::MIFlag Flag) const;
+
+  uint64_t getStackThreshold() const override;
 
 protected:
   const RISCVSubtarget &STI;
@@ -117,8 +124,8 @@ private:
                                    bool DynAllocation) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 };
 } // namespace llvm
 #endif

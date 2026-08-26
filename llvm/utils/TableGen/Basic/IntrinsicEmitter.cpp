@@ -577,6 +577,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Dereferenceable";
   case CodeGenIntrinsic::Range:
     return "Range";
+  case CodeGenIntrinsic::NoFreeObj:
+    return "NoFreeObj";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -912,7 +914,8 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
     OS << "    switch (ArgIdx) {\n";
     for (const auto [ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
       OS << "    case " << ArgIdx << ":\n";
-      OS << "      OS << \"" << ArgName << "=\";\n";
+      if (!ArgName.empty())
+        OS << "      OS << \"" << ArgName << "=\";\n";
       if (!FuncName.empty()) {
         OS << "      ";
         if (!Int.TargetPrefix.empty())

@@ -60,21 +60,21 @@ void ThreadPlanStepInstruction::GetDescription(Stream *s,
 
   if (level == lldb::eDescriptionLevelBrief) {
     if (m_step_over)
-      s->Printf("instruction step over");
+      s->PutCString("instruction step over");
     else
-      s->Printf("instruction step into");
+      s->PutCString("instruction step into");
 
     PrintFailureIfAny();
   } else {
-    s->Printf("Stepping one instruction past ");
+    s->PutCString("Stepping one instruction past ");
     DumpAddress(s->AsRawOstream(), m_instruction_addr, sizeof(addr_t));
     if (!m_start_has_symbol)
-      s->Printf(" which has no symbol");
+      s->PutCString(" which has no symbol");
 
     if (m_step_over)
-      s->Printf(" stepping over calls");
+      s->PutCString(" stepping over calls");
     else
-      s->Printf(" stepping into calls");
+      s->PutCString(" stepping into calls");
 
     PrintFailureIfAny();
   }
@@ -110,7 +110,7 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
       SetPlanComplete();
     }
     return (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr);
-  } else if (cur_frame_id < m_stack_id) {
+  } else if (cur_frame_id.IsYoungerThan(m_stack_id)) {
     // If the current frame is younger than the start frame and we are stepping
     // over, then we need to continue, but if we are doing just one step, we're
     // done.
@@ -137,7 +137,8 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
 
     StackID cur_frame_zero_id = cur_frame_sp->GetStackID();
 
-    if (cur_frame_zero_id == m_stack_id || m_stack_id < cur_frame_zero_id) {
+    if (cur_frame_zero_id == m_stack_id ||
+        m_stack_id.IsYoungerThan(cur_frame_zero_id)) {
       if (thread.GetRegisterContext()->GetPC(0) != m_instruction_addr) {
         if (--m_iteration_count <= 0) {
           SetPlanComplete();

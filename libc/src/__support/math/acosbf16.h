@@ -16,7 +16,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/math/inv_trigf_utils.h"
+#include "src/__support/math/asin_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
@@ -46,7 +46,7 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
     if (LIBC_UNLIKELY(x_abs == 0))
       return fputil::cast<bfloat16>(PI_2);
 
-    float xp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(x_sq));
+    float xp = fputil::cast<float>(asin_internal::asin_eval(x_sq));
     float result = xf * fputil::multiply_add(x_sq, xp, 1.0f);
     return fputil::cast<bfloat16>(PI_2 - result);
   }
@@ -69,7 +69,7 @@ LIBC_INLINE bfloat16 acosbf16(bfloat16 x) {
     // TODO: Use bfloat16 version for inv_trigf_utils_internals after they are
     // available Tracking issue :
     // https://github.com/llvm/llvm-project/issues/202079
-    float tp = fputil::cast<float>(inv_trigf_utils_internal::asin_eval(t));
+    float tp = fputil::cast<float>(asin_internal::asin_eval(t));
     float asin_sqrt_t = t_sqrt * (fputil::multiply_add(t, tp, 1.0f));
 
     return fputil::cast<bfloat16>(

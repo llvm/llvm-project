@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h" // uintptr_t
-#include "src/__support/CPP/string_view.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getname_np.h"
 #include "src/pthread/pthread_join.h"
@@ -21,8 +20,6 @@
 
 #include <errno.h>
 #include <pthread.h>
-
-using string_view = LIBC_NAMESPACE::cpp::string_view;
 
 char child_thread_name_buffer[16];
 pthread_mutex_t mutex;
@@ -49,8 +46,7 @@ TEST_MAIN() {
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_getname_np(main_thread, thread_name_buffer, 16),
       0);
-  ASSERT_EQ(string_view(MAIN_THREAD_NAME),
-            string_view(reinterpret_cast<const char *>(thread_name_buffer)));
+  ASSERT_STREQ(MAIN_THREAD_NAME, thread_name_buffer);
 
   pthread_t th;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&th, nullptr, child_func, nullptr),
@@ -59,8 +55,7 @@ TEST_MAIN() {
   const char CHILD_THREAD_NAME[] = "child_thread";
   ASSERT_EQ(LIBC_NAMESPACE::pthread_setname_np(th, CHILD_THREAD_NAME), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_getname_np(th, thread_name_buffer, 16), 0);
-  ASSERT_EQ(string_view(CHILD_THREAD_NAME),
-            string_view(reinterpret_cast<const char *>(thread_name_buffer)));
+  ASSERT_STREQ(CHILD_THREAD_NAME, thread_name_buffer);
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&mutex), 0);
 
@@ -68,9 +63,7 @@ TEST_MAIN() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, &retval), 0);
   ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
   // Make sure that the child thread saw it name correctly.
-  ASSERT_EQ(
-      string_view(CHILD_THREAD_NAME),
-      string_view(reinterpret_cast<const char *>(child_thread_name_buffer)));
+  ASSERT_STREQ(CHILD_THREAD_NAME, child_thread_name_buffer);
 
   LIBC_NAMESPACE::pthread_mutex_destroy(&mutex);
 

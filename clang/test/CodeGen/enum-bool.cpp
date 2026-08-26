@@ -47,3 +47,21 @@ E b(int x) { return (E)x; }
 
 } // namespace D
 } // namespace dr2338
+
+namespace switchOnEnum {
+enum class E : bool { Zero, One };
+void func(E e) {
+  switch (e) {
+    case E::Zero...E::One:
+      break;
+  }
+// CHECK-LABEL: define {{.*}}@_ZN12switchOnEnum4funcENS_1EE
+// CHECK: %[[ARG:.*]] = alloca i8
+// CHECK: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// CHECK: %[[CAST:.*]] = icmp ne i8 %[[ARG_LOAD]], 0
+// CHECK: switch i1 %[[CAST]], label %{{.*}} [
+// CHECK:   i1 false, label %
+// CHECK:   i1 true, label %
+// CHECK: ]
+}
+}

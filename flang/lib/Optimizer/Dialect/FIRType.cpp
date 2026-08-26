@@ -24,12 +24,18 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "flang/Optimizer/Dialect/FIROpsTypes.cpp.inc"
 
 using namespace fir;
+
+static llvm::cl::opt<bool> enableFirTypeAliases(
+    "enable-fir-type-aliases",
+    llvm::cl::desc("Enable MLIR type aliases for FIR derived types"),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -1122,7 +1128,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       char ch = '(';
       for (auto p : getLenParamList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << ')';
@@ -1134,7 +1140,7 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
-        p.second.print(printer.getStream());
+        printer.printType(p.second);
         ch = ',';
       }
       printer << '}';
@@ -1145,6 +1151,18 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
     recordTypeVisited.erase(uniqueKey());
   }
   printer << '>';
+}
+
+mlir::OpAsmAliasResult fir::RecordType::getAlias(llvm::raw_ostream &os) const {
+  if (!enableFirTypeAliases)
+    return mlir::OpAsmAliasResult::NoAlias;
+  // Derived type names may contain "." that are forbidden in MLIR type
+  // alias. Replace them by a capital 'X' that cannot be found in user
+  // defined derived type and is also used as a replacement before generating
+  // llvm assembly.
+  for (char ch : getName())
+    os << (ch == '.' ? 'X' : ch);
+  return mlir::OpAsmAliasResult::OverridableAlias;
 }
 
 void fir::RecordType::finalize(llvm::ArrayRef<TypePair> lenPList,

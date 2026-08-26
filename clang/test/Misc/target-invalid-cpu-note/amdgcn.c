@@ -6,37 +6,19 @@
 // CHECK: error: unknown target CPU 'not-a-cpu'
 // CHECK-NEXT: note: valid target CPU values are:
 // CHECK-SAME: {{^}} gfx600
-// CHECK-SAME: {{^}}, tahiti
 // CHECK-SAME: {{^}}, gfx601
-// CHECK-SAME: {{^}}, pitcairn
-// CHECK-SAME: {{^}}, verde
 // CHECK-SAME: {{^}}, gfx602
-// CHECK-SAME: {{^}}, hainan
-// CHECK-SAME: {{^}}, oland
 // CHECK-SAME: {{^}}, gfx700
-// CHECK-SAME: {{^}}, kaveri
 // CHECK-SAME: {{^}}, gfx701
-// CHECK-SAME: {{^}}, hawaii
 // CHECK-SAME: {{^}}, gfx702
 // CHECK-SAME: {{^}}, gfx703
-// CHECK-SAME: {{^}}, kabini
-// CHECK-SAME: {{^}}, mullins
 // CHECK-SAME: {{^}}, gfx704
-// CHECK-SAME: {{^}}, bonaire
 // CHECK-SAME: {{^}}, gfx705
 // CHECK-SAME: {{^}}, gfx801
-// CHECK-SAME: {{^}}, carrizo
 // CHECK-SAME: {{^}}, gfx802
-// CHECK-SAME: {{^}}, iceland
-// CHECK-SAME: {{^}}, tonga
 // CHECK-SAME: {{^}}, gfx803
-// CHECK-SAME: {{^}}, fiji
-// CHECK-SAME: {{^}}, polaris10
-// CHECK-SAME: {{^}}, polaris11
 // CHECK-SAME: {{^}}, gfx805
-// CHECK-SAME: {{^}}, tongapro
 // CHECK-SAME: {{^}}, gfx810
-// CHECK-SAME: {{^}}, stoney
 // CHECK-SAME: {{^}}, gfx900
 // CHECK-SAME: {{^}}, gfx902
 // CHECK-SAME: {{^}}, gfx904
@@ -72,6 +54,7 @@
 // CHECK-SAME: {{^}}, gfx1172
 // CHECK-SAME: {{^}}, gfx1200
 // CHECK-SAME: {{^}}, gfx1201
+// CHECK-SAME: {{^}}, gfx1250-strict
 // CHECK-SAME: {{^}}, gfx1250
 // CHECK-SAME: {{^}}, gfx1251
 // CHECK-SAME: {{^}}, gfx1310
@@ -84,4 +67,91 @@
 // CHECK-SAME: {{^}}, gfx12-generic
 // CHECK-SAME: {{^}}, gfx12-5-generic
 // CHECK-SAME: {{^}}, gfx13-generic
+// CHECK-SAME: {{^}}, tahiti
+// CHECK-SAME: {{^}}, pitcairn
+// CHECK-SAME: {{^}}, verde
+// CHECK-SAME: {{^}}, hainan
+// CHECK-SAME: {{^}}, oland
+// CHECK-SAME: {{^}}, kaveri
+// CHECK-SAME: {{^}}, hawaii
+// CHECK-SAME: {{^}}, kabini
+// CHECK-SAME: {{^}}, mullins
+// CHECK-SAME: {{^}}, bonaire
+// CHECK-SAME: {{^}}, carrizo
+// CHECK-SAME: {{^}}, iceland
+// CHECK-SAME: {{^}}, tonga
+// CHECK-SAME: {{^}}, fiji
+// CHECK-SAME: {{^}}, polaris10
+// CHECK-SAME: {{^}}, polaris11
+// CHECK-SAME: {{^}}, tongapro
+// CHECK-SAME: {{^}}, stoney
 // CHECK-SAME: {{$}}
+
+// The pseudo targets "generic"/"generic-hsa" may not be used.
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// GENERIC: error: unknown target CPU 'generic'
+// GENERIC-NEXT: note: valid target CPU values are:
+// GENERIC-NOT: {{[ ,]}}generic{{[,$]}}
+// GENERIC-NOT: generic-hsa
+
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// GENERIC-HSA: error: unknown target CPU 'generic-hsa'
+// GENERIC-HSA-NEXT: note: valid target CPU values are:
+// GENERIC-HSA-NOT: generic-hsa
+
+// When the triple carries a major-family subarch, only the GPUs in that family
+// are valid (a CPU from another family is rejected).
+// RUN: not %clang_cc1 -triple amdgpu9--- -target-cpu gfx1030 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX9 %s
+// GFX9: error: unknown target CPU 'gfx1030'
+// GFX9-NEXT: note: valid target CPU values are:
+// GFX9-SAME: {{^}} gfx900
+// GFX9-SAME: {{^}}, gfx902
+// GFX9-SAME: {{^}}, gfx904
+// GFX9-SAME: {{^}}, gfx906
+// GFX9-SAME: {{^}}, gfx909
+// GFX9-SAME: {{^}}, gfx90c
+// GFX9-SAME: {{^}}, gfx9-generic
+// GFX9-SAME: {{$}}
+
+// gfx908 and gfx90a are not part of the gfx9-generic family (they are their own
+// major subarches), so they are rejected by the amdgpu9 triple above and only
+// accepted by their own specific subarch triples.
+// RUN: not %clang_cc1 -triple amdgpu9.08--- -target-cpu gfx900 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX908 %s
+// GFX908: error: unknown target CPU 'gfx900'
+// GFX908-NEXT: note: valid target CPU values are:
+// GFX908-SAME: {{^}} gfx908
+// GFX908-SAME: {{$}}
+
+// When the triple carries a specific subarch, only that GPU is valid, so even a
+// CPU from the same major family but a different specific subarch is rejected.
+// RUN: not %clang_cc1 -triple amdgpu9.0a--- -target-cpu gfx900 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX90A %s
+// GFX90A: error: unknown target CPU 'gfx900'
+// GFX90A-NEXT: note: valid target CPU values are:
+// GFX90A-SAME: {{^}} gfx90a
+// GFX90A-SAME: {{$}}
+
+// gfx810 is its own major subarch.
+// RUN: not %clang_cc1 -triple amdgpu8.10--- -target-cpu gfx803 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX810 %s
+// GFX810: error: unknown target CPU 'gfx803'
+// GFX810-NEXT: note: valid target CPU values are:
+// GFX810-SAME: {{^}} gfx810
+// GFX810-SAME: {{^}}, stoney
+// GFX810-SAME: {{$}}
+
+// amdgpu11.7 is a major-family subarch covering the gfx117x GPUs.
+// RUN: not %clang_cc1 -triple amdgpu11.7--- -target-cpu gfx1100 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX11_7 %s
+// GFX11_7: error: unknown target CPU 'gfx1100'
+// GFX11_7-NEXT: note: valid target CPU values are:
+// GFX11_7-SAME: {{^}} gfx1170
+// GFX11_7-SAME: {{^}}, gfx1171
+// GFX11_7-SAME: {{^}}, gfx1172
+// GFX11_7-SAME: {{$}}
+
+// amdgpu13 is a major-family subarch covering the gfx131x GPUs.
+// RUN: not %clang_cc1 -triple amdgpu13--- -target-cpu gfx1200 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX13 %s
+// GFX13: error: unknown target CPU 'gfx1200'
+// GFX13-NEXT: note: valid target CPU values are:
+// GFX13-SAME: {{^}} gfx1310
+// GFX13-SAME: {{$}}

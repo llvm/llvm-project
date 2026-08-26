@@ -43,7 +43,9 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/Block.h"
@@ -86,12 +88,13 @@ static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
   if (Operation *dstOp = dst.getDefiningOp()) {
-    if (dstOp->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName()))
+    if (dstOp->getDiscardableAttrOfType<acc::VarNameAttr>(
+            acc::getVarNameAttrName()))
       return;
     if (isa<ACC_DATA_ENTRY_OPS>(dstOp))
       return;
-    dstOp->setAttr(acc::getVarNameAttrName(),
-                   acc::VarNameAttr::get(dstOp->getContext(), name));
+    dstOp->setDiscardableAttr(acc::getVarNameAttrName(),
+                              acc::VarNameAttr::get(dstOp->getContext(), name));
     return;
   }
   auto blockArg = dyn_cast<BlockArgument>(dst);
@@ -124,13 +127,14 @@ static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
                                        StringRef name) {
   StringRef placeholder = acc::getVarNamePlaceholder();
   for (auto it = block->begin(); it != std::next(ip); ++it) {
-    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    auto attr = it->getDiscardableAttrOfType<acc::VarNameAttr>(
+        acc::getVarNameAttrName());
     if (attr && attr.getName() == placeholder) {
       if (name.empty())
-        it->removeAttr(acc::getVarNameAttrName());
+        it->removeDiscardableAttr(acc::getVarNameAttrName());
       else
-        it->setAttr(acc::getVarNameAttrName(),
-                    acc::VarNameAttr::get(it->getContext(), name));
+        it->setDiscardableAttr(acc::getVarNameAttrName(),
+                               acc::VarNameAttr::get(it->getContext(), name));
     }
   }
 }
@@ -181,10 +185,11 @@ private:
   void removeRecipe(OpTy op, ModuleOp moduleOp) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
-                            acc::OpenACCSupport &accSupport) const;
+                            acc::OpenACCSupport &accSupport,
+                            acc::ACCToGPUMappingPolicy &policy) const;
   template <typename OpTy>
-  LogicalResult materializeForACCOp(OpTy accOp,
-                                    acc::OpenACCSupport &accSupport) const;
+  LogicalResult materializeForACCOp(OpTy accOp, acc::OpenACCSupport &accSupport,
+                                    acc::ACCToGPUMappingPolicy &policy) const;
 };
 
 void ACCRecipeMaterialization::handleFirstprivateMapping(
@@ -220,9 +225,9 @@ void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
 }
 
 template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
-LogicalResult
-ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
-                                      acc::OpenACCSupport &accSupport) const {
+LogicalResult ACCRecipeMaterialization::materialize(
+    OpTy op, RecipeOpTy recipe, AccOpTy accOp, acc::OpenACCSupport &accSupport,
+    acc::ACCToGPUMappingPolicy &policy) const {
   Region &region = accOp.getRegion();
   Value origPtr = op.getVar();
   Value accPtr = op.getAccVar();
@@ -341,8 +346,10 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     else
       llvm_unreachable("unexpected acc op with reduction recipe");
 
-    auto reductionOp = acc::ReductionInitOp::create(
-        b, op.getLoc(), origPtr, recipe.getReductionOperatorAttr());
+    SmallVector<Value> reductionBounds(acc::getBounds(op));
+    auto reductionOp =
+        acc::ReductionInitOp::create(b, op.getLoc(), origPtr, reductionBounds,
+                                     recipe.getReductionOperatorAttr());
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
@@ -380,11 +387,29 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     cloneRegionIntoAccRegion(&combinerRegion, &combineRegionOp.getRegion(),
                              /*hasResult=*/false);
 
-    auto setSeqParDimsForRecipeLoops = [](Region *r) {
-      r->walk([](LoopLikeOpInterface loopLike) {
-        loopLike->setAttr(
-            acc::GPUParallelDimsAttr::name,
-            acc::GPUParallelDimsAttr::seq(loopLike->getContext()));
+    auto *ctx = b.getContext();
+
+    // For reductions that come from parallel constructs, explicitly set the
+    // GPU parallel dimensions attribute to blockXDim since they will always be
+    // gang private. GPU parallel dimensions cannot be determined for acc.loop
+    // at this point.
+    if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>) {
+      acc::GPUParallelDimsAttr parDimsAttr;
+      if (accOp.isEffectivelySerial()) {
+        // If acc.serial has been lowered to a parallel op that is effectively
+        // sequential
+        parDimsAttr = acc::getSeqParDimsAttr(ctx, policy);
+      } else {
+        parDimsAttr = acc::getGangDim1ParDimsAttr(ctx, policy);
+      }
+      acc::setParDimsAttr(reductionOp, parDimsAttr);
+      acc::setParDimsAttr(combineRegionOp, parDimsAttr);
+    }
+
+    // Set sequential parallel dimensions attribute for loops in the recipe.
+    auto setSeqParDimsForRecipeLoops = [&](Region *r) {
+      r->walk([&](LoopLikeOpInterface loopLike) {
+        acc::setParDimsAttr(loopLike, acc::getSeqParDimsAttr(ctx, policy));
       });
     };
     setSeqParDimsForRecipeLoops(&reductionOp.getRegion());
@@ -406,7 +431,8 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
 
 template <typename OpTy>
 LogicalResult ACCRecipeMaterialization::materializeForACCOp(
-    OpTy accOp, acc::OpenACCSupport &accSupport) const {
+    OpTy accOp, acc::OpenACCSupport &accSupport,
+    acc::ACCToGPUMappingPolicy &policy) const {
   assert(isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp));
 
   if (!accOp.getFirstprivateOperands().empty()) {
@@ -422,7 +448,8 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << firstprivateOp << "\n"
                               << symbolRef << "\n");
       handleFirstprivateMapping(firstprivateOp);
-      if (failed(materialize(firstprivateOp, recipeOp, accOp, accSupport)))
+      if (failed(
+              materialize(firstprivateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -439,7 +466,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::PrivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << privateOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(privateOp, recipeOp, accOp, accSupport)))
+      if (failed(materialize(privateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -456,7 +483,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::ReductionRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << reductionOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport)))
+      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
   }
@@ -467,6 +494,8 @@ void ACCRecipeMaterialization::runOnOperation() {
   ModuleOp moduleOp = getOperation();
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
+  acc::DefaultACCToGPUMappingPolicy policy;
+
   // Materialize all recipes for all compute constructs and loop constructs.
   bool anyFailed = false;
   moduleOp.walk([&](Operation *op) {
@@ -474,7 +503,7 @@ void ACCRecipeMaterialization::runOnOperation() {
       return;
     TypeSwitch<Operation *>(op).Case<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(
         [&](auto constructOp) {
-          if (failed(materializeForACCOp(constructOp, accSupport)))
+          if (failed(materializeForACCOp(constructOp, accSupport, policy)))
             anyFailed = true;
         });
   });

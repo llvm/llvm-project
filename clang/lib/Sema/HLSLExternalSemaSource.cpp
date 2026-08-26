@@ -24,7 +24,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -279,6 +278,50 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addGetDimensionsMethods(Dim)
       .addGatherMethods(Dim, IsArray)
       .addGatherCmpMethods(Dim, IsArray);
+}
+
+/// Set up RWTexture type: UAV texture with only operator[] (uint2, read/write),
+/// Load and GetDimensions (no sample/gather/mips/LOD).
+static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::UAV, /*IsROV=*/false, IsArray, Dim)
+      .addTextureLoadMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      .addGetDimensionsMethods(Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
+/// Set up Texture2DMS (multisampled) type: SRV texture with only operator[]
+/// and sample-indexed Load. It does not support sampling, gather, LOD, or mips.
+static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
+  assert(CTD && "multisampled texture must be a class template");
+
+  // Parameter 1 is the N in Texture2DMS<T, N>.
+  auto *NTTP =
+      cast<NonTypeTemplateParmDecl>(CTD->getTemplateParameters()->getParam(1));
+  Expr *SampleCountExpr =
+      S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
+
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim,
+                        SampleCountExpr)
+      .addTextureLoadMSMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);
+      // the generic addGetDimensionsMethods is mip-based and unsuitable here.
+      // https://github.com/llvm/wg-hlsl/issues/347
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
 }
 
 // Add a partial specialization for a template. The `TextureTemplate` is
@@ -645,6 +688,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .addByteAddressBufferLoadMethods()
         .addByteAddressBufferStoreMethods()
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -654,6 +698,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -691,6 +736,25 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .completeDefinition();
   });
 
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2D")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
   // Texture2DArray — same as Texture2D but IsArray=true
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DArray")
              .addSimpleTemplateParams({"element_type"}, {Float4Ty},
@@ -708,6 +772,39 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(PartialSpec2DA, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                      /*IsArray=*/true, ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // RWTexture2DArray — same as RWTexture2D but IsArray=true
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWTexture2DArray")
+             .addSimpleTemplateParams({"element_type"}, {Float4Ty},
+                                      TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  auto *PartialSpecRW2DA = addVectorTexturePartialSpecialization(
+      *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
+  onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
+    setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // Texture2DMS — like Texture2D but multisampled, and the element type has no
+  // default argument.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DMS")
+             .addMSTextureTemplateParams("element_type", "sample_count",
+                                         TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupMSTextureType(Decl, *SemaPtr, /*IsArray=*/false,
+                       ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }
@@ -784,8 +881,12 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAdd",
                             "__builtin_hlsl_interlocked_add");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedMin",
+                            "__builtin_hlsl_interlocked_min");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
+                            "__builtin_hlsl_interlocked_xor");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
@@ -797,31 +898,7 @@ void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (!isa<CXXRecordDecl>(Tag))
     return;
-  auto Record = cast<CXXRecordDecl>(Tag);
-
-  // If this is a specialization, we need to get the underlying templated
-  // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
-    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
-      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
-      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
-      Template->getPartialSpecializations(Partials);
-      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
-      for (auto *Partial : Partials) {
-        sema::TemplateDeductionInfo Info(TDecl->getLocation());
-        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
-                                             Info) ==
-            TemplateDeductionResult::Success) {
-          MatchedPartial = Partial;
-          break;
-        }
-      }
-      if (MatchedPartial)
-        Record = MatchedPartial;
-      else
-        Record = Template->getTemplatedDecl();
-    }
-  }
+  auto *Record = cast<CXXRecordDecl>(Tag);
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())

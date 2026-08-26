@@ -45,6 +45,17 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     sudo ./llvm.sh 23 && \
     rm llvm.sh
 
+# Install the LLVM testing tools, which the llvm.sh script above does not
+# include. This provides lit along with FileCheck, not, count and split-file,
+# which are required to run the libc test suites and some CIs like precommit
+# testing CI for libc-based compiler-rt builtins. The package only symlinks
+# the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
+# so also symlink them under their canonical names.
+# llvm-link is required to build bitcode library for GPU targets
+RUN apt-get install -y llvm-23-tools && \
+    ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/') && \
+    ln -s /usr/lib/llvm-23/bin/llvm-link /usr/bin/llvm-link
+
 # Install gmp and mpfr for cross compilation
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \
     tar -xf gmp-6.3.0.tar.xz && \

@@ -6,11 +6,11 @@ define void @test(ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP0:%.*]], i32 6
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP1:%.*]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP1:%.*]], i64 1
 ; CHECK-NEXT:    br label [[TMP6:%.*]]
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr null, align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp olt <2 x double> [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x double> zeroinitializer, <2 x double> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP10]], zeroinitializer
@@ -44,9 +44,9 @@ define { <2 x float>, <2 x float> } @test1(i32 %conv.i32.i.i.i) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV_I32_I_I_I1:%.*]] = fptosi float 0.000000e+00 to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I1]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I1]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

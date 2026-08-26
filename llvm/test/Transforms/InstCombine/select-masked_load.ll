@@ -149,6 +149,79 @@ define <vscale x 4 x float> @fold_sel_into_masked_load_scalable_one_use_check(pt
   ret <vscale x 4 x float> %sel
 }
 
+define <4 x i32> @fold_sel_into_masked_load_metadata(ptr %ptr, <4 x i1> %mask) {
+; CHECK-LABEL: @fold_sel_into_masked_load_metadata(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x i32> splat (i32 111)), !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x i32> poison), !tbaa !0, !alias.scope !3, !noalias !6
+  %sel = select <4 x i1> %mask, <4 x i32> %load, <4 x i32> splat (i32 111)
+  ret <4 x i32> %sel
+}
+
+define <vscale x 4 x i32> @fold_sel_into_masked_load_drop_metadata(ptr %loc, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthrough) {
+; CHECK-LABEL: @fold_sel_into_masked_load_drop_metadata(
+; CHECK-NEXT:    [[SEL:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 1 [[LOC:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x i32> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[SEL]]
+;
+  %load = call <vscale x 4 x i32> @llvm.masked.load.v4i32.p0(ptr %loc, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i32> zeroinitializer), !range !9
+  %sel = select <vscale x 4 x i1> %mask, <vscale x 4 x i32> %load, <vscale x 4 x i32> %passthrough
+  ret <vscale x 4 x i32> %sel
+}
+
+; Keep the folded load before an intervening aliasing store.
+define <4 x float> @fold_sel_into_masked_load_aliasing_store(ptr %ptr, <4 x i1> %mask, <4 x float> %passthrough) {
+; CHECK-LABEL: @fold_sel_into_masked_load_aliasing_store(
+; CHECK-NEXT:    [[SEL:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    store <4 x float> [[PASSTHROUGH]], ptr [[PTR]], align 16
+; CHECK-NEXT:    ret <4 x float> [[SEL]]
+;
+  %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
+  store <4 x float> %passthrough, ptr %ptr, align 16
+  %sel = select <4 x i1> %mask, <4 x float> %load, <4 x float> %passthrough
+  ret <4 x float> %sel
+}
+
+; Do not fold when the new passthrough is unavailable at the old load.
+define <4 x float> @neg_fold_sel_into_masked_load_passthrough_after_load(ptr %ptr, <4 x i1> %mask, <4 x float> %a) {
+; CHECK-LABEL: @neg_fold_sel_into_masked_load_passthrough_after_load(
+; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[PTR:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[PASSTHROUGH:%.*]] = fadd <4 x float> [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[MASK]], <4 x float> [[LOAD]], <4 x float> [[PASSTHROUGH]]
+; CHECK-NEXT:    ret <4 x float> [[SEL]]
+;
+  %load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %ptr, i32 4, <4 x i1> %mask, <4 x float> zeroinitializer)
+  %passthrough = fadd <4 x float> %a, %a
+  %sel = select <4 x i1> %mask, <4 x float> %load, <4 x float> %passthrough
+  ret <4 x float> %sel
+}
+
+; Do not copy result or passthrough attributes (range/noundef) to the new load.
+; Use the current intrinsic form because auto-upgrading the legacy form drops
+; these attributes before InstCombine.
+define <8 x i16> @fold_sel_into_masked_load_drop_attrs(ptr %ptr, <8 x i1> %mask, <8 x i16> %passthrough) {
+; CHECK-LABEL: @fold_sel_into_masked_load_drop_attrs(
+; CHECK-NEXT:    [[SEL:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[PTR:%.*]], <8 x i1> [[MASK:%.*]], <8 x i16> [[PASSTHROUGH:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[SEL]]
+;
+  %load = call range(i16 0, 2) <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 %ptr, <8 x i1> %mask, <8 x i16> noundef zeroinitializer)
+  %sel = select <8 x i1> %mask, <8 x i16> %load, <8 x i16> %passthrough
+  ret <8 x i16> %sel
+}
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"int", !2, i64 0}
+!2 = !{!"omnipotent char", !8, i64 0}
+!3 = !{!4}
+!4 = distinct !{!4, !5, !"scope"}
+!5 = distinct !{!5, !"domain"}
+!6 = !{!7}
+!7 = distinct !{!7, !5, !"noscope"}
+!8 = !{!"Simple C/C++ TBAA"}
+!9 = !{i32 0, i32 2}
+
+
 declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, i32 immarg, <8 x i1>, <8 x float>)
 declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
 declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, <8 x i1>, <8 x i16>)
