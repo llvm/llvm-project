@@ -440,19 +440,16 @@ public:
   /// Runs the LTO pipeline. This function calls the supplied AddStream
   /// function to add native object files to the link.
   ///
-  /// The \p ThinLTOCache parameter is optional. If supplied, it will be used to
-  /// cache native object files from ThinLTO compilation, and add them to the
-  /// link.
+  /// The Cache parameter is optional. If supplied, it will be used to cache
+  /// native object files and add them to the link.
   ///
-  /// The \p RegularLTOCache parameter is optional. If supplied, it will be used
-  /// to cache native object files (and add them to the link) from the
-  /// individual module partitions created when parallel codegen is enabled for
-  /// regular LTO. This is a distinct cache from \p ThinLTOCache.
+  /// If \p CacheLTOPartitions is true, \p Cache will also be used to cache the
+  /// parallel LTO codegen partitions.
   ///
   /// The client will receive at most one callback (via either AddStream or
-  /// one of the FileCache) for each task identifier.
-  virtual Error run(AddStreamFn AddStream, FileCache ThinLTOCache = {},
-                    FileCache RegularLTOCache = {});
+  /// Cache) for each task identifier.
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {},
+                    bool CacheLTOPartitions = false);
 
   /// Wait for cleanup work started by run() to finish.
   ///
@@ -649,7 +646,7 @@ private:
   addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
              ArrayRef<SymbolResolution> Res);
 
-  Error runRegularLTO(AddStreamFn AddStream, FileCache &LTOPartitionsCache);
+  Error runRegularLTO(AddStreamFn AddStream, FileCache LTOPartitionsCache);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
                    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
 

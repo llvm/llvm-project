@@ -89,13 +89,16 @@ public:
   /// Runs the DTLTO pipeline. This function calls the supplied AddStream
   /// function to add native object files to the link.
   ///
-  /// The ThinLTOCache parameter is optional. If supplied, it will be used to
-  /// cache ThinLTO backend compilations and add them to the link.
+  /// The Cache parameter is optional. If supplied, it will be used to cache
+  /// native object files and add them to the link.
   ///
-  /// RegularLTOCache is ignored. We always run in LTOK_UnifiedThin mode, so
-  /// distribution/caching is handled per-ThinLTO module via Cache above.
-  virtual Error run(AddStreamFn AddStream, FileCache ThinLTOCache = {},
-                    FileCache RegularLTOCache = {}) override;
+  /// If \p CacheLTOPartitions is true, \p Cache will also be used to cache the
+  /// parallel LTO codegen partitions.
+  ///
+  /// The client will receive at most one callback (via either AddStream or
+  /// Cache) for each task identifier.
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {},
+                    bool CacheLTOPartitions = false) override;
 
   /// Wait for LTO cleanup. Clients may call this after run() once subsequent
   /// linking work that can overlap with cleanup is complete. Cleanup may emit
