@@ -521,11 +521,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
       CtorClosureDefaultArgs;
 
-  /// Keeps track of all declaration attributes.
+  /// Storage for the AttrVecs pointed to by Decl::Attrs.
   ///
-  /// Since so few decls have attrs, we keep them in a hash map instead of
-  /// wasting space in the Decl class.
-  llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+  /// A SpecificBumpPtrAllocator so that the vectors are destroyed when the
+  /// context dies without having to track them individually.
+  llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -1164,11 +1164,8 @@ public:
     return CommentCommandTraits;
   }
 
-  /// Retrieve the attributes for the given declaration.
-  AttrVec& getDeclAttrs(const Decl *D);
-
-  /// Erase the attributes corresponding to the given declaration.
-  void eraseDeclAttrs(const Decl *D);
+  /// Allocate an empty attribute vector with the lifetime of this context.
+  AttrVec *allocateAttrVec();
 
   ArrayRef<CXXDefaultArgExpr *>
   getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
