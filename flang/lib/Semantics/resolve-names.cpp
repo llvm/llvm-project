@@ -5835,6 +5835,11 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
     // other semantic checks run before we print the errors
     isValid = false;
   }
+  if (hasModulePrefix && inInterfaceBlock() && isAbstract()) { // C1547
+    Say(name,
+        "'%s' may not have a MODULE prefix in an ABSTRACT interface body"_err_en_US);
+    isValid = false;
+  }
   Symbol *moduleInterface{nullptr};
   if (isValid && hasModulePrefix && !inInterfaceBlock()) {
     moduleInterface = FindSeparateModuleProcedureInterface(name);

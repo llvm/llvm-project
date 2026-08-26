@@ -97,3 +97,27 @@ end
 real module function c1547()
   func = 0.0
 end function
+
+module m5
+abstract interface
+  !ERROR: 'f1' may not have a MODULE prefix in an ABSTRACT interface body
+  pure integer module function f1(i)
+    integer, intent(in) :: i
+  end function
+  !ERROR: 's1' may not have a MODULE prefix in an ABSTRACT interface body
+  module subroutine s1(i)
+    integer, intent(in) :: i
+  end subroutine
+end interface
+end module
+
+module m6
+end module
+submodule(m6) s6
+abstract interface
+  !ERROR: 'f2' may not have a MODULE prefix in an ABSTRACT interface body
+  module function f2()
+    integer :: f2
+  end function
+end interface
+end submodule
