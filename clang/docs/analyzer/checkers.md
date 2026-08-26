@@ -3372,8 +3372,7 @@ struct Wrapper {
 
 int &method_return() {
   Wrapper w;
-  return w.get(); // warn: returning value bound to 'w' that will go out
-                  //       of scope
+  return w.get(); // warn: returning value bound to 'w' that will go out of scope
 }
 ```
 
