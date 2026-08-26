@@ -86,7 +86,7 @@ jobs:
           -DLLVM_USE_LINKER=lld-23
           -DLLVM_ENABLE_RUNTIMES=libc
           -DLLVM_LIBC_FULL_BUILD=ON
-          -DLLVM_LIBC_ENABLE_COVERAGE=ON
+          -DLIBC_ENABLE_COVERAGE=ON
           -DLIBC_ENABLE_MCDC=ON
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
@@ -276,8 +276,8 @@ jobs:
         # 2. Generate git diff for modified libc source files
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
 
-        # 3. Run Patch Report Python Script using persisted commit metadata
-        python3 libc/utils/coverage/patch_report.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
+        # 3. Run Diff Coverage Python Script using persisted commit metadata
+        python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
 
@@ -323,14 +323,10 @@ jobs:
             const headSha = context.payload.pull_request.head.sha.substring(0, 7);
             const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
             
-            const lineMatch = reportContent.match(/\|\s*\*\*Patch Line Coverage\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|/);
-            const linePct = lineMatch ? lineMatch[1] + '%' : '100.00%';
-            
-            const mcdcMatch = reportContent.match(/\|\s*\*\*MC\/DC Condition Independence\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|/);
-            const mcdcPct = mcdcMatch ? mcdcMatch[1] + '%' : '100.00%';
-
-            const missMatch = reportContent.match(/\|\s*\*\*Unexecuted Lines\*\*\s*\|\s*\*\*([0-9]+)\*\*\s*\|/);
-            const missedLines = missMatch ? missMatch[1] : '0';
+            const summaryMatch = reportContent.match(/\|\s*\*\*Total \(Patch\)\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\(([0-9]+)\/([0-9]+)\)\s*\|\s*\*\*([0-9.]+)%\*\*\s*\(([0-9]+)\/([0-9]+)\)\s*\|.*?\|\s*\*\*([0-9]+)\*\*/);
+            const linePct = summaryMatch ? summaryMatch[1] + '%' : '100.00%';
+            const mcdcPct = summaryMatch ? summaryMatch[4] + '%' : '100.00%';
+            const missedLines = summaryMatch ? summaryMatch[7] : '0';
 
             const newHistoryRow = `| [\`${headSha}\`](https://github.com/${owner}/${repo}/commit/${context.payload.pull_request.head.sha}) | ${dateStr} | **${mcdcPct}** | **${linePct}** | ${missedLines} |`;
 

@@ -86,7 +86,7 @@ jobs:
           -DLLVM_USE_LINKER=lld-23
           -DLLVM_ENABLE_RUNTIMES=libc
           -DLLVM_LIBC_FULL_BUILD=ON
-          -DLLVM_LIBC_ENABLE_COVERAGE=ON
+          -DLIBC_ENABLE_COVERAGE=ON
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
           -DLIBC_TEST_SKIP_SHARED_TESTS=ON
@@ -266,8 +266,8 @@ jobs:
         # 2. Generate git diff for modified libc source files
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
 
-        # 3. Run Patch Report Python Script using persisted commit metadata
-        python3 libc/utils/coverage/patch_report.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
+        # 3. Run Diff Coverage Python Script using persisted commit metadata
+        python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
 
@@ -315,14 +315,10 @@ jobs:
             const headSha = context.payload.pull_request.head.sha.substring(0, 7);
             const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
             
-            const pctMatch = reportContent.match(/\|\s*\*\*Patch Line Coverage\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|/);
-            const pct = pctMatch ? pctMatch[1] + '%' : '100.00%';
-            
-            const lineMatch = reportContent.match(/\|\s*\*\*Executable Lines Evaluated\*\*\s*\|\s*\*\*([0-9]+)\*\*\s*\|/);
-            const totalLines = lineMatch ? lineMatch[1] : 'N/A';
-
-            const missMatch = reportContent.match(/\|\s*\*\*Unexecuted Lines\*\*\s*\|\s*\*\*([0-9]+)\*\*\s*\|/);
-            const missedLines = missMatch ? missMatch[1] : '0';
+            const summaryMatch = reportContent.match(/\|\s*\*\*Total \(Patch\)\*\*\s*\|\s*\*\*([0-9.]+)%\*\*\s*\|\s*([0-9]+)\s*\/\s*([0-9]+)\s*\|\s*\*\*([0-9]+)\*\*/);
+            const pct = summaryMatch ? summaryMatch[1] + '%' : '100.00%';
+            const totalLines = summaryMatch ? summaryMatch[3] : 'N/A';
+            const missedLines = summaryMatch ? summaryMatch[4] : '0';
 
             const newHistoryRow = `| [\`${headSha}\`](https://github.com/${owner}/${repo}/commit/${context.payload.pull_request.head.sha}) | ${dateStr} | ${totalLines} | **${pct}** | ${missedLines} |`;
 
