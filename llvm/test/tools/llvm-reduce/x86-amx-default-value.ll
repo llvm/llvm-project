@@ -9,13 +9,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @wobble() #0 {
 bbl:
-  %call = call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 undef)
+  %call = call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 poison)
   ret void
 }
 
 define <256 x i32> @ham() #0 {
 bbl:
-  %call = call x86_amx @llvm.x86.tileloadd64.internal(i16 undef, i16 0, ptr null, i64 0)
+  %call = call x86_amx @llvm.x86.tileloadd64.internal(i16 poison, i16 0, ptr null, i64 0)
   ret <256 x i32> zeroinitializer
 }
 
@@ -36,8 +36,8 @@ bbl3:                                             ; preds = %bbl
 
 bbl4:                                             ; preds = %bbl3
   call void @llvm.lifetime.start.p0(ptr %alloca)
-  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 undef)
-  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 undef)
+  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 poison)
+  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 poison)
   br label %bbl5
 
 bbl5:                                             ; preds = %bbl5, %bbl4
@@ -52,8 +52,8 @@ bbl7:                                             ; preds = %bbl5
   ret <256 x i32> zeroinitializer
 
 bbl9:                                             ; preds = %bbl3
-  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 undef)
-  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 undef)
+  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 poison)
+  call x86_amx @llvm.x86.tilezero.internal(i16 0, i16 poison)
   %call10 = call x86_amx @llvm.x86.tileloadd64.internal(i16 0, i16 0, ptr null, i64 0)
   unreachable
 
