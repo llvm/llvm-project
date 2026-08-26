@@ -819,7 +819,8 @@ void OptTable::internalPrintHelp(
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
     StringRef HelpText = getOptionHelpText(Id, VisibilityMask);
-    if (HelpText.empty() && ShowAllAliases) {
+    if (!getHelpTextOffset(CandidateInfo, VisibilityMask).value() &&
+        ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
         HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
@@ -828,7 +829,7 @@ void OptTable::internalPrintHelp(
     if (!HelpText.empty()) {
       StringRef HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
-      GroupedOptionHelp[std::string(HelpGroup)].push_back({OptName, HelpText});
+      GroupedOptionHelp[HelpGroup.str()].push_back({OptName, HelpText});
     }
   }
 

@@ -215,6 +215,15 @@ private:
     return OptionInfos[id - 1];
   }
 
+  StringTable::Offset getHelpTextOffset(const Info &I,
+                                        Visibility VisibilityMask) const {
+    for (auto [Visibilities, TextOffset] : I.HelpTextsForVariants)
+      for (auto Visibility : Visibilities)
+        if (VisibilityMask & Visibility)
+          return TextOffset;
+    return I.HelpTextOffset;
+  }
+
   StringRef getOptionValues(const Info &I) const {
     if (I.ValuesOffset.value())
       return (*StrTable)[I.ValuesOffset];
@@ -305,12 +314,7 @@ public:
   // visibility mask, use that text instead of the generic text.
   StringRef getOptionHelpText(OptSpecifier id,
                               Visibility VisibilityMask) const {
-    const Info &I = getInfo(id);
-    for (auto [Visibilities, TextOffset] : I.HelpTextsForVariants)
-      for (auto Visibility : Visibilities)
-        if (VisibilityMask & Visibility)
-          return (*StrTable)[TextOffset];
-    return (*StrTable)[I.HelpTextOffset];
+    return (*StrTable)[getHelpTextOffset(getInfo(id), VisibilityMask)];
   }
 
   /// Get the meta-variable name to use when describing

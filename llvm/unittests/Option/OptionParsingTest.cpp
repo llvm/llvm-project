@@ -32,6 +32,10 @@ enum ID {
 #undef OPTION
 };
 
+#define OPTTABLE_VALUES_CODE
+#include "Opts.inc"
+#undef OPTTABLE_VALUES_CODE
+
 #define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Opts.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
@@ -62,14 +66,16 @@ class TestOptTable : public GenericOptTable {
 public:
   TestOptTable(bool IgnoreCase = false)
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        IgnoreCase) {}
+                        IgnoreCase, /*SubCommands=*/{},
+                        /*SubCommandIDsTable=*/{}, OptionValuesCodeTable) {}
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
 public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion, IgnoreCase) {}
+                            OptionPrefixesUnion, IgnoreCase, /*SubCommands=*/{},
+                            /*SubCommandIDsTable=*/{}, OptionValuesCodeTable) {}
 };
 }
 
@@ -238,6 +244,16 @@ TYPED_TEST(OptTableTest, AliasArgsMultiple) {
   EXPECT_TRUE(AL.hasArg(OPT_D));
   EXPECT_EQ((std::vector<std::string>{"foo", "bar"}),
             AL.getAllArgValues(OPT_D));
+}
+
+TYPED_TEST(OptTableTest, SuggestValueCompletions) {
+  TypeParam T;
+
+  EXPECT_EQ((std::vector<std::string>{"inline1", "inline2"}),
+            T.suggestValueCompletions("-values-inline=", ""));
+  // Values computed by ValuesCode live outside the string table.
+  EXPECT_EQ((std::vector<std::string>{"code1", "code2"}),
+            T.suggestValueCompletions("-values-from-code=", ""));
 }
 
 TYPED_TEST(OptTableTest, IgnoreCase) {

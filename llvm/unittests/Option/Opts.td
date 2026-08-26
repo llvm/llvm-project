@@ -30,6 +30,11 @@ def Jmulti : Flag<["-"], "Jmulti">, Alias<D>, AliasArgs<["foo", "bar"]>;
 
 def K : Flag<["-"], "K">, Alias<B>;
 
+def ValuesInline : Joined<["-"], "values-inline=">, Values<"inline1,inline2">;
+def ValuesFromCode : Joined<["-"], "values-from-code=">, ValuesCode<[{
+  static constexpr const char VALUES_CODE [] = "code1,code2";
+}]>;
+
 def Slurp : Option<["-"], "slurp", KIND_REMAINING_ARGS>;
 
 def SlurpJoined : Option<["-"], "slurpjoined", KIND_REMAINING_ARGS_JOINED>;
