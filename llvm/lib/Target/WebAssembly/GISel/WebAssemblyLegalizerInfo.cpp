@@ -15,11 +15,6 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "wasm-legalinfo"
 
@@ -182,8 +177,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .legalFor({{p0, p0i}})
       .clampScalar(1, p0s, p0s);
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
-  getActionDefinitionsBuilder(G_GLOBAL_VALUE).customFor({p0});
+  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p0});
 
   getActionDefinitionsBuilder(G_LOAD)
       .legalForTypesWithMemDesc({{i32, p0, i8, 1},
@@ -233,78 +227,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 bool WebAssemblyLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
-  MachineBasicBlock &MBB = *MI.getParent();
-  MachineFunction &MF = *MBB.getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetMachine &TM = MF.getTarget();
-  const TargetLowering &TLI = Helper.getTargetLowering();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_SEXT_INREG: {
-    assert(MI.getOperand(2).isImm() && "Expected immediate");
-
-    // Mark only 8/16/32-bit SEXT_INREG as legal
-    auto [DstType, SrcType] = MI.getFirst2LLTs();
-    auto ExtFromWidth = MI.getOperand(2).getImm();
-
-    if (ExtFromWidth == 8 || ExtFromWidth == 16 ||
-        (DstType.getScalarSizeInBits() == 64 && ExtFromWidth == 32)) {
-      return true;
-    }
-
-    return Helper.lower(MI, 0, DstType) != LegalizerHelper::UnableToLegalize;
-  }
-  case TargetOpcode::G_GLOBAL_VALUE: {
-    assert(MI.getOperand(1).getTargetFlags() == 0 &&
-           "Unexpected target flags on generic G_GLOBAL_VALUE instruction");
-
-    unsigned OperandFlags = 0;
-    const llvm::GlobalValue *GV = MI.getOperand(1).getGlobal();
-    LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
-    bool PtrIsI64 = PtrTy.getSizeInBits() == 64;
-
-    if (TLI.isPositionIndependent()) {
-      if (TM.shouldAssumeDSOLocal(GV)) {
-        MachineIRBuilder B(MI);
-
-        const char *BaseName;
-        if (GV->getValueType()->isFunctionTy()) {
-          BaseName = MF.createExternalSymbolName("__table_base");
-          OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
-        } else {
-          BaseName = MF.createExternalSymbolName("__memory_base");
-          OperandFlags = WebAssemblyII::MO_MEMORY_BASE_REL;
-        }
-
-        Register BaseAddr = MRI.createGenericVirtualRegister(PtrTy);
-        B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
-                              : WebAssembly::GLOBAL_GET_I32)
-            .addDef(BaseAddr)
-            .addExternalSymbol(BaseName);
-
-        Register SymAddr = MRI.createGenericVirtualRegister(
-            LLT::integer(PtrTy.getSizeInBits()));
-        B.buildInstr(WebAssembly::G_WrapperREL)
-            .addDef(SymAddr)
-            .addGlobalAddress(GV, MI.getOperand(1).getOffset(), OperandFlags);
-
-        B.buildInstr(TargetOpcode::G_PTR_ADD)
-            .addDef(MI.getOperand(0).getReg())
-            .addReg(BaseAddr)
-            .addReg(SymAddr);
-
-        MI.eraseFromParent();
-        return true;
-      }
-      OperandFlags = WebAssemblyII::MO_GOT;
-    }
-
-    MI.setDesc(TII.get(WebAssembly::G_Wrapper));
-    MI.getOperand(1).setTargetFlags(OperandFlags);
-
-    return true;
-  }
   default:
     break;
   }
