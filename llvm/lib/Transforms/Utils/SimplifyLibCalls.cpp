@@ -1834,19 +1834,24 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   else
     return nullptr;
 
-  bool ShouldOptimizeExisting =
+  bool ShouldOptimizeExistingHotColdNew =
       OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Always ||
       (OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Cold &&
        IsCold);
 
   Value *HotColdVal = B.getInt8(HotCold);
   auto getHotColdHintForExisting = [&](uint8_t HotCold) -> Value * {
+    // If not taking the minimum, simply use the compiler hint value.
     if (!MinExistingHotColdNewHint)
       return HotColdVal;
     Value *ExistingHint = CI->getArgOperand(CI->arg_size() - 1);
+    // If the existing hint is a compile-time constant, evaluate the minimum
+    // at compile time.
     if (auto *CIHint = dyn_cast<ConstantInt>(ExistingHint))
       return B.getInt8(
           std::min(HotCold, static_cast<uint8_t>(CIHint->getZExtValue())));
+    // If the existing hint is a dynamic/runtime value, emit a umin intrinsic
+    // to compute the minimum at runtime.
     if (ExistingHint->getType() != B.getInt8Ty())
       ExistingHint = B.CreateTruncOrBitCast(ExistingHint, B.getInt8Ty());
     return B.CreateBinaryIntrinsic(Intrinsic::umin, ExistingHint, HotColdVal);
@@ -1862,7 +1867,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   Value *NewCall = nullptr;
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
                                LibFunc_Znwm12__hot_cold_t,
                                getHotColdHintForExisting(HotCold));
@@ -1872,7 +1877,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
                              LibFunc_Znwm12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_Znam12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
                                LibFunc_Znam12__hot_cold_t,
                                getHotColdHintForExisting(HotCold));
@@ -1882,7 +1887,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
                              LibFunc_Znam12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall =
           emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
                                 TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
@@ -1894,7 +1899,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall =
           emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
                                 TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
@@ -1906,7 +1911,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall =
           emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
                                 TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
@@ -1918,7 +1923,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall =
           emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
                                 TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
@@ -1930,7 +1935,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
@@ -1943,7 +1948,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
@@ -1961,7 +1966,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
                                           HotColdVal);
     break;
   case LibFunc_size_returning_new_hot_cold:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                             LibFunc_size_returning_new_hot_cold,
                                             getHotColdHintForExisting(HotCold));
@@ -1972,7 +1977,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
-    if (ShouldOptimizeExisting)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold,
