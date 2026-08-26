@@ -9913,7 +9913,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
-      SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      SrcIntTy = LLT::integer(SrcTy.getSizeInBits());
       SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 

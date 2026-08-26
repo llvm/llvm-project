@@ -2549,7 +2549,7 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
           std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
                             tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -2572,7 +2572,7 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // The `printProperties` method is responsible for printing out a leading
   // space so that empty `prop-dict`s don't produce stray whitespace.
   if (fmt.useProperties) {
-    body << "  printProperties(this->getContext(), _odsPrinter, "
+    body << "  printProperties((*this)->getContext(), _odsPrinter, "
             "getProperties(), elidedProps);\n";
   }
 }
@@ -2602,7 +2602,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
           std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
                             tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
-      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Builder odsBuilder((*this)->getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
            << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
@@ -2624,7 +2624,7 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
             "  });\n"
             "  _odsPrinter.printOptionalAttrDict"
          << (withKeyword ? "WithKeyword" : "")
-         << "(_odsAttrs.getDictionary(getContext()).getValue(), "
+         << "(_odsAttrs.getDictionary((*this)->getContext()).getValue(), "
             "elidedAttrs);\n";
   }
 }
