@@ -46,10 +46,11 @@ void NVPTXSubtarget::anchor() {}
 // NVPTX.td), so older SMs that supported earlier PTX versions instead use 3.2
 // as their effective minimum.
 //
-// Note: the sm_110 architectures are older than the table's PTX 9.0 row
-// suggests, because 9.0 is where they were renamed rather than introduced. They
-// take the minimum of the sm_101 names they were renamed from; see
-// getTargetName below.
+// Note: sm_110* is the PTX ISA 9.0 spelling of sm_101*, which was introduced in
+// PTX ISA 8.6 (sm_101f in 8.8) and renamed in 9.0. Since getTargetName()
+// rewrites the new spelling back to the old one when emitting older PTX, the
+// sm_110* names work with any PTX version that supported sm_101*, so they take
+// sm_101*'s minimum PTX version rather than the 9.0 of the rename.
 static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
   switch (Arch) {
   case NVPTX::GK_NONE:
@@ -120,9 +121,8 @@ static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
 }
 
 StringRef NVPTXSubtarget::getTargetName() const {
-  // Prior to PTX ISA 9.0, The sm_110* targets were spelled as sm_101*. For
-  // backwards compatibility with older PTX, we rewrite the names to the old
-  // spelling as required by the PTX version.
+  // Spell sm_110* as sm_101* when emitting PTX older than 9.0, which does not
+  // know the new names. See the note above minPTXVersion().
   if (!hasFeature(NVPTX::PTX90))
     switch (Arch) {
     case NVPTX::GK_SM_110:
