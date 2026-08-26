@@ -169,7 +169,10 @@ void function_interface_impl::printFunctionAttributes(
   SmallVector<StringRef, 8> ignoredAttrs = {SymbolTable::getSymbolAttrName()};
   ignoredAttrs.append(elided.begin(), elided.end());
 
-  p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+  p.printOptionalAttrDictWithKeyword(attrs, ignoredAttrs);
 }
 
 void function_interface_impl::printFunctionOp(
