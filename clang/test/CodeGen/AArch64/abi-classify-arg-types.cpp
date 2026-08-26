@@ -36,12 +36,12 @@ struct ExplicitCopy {
 };
 
 void arg_nontrivial_copy(NonTrivialCopy a) {}
-// CHECK: define{{.*}} void @arg_nontrivial_copy(ptr nofree noundef align 4 dead_on_return dereferenceable(4) %{{.*}})
+// CHECK: define{{.*}} void @arg_nontrivial_copy(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %{{.*}})
 
 void arg_nontrivial_dtor_and_copy(NonTrivialDtorAndCopy a) {}
-// CHECK: define{{.*}} void @arg_nontrivial_dtor_and_copy(ptr nofree noundef align 4 {{(dead_on_return )?}}dereferenceable(4) %{{.*}})
+// CHECK: define{{.*}} void @arg_nontrivial_dtor_and_copy(ptr nofreeobj noundef align 4 {{(dead_on_return )?}}dereferenceable(4) %{{.*}})
 
 void arg_explicit_copy(ExplicitCopy a) {}
-// CHECK: define{{.*}} void @arg_explicit_copy(ptr nofree noundef align 2 dead_on_return dereferenceable(2) %{{.*}})
+// CHECK: define{{.*}} void @arg_explicit_copy(ptr nofreeobj noundef align 2 dead_on_return dereferenceable(2) %{{.*}})
 
 }

@@ -7301,6 +7301,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_pmul:
     return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  case Intrinsic::aarch64_sve_psel: {
+    if (Op.getValueType() != MVT::aarch64svcount)
+      return Op;
+    // Lower predicate-as-counter variants to reuse normal predicate isel.
+    SmallVector<SDValue> Ops(Op->ops());
+    Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Ops[1]);
+    SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
+  }
   }
 }
 
@@ -14386,14 +14395,39 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     }
   } else {
     if (const auto P = parseSVERegAsConstraint(Constraint)) {
-      // SME functions that are not in streaming mode, should
-      // still observe clobbers of Z-registers by clobbering
-      // the lower 128bits of those registers.
-      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
-          !Subtarget->isSVEorStreamingSVEAvailable())
-        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
-                              &AArch64::FPR128RegClass);
-      return *P;
+      if (!AArch64::ZPRRegClass.hasSubClassEq(P->second))
+        return *P;
+
+      // A named Z-register constraint with MVT::Other
+      // represents an untyped clobber.
+      if (VT == MVT::Other) {
+        // SME functions that are not in streaming mode, should
+        // still observe clobbers of Z-registers by clobbering
+        // the lower 128bits of those registers.
+        if (!Subtarget->isSVEorStreamingSVEAvailable())
+          return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                                &AArch64::FPR128RegClass);
+        return *P;
+      }
+
+      if (Subtarget->isSVEorStreamingSVEAvailable()) {
+        // Accept the full-width SVE vector types representable in C
+        switch (VT.SimpleTy) {
+        case MVT::nxv16i8:
+        case MVT::nxv8i16:
+        case MVT::nxv4i32:
+        case MVT::nxv2i64:
+        case MVT::nxv8f16:
+        case MVT::nxv4f32:
+        case MVT::nxv2f64:
+        case MVT::nxv8bf16:
+          return *P;
+        default:
+          break;
+        }
+      }
+
+      return std::make_pair(0U, nullptr);
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
@@ -30083,7 +30117,9 @@ static SDValue performDUPCombine(SDNode *N,
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
         Op.getOpcode() == AArch64ISD::FCMGE ||
-        Op.getOpcode() == AArch64ISD::FCMGT) {
+        Op.getOpcode() == AArch64ISD::FCMGT ||
+        (Op.getOpcode() == ISD::BITCAST &&
+         Op->getOperand(0).getValueType().isFloatingPoint())) {
       EVT ElemVT = VT.getVectorElementType();
       EVT ExpandedVT = VT;
       // Insert into a 128-bit vector to match DUPLANE's pattern.

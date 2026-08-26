@@ -148,6 +148,16 @@ template <typename T> constexpr bool isIntegralOrPointer() {
          std::is_same_v<T, Integral<64, true>>;
 }
 
+template <typename T> constexpr bool isFixedSizeIntegralType() {
+  return std::is_same_v<T, Char<false>> || std::is_same_v<T, Char<true>> ||
+         std::is_same_v<T, Integral<16, false>> ||
+         std::is_same_v<T, Integral<16, true>> ||
+         std::is_same_v<T, Integral<32, false>> ||
+         std::is_same_v<T, Integral<32, true>> ||
+         std::is_same_v<T, Integral<64, false>> ||
+         std::is_same_v<T, Integral<64, true>>;
+}
+
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
 template <> struct PrimConv<PT_Sint8> {
