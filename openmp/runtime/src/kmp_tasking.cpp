@@ -3357,9 +3357,19 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
   }
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
-  // This should have been moved to a task node within the group, else it will
-  // leak here.
-  assert(!taskgroup->taskgraph.reduce_input);
+  // The stash is normally adopted by the next node recorded in this taskgroup,
+  // which then owns it.  It can legitimately still be here: the construct that
+  // left it may have turned out not to be a replayable construct, in which
+  // case no node was recorded for it and nothing will come back for the stash.
+  // (A `replayable` clause whose argument is a compile-time constant is
+  // resolved by the compiler, which routes such a construct to the ordinary
+  // reduction init instead; this covers the non-constant case.)  No node can be
+  // recorded in a taskgroup that is ending, so free it here rather than leak.
+  if (taskgroup->taskgraph.reduce_input) {
+    __kmp_fast_free(thread, taskgroup->taskgraph.reduce_input->reduce_data);
+    __kmp_fast_free(thread, taskgroup->taskgraph.reduce_input);
+    taskgroup->taskgraph.reduce_input = nullptr;
+  }
 #endif
 
   // Restore parent taskgroup for the current task
