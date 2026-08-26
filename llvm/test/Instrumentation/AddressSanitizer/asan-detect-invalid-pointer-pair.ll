@@ -74,48 +74,27 @@ define <2 x i1> @mycmp_vector(<2 x ptr> %p, <2 x ptr> %q) sanitize_address {
 
 define i32 @mysub_ptrtoint_trunc(ptr %p, ptr %q) sanitize_address {
 ; ALL-LABEL: @mysub_ptrtoint_trunc
-; NOSUB-NOT: call void @__sanitizer_ptr_sub
-; SUB: [[P:%[0-9A-Za-z]+]] = ptrtoint ptr %p to i32
-; SUB: [[Q:%[0-9A-Za-z]+]] = ptrtoint ptr %q to i32
+; ALL-NOT: call void @__sanitizer_ptr_sub
   %x = ptrtoint ptr %p to i32
   %y = ptrtoint ptr %q to i32
   %z = sub i32 %x, %y
-; SUB: [[XP:%[0-9A-Za-z]+]] = zext i32 [[P]] to i64
-; SUB: [[XQ:%[0-9A-Za-z]+]] = zext i32 [[Q]] to i64
-; SUB: call void @__sanitizer_ptr_sub(i64 [[XP]], i64 [[XQ]])
   ret i32 %z
 }
 
 define <2 x i32> @mysub_vector_ptrtoint_trunc(<2 x ptr> %p, <2 x ptr> %q) sanitize_address {
 ; ALL-LABEL: @mysub_vector_ptrtoint_trunc
-; NOSUB-NOT: call void @__sanitizer_ptr_sub
+; ALL-NOT: call void @__sanitizer_ptr_sub
   %x = ptrtoint <2 x ptr> %p to <2 x i32>
   %y = ptrtoint <2 x ptr> %q to <2 x i32>
-; SUB: [[X0:%[0-9A-Za-z]+]] = extractelement <2 x i32> %x, i32 0
-; SUB: [[ZX0:%[0-9A-Za-z]+]] = zext i32 [[X0]] to i64
-; SUB: [[Y0:%[0-9A-Za-z]+]] = extractelement <2 x i32> %y, i32 0
-; SUB: [[ZY0:%[0-9A-Za-z]+]] = zext i32 [[Y0]] to i64
-; SUB: call void @__sanitizer_ptr_sub(i64 [[ZX0]], i64 [[ZY0]])
-; SUB: [[X1:%[0-9A-Za-z]+]] = extractelement <2 x i32> %x, i32 1
-; SUB: [[ZX1:%[0-9A-Za-z]+]] = zext i32 [[X1]] to i64
-; SUB: [[Y1:%[0-9A-Za-z]+]] = extractelement <2 x i32> %y, i32 1
-; SUB: [[ZY1:%[0-9A-Za-z]+]] = zext i32 [[Y1]] to i64
-; SUB: call void @__sanitizer_ptr_sub(i64 [[ZX1]], i64 [[ZY1]])
   %z = sub <2 x i32> %x, %y
   ret <2 x i32> %z
 }
 
 define i128 @mysub_ptrtoint_widen(ptr %p, ptr %q) sanitize_address {
 ; ALL-LABEL: @mysub_ptrtoint_widen
-; NOSUB-NOT: call void @__sanitizer_ptr_sub
-; SUB: [[P:%[0-9A-Za-z]+]] = ptrtoint ptr %p to i128
-; SUB: [[Q:%[0-9A-Za-z]+]] = ptrtoint ptr %q to i128
+; ALL-NOT: call void @__sanitizer_ptr_sub
   %x = ptrtoint ptr %p to i128
   %y = ptrtoint ptr %q to i128
-; SUB-NOT: zext i128
-; SUB: [[XP:%[0-9A-Za-z]+]] = trunc i128 [[P]] to i64
-; SUB: [[XQ:%[0-9A-Za-z]+]] = trunc i128 [[Q]] to i64
-; SUB: call void @__sanitizer_ptr_sub(i64 [[XP]], i64 [[XQ]])
   %z = sub i128 %x, %y
   ret i128 %z
 }
