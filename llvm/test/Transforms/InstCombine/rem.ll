@@ -928,7 +928,6 @@ define i32 @srem_select_of_constants_divisor(i1 %b, i32 %x) {
   ret i32 %r
 }
 
-
 define i32 @srem_select_of_constants_divisor_minus_one_arm(i1 %b, i32 %x) {
 ; CHECK-LABEL: @srem_select_of_constants_divisor_minus_one_arm(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 -2, i32 -1
@@ -1066,10 +1065,6 @@ define i32 @urem_select_of_constants_divisor(i1 %b, i32 %x) {
   %r = urem i32 %x, %s
   ret i32 %r
 }
-
-
-
-
 
 ; https://alive2.llvm.org/ce/z/bh2KHm
 define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {

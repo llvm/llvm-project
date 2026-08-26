@@ -1329,19 +1329,10 @@ static bool isSplittableSelectDivisor(BinaryOperator &I) {
   if (C1->isZero() || C2->isZero())
     return false;
 
-  // A sibling div/rem on this divisor would leave four divisions where one
-  // hardware divide already computes both results.
-  auto *SI = cast<SelectInst>(I.getOperand(1));
-  for (User *U : SI->users()) {
-    auto *UI = dyn_cast<Instruction>(U);
-    if (UI && UI != &I && UI->isIntDivRem() && UI->getOperand(1) == SI)
-      return false;
-  }
-
   // Signed division of INT_MIN by -1 overflows so an arm dividing by -1 would
   // be undefined on a path that previously chose the other arm.
-  bool IsSigned = I.getOpcode() == Instruction::SDiv ||
-                  I.getOpcode() == Instruction::SRem;
+  bool IsSigned =
+      I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
   if (IsSigned && (C1->isAllOnes() || C2->isAllOnes()))
     return false;
 

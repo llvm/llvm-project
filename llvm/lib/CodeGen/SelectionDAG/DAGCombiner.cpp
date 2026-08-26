@@ -31099,16 +31099,6 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   if (N1.getOperand(0) == N2.getOperand(0)) {
     SDValue N11 = N1.getOperand(1);
     SDValue N21 = N2.getOperand(1);
-    // Two constant divisors would become one variable divisor, which needs a
-    // hardware divide that neither arm needed. Targets that would rather have
-    // the divider can say so through isIntDivCheap.
-    if ((BinOpc == ISD::SDIV || BinOpc == ISD::UDIV || BinOpc == ISD::SREM ||
-         BinOpc == ISD::UREM) &&
-        isConstantOrConstantVector(N11) && isConstantOrConstantVector(N21) &&
-        !TLI.isIntDivCheap(
-            N->getValueType(0),
-            DAG.getMachineFunction().getFunction().getAttributes()))
-      return SDValue();
     // Second op VT might be different (e.g. shift amount type)
     if (N11.getValueType() == N21.getValueType()) {
       SDValue NewSel = DAG.getSelect(DL, N11.getValueType(), N0, N11, N21);
