@@ -262,7 +262,7 @@ llvm-cov show \
 * **MC/DC Coverage:**  
   Evaluates compound boolean expressions (such as `if (A && B)` or `if (A || B)`). It verifies that each individual condition was tested as both True and False, and demonstrated that it could independently change the overall outcome of the decision.
 
-### Understanding Summary Reports (`llvm-cov report`)
+### Interpreting Summary Reports (`llvm-cov report`)
 
 The summary table produced by `llvm-cov report` displays metrics across individual source files and overall totals:
 
@@ -272,69 +272,32 @@ The summary table produced by `llvm-cov report` displays metrics across individu
 * **Branches / Missed Branches:** The total count of decision directions (both True and False) evaluated.
 * **MC/DC Conditions / Missed Conditions:** The count of individual boolean sub-conditions that demonstrated independent decision control.
 
-### Understanding Annotated Source Code (`llvm-cov show`)
+### Interpreting MC/DC Truth Tables
 
-When viewing annotated source listings:
-* **Line Number (Left Column):** The corresponding line in the source file.
-* **Execution Count (Second Column):** The number of times that line was executed (for example, `517` means 517 executions; `0` indicates unexecuted code).
-* **Branch Annotations:** Shows the exact number of times each branch path evaluated True and False:
-  ```text
-  |  Branch (19:7):  [True: 256, False: 261]
-  |  Branch (19:16): [True: 0,   False: 261]
-  ```
-  In this example, the second branch at column 16 was evaluated False 261 times, but was never evaluated True (`True: 0`), indicating an untested branch path.
-
-### Understanding the MC/DC Truth Table Output
-
-When inspecting with `--show-mcdc`, `llvm-cov` prints a truth table underneath each compound decision statement.
-
-For example, inspecting `libc/src/ctype/isalpha.cpp` produces:
+When inspecting with `--show-mcdc`, `llvm-cov` displays an MC/DC analysis box beneath each compound decision:
 
 ```text
-   18|    517|LLVM_LIBC_FUNCTION(int, isalpha, (int c)) {
-   19|    517|  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
-  ------------------
-  |  Branch (19:7): [True: 256, False: 261]
-  |  Branch (19:16): [True: 0, False: 261]
-  ------------------
-  |---> MC/DC Decision Region (19:7) to (19:61)
-  |  Number of Conditions: 2
-  |     Condition C1 --> (19:7)
-  |     Condition C2 --> (19:16)
+   19|  if (c < 0 || c > 255)
+  -----------------------------------------------
+  | Conditions: C1 = (c < 0), C2 = (c > 255)
   |
-  |  Executed MC/DC Test Vectors:
-  |     C1, C2    Result
-  |  1 { F,  F  = F      }
-  |  2 { T,  -  = T      }
+  | Executed Test Vectors:
+  |    C1, C2    Result
+  | 1 { F,  F  = F      }  (tested with c = 'a')
+  | 2 { T,  -  = T      }  (tested with c = -1)
   |
-  |  C1-Pair: covered (1, 2)
-  |  C2-Pair: not covered
-  |  MC/DC Coverage for Decision: 50.00%
-  ------------------
-   20|    256|    return 0;
-   21|    261|  return static_cast<int>(internal::isalpha(static_cast<char>(c)));
-   22|    517|}
+  | C1-Pair: covered (1, 2)
+  | C2-Pair: not covered
+  | MC/DC Coverage: 50.00%
+  -----------------------------------------------
 ```
 
-#### Step-by-Step Breakdown:
-
-1. **Conditions (C1, C2):**  
-   The decision on line 19 contains two sub-conditions: `if (c < 0 || c > 255)`.
-   * **C1** is the first condition: `c < 0`
-   * **C2** is the second condition: `c > 255`
-
-2. **Executed Test Vectors:**  
-   Each numbered row records an observed combination of condition inputs and the resulting decision outcome:
-   * **Vector 1 (`F, F = F`):** Tested with a valid character (e.g. `c = 'a'`). Both C1 and C2 evaluated to False, producing an overall result of False.
-   * **Vector 2 (`T, - = T`):** Tested with a negative value (e.g. `c = -1`). C1 evaluated to True, producing an overall result of True. The hyphen (`-`) indicates that C2 was short-circuited by the compiler and not evaluated.
-
-3. **Condition Pairs & Independent Effect:**  
-   To satisfy MC/DC, each condition must show that toggling its value from False to True directly flips the overall decision outcome while holding other conditions constant:
-   * **`C1-Pair: covered (1, 2)`:** Comparing Vector 1 (`F, F = F`) and Vector 2 (`T, - = T`) shows that changing C1 from False to True flipped the result from False to True. C1 is fully covered.
-   * **`C2-Pair: not covered`:** There is no test vector where C2 evaluated to True while C1 remained False. Therefore, C2 has not yet proved independent control over the decision.
-
-4. **How to Reach 100% Decision Coverage:**  
-   To complete coverage for C2:
-   * Add a test case with an out-of-range positive value (such as `c = 256`).
-   * This executes Vector 3 (`F, T = T`), where C1 is False and C2 is True, yielding an overall True outcome.
-   * Comparing Vector 1 (`F, F = F`) and Vector 3 (`F, T = T`) forms the independence pair `(1, 3)` for C2, demonstrating that C2 independently controls the decision and achieving 100% MC/DC coverage.
+* **Conditions:** **C1** represents `c < 0` and **C2** represents `c > 255`.
+* **Executed Vectors:**
+  * **Vector 1 (`F, F = F`):** Tested with a valid character (`c = 'a'`). Both C1 and C2 evaluated False, producing an overall False result.
+  * **Vector 2 (`T, - = T`):** Tested with a negative value (`c = -1`). C1 evaluated True, producing an overall True result. The hyphen (`-`) indicates C2 was short-circuited and not evaluated.
+* **Condition Pairs:**
+  * **`C1-Pair: covered (1, 2)`:** Comparing Vector 1 and Vector 2 proves that changing C1 from False to True directly flipped the result from False to True. C1 is fully covered.
+  * **`C2-Pair: not covered`:** C2 was never tested in a state where it independently turned the result True while C1 was False.
+* **Reaching 100% Coverage:**
+  Add a test with a value above 255 (`c = 256`). This executes Vector 3 (`F, T = T`), forming the independence pair `(1, 3)` for C2 and reaching 100% MC/DC coverage.
