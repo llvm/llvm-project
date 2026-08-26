@@ -35,6 +35,8 @@
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/ASTMatchers/Dynamic/Parser.h"
+#include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
@@ -813,6 +815,61 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
   };
 
   WorkScheduler->runWithAST("Definitions", File, std::move(Action));
+}
+
+void ClangdServer::completeASTMatcher(
+    const CompleteASTMatcherArgs &Args,
+    Callback<std::vector<ASTMatcherCompletion>> CB) {
+  auto Action = [Args, CB = std::move(CB)]() mutable -> void {
+    using ::clang::ast_matchers::dynamic::Parser;
+    using ::clang::ast_matchers::dynamic::MatcherCompletion;
+
+    std::vector<ASTMatcherCompletion> ToolTips;
+    auto QueryRef = StringRef(Args.searchQuery);
+    std::vector<MatcherCompletion> Comps =
+        Parser::completeExpression(QueryRef, Args.offset);
+    for (auto I = Comps.begin(), E = Comps.end(); I != E; ++I) {
+      ToolTips.push_back(ASTMatcherCompletion{I->TypedText, I->MatcherDecl});
+    }
+    return CB(std::move(ToolTips));
+  };
+  WorkScheduler->runQuick("ASTMatcherCompletion", "", std::move(Action));
+}
+
+void ClangdServer::findAST(SearchASTArgs const &Args,
+                           Callback<BoundASTNodes> CB) {
+  auto Action = [Args, CB = std::move(CB)](
+                    llvm::Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto BoundNodes = clangd::locateASTQuery(InpAST->AST, Args);
+    if (!BoundNodes)
+      return CB(BoundNodes.takeError());
+    if (BoundNodes->empty())
+      return CB(error("No matching AST nodes found"));
+
+    auto &&AST = InpAST->AST;
+    // Convert BoundNodes to a vector of vectors to ASTNode's.
+    BoundASTNodes Result;
+    Result.reserve(BoundNodes->size());
+    for (auto &&BN : *BoundNodes) {
+      auto &&Map = BN.getMap();
+      BoundASTNodes::value_type BAN;
+      for (const auto &[Key, Value] : Map) {
+        BAN.emplace(Key, dumpAST(Value, AST.getTokens(), AST.getASTContext()));
+      }
+      if (BAN.empty())
+        continue;
+      Result.push_back(std::move(BAN));
+    }
+    if (Result.empty()) {
+      return CB(error("No AST nodes found for the query"));
+    }
+    CB(std::move(Result));
+  };
+
+  WorkScheduler->runWithAST("FindAST", Args.textDocument.uri.file(),
+                            std::move(Action));
 }
 
 void ClangdServer::switchSourceHeader(

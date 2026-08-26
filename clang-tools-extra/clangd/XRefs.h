@@ -19,6 +19,7 @@
 #include "index/SymbolID.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -31,6 +32,9 @@ class TokenBuffer;
 } // namespace syntax
 namespace clangd {
 class ParsedAST;
+
+auto locateASTQuery(ParsedAST &AST, SearchASTArgs const &)
+    -> llvm::Expected<std::vector<ast_matchers::BoundNodes>>;
 
 // Describes where a symbol is declared and defined (as far as clangd knows).
 // There are three cases:
