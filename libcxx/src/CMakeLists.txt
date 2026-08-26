@@ -276,6 +276,12 @@ if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
   target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
 endif()
 
+if (LIBCXX_HERMETIC_STATIC_LIBRARY)
+  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+  # too. Define it in the same way here, to avoid redefinition conflicts.
+  target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
+endif()
+
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
