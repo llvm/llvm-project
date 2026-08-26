@@ -836,7 +836,8 @@ struct F8E4M3FNExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
 /// round-to-nearest-even to recover the 7 magnitude bits. F8E4M3FN has no
 /// infinity, so any input that overflows the maximum representable magnitude
 /// (448), as well as infinities and NaNs, maps to the F8E4M3FN NaN encoding to
-/// match the LLVM APFloat NanOnly overflow behavior.
+/// match the LLVM APFloat NanOnly overflow behavior and the OCP FP8 (E4M3)
+/// spec.
 struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(arith::TruncFOp op,
