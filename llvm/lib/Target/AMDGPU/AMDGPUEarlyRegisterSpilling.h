@@ -40,81 +40,6 @@ struct RegisterSpillCandidate {
   LaneBitmask Mask;
 };
 
-/// Helper data structure for grouping together uses where the head of the group
-/// dominates all the other uses in the group.
-class DomGroup {
-public:
-  enum class RestorePlacement {
-    BeforeHead,         // Emit restore before the Head of the DomGroup.
-    LoopPreheader,      // Emit restore in loop preheader.
-    IncomingBlockOfPhi, // Emit restore for incoming value in phi node.
-    CommonDominator,    // Emit restore in common dominator.
-  };
-
-private:
-  SmallVector<MachineInstr *> Uses;
-  SmallVector<MachineBasicBlock *> UseBlocks;
-  SmallDenseMap<MachineInstr *, MachineBasicBlock *> PHIInstrToRestoreBlock;
-  MachineInstr *Restore = nullptr;
-  MachineBasicBlock *CommonDominator = nullptr;
-  bool Deleted = false;
-  RestorePlacement WhereToRestore;
-  LaneBitmask Mask = LaneBitmask::getNone();
-
-public:
-  DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock,
-           RestorePlacement WhereToRestore)
-      : WhereToRestore(WhereToRestore) {
-    Uses.push_back(MI);
-    UseBlocks.push_back(RestoreBlock);
-    if (MI->isPHI())
-      PHIInstrToRestoreBlock[MI] = RestoreBlock;
-  }
-  DomGroup() = default;
-  MachineInstr *getHead() const { return Uses.front(); }
-  bool isDeleted() const { return Deleted; }
-  void setDeleted() { Deleted = true; }
-  void merge(DomGroup &Other) {
-    for (auto *MI : Other.Uses)
-      Uses.push_back(MI);
-
-    for (auto *UseMBB : Other.UseBlocks)
-      UseBlocks.push_back(UseMBB);
-
-    PHIInstrToRestoreBlock.insert(Other.PHIInstrToRestoreBlock.begin(),
-                                  Other.PHIInstrToRestoreBlock.end());
-
-    Other.setDeleted();
-  }
-  const auto &getUses() const { return Uses; }
-  const auto &getUseBlocks() const { return UseBlocks; }
-  size_t size() const { return Uses.size(); }
-  void setCommonDominator(MachineBasicBlock *CD) { CommonDominator = CD; }
-  MachineBasicBlock *getCommonDominator() const { return CommonDominator; }
-  void setRestore(MachineInstr *R) { Restore = R; }
-  MachineInstr *getRestore() const { return Restore; }
-  bool hasCommonDominator() const { return CommonDominator != nullptr; }
-  MachineBasicBlock *getRestoreBlock() const { return UseBlocks.front(); }
-  void setRestoreBlock(MachineBasicBlock *NewRestoreBlock) {
-    *UseBlocks.begin() = NewRestoreBlock;
-  }
-  MachineBasicBlock *getRestoreBlockForPHI(MachineInstr *PHI) const {
-    assert(PHI->isPHI() && "The instruction is not a PHI node.");
-    auto It = PHIInstrToRestoreBlock.find(PHI);
-    assert(It != PHIInstrToRestoreBlock.end() &&
-           "The PHI node does not exist in the map.");
-    return It->second;
-  }
-  RestorePlacement getWhereToRestore() const { return WhereToRestore; }
-  void setWhereToRestore(RestorePlacement RP) { WhereToRestore = RP; }
-  LaneBitmask getLaneBitmask() const { return Mask; }
-  void setLaneBitmask(LaneBitmask M) { Mask = M; }
-
-  bool operator==(const DomGroup &Other) const {
-    return getHead() == Other.getHead();
-  }
-};
-
 class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -131,8 +56,7 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   // TODO: Support spilling of a register more than once.
   DenseSet<Register> SpilledRegs;
   // We do not spill the registers that are returned by restore instructions.
-  DenseMap<Register, DomGroup> RestoreRegToDomGroup;
-  DenseMap<MachineLoop *, SmallVector<DomGroup>> LoopToDomGroups;
+  DenseSet<Register> RestoredRegs;
 
   unsigned MaxVGPRs = 0;
   unsigned MaxSGPRs = 0;
@@ -146,48 +70,15 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   SmallVector<RegisterSpillCandidate>
   getCandidates(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker);
 
-  /// Return where we have to spill \p RegToSpill. It can be one of:
-  /// (i) the high register pressure point,
-  /// (ii) the definition block of \p RegToSpill,
-  /// (iii) the common dominator of \p CurMI and related uses.
-  /// \p CurMI is the high-register-pressure point.
-  std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
-  getWhereToSpill(MachineInstr *CurMI, Register RegToSpill);
+  MachineInstr *emitRestore(Register CandidateReg, MachineInstr *DefRegUseInstr,
+                            int FI);
 
-  /// Return where we have to spill if the definition of the spilled register is
-  /// inside a loop. \p CurMI is the high-register-pressure point.
-  std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
-  getWhereToSpillIfDefintionInLoop(MachineInstr *CurMI,
-                                   MachineBasicBlock *DefRegMBB);
+  MachineInstr *emitRestore(Register CandidateReg, MachineBasicBlock &InsertBB,
+                            int FI);
 
   /// Main spill function that emits the spill and restore code.
   void spill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker,
              unsigned NumOfSpills);
-
-  /// Emit restore instructions for each group that contains the uses that are
-  /// dominated by the head of the group.
-  void groupUses(Register RegToSpill, MachineBasicBlock *SpillBlock,
-                 MachineInstr *CurMI, SetVectorType &DominatedUses,
-                 SmallVector<DomGroup> &GroupOfUses);
-
-  /// Check if it is legal or profitable to emit a restore in the common
-  /// dominator.
-  bool shouldEmitRestoreInCommonDominator(
-      MachineBasicBlock *SpillBlock, MachineBasicBlock *CurMBB,
-      MachineBasicBlock *CommonDominatorToRestore);
-
-  /// Find the common dominator of the reachable uses and the block that we
-  /// intend to spill.
-  MachineBasicBlock *
-  findCommonDominatorToSpill(MachineBasicBlock *SpillBlock, Register RegToSpill,
-                             const SetVectorType &NonDominatedReachableUses);
-
-  /// Collect Non Dominated Reachable and Unreachable uses.
-  /// Returns true if there is a use in a loop nest.
-  bool classifyUses(MachineBasicBlock *SpillBlock, Register RegToSpill,
-                    MachineInstr *CurMI, SetVectorType &DominatedUses,
-                    SetVectorType &NonDominatedReachableUses,
-                    SetVectorType &UnreachableUses);
 
   bool hasPHIUseInSameBB(Register Reg, MachineBasicBlock *MBB);
 
@@ -197,13 +88,11 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   bool isSpilledReg(Register Reg) { return SpilledRegs.contains(Reg); }
 
-  bool isRestoredReg(Register Reg) {
-    return RestoreRegToDomGroup.contains(Reg);
-  }
+  bool isRestoredReg(Register Reg) { return RestoredRegs.contains(Reg); }
 
   void clearTables() {
     SpilledRegs.clear();
-    RestoreRegToDomGroup.clear();
+    RestoredRegs.clear();
   }
 
 public:
