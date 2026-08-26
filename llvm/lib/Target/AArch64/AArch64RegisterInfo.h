@@ -59,7 +59,7 @@ public:
     return 2;
   }
 
-  unsigned getCSRCostScale(const MachineFunction &MF) const {
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
     return 100;
   }
 
