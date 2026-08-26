@@ -3723,6 +3723,7 @@ bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
   case X86::TCRETURNri64:
+  case X86::TCRETURNri64_R10:
   case X86::TCRETURNri64_ImpCall:
   case X86::TCRETURNmi64:
     return true;

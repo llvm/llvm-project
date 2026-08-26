@@ -64955,7 +64955,9 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   case X86::CALL64r_ImpCall:
   case X86::CALL64r_NT:
   case X86::TAILJMPr64:
+  case X86::TAILJMPr64_R10:
   case X86::TAILJMPr64_REX:
+  case X86::TAILJMPr64_R10_REX:
     assert(Target.isReg() && "Unexpected target operand for an indirect call");
     Target.setIsRenamable(false);
     TargetReg = Target.getReg();
