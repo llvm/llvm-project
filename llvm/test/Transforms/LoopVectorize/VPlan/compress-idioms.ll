@@ -19,14 +19,13 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      MONOTONIC-PHI ir<%idx> = phi ir<0>, vp<%monotonic.add>
+; CHECK-NEXT:      MONOTONIC-PHI ir<%idx> = phi ir<0>, vp<%monotonic.add>, ir<1>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%src.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.src> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.src>, ir<%c>
-; CHECK-NEXT:      EMIT-SCALAR ir<%dst.idx> = sext ir<%idx> to i64
-; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr inbounds ir<%dst>, ir<%dst.idx>
+; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr inbounds ir<%dst>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%dst.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.compressstore(ir<%load.src>, vp<[[VP6]]>, ir<%cmp>)
 ; CHECK-NEXT:      EMIT vp<%handled.lanes> = num-active-lanes ir<%cmp>
@@ -54,21 +53,20 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
   %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
   %load.src = load i32, ptr %src.ptr, align 4
   %cmp = icmp slt i32 %load.src, %c
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:
-  %dst.idx = sext i32 %idx to i64
-  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %dst.idx
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
   store i32 %load.src, ptr %dst.ptr, align 4
-  %idx.next = add nsw i32 %idx, 1
+  %idx.next = add nsw i64 %idx, 1
   br label %for.inc
 
 for.inc:
-  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
@@ -95,14 +93,13 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      MONOTONIC-PHI ir<%idx> = phi ir<0>, vp<%monotonic.add>
+; CHECK-NEXT:      MONOTONIC-PHI ir<%idx> = phi ir<0>, vp<%monotonic.add>, ir<1>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%dst.ptr> = getelementptr ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%dst.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.dst> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.dst>, ir<%c>
-; CHECK-NEXT:      EMIT-SCALAR ir<%src.idx> = sext ir<%idx> to i64
-; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr inbounds ir<%src>, ir<%src.idx>
+; CHECK-NEXT:      CLONE ir<%src.ptr> = getelementptr inbounds ir<%src>, ir<%idx>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%src.ptr>, ir<1>
 ; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP7:%[0-9]+]]> = call llvm.masked.expandload(vp<[[VP6]]>, ir<%cmp>, ir<poison>)
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i32, ir<%dst.ptr>, ir<1>
@@ -132,22 +129,21 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
   %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %iv
   %load.dst = load i32, ptr %dst.ptr, align 4
   %cmp = icmp slt i32 %load.dst, %c
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:
-  %src.idx = sext i32 %idx to i64
-  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %src.idx
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
   %load.src = load i32, ptr %src.ptr, align 4
   store i32 %load.src, ptr %dst.ptr, align 4
-  %idx.next = add nsw i32 %idx, 1
+  %idx.next = add nsw i64 %idx, 1
   br label %for.inc
 
 for.inc:
-  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body

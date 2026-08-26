@@ -19,16 +19,15 @@ define void @compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[MONOTONIC_IV:%.*]] = phi i32 [ 0, %[[VECTOR_PH1]] ], [ [[MONOTONIC_ADD:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[MONOTONIC_ADD:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[MONOTONIC_IV]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP5]]
 ; CHECK-NEXT:    call void @llvm.masked.compressstore.nxv4i32.p0(<vscale x 4 x i32> [[WIDE_LOAD]], ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <vscale x 4 x i1> [[TMP4]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[MONOTONIC_ADD]] = add i32 [[MONOTONIC_IV]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <vscale x 4 x i1> [[TMP4]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP7]])
+; CHECK-NEXT:    [[MONOTONIC_ADD]] = add i64 [[TMP5]], [[TMP8]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[IF_THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -42,21 +41,20 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
   %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
   %load.src = load i32, ptr %src.ptr, align 4
   %cmp = icmp slt i32 %load.src, %c
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:
-  %dst.idx = sext i32 %idx to i64
-  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %dst.idx
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
   store i32 %load.src, ptr %dst.ptr, align 4
-  %idx.next = add nsw i32 %idx, 1
+  %idx.next = add nsw i64 %idx, 1
   br label %for.inc
 
 for.inc:
-  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
@@ -81,17 +79,16 @@ define void @expand_load(ptr noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[MONOTONIC_IV:%.*]] = phi i32 [ 0, %[[VECTOR_PH1]] ], [ [[MONOTONIC_ADD:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[MONOTONIC_ADD:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[MONOTONIC_IV]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.masked.expandload.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP7]], ptr align 4 [[TMP3]], <vscale x 4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i1> [[TMP4]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP8]])
-; CHECK-NEXT:    [[MONOTONIC_ADD]] = add i32 [[MONOTONIC_IV]], [[TMP9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 4 x i1> [[TMP4]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP8]])
+; CHECK-NEXT:    [[MONOTONIC_ADD]] = add i64 [[TMP5]], [[TMP9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[IF_THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -105,22 +102,21 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
   %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %iv
   %load.dst = load i32, ptr %dst.ptr, align 4
   %cmp = icmp slt i32 %load.dst, %c
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:
-  %src.idx = sext i32 %idx to i64
-  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %src.idx
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %idx
   %load.src = load i32, ptr %src.ptr, align 4
   store i32 %load.src, ptr %dst.ptr, align 4
-  %idx.next = add nsw i32 %idx, 1
+  %idx.next = add nsw i64 %idx, 1
   br label %for.inc
 
 for.inc:
-  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
