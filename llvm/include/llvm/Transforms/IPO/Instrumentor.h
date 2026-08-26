@@ -13,10 +13,12 @@
 #ifndef LLVM_TRANSFORMS_IPO_INSTRUMENTOR_H
 #define LLVM_TRANSFORMS_IPO_INSTRUMENTOR_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EnumeratedArray.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -273,6 +275,7 @@ struct BaseConfigurationOption {
   enum KindTy {
     STRING,
     BOOLEAN,
+    STRING_LIST,
   };
 
   /// Create a boolean option with \p Name name, \p Description description and
@@ -286,6 +289,13 @@ struct BaseConfigurationOption {
   LLVM_ABI static std::unique_ptr<BaseConfigurationOption>
   createStringOption(InstrumentationConfig &IC, StringRef Name,
                      StringRef Description, StringRef DefaultValue);
+
+  /// Create a string-list option with \p Name name, \p Description
+  /// description and \p DefaultValue as string-list default value.
+  LLVM_ABI static std::unique_ptr<BaseConfigurationOption>
+  createStringListOption(InstrumentationConfig &IC, StringRef Name,
+                         StringRef Description,
+                         ArrayRef<StringRef> DefaultValue);
 
   /// Helper union that holds any possible option type.
   union ValueTy {
@@ -317,12 +327,26 @@ struct BaseConfigurationOption {
   }
   ///}
 
+  /// Set and get of the string-list value. Only valid if it is a string-list
+  /// option.
+  ///{
+  void setStringList(ArrayRef<StringRef> Values) {
+    assert(Kind == STRING_LIST && "Not a string list!");
+    StringList.assign(Values.begin(), Values.end());
+  }
+  ArrayRef<StringRef> getStringList() const {
+    assert(Kind == STRING_LIST && "Not a string list!");
+    return StringList;
+  }
+  ///}
+
   /// The information of the option.
   ///{
   StringRef Name;
   StringRef Description;
   KindTy Kind;
   ValueTy Value = {0};
+  SmallVector<StringRef> StringList;
   ///}
 
   /// Construct a base configuration option.
@@ -370,8 +394,8 @@ struct LLVM_ABI InstrumentationConfig {
         *this, "host_enabled", "Instrument non-GPU targets", true);
     GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
-    RuntimeBitcode = BaseConfigurationOption::createStringOption(
-        *this, "runtime_bitcode", "Link runtime bitcode", "");
+    RuntimeBitcodes = BaseConfigurationOption::createStringListOption(
+        *this, "runtime_bitcodes", "Link runtime bitcode files", {});
     InlineRuntimeEagerly = BaseConfigurationOption::createBoolOption(
         *this, "inline_runtime", "Inline runtime function calls eagerly", true);
     populate(IIRB);
@@ -379,6 +403,13 @@ struct LLVM_ABI InstrumentationConfig {
 
   /// Populate the instrumentation opportunities.
   virtual void populate(InstrumentorIRBuilderTy &IIRB);
+
+  /// Allow embedded users to extend the module after instrumentation and before
+  /// runtime bitcode linking.
+  virtual bool instrumentBeforeRuntimeLink(Module &,
+                                           InstrumentorIRBuilderTy &) {
+    return false;
+  }
 
   /// Get the runtime prefix for the instrumentation runtime functions.
   StringRef getRTName() const { return RuntimePrefix->getString(); }
@@ -445,7 +476,7 @@ struct LLVM_ABI InstrumentationConfig {
   std::unique_ptr<BaseConfigurationOption> FunctionRegex;
   std::unique_ptr<BaseConfigurationOption> HostEnabled;
   std::unique_ptr<BaseConfigurationOption> GPUEnabled;
-  std::unique_ptr<BaseConfigurationOption> RuntimeBitcode;
+  std::unique_ptr<BaseConfigurationOption> RuntimeBitcodes;
   std::unique_ptr<BaseConfigurationOption> InlineRuntimeEagerly;
 
   /// The map registered instrumentation opportunities. The map is indexed by

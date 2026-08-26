@@ -1,0 +1,36 @@
+//===-- InputGen GPU direct-entry ABI definitions -------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Define INPUTGEN_GPU_ENTRY_STATE and/or INPUTGEN_GPU_ABI_MODE before including
+// this file to generate declarations for the direct-entry ABI.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef INPUTGEN_GPU_ENTRY_STATE
+#define INPUTGEN_GPU_ENTRY_STATE(Variable, Constant, CType, Symbol)
+#endif
+
+#ifndef INPUTGEN_GPU_ABI_MODE
+#define INPUTGEN_GPU_ABI_MODE(Name, Value)
+#endif
+
+INPUTGEN_GPU_ENTRY_STATE(InputGenEntryBuffer, InputGenEntryBufferSymbol, int *,
+                         "inputgen_buffer")
+INPUTGEN_GPU_ENTRY_STATE(InputGenEntryBufferSize, InputGenEntryBufferSizeSymbol,
+                         uint64_t, "inputgen_buffer_size")
+INPUTGEN_GPU_ENTRY_STATE(InputGenEntryBufferOffset,
+                         InputGenEntryBufferOffsetSymbol, uint64_t,
+                         "inputgen_buffer_offset")
+INPUTGEN_GPU_ENTRY_STATE(InputGenEntryMode, InputGenEntryModeSymbol, int,
+                         "inputgen_mode")
+
+INPUTGEN_GPU_ABI_MODE(INPUTGEN_MODE_GENERATE, 1)
+INPUTGEN_GPU_ABI_MODE(INPUTGEN_MODE_REPLAY, 2)
+
+#undef INPUTGEN_GPU_ENTRY_STATE
+#undef INPUTGEN_GPU_ABI_MODE
