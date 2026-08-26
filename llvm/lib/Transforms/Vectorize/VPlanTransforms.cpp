@@ -44,7 +44,6 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
-
 static cl::opt<bool>
     UsePartialReduceByDefault("use-partial-reduce-by-default", cl::init(false),
                               cl::Hidden,
