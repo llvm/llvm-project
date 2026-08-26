@@ -3592,7 +3592,7 @@ exit:
 }
 
 ; The loaded stride has range metadata excluding unit stride.
-define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p,
+define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p, ptr %stride.ptr) {
 ; CHECK-LABEL: VPlan for loop in 'known_non_unit_via_load_range'
 ; CHECK:  VPlan ' for UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
@@ -3650,7 +3650,6 @@ define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p,
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ;
-                                           ptr %stride.ptr) {
 entry:
   %stride = load i64, ptr %stride.ptr, align 8, !range !0
   br label %loop

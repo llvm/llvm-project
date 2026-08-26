@@ -4387,7 +4387,7 @@ exit:
 }
 
 ; The loaded stride has range metadata excluding unit stride.
-define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p,
+define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p, ptr %stride.ptr) {
 ; COMPARE-NO-MV-LABEL: define void @known_non_unit_via_load_range(
 ; COMPARE-NO-MV-SAME: ptr noalias [[OUT:%.*]], ptr [[P:%.*]], ptr [[STRIDE_PTR:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
@@ -4432,7 +4432,6 @@ define void @known_non_unit_via_load_range(ptr noalias %out, ptr %p,
 ; COMPARE-LAA-MV:       [[EXIT]]:
 ; COMPARE-LAA-MV-NEXT:    ret void
 ;
-  ptr %stride.ptr) {
 entry:
   %stride = load i64, ptr %stride.ptr, align 8, !range !0
   br label %loop
