@@ -1929,6 +1929,15 @@ public:
     return V;
   }
 
+  /// Scan the string literal contents for a code unit with value 0.
+  /// If \p StartIndex is outside of the length of the string, this returns \c
+  /// std::nullopt.
+  ///
+  /// Otherwise, returns the offset (in code units, not bytes) of the zero code
+  /// unit, starting at index \p StartIndex. If no such code unit could be
+  /// found, this returns `getLength() - StartIndex`.
+  UnsignedOrNone findZeroCodeUnit(unsigned StartIndex = 0) const;
+
   /// \returns The length of the full string in bytes.
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
   /// \returns The length of the full string in characters.
