@@ -185,7 +185,7 @@ void mock::MockLiboffload::initDefault() {
       .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
                         const void *ProgData, size_t ProgDataSize,
                         ol_program_handle_t *Program) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);
