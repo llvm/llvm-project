@@ -373,6 +373,9 @@ class HeaderFileInfoTrait {
   ModuleFile &M;
 
 public:
+  // Maximum number of lookup tables we allow before condensing the tables.
+  static const int MaxTables = 64;
+
   using external_key_type = FileEntryRef;
 
   struct internal_key_type {
@@ -385,14 +388,24 @@ public:
   using internal_key_ref = const internal_key_type &;
 
   using data_type = HeaderFileInfo;
+
+  struct data_type_builder {
+    data_type &Data;
+    data_type_builder(data_type &D) : Data(D) {}
+
+    void merge(data_type D) const;
+  };
+
   using hash_value_type = unsigned;
   using offset_type = unsigned;
+  using file_type = ModuleFile *;
 
   HeaderFileInfoTrait(ASTReader &Reader, ModuleFile &M)
       : Reader(Reader), M(M) {}
 
   static hash_value_type ComputeHash(internal_key_ref ikey);
   internal_key_type GetInternalKey(external_key_type ekey);
+  OptionalFileEntryRef TryGetExternalKey(internal_key_ref ikey);
   bool EqualKey(internal_key_ref a, internal_key_ref b);
 
   static std::pair<unsigned, unsigned>
@@ -400,15 +413,21 @@ public:
 
   static internal_key_type ReadKey(const unsigned char *d, unsigned);
 
-  data_type ReadData(internal_key_ref,const unsigned char *d, unsigned DataLen);
+  void ReadDataInto(internal_key_ref, const unsigned char *d, unsigned DataLen,
+                    data_type_builder &Val);
+
+  static void MergeDataInto(const data_type &From, data_type_builder &To);
+
+  file_type ReadFileRef(const unsigned char *&d);
 
 private:
   OptionalFileEntryRef getFile(const internal_key_type &Key);
 };
 
 /// The on-disk hash table used for known header files.
-using HeaderFileInfoLookupTable =
-    llvm::OnDiskChainedHashTable<HeaderFileInfoTrait>;
+struct HeaderFileInfoLookupTable {
+  MultiOnDiskHashTable<HeaderFileInfoTrait, /*UseExternalKey=*/true> Table;
+};
 
 } // namespace reader
 

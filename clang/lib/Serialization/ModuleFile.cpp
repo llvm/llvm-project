@@ -24,7 +24,6 @@ using namespace reader;
 
 ModuleFile::~ModuleFile() {
   delete static_cast<ASTIdentifierLookupTable *>(IdentifierLookupTable);
-  delete static_cast<HeaderFileInfoLookupTable *>(HeaderFileInfoTable);
   delete static_cast<ASTSelectorLookupTable *>(SelectorLookupTable);
 }
 
