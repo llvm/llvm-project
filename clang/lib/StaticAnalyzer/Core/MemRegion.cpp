@@ -808,11 +808,13 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes,
 
 SourceRange MemRegion::sourceRange() const {
   // Check for more specific regions first.
-  if (auto *FR = dyn_cast<FieldRegion>(this))
+  if (auto *FR = dyn_cast<FieldRegion>(this)) {
     return FR->getDecl()->getSourceRange();
+  }
 
-  if (auto *VR = dyn_cast<VarRegion>(this->getBaseRegion()))
+  if (auto *VR = dyn_cast<VarRegion>(this->getBaseRegion())) {
     return VR->getDecl()->getSourceRange();
+  }
 
   // Return invalid source range (can be checked by client).
   return {};
@@ -1061,12 +1063,13 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     if (CallSite) {
       const Decl *CalleeDecl = SF->getDecl();
       bool CurrentParam = true;
-      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl))
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
         CurrentParam =
             (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
-      else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl))
+      } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
         CurrentParam =
             (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
+      }
 
       if (CurrentParam) {
         // If this is a parameter of the *current* stack frame, we can
