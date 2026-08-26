@@ -81,8 +81,8 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
 
   OS << '{';
   ListSeparator LS(",");
-  for (const auto &P : Map)
-    OS << LS << '(' << getModeName(P.first) << ':' << getMVTName(P.second).str()
+  for (const auto &[Mode, VT] : Map)
+    OS << LS << '(' << getModeName(Mode) << ':' << getMVTName(VT).str()
        << ')';
   OS << '}';
 }
@@ -164,8 +164,8 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '{';
   ListSeparator LS(",");
-  for (const auto &P : Map)
-    OS << LS << '(' << getModeName(P.first) << ':' << P.second << ')';
+  for (const auto &[Mode, Info] : Map)
+    OS << LS << '(' << getModeName(Mode) << ':' << Info << ')';
   OS << '}';
 }
 

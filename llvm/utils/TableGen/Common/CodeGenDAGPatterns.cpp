@@ -193,9 +193,9 @@ void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
     return;
   }
   OS << '{';
-  for (const auto &P : Map) {
-    OS << ' ' << getModeName(P.first) << ':';
-    P.second.writeToStream(OS);
+  for (const auto &[Mode, Types] : Map) {
+    OS << ' ' << getModeName(Mode) << ':';
+    Types.writeToStream(OS);
   }
   OS << " }";
 }
