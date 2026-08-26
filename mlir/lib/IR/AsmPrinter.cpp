@@ -762,8 +762,10 @@ private:
       printType(type);
 
     // Consider the attributes of the operation for aliases.
-    for (const NamedAttribute &attr : op->getAttrs())
+    for (const NamedAttribute &attr : op->getRawDictionaryAttrs())
       printAttribute(attr.getValue());
+    op->getName().walkInherentAttrs(
+        op, [&](StringRef, Attribute &attr) { printAttribute(attr); });
   }
 
   /// Print the given block. If 'printBlockArgs' is false, the arguments of the

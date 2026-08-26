@@ -153,3 +153,24 @@ func.func @percent_separator() {
   }
   return
 }
+
+// -----
+
+// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=acc_routine_gang_vector_loop | Remark="!$acc loop gang, vector ! blockidx.x threadidx.x"
+func.func @acc_routine_gang_vector_loop() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_0, <gang_dim1>, "acc_routine_gang_vector_loop">} {
+  %c1 = arith.constant 1 : index
+  acc.kernel_environment {
+    %0 = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+    %1 = acc.par_width %c1 par_dim(#acc.par_dim<thread_x>)
+    acc.compute_region launch(%arg0 = %0, %arg1 = %1) {
+      %c0 = arith.constant 0 : index
+      %c1_1 = arith.constant 1 : index
+      %c128_inner = arith.constant 128 : index
+      scf.parallel (%iv) = (%c0) to (%c128_inner) step (%c1_1) {
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}

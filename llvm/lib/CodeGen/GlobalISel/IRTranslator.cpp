@@ -2513,8 +2513,7 @@ bool IRTranslatorImpl::translateGetElementPtr(const User &U,
     return true;
   }
 
-  MIRBuilder.buildCopy(getOrCreateVReg(U), BaseReg);
-  return true;
+  return translateCopy(U, BaseReg, MIRBuilder);
 }
 
 bool IRTranslatorImpl::translateMemFunc(const CallInst &CI,

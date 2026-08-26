@@ -181,6 +181,11 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int Upper = upper;
 }
 
+// The underlying object of the argument/return can not be freed.
+class NoFreeObj<AttrIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
 // ArgProperty - Base class for argument properties that can be specified in
 // ArgInfo.
 class ArgProperty;
@@ -2565,28 +2570,24 @@ def int_xray_typedevent : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty, llvm_i64_ty],
 
 // @llvm.memcpy.element.unordered.atomic.*(dest, src, length, elementsize)
 def int_memcpy_element_unordered_atomic
-    : Intrinsic<[],
-                [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrArgMemOnly, IntrWillReturn, IntrNoSync,
-                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-                 WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-                 ImmArg<ArgIndex<3>>]>;
+    : DefaultAttrsIntrinsic<
+          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
+          [IntrArgMemOnly, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memmove.element.unordered.atomic.*(dest, src, length, elementsize)
 def int_memmove_element_unordered_atomic
-    : Intrinsic<[],
-                [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrArgMemOnly, IntrWillReturn, IntrNoSync,
-                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-                 WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-                 ImmArg<ArgIndex<3>>]>;
+    : DefaultAttrsIntrinsic<
+          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
+          [IntrArgMemOnly, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
 def int_memset_element_unordered_atomic
-    : Intrinsic<[], [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoSync,
-                 NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
-                 ImmArg<ArgIndex<3>>]>;
+    : DefaultAttrsIntrinsic<
+          [], [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
+          [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+           WriteOnly<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
 
 //===------------------------ Reduction Intrinsics ------------------------===//
 //

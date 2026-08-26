@@ -4719,7 +4719,7 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
       KnownBits Known0 = DAG.computeKnownBits(N0);
       unsigned ActiveBits = Known0.countMaxActiveBits();
       for (unsigned NarrowBits = PowerOf2Ceil(ActiveBits);
-           NarrowBits < ScalarBits; NarrowBits *= 2) {
+           NarrowBits != 0 && NarrowBits < ScalarBits; NarrowBits *= 2) {
         unsigned Scale = ScalarBits / NarrowBits;
         unsigned NumElts = VT.getVectorNumElements() * Scale;
         MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
@@ -5964,6 +5964,8 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
                                 ISD::matchUnaryPredicate(
                                     Y,
                                     [&](auto *C) {
+                                      if (!C)
+                                        return true;
                                       const APInt &YConst = C->getAsAPIntVal();
                                       return (Opcode == ISD::ABDS)
                                                  ? YConst.isSignedIntN(Bits)

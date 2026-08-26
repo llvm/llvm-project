@@ -2462,6 +2462,10 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   // When little-endian we can use ordinary d and q register loads/stores for
   // vector types, but when big-endian we need to use structure load/store which
   // only allow post-index addressing.
+  // With +strict-align, we also need to use LD1/ST1 when the alignment is
+  // less than the vector size, but we can still use LDR/STR for more-aligned
+  // accesses, so these are marked as legal here, and the invalid cases are
+  // rejected in getIndexedAddressParts.
   if (Subtarget->isLittleEndian()) {
     for (unsigned im = (unsigned)ISD::PRE_INC;
          im != (unsigned)ISD::LAST_INDEXED_MODE; ++im) {
@@ -3150,7 +3154,14 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
   // unaligned accesses are disabled). Without this, these will be forced to
   // have 16-byte alignment with +strict-align (and fail to lower as we don't
   // yet support TLI.expandUnalignedLoad() and TLI.expandUnalignedStore()).
-  if (VT.isScalableVector()) {
+  //
+  // For NEON in strict-align mode, we need to use LD1/ST1 when the alignment
+  // is less than the size of the vector, but greater than or equal to the size
+  // of the elements.
+  bool UseNEONLd1 = Subtarget->requiresStrictAlign() &&
+                    VT.isFixedLengthVector() &&
+                    (VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128);
+  if (VT.isScalableVector() || UseNEONLd1) {
     unsigned ElementSizeBits = VT.getScalarSizeInBits();
     if (ElementSizeBits % 8 == 0 && Alignment >= Align(ElementSizeBits / 8))
       return true;
@@ -7290,6 +7301,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_pmul:
     return DAG.getNode(ISD::CLMUL, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  case Intrinsic::aarch64_sve_psel: {
+    if (Op.getValueType() != MVT::aarch64svcount)
+      return Op;
+    // Lower predicate-as-counter variants to reuse normal predicate isel.
+    SmallVector<SDValue> Ops(Op->ops());
+    Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Ops[1]);
+    SDValue PSel = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, Ops);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::aarch64svcount, PSel);
+  }
   }
 }
 
@@ -14375,14 +14395,39 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     }
   } else {
     if (const auto P = parseSVERegAsConstraint(Constraint)) {
-      // SME functions that are not in streaming mode, should
-      // still observe clobbers of Z-registers by clobbering
-      // the lower 128bits of those registers.
-      if (AArch64::ZPRRegClass.hasSubClassEq(P->second) &&
-          !Subtarget->isSVEorStreamingSVEAvailable())
-        return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
-                              &AArch64::FPR128RegClass);
-      return *P;
+      if (!AArch64::ZPRRegClass.hasSubClassEq(P->second))
+        return *P;
+
+      // A named Z-register constraint with MVT::Other
+      // represents an untyped clobber.
+      if (VT == MVT::Other) {
+        // SME functions that are not in streaming mode, should
+        // still observe clobbers of Z-registers by clobbering
+        // the lower 128bits of those registers.
+        if (!Subtarget->isSVEorStreamingSVEAvailable())
+          return std::make_pair(TRI->getSubReg(P->first, AArch64::zsub),
+                                &AArch64::FPR128RegClass);
+        return *P;
+      }
+
+      if (Subtarget->isSVEorStreamingSVEAvailable()) {
+        // Accept the full-width SVE vector types representable in C
+        switch (VT.SimpleTy) {
+        case MVT::nxv16i8:
+        case MVT::nxv8i16:
+        case MVT::nxv4i32:
+        case MVT::nxv2i64:
+        case MVT::nxv8f16:
+        case MVT::nxv4f32:
+        case MVT::nxv2f64:
+        case MVT::nxv8bf16:
+          return *P;
+        default:
+          break;
+        }
+      }
+
+      return std::make_pair(0U, nullptr);
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
@@ -30072,7 +30117,9 @@ static SDValue performDUPCombine(SDNode *N,
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
         Op.getOpcode() == AArch64ISD::FCMGE ||
-        Op.getOpcode() == AArch64ISD::FCMGT) {
+        Op.getOpcode() == AArch64ISD::FCMGT ||
+        (Op.getOpcode() == ISD::BITCAST &&
+         Op->getOperand(0).getValueType().isFloatingPoint())) {
       EVT ElemVT = VT.getVectorElementType();
       EVT ExpandedVT = VT;
       // Insert into a 128-bit vector to match DUPLANE's pattern.
@@ -31835,10 +31882,9 @@ bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
   return isInt<9>(CstOffset->getSExtValue());
 }
 
-bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
-                                                   SDValue &Base,
-                                                   SDValue &Offset,
-                                                   SelectionDAG &DAG) const {
+bool AArch64TargetLowering::getIndexedAddressParts(
+    SDNode *N, SDNode *Op, SDValue &Base, SDValue &Offset, SelectionDAG &DAG,
+    ISD::MemIndexedMode AM) const {
   if (Op->getOpcode() != ISD::ADD && Op->getOpcode() != ISD::SUB)
     return false;
 
@@ -31882,6 +31928,12 @@ bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
     if (!Subtarget->isLittleEndian() && MemType.isVector() &&
         (uint64_t)RHSC != MemType.getStoreSize())
       return false;
+    // Likewise, when compiling with +strict-align we use LD1/ST1 when the
+    // alignment is less than the vector size.
+    if (Subtarget->requiresStrictAlign() && MemType.isVector() &&
+        cast<MemSDNode>(N)->getAlign() < MemType.getStoreSize() &&
+        ((uint64_t)RHSC != MemType.getStoreSize() || AM != ISD::POST_INC))
+      return false;
     // Always emit pre-inc/post-inc addressing mode. Use negated constant offset
     // when dealing with subtraction.
     Offset = DAG.getConstant(RHSC, SDLoc(N), RHS->getValueType(0));
@@ -31914,7 +31966,8 @@ bool AArch64TargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   if (IsVolatile)
     return false;
 
-  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG))
+  if (!getIndexedAddressParts(N, Ptr.getNode(), Base, Offset, DAG,
+                              ISD::PRE_INC))
     return false;
   AM = ISD::PRE_INC;
   return true;
@@ -31943,7 +31996,7 @@ bool AArch64TargetLowering::getPostIndexedAddressParts(
   if (IsVolatile)
     return false;
 
-  if (!getIndexedAddressParts(N, Op, Base, Offset, DAG))
+  if (!getIndexedAddressParts(N, Op, Base, Offset, DAG, ISD::POST_INC))
     return false;
   // Post-indexing updates the base, so it's not a valid transform
   // if that's not the same as the load's pointer.
@@ -33922,16 +33975,11 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
     return SDValue();
 
   EVT MaskVT = Store->getMask().getValueType();
-  EVT MaskExtVT = getPromotedVTForPredicate(MaskVT);
-  EVT MaskReduceVT = MaskExtVT.getScalarType();
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-
-  SDValue MaskExt =
-      DAG.getNode(ISD::ZERO_EXTEND, DL, MaskExtVT, Store->getMask());
-  SDValue CntActive =
-      DAG.getNode(ISD::VECREDUCE_ADD, DL, MaskReduceVT, MaskExt);
-  if (MaskReduceVT != MVT::i64)
-    CntActive = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CntActive);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
 
   SDValue CompressedValue =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
