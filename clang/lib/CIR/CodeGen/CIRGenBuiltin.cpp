@@ -545,10 +545,8 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   mlir::Value input = emitScalarExpr(e->getArg(0));
   mlir::Value amount = emitScalarExpr(e->getArg(1));
 
-  // TODO(cir): MSVC flavor bit rotate builtins use different types for input
-  // and amount, but cir.rotate requires them to have the same type. Cast amount
-  // to the type of input when necessary.
-  assert(!cir::MissingFeatures::msvcBuiltins());
+  if (amount.getType() != input.getType())
+    amount = builder.createIntCast(amount, input.getType());
 
   auto r = cir::RotateOp::create(builder, getLoc(e->getSourceRange()), input,
                                  amount, isRotateLeft);
@@ -1701,7 +1699,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_rotate_left_ui:
   case Builtin::BIstdc_rotate_left_ul:
   case Builtin::BIstdc_rotate_left_ull:
-    return errorBuiltinNYI(*this, e, builtinID);
+    return emitRotate(e, /*isRotateLeft=*/true);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
@@ -1714,11 +1712,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_rotate_right_ui:
   case Builtin::BIstdc_rotate_right_ul:
   case Builtin::BIstdc_rotate_right_ull:
-  case Builtin::BIstdc_memreverse8:
+    return emitRotate(e, /*isRotateLeft=*/false);
   case Builtin::BIstdc_memreverse8u8:
+    return RValue::get(emitScalarExpr(e->getArg(0)));
   case Builtin::BIstdc_memreverse8u16:
   case Builtin::BIstdc_memreverse8u32:
-  case Builtin::BIstdc_memreverse8u64:
+  case Builtin::BIstdc_memreverse8u64: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
+  }
+  case Builtin::BIstdc_memreverse8:
     return errorBuiltinNYI(*this, e, builtinID);
 
   case Builtin::BI__builtin_coro_id:
