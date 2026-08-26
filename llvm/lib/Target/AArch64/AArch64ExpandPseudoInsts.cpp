@@ -1488,10 +1488,83 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       // Small codemodel expand into ADRP + LDR.
       MachineFunction &MF = *MI.getParent()->getParent();
       DebugLoc DL = MI.getDebugLoc();
+
+      // A weak external reference may be resolved by the linker to a
+      // definition from another object file whose alignment cannot be
+      // relied upon (e.g. a COFF weak external default fallback), so do
+      // not fold the page offset into a scaled LDR. Expand into
+      // ADRP + ADD + LDR instead, which uses relocations that are valid
+      // regardless of the alignment of the resolved symbol.
+      //
+      // References that go through a pointer slot (.refptr. or __imp_)
+      // instead of the symbol itself keep the scaled form, as the slot is
+      // sufficiently aligned.
+      const bool IsWeakExternalCOFF =
+          MO1.isGlobal() && MO1.getGlobal()->hasExternalWeakLinkage() &&
+          MF.getTarget().getTargetTriple().isOSBinFormatCOFF() &&
+          !(Flags & (AArch64II::MO_COFFSTUB | AArch64II::MO_DLLIMPORT));
+
       MachineInstrBuilder MIB1 =
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg);
 
       MachineInstrBuilder MIB2;
+      if (IsWeakExternalCOFF) {
+        MachineInstrBuilder MIBAdd =
+            BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), DstReg)
+                .addReg(DstReg);
+        if (MO1.isGlobal())
+          MIBAdd.addGlobalAddress(MO1.getGlobal(), MO1.getOffset(),
+                                  Flags | AArch64II::MO_PAGEOFF |
+                                      AArch64II::MO_NC);
+        else if (MO1.isSymbol())
+          MIBAdd.addExternalSymbol(MO1.getSymbolName(),
+                                   Flags | AArch64II::MO_PAGEOFF |
+                                       AArch64II::MO_NC);
+        else {
+          assert(MO1.isCPI() &&
+                 "Only expect globals, externalsymbols, or constant pools");
+          MIBAdd.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
+                                      Flags | AArch64II::MO_PAGEOFF |
+                                          AArch64II::MO_NC);
+        }
+        MIBAdd.addImm(0);
+        if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
+          auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+          unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
+          MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui))
+                     .addDef(Reg32)
+                     .addReg(DstReg, RegState::Kill)
+                     .addReg(DstReg, RegState::Implicit);
+        } else {
+          Register DstReg = MI.getOperand(0).getReg();
+          MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui), DstReg)
+                     .addUse(DstReg, RegState::Kill);
+        }
+        // The offset operand of the LDR is a plain immediate now; the page
+        // offset is folded into the ADD above.
+        MIB2.addImm(0);
+        if (MO1.isGlobal())
+          MIB1.addGlobalAddress(MO1.getGlobal(), 0, Flags | AArch64II::MO_PAGE);
+        else if (MO1.isSymbol())
+          MIB1.addExternalSymbol(MO1.getSymbolName(),
+                                 Flags | AArch64II::MO_PAGE);
+        else {
+          assert(MO1.isCPI() &&
+                 "Only expect globals, externalsymbols, or constant pools");
+          MIB1.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
+                                    Flags | AArch64II::MO_PAGE);
+        }
+
+        // If the LOADgot instruction has a debug-instr-number, annotate the
+        // LDRWui instruction that it is expanded to with the same
+        // debug-instr-number to preserve debug information.
+        if (MI.peekDebugInstrNum() != 0)
+          MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
+        transferImpOps(MI, MIB1, MIB2);
+        MI.eraseFromParent();
+        return true;
+      }
+
       if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
         auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
         unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
