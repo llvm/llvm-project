@@ -150,7 +150,8 @@ bool OpenCLFunctionMetadataLowering::lower(mlir::NamedAttribute attr,
           [&](cir::OpenCLKernelArgMetadataAttr clArgMetadata) {
             if (!includeFunctionOnlyAttrs)
               return true;
-            return lower(clArgMetadata);
+            lower(clArgMetadata);
+            return true;
           })
       .Default(false);
 }
@@ -165,10 +166,9 @@ void OpenCLFunctionMetadataLowering::appendAttrs(
   }
 }
 
-bool OpenCLFunctionMetadataLowering::lower(
+void OpenCLFunctionMetadataLowering::lower(
     cir::OpenCLKernelArgMetadataAttr clArgMetadata) {
   convertOpenCLKernelArgMetadata(clArgMetadata, functionMetadata);
-  return true;
 }
 
 } // namespace direct

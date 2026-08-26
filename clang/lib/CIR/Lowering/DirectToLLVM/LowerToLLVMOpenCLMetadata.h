@@ -26,7 +26,7 @@ public:
   void appendAttrs(llvm::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
 private:
-  bool lower(cir::OpenCLKernelArgMetadataAttr clArgMetadata);
+  void lower(cir::OpenCLKernelArgMetadataAttr clArgMetadata);
 
   mlir::MLIRContext *ctx;
   llvm::SmallVector<mlir::Attribute> functionMetadata;
