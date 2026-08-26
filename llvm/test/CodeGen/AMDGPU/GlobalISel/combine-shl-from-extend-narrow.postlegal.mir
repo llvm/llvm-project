@@ -115,8 +115,8 @@ body:             |
     ; GFX6-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX6-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     ;
@@ -126,8 +126,8 @@ body:             |
     ; GFX9-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX9-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX9-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     %narrow:_(s32) = COPY $vgpr0
@@ -153,8 +153,8 @@ body:             |
     ; GFX6-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX6-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     ;
@@ -164,8 +164,8 @@ body:             |
     ; GFX9-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX9-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX9-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     %narrow:_(s32) = COPY $vgpr0
@@ -191,8 +191,8 @@ body:             |
     ; GFX6-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX6-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     ;
@@ -202,8 +202,8 @@ body:             |
     ; GFX9-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX9-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX9-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     %narrow:_(s32) = COPY $vgpr0
@@ -229,8 +229,8 @@ body:             |
     ; GFX6-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX6-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX6-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     ;
@@ -240,8 +240,8 @@ body:             |
     ; GFX9-NEXT: %narrow:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX9-NEXT: %masked:_(s32) = G_AND %narrow, %masklow30
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, [[C]](s32)
+    ; GFX9-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 2
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL %masked, %shiftamt(s32)
     ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
     %narrow:_(s32) = COPY $vgpr0
@@ -348,14 +348,14 @@ body:             |
     ; GFX6-LABEL: name: do_not_shl_s32_zero_by_16_from_zext_s16
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: %shl:_(s32) = G_CONSTANT i32 0
-    ; GFX6-NEXT: $vgpr0 = COPY %shl(s32)
+    ; GFX6-NEXT: %extend:_(s32) = G_CONSTANT i32 0
+    ; GFX6-NEXT: $vgpr0 = COPY %extend(s32)
     ;
     ; GFX9-LABEL: name: do_not_shl_s32_zero_by_16_from_zext_s16
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: %shl:_(s32) = G_CONSTANT i32 0
-    ; GFX9-NEXT: $vgpr0 = COPY %shl(s32)
+    ; GFX9-NEXT: %extend:_(s32) = G_CONSTANT i32 0
+    ; GFX9-NEXT: $vgpr0 = COPY %extend(s32)
     %zero:_(s16) = G_CONSTANT i16 0
     %extend:_(s32) = G_ZEXT %zero:_(s16)
     %shiftamt:_(s16) = G_CONSTANT i16 16

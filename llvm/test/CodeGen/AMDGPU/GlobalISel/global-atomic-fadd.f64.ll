@@ -20,8 +20,8 @@ define amdgpu_ps void @global_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX90A-NEXT: bb.2.atomicrmw.start:
   ; GFX90A-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI %23, %bb.2, [[S_MOV_B64_]], %bb.1
-  ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_LOAD_DWORDX2_]], %bb.1, %21, %bb.2
+  ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI %24, %bb.2, [[S_MOV_B64_]], %bb.1
+  ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_LOAD_DWORDX2_]], %bb.1, %22, %bb.2
   ; GFX90A-NEXT:   [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, [[PHI1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[V_ADD_F64_e64_]], %subreg.sub0_sub1, [[PHI1]], %subreg.sub2_sub3
   ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (i64) on %ir.ptr, addrspace 1)
@@ -68,8 +68,8 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT: bb.2.atomicrmw.start:
   ; GFX90A-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI %27, %bb.2, [[S_MOV_B64_]], %bb.1
-  ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_LOAD_DWORDX2_]], %bb.1, %25, %bb.2
+  ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:sreg_64_xexec = PHI %28, %bb.2, [[S_MOV_B64_]], %bb.1
+  ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vreg_64_align2 = PHI [[GLOBAL_LOAD_DWORDX2_]], %bb.1, %26, %bb.2
   ; GFX90A-NEXT:   [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, [[PHI1]], 0, [[REG_SEQUENCE1]], 0, 0, implicit $mode, implicit $exec
   ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[V_ADD_F64_e64_]], %subreg.sub0_sub1, [[PHI1]], %subreg.sub2_sub3
   ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (i64) on %ir.ptr, addrspace 1)
