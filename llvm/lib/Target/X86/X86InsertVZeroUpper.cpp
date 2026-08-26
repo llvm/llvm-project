@@ -170,8 +170,7 @@ static bool callHasRegMask(MachineInstr &MI) {
 
 /// Insert a vzeroupper instruction before I.
 static bool insertVZeroUpper(MachineBasicBlock::iterator I,
-                             MachineBasicBlock &MBB,
-                             const TargetInstrInfo *TII,
+                             MachineBasicBlock &MBB, const TargetInstrInfo *TII,
                              const TargetRegisterInfo *TRI) {
   MachineInstrBuilder MIB =
       BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
@@ -334,7 +333,7 @@ static bool insertVZeroUpper(MachineFunction &MF) {
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
     EverMadeChange |= processBasicBlock(MBB, BlockStates, DirtySuccessors,
-                                          IsX86INTR, TII, TRI);
+                                        IsX86INTR, TII, TRI);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
