@@ -383,9 +383,9 @@ void MappingTraits<WasmYAML::CodeMetadataItemEntry<WasmYAML::BranchHint>>::
 void ScalarEnumerationTraits<WasmYAML::BranchHint>::enumeration(
     IO &IO, WasmYAML::BranchHint &BranchHint) {
   IO.enumCase(BranchHint, "UNLIKELY",
-              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::UNLIKELY));
+              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::Unlikely));
   IO.enumCase(BranchHint, "LIKELY",
-              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::LIKELY));
+              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::Likely));
 }
 
 void MappingTraits<WasmYAML::SegmentInfo>::mapping(

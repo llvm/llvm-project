@@ -310,8 +310,6 @@ struct BranchHintSection : CodeMetadataSection<BranchHint> {
     auto C = dyn_cast<CustomSection>(S);
     return C && C->Name == "metadata.code.branch_hint";
   }
-
-  std::vector<CodeMetadataFuncEntry<BranchHint>> Entries;
 };
 
 struct TypeSection : Section {

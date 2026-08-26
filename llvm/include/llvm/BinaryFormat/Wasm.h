@@ -540,8 +540,8 @@ template <typename T> struct WasmCodeMetadataFuncEntry {
 };
 
 enum class WasmCodeMetadataBranchHint : uint8_t {
-  UNLIKELY = 0x0,
-  LIKELY = 0x1,
+  Unlikely = 0x0,
+  Likely = 0x1,
 };
 
 using WasmFunctionBranchHints =

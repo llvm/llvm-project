@@ -1041,8 +1041,8 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseCodeMetadataSection(StringRef Name,
                                                ReadContext &Ctx) {
-  // "code_metadata." prefix length = 14
-  const auto HintTypeName = Name.substr(14);
+  StringRef HintTypeName = Name;
+  HintTypeName.consume_front("metadata.code.");
   if (HintTypeName == "branch_hint")
     return parseBranchHintSection(Ctx);
   dbgs() << "invalid code metadata section: " << Name
@@ -1061,7 +1061,7 @@ Error WasmObjectFile::parseBranchHintSection(ReadContext &Ctx) {
       wasm::WasmBranchHint Hint;
       Hint.Offset = readVaruint32(Ctx);
       Hint.Size = readVaruint32(Ctx);
-      uint8_t Data = readUint8(Ctx);
+      uint32_t Data = readVaruint32(Ctx);
       if (Data > 0x1) {
         dbgs() << "invalid branch hint data; hint out of range [0; 1]; "
                   "ignoring metadata.code.branch_hint section.\n";

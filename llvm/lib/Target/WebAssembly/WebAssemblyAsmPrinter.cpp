@@ -752,8 +752,8 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
 // Try to infer branch target for a BR_IF instruction after MBB targets were
 // stackified by `WebAssemblyCFGStackify` using simple heuristics to avoid
 // having to simulate block-stack.
-const MachineBasicBlock *inferBranchTarget(const MachineInstr *MI,
-                                           const MachineBasicBlock *MBB) {
+static const MachineBasicBlock *
+inferBranchTarget(const MachineInstr *MI, const MachineBasicBlock *MBB) {
   // Since we need to guess branch targets based on MBB successor order,
   // we need to make sure that the BR_IF is the last terminator to exclude
   // complicated edge cases.
@@ -824,10 +824,10 @@ void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
   const uint32_t D = BranchProbability::getOne().getDenominator();
   uint8_t HintValue;
   if (Prob > BranchProbability::getRaw(ThresholdProbHigh * D))
-    HintValue = static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::LIKELY);
+    HintValue = static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::Likely);
   else if (Prob <= BranchProbability::getRaw(ThresholdProbLow * D))
     HintValue =
-        static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::UNLIKELY);
+        static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::Unlikely);
   else
     return; // Don't emit branch hint between thresholds
 
