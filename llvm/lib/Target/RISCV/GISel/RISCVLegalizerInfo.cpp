@@ -542,6 +542,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 
+  // On RV64 the 64-bit counter CSRs (cycle/time) are read directly. On RV32
+  // they are custom-legally lowered to a re-read-the-high-half loop (see
+  // legalizeReadCounter).
+  getActionDefinitionsBuilder({G_READCYCLECOUNTER, G_READSTEADYCOUNTER})
+      .legalFor(ST.is64Bit(), {s64})
+      .customFor(!ST.is64Bit(), {s64});
+
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
@@ -886,6 +893,103 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
   MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeReadCounter(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert((MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER ||
+          MI.getOpcode() == TargetOpcode::G_READSTEADYCOUNTER) &&
+         "Unexpected opcode");
+  assert(!STI.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
+                           "has custom type legalization on riscv32");
+
+  // On RV32 a 64-bit counter CSR must be read as two 32-bit halves. Because
+  // the count may wrap between the two reads, re-read the high half and loop
+  // until the two high reads agree.
+  int64_t LoCounter, HiCounter;
+  if (MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER) {
+    LoCounter = RISCVSysReg::cycle;
+    HiCounter = RISCVSysReg::cycleh;
+  } else {
+    LoCounter = RISCVSysReg::time;
+    HiCounter = RISCVSysReg::timeh;
+  }
+
+  MachineBasicBlock *BB = MI.getParent();
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // Split BB into an entry that falls through into a loop block, and a done
+  // block that receives the remainder of BB and its original successors.
+  MachineFunction::iterator It = std::next(BB->getIterator());
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, LoopMBB);
+  MF.insert(It, DoneMBB);
+
+  // Splice the instructions after the readcyclecounter into DoneMBB, notifying
+  // the observer about each moved instruction so CSEInfo stays consistent.
+  for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
+                                   E = BB->end();
+       I != E; ++I)
+    Observer.changingInstr(*I);
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  for (MachineInstr &MovedMI : DoneMBB->instrs())
+    Observer.changedInstr(MovedMI);
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(LoopMBB);
+
+  LLT S32 = LLT::scalar(32);
+  // Generic vregs carry the s32 type for G_MERGE_VALUES below, but are also
+  // constrained to GPR so the target CSRRS/BNE instructions satisfy the
+  // verifier's register-class constraints.
+  auto CreateGPR = [&]() {
+    Register R = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegClass(R, &RISCV::GPRRegClass);
+    return R;
+  };
+  Register LoReg = CreateGPR();
+  Register HiReg = CreateGPR();
+  Register ReadAgainReg = CreateGPR();
+
+  // read:
+  //   csrrs HiReg, counterh    # high word
+  //   csrrs LoReg, counter     # low word
+  //   csrrs ReadAgainReg, counterh
+  //   bne   HiReg, ReadAgainReg, read
+  // Emit the target instructions directly with BuildMI.
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), LoReg)
+      .addImm(LoCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), ReadAgainReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+
+  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+      .addReg(HiReg)
+      .addReg(ReadAgainReg)
+      .addMBB(LoopMBB);
+
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(DoneMBB);
+
+  // Re-pair the two halves into the 64-bit result.
+  Register DstReg = MI.getOperand(0).getReg();
+  Observer.erasingInstr(MI);
+  MI.eraseFromParent();
+
+  MIRBuilder.setInsertPt(*DoneMBB, DoneMBB->begin());
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildMergeValues(DstReg, {LoReg, HiReg});
   return true;
 }
 
@@ -1601,6 +1705,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_READCYCLECOUNTER:
+  case TargetOpcode::G_READSTEADYCOUNTER:
+    return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
