@@ -20,17 +20,57 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
+#define DEBUG_TYPE "vplan-predicator"
+
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
 namespace {
+class CompactRPOT {
+  SmallVector<VPBlockBase *> Blocks;
+  DenseMap<const VPBlockBase *, unsigned> BlockIndex;
+
+  template <typename rpo_iterator>
+  void scheduleDomRegion(VPBlockBase *VPBB, rpo_iterator It, rpo_iterator End,
+                         unsigned &NextIndex, const VPDominatorTree &VPDT) {
+    BlockIndex[VPBB] = NextIndex++;
+    for (; It != End; ++It) {
+      auto *DTNode = VPDT.getNode(*It);
+      if (DTNode->getIDom()->getBlock() != VPBB)
+        continue;
+      scheduleDomRegion(*It, It, End, NextIndex, VPDT);
+    }
+  }
+
+public:
+  CompactRPOT(VPBasicBlock *Header, const VPDominatorTree &VPDT) {
+    copy(post_order(VPBlockShallowTraversalWrapper<VPBlockBase *>{Header}),
+         std::back_inserter(Blocks));
+    unsigned Index = 0;
+    // Blocks are in post-order (not reversed), so use reverse iterators while
+    // compacting.
+    scheduleDomRegion(*Blocks.rbegin(), Blocks.rbegin(), Blocks.rend(), Index,
+                      VPDT);
+    sort(Blocks, [&](VPBlockBase *A, VPBlockBase *B) {
+      return BlockIndex[A] < BlockIndex[B];
+    });
+
+    LLVM_DEBUG({
+      dbgs() << "Compact RPOT: ";
+      for (VPBlockBase *VPBB : Blocks) {
+        dbgs() << " " << VPBB->getName();
+      }
+      dbgs() << "\n";
+    });
+  }
+
+  auto begin() const { return Blocks.begin(); }
+  auto end() const { return Blocks.end(); }
+  unsigned getIndex(const VPBlockBase *BB) const { return BlockIndex.at(BB); }
+};
+
 class VPPredicator {
   VPlan &Plan;
-
-  // Scan the body of the loop in a topological order to visit each basic
-  // block after having visited its predecessor basic blocks.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT;
-  DenseMap<const VPBlockBase *, unsigned> BlockIndex;
 
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
@@ -40,6 +80,10 @@ class VPPredicator {
 
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
+
+  // Scan the body of the loop in a topological order to visit each basic
+  // block after having visited its predecessor basic blocks.
+  CompactRPOT BlocksInCompactRPOTOrder;
 
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
@@ -109,12 +153,9 @@ class VPPredicator {
 
 public:
   VPPredicator(VPlan &Plan)
-      : Plan(Plan), RPOT(Plan.getVectorLoopRegion()->getEntryBasicBlock()),
-        VPDT(Plan), VPPDT(Plan) {
-    for (auto [Idx, BB] : enumerate(RPOT)) {
-      BlockIndex[BB] = Idx;
-    }
-  }
+      : Plan(Plan), VPDT(Plan), VPPDT(Plan),
+        BlocksInCompactRPOTOrder(
+            Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -331,7 +372,8 @@ VPPredicator::computeBlendTerms(VPPhi *Phi) const {
     Terms.emplace_back(V, const_cast<VPBasicBlock *>(cast<VPBasicBlock>(VPBB)));
 
   sort(Terms, [this](const BlendTermTy &L, const BlendTermTy &R) {
-    return BlockIndex.lookup(L.second) < BlockIndex.lookup(R.second);
+    return BlocksInCompactRPOTOrder.getIndex(L.second) <
+           BlocksInCompactRPOTOrder.getIndex(R.second);
   });
   assert(all_of(zip(Terms, drop_begin(Terms)),
                 [](const auto &Pair) {
@@ -420,7 +462,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
 void VPPredicator::run() {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPBlockBase *VPB : RPOT) {
+  for (VPBlockBase *VPB : BlocksInCompactRPOTOrder) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
@@ -440,13 +482,14 @@ void VPPredicator::run() {
     }
   }
 
-  for (VPBlockBase *VPBB : reverse(RPOT))
+  for (VPBlockBase *VPBB : reverse(BlocksInCompactRPOTOrder))
     if (VPBB != Header)
       convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(BlocksInCompactRPOTOrder)) {
     auto Successors = to_vector(VPBB->getSuccessors());
     if (Successors.size() > 1)
       VPBB->getTerminator()->eraseFromParent();
