@@ -11,7 +11,6 @@
 #define _LIBCPP__STATIC_PACKED_BOUNDED_ITER_H
 
 #include <__assert>
-#include <__bit/bit_cast.h>
 #include <__bit/countr.h>
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
@@ -77,7 +76,7 @@ private:
     if consteval {
       return __ptr_;
     } else {
-      return std::bit_cast<pointer>(__data_ & __PtrMask) + __count();
+      return reinterpret_cast<pointer>(__data_ & __PtrMask) + __count();
     }
   }
 
