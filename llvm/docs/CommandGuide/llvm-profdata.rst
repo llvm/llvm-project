@@ -387,7 +387,8 @@ OPTIONS
 .. option:: --show-composite-info-only=[true|false]
 
  Show the per-function composite block structure. This option is only meaningful
- for sample-based profiles in composite extbinary format.
+ for sample-based profiles in the composite extbinary format, introduced in
+ version 105.
 
 .. option:: --debug-info=<path>
 

@@ -1,6 +1,6 @@
 ; Verify composite inspection for known, nested, unknown, and empty blocks, and
 ; verify that requesting it for a legacy profile produces a warning.
-; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t.composite
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --sample-profile-format-version=105 --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t.composite
 ; RUN: llvm-profdata show --sample --show-composite-info-only %t.composite | FileCheck %s --check-prefix=KNOWN
 
 ; KNOWN: Function: baz

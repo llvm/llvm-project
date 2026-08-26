@@ -772,9 +772,8 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterExtBinary::configureCompositeProfile(
-    const SampleProfileMap &ProfileMap) {
-  WriteCompositeProf = ExtBinaryCompositeProf || ProfileMap.hasNonLBRProfile();
+void SampleProfileWriterExtBinary::configureCompositeProfile() {
+  WriteCompositeProf = ExtBinaryCompositeProf;
   ProfSection = WriteCompositeProf ? SecCompositeProfile : SecLBRProfile;
   FuncOffsetSection =
       WriteCompositeProf ? SecCompositeFuncOffsetTable : SecFuncOffsetTable;
@@ -793,9 +792,9 @@ void SampleProfileWriterExtBinary::configureCompositeProfile(
 
 std::error_code SampleProfileWriterExtBinary::writeSections(
     const SampleProfileMap &ProfileMap) {
-  // Preserve section configuration at the point where the selected layout is
-  // consumed, after the base writer has emitted the validated file version.
-  configureCompositeProfile(ProfileMap);
+  // Rewrite the final configured layout immediately before its section types
+  // are consumed. Earlier layout configuration may replace SectionHdrLayout.
+  configureCompositeProfile();
 
   std::error_code EC;
   if (SecLayout == DefaultLayout)
@@ -1330,13 +1329,16 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
   if (Format != SPF_Ext_Binary)
     Writer->setFormatVersion(DefaultVersion);
   else if (formatVersionIsSupported(RequestedVersion)) {
-    // A composite request selects its required format version unless the user
-    // explicitly requested an incompatible legacy version.
+    // Composite output defaults to its first compatible format version.
+    // Preserve a compatible version explicitly selected by the user.
     if (ExtBinaryCompositeProf) {
-      if (RequestedVersion.getNumOccurrences() != 0 &&
-          RequestedVersion < CompositeProfileVersion)
-        return sampleprof_error::unsupported_version;
-      Writer->setFormatVersion(CompositeProfileVersion);
+      if (RequestedVersion.getNumOccurrences() == 0) {
+        Writer->setFormatVersion(CompositeProfileVersion);
+      } else {
+        if (RequestedVersion < CompositeProfileVersion)
+          return sampleprof_error::unsupported_version;
+        Writer->setFormatVersion(RequestedVersion);
+      }
     } else {
       Writer->setFormatVersion(RequestedVersion);
     }

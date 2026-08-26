@@ -1,6 +1,6 @@
 ; Verify that composite payload readers cannot cross declared block boundaries
 ; and that inspection still reports an invalid unknown block size.
-; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.valid
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --sample-profile-format-version=105 --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.valid
 
 ; RUN: %python %S/Inputs/modify-composite-profile.py %t.valid %t.undersized undersized
 ; RUN: not llvm-profdata merge --sample %t.undersized -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED

@@ -152,12 +152,12 @@ enum SecType {
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
   SecCSNameTable = 6,
-  // Substitution to SecFuncOffsetTable when we have non-LBR profile types
+  // Function offset table used by the composite profile representation.
   SecCompositeFuncOffsetTable = 7,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
   SecLBRProfile = SecFuncProfileFirst,
-  // Substitution to SecLBRProfile when we have non-LBR profile types
+  // Function profile section used by the composite profile representation.
   SecCompositeProfile = 33
 };
 
@@ -1430,12 +1430,6 @@ public:
     return !(*this == Other);
   }
 
-  bool hasNonLBRSamples() const {
-    // Currently just a stub - should be implemented when
-    // first non-LBR profile is encountered.
-    return false;
-  }
-
 private:
   /// CFG hash value for the function.
   uint64_t FunctionHash = 0;
@@ -1561,14 +1555,6 @@ public:
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
 
   iterator erase(iterator It) { return base_type::erase(It); }
-
-  bool hasNonLBRProfile() const {
-    for (const auto &[Context, FuncSamples] : *this) {
-      if (FuncSamples.hasNonLBRSamples())
-        return true;
-    }
-    return false;
-  }
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;

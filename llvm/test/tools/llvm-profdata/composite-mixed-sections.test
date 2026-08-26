@@ -1,13 +1,13 @@
 ; Verify that an empty composite section is skipped without preventing a
 ; following legacy profile section from being read.
-; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.legacy
+; RUN: llvm-profdata merge --sample --sample-profile-format-version=105 --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.legacy
 ; RUN: %python %S/Inputs/modify-composite-profile.py %t.legacy %t.empty-mixed prepend-empty-composite
 ; RUN: llvm-profdata merge --sample --text %t.empty-mixed -o - | FileCheck %s --check-prefix=PROFILE
 
 ; Verify that the temporary decoding mode is also restored after reading a
 ; nonempty composite section. Both sections contain the same profiles, so every
 ; counter is expected to be accumulated exactly twice.
-; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.composite
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --sample-profile-format-version=105 --extbinary %S/Inputs/sample-composite-empty-lbr.proftext -o %t.composite
 ; RUN: %python %S/Inputs/modify-composite-profile.py %t.legacy %t.nonempty-mixed prepend-composite --donor %t.composite
 ; RUN: llvm-profdata merge --sample --text %t.nonempty-mixed -o - | FileCheck %s --check-prefix=ACCUMULATED
 
@@ -16,7 +16,7 @@
 
 ; Verify that an empty composite section still makes composite inspection
 ; applicable, without producing the legacy-profile warning.
-; RUN: llvm-profdata show --sample --show-composite-info-only %t.empty-mixed 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-WARNING
+; RUN: llvm-profdata show --sample --show-composite-info-only %t.empty-mixed 2>&1 | count 0
 
 ; PROFILE: top:42:7
 ; PROFILE-NEXT: caller:21:3
@@ -26,4 +26,3 @@
 ; ACCUMULATED-NEXT:  1: callee:22
 ; SECTIONS: CompositeProfileSection
 ; SECTIONS: LBRProfileSection
-; NO-WARNING-NOT: only supported for composite sample profiles

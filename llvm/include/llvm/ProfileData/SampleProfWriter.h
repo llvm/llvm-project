@@ -475,7 +475,7 @@ private:
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
   /// Select the profile representation and update its section layout as needed.
-  void configureCompositeProfile(const SampleProfileMap &ProfileMap);
+  void configureCompositeProfile();
 
   std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
