@@ -30234,4 +30234,9 @@
 {"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
 {"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
 {"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
+
+// Conversion operators with substitutions that have template args
+// (https://github.com/llvm/llvm-project/issues/109130)
+{"_ZN3foocvNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEv", "foo::operator std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>()"},
+{"_ZN1XcvSt6vectorIiSaIiEEEv", "X::operator std::vector<int, std::allocator<int>>()"},
     // clang-format on
