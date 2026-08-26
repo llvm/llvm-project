@@ -125,6 +125,8 @@ add_unittest_framework_library(
 set(libc_hermetic_test_support_srcs HermeticTestUtils.cpp)
 if(LIBC_TARGET_OS_IS_BAREMETAL AND LIBC_TARGET_ARCHITECTURE_IS_ARM)
   list(APPEND libc_hermetic_test_support_srcs ArmBaremetalTestUtils.cpp)
+endif()
+
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
