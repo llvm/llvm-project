@@ -368,6 +368,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
       if (!SeenFirstLoadableSegment) {
+        // Derive the preferred address corresponding to file offset zero
+        // without assuming a page size.
         FirstLoadableAddress = Phdr.p_vaddr - Phdr.p_offset;
         SeenFirstLoadableSegment = true;
       }
