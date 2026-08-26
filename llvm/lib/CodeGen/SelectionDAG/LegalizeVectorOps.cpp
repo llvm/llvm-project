@@ -27,6 +27,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -152,7 +153,8 @@ class VectorLegalizer {
   void ExpandStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandREM(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
-  bool tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
+  bool tryExpandVecMathCall(SDNode *Node,
+                            function_ref<RTLIB::Libcall(EVT)> GetLibcall,
                             SmallVectorImpl<SDValue> &Results);
 
   void UnrollStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
@@ -1244,13 +1246,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
-  case ISD::FREM: {
-    RTLIB::Libcall LC = RTLIB::getREM(Node->getValueType(0));
-    if (tryExpandVecMathCall(Node, LC, Results))
+  case ISD::FREM:
+    if (tryExpandVecMathCall(Node, RTLIB::getREM, Results))
       return;
-
     break;
-  }
   case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
     EVT VT = Node->getValueType(0);
@@ -1265,24 +1264,20 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     // scalarizing.
     break;
   }
-  case ISD::FPOW: {
-    RTLIB::Libcall LC = RTLIB::getPOW(Node->getValueType(0));
-    if (tryExpandVecMathCall(Node, LC, Results))
+  case ISD::FPOW:
+    if (tryExpandVecMathCall(Node, RTLIB::getPOW, Results))
       return;
 
     // TODO: Try to see if there's a narrower call available to use before
     // scalarizing.
     break;
-  }
-  case ISD::FCBRT: {
-    RTLIB::Libcall LC = RTLIB::getCBRT(Node->getValueType(0));
-    if (tryExpandVecMathCall(Node, LC, Results))
+  case ISD::FCBRT:
+    if (tryExpandVecMathCall(Node, RTLIB::getCBRT, Results))
       return;
 
     // TODO: Try to see if there's a narrower call available to use before
     // scalarizing.
     break;
-  }
   case ISD::FMODF: {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = RTLIB::getMODF(VT);
@@ -2147,24 +2142,33 @@ void VectorLegalizer::ExpandREM(SDNode *Node,
 }
 
 // Try to expand libm nodes into vector math routine calls. Callers provide the
-// LibFunc equivalent of the passed in Node, which is used to lookup mappings
-// within TargetLibraryInfo. The only mappings considered are those where the
-// result and all operands are the same vector type. While predicated nodes are
-// not supported, we will emit calls to masked routines by passing in an all
-// true mask.
-bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
-                                           SmallVectorImpl<SDValue> &Results) {
+// RTLIB::get<OP>(EVT) selector of the node's libcall family, which is used to
+// look up mappings within RuntimeLibcallsInfo. The only mappings considered are
+// those where the result and all operands are the same vector type. While
+// predicated nodes are not supported, we will emit calls to masked routines by
+// passing in a mask that is true for the lanes computed by the node.
+bool VectorLegalizer::tryExpandVecMathCall(
+    SDNode *Node, function_ref<RTLIB::Libcall(EVT)> GetLibcall,
+    SmallVectorImpl<SDValue> &Results) {
   // Chain must be propagated but currently strict fp operations are down
   // converted to their none strict counterpart.
   assert(!Node->isStrictFPOpcode() && "Unexpected strict fp operation!");
 
-  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
-  if (LCImpl == RTLIB::Unsupported)
-    return false;
-
   EVT VT = Node->getValueType(0);
-  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
   LLVMContext &Ctx = *DAG.getContext();
+  const LibcallLoweringInfo &Libcalls = DAG.getLibcalls();
+
+  // Try to widen the vector type when no libcall is available at that width.
+  EVT CallVT = VT;
+  RTLIB::LibcallImpl LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+  while (LCImpl == RTLIB::Unsupported) {
+    CallVT = CallVT.getDoubleNumVectorElementsVT(Ctx);
+    if (!TLI.isTypeLegal(CallVT))
+      return false;
+    LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+  }
+
+  const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
 
   auto [FuncTy, FuncAttrs] = RTLCI.getFunctionTy(
       Ctx, DAG.getSubtarget().getTargetTriple(), DAG.getDataLayout(), LCImpl);
@@ -2176,7 +2180,7 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
 
   // Sanity check just in case function has unexpected parameters.
   assert(FuncTy->getNumParams() == Node->getNumOperands() + HasMaskArg &&
-         EVT::getEVT(FuncTy->getReturnType(), true) == VT &&
+         EVT::getEVT(FuncTy->getReturnType(), true) == CallVT &&
          "mismatch in value type and call signature type");
 
   for (unsigned I = 0, E = FuncTy->getNumParams(); I != E; ++I) {
@@ -2185,12 +2189,23 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
     if (HasMaskArg && I == E - 1) {
       assert(cast<VectorType>(ParamTy)->getElementType()->isIntegerTy(1) &&
              "unexpected vector mask type");
-      EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
-      Args.emplace_back(DAG.getBoolConstant(true, DL, MaskVT, VT),
-                        MaskVT.getTypeForEVT(Ctx));
-
+      EVT MaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CallVT);
+      SDValue Mask;
+      if (CallVT == VT) {
+        Mask = DAG.getBoolConstant(true, DL, MaskVT, CallVT);
+      } else {
+        // Only the lanes holding the node's elements need to be active.
+        EVT SubMaskVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, VT);
+        Mask = DAG.getInsertSubvector(
+            DL, DAG.getBoolConstant(false, DL, MaskVT, CallVT),
+            DAG.getBoolConstant(true, DL, SubMaskVT, VT), 0);
+      }
+      Args.emplace_back(Mask, MaskVT.getTypeForEVT(Ctx));
     } else {
       SDValue Op = Node->getOperand(I);
+      assert(Op.getValueType() == VT && "mismatch in vector types");
+      if (CallVT != VT)
+        Op = DAG.getInsertSubvector(DL, DAG.getPOISON(CallVT), Op, 0);
       assert(Op.getValueType() == EVT::getEVT(ParamTy, true) &&
              "mismatch in value type and call argument type");
       Args.emplace_back(Op, ParamTy);
@@ -2208,7 +2223,10 @@ bool VectorLegalizer::tryExpandVecMathCall(SDNode *Node, RTLIB::Libcall LC,
       .setLibCallee(CC, FuncTy->getReturnType(), Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-  Results.push_back(CallResult.first);
+  SDValue Result = CallResult.first;
+  if (CallVT != VT)
+    Result = DAG.getExtractSubvector(DL, VT, Result, 0);
+  Results.push_back(Result);
   return true;
 }
 
