@@ -992,9 +992,18 @@ TEST(DWARFExpression, DW_OP_div) {
 }
 
 TEST(DWARFExpression, DW_OP_mod) {
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-7),
-                                 DW_OP_const1s, 3, DW_OP_mod}),
-                       ExpectScalar(static_cast<int32_t>(-1)));
+  // DW_OP_mod uses unsigned remainder, so on a 64-bit target all-one bits
+  // modulo 2 is 1, not signed -1 % 2 == -1.
+  uint8_t expr[] = {DW_OP_consts, 0x7f,      DW_OP_consts,
+                    0x02,         DW_OP_mod, DW_OP_stack_value};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size=*/8);
+  auto result = DWARFExpression::Evaluate(
+      /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+      /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(64, 1, /*sign=*/false));
+  EXPECT_FALSE(result->GetScalar().IsSigned());
 }
 
 TEST(DWARFExpression, DW_OP_minus) {

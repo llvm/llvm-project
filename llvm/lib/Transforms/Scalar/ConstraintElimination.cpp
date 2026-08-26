@@ -1141,8 +1141,8 @@ void State::addInfoForInductions(BasicBlock &BB) {
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
 
   // If we looked through `PN + C`, only derive facts when that add is
-  // really the induction's post-increment.
-  if (IncStep && (*IncStep != *StepOffset || StepOffset->isNegative()))
+  // really the induction's post-increment or post-decrement.
+  if (IncStep && *IncStep != *StepOffset)
     return;
 
   MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
@@ -1154,23 +1154,28 @@ void State::addInfoForInductions(BasicBlock &BB) {
       return;
 
     // AR may wrap.
-    // Add StartValue >= PN conditional on B <= StartValue which guarantees that
-    // the loop exits before wrapping with a step of -1.
+    // The loop exits once the compared value reaches B, that is at PN == B when
+    // comparing the phi, and at PN == B + 1 for a post-decrement. Use
+    // non-strict predicate for the former, and a strict one for the latter to
+    // ensure the loop exits before wrapping.
+    CmpInst::Predicate UPrecond =
+        IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+    ConditionTy BBeforeStartUnsigned = {UPrecond, B, StartValue};
+    ConditionTy BBeforeStartSigned = {ICmpInst::getSignedPredicate(UPrecond), B,
+                                      StartValue};
+
+    // AR may wrap, so both facts are conditional on B being below StartValue.
+    // Add StartValue >= PN, which holds as the loop exits before wrapping.
     WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, StartValue, PN,
-        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+        DTN, CmpInst::ICMP_UGE, StartValue, PN, BBeforeStartUnsigned));
     if (!(Info.Decreasing && Info.Signed))
       WorkList.push_back(FactOrCheck::getConditionFact(
-          DTN, CmpInst::ICMP_SGE, StartValue, PN,
-          ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
-    // Add PN > B conditional on B <= StartValue which guarantees that the loop
-    // exits when reaching B with a step of -1.
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGT, PN, B,
-        ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGT, PN, B,
-        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
+          DTN, CmpInst::ICMP_SGE, StartValue, PN, BBeforeStartSigned));
+    // Add PN > B, which holds as the loop exits when reaching B.
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGT, PN,
+                                                     B, BBeforeStartUnsigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGT, PN,
+                                                     B, BBeforeStartSigned));
     return;
   }
 

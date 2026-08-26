@@ -81,7 +81,7 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
   case M68k::MOVI8di:
     return TII->ExpandMOVI(MIB, MVT::i8);
-  case M68k::MOVI16ri:
+  case M68k::MOVI16di:
     return TII->ExpandMOVI(MIB, MVT::i16);
   case M68k::MOVI32ri:
     return TII->ExpandMOVI(MIB, MVT::i32);
