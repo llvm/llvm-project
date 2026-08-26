@@ -290,7 +290,6 @@ define void @call_vec_double_vararg_straddle(<2 x double> %v) {
 ; CHECK-NEXT:    lgb 0,
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
-; CHECK-NEXT:    * kill: def $r2l killed $r2l def $r2d
 ; CHECK-NEXT:    lghr 2,2
 ; CHECK-NEXT:    lgfr 1,1
 ; CHECK-NEXT:    stg 0,2200(4)

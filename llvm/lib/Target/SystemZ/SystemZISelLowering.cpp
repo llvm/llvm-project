@@ -2155,12 +2155,11 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       }
     } else {
       SDValue Val = convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue);
-      // For i8/i16 formals under XPLINK64, CC_XPLINK_Promote_i32 either keeps
-      // LocVT=i32 (register arg) or uses LocVT=i64 (stack arg, 8-byte slot).
-      // Either way convertLocVTToValVT yields ValVT=i32 (legalized).  Truncate
-      // down to the true original i8/i16 so the DAG folds the truncate+extend
-      // into a narrow instruction (LGBR/LGHR/LGB/LGH etc).
-      // Only for XPLINK64: ELF receives i8/i16 already correctly widened.
+      // For i8/i16 formals under XPLINK64, LocVT=i64/AExt means the DAG
+      // would otherwise select LGFR (sign-extend from bit 31).  Truncate
+      // down to the true original i8/i16 so the subsequent sign/zero-extend
+      // to i64 selects the correct narrow instruction (LGBR/LGHR/LLGCR/LLGHR
+      // for register args, LGB/LGH/LLGC/LLGH for stack args).
       // Guard with isSimple() since non-simple EVTs must not reach
       // getSimpleVT().
       if (Subtarget.isTargetXPLINK64() && Ins[I].ArgVT.isSimple()) {
