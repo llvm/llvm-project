@@ -18,22 +18,36 @@
 #include <cassert>
 #include <type_traits>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 struct X {};
 
-int main(int, char**)
-{
-    using H = std::hash<X>;
-    static_assert(!std::is_default_constructible<H>::value, "");
-    static_assert(!std::is_copy_constructible<H>::value, "");
-    static_assert(!std::is_move_constructible<H>::value, "");
-    static_assert(!std::is_copy_assignable<H>::value, "");
-    static_assert(!std::is_move_assignable<H>::value, "");
+template <template <typename> typename THash >
+TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+  using H = THash<X>;
+
+  static_assert(!std::is_default_constructible<H>::value, "");
+  static_assert(!std::is_copy_constructible<H>::value, "");
+  static_assert(!std::is_move_constructible<H>::value, "");
+  static_assert(!std::is_copy_assignable<H>::value, "");
+  static_assert(!std::is_move_assignable<H>::value, "");
 #if TEST_STD_VER > 14
     static_assert(!std::is_invocable<H, X&>::value, "");
     static_assert(!std::is_invocable<H, X const&>::value, "");
 #endif
+
+    return true;
+}
+
+int main(int, char**) {
+  assert(test_with_hash<std::hash>());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_with_hash<support::constexpr_hash>());
+#endif
+  // using H = std::hash<X>;
+  // using H = support::constexpr_hash<X>;
 
   return 0;
 }

@@ -11,48 +11,41 @@ namespace support {
 
 #if TEST_STD_VER >= 26
 
-// TODO: use _ prefix
-template <typename _Tp>
-concept EnabledForHash =
-    requires(_Tp t) {
-      { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
-    }
-
-    // we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
-    //  note: bit_cast from a pointer type is not allowed in a constant expression
-    // read of member '__a' of union with active member '__t' is not allowed in a constant expression
-    /*
-
-    union {
-      _Tp __t;
-      size_t __a;
-    } __u;
-    __u.__a = 0;
-    __u.__t = __v;
-    return __u.__a;
-*/
-    and not std::is_pointer_v<_Tp>;
-
-template <typename _Tp>
-concept DisabledForHash = not EnabledForHash<_Tp>;
-
 // TODO: document the constraints of using this at runtime OR make it consteval only
 template <typename _Tp>
 struct constexpr_hash;
 
-template <DisabledForHash _Tp>
-struct constexpr_hash<_Tp> {
+// we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
+template <class _Tp>
+struct constexpr_hash<_Tp*> {
   constexpr_hash()                                 = delete;
   constexpr_hash(const constexpr_hash&)            = delete;
   constexpr_hash& operator=(const constexpr_hash&) = delete;
 };
 
-template <EnabledForHash _Tp>
+template <>
+struct constexpr_hash<std::nullptr_t> {
+  constexpr_hash() noexcept                        = default;
+  constexpr_hash& operator=(const constexpr_hash&) = default;
+
+  [[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(std::nullptr_t) const noexcept {
+    return 662607004ull;
+  }
+};
+
+template <typename _Tp>
+  requires requires(_Tp t) {
+    { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
+
+    {
+      std::bool_constant< std::bool_constant<std::is_integral_v<_Tp>>() ||
+                          std::bool_constant<std::is_floating_point_v<_Tp>>() ||
+                          std::bool_constant<std::is_enum_v<_Tp>>() >()
+    } -> std::same_as<std::true_type>;
+  }
 struct constexpr_hash<_Tp> {
   [[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Tp& __v) const noexcept {
-    if constexpr (std::is_same_v<_Tp, nullptr_t>) {
-      return 662607004ull;
-    } else if constexpr (std::is_integral_v<_Tp>) {
+    if constexpr (std::is_integral_v<_Tp>) {
       if constexpr (sizeof(_Tp) <= sizeof(size_t)) {
         return static_cast<size_t>(__v);
       } else {
@@ -91,6 +84,13 @@ struct constexpr_hash<_Tp> {
 
   constexpr_hash() noexcept                        = default;
   constexpr_hash& operator=(const constexpr_hash&) = default;
+};
+
+template <class _Tp>
+struct constexpr_hash {
+  constexpr_hash()                                 = delete;
+  constexpr_hash(const constexpr_hash&)            = delete;
+  constexpr_hash& operator=(const constexpr_hash&) = delete;
 };
 
 } // namespace support
