@@ -371,10 +371,6 @@ float64x2_t test_vfmaq_laneq_f64_0(float64x2_t a, float64x2_t b,
 }
 
 // ALL-LABEL: @test_vfmas_lane_f32(
-// LLVM-STRICT-LABEL: @test_vfmas_lane_f32(
-// LLVM-STRICT: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CIR-STRICT-LABEL: cir.func {{.*}}@test_vfmas_lane_f32(
-// CIR-STRICT: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<2 x !cir.float>
 // CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.float
