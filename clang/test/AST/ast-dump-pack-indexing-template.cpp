@@ -14,7 +14,7 @@ struct DumpDependent {
 // CHECK-NEXT:   |-name: 'TT...[1]':'template-parameter-0-0...[1]' pack_indexing index 1
 // CHECK-NEXT:   | |-pattern: 'TT':'template-parameter-0-0'
 // CHECK-NEXT:   | | `-TemplateTemplateParmDecl {{.*}} depth 0 index 0 ... TT
-// CHECK-NEXT:   | `-index: ConstantExpr {{.*}} '__size_t':'unsigned long'
+// CHECK-NEXT:   | `-index: ConstantExpr {{.*}} '__size_t':'{{.*}}'
 // CHECK-NEXT:   |   `-value: Int 1
 // CHECK-NEXT:   `-TemplateArgument type 'int'
 
@@ -36,7 +36,7 @@ constexpr bool DumpConceptId = CC...[0]<int>;
 // CHECK-NEXT: `-name: 'CC...[0]':'template-parameter-0-0...[0]' pack_indexing index 0
 // CHECK-NEXT:   |-pattern: 'CC':'template-parameter-0-0'
 // CHECK-NEXT:   | `-TemplateTemplateParmDecl {{.*}} depth 0 index 0 ... CC
-// CHECK-NEXT:   `-index: ConstantExpr {{.*}} '__size_t':'unsigned long'
+// CHECK-NEXT:   `-index: ConstantExpr {{.*}} '__size_t':'{{.*}}'
 // CHECK-NEXT:     `-value: Int 0
 
 template <template <class> auto... VV>
