@@ -1512,13 +1512,6 @@ static void getDeclareTargetInfo(
       // Case: implicit capture of the enclosing function/subroutine.
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
-      bool owningProcNotMainProgram =
-          owningProc && !owningProc->isMainProgram();
-
-      const semantics::Symbol *owningSym =
-          owningProcNotMainProgram
-              ? &owningProc->getSubprogramSymbol()
-              : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
 
       // A bare '!$omp declare target' may appear in the specification part of
       // an interface body. In that case, the PFT records the directive as an
@@ -1526,26 +1519,24 @@ static void getDeclareTargetInfo(
       // body's subprogram, so eval.getOwningProcedure() points at the main
       // program.
       //
-      // Detect this by comparing the program unit lexically containing
-      // the directive with the procedure currently being lowered; when they
-      // differ, it might be this case or it might be one of the entries of a
-      // multiple-entry subprogram. In the first case, the directive belongs to
-      // the interface-body subprogram; otherwise, the owning subprogram is the
-      // correct one.
+      // Detect this by looking at the program unit lexically containing the
+      // directive with the procedure currently being lowered. If it is an
+      // interface, then use its symbol instead.
       const semantics::Scope &progUnitScope =
           semantics::GetProgramUnitContaining(
               semaCtx.FindScope(construct.v.source));
-      const semantics::Symbol *lexicalSym = progUnitScope.symbol();
-
-      if (lexicalSym && lexicalSym != owningSym) {
-        // Interface subprogram capture or non-default subprogram entry.
+      const semantics::Symbol *progUnitSym = progUnitScope.symbol();
+      const auto *subpDetails =
+          progUnitSym ? progUnitSym->detailsIf<semantics::SubprogramDetails>()
+                      : nullptr;
+      if (progUnitSym && subpDetails && subpDetails->isInterface()) {
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     owningProcNotMainProgram ? *owningSym
-                                                              : *lexicalSym);
-      } else if (owningProcNotMainProgram) {
-        // Main programs are never device routines, so skip those here.
+                                     *progUnitSym);
+      } else {
+        assert(owningProc && !owningProc->isMainProgram() &&
+               "unexpected missing owning procedure or main program");
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     *owningSym);
+                                     owningProc->getSubprogramSymbol());
       }
     }
 
