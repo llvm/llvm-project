@@ -7,3 +7,6 @@ void func(void);
 
 // CHECK-NEXT: FunctionDecl {{0x[a-z0-9]*}} prev [[PTR]] {{.*}}func 'void () __attribute__((cfi_unchecked_callee))'
 void func(void) {}
+
+// CHECK: TypeAliasDecl {{0x[a-z0-9]*}} {{.*}}CfiCheckFunction 'void () __attribute__((cfi_unchecked_callee))'
+using CfiCheckFunction [[clang::cfi_unchecked_callee]] = void(void);
