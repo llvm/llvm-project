@@ -1091,6 +1091,22 @@ void Verifier::visitDILocation(const DILocation &N) {
     CheckDI(isa<DILocation>(IA), "inlined-at should be a location", &N, IA);
   if (auto *SP = dyn_cast<DISubprogram>(N.getRawScope()))
     CheckDI(SP->isDefinition(), "scope points into the type hierarchy", &N);
+  if (auto *L = N.getRawIRLayers())
+    CheckDI(isa<DILayerLocList>(L), "irlayers must be a DILayerLocList", &N, L);
+}
+
+void Verifier::visitDILayerLoc(const DILayerLoc &N) {
+  CheckDI(isa_and_nonnull<MDString>(N.getRawKind()),
+          "layer kind must be a non-null MDString", &N, N.getRawKind());
+  CheckDI(isa_and_nonnull<DIFile>(N.getRawFile()),
+          "layer file must be a non-null DIFile", &N, N.getRawFile());
+}
+
+void Verifier::visitDILayerLocList(const DILayerLocList &N) {
+  CheckDI(N.getNumLayers() > 0, "DILayerLocList must be non-empty", &N);
+  for (const MDOperand &Op : N.layers())
+    CheckDI(isa_and_nonnull<DILayerLoc>(Op.get()),
+            "DILayerLocList entry must be a DILayerLoc", &N, Op.get());
 }
 
 void Verifier::visitGenericDINode(const GenericDINode &N) {

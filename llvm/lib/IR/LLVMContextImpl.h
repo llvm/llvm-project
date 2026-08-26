@@ -277,7 +277,8 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
-  uint64_t AtomGroup : 61;
+  Metadata *IRLayers;
+  uint64_t AtomGroup : 60;
   uint64_t AtomRank : 3;
   unsigned Line;
   uint16_t Column;
@@ -285,22 +286,23 @@ template <> struct MDNodeKeyImpl<DILocation> {
 
   MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
-                uint8_t AtomRank)
-      : Scope(Scope), InlinedAt(InlinedAt), AtomGroup(AtomGroup),
-        AtomRank(AtomRank), Line(Line), Column(Column),
+                uint8_t AtomRank, Metadata *IRLayers)
+      : Scope(Scope), InlinedAt(InlinedAt), IRLayers(IRLayers),
+        AtomGroup(AtomGroup), AtomRank(AtomRank), Line(Line), Column(Column),
         ImplicitCode(ImplicitCode) {}
 
   MDNodeKeyImpl(const DILocation *L)
       : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
-        AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
-        Line(L->getLine()), Column(L->getColumn()),
+        IRLayers(L->getRawIRLayers()), AtomGroup(L->getAtomGroup()),
+        AtomRank(L->getAtomRank()), Line(L->getLine()), Column(L->getColumn()),
         ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
            ImplicitCode == RHS->isImplicitCode() &&
-           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank() &&
+           IRLayers == RHS->getRawIRLayers();
   }
 
   unsigned getHashValue() const {
@@ -313,10 +315,56 @@ template <> struct MDNodeKeyImpl<DILocation> {
     // messing with the hash distribution* appear to still be massively
     // outweighed by the overall compile time savings by performing this check.
     // * (hash_combine(x) != hash_combine(x, 0))
-    if (AtomGroup || AtomRank)
+    // irlayers is likewise rare, so it is only mixed in when present to keep
+    // the common no-layers hashes unchanged.
+    if (AtomGroup || AtomRank) {
+      if (IRLayers)
+        return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
+                            AtomGroup | (uint64_t(AtomRank) << 61), IRLayers);
       return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
                           AtomGroup | (uint64_t(AtomRank) << 61));
+    }
+    if (IRLayers)
+      return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
+                          IRLayers);
     return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt);
+  }
+};
+
+/// DenseMapInfo for DILayerLoc.
+template <> struct MDNodeKeyImpl<DILayerLoc> {
+  Metadata *Kind;
+  Metadata *File;
+  unsigned Line;
+  uint16_t Column;
+
+  MDNodeKeyImpl(Metadata *Kind, Metadata *File, unsigned Line, uint16_t Column)
+      : Kind(Kind), File(File), Line(Line), Column(Column) {}
+  MDNodeKeyImpl(const DILayerLoc *N)
+      : Kind(N->getRawKind()), File(N->getRawFile()), Line(N->getLine()),
+        Column(N->getColumn()) {}
+
+  bool isKeyOf(const DILayerLoc *RHS) const {
+    return Kind == RHS->getRawKind() && File == RHS->getRawFile() &&
+           Line == RHS->getLine() && Column == RHS->getColumn();
+  }
+
+  unsigned getHashValue() const {
+    return hash_combine(Kind, File, Line, Column);
+  }
+};
+
+/// DenseMapInfo for DILayerLocList.
+template <> struct MDNodeKeyImpl<DILayerLocList> : MDNodeOpsKey {
+  MDNodeKeyImpl(ArrayRef<Metadata *> Ops) : MDNodeOpsKey(Ops) {}
+  MDNodeKeyImpl(const DILayerLocList *N) : MDNodeOpsKey(N) {}
+
+  bool isKeyOf(const DILayerLocList *RHS) const { return compareOps(RHS); }
+
+  unsigned getHashValue() const { return getHash(); }
+
+  static unsigned calculateHash(DILayerLocList *N) {
+    return MDNodeOpsKey::calculateHash(N);
   }
 };
 

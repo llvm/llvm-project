@@ -2124,6 +2124,29 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                     /* Default */ false);
   Printer.printInt("atomGroup", DL->getAtomGroup());
   Printer.printInt<unsigned>("atomRank", DL->getAtomRank());
+  Printer.printMetadata("irlayers", DL->getRawIRLayers());
+  Out << ")";
+}
+
+static void writeDILayerLoc(raw_ostream &Out, const DILayerLoc *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLoc(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
+  Printer.printInt("column", N->getColumn());
+  Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
+  Printer.printString("kind", N->getKind(), /* ShouldSkipEmpty */ false);
+  Out << ")";
+}
+
+static void writeDILayerLocList(raw_ostream &Out, const DILayerLocList *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DILayerLocList(";
+  ListSeparator FS;
+  for (const MDOperand &Op : N->operands()) {
+    Out << FS;
+    writeMetadataAsOperand(Out, Op, WriterCtx);
+  }
   Out << ")";
 }
 

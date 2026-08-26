@@ -340,6 +340,10 @@ private:
   unsigned createDILocationAbbrev();
   void writeDILocation(const DILocation *N, SmallVectorImpl<uint64_t> &Record,
                        unsigned &Abbrev);
+  void writeDILayerLoc(const DILayerLoc *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
+  void writeDILayerLocList(const DILayerLocList *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   unsigned createGenericDINodeAbbrev();
   void writeGenericDINode(const GenericDINode *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned &Abbrev);
@@ -1900,6 +1904,7 @@ unsigned ModuleBitcodeWriter::createDILocationAbbrev() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isImplicitCode
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // atomGroup
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // atomRank
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // irlayers (0 = none)
   return Stream.EmitAbbrev(std::move(Abbv));
 }
 
@@ -1917,7 +1922,30 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
   Record.push_back(N->isImplicitCode());
   Record.push_back(N->getAtomGroup());
   Record.push_back(N->getAtomRank());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawIRLayers()));
   Stream.EmitRecord(bitc::METADATA_LOCATION, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILayerLoc(const DILayerLoc *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(N->getLine());
+  Record.push_back(N->getColumn());
+  Record.push_back(VE.getMetadataID(N->getRawFile()));
+  Record.push_back(VE.getMetadataID(N->getRawKind()));
+  Stream.EmitRecord(bitc::METADATA_LAYERLOC, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILayerLocList(const DILayerLocList *N,
+                                              SmallVectorImpl<uint64_t> &Record,
+                                              unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  for (auto &I : N->operands())
+    Record.push_back(VE.getMetadataOrNullID(I));
+  Stream.EmitRecord(bitc::METADATA_LAYERLOCLIST, Record, Abbrev);
   Record.clear();
 }
 
@@ -3879,6 +3907,7 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(DL->isImplicitCode());
           Vals.push_back(DL->getAtomGroup());
           Vals.push_back(DL->getAtomRank());
+          Vals.push_back(VE.getMetadataOrNullID(DL->getRawIRLayers()));
           Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals,
                             FUNCTION_DEBUG_LOC_ABBREV);
           Vals.clear();
@@ -4287,6 +4316,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Atom group.
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 3)); // Atom rank.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // irlayers (0 = none).
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_DEBUG_LOC_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");

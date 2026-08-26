@@ -5784,13 +5784,49 @@ bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(inlinedAt, MDField, );                                              \
   OPTIONAL(isImplicitCode, MDBoolField, (false));                              \
   OPTIONAL(atomGroup, MDUnsignedField, (0, UINT64_MAX));                       \
-  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));
+  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));                         \
+  OPTIONAL(irlayers, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(
-      DILocation, (Context, line.Val, column.Val, scope.Val, inlinedAt.Val,
-                   isImplicitCode.Val, atomGroup.Val, atomRank.Val));
+  Result =
+      GET_OR_DISTINCT(DILocation, (Context, line.Val, column.Val, scope.Val,
+                                   inlinedAt.Val, isImplicitCode.Val,
+                                   atomGroup.Val, atomRank.Val, irlayers.Val));
+  return false;
+}
+
+bool LLParser::parseDILayerLoc(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  REQUIRED(kind, MDStringField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DILayerLoc,
+                           (Context, kind.Val, file.Val, line.Val, column.Val));
+  return false;
+}
+
+bool LLParser::parseDILayerLocList(MDNode *&Result, bool IsDistinct) {
+  // ::= !DILayerLocList(!a, !b, ...)
+  Lex.Lex(); // eat the '!DILayerLocList' type name
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+  SmallVector<Metadata *, 4> Layers;
+  if (!EatIfPresent(lltok::rparen)) {
+    do {
+      Metadata *MD;
+      if (parseMetadata(MD, nullptr))
+        return true;
+      Layers.push_back(MD);
+    } while (EatIfPresent(lltok::comma));
+    if (parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+  }
+  Result = GET_OR_DISTINCT(DILayerLocList, (Context, Layers));
   return false;
 }
 

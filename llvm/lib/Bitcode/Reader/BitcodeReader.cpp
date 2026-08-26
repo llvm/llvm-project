@@ -5243,8 +5243,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
       bool isImplicitCode = Record.size() >= 5 && Record[4];
-      uint64_t AtomGroup = Record.size() == 7 ? Record[5] : 0;
-      uint8_t AtomRank = Record.size() == 7 ? Record[6] : 0;
+      uint64_t AtomGroup = Record.size() >= 7 ? Record[5] : 0;
+      uint8_t AtomRank = Record.size() >= 7 ? Record[6] : 0;
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -5259,9 +5259,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid debug loc record");
       }
+      Metadata *IRLayers = nullptr;
+      if (Record.size() >= 8 && Record[7])
+        IRLayers = MDLoader->getMetadataFwdRefOrLoad(Record[7] - 1);
 
       LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
-                                isImplicitCode, AtomGroup, AtomRank);
+                                isImplicitCode, AtomGroup, AtomRank, IRLayers);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;

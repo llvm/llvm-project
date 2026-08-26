@@ -60,6 +60,11 @@ DILocation *DebugLoc::getInlinedAt() const {
   return get()->getInlinedAt();
 }
 
+MDNode *DebugLoc::getRawIRLayers() const {
+  DILocation *L = get();
+  return L ? cast_if_present<MDNode>(L->getRawIRLayers()) : nullptr;
+}
+
 MDNode *DebugLoc::getInlinedAtScope() const {
   return cast<DILocation>(Loc)->getInlinedAtScope();
 }
@@ -109,17 +114,22 @@ DebugLoc DebugLoc::replaceInlinedAtSubprogram(
     DILocation *LocToUpdate = LocChain.pop_back_val();
     DIScope *NewScope = DILocalScope::cloneScopeForSubprogram(
         *LocToUpdate->getScope(), NewSP, Ctx, Cache);
-    UpdatedLoc = DILocation::get(Ctx, LocToUpdate->getLine(),
-                                 LocToUpdate->getColumn(), NewScope);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(), NewScope,
+        /*InlinedAt=*/nullptr, /*ImplicitCode=*/false, /*AtomGroup=*/0,
+        /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
   // Recreate the location chain, bottom-up, starting at the new scope (or a
-  // cached result).
+  // cached result). Each frame keeps its own irlayers, as appendInlinedAt does:
+  // the intermediate-IR snapshot can live on any frame, so outlining must not
+  // drop it.
   for (const DILocation *LocToUpdate : reverse(LocChain)) {
-    UpdatedLoc =
-        DILocation::get(Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
-                        LocToUpdate->getScope(), UpdatedLoc);
+    UpdatedLoc = DILocation::get(
+        Ctx, LocToUpdate->getLine(), LocToUpdate->getColumn(),
+        LocToUpdate->getScope(), UpdatedLoc, /*ImplicitCode=*/false,
+        /*AtomGroup=*/0, /*AtomRank=*/0, LocToUpdate->getRawIRLayers());
     Cache[LocToUpdate] = UpdatedLoc;
   }
 
@@ -149,9 +159,14 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
   // location (then rebuilding the rest of the chain behind it) and update the
   // map of already-constructed inlined-at nodes.
   // Key Instructions: InlinedAt fields don't need atom info.
+  // Preserve each frame's irlayers -- the intermediate-IR snapshot can
+  // live on any frame (the one outermost at snapshot time), so the chain
+  // rebuild must not drop it.
   for (const DILocation *MD : reverse(InlinedAtLocations))
     Cache[MD] = Last = DILocation::getDistinct(
-        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last);
+        Ctx, MD->getLine(), MD->getColumn(), MD->getScope(), Last,
+        /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+        MD->getRawIRLayers());
 
   return Last;
 }

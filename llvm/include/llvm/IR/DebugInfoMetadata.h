@@ -2659,6 +2659,116 @@ public:
   }
 };
 
+/// A single intermediate-IR layer location.
+///
+/// One source coordinate in an intermediate IR level (e.g. TileIR, MLIR) that
+/// sits between the high-level source and the final LLVM IR. Lightweight: it
+/// references its \a DIFile directly (no scope, no discriminator) and stores
+/// line/column in the free Metadata subclass-data slots. Grouped behind a
+/// \a DILayerLocList on \a DILocation's optional `irlayers` operand.
+///
+/// Uses the SubclassData16 and SubclassData32 Metadata slots.
+class DILayerLoc : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DILayerLoc(LLVMContext &C, StorageType Storage, unsigned Line,
+             unsigned Column, ArrayRef<Metadata *> Ops)
+      : MDNode(C, DILayerLocKind, Storage, Ops) {
+    assert(Ops.size() == 2 && "Expected {kind, file}");
+    assert(Column < (1u << 16) && "Expected 16-bit column");
+    SubclassData32 = Line;
+    SubclassData16 = Column;
+  }
+  ~DILayerLoc() { dropAllReferences(); }
+
+  LLVM_ABI static DILayerLoc *getImpl(LLVMContext &Context, MDString *Kind,
+                                      Metadata *File, unsigned Line,
+                                      unsigned Column, StorageType Storage,
+                                      bool ShouldCreate = true);
+
+  TempDILayerLoc cloneImpl() const {
+    return getTemporary(getContext(), getRawKind(), getRawFile(), getLine(),
+                        getColumn());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DILayerLoc,
+                    (MDString * Kind, Metadata *File, unsigned Line,
+                     unsigned Column),
+                    (Kind, File, Line, Column))
+
+  TempDILayerLoc clone() const { return cloneImpl(); }
+
+  unsigned getLine() const { return SubclassData32; }
+  unsigned getColumn() const { return SubclassData16; }
+
+  MDString *getRawKind() const {
+    return cast_if_present<MDString>(getOperand(0));
+  }
+  StringRef getKind() const {
+    if (MDString *K = getRawKind())
+      return K->getString();
+    return StringRef();
+  }
+  Metadata *getRawFile() const { return getOperand(1); }
+  DIFile *getFile() const { return cast_if_present<DIFile>(getRawFile()); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DILayerLocKind;
+  }
+};
+
+/// A normally uniqued list of \a DILayerLoc entries (`distinct` is legal).
+///
+/// The container node behind \a DILocation's optional `irlayers` operand:
+/// essentially an \a MDTuple of \a DILayerLoc refs with typed accessors and its
+/// own metadata kind, so consumers can type-check it with
+/// `isa<DILayerLocList>`. Operand order is preserved and is part of the node's
+/// identity, but LLVM assigns it no meaning.
+class DILayerLocList : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DILayerLocList(LLVMContext &C, StorageType Storage, unsigned Hash,
+                 ArrayRef<Metadata *> Ops)
+      : MDNode(C, DILayerLocListKind, Storage, Ops) {
+    setHash(Hash);
+  }
+  ~DILayerLocList() { dropAllReferences(); }
+
+  void setHash(unsigned Hash) { SubclassData32 = Hash; }
+  void recalculateHash();
+
+  LLVM_ABI static DILayerLocList *getImpl(LLVMContext &Context,
+                                          ArrayRef<Metadata *> Layers,
+                                          StorageType Storage,
+                                          bool ShouldCreate = true);
+
+  TempDILayerLocList cloneImpl() const {
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(operands()));
+  }
+
+public:
+  /// Get the operand hash (used by the MDNodeOpsKey uniquing key).
+  unsigned getHash() const { return SubclassData32; }
+
+  DEFINE_MDNODE_GET(DILayerLocList, (ArrayRef<Metadata *> Layers), (Layers))
+
+  TempDILayerLocList clone() const { return cloneImpl(); }
+
+  unsigned getNumLayers() const { return getNumOperands(); }
+  DILayerLoc *getLayer(unsigned I) const {
+    return cast_if_present<DILayerLoc>(getOperand(I));
+  }
+  using layer_iterator = MDNode::op_iterator;
+  iterator_range<layer_iterator> layers() const { return operands(); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DILayerLocListKind;
+  }
+};
+
 /// Debug location.
 ///
 /// A debug location in source code, used for debug info and otherwise.
@@ -2669,34 +2779,40 @@ public:
 class DILocation : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
-  uint64_t AtomGroup : 61;
+  uint64_t AtomGroup : 60;
   uint64_t AtomRank : 3;
+  // Disambiguates the two optional trailing operands, layout
+  // [scope, (inlinedAt?), (irlayers?)]: irlayers is always last when present.
+  uint64_t HasIRLayers : 1;
 
   DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
              unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
-             ArrayRef<Metadata *> MDs, bool ImplicitCode);
+             bool HasIRLayers, ArrayRef<Metadata *> MDs, bool ImplicitCode);
   ~DILocation() { dropAllReferences(); }
 
-  LLVM_ABI static DILocation *
-  getImpl(LLVMContext &Context, unsigned Line, unsigned Column, Metadata *Scope,
-          Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
-          uint8_t AtomRank, StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DILocation *getImpl(LLVMContext &Context, unsigned Line,
+                                      unsigned Column, Metadata *Scope,
+                                      Metadata *InlinedAt, bool ImplicitCode,
+                                      uint64_t AtomGroup, uint8_t AtomRank,
+                                      Metadata *IRLayers, StorageType Storage,
+                                      bool ShouldCreate = true);
   static DILocation *getImpl(LLVMContext &Context, unsigned Line,
                              unsigned Column, DILocalScope *Scope,
                              DILocation *InlinedAt, bool ImplicitCode,
                              uint64_t AtomGroup, uint8_t AtomRank,
-                             StorageType Storage, bool ShouldCreate = true) {
+                             Metadata *IRLayers, StorageType Storage,
+                             bool ShouldCreate = true) {
     return getImpl(Context, Line, Column, static_cast<Metadata *>(Scope),
                    static_cast<Metadata *>(InlinedAt), ImplicitCode, AtomGroup,
-                   AtomRank, Storage, ShouldCreate);
+                   AtomRank, IRLayers, Storage, ShouldCreate);
   }
 
   TempDILocation cloneImpl() const {
-    // Get the raw scope/inlinedAt since it is possible to invoke this on
-    // a DILocation containing temporary metadata.
+    // Get the raw scope/inlinedAt/irlayers since it is possible to invoke this
+    // on a DILocation containing temporary metadata.
     return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
                         getRawInlinedAt(), isImplicitCode(), getAtomGroup(),
-                        getAtomRank());
+                        getAtomRank(), getRawIRLayers());
   }
 
 public:
@@ -2707,7 +2823,8 @@ public:
     if (!getAtomGroup() && !getAtomRank())
       return this;
     return get(getContext(), getLine(), getColumn(), getScope(), getInlinedAt(),
-               isImplicitCode());
+               isImplicitCode(), /*AtomGroup=*/0, /*AtomRank=*/0,
+               getRawIRLayers());
   }
 
   // Disallow replacing operands.
@@ -2716,15 +2833,17 @@ public:
   DEFINE_MDNODE_GET(DILocation,
                     (unsigned Line, unsigned Column, Metadata *Scope,
                      Metadata *InlinedAt = nullptr, bool ImplicitCode = false,
-                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0),
+                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0,
+                     Metadata *IRLayers = nullptr),
                     (Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
-                     AtomRank))
+                     AtomRank, IRLayers))
   DEFINE_MDNODE_GET(DILocation,
                     (unsigned Line, unsigned Column, DILocalScope *Scope,
                      DILocation *InlinedAt = nullptr, bool ImplicitCode = false,
-                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0),
+                     uint64_t AtomGroup = 0, uint8_t AtomRank = 0,
+                     Metadata *IRLayers = nullptr),
                     (Line, Column, Scope, InlinedAt, ImplicitCode, AtomGroup,
-                     AtomRank))
+                     AtomRank, IRLayers))
 
   /// Return a (temporary) clone of this.
   TempDILocation clone() const { return cloneImpl(); }
@@ -2946,9 +3065,32 @@ public:
 
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
-    if (getNumOperands() == 2)
+    // Layout: [scope, (inlinedAt?), (irlayers?)]. irlayers, when present, is
+    // always the last operand; discount it before the inlinedAt count trick.
+    unsigned NonLayerOps = getNumOperands() - (HasIRLayers ? 1 : 0);
+    if (NonLayerOps == 2)
       return getOperand(1);
     return nullptr;
+  }
+
+  /// The optional intermediate-IR layer list (\a DILayerLocList), or null.
+  /// Raw form: returns the operand without casting, so it is safe to call
+  /// before forward-ref resolution (the operand may still be a placeholder).
+  Metadata *getRawIRLayers() const {
+    if (HasIRLayers)
+      return getOperand(getNumOperands() - 1);
+    return nullptr;
+  }
+  DILayerLocList *getIRLayers() const {
+    return cast_if_present<DILayerLocList>(getRawIRLayers());
+  }
+  unsigned getNumLayers() const {
+    DILayerLocList *L = getIRLayers();
+    return L ? L->getNumLayers() : 0;
+  }
+  DILayerLoc *getLayer(unsigned I) const {
+    DILayerLocList *L = getIRLayers();
+    return L ? L->getLayer(I) : nullptr;
   }
 
   static bool classof(const Metadata *MD) {
@@ -3104,7 +3246,7 @@ DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
       DILexicalBlockFile::get(getContext(), Scope, getFile(), Discriminator);
   return DILocation::get(getContext(), getLine(), getColumn(), NewScope,
                          getInlinedAt(), isImplicitCode(), getAtomGroup(),
-                         getAtomRank());
+                         getAtomRank(), getRawIRLayers());
 }
 
 unsigned DILocation::getBaseDiscriminator() const {
