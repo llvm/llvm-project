@@ -326,7 +326,7 @@ def main(argv: List[str]) -> int:
                     'Results are submitted to LNT unless this is a dry run. That is not optional: '
                     'results that are not recorded anywhere would be requested again on every '
                     'invocation, forever.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
         formatter_class=HelpFormatter)
     parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
         help='A file containing the plan, one JSON object per line. By default, this is read from '

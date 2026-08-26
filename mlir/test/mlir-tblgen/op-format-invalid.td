@@ -372,9 +372,29 @@ def OIListErrorNoLiteral : TestFormat_Op<[{
 def OIListLiteralAmbiguity : TestFormat_Op<[{
   oilist( `foo` | `bar` ) `foo` attr-dict
 }]>;
+// CHECK: error: format ambiguity because foo is used as both an oilist separator and clause keyword.
+def OIListSeparatorClauseAmbiguity : TestFormat_Op<[{
+  oilist<`foo`>(`foo`) attr-dict
+}]>;
+// CHECK: error: format ambiguity because , is used both in oilist element and the adjacent literal.
+def OIListSeparatorLiteralAmbiguity : TestFormat_Op<[{
+  oilist<`,`>(`foo`) `,` attr-dict
+}]>;
+// CHECK: error: expected literal, but got '>'
+def OIListSeparatorMissing : TestFormat_Op<[{
+  oilist<>(`foo`) attr-dict
+}]>;
 // CHECK: error: expected '(' before oilist argument list
 def OIListStartingToken : TestFormat_Op<[{
   oilist `wrong` attr-dict
+}]>;
+// CHECK: error: expected '>' after oilist separator
+def OIListUnterminatedSeparator : TestFormat_Op<[{
+  oilist<`,` (`foo`) attr-dict
+}]>;
+// CHECK: error: oilist separator must be a non-whitespace literal
+def OIListWhitespaceSeparator : TestFormat_Op<[{
+  oilist<` `>(`foo`) attr-dict
 }]>;
 
 //===----------------------------------------------------------------------===//

@@ -29,7 +29,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBreakFalseDepsLegacyPass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupLegacyPass(Registry);
-  initializeCFIInstrInserterPass(Registry);
+  initializeCFIInstrInserterLegacyPass(Registry);
   initializeCheckDebugMachineModuleLegacyPass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeComplexDeinterleavingLegacyPassPass(Registry);
@@ -38,7 +38,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeDetectDeadLanesLegacyPass(Registry);
   initializeDummyCGSCCPassPass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
-  initializeEHContGuardTargetsPass(Registry);
+  initializeEHContGuardTargetsLegacyPass(Registry);
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);

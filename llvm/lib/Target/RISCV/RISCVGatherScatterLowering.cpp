@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCVGatherScatterLowering.h"
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -97,7 +97,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RISCVGatherScatterLoweringLegacy, DEBUG_TYPE,
                     "RISC-V gather/scatter lowering pass", false, false)
 
-FunctionPass *llvm::createRISCVGatherScatterLoweringPass() {
+FunctionPass *llvm::createRISCVGatherScatterLoweringLegacyPass() {
   return new RISCVGatherScatterLoweringLegacy();
 }
 

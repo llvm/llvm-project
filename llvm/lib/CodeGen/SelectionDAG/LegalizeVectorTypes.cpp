@@ -1396,8 +1396,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
-  case ISD::VP_MERGE:
-  case ISD::VP_SELECT:    SplitRes_Select(N, Lo, Hi); break;
+  case ISD::VP_MERGE:     SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
@@ -1445,7 +1444,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
     break;
   case ISD::SETCC:
-  case ISD::VP_SETCC:
     SplitVecRes_SETCC(N, Lo, Hi);
     break;
   case ISD::VECTOR_REVERSE:
@@ -1476,75 +1474,51 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ABS:
   case ISD::ABS_MIN_POISON:
-  case ISD::VP_ABS:
   case ISD::BITREVERSE:
-  case ISD::VP_BITREVERSE:
   case ISD::BSWAP:
-  case ISD::VP_BSWAP:
   case ISD::CTLZ:
-  case ISD::VP_CTLZ:
   case ISD::CTTZ:
-  case ISD::VP_CTTZ:
   case ISD::CTLZ_ZERO_POISON:
-  case ISD::VP_CTLZ_ZERO_POISON:
   case ISD::CTTZ_ZERO_POISON:
-  case ISD::VP_CTTZ_ZERO_POISON:
   case ISD::CTPOP:
-  case ISD::VP_CTPOP:
-  case ISD::FABS: case ISD::VP_FABS:
+  case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
   case ISD::FCEIL:
-  case ISD::VP_FCEIL:
   case ISD::FCOS:
   case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
   case ISD::FFLOOR:
-  case ISD::VP_FFLOOR:
   case ISD::FLOG:
   case ISD::FLOG10:
   case ISD::FLOG2:
   case ISD::FNEARBYINT:
-  case ISD::VP_FNEARBYINT:
-  case ISD::FNEG: case ISD::VP_FNEG:
+  case ISD::FNEG:
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FP_EXTEND:
-  case ISD::VP_FP_EXTEND:
   case ISD::FP_ROUND:
-  case ISD::VP_FP_ROUND:
   case ISD::FP_TO_SINT:
-  case ISD::VP_FP_TO_SINT:
   case ISD::FP_TO_UINT:
-  case ISD::VP_FP_TO_UINT:
   case ISD::FRINT:
-  case ISD::VP_FRINT:
   case ISD::LRINT:
-  case ISD::VP_LRINT:
   case ISD::LLRINT:
-  case ISD::VP_LLRINT:
   case ISD::FROUND:
-  case ISD::VP_FROUND:
   case ISD::FROUNDEVEN:
-  case ISD::VP_FROUNDEVEN:
   case ISD::LROUND:
   case ISD::LLROUND:
   case ISD::FSIN:
   case ISD::FSINH:
-  case ISD::FSQRT: case ISD::VP_SQRT:
+  case ISD::FSQRT:
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FTRUNC:
-  case ISD::VP_FROUNDTOZERO:
   case ISD::SINT_TO_FP:
-  case ISD::VP_SINT_TO_FP:
   case ISD::TRUNCATE:
-  case ISD::VP_TRUNCATE:
   case ISD::UINT_TO_FP:
-  case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
   case ISD::CONVERT_FROM_ARBITRARY_FP:
@@ -1564,14 +1538,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-  case ISD::VP_SIGN_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
     SplitVecRes_ExtendOp(N, Lo, Hi);
     break;
 
-  case ISD::ADD: case ISD::VP_ADD:
-  case ISD::SUB: case ISD::VP_SUB:
-  case ISD::MUL: case ISD::VP_MUL:
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
@@ -1585,48 +1557,43 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:
-  case ISD::FADD: case ISD::VP_FADD:
-  case ISD::FSUB: case ISD::VP_FSUB:
-  case ISD::FMUL: case ISD::VP_FMUL:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
-  case ISD::VP_FMINNUM:
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
-  case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
-  case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
-  case ISD::VP_FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
   case ISD::SDIV: case ISD::VP_SDIV:
   case ISD::UDIV: case ISD::VP_UDIV:
-  case ISD::FDIV: case ISD::VP_FDIV:
+  case ISD::FDIV:
   case ISD::FPOW:
   case ISD::FATAN2:
-  case ISD::AND: case ISD::VP_AND:
-  case ISD::OR: case ISD::VP_OR:
-  case ISD::XOR: case ISD::VP_XOR:
-  case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_SRA:
-  case ISD::SRL: case ISD::VP_SRL:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
   case ISD::UREM: case ISD::VP_UREM:
   case ISD::SREM: case ISD::VP_SREM:
-  case ISD::FREM: case ISD::VP_FREM:
-  case ISD::SMIN: case ISD::VP_SMIN:
-  case ISD::SMAX: case ISD::VP_SMAX:
-  case ISD::UMIN: case ISD::VP_UMIN:
-  case ISD::UMAX: case ISD::VP_UMAX:
-  case ISD::SADDSAT: case ISD::VP_SADDSAT:
-  case ISD::UADDSAT: case ISD::VP_UADDSAT:
-  case ISD::SSUBSAT: case ISD::VP_SSUBSAT:
-  case ISD::USUBSAT: case ISD::VP_USUBSAT:
+  case ISD::FREM:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::SADDSAT:
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
   case ISD::ROTL:
   case ISD::ROTR:
-  case ISD::VP_FCOPYSIGN:
     SplitVecRes_BinOp(N, Lo, Hi);
     break;
   case ISD::MASKED_UDIV:
@@ -1635,11 +1602,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::MASKED_SREM:
     SplitVecRes_MaskedBinOp(N, Lo, Hi);
     break;
-  case ISD::FMA: case ISD::VP_FMA:
+  case ISD::FMA:
   case ISD::FSHL:
-  case ISD::VP_FSHL:
   case ISD::FSHR:
-  case ISD::VP_FSHR:
     SplitVecRes_TernaryOp(N, Lo, Hi);
     break;
 
@@ -1754,7 +1719,9 @@ void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi) {
   }
 
   assert(N->getNumOperands() == 4 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
+  assert((N->getOpcode() == ISD::VP_UDIV || N->getOpcode() == ISD::VP_SDIV ||
+          N->getOpcode() == ISD::VP_UREM || N->getOpcode() == ISD::VP_SREM) &&
+         "Expected VP opcode");
 
   SDValue MaskLo, MaskHi;
   std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(2));
@@ -1804,26 +1771,10 @@ void DAGTypeLegalizer::SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo,
 
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opcode = N->getOpcode();
-  if (N->getNumOperands() == 3) {
-    Lo = DAG.getNode(Opcode, dl, Op0Lo.getValueType(), Op0Lo, Op1Lo, Op2Lo, Flags);
-    Hi = DAG.getNode(Opcode, dl, Op0Hi.getValueType(), Op0Hi, Op1Hi, Op2Hi, Flags);
-    return;
-  }
-
-  assert(N->getNumOperands() == 5 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
-
-  SDValue MaskLo, MaskHi;
-  std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
-
-  SDValue EVLLo, EVLHi;
-  std::tie(EVLLo, EVLHi) =
-      DAG.SplitEVL(N->getOperand(4), N->getValueType(0), dl);
-
-  Lo = DAG.getNode(Opcode, dl, Op0Lo.getValueType(),
-                   {Op0Lo, Op1Lo, Op2Lo, MaskLo, EVLLo}, Flags);
-  Hi = DAG.getNode(Opcode, dl, Op0Hi.getValueType(),
-                   {Op0Hi, Op1Hi, Op2Hi, MaskHi, EVLHi}, Flags);
+  Lo =
+      DAG.getNode(Opcode, dl, Op0Lo.getValueType(), Op0Lo, Op1Lo, Op2Lo, Flags);
+  Hi =
+      DAG.getNode(Opcode, dl, Op0Hi.getValueType(), Op0Hi, Op1Hi, Op2Hi, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_CMP(SDNode *N, SDValue &Lo, SDValue &Hi) {
@@ -2981,20 +2932,8 @@ void DAGTypeLegalizer::SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi) {
   else
     std::tie(RL, RH) = DAG.SplitVectorOperand(N, 1);
 
-  if (N->getOpcode() == ISD::SETCC) {
-    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
-    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
-  } else {
-    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
-    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
-    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
-    std::tie(EVLLo, EVLHi) =
-        DAG.SplitEVL(N->getOperand(4), N->getValueType(0), DL);
-    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2), MaskLo,
-                     EVLLo);
-    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2), MaskHi,
-                     EVLHi);
-  }
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, LL, RL, N->getOperand(2));
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, LH, RH, N->getOperand(2));
 }
 
 void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
@@ -3021,30 +2960,15 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo,
                      N->getOperand(3), Flags);
     return;
   }
-  if (N->getNumOperands() <= 2) {
-    if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass ||
-        Opcode == ISD::CONVERT_FROM_ARBITRARY_FP) {
-      Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
-      Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
-    } else {
-      Lo = DAG.getNode(Opcode, dl, LoVT, Lo, Flags);
-      Hi = DAG.getNode(Opcode, dl, HiVT, Hi, Flags);
-    }
-    return;
+
+  if (Opcode == ISD::FP_ROUND || Opcode == ISD::AssertNoFPClass ||
+      Opcode == ISD::CONVERT_FROM_ARBITRARY_FP) {
+    Lo = DAG.getNode(Opcode, dl, LoVT, Lo, N->getOperand(1), Flags);
+    Hi = DAG.getNode(Opcode, dl, HiVT, Hi, N->getOperand(1), Flags);
+  } else {
+    Lo = DAG.getNode(Opcode, dl, LoVT, Lo, Flags);
+    Hi = DAG.getNode(Opcode, dl, HiVT, Hi, Flags);
   }
-
-  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
-
-  SDValue MaskLo, MaskHi;
-  std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
-
-  SDValue EVLLo, EVLHi;
-  std::tie(EVLLo, EVLHi) =
-      DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
-
-  Lo = DAG.getNode(Opcode, dl, LoVT, {Lo, MaskLo, EVLLo}, Flags);
-  Hi = DAG.getNode(Opcode, dl, HiVT, {Hi, MaskHi, EVLHi}, Flags);
 }
 
 void DAGTypeLegalizer::SplitVecRes_ADDRSPACECAST(SDNode *N, SDValue &Lo,
@@ -3135,35 +3059,15 @@ void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,
     if (TLI.isTypeLegal(SrcVT) && !TLI.isTypeLegal(SplitSrcVT) &&
         TLI.isTypeLegal(NewSrcVT) && TLI.isTypeLegal(SplitLoVT)) {
       LLVM_DEBUG(dbgs() << "Split vector extend via incremental extend:";
-                 N->dump(&DAG); dbgs() << "\n");
-      if (!N->isVPOpcode()) {
-        // Extend the source vector by one step.
-        SDValue NewSrc =
-            DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0));
-        // Get the low and high halves of the new, extended one step, vector.
-        std::tie(Lo, Hi) = DAG.SplitVector(NewSrc, dl);
-        // Extend those vector halves the rest of the way.
-        Lo = DAG.getNode(N->getOpcode(), dl, LoVT, Lo);
-        Hi = DAG.getNode(N->getOpcode(), dl, HiVT, Hi);
-        return;
-      }
-
+      N->dump(&DAG); dbgs() << "\n");
       // Extend the source vector by one step.
       SDValue NewSrc =
-          DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0),
-                      N->getOperand(1), N->getOperand(2));
+        DAG.getNode(N->getOpcode(), dl, NewSrcVT, N->getOperand(0));
       // Get the low and high halves of the new, extended one step, vector.
       std::tie(Lo, Hi) = DAG.SplitVector(NewSrc, dl);
-
-      SDValue MaskLo, MaskHi;
-      std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
-
-      SDValue EVLLo, EVLHi;
-      std::tie(EVLLo, EVLHi) =
-          DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
       // Extend those vector halves the rest of the way.
-      Lo = DAG.getNode(N->getOpcode(), dl, LoVT, {Lo, MaskLo, EVLLo});
-      Hi = DAG.getNode(N->getOpcode(), dl, HiVT, {Hi, MaskHi, EVLHi});
+      Lo = DAG.getNode(N->getOpcode(), dl, LoVT, Lo);
+      Hi = DAG.getNode(N->getOpcode(), dl, HiVT, Hi);
       return;
     }
   }
@@ -3870,7 +3774,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     report_fatal_error("Do not know how to split this operator's "
                        "operand!\n");
 
-  case ISD::VP_SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
@@ -3882,12 +3785,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
-  case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
     Res = SplitVecOp_TruncateHelper(N);
     break;
   case ISD::STRICT_FP_ROUND:
-  case ISD::VP_FP_ROUND:
   case ISD::FP_ROUND:
   case ISD::CONVERT_FROM_ARBITRARY_FP:
   case ISD::CONVERT_TO_ARBITRARY_FP:
@@ -3933,8 +3834,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-  case ISD::VP_SINT_TO_FP:
-  case ISD::VP_UINT_TO_FP:
     if (N->getValueType(0).bitsLT(
             N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType()))
       Res = SplitVecOp_TruncateHelper(N);
@@ -3947,8 +3846,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-  case ISD::VP_FP_TO_SINT:
-  case ISD::VP_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_EXTEND:
@@ -4247,14 +4144,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_UnaryOp(SDNode *N) {
     // Legalize the chain result - switch anything that used the old chain to
     // use the new one.
     ReplaceValueWith(SDValue(N, 1), Ch);
-  } else if (N->getNumOperands() == 3) {
-    assert(N->isVPOpcode() && "Expected VP opcode");
-    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
-    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
-    std::tie(EVLLo, EVLHi) =
-        DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
-    Lo = DAG.getNode(N->getOpcode(), dl, OutVT, Lo, MaskLo, EVLLo);
-    Hi = DAG.getNode(N->getOpcode(), dl, OutVT, Hi, MaskHi, EVLHi);
   } else {
     Lo = DAG.getNode(N->getOpcode(), dl, OutVT, Lo);
     Hi = DAG.getNode(N->getOpcode(), dl, OutVT, Hi);
@@ -5050,7 +4939,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (isStrict) {
+  } else {
+    assert(isStrict && "unexpected node");
     LoRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
     HiRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
@@ -5058,16 +4948,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    LoRes.getValue(1), HiRes.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
-  } else {
-    assert(Opc == ISD::VP_SETCC && "Expected VP_SETCC opcode");
-    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
-    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
-    std::tie(EVLLo, EVLHi) =
-        DAG.SplitEVL(N->getOperand(4), N->getValueType(0), DL);
-    LoRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Lo0, Lo1,
-                        N->getOperand(2), MaskLo, EVLLo);
-    HiRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Hi0, Hi1,
-                        N->getOperand(2), MaskHi, EVLHi);
   }
 
   EVT ConcatVT = PartResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
@@ -5103,13 +4983,6 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_ROUND(SDNode *N) {
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    Lo.getValue(1), Hi.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
-  } else if (N->getOpcode() == ISD::VP_FP_ROUND) {
-    SDValue MaskLo, MaskHi, EVLLo, EVLHi;
-    std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
-    std::tie(EVLLo, EVLHi) =
-        DAG.SplitEVL(N->getOperand(2), N->getValueType(0), DL);
-    Lo = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Lo, MaskLo, EVLLo);
-    Hi = DAG.getNode(ISD::VP_FP_ROUND, DL, OutVT, Hi, MaskHi, EVLHi);
   } else if (N->getOpcode() == ISD::CONVERT_TO_ARBITRARY_FP) {
     Lo = DAG.getNode(N->getOpcode(), DL, OutVT, Lo, N->getOperand(1),
                      N->getOperand(2), N->getOperand(3));
@@ -5388,12 +5261,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SIGN_EXTEND_INREG: Res = WidenVecRes_InregOp(N); break;
   case ISD::VSELECT:
   case ISD::SELECT:
-  case ISD::VP_SELECT:
   case ISD::VP_MERGE:
     Res = WidenVecRes_Select(N);
     break;
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
-  case ISD::VP_SETCC:
   case ISD::SETCC:             Res = WidenVecRes_SETCC(N); break;
   case ISD::POISON:
   case ISD::UNDEF:             Res = WidenVecRes_UNDEF(N); break;
@@ -5437,19 +5308,19 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     WidenVecRes_VECTOR_DEINTERLEAVE(N);
     break;
 
-  case ISD::ADD: case ISD::VP_ADD:
-  case ISD::AND: case ISD::VP_AND:
-  case ISD::MUL: case ISD::VP_MUL:
+  case ISD::ADD:
+  case ISD::AND:
+  case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
   case ISD::ABDS:
   case ISD::ABDU:
-  case ISD::OR: case ISD::VP_OR:
-  case ISD::SUB: case ISD::VP_SUB:
-  case ISD::XOR: case ISD::VP_XOR:
-  case ISD::SHL: case ISD::VP_SHL:
-  case ISD::SRA: case ISD::VP_SRA:
-  case ISD::SRL: case ISD::VP_SRL:
+  case ISD::OR:
+  case ISD::SUB:
+  case ISD::XOR:
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
@@ -5457,24 +5328,20 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::PDEP:
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
-  case ISD::VP_FMINNUM:
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
-  case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
-  case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
-  case ISD::VP_FMAXIMUM:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case ISD::SMIN: case ISD::VP_SMIN:
-  case ISD::SMAX: case ISD::VP_SMAX:
-  case ISD::UMIN: case ISD::VP_UMIN:
-  case ISD::UMAX: case ISD::VP_UMAX:
-  case ISD::UADDSAT: case ISD::VP_UADDSAT:
-  case ISD::SADDSAT: case ISD::VP_SADDSAT:
-  case ISD::USUBSAT: case ISD::VP_USUBSAT:
-  case ISD::SSUBSAT: case ISD::VP_SSUBSAT:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+  case ISD::UADDSAT:
+  case ISD::SADDSAT:
+  case ISD::USUBSAT:
+  case ISD::SSUBSAT:
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
   case ISD::ROTL:
@@ -5492,12 +5359,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
   case ISD::VP_UREM:
-  case ISD::VP_FADD:
-  case ISD::VP_FSUB:
-  case ISD::VP_FMUL:
-  case ISD::VP_FDIV:
-  case ISD::VP_FREM:
-  case ISD::VP_FCOPYSIGN:
     Res = WidenVecRes_Binary(N);
     break;
 
@@ -5581,23 +5442,14 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ANY_EXTEND:
   case ISD::FP_EXTEND:
-  case ISD::VP_FP_EXTEND:
   case ISD::FP_ROUND:
-  case ISD::VP_FP_ROUND:
   case ISD::FP_TO_SINT:
-  case ISD::VP_FP_TO_SINT:
   case ISD::FP_TO_UINT:
-  case ISD::VP_FP_TO_UINT:
   case ISD::SIGN_EXTEND:
-  case ISD::VP_SIGN_EXTEND:
   case ISD::SINT_TO_FP:
-  case ISD::VP_SINT_TO_FP:
-  case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
   case ISD::UINT_TO_FP:
-  case ISD::VP_UINT_TO_FP:
   case ISD::ZERO_EXTEND:
-  case ISD::VP_ZERO_EXTEND:
   case ISD::CONVERT_FROM_ARBITRARY_FP:
   case ISD::CONVERT_TO_ARBITRARY_FP:
     Res = WidenVecRes_Convert(N);
@@ -5610,8 +5462,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::LRINT:
   case ISD::LLRINT:
-  case ISD::VP_LRINT:
-  case ISD::VP_LLRINT:
   case ISD::LROUND:
   case ISD::LLROUND:
     Res = WidenVecRes_XROUND(N);
@@ -5649,42 +5499,24 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ABS:
   case ISD::ABS_MIN_POISON:
-  case ISD::VP_ABS:
   case ISD::BITREVERSE:
-  case ISD::VP_BITREVERSE:
   case ISD::BSWAP:
-  case ISD::VP_BSWAP:
   case ISD::CTLZ:
-  case ISD::VP_CTLZ:
   case ISD::CTLZ_ZERO_POISON:
-  case ISD::VP_CTLZ_ZERO_POISON:
   case ISD::CTPOP:
-  case ISD::VP_CTPOP:
   case ISD::CTTZ:
-  case ISD::VP_CTTZ:
   case ISD::CTTZ_ZERO_POISON:
-  case ISD::VP_CTTZ_ZERO_POISON:
-  case ISD::FNEG: case ISD::VP_FNEG:
-  case ISD::FABS: case ISD::VP_FABS:
-  case ISD::VP_SQRT:
-  case ISD::VP_FCEIL:
-  case ISD::VP_FFLOOR:
-  case ISD::VP_FRINT:
-  case ISD::VP_FNEARBYINT:
-  case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN:
-  case ISD::VP_FROUNDTOZERO:
+  case ISD::FNEG:
+  case ISD::FABS:
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
     Res = WidenVecRes_Unary(N);
     break;
-  case ISD::FMA: case ISD::VP_FMA:
+  case ISD::FMA:
   case ISD::FSHL:
-  case ISD::VP_FSHL:
   case ISD::FSHR:
-  case ISD::VP_FSHR:
     Res = WidenVecRes_Ternary(N);
     break;
   case ISD::FMODF:
@@ -5709,16 +5541,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Ternary(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(0));
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
   SDValue InOp3 = GetWidenedVector(N->getOperand(2));
-  if (N->getNumOperands() == 3)
-    return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, InOp3);
-
-  assert(N->getNumOperands() == 5 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
-
-  SDValue Mask =
-      GetWidenedMask(N->getOperand(3), WidenVT.getVectorElementCount());
-  return DAG.getNode(N->getOpcode(), dl, WidenVT,
-                     {InOp1, InOp2, InOp3, Mask, N->getOperand(4)});
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, InOp1, InOp2, InOp3);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
@@ -5732,7 +5555,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
                        N->getFlags());
 
   assert(N->getNumOperands() == 4 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
+  assert((N->getOpcode() == ISD::VP_UDIV || N->getOpcode() == ISD::VP_SDIV ||
+          N->getOpcode() == ISD::VP_UREM || N->getOpcode() == ISD::VP_SREM) &&
+         "Expected VP opcode");
 
   SDValue Mask =
       GetWidenedMask(N->getOperand(2), WidenVT.getVectorElementCount());
@@ -6184,14 +6009,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     InOp = GetWidenedVector(N->getOperand(0));
     InVT = InOp.getValueType();
     InVTEC = InVT.getVectorElementCount();
-    if (InVTEC == WidenEC) {
-      if (N->getNumOperands() == 3 && N->isVPOpcode()) {
-        SDValue Mask =
-            GetWidenedMask(N->getOperand(1), WidenVT.getVectorElementCount());
-        return DAG.getNode(Opcode, DL, WidenVT, InOp, Mask, N->getOperand(2));
-      }
+    if (InVTEC == WidenEC)
       return MakeConvertNode(WidenVT, InOp);
-    }
     if (WidenVT.getSizeInBits() == InVT.getSizeInBits()) {
       // If both input and result vector types are of same width, extend
       // operations should be done with SIGN/ZERO_EXTEND_VECTOR_INREG, which
@@ -6296,15 +6115,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_XROUND(SDNode *N) {
   if (WidenNumElts != SrcVT.getVectorElementCount())
     return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
 
-  if (N->getNumOperands() == 1)
-    return DAG.getNode(N->getOpcode(), dl, WidenVT, Src);
-
-  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
-
-  SDValue Mask =
-      GetWidenedMask(N->getOperand(1), WidenVT.getVectorElementCount());
-  return DAG.getNode(N->getOpcode(), dl, WidenVT, Src, Mask, N->getOperand(2));
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, Src);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
@@ -6438,17 +6249,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_Unary(SDNode *N) {
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   if (N->getNumOperands() == 1)
     return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, N->getFlags());
-  if (N->getOpcode() == ISD::AssertNoFPClass)
-    return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp,
-                       N->getOperand(1), N->getFlags());
-
-  assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
-  assert(N->isVPOpcode() && "Expected VP opcode");
-
-  SDValue Mask =
-      GetWidenedMask(N->getOperand(1), WidenVT.getVectorElementCount());
-  return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT,
-                     {InOp, Mask, N->getOperand(2)});
+  assert(N->getOpcode() == ISD::AssertNoFPClass && "unexpected opcode");
+  return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, N->getOperand(1),
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_InregOp(SDNode *N) {
@@ -6494,11 +6297,25 @@ SDValue DAGTypeLegalizer::WidenVecRes_MERGE_VALUES(SDNode *N, unsigned ResNo) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
+  SDLoc DL(N);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  SDValue InOp = GetWidenedVector(N->getOperand(0));
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
 
-  return DAG.getAddrSpaceCast(SDLoc(N), WidenVT, InOp,
+  // The source has the same number of elements as the result, so widen it to
+  // match WidenVT. It only lives in the widened-vector map if it is itself
+  // widened; otherwise pad it up to the widened element count.
+  SDValue InOp = N->getOperand(0);
+  EVT InVT = InOp.getValueType();
+  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+    InOp = GetWidenedVector(InOp);
+  } else {
+    EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
+                                     InVT.getVectorElementType(), WidenEC);
+    InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
+  }
+
+  return DAG.getAddrSpaceCast(DL, WidenVT, InOp,
                               AddrSpaceCastN->getSrcAddressSpace(),
                               AddrSpaceCastN->getDestAddressSpace());
 }
@@ -7500,7 +7317,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Select(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(1));
   SDValue InOp2 = GetWidenedVector(N->getOperand(2));
   assert(InOp1.getValueType() == WidenVT && InOp2.getValueType() == WidenVT);
-  if (Opcode == ISD::VP_SELECT || Opcode == ISD::VP_MERGE)
+  if (Opcode == ISD::VP_MERGE)
     return DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2,
                        N->getOperand(3));
   return DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2);
@@ -7728,12 +7545,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
          InOp2.getValueType() == WidenInVT &&
          "Input not widened to expected type!");
   (void)WidenInVT;
-  if (N->getOpcode() == ISD::VP_SETCC) {
-    SDValue Mask =
-        GetWidenedMask(N->getOperand(3), WidenVT.getVectorElementCount());
-    return DAG.getNode(ISD::VP_SETCC, SDLoc(N), WidenVT, InOp1, InOp2,
-                       N->getOperand(2), Mask, N->getOperand(4));
-  }
   return DAG.getNode(ISD::SETCC, SDLoc(N), WidenVT, InOp1, InOp2,
                      N->getOperand(2));
 }

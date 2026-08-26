@@ -5298,23 +5298,15 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
                                       LLVM::ModuleTranslation &mt,
                                       llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
-  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
-                    .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::Shared;
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
-  llvm::Intrinsic::ID id;
-  if (isShared) {
-    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg2
-                    : llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg1;
-  } else {
-    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
-                    : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
-  }
+  llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
+                                      : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   args.push_back(mt.lookupValue(curOp.getNCols()));
+  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
 
   return id;
 }
@@ -5330,6 +5322,7 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getTaddr()));
   args.push_back(mt.lookupValue(curOp.getNCols()));
+  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
 
   return id;
 }

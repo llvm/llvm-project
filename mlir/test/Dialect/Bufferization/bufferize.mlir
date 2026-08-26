@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: @alloc_tensor_static
 func.func @alloc_tensor_static() -> tensor<8x16xf32> {
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() alignment = 64 : memref<8x16xf32>
   // CHECK: return %[[ALLOC]]
   %0 = bufferization.alloc_tensor() : tensor<8x16xf32>
   return %0 : tensor<8x16xf32>
@@ -15,7 +15,7 @@ func.func @alloc_tensor_static() -> tensor<8x16xf32> {
 // CHECK-LABEL: @alloc_tensor_dynamic
 // CHECK-SAME:    %[[D0:.*]]: index
 func.func @alloc_tensor_dynamic(%d0: index) -> tensor<?x16xf32> {
-  // CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 64 : i64} : memref<?x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) alignment = 64 : memref<?x16xf32>
   // CHECK: return %[[ALLOC]]
   %0 = bufferization.alloc_tensor(%d0) : tensor<?x16xf32>
   return %0 : tensor<?x16xf32>
@@ -29,7 +29,7 @@ func.func @alloc_tensor_dynamic(%d0: index) -> tensor<?x16xf32> {
 
 // CHECK-LABEL: @alloc_tensor_memory_space
 func.func @alloc_tensor_memory_space(%i: index) -> f32 {
-  // CHECK: memref.alloc() {alignment = 64 : i64} : memref<8x16xf32, 1>
+  // CHECK: memref.alloc() alignment = 64 : memref<8x16xf32, 1>
   %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<8x16xf32>
   %1 = tensor.extract %0[%i, %i] : tensor<8x16xf32>
   return %1 : f32
@@ -42,7 +42,7 @@ func.func @alloc_tensor_memory_space(%i: index) -> f32 {
 // CHECK-LABEL: @alloc_tensor_copy
 // CHECK-SAME:    %[[ARG:.*]]: memref<8x16xf32
 func.func @alloc_tensor_copy(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() alignment = 64 : memref<8x16xf32>
   // CHECK: memref.copy %[[ARG]], %[[ALLOC]]
   // CHECK: return %[[ALLOC]]
   %0 = bufferization.alloc_tensor() copy(%arg0) : tensor<8x16xf32>
@@ -64,7 +64,7 @@ func.func @alloc_tensor_dead() {
 
 // CHECK-LABEL: @dealloc_tensor
 func.func @dealloc_tensor() {
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() alignment = 64 : memref<8x16xf32>
   // CHECK: memref.dealloc %[[ALLOC]]
   %0 = bufferization.alloc_tensor() : tensor<8x16xf32>
   bufferization.dealloc_tensor %0 : tensor<8x16xf32>

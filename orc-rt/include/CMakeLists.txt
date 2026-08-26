@@ -20,6 +20,7 @@ set(ORC_RT_HEADERS
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
+    orc-rt/Proxy.h
     orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
     orc-rt/SPSAllocAction.h

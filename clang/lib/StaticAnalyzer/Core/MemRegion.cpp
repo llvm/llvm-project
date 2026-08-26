@@ -1102,7 +1102,9 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
     QualType Ty = D->getType();
     assert(!Ty.isNull());
-    if (Ty.isConstQualified()) {
+    // A function reference's binding cannot be changed after initialization,
+    // even though reference types themselves are never const-qualified.
+    if (Ty.isConstQualified() || Ty->isFunctionReferenceType()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
     } else {
       // Pointer value of C standard streams is usually not modified by calls
@@ -1638,7 +1640,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       }
 
       const CXXRecordDecl *Child = Ty->getAsCXXRecordDecl();
-      if (!Child) {
+      if (!Child || !ASTContext::hasLayout(Child)) {
         // We cannot compute the offset of the base class.
         SymbolicOffsetBase = R;
       } else {
@@ -1712,7 +1714,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       assert(R);
 
       const RecordDecl *RD = FR->getDecl()->getParent();
-      if (RD->isUnion() || !RD->isCompleteDefinition()) {
+      if (RD->isUnion() || !ASTContext::hasLayout(RD)) {
         // We cannot compute offset for incomplete type.
         // For unions, we could treat everything as offset 0, but we'd rather
         // treat each field as a symbolic offset so they aren't stored on top

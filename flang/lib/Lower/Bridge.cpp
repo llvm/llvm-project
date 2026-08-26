@@ -2568,7 +2568,8 @@ private:
   mlir::scf::ExecuteRegionOp
   wrapUnstructuredConstruct(Fortran::lower::pft::Evaluation &eval,
                             mlir::Block *&savedExitBlock) {
-    if (!Fortran::lower::pft::isWrappableConstruct(eval))
+    if (!Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()))
       return nullptr;
 
     mlir::Location loc = toLocation();
@@ -3177,7 +3178,8 @@ private:
     // allocated for us — startNewFunction runs resetEvaluationBlocks before
     // each entry-point pass, so we can trust the pointer isn't stale from a
     // previous pass.
-    if (Fortran::lower::pft::isWrappableConstruct(eval) &&
+    if (Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()) &&
         eval.hasNestedEvaluations()) {
       Fortran::lower::pft::Evaluation &firstStmt =
           eval.getFirstNestedEvaluation();
@@ -5433,16 +5435,25 @@ private:
         !lhsType->HasDeferredTypeParameter();
     const bool lhsHasVectorSubscripts =
         Fortran::evaluate::HasVectorSubscript(assign.lhs);
+    const bool rhsIsCUDADeviceDesignator = [&]() {
+      if (!userDefinedAssignment || !Fortran::evaluate::IsVariable(assign.rhs))
+        return false;
+      for (const Fortran::semantics::Symbol &sym :
+           Fortran::evaluate::CollectCudaSymbols(assign.rhs))
+        if (Fortran::semantics::IsCUDADevice(sym))
+          return true;
+      return false;
+    }();
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
       if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
-          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
-                                                            assign.rhs)) {
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(
+              getFoldingContext(), assign.lhs, assign.rhs)) {
         rewritten =
-            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+            Fortran::evaluate::TryBuildSplitSumExpressionTrees(assign.rhs);
         if (rewritten)
           rhsExpr = &*rewritten;
       }
@@ -5477,6 +5488,28 @@ private:
         lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
       return lhs;
     };
+
+    auto cleanupImplicitTemps = [&]() {
+      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
+        localSymbols.popScope();
+        for (mlir::Value temp : implicitTemps)
+          fir::FreeMemOp::create(builder, loc, temp);
+      }
+    };
+
+    // Keep CUDA DEVICE designator RHS values as call actuals for user-defined
+    // assignment. A region_assign would later try to enforce RHS value
+    // semantics with a host-side copy, which cannot be formed for DEVICE data.
+    if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
+        rhsIsCUDADeviceDesignator) {
+      Fortran::lower::StatementContext localStmtCtx;
+      hlfir::Entity rhs = evaluateRhs(localStmtCtx);
+      hlfir::Entity lhs = evaluateLhs(localStmtCtx);
+      Fortran::lower::convertUserDefinedAssignmentToHLFIR(
+          loc, *this, *userDefinedAssignment, lhs, rhs, localSymbols);
+      cleanupImplicitTemps();
+      return;
+    }
 
     if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
         !userDefinedAssignment) {
@@ -5514,11 +5547,7 @@ private:
                                   keepLhsLengthInAllocatableAssignment);
         }
       }
-      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
-        localSymbols.popScope();
-        for (mlir::Value temp : implicitTemps)
-          fir::FreeMemOp::create(builder, loc, temp);
-      }
+      cleanupImplicitTemps();
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted
@@ -6310,7 +6339,8 @@ private:
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
-        if (Fortran::lower::pft::isWrappableConstruct(eval)) {
+        if (Fortran::lower::pft::isWrappableConstruct(
+                eval, bridge.getSemanticsContext())) {
           // The wrap owns internal blocks; only create the entry block here
           // so the enclosing CFG can branch to it.
           if (eval.hasNestedEvaluations()) {
@@ -6898,6 +6928,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIsPIE(*module, cgOpts.IsPIE);
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
+  // Under -gpu=mem:unified|managed, host heap allocations use the matching
+  // indirect runtime allocators (malloc_unified / malloc_managed).
+  if (languageFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaUnified))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Unified);
+  else if (languageFeatures.IsEnabled(
+               Fortran::common::LanguageFeature::CudaManaged))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

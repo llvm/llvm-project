@@ -23,8 +23,11 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
+#include <memory>
 
 namespace llvm {
+
+class IRTranslatorImpl;
 
 // Technically the pass should run on an hypothetical MachineModule,
 // since it should translate Global into some sort of MachineGlobal.
@@ -38,6 +41,7 @@ class LLVM_ABI IRTranslatorLegacy : public MachineFunctionPass {
 public:
   static char ID;
   IRTranslatorLegacy(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
+  ~IRTranslatorLegacy() override;
 
   StringRef getPassName() const override { return "IRTranslator"; }
 
@@ -47,13 +51,16 @@ public:
 
 private:
   CodeGenOptLevel OptLevel;
+  std::unique_ptr<IRTranslatorImpl> Impl;
 };
 
 class IRTranslatorPass : public RequiredPassInfoMixin<IRTranslatorPass> {
-  CodeGenOptLevel OptLevel;
+  std::unique_ptr<IRTranslatorImpl> Impl;
 
 public:
-  IRTranslatorPass(CodeGenOptLevel OptLevel) : OptLevel(OptLevel) {}
+  IRTranslatorPass(CodeGenOptLevel OptLevel);
+  ~IRTranslatorPass();
+  IRTranslatorPass(IRTranslatorPass &&);
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

@@ -51,6 +51,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+
 Deprecations and Removals
 -------------------------
 
@@ -66,6 +68,8 @@ Potentially breaking changes
 
 - Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
   be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
+
+- libc++ no longer depends on msvcprt/libcpmt in the MSVC mode.
 
 Announcements About Future Releases
 -----------------------------------
