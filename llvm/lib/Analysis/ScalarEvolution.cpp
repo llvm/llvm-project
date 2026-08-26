@@ -4677,15 +4677,6 @@ const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
   if (LHS == RHS)
     return getZero(LHS->getType());
 
-  // URem identity: X - C*(X u/ C) --> X u% C, for power-of-two C.
-  const SCEVConstant *MulC, *DivC;
-  if (LHS->getType() == RHS->getType() &&
-      match(RHS, m_scev_Mul(m_SCEVConstant(MulC),
-                            m_scev_UDiv(m_scev_Specific(LHS),
-                                        m_SCEVConstant(DivC)))) &&
-      MulC->getAPInt().isPowerOf2() && MulC->getAPInt() == DivC->getAPInt())
-    return getURemExpr(LHS, MulC);
-
   // If we subtract two pointers with different pointer bases, bail.
   // Eventually, we're going to add an assertion to getMulExpr that we
   // can't multiply by a pointer.
