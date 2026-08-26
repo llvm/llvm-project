@@ -1978,13 +1978,6 @@ def riscv_pm2addsu  : RVSDNode<"PM2ADDSU", SDT_RISCVHorizontalMul>;
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp, [SDNPCommutative]>;
 def riscv_mulqr : RVSDNode<"MULQR", SDTIntBinOp, [SDNPCommutative]>;
 
-// "Q-format" multiply with widening accumulate.
-def SDT_RISCVQWideningMulAcc
-    : SDTypeProfile<1, 3, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>,
-                           SDTCisVT<2, i32>, SDTCisSameAs<2, 3>]>;
-def riscv_mqwacc  : RVSDNode<"MQWACC", SDT_RISCVQWideningMulAcc>;
-def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVQWideningMulAcc>;
-
 def SDT_RISCVPackedShift : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
                                                 SDTCisVT<2, XLenVT>]>;
@@ -2390,12 +2383,6 @@ let append Predicates = [IsRV32] in {
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
   def : PatGprGpr<riscv_mulqr, MULQR, i32>;
-
-  // "Q-format" multiply with widening accumulate patterns.
-  def : Pat<(v2i32 (riscv_mqwacc (v2i32 GPRPair:$rd), GPR:$rs1, GPR:$rs2)),
-            (MQWACC GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_mqrwacc (v2i32 GPRPair:$rd), GPR:$rs1, GPR:$rs2)),
-            (MQRWACC GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiplication with horizontal addition patterns.
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;

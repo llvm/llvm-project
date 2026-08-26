@@ -7360,7 +7360,8 @@ define i64 @test_pm2addu_v2i32_i64(<2 x i32> %a, <2 x i32> %b) {
 define i64 @test_pmq2add_v2i32_i64(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmq2add_v2i32_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mvd a4, zero
+; RV32-NEXT:    li a4, 0
+; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:    mqwacc a4, a0, a2
 ; RV32-NEXT:    mqwacc a4, a1, a3
 ; RV32-NEXT:    mvd a0, a4
@@ -7377,7 +7378,8 @@ define i64 @test_pmq2add_v2i32_i64(<2 x i32> %a, <2 x i32> %b) {
 define i64 @test_pmqr2add_v2i32_i64(<2 x i32> %a, <2 x i32> %b) {
 ; RV32-LABEL: test_pmqr2add_v2i32_i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mvd a4, zero
+; RV32-NEXT:    li a4, 0
+; RV32-NEXT:    li a5, 0
 ; RV32-NEXT:    mqrwacc a4, a0, a2
 ; RV32-NEXT:    mqrwacc a4, a1, a3
 ; RV32-NEXT:    mvd a0, a4
