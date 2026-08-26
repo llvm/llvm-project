@@ -495,14 +495,21 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  // Fold the following two scenarios:
-  //   1) i1 mul -> i1 and.
-  //   2) X * Y --> X & Y, iff X, Y can be only {0,1}.
-  // Note: We could use known bits to generalize this and related patterns with
+  // Fold the following two scenarios:  
+  //    1) i1 mul -> i1 and.  
+  //    2) X * Y --> X & Y, iff X, Y can be only {0,1}.  
+  // Note: We could use known bits to generalize this and related patterns with 
   // shifts/truncs
+
+  // Link to issue for posterity: https://github.com/llvm/llvm-project/issues/214333
+  // first attempt: make it use the noted change (I guess this is probably
+  // a todo or something from whoever wrote this previously)
+  // TODO: Update reg tests and also later see about the Alive2 proof saying they weren't identical
   if (Ty->isIntOrIntVectorTy(1) ||
       (match(Op0, m_And(m_Value(), m_One())) &&
-       match(Op1, m_And(m_Value(), m_One()))))
+       match(Op1, m_And(m_Value(), m_One()))) ||
+      (computeKnownBits(Op0, &I).countMaxActiveBits() <= 1 &&
+       computeKnownBits(Op1, &I).countMaxActiveBits() <= 1))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
   if (Value *R = foldMulShl1(I, /* CommuteOperands */ false, Builder))
