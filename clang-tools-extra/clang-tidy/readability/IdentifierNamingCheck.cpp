@@ -416,6 +416,9 @@ IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
     int StyleKindIndex) const {
+  if (StyleKindIndex == SK_Default)
+    return true;
+
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -643,7 +646,7 @@ StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
       !isOptionEnabled("TreatStructAsClass", HNOption.General))
     return {};
 
-  return CRD->isAbstract() ? "I" : "C";
+  return CRD->hasDefinition() && CRD->isAbstract() ? "I" : "C";
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(

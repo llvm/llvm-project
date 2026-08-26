@@ -142,10 +142,10 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP12]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP12]], i64 2
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP13]], i64 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

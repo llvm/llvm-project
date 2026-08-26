@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -260,7 +261,7 @@ private:
   }
 
   SmallSetVector<Instruction *, 32> UsersToReplace;
-  MapVector<Value *, Value *> WorkMap;
+  DenseMap<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
@@ -1160,9 +1161,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
-                                      Alignment, DL, SI) &&
+                                      Alignment, SQ.getWithInstruction(SI)) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
-                                      Alignment, DL, SI)) {
+                                      Alignment, SQ.getWithInstruction(SI))) {
 
         auto MaybeCastedLoadOperand = [&](Value *Op) {
           if (ASC)
@@ -1307,6 +1308,9 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic stores here but it isn't clear that this is important.
   if (!SI.isUnordered())
+    return false;
+
+  if (SI.isElementwise())
     return false;
 
   // swifterror values can't be bitcasted.
@@ -1752,6 +1756,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   AAMDNodes AATags = SI.getAAMetadata();
   if (AATags)
     NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
+
+  // If the two stores had access groups, intersect them.
+  NewSI->setMetadata(LLVMContext::MD_access_group,
+                     intersectAccessGroups(&SI, OtherStore));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

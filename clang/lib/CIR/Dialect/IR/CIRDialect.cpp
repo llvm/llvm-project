@@ -258,6 +258,7 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
     p << " " << stringifyInlineKind(inlineKindAttr.getValue());
   }
 }
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
@@ -616,10 +617,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
-                cir::ConstVectorAttr, cir::ConstComplexAttr,
-                cir::ConstRecordAttr, cir::GlobalViewAttr, cir::PoisonAttr,
-                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
+  if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
+                cir::ConstArrayAttr, cir::ConstVectorAttr,
+                cir::ConstComplexAttr, cir::ConstRecordAttr,
+                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
+                cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -975,6 +977,10 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return cir::PoisonAttr::get(getContext(), getType());
   }
 
+  // Propagate Undef value
+  if (mlir::isa_and_present<cir::UndefAttr>(adaptor.getSrc()))
+    return cir::UndefAttr::get(getType());
+
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
@@ -1013,10 +1019,14 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
       auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
       auto dstIntTy = mlir::cast<cir::IntType>(getType());
-      APInt newVal =
-          srcIntTy.isSigned()
-              ? srcConst.getIntValue().sextOrTrunc(dstIntTy.getWidth())
-              : srcConst.getIntValue().zextOrTrunc(dstIntTy.getWidth());
+      auto constIntAttr = srcConst.getValueAttr<cir::IntAttr>();
+      if (!constIntAttr)
+        return {};
+
+      APInt srcValue = constIntAttr.getValue();
+      APInt newVal = srcIntTy.isSigned()
+                         ? srcValue.sextOrTrunc(dstIntTy.getWidth())
+                         : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
     default:
@@ -2095,12 +2105,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
-  if (getDynTlsRefs()) {
+  if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
-      return emitOpError(
-          "cannot have both static local and dynamic tls references");
-    if (!getTlsModel() || getTlsModel() != TLS_Model::GeneralDynamic)
-      return emitOpError("'dyn_tls_refs' only valid for dynamic tls");
+      return emitOpError("cannot have both static local and tls references");
+    if (!getTlsModel())
+      return emitOpError("'tls_refs' only valid for tls");
   }
 
   if (getAliasee().has_value()) {
@@ -2524,7 +2533,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       (resultTypes.empty() ? cir::VoidType::get(builder.getContext())
                            : resultTypes.front());
 
-  cir::FuncType fnType = cir::FuncType::get(argTypes, returnType, isVariadic);
+  cir::FuncType fnType =
+      cir::FuncType::getChecked([&]() { return parser.emitError(loc); },
+                                argTypes, returnType, isVariadic);
   if (!fnType)
     return failure();
 
@@ -4607,6 +4618,54 @@ LogicalResult cir::LifetimeStartOp::verify() {
 
 LogicalResult cir::LifetimeEndOp::verify() {
   return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
+}
+
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+/// Reads a fundamental integer width from a signless i32 attribute.
+static std::optional<unsigned> getRecordedIntegerWidth(mlir::Attribute attr) {
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(32))
+    return std::nullopt;
+  int64_t width = intAttr.getInt();
+  if (width < 0 ||
+      !cir::isValidFundamentalIntWidth(static_cast<unsigned>(width)))
+    return std::nullopt;
+  return static_cast<unsigned>(width);
+}
+
+LogicalResult cir::MemChrOp::verify() {
+  auto moduleOp = (*this)->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return emitOpError("expects an enclosing module");
+
+  // libc memchr uses pointers in the target's default address space.
+  if (mlir::cast<cir::PointerType>(getSrc().getType()).getAddrSpace())
+    return emitOpError("src must be in the default address space");
+
+  auto checkWidth = [&](cir::IntType type, llvm::StringRef operandName,
+                        llvm::StringRef attrName) -> LogicalResult {
+    mlir::Attribute attr = moduleOp->getAttr(attrName);
+    if (!attr)
+      return emitOpError("expects the module to record ") << attrName;
+    std::optional<unsigned> width = getRecordedIntegerWidth(attr);
+    if (!width)
+      return emitOpError("requires ")
+             << attrName
+             << " to be a signless i32 holding a fundamental integer width";
+    if (type.getWidth() != *width)
+      return emitOpError() << operandName << " must have the width recorded in "
+                           << attrName;
+    return success();
+  };
+
+  if (failed(checkWidth(getPattern().getType(), "pattern",
+                        cir::CIRDialect::getIntTypeWidthAttrName())))
+    return failure();
+  return checkWidth(getLen().getType(), "len",
+                    cir::CIRDialect::getSizeTypeWidthAttrName());
 }
 
 //===----------------------------------------------------------------------===//

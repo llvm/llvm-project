@@ -33,7 +33,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
             try:
                 process.stdin.close()
                 process.wait(timeout=5)
-            except TimeoutExpired:
+            except subprocess.TimeoutExpired:
                 process.kill()
 
         self.addTearDownHook(cleanup)
@@ -76,7 +76,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.run_debug_session(connection, "Alice")
         self.run_debug_session(connection, "Bob")
 
-    @skipIfWindows
+    @requirePOSIX
     def test_server_unix_socket(self):
         """
         Test launching a binary with a lldb-dap in server mode on a unix socket.

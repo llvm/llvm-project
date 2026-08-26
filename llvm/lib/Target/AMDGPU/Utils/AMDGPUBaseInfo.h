@@ -410,6 +410,7 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
+  MIMGDim NonArrayDim;
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool MSAA;
@@ -1513,6 +1514,11 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) and not just on two.
+bool isFullSIMDMode(const MCSubtargetInfo &STI);
+
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1525,6 +1531,12 @@ bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
 bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 

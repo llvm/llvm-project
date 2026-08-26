@@ -81,6 +81,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -123,6 +124,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -922,6 +924,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -944,16 +956,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
@@ -4794,7 +4796,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     for (unsigned I = 0, N = Record[Idx++]; I < N; ++I) {
       // FIXME: we should use input files rather than storing names.
       std::string Filename = ReadPath(F, Record, Idx);
-      auto SF = FileMgr.getOptionalFileRef(Filename, false, false);
+      auto SF = FileMgr.getOptionalFileRef(Filename);
       if (!SF) {
         if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
           Error("could not find file '" + Filename +"' referenced by AST file");
@@ -7665,7 +7667,7 @@ ConceptReference *ASTRecordReader::readConceptReference() {
   auto TemplateKWLoc = readSourceLocation();
   auto ConceptNameLoc = readDeclarationNameInfo();
   auto FoundDecl = readDeclAs<NamedDecl>();
-  auto NamedConcept = readDeclAs<ConceptDecl>();
+  auto NamedConcept = readTemplateName();
   auto *CR = ConceptReference::Create(
       getContext(), NNS, TemplateKWLoc, ConceptNameLoc, FoundDecl, NamedConcept,
       (readBool() ? readASTTemplateArgumentListInfo() : nullptr));
@@ -9870,29 +9872,6 @@ void ASTReader::ReadLateParsedTemplates(
   LateParsedTemplates.clear();
 }
 
-void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
-  if (!Lambda->getLambdaContextDecl())
-    return;
-
-  auto LambdaInfo =
-      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-                     Lambda->getLambdaIndexInContext());
-
-  // Handle the import and then include case for lambdas.
-  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
-      Iter != LambdaDeclarationsForMerging.end() &&
-      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
-    CXXRecordDecl *Previous =
-        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
-    Lambda->setPreviousDecl(Previous);
-    return;
-  }
-
-  // Keep track of this lambda so it can be merged with another lambda that
-  // is loaded later.
-  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
-}
-
 void ASTReader::LoadSelector(Selector Sel) {
   // It would be complicated to avoid reading the methods anyway. So don't.
   ReadMethodPool(Sel);
@@ -11492,7 +11471,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFinalClause();
     break;
   case llvm::omp::OMPC_num_threads:
-    C = new (Context) OMPNumThreadsClause();
+    C = OMPNumThreadsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_safelen:
     C = new (Context) OMPSafelenClause();
@@ -11907,11 +11886,20 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  C->setPrescriptivenessModifier(
+      Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setPrescriptivenessModifierLoc(Record.readSourceLocation());
+  C->setDimsModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setDimsModifierLoc(Record.readSourceLocation());
+  C->setDimsModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
-  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
-  C->setNumThreads(Record.readSubExpr());
-  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {

@@ -44,10 +44,10 @@ define void @hoist_loads_no_prof_on_merged_load(ptr %dst, ptr %src, ptr %cond, i
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP10]], align 4, !alias.scope [[META4]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP11]], align 4, !alias.scope [[META4]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP12]], align 4, !alias.scope [[META4]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> poison, i32 [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP16]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> poison, i32 [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP16]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP17]], i64 3
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <4 x i32> [[TMP21]], splat (i32 1)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP21]], <4 x i32> [[TMP22]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP13]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META8:![0-9]+]]
@@ -162,10 +162,10 @@ define void @sink_stores_no_prof_on_merged_store(ptr %dst, ptr %src, ptr %cond, 
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP10]], align 4, !alias.scope [[META22]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP11]], align 4, !alias.scope [[META22]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP12]], align 4, !alias.scope [[META22]]
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP19]], i32 2
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP20]], i32 3
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> [[TMP22]], i32 [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP20]], i64 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = sub <4 x i32> [[TMP24]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP26:%.*]] = add <4 x i32> [[TMP24]], splat (i32 10)
 ; CHECK-NEXT:    [[TMP27:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP25]], <4 x i32> [[TMP26]]

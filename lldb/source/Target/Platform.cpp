@@ -791,8 +791,8 @@ const char *Platform::GetHostname() {
   return m_hostname.c_str();
 }
 
-ConstString Platform::GetFullNameForDylib(ConstString basename) {
-  return basename;
+std::string Platform::GetFullNameForDylib(llvm::StringRef basename) {
+  return basename.str();
 }
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
