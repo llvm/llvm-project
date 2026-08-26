@@ -33,10 +33,11 @@
 // arguments: the returned values and the -inf argument are dropped. Both stay covered by the
 // other two variants of this test and by the test in test/std.
 //
-// The guard has to be a #if. `if constexpr` would not do: has_infinity is true wherever this
-// matters, so nothing is discarded, and a discarded substatement in a non-templated entity is
-// still fully analyzed ([stmt.if]/2 scopes non-instantiation to templates), so it warns
-// either way. Only the preprocessor removes the tokens from translation.
+// The guard has to be a #if, not the `if constexpr` used for has_infinity below: an
+// `if constexpr (__FAST_MATH__ ? false : true)` would discard nothing where it matters, and a
+// discarded substatement in a non-templated entity is still fully analyzed ([stmt.if]/2
+// scopes non-instantiation to templates), so the use of an infinity would be diagnosed either
+// way. Only the preprocessor removes the tokens from translation.
 #ifdef __FAST_MATH__
 #  define TEST_SF_FINITE_MATH_ONLY 1
 #else
@@ -97,7 +98,7 @@ inline void test_error_reporting() {
 
 #if !TEST_SF_FINITE_MATH_ONLY
   // -inf is outside the x >= 0 domain too ([sf.cmath.general]/2)
-  if (std::numeric_limits<double>::has_infinity)
+  if constexpr (std::numeric_limits<double>::has_infinity)
     test_domain_error(laguerre, -std::numeric_limits<double>::infinity());
 #endif
 
