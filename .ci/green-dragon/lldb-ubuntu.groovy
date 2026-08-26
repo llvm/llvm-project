@@ -74,7 +74,7 @@ pip3 install --break-system-packages -r /workspace/llvm-zorg/zorg/jenkins/jobs/r
     -DLLDB_ENABLE_CURSES=ON \
     -DLLDB_ENABLE_LIBXML2=ON \
     -DLLDB_ENABLE_LUA=OFF \
-    -DLLDB_ENABLE_LZMA=OFF \
+    -DLLVM_ENABLE_LZMA=OFF \
     -DLLDB_ENABLE_PYTHON=ON \
     -DLLDB_ENABLE_SWIG=ON \
     -DLLVM_BUILD_TOOLS=TRUE \
