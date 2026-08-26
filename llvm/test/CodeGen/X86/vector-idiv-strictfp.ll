@@ -439,3 +439,101 @@ define <8 x i64> @test_divv_8i64_narrow_strictfp(<8 x i64> %a, <8 x i64> %b) nou
   %res = udiv <8 x i64> %aa, %bb
   ret <8 x i64> %res
 }
+
+define void @test_divv_7i64_narrow_strictfp(<7 x i64> %a, <7 x i64> %b, ptr %p) nounwind strictfp {
+; NODQ-LABEL: test_divv_7i64_narrow_strictfp:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vpsrlq $12, %zmm0, %zmm2
+; NODQ-NEXT:    vpsrlq $12, %zmm1, %zmm0
+; NODQ-NEXT:    vpextrq $1, %xmm2, %rax
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm1
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vmovq %xmm0, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; NODQ-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; NODQ-NEXT:    vpextrq $1, %xmm3, %rax
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; NODQ-NEXT:    vpextrq $1, %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm5
+; NODQ-NEXT:    vmovq %xmm3, %rax
+; NODQ-NEXT:    vmovq %xmm4, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm3
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; NODQ-NEXT:    vextracti32x4 $2, %zmm2, %xmm4
+; NODQ-NEXT:    vpextrq $1, %xmm4, %rax
+; NODQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm5
+; NODQ-NEXT:    vpextrq $1, %xmm5, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm6
+; NODQ-NEXT:    vmovq %xmm4, %rax
+; NODQ-NEXT:    vmovq %xmm5, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    vmovq %rax, %xmm4
+; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm6[0]
+; NODQ-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
+; NODQ-NEXT:    vmovq %xmm2, %rax
+; NODQ-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; NODQ-NEXT:    vmovq %xmm0, %rcx
+; NODQ-NEXT:    xorl %edx, %edx
+; NODQ-NEXT:    divq %rcx
+; NODQ-NEXT:    movq %rax, 48(%rdi)
+; NODQ-NEXT:    vmovdqa %xmm4, 32(%rdi)
+; NODQ-NEXT:    vmovdqa %xmm3, 16(%rdi)
+; NODQ-NEXT:    vmovdqa %xmm1, (%rdi)
+; NODQ-NEXT:    vzeroupper
+; NODQ-NEXT:    retq
+;
+; DQ-LABEL: test_divv_7i64_narrow_strictfp:
+; DQ:       # %bb.0:
+; DQ-NEXT:    vpsrlq $12, %zmm0, %zmm0
+; DQ-NEXT:    vpsrlq $12, %zmm1, %zmm1
+; DQ-NEXT:    vcvtqq2pd %zmm1, %zmm1
+; DQ-NEXT:    vcvtqq2pd %zmm0, %zmm0
+; DQ-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; DQ-NEXT:    vcvttpd2uqq {sae}, %zmm0, %zmm0
+; DQ-NEXT:    vextractf32x4 $2, %zmm0, 32(%rdi)
+; DQ-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
+; DQ-NEXT:    vmovlps %xmm1, 48(%rdi)
+; DQ-NEXT:    vmovaps %ymm0, (%rdi)
+; DQ-NEXT:    vzeroupper
+; DQ-NEXT:    retq
+  %aa = lshr <7 x i64> %a, splat (i64 12)
+  %bb = lshr <7 x i64> %b, splat (i64 12)
+  %res = udiv <7 x i64> %aa, %bb
+  store <7 x i64> %res, ptr %p
+  ret void
+}
+
+define void @test_divv_7i32_narrow_strictfp(<7 x i32> %a, <7 x i32> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_7i32_narrow_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $12, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrld $12, %ymm1, %ymm1
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vextractps $2, %xmm1, 24(%rdi)
+; CHECK-NEXT:    vmovlps %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %aa = lshr <7 x i32> %a, splat (i32 12)
+  %bb = lshr <7 x i32> %b, splat (i32 12)
+  %res = udiv <7 x i32> %aa, %bb
+  store <7 x i32> %res, ptr %p
+  ret void
+}

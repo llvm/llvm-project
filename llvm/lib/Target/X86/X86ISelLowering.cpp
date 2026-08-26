@@ -50887,23 +50887,26 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   // Widen a non-power-of-two lane count to get a machine type, but only
   // while it still fits one divide. Two chains lose to a chain plus a scalar.
   unsigned NumElts = VT.getVectorNumElements();
-  if ((IsStrict || !UseExactFPDiv) && !isPowerOf2_32(NumElts)) {
+  bool Needs512 = IsStrict || !UseExactFPDiv;
+  if (Needs512 && !isPowerOf2_32(NumElts)) {
     if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
       return SDValue();
-    SDValue WideDividend = DAG.WidenVector(Dividend, DL);
-    EVT WideVT = WideDividend.getValueType();
-    SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
-    SDValue Wide = DAG.getNode(Opc, DL, WideVT, WideDividend, WideDivisor);
-    return DAG.getExtractSubvector(DL, VT, Wide, 0);
+    Dividend = DAG.WidenVector(Dividend, DL);
+    Divisor = DAG.WidenVector(Divisor, DL);
+    N = DAG.getNode(Opc, DL, Dividend.getValueType(), Dividend, Divisor)
+            .getNode();
   }
 
-  if (UseExactFPDiv)
-    return combineIntDivRemViaExactFPDiv(N, FPSclVT, IsSigned, IsRem, IsStrict,
-                                         DAG, DCI, Subtarget, DL);
-
-  // Wide i64 needs the reciprocal refinement chain instead.
-  return combineIntDivRemViaFPReciprocal(N, IsSigned, IsRem, DAG, Subtarget,
-                                         DL);
+  SDValue Res =
+      UseExactFPDiv
+          ? combineIntDivRemViaExactFPDiv(N, FPSclVT, IsSigned, IsRem, IsStrict,
+                                          DAG, DCI, Subtarget, DL)
+          : combineIntDivRemViaFPReciprocal(N, IsSigned, IsRem, DAG, Subtarget,
+                                            DL);
+  // Narrow a widened result back to VT.
+  if (Res && Res.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
 }
 
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
