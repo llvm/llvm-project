@@ -100,6 +100,41 @@ entry:
   ret void
 }
 
+define void @hello_with_scopes(ptr noalias nocapture %a, ptr noalias nocapture readonly %c, ptr nocapture %d) #0 {
+; CHECK-LABEL: define {{[^@]+}}@hello_with_scopes
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[C:%.*]], ptr captures(none) [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope [[META23:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX]], align 4, !noalias [[META23]]
+; CHECK-NEXT:    store float [[TMP0]], ptr [[D]], align 4, !noalias [[META23]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load float, ptr %c, align 4, !alias.scope !0
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 5
+  store float %0, ptr %arrayidx, align 4, !noalias !0
+  store float %0, ptr %d, align 4, !noalias !0
+  ret void
+}
+
+define void @foo_with_scopes(ptr nocapture %a, ptr nocapture readonly %c, ptr nocapture %d) #0 {
+; CHECK-LABEL: define {{[^@]+}}@foo_with_scopes
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]], ptr captures(none) [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META26:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META29:![0-9]+]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope [[META31:![0-9]+]]
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I]], align 4, !alias.scope [[META26]], !noalias [[META34:![0-9]+]]
+; CHECK-NEXT:    store float [[TMP0]], ptr [[D]], align 4, !noalias [[META35:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @hello_with_scopes(ptr %a, ptr %c, ptr %d)
+  ret void
+}
+
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello: %a"}
 ; CHECK: !2 = distinct !{!2, i1 true, !"hello"}
@@ -123,6 +158,22 @@ entry:
 ; CHECK: !20 = !{!21}
 ; CHECK: !21 = distinct !{!21, !19, !"hello2: %b"}
 ; CHECK: !22 = !{!18, !21}
+; CHECK: !23 = !{!24}
+; CHECK: !24 = distinct !{!24, !25, !"hello_with_scopes: pre-existing"}
+; CHECK: !25 = distinct !{!25, i1 false, !"hello_with_scopes"}
+; CHECK: !26 = !{!27}
+; CHECK: !27 = distinct !{!27, !28, !"hello_with_scopes: %a"}
+; CHECK: !28 = distinct !{!28, i1 true, !"hello_with_scopes"}
+; CHECK: !29 = !{!30}
+; CHECK: !30 = distinct !{!30, !28, !"hello_with_scopes: %c"}
+; CHECK: !31 = !{!32, !30}
+; CHECK: !32 = distinct !{!32, !33, !"hello_with_scopes: pre-existing"}
+; CHECK: !33 = distinct !{!33, i1 false, !"hello_with_scopes"}
+; CHECK: !34 = !{!32}
+; CHECK: !35 = !{!32, !27, !30}
 
 attributes #0 = { nounwind uwtable }
 
+!0 = !{!1}
+!1 = distinct !{!1, !2, !"hello_with_scopes: pre-existing"}
+!2 = distinct !{!2, i1 false, !"hello_with_scopes"}
