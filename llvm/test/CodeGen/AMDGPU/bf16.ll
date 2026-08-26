@@ -18840,26 +18840,21 @@ define amdgpu_ps i32 @s_fabs_bf16(bfloat inreg %a) #0 {
 ; GFX8-LABEL: s_fabs_bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_fabs_bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX9-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_fabs_bf16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX10-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_fabs_bf16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-LABEL: s_fabs_bf16:
@@ -18869,8 +18864,6 @@ define amdgpu_ps i32 @s_fabs_bf16(bfloat inreg %a) #0 {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %op = call bfloat @llvm.fabs.bf16(bfloat %a)
   %cast = bitcast bfloat %op to i16

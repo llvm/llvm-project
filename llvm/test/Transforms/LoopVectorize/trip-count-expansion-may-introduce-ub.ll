@@ -985,8 +985,8 @@ define i64 @multi_exit_4_exit_count_with_urem_by_constant_in_latch(ptr %dst, i64
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[N]], 42
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], -42
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[N]], [[TMP5]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 42
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP6]], i64 0)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i64 [[UMIN]], 1

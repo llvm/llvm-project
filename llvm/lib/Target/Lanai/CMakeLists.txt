@@ -44,6 +44,7 @@ add_llvm_target(LanaiCodeGen
   LanaiInfo
   MC
   ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

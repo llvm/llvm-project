@@ -57,6 +57,20 @@ bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
 
+/// Create the fir.allocmem that replaces \p alloca: same allocated type, names,
+/// type parameters and shape. Any extra attribute is left to the caller.
+fir::AllocMemOp createAllocMemFromAlloca(mlir::OpBuilder &builder,
+                                         fir::AllocaOp alloca);
+
+/// Under -gpu=mem:unified|managed, move the dynamically sized fir.alloca of the
+/// user variables of \p func (automatic arrays and automatic character) to
+/// fir.allocmem/fir.freemem pairs marked for the unified/managed allocator.
+/// Compiler temporaries, fir.must_be_stack allocations, and device code, which
+/// keeps its stack allocations, are left alone. Returns true if the function
+/// was modified. This is what the cuda-heap-alloc-promotion pass runs.
+bool promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
+                                             mlir::Operation *func);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_MEMORYUTILS_H

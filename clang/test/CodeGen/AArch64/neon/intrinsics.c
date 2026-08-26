@@ -324,9 +324,9 @@ uint32x4_t test_vqrshrn_high_n_u64(uint32x2_t a, uint64x2_t b) {
 //===------------------------------------------------------===//
 
 // LLVM-LABEL: @test_vmaxv_s8(
-// CIR-LABEL: @vmaxv_s8(
 int8_t test_vmaxv_s8(int8x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_s8({{%.*}}) : (!cir.vector<8 x !s8i> {{.*}}) -> !s8i
+// CIR-LABEL: cir.func{{.*}}@vmaxv_s8(
 
 // LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXV_S8_I:%.*]] = call i8 @llvm.vector.reduce.smax.v8i8(<8 x i8> [[A]])
@@ -335,9 +335,9 @@ int8_t test_vmaxv_s8(int8x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s8(
-// CIR-LABEL: @vmaxvq_s8(
 int8_t test_vmaxvq_s8(int8x16_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s8({{%.*}}) : (!cir.vector<16 x !s8i> {{.*}}) -> !s8i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_s8(
 
 // LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_S8_I:%.*]] = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> [[A]])
@@ -346,9 +346,9 @@ int8_t test_vmaxvq_s8(int8x16_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_s16(
-// CIR-LABEL: @vmaxv_s16(
 int16_t test_vmaxv_s16(int16x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_s16({{%.*}}) : (!cir.vector<4 x !s16i> {{.*}}) -> !s16i
+// CIR-LABEL: cir.func{{.*}}@vmaxv_s16(
 
 // LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXV_S16_I:%.*]] = call i16 @llvm.vector.reduce.smax.v4i16(<4 x i16> [[A]])
@@ -357,9 +357,9 @@ int16_t test_vmaxv_s16(int16x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s16(
-// CIR-LABEL: @vmaxvq_s16(
 int16_t test_vmaxvq_s16(int16x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s16({{%.*}}) : (!cir.vector<8 x !s16i> {{.*}}) -> !s16i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_s16(
 
 // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_S16_I:%.*]] = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> [[A]])
@@ -379,9 +379,9 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_s32(
-// CIR-LABEL: @vmaxvq_s32(
 int32_t test_vmaxvq_s32(int32x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_s32({{%.*}}) : (!cir.vector<4 x !s32i> {{.*}}) -> !s32i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_s32(
 
 // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[A]])
@@ -390,9 +390,9 @@ int32_t test_vmaxvq_s32(int32x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_u8(
-// CIR-LABEL: @vmaxv_u8(
 uint8_t test_vmaxv_u8(uint8x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_u8({{%.*}}) : (!cir.vector<8 x !u8i> {{.*}}) -> !u8i
+// CIR-LABEL: cir.func{{.*}}@vmaxv_u8(
 
 // LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXV_U8_I:%.*]] = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> [[A]])
@@ -401,9 +401,9 @@ uint8_t test_vmaxv_u8(uint8x8_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u8(
-// CIR-LABEL: @vmaxvq_u8(
 uint8_t test_vmaxvq_u8(uint8x16_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u8({{%.*}}) : (!cir.vector<16 x !u8i> {{.*}}) -> !u8i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_u8(
 
 // LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_U8_I:%.*]] = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> [[A]])
@@ -412,9 +412,9 @@ uint8_t test_vmaxvq_u8(uint8x16_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxv_u16(
-// CIR-LABEL: @vmaxv_u16(
 uint16_t test_vmaxv_u16(uint16x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxv_u16({{%.*}}) : (!cir.vector<4 x !u16i> {{.*}}) -> !u16i
+// CIR-LABEL: cir.func{{.*}}@vmaxv_u16(
 
 // LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXV_U16_I:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[A]])
@@ -423,9 +423,9 @@ uint16_t test_vmaxv_u16(uint16x4_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u16(
-// CIR-LABEL: @vmaxvq_u16(
 uint16_t test_vmaxvq_u16(uint16x8_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u16({{%.*}}) : (!cir.vector<8 x !u16i> {{.*}}) -> !u16i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_u16(
 
 // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_U16_I:%.*]] = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> [[A]])
@@ -445,9 +445,9 @@ uint32_t test_vmaxv_u32(uint32x2_t a) {
 }
 
 // LLVM-LABEL: @test_vmaxvq_u32(
-// CIR-LABEL: @vmaxvq_u32(
 uint32_t test_vmaxvq_u32(uint32x4_t a) {
 // CIR: {{%.*}} = cir.call @vmaxvq_u32({{%.*}}) : (!cir.vector<4 x !u32i> {{.*}}) -> !u32i
+// CIR-LABEL: cir.func{{.*}}@vmaxvq_u32(
 
 // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]])
 // LLVM:      [[VMAXVQ_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[A]])

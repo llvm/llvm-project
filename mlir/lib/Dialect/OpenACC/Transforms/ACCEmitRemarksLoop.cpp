@@ -36,6 +36,13 @@ using namespace mlir;
 
 namespace {
 
+static bool
+computeRegionInSpecializedAccRoutine(acc::ComputeRegionOp computeRegion) {
+  if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
+    return acc::isSpecializedAccRoutine(func);
+  return false;
+}
+
 static bool shouldEmitLoopRemarks(acc::ComputeRegionOp computeRegion) {
   StringRef origin = computeRegion.getOrigin();
   if (origin == acc::KernelsOp::getOperationName() ||
@@ -43,9 +50,7 @@ static bool shouldEmitLoopRemarks(acc::ComputeRegionOp computeRegion) {
       origin == acc::SerialOp::getOperationName())
     return true;
 
-  if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
-    return acc::isSpecializedAccRoutine(func);
-  return false;
+  return computeRegionInSpecializedAccRoutine(computeRegion);
 }
 
 static std::string getACCParLevelName(acc::GPUParallelDimAttr parDim,
@@ -61,7 +66,10 @@ static std::string getACCParLevelName(acc::GPUParallelDimAttr parDim,
   else if (policy.isGang(parDim))
     accName = "gang";
 
-  if (!policy.isSeq(parDim)) {
+  // Don't specify the constant launch args for sequential loops or loops in
+  // specialized acc routines as the launch args are not determined here.
+  if (!policy.isSeq(parDim) &&
+      !computeRegionInSpecializedAccRoutine(computeRegion)) {
     if (std::optional<uint64_t> constant =
             computeRegion.getKnownConstantLaunchArg(parDim))
       accName += "(" + std::to_string(*constant) + ")";

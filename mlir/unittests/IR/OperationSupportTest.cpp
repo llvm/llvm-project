@@ -334,7 +334,7 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   // Check ignore discardable dictionary attributes.
   SmallVector<NamedAttribute> newAttrs = {
       b.getNamedAttr("foo", b.getStringAttr("f"))};
-  op1->setAttrs(newAttrs);
+  op1->setDiscardableAttrs(newAttrs);
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
             getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),

@@ -245,7 +245,6 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
 }
 
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
-  // llvm::errs()<< __PRETTY_FUNCTION__ << "Ret\n";
   if (!isActive())
     return true;
 
@@ -254,7 +253,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(S, CodePtr(), Ptr);
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -268,9 +267,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (Ptr.isPastEnd())
-      return false;
-
-    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
       return false;
 
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
@@ -324,7 +320,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;

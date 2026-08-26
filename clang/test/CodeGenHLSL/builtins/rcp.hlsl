@@ -77,6 +77,12 @@ float3 test_rcp_float3(float3 p0) { return rcp(p0); }
 // CHECK: ret <4 x float> %hlsl.rcp
 float4 test_rcp_float4(float4 p0) { return rcp(p0); }
 
+// DXIL_CHECK: define hidden noundef nofpclass(nan inf) <5 x float> @
+// SPIR_CHECK: define hidden spir_func noundef nofpclass(nan inf) <5 x float> @
+// CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn <5 x float> splat (float 1.000000e+00), %{{.*}}
+// CHECK: ret <5 x float> %hlsl.rcp
+vector<float, 5> test_rcp_float5(vector<float, 5> p0) { return rcp(p0); }
+
 // DXIL_CHECK: define hidden noundef nofpclass(nan inf) double @
 // SPIR_CHECK: define hidden spir_func noundef nofpclass(nan inf) double @
 // CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn double 1.000000e+00, %{{.*}} 
