@@ -1032,22 +1032,28 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; TMP1-EMPTY:
 ; TMP1-NEXT:    if.else1:
 ; TMP1-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c2>
-; TMP1-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP7]]>
-; TMP1-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c1>
-; TMP1-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or vp<[[VP8]]>, vp<[[VP9]]>
-; TMP1-NEXT:      BLEND ir<%phi1> = ir<0.000000e+00>/vp<[[VP8]]> ir<1.000000e+00>/vp<[[VP9]]>
+; TMP1-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP5]]>, vp<[[VP7]]>
+; TMP1-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP8]]>
+; TMP1-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c1>
+; TMP1-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP8]]>, ir<%c1>
+; TMP1-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP11]]>
+; TMP1-NEXT:      BLEND ir<%phi1> = ir<0.000000e+00>/vp<[[VP9]]> ir<1.000000e+00>/vp<[[VP10]]>
 ; TMP1-NEXT:    Successor(s): if.else2
 ; TMP1-EMPTY:
 ; TMP1-NEXT:    if.else2:
-; TMP1-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not ir<%c3>
-; TMP1-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP10]]>, vp<[[VP11]]>
-; TMP1-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%c2>
-; TMP1-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP12]]>, vp<[[VP13]]>
+; TMP1-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = not ir<%c3>
+; TMP1-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and vp<[[VP11]]>, vp<[[VP13]]>
+; TMP1-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP14]]>
+; TMP1-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = logical-and vp<[[VP5]]>, ir<%c2>
+; TMP1-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP16]]>
+; TMP1-NEXT:      EMIT vp<[[VP18:%[0-9]+]]> = or vp<[[VP14]]>, vp<[[VP16]]>
+; TMP1-NEXT:      EMIT vp<[[VP19:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP18]]>
 ; TMP1-NEXT:    Successor(s): latch
 ; TMP1-EMPTY:
 ; TMP1-NEXT:    latch:
-; TMP1-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP10]]>, ir<%c3>
-; TMP1-NEXT:      BLEND ir<%phi> = ir<2.000000e+00>/vp<[[VP14]]> ir<%phi1>/vp<[[VP15]]>
+; TMP1-NEXT:      EMIT vp<[[VP20:%[0-9]+]]> = logical-and vp<[[VP11]]>, ir<%c3>
+; TMP1-NEXT:      EMIT vp<[[VP21:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP20]]>
+; TMP1-NEXT:      BLEND ir<%phi> = ir<2.000000e+00>/vp<[[VP19]]> ir<%phi1>/vp<[[VP21]]>
 ; TMP1-NEXT:      EMIT ir<%gep> = getelementptr ir<%dst>, ir<%iv>
 ; TMP1-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP4]]>
 ; TMP1-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>, vp<[[VP4]]>
@@ -1062,7 +1068,7 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; TMP1-NEXT:  Successor(s): middle.block
 ; TMP1-EMPTY:
 ; TMP1-NEXT:  middle.block:
-; TMP1-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; TMP1-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; TMP1-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<57>, vp<[[VP2]]>
 ; TMP1-NEXT:    EMIT branch-on-cond ir<true>
 ; TMP1-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1071,7 +1077,7 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; TMP1-NEXT:  No successors
 ; TMP1-EMPTY:
 ; TMP1-NEXT:  scalar.ph:
-; TMP1-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP17]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; TMP1-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP23]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; TMP1-NEXT:  Successor(s): ir-bb<header>
 ; TMP1-EMPTY:
 ; TMP1-NEXT:  ir-bb<header>:
@@ -1201,31 +1207,34 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; TMP2-NEXT:    Successor(s): load.v1
 ; TMP2-EMPTY:
 ; TMP2-NEXT:    load.v1:
-; TMP2-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%cond1>
-; TMP2-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP8]]>
-; TMP2-NEXT:      BLEND ir<%val0> = ir<%v0>/vp<[[VP7]]> ir<0>/vp<[[VP8]]>
+; TMP2-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and vp<[[VP5]]>, ir<%cond1>
+; TMP2-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP8]]>
+; TMP2-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or ir<%c1>, vp<[[VP8]]>
+; TMP2-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP10]]>
+; TMP2-NEXT:      BLEND ir<%val0> = ir<%v0>/vp<[[VP7]]> ir<0>/vp<[[VP9]]>
 ; TMP2-NEXT:      EMIT ir<%gep1> = getelementptr inbounds ir<%src1>, ir<%iv>
-; TMP2-NEXT:      EMIT-SCALAR ir<%v1> = load ir<%gep1>, vp<[[VP9]]>
-; TMP2-NEXT:      EMIT ir<%val1> = add ir<%v1>, ir<%val0>, vp<[[VP9]]>
+; TMP2-NEXT:      EMIT-SCALAR ir<%v1> = load ir<%gep1>, vp<[[VP11]]>
+; TMP2-NEXT:      EMIT ir<%val1> = add ir<%v1>, ir<%val0>, vp<[[VP11]]>
 ; TMP2-NEXT:    Successor(s): load.v2.check
 ; TMP2-EMPTY:
 ; TMP2-NEXT:    load.v2.check:
-; TMP2-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = not ir<%cond1>
-; TMP2-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP10]]>
-; TMP2-NEXT:      BLEND ir<%val2> = ir<%val1>/vp<[[VP9]]> ir<0>/vp<[[VP11]]>
+; TMP2-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%cond1>
+; TMP2-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP5]]>, vp<[[VP12]]>
+; TMP2-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP13]]>
+; TMP2-NEXT:      BLEND ir<%val2> = ir<%val1>/vp<[[VP11]]> ir<0>/vp<[[VP14]]>
 ; TMP2-NEXT:    Successor(s): load.v2
 ; TMP2-EMPTY:
 ; TMP2-NEXT:    load.v2:
-; TMP2-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c3>
+; TMP2-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c3>
 ; TMP2-NEXT:      EMIT ir<%gep2> = getelementptr inbounds ir<%src2>, ir<%iv>
-; TMP2-NEXT:      EMIT-SCALAR ir<%v2> = load ir<%gep2>, vp<[[VP12]]>
-; TMP2-NEXT:      EMIT ir<%val3> = add ir<%v2>, ir<%val2>, vp<[[VP12]]>
+; TMP2-NEXT:      EMIT-SCALAR ir<%v2> = load ir<%gep2>, vp<[[VP15]]>
+; TMP2-NEXT:      EMIT ir<%val3> = add ir<%v2>, ir<%val2>, vp<[[VP15]]>
 ; TMP2-NEXT:    Successor(s): latch
 ; TMP2-EMPTY:
 ; TMP2-NEXT:    latch:
-; TMP2-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = not ir<%c3>
-; TMP2-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP13]]>
-; TMP2-NEXT:      BLEND ir<%result> = ir<%val3>/vp<[[VP12]]> ir<%val2>/vp<[[VP14]]>
+; TMP2-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = not ir<%c3>
+; TMP2-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP16]]>
+; TMP2-NEXT:      BLEND ir<%result> = ir<%val3>/vp<[[VP15]]> ir<%val2>/vp<[[VP17]]>
 ; TMP2-NEXT:      EMIT ir<%out> = getelementptr inbounds ir<%dst>, ir<%iv>
 ; TMP2-NEXT:      EMIT store ir<%result>, ir<%out>, vp<[[VP4]]>
 ; TMP2-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>, vp<[[VP4]]>
@@ -1240,7 +1249,7 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; TMP2-NEXT:  Successor(s): middle.block
 ; TMP2-EMPTY:
 ; TMP2-NEXT:  middle.block:
-; TMP2-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; TMP2-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; TMP2-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; TMP2-NEXT:    EMIT branch-on-cond ir<true>
 ; TMP2-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -1249,7 +1258,7 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; TMP2-NEXT:  No successors
 ; TMP2-EMPTY:
 ; TMP2-NEXT:  scalar.ph:
-; TMP2-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; TMP2-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP19]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; TMP2-NEXT:  Successor(s): ir-bb<loop>
 ; TMP2-EMPTY:
 ; TMP2-NEXT:  ir-bb<loop>:
