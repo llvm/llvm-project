@@ -845,6 +845,12 @@ aix)
     check-abi-list
     check-runtimes
 ;;
+freebsd)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/FreeBSD.cmake"
+    check-runtimes
+    check-abi-list
+;;
 android-ndk-*)
     clean
 
