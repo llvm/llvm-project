@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -2130,17 +2131,17 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   if (IsArray)
     Ptr = Ptr.expand();
 
-  size_t BaseIdx = Ptr.getIndex();
-  size_t ArraySize = Ptr.getNumElems();
-  size_t RemainingElems = ArraySize - BaseIdx;
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
   if (NElems > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, NElems - 1);
     if (IsArray)
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << (uint64_t)(BaseIdx + NElems - 1) << /*array*/ 0
-          << (uint64_t)ArraySize;
+          << LastIndex << /*array*/ 0 << ArraySize;
     else
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << (uint64_t)(BaseIdx + NElems - 1) << /*non-array*/ 1;
+          << LastIndex << /*non-array*/ 1;
     return false;
   }
 

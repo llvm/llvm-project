@@ -62,6 +62,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -21621,7 +21622,8 @@ public:
             Ptr.Designator.MostDerivedIsArrayElement
                 ? Ptr.Designator.Entries.back().getAsArrayIndex()
                 : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
-        APSInt Index = APSInt::get(ArrayIndex + NElems - 1);
+        APSInt Index =
+            APSInt::getUnsigned(llvm::SaturatingAdd(ArrayIndex, NElems - 1));
         Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
         return false;
       }

@@ -278,6 +278,14 @@ constexpr bool test_scalar_oob() { // both-error{{constexpr function never produ
 }
 static_assert(test_scalar_oob(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_scalar_oob()'}}
 
+// N large enough that the OOB diagnostic's index computation would overflow.
+constexpr bool test_huge_n_overflow() { // both-error{{constexpr function never produces a constant expression}}
+  unsigned char buf[4] = {0x01, 0x02, 0x03, 0x04};
+  __builtin_stdc_memreverse8(__SIZE_MAX__, buf + 2); // both-note 2{{cannot refer to element 18446744073709551615 of array of 4 elements in a constant expression}}
+  return true;
+}
+static_assert(test_huge_n_overflow(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_huge_n_overflow()'}}
+
 // Swapping uninitialized memory.
 constexpr bool test_uninit() {
   unsigned char buf[2]; // both-note {{declared here}}
