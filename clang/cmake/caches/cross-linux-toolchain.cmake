@@ -269,7 +269,6 @@ foreach(target ${LLVM_RUNTIME_TARGETS})
 
   set(RUNTIMES_${target}_LIBCXXABI_USE_LLVM_UNWINDER               ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT                 ON CACHE BOOL "")
-  set(RUNTIMES_${target}_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS   OFF CACHE BOOL "")
 
   set(RUNTIMES_${target}_LIBCXX_USE_COMPILER_RT                    ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
