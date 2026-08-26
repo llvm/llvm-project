@@ -14,11 +14,11 @@ func.func @test_gang_private_init_barrier(%arg0: memref<100x100xf32>) {
   %c10 = arith.constant 10 : index
   %c8 = arith.constant 8 : index
   %c100 = arith.constant 100 : index
-  %12 = acc.copyin varPtr(%arg0 : memref<100x100xf32>) -> memref<100x100xf32> {dataClause = #acc<data_clause acc_copy>, name = "gp"}
-  %13 = acc.par_width %c10 {par_dim = #acc.par_dim<block_x>}
-  %14 = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %12 = acc.copyin varPtr(%arg0 : memref<100x100xf32>) dataClause(acc_copy) name("gp") -> memref<100x100xf32>
+  %13 = acc.par_width %c10 par_dim(#acc.par_dim<block_x>)
+  %14 = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment dataOperands(%12 : memref<100x100xf32>) {
-    %15 = acc.privatize [#acc<par_dims[block_x]>] : () -> !acc.private_type<memref<8xf32>>
+    %15 = acc.privatize par_dims(#acc<par_dims[block_x]>) : () -> !acc.private_type<memref<8xf32>>
     acc.compute_region launch(%arg1 = %13, %arg2 = %14) ins(%arg10 = %12, %arg11 = %15) : (memref<100x100xf32>, !acc.private_type<memref<8xf32>>) {
       %c8_b = arith.constant 8 : index
       %c100_b = arith.constant 100 : index
@@ -67,11 +67,11 @@ func.func @test_thread_private_init_no_barrier(%arg0: memref<100x100xf32>) {
   %c10 = arith.constant 10 : index
   %c8 = arith.constant 8 : index
   %c100 = arith.constant 100 : index
-  %12 = acc.copyin varPtr(%arg0 : memref<100x100xf32>) -> memref<100x100xf32> {dataClause = #acc<data_clause acc_copy>, name = "gp"}
-  %13 = acc.par_width %c10 {par_dim = #acc.par_dim<block_x>}
-  %14 = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %12 = acc.copyin varPtr(%arg0 : memref<100x100xf32>) dataClause(acc_copy) name("gp") -> memref<100x100xf32>
+  %13 = acc.par_width %c10 par_dim(#acc.par_dim<block_x>)
+  %14 = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment dataOperands(%12 : memref<100x100xf32>) {
-    %15 = acc.privatize [#acc<par_dims[block_x, thread_x]>] : () -> !acc.private_type<memref<8xf32>>
+    %15 = acc.privatize par_dims(#acc<par_dims[block_x, thread_x]>) : () -> !acc.private_type<memref<8xf32>>
     acc.compute_region launch(%arg1 = %13, %arg2 = %14) ins(%arg10 = %12, %arg11 = %15) : (memref<100x100xf32>, !acc.private_type<memref<8xf32>>) {
       %c8_b = arith.constant 8 : index
       %c100_b = arith.constant 100 : index

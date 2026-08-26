@@ -636,10 +636,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
   bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
-  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
-      deleteParams.getAlignment())
-    return rewriter.notifyMatchFailure(
-        op, "type-aware, destroying, or aligned delete not yet supported");
+  assert(!deleteParams.getDestroyingDelete() &&
+         "destroying delete not legal on arrays");
+  assert(!deleteParams.getTypeAwareDelete() &&
+         "type-aware delete not legal on arrays");
 
   const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
   CIRBaseBuilderTy cirBuilder(rewriter);
@@ -716,6 +716,12 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
               cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
           callArgs.push_back(allocSize);
         }
+        if (deleteParams.getAlignment()) {
+          auto alignVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, *deleteParams.getAlignment()));
+          callArgs.push_back(alignVal);
+        }
+
         auto deleteCall =
             cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
         // operator delete[] is implicitly nothrow per [basic.stc.dynamic],

@@ -133,8 +133,8 @@ func.func @par2_1_loop() {
 // CHECK: scf.parallel (%[[iv2:.*]]) = (%[[c1]]) to (%[[c4:.*]]) step (%[[c1]])
 // CHECK: arith.addi %[[iv2]], %[[tidx]]
 func.func @par2_0_1_loop() {
-  %par_dim1 = acc.par_width {par_dim = #acc.par_dim<thread_x>}
-  %par_dim2 = acc.par_width {par_dim = #acc.par_dim<thread_y>}
+  %par_dim1 = acc.par_width par_dim(#acc.par_dim<thread_x>)
+  %par_dim2 = acc.par_width par_dim(#acc.par_dim<thread_y>)
   acc.compute_region launch(%arg0 = %par_dim1, %arg1 = %par_dim2) {
     %c1 = arith.constant 1 : index
     %c4 = arith.constant 4 : index
@@ -188,7 +188,7 @@ func.func @empty() {
 // CHECK-SAME: in (%[[bdimx:[a-z0-9_]+]] = %[[bdimx_val]], %[[bdimy:[a-z0-9_]+]] = %[[bdimy_val:[a-z0-9_]+]], %[[bdimz:[a-z0-9_]+]] = %[[bdimz_val:[a-z0-9_]+]])
 func.func @empty_some_known_launch_arg() {
   %c32 = arith.constant 32 : index
-  %par_dim1 = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %par_dim1 = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.compute_region launch(%arg0 = %par_dim1) {
     acc.yield
   } {origin = "acc.parallel"}
@@ -223,12 +223,12 @@ func.func @empty_all_known_launch_arg() {
   %c32 = arith.constant 32 : index
   %c128 = arith.constant 128 : index
 
-  %par_dim1 = acc.par_width %c2 {par_dim = #acc.par_dim<thread_x>}
-  %par_dim2 = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %par_dim3 = acc.par_width %c8 {par_dim = #acc.par_dim<thread_z>}
-  %par_dim4 = acc.par_width %c16 {par_dim = #acc.par_dim<block_x>}
-  %par_dim5 = acc.par_width %c32 {par_dim = #acc.par_dim<block_y>}
-  %par_dim6 = acc.par_width %c128 {par_dim = #acc.par_dim<block_z>}
+  %par_dim1 = acc.par_width %c2 par_dim(#acc.par_dim<thread_x>)
+  %par_dim2 = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %par_dim3 = acc.par_width %c8 par_dim(#acc.par_dim<thread_z>)
+  %par_dim4 = acc.par_width %c16 par_dim(#acc.par_dim<block_x>)
+  %par_dim5 = acc.par_width %c32 par_dim(#acc.par_dim<block_y>)
+  %par_dim6 = acc.par_width %c128 par_dim(#acc.par_dim<block_z>)
   acc.compute_region launch(%tx = %par_dim1, %ty = %par_dim2, %tz = %par_dim3, %bx = %par_dim4, %by = %par_dim5, %bz = %par_dim6) {
     acc.yield
   } {origin = "acc.parallel"}
@@ -252,12 +252,12 @@ func.func @using_block_args(%arr : memref<?xf32>) {
   %c32_pw = arith.constant 32 : index
   %c128_pw = arith.constant 128 : index
 
-  %par_dim1 = acc.par_width %c2_pw {par_dim = #acc.par_dim<thread_x>}
-  %par_dim2 = acc.par_width %c4_pw {par_dim = #acc.par_dim<thread_y>}
-  %par_dim3 = acc.par_width %c8_pw {par_dim = #acc.par_dim<thread_z>}
-  %par_dim4 = acc.par_width %c16_pw {par_dim = #acc.par_dim<block_x>}
-  %par_dim5 = acc.par_width %c32_pw {par_dim = #acc.par_dim<block_y>}
-  %par_dim6 = acc.par_width %c128_pw {par_dim = #acc.par_dim<block_z>}
+  %par_dim1 = acc.par_width %c2_pw par_dim(#acc.par_dim<thread_x>)
+  %par_dim2 = acc.par_width %c4_pw par_dim(#acc.par_dim<thread_y>)
+  %par_dim3 = acc.par_width %c8_pw par_dim(#acc.par_dim<thread_z>)
+  %par_dim4 = acc.par_width %c16_pw par_dim(#acc.par_dim<block_x>)
+  %par_dim5 = acc.par_width %c32_pw par_dim(#acc.par_dim<block_y>)
+  %par_dim6 = acc.par_width %c128_pw par_dim(#acc.par_dim<block_z>)
   acc.compute_region launch(%tx = %par_dim1, %ty = %par_dim2, %tz = %par_dim3, %bx = %par_dim4, %by = %par_dim5, %bz = %par_dim6) ins(%arg10 = %arr) : (memref<?xf32>) {
     %c0 = arith.constant 0 : index
     %c2 = arith.constant 2 : index

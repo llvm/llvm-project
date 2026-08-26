@@ -9,9 +9,9 @@ func.func @test_worker_private_foldable_nw() {
   %c5 = arith.constant 5 : index
   %c32 = arith.constant 32 : index
   %nw = arith.addi %c1, %c1 : index
-  %block_x = acc.par_width %c5 {par_dim = #acc.par_dim<block_x>}
-  %thread_y = acc.par_width %nw {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_x = acc.par_width %c5 par_dim(#acc.par_dim<block_x>)
+  %thread_y = acc.par_width %nw par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv = acc.privatize : () -> !acc.private_type<memref<2xi32>>
     acc.compute_region launch(%arg0 = %block_x, %arg1 = %thread_y, %arg2 = %thread_x) ins(%arg10 = %priv) : (!acc.private_type<memref<2xi32>>) {

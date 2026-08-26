@@ -6,9 +6,9 @@
 func.func @test_worker_private_dynamic_nw(%nw: index) {
   %c32 = arith.constant 32 : index
   %c5 = arith.constant 5 : index
-  %block_x = acc.par_width %c5 {par_dim = #acc.par_dim<block_x>}
-  %thread_y = acc.par_width %nw {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_x = acc.par_width %c5 par_dim(#acc.par_dim<block_x>)
+  %thread_y = acc.par_width %nw par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %priv = acc.privatize : () -> !acc.private_type<memref<2xi32>>
     // expected-error @below {{failed to legalize operation 'acc.compute_region'}}

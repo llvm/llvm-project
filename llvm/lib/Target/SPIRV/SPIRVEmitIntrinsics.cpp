@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVEmitIntrinsics.h"
 #include "SPIRV.h"
 #include "SPIRVAuxDataHandler.h"
 #include "SPIRVBuiltins.h"
@@ -2638,7 +2637,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // No SPIR-V opcode exists for these, so lowering to an imported helper is an
   // AMD extension. Other targets keep the generic expansion.
-  if (!isAMDTarget(TM.getTargetTriple()))
+  if (TM.getTargetTriple().getVendor() != Triple::AMD)
     return &I;
 
   Module *M = I.getModule();
@@ -2652,8 +2651,9 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
       getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  uint32_t MemSem =
-      static_cast<uint32_t>(getMemSemantics(I.getOrdering())) | ScSem;
+  uint32_t MemSem = getMemSemanticsWithStorageClass(
+      TM.getTargetTriple(),
+      static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
 
   SmallString<64> FuncName(Op == AtomicRMWInst::UIncWrap
                                ? "__translate_spirv_atomic_uinc_wrap"
@@ -2661,9 +2661,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   Type *ValTy = I.getValOperand()->getType();
   Type *PtrTy = I.getPointerOperand()->getType();
-  // Encode the address space and value type in the name (e.g. _p1_i32,
-  // _p1_v2i32), as lowerLLVMIntrinsicName() does, since SPIR-V resolves an
-  // imported function by its linkage name alone.
+  // Encode the address space and value type in the name for overload.
   raw_svector_ostream OS(FuncName);
   OS << "_p" << AS << "_";
   if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))

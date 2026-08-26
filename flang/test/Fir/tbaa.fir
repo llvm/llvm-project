@@ -67,7 +67,7 @@ module {
 // CHECK:           %[[VAL_33:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:           %[[VAL_34:.*]] = llvm.trunc %[[VAL_33]] : i32 to i8
 // CHECK:           %[[VAL_35:.*]] = llvm.insertvalue %[[VAL_34]], %[[VAL_32]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
-// CHECK:           %[[VAL_36:.*]] = llvm.mlir.constant(1 : ui8) : i8
+// CHECK:           %[[VAL_36:.*]] = llvm.mlir.constant(1 : i8) : i8
 // CHECK:           %[[VAL_37:.*]] = llvm.or %[[EXTRA]], %[[VAL_36]]  : i8
 // CHECK:           %[[VAL_38:.*]] = llvm.insertvalue %[[VAL_37]], %[[VAL_35]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>
 // CHECK:           %[[VAL_40B:.*]] = llvm.insertvalue %[[VAL_19]], %[[VAL_38]][7] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, ptr, array<1 x i64>)>

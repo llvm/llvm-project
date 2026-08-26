@@ -8,19 +8,17 @@
 
 #include "SingleStepCheck.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Host/linux/Ptrace.h"
+#include "lldb/Utility/Status.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Errno.h"
+
 #include <csignal>
 #include <sched.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
-#include "NativeProcessLinux.h"
-
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Errno.h"
-
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Host/linux/Ptrace.h"
-#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
