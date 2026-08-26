@@ -3070,6 +3070,31 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {
+  EXPECT_EQ(AMDGPU::getMinWavesPerEU(), 1u);
+
+  // GFX90A/GFX9.4/GFX9.5 -> 8, other pre-GFX10 -> 10, GFX10.1 -> 20,
+  // GFX10.3 and every later generation -> 16.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch900), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch942), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch950), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1010), 20u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1030), 16u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(Triple::AMDGPUSubArch1250), 16u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX908), 10u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX90A), 8u);
+  EXPECT_EQ(AMDGPU::getMaxWavesPerEU(AMDGPU::GK_GFX1030), 16u);
+}
+
 TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   using AMDGPU::TargetID;
   using AMDGPU::TargetIDSetting;
