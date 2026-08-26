@@ -213,7 +213,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
                                  {i64, p0, i8, 1},
                                  {i64, p0, i16, 1},
-                                 {i64, p0, s32, 1},
+                                 {i64, p0, i32, 1},
                                  {i64, p0, i64, 1},
 
                                  {f32, p0, f32, 1},
