@@ -1063,7 +1063,7 @@ TEST(ExternalIOTests, OpenNewExtant) {
       << "EndIoStatement() for OpenUnit(NEW)";
   // OPEN(10,STATUS='OLD')
   io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
-  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 15))
+  ASSERT_TRUE(IONAME(SetFile)(io, "opennewextant", 13))
       << "SetFile(opennewextant)";
   ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
