@@ -61,7 +61,6 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx12(ptr addrspace(1) inreg %ptr
 ; GFX12-True16-LABEL: load_uniform_P1_i16_b16_gfx12:
 ; GFX12-True16:       ; %bb.0:
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-True16-NEXT:    s_clause 0x1
 ; GFX12-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[2:3] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
@@ -76,7 +75,6 @@ define amdgpu_ps void @load_uniform_P1_i16_b16_gfx12(ptr addrspace(1) inreg %ptr
 ; GFX12-NoTrue16-LABEL: load_uniform_P1_i16_b16_gfx12:
 ; GFX12-NoTrue16:       ; %bb.0:
 ; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NoTrue16-NEXT:    s_clause 0x1
 ; GFX12-NoTrue16-NEXT:    global_load_u16 v3, v2, s[0:1]
 ; GFX12-NoTrue16-NEXT:    global_load_u16 v2, v2, s[2:3] scope:SCOPE_SYS
 ; GFX12-NoTrue16-NEXT:    s_wait_loadcnt 0x0
@@ -227,7 +225,6 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx12(ptr addrspace(1) i
 ; GFX12-True16-LABEL: load_uniform_P1_i16_anyextending_gfx12:
 ; GFX12-True16:       ; %bb.0:
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-True16-NEXT:    s_clause 0x1
 ; GFX12-True16-NEXT:    global_load_d16_b16 v3, v2, s[0:1]
 ; GFX12-True16-NEXT:    global_load_d16_b16 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-True16-NEXT:    s_wait_loadcnt 0x0
@@ -242,7 +239,6 @@ define amdgpu_ps void @load_uniform_P1_i16_anyextending_gfx12(ptr addrspace(1) i
 ; GFX12-NoTrue16-LABEL: load_uniform_P1_i16_anyextending_gfx12:
 ; GFX12-NoTrue16:       ; %bb.0:
 ; GFX12-NoTrue16-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NoTrue16-NEXT:    s_clause 0x1
 ; GFX12-NoTrue16-NEXT:    global_load_u16 v3, v2, s[0:1]
 ; GFX12-NoTrue16-NEXT:    global_load_u16 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-NoTrue16-NEXT:    s_wait_loadcnt 0x0
@@ -378,7 +374,6 @@ define amdgpu_ps void @load_uniform_P1_i32(ptr addrspace(1) inreg %ptra, ptr add
 ; GFX12-LABEL: load_uniform_P1_i32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b32 v3, v2, s[0:1]
 ; GFX12-NEXT:    global_load_b32 v2, v2, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -439,7 +434,6 @@ define amdgpu_ps void @load_uniform_P1_v2i32(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX12-LABEL: load_uniform_P1_v2i32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b64 v[2:3], v4, s[0:1]
 ; GFX12-NEXT:    global_load_b64 v[4:5], v4, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -511,7 +505,6 @@ define amdgpu_ps void @load_uniform_P1_v3i32_gfx12(ptr addrspace(1) inreg %ptra,
 ; GFX12-LABEL: load_uniform_P1_v3i32_gfx12:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v5, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b96 v[2:4], v5, s[0:1]
 ; GFX12-NEXT:    global_load_b96 v[5:7], v5, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -594,7 +587,6 @@ define amdgpu_ps void @load_uniform_P1_v4i32(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX12-LABEL: load_uniform_P1_v4i32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v6, 0
-; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b128 v[2:5], v6, s[0:1]
 ; GFX12-NEXT:    global_load_b128 v[6:9], v6, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -718,7 +710,7 @@ define amdgpu_ps void @load_uniform_P1_v8i32(ptr addrspace(1) inreg %ptra, ptr a
 ; GFX12-LABEL: load_uniform_P1_v8i32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v14, 0
-; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b128 v[2:5], v14, s[0:1]
 ; GFX12-NEXT:    global_load_b128 v[6:9], v14, s[0:1] offset:16
 ; GFX12-NEXT:    global_load_b128 v[10:13], v14, s[0:1] scope:SCOPE_SYS
@@ -937,7 +929,7 @@ define amdgpu_ps void @load_uniform_P1_v16i32(ptr addrspace(1) inreg %ptra, ptr 
 ; GFX12-LABEL: load_uniform_P1_v16i32:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v30, 0
-; GFX12-NEXT:    s_clause 0x4
+; GFX12-NEXT:    s_clause 0x3
 ; GFX12-NEXT:    global_load_b128 v[2:5], v30, s[0:1]
 ; GFX12-NEXT:    global_load_b128 v[6:9], v30, s[0:1] offset:16
 ; GFX12-NEXT:    global_load_b128 v[10:13], v30, s[0:1] offset:32

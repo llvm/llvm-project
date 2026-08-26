@@ -190,11 +190,9 @@ public:
     return true;
   }
 
-  // \return if scopes are different on gfx1250 and disallowed to be claused.
+  // \return if scopes are different shall not be to be claused.
   bool isIncompatibleScope(const MachineInstr &MI1, const MachineInstr &MI2,
                            const SIInstrInfo *SII) const {
-    assert(ST->getGeneration() == AMDGPUSubtarget::GFX12 &&
-           ST->hasGFX1250Insts());
     int CPol1 = 0, CPol2 = 0;
     if (const MachineOperand *Op =
             SII->getNamedOperand(MI1, AMDGPU::OpName::cpol)) {
@@ -268,8 +266,7 @@ public:
               // as they aren't used in the SIInstrInfo implementation.
               !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
                                         2, 2))) ||
-            (CI.Length && ST->hasGFX1250_STRICT() &&
-             isIncompatibleScope(MI, *CI.Last, SII))) {
+            (CI.Length && isIncompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();
