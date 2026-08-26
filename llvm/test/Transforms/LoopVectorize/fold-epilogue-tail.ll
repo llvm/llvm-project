@@ -1,28 +1,24 @@
 ; REQUIRES: asserts
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s
+; DEFINE: %{cmd} = opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output \
+; DEFINE: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize -enable-epilogue-vectorization=false \
-; RUN: --disable-output -force-vector-width=16 -epilogue-vectorization-force-VF=8 -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -epilogue-vectorization-force-VF=8  \
-; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-epilogue-vectorization=false \
+; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
-; RUN:  -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
+; RUN: %{cmd}  -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=8 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VFs
+; RUN: %{cmd} -force-vector-width=16 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
-; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 \
-; RUN: -enable-early-exit-vectorization-with-side-effects < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EARLY-EXIT
+; RUN: %{cmd} -force-vector-width=8 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-VFs
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize -enable-vplan-native-path --disable-output \
-; RUN: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize \
-; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-early-exit-vectorization-with-side-effects \
+; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EARLY-EXIT
+
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
+; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
@@ -88,7 +84,7 @@ exit.2:
 
 define i32 @opt_for_size(ptr %p, i32 %n, i8 %val) optsize {
 ; CHECK-LABEL: Checking a loop in 'opt_for_size'
-; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since tail-folding is already requested for the main vector loop.
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue allowed.
 ;
 entry:
   br label %for.body
@@ -107,7 +103,7 @@ for.end:
 
 define i32 @low_tc(ptr %p, i8 %val)  {
 ; CHECK-LABEL: Checking a loop in 'low_tc'
-; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since tail-folding is already requested for the main vector loop.
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue allowed.
 ;
 entry:
   br label %for.body

@@ -7187,10 +7187,9 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
 
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
-    reportVectorizationInfo(
-        "Not applying tail-folding to the epilogue, since tail-folding is "
-        "already requested for the main vector loop.",
-        "InvalidTailFoldedEpilogue", ORE, L);
+    reportVectorizationInfo("Not applying tail-folding to the epilogue, since "
+                            "no epilogue allowed.",
+                            "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
 
