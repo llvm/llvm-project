@@ -12,7 +12,7 @@ class NestedFrameRecognizer(ScriptedStackFrameRecognizer):
         """Step through from baz to bar"""
         frame = thread.frames[0]
 
-        if frame.name == "baz":
+        if frame.name.startswith("baz"):
             target = thread.process.target
             bar_funcs = target.FindFunctions("bar", lldb.eFunctionNameTypeFull)
             if bar_funcs.GetSize() == 0:
