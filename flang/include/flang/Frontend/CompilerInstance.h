@@ -111,7 +111,8 @@ class CompilerInstance {
   /// @}
 
 public:
-  explicit CompilerInstance();
+  explicit CompilerInstance(std::shared_ptr<CompilerInvocation> invocation =
+                                std::make_shared<CompilerInvocation>());
 
   ~CompilerInstance();
 
@@ -119,12 +120,8 @@ public:
   /// {
 
   CompilerInvocation &getInvocation() {
-    assert(invocation && "Compiler instance has no invocation!");
     return *invocation;
   };
-
-  /// Replace the current invocation.
-  void setInvocation(std::shared_ptr<CompilerInvocation> value);
 
   /// }
   /// @name File manager

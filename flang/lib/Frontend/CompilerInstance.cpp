@@ -33,11 +33,12 @@
 
 using namespace Fortran::frontend;
 
-CompilerInstance::CompilerInstance()
-    : invocation(new CompilerInvocation()),
-      allSources(new Fortran::parser::AllSources()),
+CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> invocation)
+    : invocation(invocation), allSources(new Fortran::parser::AllSources()),
       allCookedSources(new Fortran::parser::AllCookedSources(*allSources)),
       parsing(new Fortran::parser::Parsing(*allCookedSources)) {
+  assert(invocation && "Invocation must not be null.");
   // TODO: This is a good default during development, but ultimately we should
   // give the user the opportunity to specify this.
   allSources->set_encoding(Fortran::parser::Encoding::UTF_8);
@@ -45,11 +46,6 @@ CompilerInstance::CompilerInstance()
 
 CompilerInstance::~CompilerInstance() {
   assert(outputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> value) {
-  invocation = std::move(value);
 }
 
 void CompilerInstance::setSemaOutputStream(raw_ostream &value) {
