@@ -366,7 +366,8 @@ void CodeMetaDataOutputSection::finalizeContents() {
                       buf - hintsStart);
       numFunctionsTotal++;
     }
-    assert(buf == end && "CodeMetaDataOutputSection: not all data was consumed");
+    assert(buf == end &&
+           "CodeMetaDataOutputSection: not all data was consumed");
   }
 
   raw_string_ostream payloadOs(payload);
