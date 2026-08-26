@@ -123,9 +123,8 @@ public:
   }
   static void setInherentAttr(Properties &prop, StringRef name,
                               mlir::Attribute value) {}
-  static void populateInherentAttrs(MLIRContext *context,
-                                    const Properties &prop,
-                                    NamedAttrList &attrs) {}
+  static void walkInherentAttrs(MLIRContext *context, Properties &prop,
+                                OperationName::InherentAttrVisitor visitor) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
                       function_ref<InFlightDiagnostic()> emitError) {

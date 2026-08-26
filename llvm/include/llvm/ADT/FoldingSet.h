@@ -342,6 +342,10 @@ public:
   /// Returns true if there are no nodes in the folding set.
   [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
+  /// Grow the number of buckets so that we can hold at least \p N nodes
+  /// before rebucketing. May allocate more space than requested.
+  LLVM_ABI void reserve(unsigned N);
+
 protected:
   /// Functions provided by the derived class to compute folding properties.
   /// This is effectively a vtable for FoldingSetBase, except that we don't
@@ -383,10 +387,6 @@ private:
 protected:
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
-
-  /// Grow the number of buckets so that we can hold at least \p N nodes
-  /// before rebucketing. May allocate more space than requested.
-  LLVM_ABI void reserve(unsigned N);
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -509,10 +509,6 @@ public:
 
   const_iterator begin() const { return const_iterator(this, 0); }
   const_iterator end() const { return const_iterator(this, NumBuckets); }
-
-  /// Grow the number of buckets so that we can hold at least \p N nodes
-  /// before rebucketing. May allocate more space than requested.
-  void reserve(unsigned N) { FoldingSetBase::reserve(N); }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.

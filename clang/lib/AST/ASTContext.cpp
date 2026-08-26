@@ -8232,20 +8232,18 @@ QualType ASTContext::getBaseElementType(QualType type) const {
   return getQualifiedType(type, qs);
 }
 
-/// getConstantArrayElementCount - Returns number of constant array elements.
-uint64_t
-ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
+uint64_t ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA) {
   uint64_t ElementCount = 1;
   do {
     ElementCount *= CA->getZExtSize();
-    CA = dyn_cast_or_null<ConstantArrayType>(
-      CA->getElementType()->getAsArrayTypeUnsafe());
+    CA = dyn_cast_if_present<ConstantArrayType>(
+        CA->getElementType()->getAsArrayTypeUnsafe());
   } while (CA);
   return ElementCount;
 }
 
-uint64_t ASTContext::getArrayInitLoopExprElementCount(
-    const ArrayInitLoopExpr *AILE) const {
+uint64_t
+ASTContext::getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) {
   if (!AILE)
     return 0;
 

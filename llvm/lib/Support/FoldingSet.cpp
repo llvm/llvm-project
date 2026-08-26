@@ -17,7 +17,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -134,8 +133,7 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetBase Implementation
 
-/// Encode a hash as the token FindNodeOrInsertPos hands back. Never null, and
-/// unlike a bucket address it survives intervening insertions.
+/// Encode a 32-bit hash as an opaque non-null token for InsertPos.
 static void *encodeHash(uint32_t Hash) {
   return reinterpret_cast<void *>(static_cast<uintptr_t>(Hash));
 }
@@ -185,7 +183,6 @@ void FoldingSetBase::placeNode(Node *N, uint32_t Hash) {
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
   while (Buckets[I]) {
-    // A second copy of N hashes here too, so the probe always passes it.
     assert(Buckets[I] != N && "Node already in the folding set");
     I = (I + 1) & Mask;
   }
@@ -227,11 +224,9 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   unsigned IDHash = ID.ComputeHash();
   unsigned Mask = NumBuckets - 1;
   for (unsigned I = IDHash & Mask; Buckets[I]; I = (I + 1) & Mask) {
-    // Reject on the hash first, so a probe step touches no node.
     Node *N = static_cast<Node *>(Buckets[I]);
-    if (N->getFoldingSetHash() != IDHash)
-      continue;
-    if (nodeEquals(Info, this, N, ID, IDHash)) {
+    if (N->getFoldingSetHash() == IDHash &&
+        nodeEquals(Info, this, N, ID, IDHash)) {
       InsertPos = nullptr;
       return N;
     }
@@ -242,6 +237,7 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
 }
 
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos) {
+  assert(N && "Cannot insert a null node");
   assert(InsertPos && "Invalid InsertPos!");
   incrementEpoch();
   if (LLVM_UNLIKELY((NumNodes + 1) * 4 > NumBuckets * 3))
@@ -259,7 +255,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   unsigned Mask = NumBuckets - 1;
   unsigned I = Hash & Mask;
   while (Buckets[I] != N) {
-    if (!Buckets[I])
+    if (LLVM_UNLIKELY(!Buckets[I]))
       return false; // Not in folding set.
     I = (I + 1) & Mask;
   }

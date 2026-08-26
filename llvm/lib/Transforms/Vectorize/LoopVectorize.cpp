@@ -486,9 +486,13 @@ static std::optional<ElementCount> getSmallBestKnownTC(
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
+  // An estimate of zero means the loop is estimated not to be entered; it is
+  // not a usable trip count for the profitability decisions below (and would
+  // e.g. divide by zero when scaling runtime check cost), so treat it as
+  // unknown.
   if (LoopVectorizeWithBlockFrequency && !ComputeUpperBoundOnly)
-    if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return ElementCount::getFixed(*EstimatedTC);
+    if (unsigned EstimatedTC = getLoopEstimatedTripCount(L).value_or(0))
+      return ElementCount::getFixed(EstimatedTC);
 
   if (!CanUseConstantMax)
     return std::nullopt;
