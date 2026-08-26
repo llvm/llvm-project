@@ -509,11 +509,15 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
   if (!operands)
     return;
 
-  SmallVector<RegionSuccessor> successors;
   auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
   if (!terminator)
     return;
+
+  SmallVector<RegionSuccessor> successors;
+  // Use operand-aware resolution to prune dead successors via constant folding
+  // (e.g. a scf.while condition known to be false).
   terminator.getSuccessorRegions(*operands, successors);
+
   visitRegionBranchEdges(branch, op, successors);
 }
 
@@ -540,8 +544,10 @@ void DeadCodeAnalysis::visitRegionBranchEdges(
     auto *predecessors = getOrCreate<PredecessorState>(point);
     propagateIfChanged(
         predecessors,
-        predecessors->join(predecessorOp,
-                           regionBranchOp.getSuccessorInputs(successor)));
+        predecessors->join(
+            predecessorOp,
+            getRegionBranchSuccessorOwner(successor).getSuccessorInputs(
+                successor)));
     LDBG() << "Added region branch as predecessor for successor: " << *point;
   }
 }

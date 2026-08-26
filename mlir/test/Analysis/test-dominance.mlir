@@ -680,3 +680,63 @@ func.func @func_loop_nested_region(
 // CHECK:   ^{{.*}}
 // CHECK:   }
 // CHECK: }
+
+
+// -----
+
+// CHECK-LABEL: Testing : func_loop_early_exit
+func.func @func_loop_early_exit(%cond : i1, %arg0 : index) -> index {
+  %0 = scf.loop token(%outer) -> index {
+    scf.loop token(%inner) {
+      scf.if %cond {
+        scf.break [%outer] %arg0 : index
+      }
+      "test.foo"() : () -> ()
+      scf.break [%inner] {test.print_dominance = true}
+    }
+  }
+  return %0 : index
+}
+
+// CHECK: postdominates(scf.break {{.*}} {test.print_dominance = true} {{.*}} scf.break
+// CHECK-SAME: = 0
+// CHECK: postdominates(scf.break {{.*}} {test.print_dominance = true} {{.*}} scf.if
+// CHECK-SAME: = 0
+// CHECK: postdominates(scf.break {{.*}} {test.print_dominance = true} {{.*}} "test.foo"
+// CHECK-SAME: = 1
+// CHECK: postdominates(scf.break {{.*}} {test.print_dominance = true} {{.*}} scf.break
+// CHECK-SAME: = 1
+
+// -----
+
+// CHECK-LABEL: Testing : func_loop_early_exit_cross_block
+func.func @func_loop_early_exit_cross_block(%cond : i1, %arg0 : index) -> index {
+  %0 = scf.loop token(%outer) -> index {
+    scf.loop token(%inner) {
+      test.propagate_control_flow_break {
+      ^bb0:
+        cf.cond_br %cond, ^bb1, ^bb2
+      ^bb1:
+        scf.if %cond {
+          scf.break [%outer] %arg0 : index
+        }
+        cf.br ^bb2
+      ^bb2:
+        "test.foo"() {test.print_dominance = true} : () -> ()
+        "test.return"() : () -> ()
+      }
+      scf.break [%inner]
+    }
+  }
+  return %0 : index
+}
+
+// CHECK: --- PostDominanceInfo ---
+// CHECK: postdominates("test.foo"() {test.print_dominance = true} {{.*}} cf.cond_br
+// CHECK-SAME: = 0
+// CHECK: postdominates("test.foo"() {test.print_dominance = true} {{.*}} scf.if
+// CHECK-SAME: = 0
+// CHECK: postdominates("test.foo"() {test.print_dominance = true} {{.*}} cf.br
+// CHECK-SAME: = 1
+// CHECK: postdominates("test.foo"() {test.print_dominance = true} {{.*}} "test.foo"
+// CHECK-SAME: = 1

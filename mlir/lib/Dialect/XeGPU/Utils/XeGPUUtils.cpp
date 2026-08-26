@@ -944,11 +944,17 @@ xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
     }
     if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
       // Each result and its then/else yield operands share one position and
-      // must convert identically; derive all from the result's layout.
-      scf::YieldOp thenYield = ifOp.thenYield();
-      scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
+      // must convert identically; derive all from the result's layout. A
+      // branch that exits early does not yield a value to this `scf.if`, so
+      // only record operands from branches that actually end with scf.yield.
+      scf::YieldOp thenYield = dyn_cast<scf::YieldOp>(ifOp.thenTerminator());
+      scf::YieldOp elseYield;
+      if (ifOp.elseBlock())
+        elseYield = dyn_cast<scf::YieldOp>(ifOp.elseTerminator());
       for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
-        SmallVector<Value> dests{res, thenYield.getOperand(idx)};
+        SmallVector<Value> dests{res};
+        if (thenYield)
+          dests.push_back(thenYield.getOperand(idx));
         if (elseYield)
           dests.push_back(elseYield.getOperand(idx));
         recordTypes(res, dests);

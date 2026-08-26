@@ -1362,6 +1362,19 @@ struct HasAncestor {
   };
 };
 
+/// This class provides a verifier for ops that are expecting to have nested
+/// predecessors.
+template <typename... NestedPredecessorOpTypes>
+struct HasNestedTerminators {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static bool acceptsTerminator(Operation *predecessor) {
+      return llvm::isa_and_nonnull<NestedPredecessorOpTypes...>(predecessor);
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size

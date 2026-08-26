@@ -179,8 +179,8 @@ struct IfOpInterface
                              std::optional<int64_t> dim,
                              ValueBoundsConstraintSet &cstr) {
     unsigned int resultNum = cast<OpResult>(value).getResultNumber();
-    Value thenValue = ifOp.thenYield().getResults()[resultNum];
-    Value elseValue = ifOp.elseYield().getResults()[resultNum];
+    Value thenValue = ifOp.thenTerminator()->getOperand(resultNum);
+    Value elseValue = ifOp.elseTerminator()->getOperand(resultNum);
 
     auto boundsBuilder = cstr.bound(value);
     if (dim)

@@ -123,6 +123,11 @@ protected:
                              Block::iterator bIt,
                              bool enclosingOk = true) const;
 
+  /// Return true if `op` contains a nested breaking terminator that escapes
+  /// through it to an ancestor. This cache is invalidated together with
+  /// dominance info.
+  bool hasBreakingControlFlowOpsCached(Operation *op) const;
+
   /// A mapping of regions to their base dominator tree and a cached
   /// "hasSSADominance" bit. This map does not contain dominator trees for
   /// single block CFG regions, but we do want to cache the "hasSSADominance"
@@ -131,6 +136,10 @@ protected:
   ///
   mutable DenseMap<Region *, llvm::PointerIntPair<DomTree *, 1, bool>>
       dominanceInfos;
+
+  /// Cached escaping breaking-terminator query results. This is stable for the
+  /// lifetime of the analyzed IR and cleared on dominance invalidation.
+  mutable DenseMap<Operation *, bool> breakingControlFlowOpsCache;
 };
 
 extern template class DominanceInfoBase</*IsPostDom=*/true>;
