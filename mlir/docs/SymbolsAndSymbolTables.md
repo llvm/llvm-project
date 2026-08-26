@@ -45,10 +45,13 @@ following properties:
 *   A `StringAttr` attribute named
     'SymbolTable::getSymbolAttrName()'(`sym_name`).
     -   This attribute defines the symbolic 'name' of the operation.
-*   An optional `StringAttr` attribute named
-    'SymbolTable::getVisibilityAttrName()'(`sym_visibility`)
-    -   This attribute defines the [visibility](#symbol-visibility) of the
-        symbol, or more specifically in-which scopes it may be accessed.
+*   A [visibility](#symbol-visibility) (`getVisibility`/`setVisibility`)
+    -   The visibility defines in which scopes the symbol may be accessed.
+    -   By default this is stored in an optional `StringAttr` attribute named
+        'SymbolOpInterface::getDefaultVisibilityAttrName()'(`sym_visibility`),
+        where the absence of the attribute means public visibility. Operations
+        may override `getVisibility`/`setVisibility` to use a different
+        representation.
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.

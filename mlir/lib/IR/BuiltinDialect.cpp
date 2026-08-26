@@ -163,8 +163,9 @@ LogicalResult ModuleOp::verify() {
   for (auto attr : (*this)->getDiscardableAttrDictionary().getValue()) {
     if (!attr.getName().strref().contains('.') &&
         !llvm::is_contained(
-            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
-                                mlir::SymbolTable::getVisibilityAttrName()},
+            ArrayRef<StringRef>{
+                mlir::SymbolTable::getSymbolAttrName(),
+                mlir::SymbolOpInterface::getDefaultVisibilityAttrName()},
             attr.getName().strref()))
       return emitOpError() << "can only contain attributes with "
                               "dialect-prefixed names, found: '"
