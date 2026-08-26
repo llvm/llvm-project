@@ -204,19 +204,23 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              builder.getStringAttr(intrinsicName.value()),
                              funcResTy, args)
         .getResult();
-  } else if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
+  }
+  if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
     assert(args.size() == 3 && "fma expects three operands");
     return Operation::create(builder, loc, funcResTy, args[0], args[1], args[2],
                              builder.getConstrainedFPAttr())
         .getResult();
-  } else if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {
+  }
+  if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {
     assert(args.size() == 1 && "sqrt expects one operand");
     return Operation::create(builder, loc, funcResTy, args[0],
                              builder.getConstrainedFPAttr())
         .getResult();
-  } else {
-    return Operation::create(builder, loc, funcResTy, args).getResult();
   }
+  if constexpr (!std::is_same_v<Operation, cir::LLVMIntrinsicCallOp> &&
+                !std::is_same_v<Operation, cir::FMAOp> &&
+                !std::is_same_v<Operation, cir::SqrtOp>)
+    return Operation::create(builder, loc, funcResTy, args).getResult();
 }
 
 // TODO(cir): Remove `cgm` from the list of arguments once all NYI(s) are gone.
