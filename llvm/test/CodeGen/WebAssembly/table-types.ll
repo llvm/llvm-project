@@ -1,4 +1,5 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
 %externref = type target("wasm.externref")
 %funcref = type target("wasm.funcref")
