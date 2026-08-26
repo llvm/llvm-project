@@ -80,18 +80,19 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
   scopeStack_.push_back(&context.globalScope());
 }
 
-void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
+void OmpStructureChecker::Enter(const parser::ProgramUnit &x) { //
   ClearLabels();
   declareVariantPairs_.clear();
+  CollectMetadirectiveConstructSelectors(x);
 }
 
 void OmpStructureChecker::Leave(const parser::ProgramUnit &) {
-  if (!metadirectiveLoopVariants_.empty()) {
+  if (!pendingLoopDirectiveGroups_.empty()) {
     // A declaration-only unit (module, submodule, or block data) has no
     // execution part to follow the metadirective, so its loop-associated
     // variants were never validated. A subprogram validates them while
     // scanning the execution part, leaving none pending here.
-    CheckMetadirectiveVariantsWithoutLoop();
+    CheckPendingLoopDirectivesWithoutLoop();
   }
 }
 
@@ -207,38 +208,39 @@ void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
   scopeStack_.pop_back();
 }
 
-void OmpStructureChecker::BeginMetadirectiveVariantScope() {
-  metadirectiveVariantScopeStarts_.push_back(metadirectiveLoopVariants_.size());
+void OmpStructureChecker::BeginPendingLoopDirectiveScope() {
+  pendingLoopDirectiveScopeStarts_.push_back(
+      pendingLoopDirectiveGroups_.size());
 }
 
-void OmpStructureChecker::EndMetadirectiveVariantScope() {
-  CHECK(!metadirectiveVariantScopeStarts_.empty());
-  std::size_t firstVariant{metadirectiveVariantScopeStarts_.back()};
-  metadirectiveVariantScopeStarts_.pop_back();
-  if (firstVariant < metadirectiveLoopVariants_.size()) {
-    // Diagnose variants that were recorded in this scope but not consumed by
-    // one of its executable constructs, preserving variants from an enclosing
-    // scope.
-    CheckMetadirectiveVariantsWithoutLoop(firstVariant);
+void OmpStructureChecker::EndPendingLoopDirectiveScope() {
+  CHECK(!pendingLoopDirectiveScopeStarts_.empty());
+  std::size_t firstDirectiveGroup{pendingLoopDirectiveScopeStarts_.back()};
+  pendingLoopDirectiveScopeStarts_.pop_back();
+  if (firstDirectiveGroup < pendingLoopDirectiveGroups_.size()) {
+    // Diagnose directives that were recorded in this scope but not consumed
+    // by one of its executable constructs, preserving directives from an
+    // enclosing scope.
+    CheckPendingLoopDirectivesWithoutLoop(firstDirectiveGroup);
   }
 }
 
 void OmpStructureChecker::Enter(const parser::Block &) {
-  BeginMetadirectiveVariantScope();
+  BeginPendingLoopDirectiveScope();
 }
 
 void OmpStructureChecker::Leave(const parser::Block &) {
-  EndMetadirectiveVariantScope();
+  EndPendingLoopDirectiveScope();
 }
 
 void OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
-  BeginMetadirectiveVariantScope();
+  BeginPendingLoopDirectiveScope();
   auto &endBlockStmt{std::get<parser::Statement<parser::EndBlockStmt>>(x.t)};
   scopeStack_.push_back(&context_.FindScope(endBlockStmt.source));
 }
 
 void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
-  EndMetadirectiveVariantScope();
+  EndPendingLoopDirectiveScope();
   scopeStack_.pop_back();
 }
 
@@ -251,20 +253,20 @@ void OmpStructureChecker::Enter(const parser::ModuleSubprogram &) {
 }
 
 void OmpStructureChecker::Enter(const parser::ModuleSubprogramPart &) {
-  if (!metadirectiveLoopVariants_.empty()) {
+  if (!pendingLoopDirectiveGroups_.empty()) {
     // The enclosing module or submodule has no execution part. Diagnose its
     // pending loop-associated variants before a contained procedure starts a
     // new specification part and resets the worklist.
-    CheckMetadirectiveVariantsWithoutLoop();
+    CheckPendingLoopDirectivesWithoutLoop();
   }
 }
 
 void OmpStructureChecker::Enter(const parser::InterfaceBody &) {
-  BeginMetadirectiveVariantScope();
+  BeginPendingLoopDirectiveScope();
 }
 
 void OmpStructureChecker::Leave(const parser::InterfaceBody &) {
-  EndMetadirectiveVariantScope();
+  EndPendingLoopDirectiveScope();
 }
 
 void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
@@ -272,7 +274,7 @@ void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
   // An empty partStack_ marks the unit's top-level specification part, so a
   // nested one such as an interface body does not reset them.
   if (partStack_.empty()) {
-    metadirectiveLoopVariants_.clear();
+    pendingLoopDirectiveGroups_.clear();
   }
   partStack_.push_back(PartKind::SpecificationPart);
 }
@@ -286,10 +288,10 @@ void OmpStructureChecker::Enter(const parser::ExecutionPart &) {
 }
 
 void OmpStructureChecker::Leave(const parser::ExecutionPart &) {
-  if (!metadirectiveLoopVariants_.empty()) {
+  if (!pendingLoopDirectiveGroups_.empty()) {
     // No loop nest followed the metadirective in this execution part, so its
     // loop-associated variants were never validated.
-    CheckMetadirectiveVariantsWithoutLoop();
+    CheckPendingLoopDirectivesWithoutLoop();
   }
   partStack_.pop_back();
 }
@@ -648,6 +650,35 @@ void OmpStructureChecker::Leave(const parser::EorLabel &x) {
 void OmpStructureChecker::ClearLabels() {
   sourceLabels_.clear();
   targetLabels_.clear();
+}
+
+llvm::SmallVector<OmpStructureChecker::EffectiveDirectivePath, 4>
+OmpStructureChecker::GetEnclosingDirectivePaths() const {
+  // The current metadirective is already on dirContext_; start at its parent.
+  int actualIndex{static_cast<int>(dirContext_.size()) - 2};
+  std::size_t depth{0};
+  llvm::SmallVector<EffectiveDirectivePath, 4> paths(1);
+  if (!activeMetadirectiveReplacements_.empty()) {
+    const MetadirectiveReplacementContext &frame{
+        activeMetadirectiveReplacements_.back()};
+    depth = frame.directiveContextDepth;
+    paths = frame.paths;
+  }
+
+  EffectiveDirectivePath actualContexts;
+  while (actualIndex >= static_cast<int>(depth)) {
+    std::size_t index{static_cast<std::size_t>(actualIndex--)};
+    const DirectiveContext &context{dirContext_[index]};
+    // A metadirective is replaced, so it is transparent in an effective path.
+    if (context.directive == llvm::omp::Directive::OMPD_metadirective) {
+      continue;
+    }
+    actualContexts.push_back(context.directive);
+  }
+  for (EffectiveDirectivePath &path : paths) {
+    path.insert(path.begin(), actualContexts.begin(), actualContexts.end());
+  }
+  return GetUniqueEffectiveDirectivePaths(std::move(paths));
 }
 
 bool OmpStructureChecker::IsCloselyNestedRegion(
