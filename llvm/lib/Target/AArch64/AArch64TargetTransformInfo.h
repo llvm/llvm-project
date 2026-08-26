@@ -334,10 +334,8 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    if ((ST->hasSVE2p2() || ST->hasSME2p2()) &&
-        ((Ty->isIntegerTy(8) || Ty->isIntegerTy(16)) ||
-         ((Ty->isHalfTy() || Ty->isBFloatTy()) &&
-          Ty->getScalarSizeInBits() == 16)))
+    if ((ST->hasSVE2p2() || (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())) &&
+        (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) || Ty->getScalarSizeInBits() == 16))
       return true;
     return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
            Ty->isIntegerTy(64);
@@ -345,7 +343,7 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!ST->isSVEAvailable())
+    if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
     if (isa<FixedVectorType>(DataType) &&

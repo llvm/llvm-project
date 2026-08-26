@@ -2227,8 +2227,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
-      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+      }
 
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
@@ -2301,13 +2303,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
       setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
     }
-  }
-
-  if ((Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||
-      (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())) {
-    // With +sve2p2/+sme2p2 the full range of vector types are supported.
-    for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
-      setOperationAction(ISD::MSTORE, VT, Custom);
   }
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
