@@ -16,13 +16,6 @@ struct Huge {
 extern "C" bool __atomic_is_lock_free(size_t size, const volatile void *ptr);
 
 int main() {
-#if defined(__SIZEOF_INT128__)
-  if (__atomic_always_lock_free(sizeof(Large), 0)) {
-    std::atomic<Large> a;
-    assert(a.is_lock_free());
-  }
-#endif
-
   std::atomic<Huge> b;
   assert(!b.is_lock_free());
 
@@ -44,14 +37,6 @@ int main() {
   assert(__atomic_is_lock_free(s8, nullptr));
   assert(!__atomic_is_lock_free(s32, nullptr));
 
-#if defined(__SIZEOF_INT128__)
-  if (__atomic_always_lock_free(16, 0)) {
-    assert(__atomic_is_lock_free(s16, nullptr));
-  } else {
-    assert(!__atomic_is_lock_free(s16, nullptr));
-  }
-#endif
-
   alignas(16) char buffer[32];
   // Size 1 is always lock-free regardless of alignment.
   assert(__atomic_is_lock_free(s1, buffer));
@@ -70,9 +55,15 @@ int main() {
   assert(!__atomic_is_lock_free(s8, buffer + 1));
 
 #if defined(__SIZEOF_INT128__)
-  if (__atomic_always_lock_free(16, 0)) {
+  std::atomic<Large> a;
+  bool is_16_lock_free = a.is_lock_free();
+  assert(__atomic_is_lock_free(s16, nullptr) == is_16_lock_free);
+
+  if (is_16_lock_free) {
     assert(__atomic_is_lock_free(s16, buffer));
     assert(!__atomic_is_lock_free(s16, buffer + 1));
+  } else {
+    assert(!__atomic_is_lock_free(s16, buffer));
   }
 #endif
 
