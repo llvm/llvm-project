@@ -48,9 +48,9 @@ body: |
     ; GFX1150-LABEL: name: end_of_shader
     ; GFX1150: liveins: $vgpr0
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_ENDPGM 0
@@ -75,13 +75,13 @@ body: |
     ; GFX1150-LABEL: name: end_of_shader_return_to_epilogue
     ; GFX1150: liveins: $vgpr0
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_WAITCNT_EXPCNT $sgpr_null, 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: SI_RETURN_TO_EPILOG $vgpr0
     EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0
@@ -196,11 +196,11 @@ body: |
     ; GFX1150-LABEL: name: block_of_exports
     ; GFX1150: liveins: $vgpr0
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: EXP 2, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX1150-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_ENDPGM 0
@@ -231,23 +231,23 @@ body: |
     ; GFX1150-LABEL: name: sparse_exports
     ; GFX1150: liveins: $vgpr0
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: EXP 2, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_WAITCNT_EXPCNT $sgpr_null, 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: $vgpr0 = V_AND_B32_e32 1, $vgpr0, implicit $exec
     ; GFX1150-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_WAITCNT_EXPCNT $sgpr_null, 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: $vgpr0 = V_OR_B32_e32 2, $vgpr0, implicit $exec
     ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_ENDPGM 0
@@ -362,24 +362,24 @@ body: |
     ; GFX11-LABEL: name: existing_setprio_2
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: S_SETPRIO 3, 0
+    ; GFX11-NEXT: S_SETPRIO 3
     ; GFX11-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX11-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX11-NEXT: S_SETPRIO 3, 0
+    ; GFX11-NEXT: S_SETPRIO 3
     ; GFX11-NEXT: S_ENDPGM 0
     ;
     ; GFX1150-LABEL: name: existing_setprio_2
     ; GFX1150: liveins: $vgpr0
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: S_SETPRIO 3, 0
+    ; GFX1150-NEXT: S_SETPRIO 3
     ; GFX1150-NEXT: EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX1150-NEXT: EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    ; GFX1150-NEXT: S_SETPRIO 0, 0
+    ; GFX1150-NEXT: S_SETPRIO 0
     ; GFX1150-NEXT: S_WAITCNT_EXPCNT $sgpr_null, 0
     ; GFX1150-NEXT: S_NOP 0
     ; GFX1150-NEXT: S_NOP 0
-    ; GFX1150-NEXT: S_SETPRIO 2, 0
-    ; GFX1150-NEXT: S_SETPRIO 3, 0
+    ; GFX1150-NEXT: S_SETPRIO 2
+    ; GFX1150-NEXT: S_SETPRIO 3
     ; GFX1150-NEXT: S_ENDPGM 0
     S_SETPRIO 3, 0
     EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
