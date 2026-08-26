@@ -1087,12 +1087,22 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
     for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
       if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
-        assert(Blend->getNumIncomingValues() == 2 &&
-               "Blend must have 2 incoming values");
-        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 0 : 1;
-        assert(Blend->getIncomingValue(PhiRIdx) == PhiR &&
-               "PhiR must be an operand of the blend");
-        Blend->replaceAllUsesWith(Blend->getIncomingValue(1 - PhiRIdx));
+        VPValue *NonPhiOp = nullptr;
+        [[maybe_unused]] bool PhiRSeen = false;
+        for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
+          VPValue *V = Blend->getIncomingValue(I);
+          if (V == PhiR) {
+            PhiRSeen = true;
+            continue;
+          }
+
+          assert(is_contained({V, (VPValue *)nullptr}, NonPhiOp) &&
+                 "Must only have 2 incoming values, one of them PhiR");
+          NonPhiOp = V;
+        }
+        assert(PhiRSeen && "PhiR must be an operand of the blend");
+
+        Blend->replaceAllUsesWith(NonPhiOp);
         continue;
       }
 
