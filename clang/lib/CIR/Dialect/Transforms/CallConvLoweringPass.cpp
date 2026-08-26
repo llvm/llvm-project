@@ -234,10 +234,12 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
-        // A bit-field access unit's width can understate the bit-fields it
-        // holds.  When the union has such a unit, a spanning member is not
-        // enough on its own: it must also supply data, either the unit
-        // itself or another member.
+        // A bit-field access unit's declared width is a compiler choice and
+        // can be narrower than the bit-fields it stores, so reaching the
+        // union's full size does not by itself confirm a member's content
+        // is real.  When the union contains such a unit, require some
+        // member (the unit itself or another one) that both reaches
+        // the full size and holds data.
         llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
         if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
             !llvm::any_of(llvm::zip_equal(members, kinds),
@@ -405,9 +407,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // the whole union rather than just the member the classifier reduces
         // it to.
         if (recTy.isUnion()) {
-          // Only data members are classified.  An unnamed bit-field's storage
-          // is a member here but contributes no class, so mapping it would
-          // pass an argument that should be dropped.
+          // Classify only the members that hold data for the ABI.  A member
+          // that holds none, such as an unnamed bit-field's storage, is
+          // skipped so it does not appear as a spurious argument.
           for (auto [fieldTy, kind] :
                llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
             if (cir::holdsDataForABI(fieldTy, kind))
