@@ -470,13 +470,15 @@ int *nothingIsCertain(int x, int y) {
 // We disable this test under Windows because 'struct Empty {}' has a nozero
 // size on that platform. Note that '_WIN32' is also defined on 64-bit systems
 // and is apparently the customary way to detect Windows OS.
+// The empty struct also has nonzero size under C++ so these corner cases are
+// only relevant under C.
 
 struct Empty {};
 struct Empty ZeroSizeElements[10];
 
 struct Empty zeroSizeElements(void) {
-  // Previously this had produced the false positive warning {{Access of
-  // 'ZeroSizeElements' at byte offset 0, while it holds only 0 bytes}}.
+  // Here the offset and extent are both 0, which previously caused a false
+  // positive out of bounds report.
   return ZeroSizeElements[5]; // no-warning
 }
 
