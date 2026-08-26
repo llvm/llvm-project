@@ -874,7 +874,6 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     if (!WidePhi)
       return false;
     SE->forgetLoop(FI.OuterLoop);
-    SE->forgetBlockAndLoopDispositions();
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
     LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIV.NarrowIV->dump());
     Deleted = RecursivelyDeleteDeadPHINode(WideIV.NarrowIV);
