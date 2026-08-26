@@ -106,6 +106,8 @@ void materializeOpenMPDeclareMappers(
     Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
     const Fortran::semantics::Scope *scope = nullptr);
 
+// Mark declare target globals and functions that were imported from a
+// module file.
 void markOpenMPImportedDeclareTargets(
     Fortran::lower::AbstractConverter &converter,
     semantics::SemanticsContext &semaCtx);

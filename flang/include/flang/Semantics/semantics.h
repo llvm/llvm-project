@@ -377,7 +377,7 @@ public:
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
-  std::list<parser::Program> &GetModFileParseTrees() {
+  const std::list<parser::Program> &GetModFileParseTrees() {
     return modFileParseTrees_;
   }
 

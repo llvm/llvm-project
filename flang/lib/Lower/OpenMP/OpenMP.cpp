@@ -1855,6 +1855,31 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
                                    /*implicit=*/false);
 }
 
+// Take a declare target directive, and mark the globals and functions
+// named in its clauses.
+static void markDeclareTargetWithDirective(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    std::optional<common::reference_wrapper<lower::pft::Evaluation>> eval,
+    const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
+  mlir::omp::DeclareTargetOperands clauseOps;
+  llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
+  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
+  getDeclareTargetInfo(converter, semaCtx, eval, declareTargetConstruct,
+                       clauseOps, symbolAndClause);
+
+  for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
+    mlir::Operation *op =
+        mod.lookupSymbol(converter.mangleName(symClause.symbol));
+
+    // Do nothing if op is not found.
+    if (!op)
+      continue;
+
+    markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
+                      symClause.automap);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -6777,25 +6802,12 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OmpDeclareTargetDirective &declareTargetConstruct) {
-  mlir::omp::DeclareTargetOperands clauseOps;
-  llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
-  mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
-  getDeclareTargetInfo(converter, semaCtx, eval, declareTargetConstruct,
-                       clauseOps, symbolAndClause);
 
-  for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
-    mlir::Operation *op =
-        mod.lookupSymbol(converter.mangleName(symClause.symbol));
-
-    // Some symbols are deferred until later in the module, these are handled
-    // upon finalization of the module for OpenMP inside of Bridge, so we simply
-    // skip for now.
-    if (!op)
-      continue;
-
-    markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
-                      symClause.automap);
-  }
+  // Some symbols are deferred until later. These are skipped in
+  // markDeclareTargetWithDirective at this stage and handled later in
+  // finalizeOpenMPLowering.
+  markDeclareTargetWithDirective(converter, semaCtx, eval,
+                                 declareTargetConstruct);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -8097,6 +8109,7 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
 // operator reductions imported from modules (deleted: replaced by lazy,
 // clause-driven materialization).
 
+namespace {
 // Visitor used to mark declare target globals from imported modules.
 struct ModuleDeclareTargetVisitor {
   Fortran::lower::AbstractConverter &converter;
@@ -8115,33 +8128,19 @@ struct ModuleDeclareTargetVisitor {
   void Post(const T &) {}
 
   void Post(const parser::OmpDeclareTargetDirective &directive) {
-    mlir::omp::DeclareTargetOperands clauseOps;
-    llvm::SmallVector<DeclareTargetCaptureInfo> symbolAndClause;
-    mlir::ModuleOp mod = converter.getFirOpBuilder().getModule();
-
-    getDeclareTargetInfo(converter, semaCtx, std::nullopt, directive, clauseOps,
-                         symbolAndClause);
-
-    for (const DeclareTargetCaptureInfo &symClause : symbolAndClause) {
-      mlir::Operation *op =
-          mod.lookupSymbol(converter.mangleName(symClause.symbol));
-
-      // op not found, so nothing to mark. This happens for variables
-      // and functions that are not actually used in the current
-      // translation unit.
-      if (!op)
-        continue;
-
-      markDeclareTarget(op, converter, symClause.clause, clauseOps.deviceType,
-                        symClause.automap);
-    }
+    // The directive might mention symbols that are not used in the
+    // current translation unit. Such symbols are ignored in
+    // markDeclareTargetWithDirective, as there exists no Operation
+    // that needs marking.
+    markDeclareTargetWithDirective(converter, semaCtx, std::nullopt, directive);
   }
 };
+} // namespace
 
 void Fortran::lower::markOpenMPImportedDeclareTargets(
     Fortran::lower::AbstractConverter &converter,
     semantics::SemanticsContext &semaCtx) {
-  std::list<parser::Program> &modTrees = semaCtx.GetModFileParseTrees();
+  const std::list<parser::Program> &modTrees = semaCtx.GetModFileParseTrees();
   ModuleDeclareTargetVisitor visitor{converter, semaCtx};
   for (auto &modTree : modTrees) {
     parser::Walk(modTree, visitor);
