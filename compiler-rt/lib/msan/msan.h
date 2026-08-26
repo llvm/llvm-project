@@ -142,6 +142,24 @@ const MappingDesc kMemoryLayout[] = {
 #define MEM_TO_SHADOW(mem) (LINEARIZE_MEM((mem)) + 0x080000000000ULL)
 #define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x140000000000ULL)
 
+#elif SANITIZER_LINUX && SANITIZER_RISCV64
+// RISC-V 64 SV39 layout (256GB VMA). Three app regions share a single 48GB
+// shadow via AndMask=0x3C00000000 (clears bits 34-37), yielding ~3x aliasing.
+// This is geometrically unavoidable on SV39: x86/Arm have ≥1000× larger VMA
+// and use simple linear maps. Shadow and origin are non-overlapping.
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x000000001000ULL, MappingDesc::INVALID, "null"},
+    {0x000000001000ULL, 0x001000000000ULL, MappingDesc::APP, "app-lo"},
+    {0x001000000000ULL, 0x001c00000000ULL, MappingDesc::SHADOW, "shadow"},
+    {0x001c00000000ULL, 0x002c00000000ULL, MappingDesc::APP, "app-mid"},
+    {0x002c00000000ULL, 0x003000000000ULL, MappingDesc::ALLOCATOR, "alloc"},
+    {0x003000000000ULL, 0x003c00000000ULL, MappingDesc::ORIGIN, "origin"},
+    {0x003c00000000ULL, 0x004000000000ULL, MappingDesc::APP, "app-hi"},
+};
+#  define MEM_TO_SHADOW(mem) \
+    ((((uptr)(mem) & ~0x3c00000000ULL)) + 0x1000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x2000000000ULL)
+
 #elif SANITIZER_LINUX && SANITIZER_S390_64
 const MappingDesc kMemoryLayout[] = {
     {0x000000000000ULL, 0x040000000000ULL, MappingDesc::APP, "low memory"},

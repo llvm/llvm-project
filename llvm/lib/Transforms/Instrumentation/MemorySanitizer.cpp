@@ -520,6 +520,16 @@ static const MemoryMapParams Linux_Hexagon_MemoryMapParams = {
 // FIXME: Remove -msan-origin-base -msan-and-mask added by PR #109284 to tests
 // after picking good constants
 
+// riscv64 Linux — SV39 (256GB). Three app regions share a single 48GB shadow
+// via AndMask=0x3C00000000 (clears bits 34-37). Shadow and origin are
+// non-overlapping. x86/Arm use simple linear maps but have ≥1000× larger VMA.
+static const MemoryMapParams Linux_RISCV64_MemoryMapParams = {
+    0x3C00000000, // AndMask
+    0,            // XorMask
+    0x1000000000, // ShadowBase
+    0x3000000000, // OriginBase
+};
+
 // aarch64 FreeBSD
 static const MemoryMapParams FreeBSD_AArch64_MemoryMapParams = {
     0x1800000000000, // AndMask
@@ -585,6 +595,11 @@ static const PlatformMemoryMapParams Linux_LoongArch_MemoryMapParams = {
 static const PlatformMemoryMapParams Linux_Hexagon_MemoryMapParams_P = {
     &Linux_Hexagon_MemoryMapParams,
     nullptr,
+};
+
+static const PlatformMemoryMapParams Linux_RISCV_MemoryMapParams = {
+    nullptr,
+    &Linux_RISCV64_MemoryMapParams,
 };
 
 static const PlatformMemoryMapParams FreeBSD_ARM_MemoryMapParams = {
@@ -1116,6 +1131,9 @@ void MemorySanitizer::initializeModule(Module &M) {
         break;
       case Triple::hexagon:
         MapParams = Linux_Hexagon_MemoryMapParams_P.bits32;
+        break;
+      case Triple::riscv64:
+        MapParams = Linux_RISCV_MemoryMapParams.bits64;
         break;
       default:
         report_fatal_error("unsupported architecture");
