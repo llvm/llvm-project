@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the strptime function.
+/// This file contains the declaration of the tzset function.
 ///
 //===----------------------------------------------------------------------===//
 
