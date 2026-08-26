@@ -150,8 +150,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     // optimization opportunities (e.g. LICM) for backends targeting LLVM IR.
     // This will have to be changed, when strict FP behavior is supported
     // by Math dialect.
-    opFunc->setAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
-                    UnitAttr::get(rewriter.getContext()));
+    opFunc->setDiscardableAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
+                               UnitAttr::get(rewriter.getContext()));
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 

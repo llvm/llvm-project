@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ThreadPoolRunner.h"
+#include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "gtest/gtest.h"
 
 #include <atomic>

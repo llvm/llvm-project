@@ -48,6 +48,8 @@ class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 class XeVM_Op<string mnemonic, list<Trait> traits = []>
     : LLVM_OpBase<XeVM_Dialect, mnemonic, traits> {
 
+  let hasCustomPropertiesPrinter = 1;
+
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop,

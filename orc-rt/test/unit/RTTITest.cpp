@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/RTTI.h"
+#include "orc-rt/bedrock/RTTI.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

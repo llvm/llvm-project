@@ -999,6 +999,10 @@ int FunctionComparator::compareSignature() const {
   if (int Res = cmpAttrs(FnL->getAttributes(), FnR->getAttributes()))
     return Res;
 
+  if (int Res = cmpMDNode(FnL->getMetadata(LLVMContext::MD_kcfi_type),
+                          FnR->getMetadata(LLVMContext::MD_kcfi_type)))
+    return Res;
+
   if (int Res = cmpNumbers(FnL->hasGC(), FnR->hasGC()))
     return Res;
 

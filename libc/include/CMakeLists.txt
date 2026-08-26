@@ -785,6 +785,7 @@ add_header_macro(
     .llvm-libc-macros.sys_resource_macros
     .llvm-libc-types.rlim_t
     .llvm-libc-types.struct_rlimit
+    .llvm-libc-types.struct_rusage
 )
 
 add_header_macro(

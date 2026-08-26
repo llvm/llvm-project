@@ -20,7 +20,6 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -40,8 +39,12 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
-#include <linux/unistd.h>
 #include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <linux/unistd.h>
+#include <sys/ptrace.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>

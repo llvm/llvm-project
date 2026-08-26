@@ -718,6 +718,13 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         case CompileUnit::Stage::Cloned:
           // Update DIEs referencies.
           CU.updateDieRefPatchesWithClonedOffsets();
+
+          // Later than cloning, so that the offsets are final, and no later,
+          // because a unit which got this far can no longer be skipped and have
+          // its section dropped from the output.
+          if (CU.isClangModule())
+            CU.noteModuleAnchors();
+
           CU.setStage(CompileUnit::Stage::PatchesUpdated);
           break;
 

@@ -244,8 +244,9 @@ static LogicalResult cloneFuncsToGPUModule(
 
     gpu::GPUFuncOp deviceFuncOp = createGPUFuncFromFunc(builder, srcFunc);
 
-    if (auto specRoutineAttr = srcFunc->getAttrOfType<SpecializedRoutineAttr>(
-            getSpecializedRoutineAttrName())) {
+    if (auto specRoutineAttr =
+            srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
+                getSpecializedRoutineAttrName())) {
       StringAttr funcName = specRoutineAttr.getFuncName();
       if (failed(SymbolTable::replaceAllSymbolUses(
               StringAttr::get(ctx, deviceFuncOp.getName()), funcName, mod))) {
@@ -253,11 +254,14 @@ static LogicalResult cloneFuncsToGPUModule(
                            "cannot replace symbol for acc routine");
         return failure();
       }
-      deviceFuncOp->setAttr(SymbolTable::getSymbolAttrName(), funcName);
+      deviceFuncOp->setDiscardableAttr(SymbolTable::getSymbolAttrName(),
+                                       funcName);
     }
-    if (auto specAttr = srcFunc->getAttrOfType<SpecializedRoutineAttr>(
-            getSpecializedRoutineAttrName()))
-      deviceFuncOp->setAttr(getSpecializedRoutineAttrName(), specAttr);
+    if (auto specAttr =
+            srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(
+                getSpecializedRoutineAttrName()))
+      deviceFuncOp->setDiscardableAttr(getSpecializedRoutineAttrName(),
+                                       specAttr);
 
     gpuSymTab.insert(deviceFuncOp);
   }

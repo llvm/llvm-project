@@ -351,12 +351,14 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
 }
 
 void setCollapseCountAttr(Operation *op, uint64_t count) {
-  op->setAttr(getCollapseCountAttrName(),
-              IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
+  op->setDiscardableAttr(
+      getCollapseCountAttrName(),
+      IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
 }
 
 uint64_t getCollapseCount(Operation *op) {
-  if (auto attr = op->getAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
+  if (auto attr =
+          op->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
     return attr.getValue().getZExtValue();
   return 1;
 }

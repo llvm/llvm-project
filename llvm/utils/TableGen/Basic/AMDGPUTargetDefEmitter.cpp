@@ -70,11 +70,12 @@ static std::optional<StringRef> getSubArchSpelling(const Record *Rec) {
   return Rec->getValueAsOptionalString("SubArchSpelling");
 }
 
-// Emit a subarch enumerator suffix for a spelling, converting '.' to '_' and
-// upcasing, e.g. "4.67q" -> "4_67Q".
+// Emit a subarch enumerator suffix for a spelling, dropping '.' and upcasing,
+// e.g. "12.50s" -> "1250S", matching the sibling name-derived enumerators.
 static void emitSpellingSuffix(raw_ostream &OS, StringRef Spelling) {
   for (char C : Spelling)
-    OS << static_cast<char>((C == '.') ? '_' : toUpper(C));
+    if (C != '.')
+      OS << static_cast<char>(toUpper(C));
 }
 
 // Derive the Triple::SubArchType for a canonical GPU record. A pseudo target

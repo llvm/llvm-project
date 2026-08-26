@@ -4922,6 +4922,12 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                      : BlendCond;
   }
 
+  // When folding the tail, the inactive lanes of the reduction update are
+  // computed from values that do not correspond to any scalar iteration
+  // and must not be accumulated.
+  if (!Cond)
+    Cond = Plan.getVectorLoopRegion()->getHeaderMask();
+
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue ||
                        RdxPhi->getBackedgeValue() == Chain.Blend;

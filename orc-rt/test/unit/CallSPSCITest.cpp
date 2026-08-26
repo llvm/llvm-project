@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/sps-ci/CallSPSCI.h"
-#include "orc-rt/SPSWrapperFunction.h"
+#include "orc-rt/bedrock/sps-ci/CallSPSCI.h"
+#include "orc-rt/bedrock/SPSWrapperFunction.h"
 
 #include "DirectCaller.h"
 #include "gtest/gtest.h"

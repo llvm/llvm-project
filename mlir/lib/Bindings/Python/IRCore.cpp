@@ -2104,7 +2104,7 @@ void PySymbolTable::setSymbolName(PyOperationBase &symbol,
 PyStringAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
-  MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
+  MlirStringRef attrName = mlirSymbolTableGetDefaultVisibilityAttributeName();
   MlirAttribute existingVisAttr =
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingVisAttr))
@@ -2120,7 +2120,7 @@ void PySymbolTable::setVisibility(PyOperationBase &symbol,
         "Expected visibility to be 'public', 'private' or 'nested'");
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
-  MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
+  MlirStringRef attrName = mlirSymbolTableGetDefaultVisibilityAttributeName();
   MlirAttribute existingVisAttr =
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingVisAttr))

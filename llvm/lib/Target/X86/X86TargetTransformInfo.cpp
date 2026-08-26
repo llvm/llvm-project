@@ -7019,7 +7019,7 @@ X86TTIImpl::TTI::MemCmpExpansionOptions
 X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = 2;
+  Options.NumLoadsPerBlock = IsZeroCmp ? 2 : 1;
   // All GPR and vector loads can be unaligned.
   Options.AllowOverlappingLoads = true;
   if (IsZeroCmp) {

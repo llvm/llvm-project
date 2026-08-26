@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
-#include "orc-rt/SPSAllocAction.h"
-#include "orc-rt/SPSMemoryFlags.h"
-#include "orc-rt/SPSWrapperFunction.h"
-#include "orc-rt/Session.h"
-#include "orc-rt/SimpleNativeMemoryMap.h"
+#include "orc-rt/bedrock/sps-ci/SimpleNativeMemoryMapSPSCI.h"
+#include "orc-rt/bedrock/SPSAllocAction.h"
+#include "orc-rt/bedrock/SPSMemoryFlags.h"
+#include "orc-rt/bedrock/SPSWrapperFunction.h"
+#include "orc-rt/bedrock/Session.h"
+#include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 
 #include "AllocActionTestUtils.h"
 #include "CommonTestUtils.h"

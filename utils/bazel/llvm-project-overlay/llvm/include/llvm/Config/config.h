@@ -52,7 +52,7 @@
 
 /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
    don't. */
-#define HAVE_DECL_ARC4RANDOM 0
+/* HAVE_DECL_ARC4RANDOM defined in Bazel */
 
 /* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
    don't. */
@@ -175,7 +175,7 @@
 /* HAVE_SYS_IOCTL_H defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
-/* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
+/* HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */

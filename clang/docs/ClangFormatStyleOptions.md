@@ -2582,6 +2582,16 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+  - `bool AfterExportBlock` Wrap export blocks.
+
+    ```c++
+    true:                            false:
+    export             vs.           export {
+    {                                  int foo();
+      int foo();                     }
+    }
+    ```
+
   - `bool AfterExternBlock` Wrap extern blocks.
 
     ```c++

@@ -1007,8 +1007,8 @@ void OperationName::UnregisteredOpModel::setInherentAttr(Operation *op,
   *op->getPropertiesStorage().as<Attribute *>() =
       attrs.getDictionary(op->getContext());
 }
-void OperationName::UnregisteredOpModel::populateInherentAttrs(
-    Operation *op, NamedAttrList &attrs) {}
+void OperationName::UnregisteredOpModel::walkInherentAttrs(
+    Operation *op, InherentAttrVisitor visitor) {}
 LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
     OperationName opName, NamedAttrList &attributes,
     function_ref<InFlightDiagnostic()> emitError) {

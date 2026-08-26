@@ -445,9 +445,9 @@ public:
     Type inputETy = inputTy.getElementType();
     Type resultETy = resultTy.getElementType();
 
-    auto padAttr = cast<DenseI64ArrayAttr>(op->getAttr("pad"));
-    auto strideTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("stride"));
-    auto dilationTosaAttr = cast<DenseI64ArrayAttr>(op->getAttr("dilation"));
+    auto padAttr = op.getPadAttr();
+    auto strideTosaAttr = op.getStrideAttr();
+    auto dilationTosaAttr = op.getDilationAttr();
 
     Type accETy = op.getAccType();
 

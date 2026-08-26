@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/StringExtras.h"
+#include "orc-rt/bedrock/StringExtras.h"
 #include "gtest/gtest.h"
 
 #include <cstdint>

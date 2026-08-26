@@ -119,10 +119,10 @@ private:
         /* gangDimDeviceType=*/nullptr);
 
     // Assert that the callee does not already have routine info attribute
-    assert(!callee->hasAttr(acc::getRoutineInfoAttrName()) &&
+    assert(!callee->hasDiscardableAttr(acc::getRoutineInfoAttrName()) &&
            "function is already associated with a routine");
 
-    callee->setAttr(
+    callee->setDiscardableAttr(
         acc::getRoutineInfoAttrName(),
         mlir::acc::RoutineInfoAttr::get(
             builder.getContext(),

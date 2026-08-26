@@ -139,7 +139,8 @@ DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -149,7 +150,8 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -158,11 +160,12 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
 LogicalResult ModuleOp::verify() {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : (*this)->getAttrs()) {
+  for (auto attr : (*this)->getDiscardableAttrDictionary().getValue()) {
     if (!attr.getName().strref().contains('.') &&
         !llvm::is_contained(
-            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
-                                mlir::SymbolTable::getVisibilityAttrName()},
+            ArrayRef<StringRef>{
+                mlir::SymbolTable::getSymbolAttrName(),
+                mlir::SymbolOpInterface::getDefaultVisibilityAttrName()},
             attr.getName().strref()))
       return emitOpError() << "can only contain attributes with "
                               "dialect-prefixed names, found: '"
@@ -172,7 +175,8 @@ LogicalResult ModuleOp::verify() {
   // Check that there is at most one data layout spec attribute.
   StringRef layoutSpecAttrName;
   DataLayoutSpecInterface layoutSpec;
-  for (const NamedAttribute &na : (*this)->getAttrs()) {
+  for (const NamedAttribute &na :
+       (*this)->getDiscardableAttrDictionary().getValue()) {
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(na.getValue())) {
       if (layoutSpec) {
         InFlightDiagnostic diag =

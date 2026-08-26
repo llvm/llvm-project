@@ -5,6 +5,16 @@
 // CHECK-LABEL: llvm.func @foo(i64, i64)
 func.func private @foo(index, index)
 
+// CHECK-LABEL: llvm.func @discardable_attribute
+func.func @discardable_attribute() {
+  // CHECK: omp.critical
+  omp.critical {
+    // CHECK: } {test.discardable}
+    omp.terminator
+  } {test.discardable}
+  return
+}
+
 // CHECK-LABEL: llvm.func @critical_block_arg
 func.func @critical_block_arg() {
   // CHECK: omp.critical

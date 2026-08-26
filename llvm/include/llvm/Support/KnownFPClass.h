@@ -305,7 +305,15 @@ struct KnownFPClass {
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Report known values for exp, exp2 and exp10.
+  /// Propagate known class for sqrt
+  LLVM_ABI static KnownFPClass
+  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for log/log2/log10
+  LLVM_ABI static KnownFPClass
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for exp, exp2 and exp10
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
 
   /// Report known values for sin
@@ -336,8 +344,9 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass atan(const KnownFPClass &Src);
 
   /// Report known values for atan2
-  LLVM_ABI static KnownFPClass atan2(const KnownFPClass &LHS,
-                                     const KnownFPClass &RHS);
+  LLVM_ABI static KnownFPClass
+  atan2(const KnownFPClass &LHS, const KnownFPClass &RHS,
+        DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Return true if the sign bit must be 0, ignoring the sign of nans.
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
@@ -443,47 +452,45 @@ struct KnownFPClass {
   LLVM_ABI void propagateCanonicalizingSrc(const KnownFPClass &Src,
                                            DenormalMode Mode);
 
-  /// Propagate known class for log/log2/log10
-  static LLVM_ABI KnownFPClass
-  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
-
-  /// Propagate known class for sqrt
-  static LLVM_ABI KnownFPClass
-  sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
-
   /// Propagate known class for fpext.
-  static LLVM_ABI KnownFPClass fpext(const KnownFPClass &KnownSrc,
+  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
                                      const fltSemantics &DstTy,
                                      const fltSemantics &SrcTy);
 
   /// Propagate known class for fptrunc.
-  static LLVM_ABI KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
 
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
-  static LLVM_ABI KnownFPClass roundToIntegral(const KnownFPClass &Src,
+  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
                                                bool IsTrunc,
                                                bool IsMultiUnitFPType);
 
   /// Propagate known class for mantissa component of frexp
-  static LLVM_ABI KnownFPClass frexp_mant(
-      const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass
+  frexp_mant(const KnownFPClass &Src,
+             DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for ldexp, assuming the exponent is known to be
   /// within [\p ConstantRangeMin, \p ConstantRangeMax]
   ///
   // TODO: This really ought to use ConstantRange, but it's in IR not Support.
-  static LLVM_ABI KnownFPClass
+  LLVM_ABI static KnownFPClass
   ldexp(const KnownFPClass &Src, const APInt &ConstantRangeMin,
         const APInt &ConstantRangeMax, const fltSemantics &Flt,
         DenormalMode Mode = DenormalMode::getDynamic());
-  static LLVM_ABI KnownFPClass ldexp(
-      const KnownFPClass &Src, const KnownBits &ExpBits,
-      const fltSemantics &Flt, DenormalMode Mode = DenormalMode::getDynamic());
+  LLVM_ABI static KnownFPClass
+  ldexp(const KnownFPClass &Src, const KnownBits &ExpBits,
+        const fltSemantics &Flt,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for pow
+  LLVM_ABI static KnownFPClass pow(const KnownFPClass &LHS,
+                                   const KnownFPClass &RHS);
 
   /// Propagate known class for powi
-  static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,
+  LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src,
                                     const KnownBits &N);
 
   void resetAll() { *this = KnownFPClass(); }

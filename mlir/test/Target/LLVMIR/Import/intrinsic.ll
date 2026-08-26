@@ -582,7 +582,7 @@ define void @trap_intrinsics() {
   call void @llvm.trap()
   ; CHECK: llvm.intr.debugtrap
   call void @llvm.debugtrap()
-  ; CHECK: llvm.intr.ubsantrap <{failureKind = 1 : i8}>
+  ; CHECK: llvm.intr.ubsantrap <failureKind = 1>
   call void @llvm.ubsantrap(i8 1)
   ret void
 }

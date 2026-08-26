@@ -58,7 +58,7 @@ static constexpr StringRef barePtrAttrName = "llvm.bareptr";
 /// Return `true` if the `op` should use bare pointer calling convention.
 static bool shouldUseBarePtrCallConv(Operation *op,
                                      const LLVMTypeConverter *typeConverter) {
-  return (op && op->hasAttr(barePtrAttrName)) ||
+  return (op && op->hasDiscardableAttr(barePtrAttrName)) ||
          typeConverter->getOptions().useBarePtrCallConv;
 }
 
@@ -71,7 +71,8 @@ static bool isDiscardableAttr(StringRef name) {
 /// `LLVMFuncOp::build`.
 static void filterFuncAttributes(FunctionOpInterface func,
                                  SmallVectorImpl<NamedAttribute> &result) {
-  for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
+  for (const NamedAttribute &attr :
+       func->getDiscardableAttrDictionary().getValue()) {
     if (isDiscardableAttr(attr.getName().strref()))
       continue;
     result.push_back(attr);
@@ -298,7 +299,8 @@ static FailureOr<LLVM::LLVMFunctionType> convertFuncSignature(
     FunctionOpInterface funcOp, const LLVMTypeConverter &converter,
     bool useBarePtrCallConv, TypeConverter::SignatureConversion &result,
     SmallVectorImpl<std::optional<NamedAttribute>> &byValRefNonPtrAttrs) {
-  auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
+  auto varargsAttr =
+      funcOp->getDiscardableAttrOfType<BoolAttr>(varargsAttrName);
   auto llvmType = dyn_cast_or_null<LLVM::LLVMFunctionType>(
       converter.convertFunctionSignature(
           funcOp, varargsAttr && varargsAttr.getValue(), useBarePtrCallConv,
@@ -334,7 +336,7 @@ static LLVM::LLVMFuncOp createLLVMFuncOp(FunctionOpInterface funcOp,
       .setVisibility(funcOp.getVisibility());
 
   // Set readnone memory effects
-  if (funcOp->hasAttr(LLVM::LLVMDialect::getReadnoneAttrName())) {
+  if (funcOp->hasDiscardableAttr(LLVM::LLVMDialect::getReadnoneAttrName())) {
     auto memoryAttr = LLVM::MemoryEffectsAttr::get(
         rewriter.getContext(), {/*other=*/LLVM::ModRefInfo::NoModRef,
                                 /*argMem=*/LLVM::ModRefInfo::NoModRef,
@@ -466,7 +468,7 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
   // Validate C wrapper varargs constraint
-  bool emitCWrapper = funcOp->hasAttrOfType<UnitAttr>(
+  bool emitCWrapper = funcOp->hasDiscardableAttrOfType<UnitAttr>(
       LLVM::LLVMDialect::getEmitCWrapperAttrName());
   if (!useBarePtrCallConv && emitCWrapper && llvmType->isVarArg())
     return funcOp.emitError("C interface for variadic functions is not "
@@ -549,10 +551,11 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<func::ConstantOp> {
 
     auto newOp =
         LLVM::AddressOfOp::create(rewriter, op.getLoc(), type, op.getValue());
-    for (const NamedAttribute &attr : op->getAttrs()) {
+    for (const NamedAttribute &attr :
+         op->getDiscardableAttrDictionary().getValue()) {
       if (attr.getName().strref() == "value")
         continue;
-      newOp->setAttr(attr.getName(), attr.getValue());
+      newOp->setDiscardableAttr(attr.getName(), attr.getValue());
     }
     rewriter.replaceOp(op, newOp->getResults());
     return success();
@@ -597,10 +600,12 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto promoted = this->getTypeConverter()->promoteOperands(
         callOp.getLoc(), /*opOperands=*/callOp->getOperands(),
         adaptor.getOperands(), rewriter, useBarePtrCallConv);
-    auto newOp = LLVM::CallOp::create(rewriter, callOp.getLoc(),
-                                      packedResult ? TypeRange(packedResult)
-                                                   : TypeRange(),
-                                      promoted, callOp->getAttrs());
+    auto newOp = LLVM::CallOp::create(
+        rewriter, callOp.getLoc(),
+        packedResult ? TypeRange(packedResult) : TypeRange(), promoted,
+        callOp->getDiscardableAttrDictionary().getValue());
+    if constexpr (std::is_same_v<CallOpType, func::CallOp>)
+      newOp.setCalleeAttr(callOp.getCalleeAttr());
 
     newOp.getProperties().operandSegmentSizes = {
         static_cast<int32_t>(promoted.size()), 0};
@@ -687,13 +692,13 @@ public:
       Operation *callee =
           symbolTables->lookupNearestSymbolFrom(callOp, callOp.getCalleeAttr());
       useBarePtrCallConv =
-          callee != nullptr && callee->hasAttr(barePtrAttrName);
+          callee != nullptr && callee->hasDiscardableAttr(barePtrAttrName);
     } else {
       // Warning: This is a linear lookup.
       Operation *callee =
           SymbolTable::lookupNearestSymbolFrom(callOp, callOp.getCalleeAttr());
       useBarePtrCallConv =
-          callee != nullptr && callee->hasAttr(barePtrAttrName);
+          callee != nullptr && callee->hasDiscardableAttr(barePtrAttrName);
     }
     return matchAndRewriteImpl(callOp, adaptor, rewriter, useBarePtrCallConv);
   }
@@ -795,7 +800,8 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (updatedOperands.size() <= 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, TypeRange(), updatedOperands, op->getAttrs());
+          op, TypeRange(), updatedOperands,
+          op->getDiscardableAttrDictionary().getValue());
       return success();
     }
 
@@ -811,8 +817,8 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
       packed = LLVM::InsertValueOp::create(rewriter, loc, packed, operand, idx);
     }
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
-                                                op->getAttrs());
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
+        op, TypeRange(), packed, op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -845,7 +851,7 @@ struct ConvertFuncToLLVMPass
     ModuleOp m = getOperation();
     StringRef dataLayout;
     auto dataLayoutAttr = dyn_cast_or_null<StringAttr>(
-        m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
+        m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
     if (dataLayoutAttr)
       dataLayout = dataLayoutAttr.getValue();
 
@@ -896,8 +902,8 @@ struct SetLLVMModuleDataLayoutPass
       return;
     }
     ModuleOp m = getOperation();
-    m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
-               StringAttr::get(m.getContext(), this->dataLayout));
+    m->setDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+                          StringAttr::get(m.getContext(), this->dataLayout));
   }
 };
 } // namespace

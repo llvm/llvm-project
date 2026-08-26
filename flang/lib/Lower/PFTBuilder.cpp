@@ -1052,9 +1052,13 @@ private:
             }
           },
           [&](const parser::AssignedGotoStmt &s) {
-            // Mark every possible target of the assigned GO TO so that
-            // wrappability analyses can see any escape from an enclosing
-            // construct.
+            // See Fortran 90 Clause 8.2.4.
+            // Relax the requirement that the GOTO variable must have a value in
+            // the label list when a list is present, and allow a branch to any
+            // non-format target that has an ASSIGN statement for the variable.
+            //
+            // (Both PFT builder and MLIR lowering bridge apply the same
+            // relaxation)
             auto markIfBranchTarget = [&](parser::Label label) {
               assert(label && "missing branch target label");
               auto iter{labelEvaluationMap->find(label)};
@@ -1065,24 +1069,16 @@ private:
               if (semanticsContext.IsRecordedBranchTarget(target->position))
                 markBranchTarget(eval, *target);
             };
-            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
-            if (!labelList.empty()) {
-              // Explicit target list: `go to v, (l1, l2, ...)`.
-              for (const auto &label : labelList)
-                markIfBranchTarget(label);
-            } else {
-              // No explicit list (`go to v`): fall back to the set of labels
-              // that have been previously ASSIGN'd to v.
-              // TODO: This may miss assignments that appear later in program
-              // order, but it matches the information available at this point
-              // in the walk.
-              const auto *sym = std::get<parser::Name>(s.t).symbol;
-              if (sym) {
-                auto iter = assignSymbolLabelMap->find(*sym);
-                if (iter != assignSymbolLabelMap->end())
-                  for (auto label : iter->second)
-                    markIfBranchTarget(label);
-              }
+            for (const auto &label : std::get<std::list<parser::Label>>(s.t))
+              markIfBranchTarget(label);
+            // TODO: This may miss assignments that appear later in program
+            // order, but it matches the information available at this point in
+            // the walk.
+            if (const auto *sym = std::get<parser::Name>(s.t).symbol) {
+              auto iter = assignSymbolLabelMap->find(*sym);
+              if (iter != assignSymbolLabelMap->end())
+                for (auto label : iter->second)
+                  markIfBranchTarget(label);
             }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);

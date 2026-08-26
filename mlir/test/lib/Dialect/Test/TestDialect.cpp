@@ -316,7 +316,8 @@ void test::testSideEffectOpGetEffect(
     Operation *op,
     SmallVectorImpl<SideEffects::EffectInstance<TestEffects::Effect>>
         &effects) {
-  auto effectsAttr = op->getAttrOfType<AffineMapAttr>("effect_parameter");
+  auto effectsAttr =
+      op->getDiscardableAttrOfType<AffineMapAttr>("effect_parameter");
   if (!effectsAttr)
     return;
 
@@ -481,7 +482,8 @@ MutableOperandRange CallWithSegmentsOp::getArgOperandsMutable() {
   // Obtain the canonical segment size attribute name for this op.
   auto segName =
       CallWithSegmentsOp::getOperandSegmentSizesAttrName(op->getName());
-  auto sizesAttr = op->getAttrOfType<DenseI32ArrayAttr>(segName);
+  auto sizesAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(segName).value_or(Attribute{}));
   assert(sizesAttr && "missing operandSegmentSizes attribute on op");
 
   // Compute the start and length of the args segment from the prefix size and

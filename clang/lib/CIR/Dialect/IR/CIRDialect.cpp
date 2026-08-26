@@ -4621,6 +4621,54 @@ LogicalResult cir::LifetimeEndOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+/// Reads a fundamental integer width from a signless i32 attribute.
+static std::optional<unsigned> getRecordedIntegerWidth(mlir::Attribute attr) {
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(32))
+    return std::nullopt;
+  int64_t width = intAttr.getInt();
+  if (width < 0 ||
+      !cir::isValidFundamentalIntWidth(static_cast<unsigned>(width)))
+    return std::nullopt;
+  return static_cast<unsigned>(width);
+}
+
+LogicalResult cir::MemChrOp::verify() {
+  auto moduleOp = (*this)->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return emitOpError("expects an enclosing module");
+
+  // libc memchr uses pointers in the target's default address space.
+  if (mlir::cast<cir::PointerType>(getSrc().getType()).getAddrSpace())
+    return emitOpError("src must be in the default address space");
+
+  auto checkWidth = [&](cir::IntType type, llvm::StringRef operandName,
+                        llvm::StringRef attrName) -> LogicalResult {
+    mlir::Attribute attr = moduleOp->getAttr(attrName);
+    if (!attr)
+      return emitOpError("expects the module to record ") << attrName;
+    std::optional<unsigned> width = getRecordedIntegerWidth(attr);
+    if (!width)
+      return emitOpError("requires ")
+             << attrName
+             << " to be a signless i32 holding a fundamental integer width";
+    if (type.getWidth() != *width)
+      return emitOpError() << operandName << " must have the width recorded in "
+                           << attrName;
+    return success();
+  };
+
+  if (failed(checkWidth(getPattern().getType(), "pattern",
+                        cir::CIRDialect::getIntTypeWidthAttrName())))
+    return failure();
+  return checkWidth(getLen().getType(), "len",
+                    cir::CIRDialect::getSizeTypeWidthAttrName());
+}
+
+//===----------------------------------------------------------------------===//
 // ConstructCatchParamOp
 //===----------------------------------------------------------------------===//
 

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/Proxy.h"
+#include "orc-rt/bedrock/Proxy.h"
 
 #include "CommonTestUtils.h"
 

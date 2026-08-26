@@ -515,6 +515,10 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     return ISD::FMINIMUM;
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return ISD::FMAXIMUMNUM;
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return ISD::FMINIMUMNUM;
   }
 }
 
@@ -13889,14 +13893,17 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
     case ISD::FDIV:
       return OperandNo == 1 && ConstFP->isOne();
     case ISD::FMINNUM:
-    case ISD::FMAXNUM: {
-      // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+    case ISD::FMAXNUM:
+    case ISD::FMINIMUMNUM:
+    case ISD::FMAXIMUMNUM: {
+      // Neutral element for fminnum/fminimumnum is NaN, Inf or FLT_MAX,
+      // depending on fast-math flags (FMF).
       EVT VT = V.getValueType();
       const fltSemantics &Semantics = VT.getFltSemantics();
       APFloat NeutralAF = !Flags.hasNoNaNs()   ? APFloat::getQNaN(Semantics)
                           : !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
                                                : APFloat::getLargest(Semantics);
-      if (Opcode == ISD::FMAXNUM)
+      if (Opcode == ISD::FMAXNUM || Opcode == ISD::FMAXIMUMNUM)
         NeutralAF.changeSign();
 
       return ConstFP->isExactlyValue(NeutralAF);
@@ -15239,13 +15246,16 @@ SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
   case ISD::FMUL:
     return getConstantFP(1.0, DL, VT);
   case ISD::FMINNUM:
-  case ISD::FMAXNUM: {
-    // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
+    // Neutral element for fminnum/fminimumnum is NaN, Inf or FLT_MAX,
+    // depending on fast-math flags (FMF).
     const fltSemantics &Semantics = VT.getFltSemantics();
     APFloat NeutralAF = !Flags.hasNoNaNs() ? APFloat::getQNaN(Semantics) :
                         !Flags.hasNoInfs() ? APFloat::getInf(Semantics) :
                         APFloat::getLargest(Semantics);
-    if (Opcode == ISD::FMAXNUM)
+    if (Opcode == ISD::FMAXNUM || Opcode == ISD::FMAXIMUMNUM)
       NeutralAF.changeSign();
 
     return getConstantFP(NeutralAF, DL, VT);

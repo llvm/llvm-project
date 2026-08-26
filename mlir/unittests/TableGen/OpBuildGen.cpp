@@ -33,6 +33,15 @@ static MLIRContext &getContext() {
 /// Test fixture for providing basic utilities for testing.
 class OpBuildGenTest : public ::testing::Test {
 protected:
+  static NamedAttrList collectAttrs(Operation *op) {
+    NamedAttrList attrs(op->getDiscardableAttrDictionary());
+    if (op->getPropertiesStorageSize())
+      op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+        attrs.append(name, attr);
+      });
+    return NamedAttrList(attrs.getDictionary(op->getContext()));
+  }
+
   OpBuildGenTest()
       : ctx(getContext()), builder(&ctx), loc(builder.getUnknownLoc()),
         i32Ty(builder.getI32Type()), f32Ty(builder.getF32Type()),
@@ -60,10 +69,10 @@ protected:
     for (unsigned idx : llvm::seq(0U, op->getNumOperands()))
       EXPECT_EQ(op->getOperand(idx), operands[idx]);
 
-    EXPECT_EQ(op->getAttrs().size(), attrs.size());
+    NamedAttrList actualAttrs = collectAttrs(op);
+    EXPECT_EQ(actualAttrs.getAttrs().size(), attrs.size());
     for (unsigned idx : llvm::seq<unsigned>(0U, attrs.size()))
-      EXPECT_EQ(op->getAttr(attrs[idx].getName().strref()),
-                attrs[idx].getValue());
+      EXPECT_EQ(actualAttrs.get(attrs[idx].getName()), attrs[idx].getValue());
 
     EXPECT_TRUE(mlir::succeeded(concreteOp.verify()));
     concreteOp.erase();
@@ -85,11 +94,12 @@ protected:
     for (unsigned idx : llvm::seq(0U, op->getNumOperands()))
       EXPECT_EQ(op->getOperand(idx), operands[idx]);
 
-    EXPECT_EQ(op->getAttrs().size(), attrs.size());
-    if (op->getAttrs().size() != attrs.size()) {
+    NamedAttrList actualAttrs = collectAttrs(op);
+    EXPECT_EQ(actualAttrs.getAttrs().size(), attrs.size());
+    if (actualAttrs.getAttrs().size() != attrs.size()) {
       // Simple export where there is mismatch count.
       llvm::errs() << "Op attrs:\n";
-      for (auto it : op->getAttrs())
+      for (auto it : actualAttrs)
         llvm::errs() << "\t" << it.getName() << " = " << it.getValue() << "\n";
 
       llvm::errs() << "Expected attrs:\n";
@@ -97,8 +107,7 @@ protected:
         llvm::errs() << "\t" << it.getName() << " = " << it.getValue() << "\n";
     } else {
       for (unsigned idx : llvm::seq<unsigned>(0U, attrs.size()))
-        EXPECT_EQ(op->getAttr(attrs[idx].getName().strref()),
-                  attrs[idx].getValue());
+        EXPECT_EQ(actualAttrs.get(attrs[idx].getName()), attrs[idx].getValue());
     }
 
     EXPECT_TRUE(mlir::succeeded(concreteOp.verify()));
@@ -288,6 +297,18 @@ TEST_F(OpBuildGenTest, BuildMethodsVariadicProperties) {
   op = test::TableGenBuildOp6::create(builder, loc,
                                       ValueRange{*cstI32, *cstI32}, attrs);
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
+
+  // Test replacing an inherent attribute backed by a native property.
+  op = test::TableGenBuildOp6::create(builder, loc, f32Ty, ValueRange{*cstI32},
+                                      ValueRange{*cstI32});
+  DenseI32ArrayAttr replacement = builder.getDenseI32ArrayAttr({0, 2});
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    if (name == "operandSegmentSizes")
+      attr = replacement;
+  });
+  EXPECT_EQ(op.getProperties().operandSegmentSizes[0], 0);
+  EXPECT_EQ(op.getProperties().operandSegmentSizes[1], 2);
+  op.erase();
 }
 
 TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
@@ -296,7 +317,19 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   ArrayRef<NamedAttribute> discardableAttrs = attrs.drop_front();
   auto op7 = test::TableGenBuildOp7::create(
       builder, loc, TypeRange{}, ValueRange{}, props, discardableAttrs);
-  verifyOp(op7, {}, {}, attrs);
+  unsigned numInherentAttrs = 0;
+  BoolAttr replacement = builder.getBoolAttr(false);
+  op7->getName().walkInherentAttrs(op7, [&](StringRef name, Attribute &attr) {
+    EXPECT_EQ(name, attrs[0].getName());
+    EXPECT_EQ(attr, attrs[0].getValue());
+    attr = replacement;
+    ++numInherentAttrs;
+  });
+  EXPECT_EQ(numInherentAttrs, 1u);
+  EXPECT_EQ(op7.getProperties().getAttr0(), replacement);
+  std::vector<NamedAttribute> replacedAttrs(attrs.begin(), attrs.end());
+  replacedAttrs[0].setValue(replacement);
+  verifyOp(op7, {}, {}, replacedAttrs);
 
   // Check that the old-style builder where all the attributes go in the same
   // place works.

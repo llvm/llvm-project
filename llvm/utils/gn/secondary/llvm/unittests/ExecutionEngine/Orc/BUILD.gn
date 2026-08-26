@@ -30,7 +30,6 @@ unittest("OrcJITTests") {
     "LibraryResolverTest.cpp",
     "LinkGraphLinkingLayerTest.cpp",
     "LookupAndApplyTest.cpp",
-    "LookupAndRecordAddrsTest.cpp",
     "MachOBuilderTest.cpp",
     "MachOPlatformTest.cpp",
     "MangleAndInternerTest.cpp",

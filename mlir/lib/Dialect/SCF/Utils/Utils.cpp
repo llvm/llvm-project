@@ -363,6 +363,57 @@ void mlir::generateUnrolledLoop(
   loopBodyBlock->getTerminator()->setOperands(lastYielded);
 }
 
+/// Splits `forOp` into two consecutive loops at `splitPoint`.
+FailureOr<std::pair<scf::ForOp, scf::ForOp>>
+mlir::splitForOpAtPoint(RewriterBase &rewriter, scf::ForOp forOp,
+                        Value splitPoint) {
+  if (splitPoint.getType() != forOp.getLowerBound().getType())
+    return failure();
+
+  // Reject statically known violations of the split preconditions.
+  bool isUnsigned = forOp.getUnsignedCmp();
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
+  auto checkSplitPoint = [&](auto getBound) -> LogicalResult {
+    auto lb = getBound(lbVal);
+    auto ub = getBound(ubVal);
+    auto step = getBound(stepVal);
+    auto split = getBound(splitPoint);
+    if ((lb && split && *lb > *split) || (split && ub && *split >= *ub) ||
+        (step && *step <= 0))
+      return failure();
+    if (lb && step && split && (*split - *lb) % *step != 0)
+      return failure();
+    return success();
+  };
+  if (failed(isUnsigned ? checkSplitPoint(getConstantUIntValue)
+                        : checkSplitPoint(getConstantIntValue)))
+    return failure();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(forOp);
+  auto firstForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  auto secondForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  rewriter.modifyOpInPlace(firstForOp,
+                           [&] { firstForOp.setUpperBound(splitPoint); });
+  rewriter.modifyOpInPlace(secondForOp,
+                           [&] { secondForOp.setLowerBound(splitPoint); });
+
+  // Chain iter-args across the split:
+  //   - `secondForOp` is initialized from `firstForOp`'s results.
+  //   - Users of `forOp`'s results are redirected to `secondForOp`'s results,
+  //     so downstream code observes the final carried values.
+  rewriter.modifyOpInPlace(secondForOp, [&] {
+    secondForOp->setOperands(secondForOp.getNumControlOperands(),
+                             secondForOp.getInitArgs().size(),
+                             firstForOp.getResults());
+  });
+  rewriter.replaceOp(forOp, secondForOp.getResults());
+
+  return std::pair<scf::ForOp, scf::ForOp>{firstForOp, secondForOp};
+}
+
 /// Unrolls 'forOp' by 'unrollFactor', returns the unrolled main loop and the
 /// epilogue loop, if the loop is unrolled.
 FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
@@ -484,27 +535,19 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
-    OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPointAfter(forOp);
-    auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
-    epilogueForOp.setLowerBound(upperBoundUnrolled);
-
-    // Update uses of loop results.
-    auto results = forOp.getResults();
-    auto epilogueResults = epilogueForOp.getResults();
-
-    for (auto e : llvm::zip(results, epilogueResults)) {
-      std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-    }
-    epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getInitArgs().size(), results);
+    auto splitLoops = splitForOpAtPoint(rewriter, forOp, upperBoundUnrolled);
+    if (failed(splitLoops))
+      return failure();
+    forOp = splitLoops->first;
+    scf::ForOp epilogueForOp = splitLoops->second;
     if (!shouldPromoteIfSingleIteration ||
         epilogueForOp.promoteIfSingleIteration(rewriter).failed())
       resultLoops.epilogueLoopOp = epilogueForOp;
+  } else {
+    forOp.setUpperBound(upperBoundUnrolled);
   }
 
   // Create unrolled loop.
-  forOp.setUpperBound(upperBoundUnrolled);
   forOp.setStep(stepUnrolled);
 
   auto iterArgs = ValueRange(forOp.getRegionIterArgs());

@@ -147,6 +147,8 @@ TEST(SymbolOpInterface, Visibility) {
   ASSERT_FALSE(symOp.isPublic());
   ASSERT_FALSE(symOp.isNested());
   ASSERT_TRUE(symOp.canDiscardOnUseEmpty());
+  ASSERT_EQ(SymbolTable::getSymbolVisibility(symOp),
+            SymbolTable::Visibility::Private);
 
   std::string diagStr;
   context.getDiagEngine().registerHandler(
@@ -162,8 +164,13 @@ TEST(SymbolOpInterface, Visibility) {
   symOp.setPrivate();
   expectedDiag += "'test.overridden_symbol_visibility' op cannot change "
                   "visibility of symbol to private";
+  SymbolTable::setSymbolVisibility(symOp, SymbolTable::Visibility::Nested);
+  expectedDiag += "'test.overridden_symbol_visibility' op cannot change "
+                  "visibility of symbol to nested";
 
   ASSERT_EQ(diagStr, expectedDiag);
+  ASSERT_FALSE(
+      symOp->hasAttr(SymbolOpInterface::getDefaultVisibilityAttrName()));
 }
 
 } // namespace

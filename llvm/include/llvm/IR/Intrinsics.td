@@ -181,6 +181,11 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int Upper = upper;
 }
 
+// The underlying object of the argument/return can not be freed.
+class NoFreeObj<AttrIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
 // ArgProperty - Base class for argument properties that can be specified in
 // ArgInfo.
 class ArgProperty;
@@ -2621,6 +2626,12 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
                                          [LLVMVectorElementType<0>],
                                          [llvm_any_vector_float_ty]>;
   def int_vector_reduce_fmaximum: DefaultAttrsIntrinsic<
+                                         [LLVMVectorElementType<0>],
+                                         [llvm_any_vector_float_ty]>;
+  def int_vector_reduce_fminimumnum: DefaultAttrsIntrinsic<
+                                         [LLVMVectorElementType<0>],
+                                         [llvm_any_vector_float_ty]>;
+  def int_vector_reduce_fmaximumnum: DefaultAttrsIntrinsic<
                                          [LLVMVectorElementType<0>],
                                          [llvm_any_vector_float_ty]>;
 }

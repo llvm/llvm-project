@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-utils/CommandLine.h"
-#include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include <iostream>
 
 int main(int argc, char *argv[]) {

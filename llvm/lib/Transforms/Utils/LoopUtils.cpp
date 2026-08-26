@@ -1198,6 +1198,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vector_reduce_fminimumnum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1247,6 +1249,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
     return Intrinsic::minimum;
   case Intrinsic::vector_reduce_fmaximum:
     return Intrinsic::maximum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1297,6 +1303,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMaximum;
   case Intrinsic::vector_reduce_fminimum:
     return RecurKind::FMinimum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return RecurKind::FMaximumNum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return RecurKind::FMinimumNum;
   default:
     return RecurKind::None;
   }

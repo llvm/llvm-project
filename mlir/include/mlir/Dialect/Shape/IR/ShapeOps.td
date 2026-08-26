@@ -85,7 +85,8 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative, Pure]> {
   let builders = [OpBuilder<(ins "Value":$shape)>];
 
   let assemblyFormat = [{
-    $shapes attr-dict `:` type($shapes) `->` type($result)
+    $shapes (`error` `=` $error^)? attr-dict `:` type($shapes) `->`
+    type($result)
   }];
 
   let builders = [OpBuilder<(ins "::mlir::Type":$result,

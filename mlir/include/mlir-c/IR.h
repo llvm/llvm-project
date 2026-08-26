@@ -1322,9 +1322,10 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
 /// symbol tables.
 MLIR_CAPI_EXPORTED MlirStringRef mlirSymbolTableGetSymbolAttributeName(void);
 
-/// Returns the name of the attribute used to store symbol visibility.
+/// Returns the name of the attribute used by default to store symbol
+/// visibility.
 MLIR_CAPI_EXPORTED MlirStringRef
-mlirSymbolTableGetVisibilityAttributeName(void);
+mlirSymbolTableGetDefaultVisibilityAttributeName(void);
 
 /// Creates a symbol table for the given operation. If the operation does not
 /// have the SymbolTable trait, returns a null symbol table.

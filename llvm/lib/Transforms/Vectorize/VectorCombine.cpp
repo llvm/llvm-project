@@ -2385,6 +2385,10 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     uint64_t Idx;
     if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
       return false;
+    // An out-of-bounds extractelement produces poison; bail out rather
+    // than computing a shift amount that overflows the packed type.
+    if (Idx >= SrcTy->getNumElements())
+      return false;
     if (cast<Instruction>(U)->use_empty())
       continue;
     ExtCnt += 1;

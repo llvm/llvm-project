@@ -577,6 +577,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Dereferenceable";
   case CodeGenIntrinsic::Range:
     return "Range";
+  case CodeGenIntrinsic::NoFreeObj:
+    return "NoFreeObj";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }

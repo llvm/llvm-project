@@ -319,6 +319,28 @@ def pmulqr_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4,
 def pmulq_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 def pmulqr_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 
+// Packed "Q-format" Multiply Parts Accumulate (32-bit)
+def mqacc_h00_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def mqacc_h01_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def mqacc_h11_i32  : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def mqracc_h00_i32 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def mqracc_h01_i32 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+def mqracc_h11_i32 : RISCVBuiltin<"int(int, _Vector<2, short>, _Vector<2, short>)">;
+
+// Packed "Q-format" Multiply Parts Accumulate (64-bit)
+def pmqacc_h00_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqacc_h01_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqacc_h11_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqracc_h00_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqracc_h01_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def pmqracc_h11_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<4, short>, _Vector<4, short>)">;
+def mqacc_w00_i64  : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def mqacc_w01_i64  : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def mqacc_w11_i64  : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def mqracc_w00_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def mqracc_w01_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+def mqracc_w11_i64 : RISCVBuiltin<"int64_t(int64_t, _Vector<2, int>, _Vector<2, int>)">;
+
 // Packed Sign and Zero Extend (32-bit)
 def psext_b_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>)">;
 def pzext_b_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>)">;

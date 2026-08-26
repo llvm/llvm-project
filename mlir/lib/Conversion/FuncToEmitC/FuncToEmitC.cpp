@@ -188,9 +188,12 @@ public:
     }
 
     if (callOp.getNumResults() <= 1) {
-      rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, convertedResultTypes,
-                                                 adaptor.getOperands(),
-                                                 callOp->getAttrs());
+      auto newCall = rewriter.replaceOpWithNewOp<emitc::CallOp>(
+          callOp, callOp.getCalleeAttr(), convertedResultTypes,
+          adaptor.getOperands());
+      newCall.setArgAttrsAttr(callOp.getArgAttrsAttr());
+      newCall.setResAttrsAttr(callOp.getResAttrsAttr());
+      newCall->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
       return success();
     }
 
@@ -292,11 +295,19 @@ public:
                           signatureConverter.getConvertedTypes(),
                           resultType ? TypeRange(resultType) : TypeRange()));
 
+    newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+    newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+    if (StringAttr visibility = funcOp.getSymVisibilityAttr())
+      newFuncOp->setDiscardableAttr(
+          SymbolOpInterface::getDefaultVisibilityAttrName(), visibility);
+
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (const auto &namedAttr :
+         funcOp->getDiscardableAttrDictionary().getValue()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+        newFuncOp->setDiscardableAttr(namedAttr.getName(),
+                                      namedAttr.getValue());
     }
 
     // Add `extern` to specifiers if `func.func` is declaration only.

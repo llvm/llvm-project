@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-c/config.h"
-#include "orc-rt/Error.h"
+#include "orc-rt/bedrock/Error.h"
 #include "gtest/gtest.h"
 
 #include <system_error>

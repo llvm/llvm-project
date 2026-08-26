@@ -31,14 +31,14 @@ struct TestTopologicalSortPass
   void runOnOperation() override {
     SetVector<Operation *> toSort;
     getOperation().walk([&](Operation *op) {
-      if (op->hasAttrOfType<UnitAttr>(kToSortMark))
+      if (op->hasDiscardableAttrOfType<UnitAttr>(kToSortMark))
         toSort.insert(op);
     });
 
     auto i32Type = IntegerType::get(&getContext(), 32);
     SetVector<Operation *> sortedOps = topologicalSort(toSort);
     for (auto [index, op] : llvm::enumerate(sortedOps))
-      op->setAttr(kOrderIndex, IntegerAttr::get(i32Type, index));
+      op->setDiscardableAttr(kOrderIndex, IntegerAttr::get(i32Type, index));
   }
 };
 

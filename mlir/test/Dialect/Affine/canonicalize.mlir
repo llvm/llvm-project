@@ -1,8 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
 
-// XFAIL: mlir-expensive-checks
-
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0 - 1)>
@@ -1877,6 +1875,27 @@ func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, inde
   %1:4 = affine.delinearize_index %0 into (2, 2, 2, 2)
       : index, index, index, index
   return %1#0, %1#1, %1#2, %1#3 : index, index, index, index
+}
+
+// -----
+
+// A split that consumes an entire bounded delinearization basis would lose the
+// contribution of earlier linearization inputs to the first result.
+// CHECK-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK:         return %[[DELIN]]#0, %[[DELIN]]#1
+// CHECK-BOTTOM-UP-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-BOTTOM-UP-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK-BOTTOM-UP:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK-BOTTOM-UP:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK-BOTTOM-UP:         return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @dont_split_fully_consumed_bounded_basis(%a: index, %b: index)
+    -> (index, index) {
+  %0 = affine.linearize_index disjoint [%a, %b] by (2, 4) : index
+  %1:2 = affine.delinearize_index %0 into (2, 2) : index, index
+  return %1#0, %1#1 : index, index
 }
 
 // -----

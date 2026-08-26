@@ -609,7 +609,7 @@ def OpenACC_ComputeRegionOp
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
     ```
   }];
 
@@ -738,7 +738,7 @@ def OpenACC_PredicateRegionOp
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
     ```
   }];
   let regions = (region AnyRegion:$region);

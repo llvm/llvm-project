@@ -3406,3 +3406,129 @@ int32x2_t test_pnclipp_i32x2(int64_t a, int64_t b) {
 uint32x2_t test_pnclipup_u32x2(uint64_t a, uint64_t b) {
   return __riscv_pnclipup_u32x2(a, b);
 }
+
+// CHECK-LABEL: test_mqacc_h00_i32:
+// RV32:        mqacc.h00
+// RV64:        pmqacc.w.h00
+int32_t test_mqacc_h00_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqacc_h00_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqacc_h01_i32:
+// RV32:        mqacc.h01
+// RV64:        pmqacc.w.h01
+int32_t test_mqacc_h01_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqacc_h01_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqacc_h11_i32:
+// RV32:        mqacc.h11
+// RV64:        pmqacc.w.h11
+int32_t test_mqacc_h11_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqacc_h11_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_h00_i32:
+// RV32:        mqracc.h00
+// RV64:        pmqracc.w.h00
+int32_t test_mqracc_h00_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqracc_h00_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_h01_i32:
+// RV32:        mqracc.h01
+// RV64:        pmqracc.w.h01
+int32_t test_mqracc_h01_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqracc_h01_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_h11_i32:
+// RV32:        mqracc.h11
+// RV64:        pmqracc.w.h11
+int32_t test_mqracc_h11_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_mqracc_h11_i32(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqacc_h00_i32x2:
+// RV32-COUNT-2: mqacc.h00
+// RV64:        pmqacc.w.h00
+int32x2_t test_pmqacc_h00_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqacc_h00_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqacc_h01_i32x2:
+// RV32-COUNT-2: mqacc.h01
+// RV64:        pmqacc.w.h01
+int32x2_t test_pmqacc_h01_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqacc_h01_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqacc_h11_i32x2:
+// RV32-COUNT-2: mqacc.h11
+// RV64:        pmqacc.w.h11
+int32x2_t test_pmqacc_h11_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqacc_h11_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqracc_h00_i32x2:
+// RV32-COUNT-2: mqracc.h00
+// RV64:        pmqracc.w.h00
+int32x2_t test_pmqracc_h00_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqracc_h00_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqracc_h01_i32x2:
+// RV32-COUNT-2: mqracc.h01
+// RV64:        pmqracc.w.h01
+int32x2_t test_pmqracc_h01_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqracc_h01_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmqracc_h11_i32x2:
+// RV32-COUNT-2: mqracc.h11
+// RV64:        pmqracc.w.h11
+int32x2_t test_pmqracc_h11_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqracc_h11_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqacc_w00_i64:
+// RV32:        mqwacc
+// RV64:        mqacc.w00
+int64_t test_mqacc_w00_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqacc_w00_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqacc_w01_i64:
+// RV32:        mqwacc
+// RV64:        mqacc.w01
+int64_t test_mqacc_w01_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqacc_w01_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqacc_w11_i64:
+// RV32:        mqwacc
+// RV64:        mqacc.w11
+int64_t test_mqacc_w11_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqacc_w11_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_w00_i64:
+// RV32:        mqrwacc
+// RV64:        mqracc.w00
+int64_t test_mqracc_w00_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqracc_w00_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_w01_i64:
+// RV32:        mqrwacc
+// RV64:        mqracc.w01
+int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqracc_w01_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_mqracc_w11_i64:
+// RV32:        mqrwacc
+// RV64:        mqracc.w11
+int64_t test_mqracc_w11_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_mqracc_w11_i64(rd, a, b);
+}

@@ -273,6 +273,8 @@ void DebugInfoFinder::processType(DIType *DT) {
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *P = dyn_cast<DIProperty>(D))
+        processType(P->getType());
       else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
         auto VisitBound = [&](DISubrange::BoundType Bound) {
           if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))

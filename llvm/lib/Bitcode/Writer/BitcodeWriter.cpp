@@ -410,6 +410,8 @@ private:
                                        unsigned Abbrev);
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -2509,6 +2511,20 @@ void ModuleBitcodeWriter::writeDIObjCProperty(const DIObjCProperty *N,
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
 
   Stream.EmitRecord(bitc::METADATA_OBJC_PROPERTY, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getBackingStorage()));
+
+  Stream.EmitRecord(bitc::METADATA_PROPERTY, Record, Abbrev);
   Record.clear();
 }
 

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/InProcessControllerAccess.h"
-#include "orc-rt/QueueingRunner.h"
+#include "orc-rt/bedrock/InProcessControllerAccess.h"
+#include "orc-rt/bedrock/QueueingRunner.h"
 
 #include "gtest/gtest.h"
 

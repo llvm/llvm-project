@@ -304,34 +304,15 @@ void SymbolTable::setSymbolName(Operation *symbol, StringAttr name) {
 
 /// Returns the visibility of the given symbol operation.
 SymbolTable::Visibility SymbolTable::getSymbolVisibility(Operation *symbol) {
-  // If the attribute doesn't exist, assume public.
-  StringAttr vis = symbol->getAttrOfType<StringAttr>(getVisibilityAttrName());
-  if (!vis)
-    return Visibility::Public;
-
-  // Otherwise, switch on the string value.
-  return StringSwitch<Visibility>(vis.getValue())
-      .Case("private", Visibility::Private)
-      .Case("nested", Visibility::Nested)
-      .Case("public", Visibility::Public);
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  return symbolOp.getVisibility();
 }
 /// Sets the visibility of the given symbol operation.
 void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
-  MLIRContext *ctx = symbol->getContext();
-
-  // If the visibility is public, just drop the attribute as this is the
-  // default.
-  if (vis == Visibility::Public) {
-    symbol->removeAttr(StringAttr::get(ctx, getVisibilityAttrName()));
-    return;
-  }
-
-  // Otherwise, update the attribute.
-  assert((vis == Visibility::Private || vis == Visibility::Nested) &&
-         "unknown symbol visibility kind");
-
-  StringRef visName = vis == Visibility::Private ? "private" : "nested";
-  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(ctx, visName));
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  symbolOp.setVisibility(vis);
 }
 
 /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -427,9 +408,11 @@ static LogicalResult lookupSymbolInImpl(
     if (!symbolOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     symbolOp = lookupSymbolFn(symbolOp, ref.getAttr());
+    if (!symbolOp)
+      return failure();
     // If the nested symbol is private, lookup failed.
-    if (!symbolOp || SymbolTable::getSymbolVisibility(symbolOp) ==
-                         SymbolTable::Visibility::Private)
+    auto nestedSymbol = dyn_cast<SymbolOpInterface>(symbolOp);
+    if (nestedSymbol && nestedSymbol.isPrivate())
       return failure();
     symbols.push_back(symbolOp);
   }
@@ -531,12 +514,14 @@ LogicalResult detail::verifySymbol(Operation *op) {
                              << mlir::SymbolTable::getSymbolAttrName() << "'";
 
   // Verify the visibility attribute.
-  if (Attribute vis = op->getAttr(mlir::SymbolTable::getVisibilityAttrName())) {
+  StringRef visAttrName =
+      mlir::SymbolOpInterface::getDefaultVisibilityAttrName();
+  if (Attribute vis = op->getAttr(visAttrName)) {
     StringAttr visStrAttr = llvm::dyn_cast<StringAttr>(vis);
     if (!visStrAttr)
-      return op->emitOpError() << "requires visibility attribute '"
-                               << mlir::SymbolTable::getVisibilityAttrName()
-                               << "' to be a string attribute, but got " << vis;
+      return op->emitOpError()
+             << "requires visibility attribute '" << visAttrName
+             << "' to be a string attribute, but got " << vis;
 
     if (!llvm::is_contained(ArrayRef<StringRef>{"public", "private", "nested"},
                             visStrAttr.getValue()))
@@ -546,6 +531,41 @@ LogicalResult detail::verifySymbol(Operation *op) {
              << visStrAttr;
   }
   return success();
+}
+
+SymbolTable::Visibility detail::defaultGetSymbolVisibility(Operation *symbol) {
+  StringAttr vis = symbol->getAttrOfType<StringAttr>(
+      SymbolOpInterface::getDefaultVisibilityAttrName());
+  // If the attribute doesn't exist, assume public.
+  if (!vis)
+    return SymbolTable::Visibility::Public;
+
+  // Otherwise, switch on the string value.
+  return StringSwitch<SymbolTable::Visibility>(vis.getValue())
+      .Case("private", SymbolTable::Visibility::Private)
+      .Case("nested", SymbolTable::Visibility::Nested)
+      .Case("public", SymbolTable::Visibility::Public);
+}
+
+void detail::defaultSetSymbolVisibility(Operation *symbol,
+                                        SymbolTable::Visibility vis) {
+  StringRef attrName = SymbolOpInterface::getDefaultVisibilityAttrName();
+
+  // If the visibility is public, just drop the attribute as this is the
+  // default.
+  if (vis == SymbolTable::Visibility::Public) {
+    symbol->removeAttr(attrName);
+    return;
+  }
+
+  // Otherwise, update the attribute.
+  assert((vis == SymbolTable::Visibility::Private ||
+          vis == SymbolTable::Visibility::Nested) &&
+         "unknown symbol visibility kind");
+
+  StringRef visName =
+      vis == SymbolTable::Visibility::Private ? "private" : "nested";
+  symbol->setAttr(attrName, StringAttr::get(symbol->getContext(), visName));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1126,7 +1146,7 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
   StringAttr visibilityAttr = parser.getBuilder().getStringAttr(visibility);
   attrs.push_back(parser.getBuilder().getNamedAttr(
-      SymbolTable::getVisibilityAttrName(), visibilityAttr));
+      SymbolOpInterface::getDefaultVisibilityAttrName(), visibilityAttr));
   return success();
 }
 
