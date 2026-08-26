@@ -623,10 +623,11 @@ void ParamVarRegion::dumpToStream(raw_ostream &os) const {
   assert(PVD &&
          "`ParamVarRegion` support functions without `Decl` not implemented"
          " yet.");
-  if (const IdentifierInfo *ID = PVD->getIdentifier())
+  if (const IdentifierInfo *ID = PVD->getIdentifier()) {
     os << ID->getName();
-  else
+  } else {
     os << "ParamVarRegion{P" << PVD->getID() << '}';
+  }
 }
 
 bool MemRegion::canPrintPretty() const {
