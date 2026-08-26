@@ -5151,8 +5151,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
     return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
-                                      ->getContainedType()
-                                      ->getCanonicalTypeInternal());
+                                      ->getWrappedType());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
   }

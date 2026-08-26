@@ -1478,16 +1478,6 @@ void TextNodeDumper::dumpLinkageAndVisibility(const NamedDecl *ND) {
     llvm_unreachable("Not a formal linkage!");
   }
 
-  // FIXME: HLSLAttributedResourceType should always have contained type,
-  //        or LinkageComputer::computeTypeLinkageInfo needs to deal with
-  //        the lack of contained type.
-  if (const auto *VD = dyn_cast<VarDecl>(ND)) {
-    if (const auto *Ty = dyn_cast<HLSLAttributedResourceType>(VD->getType());
-        Ty && Ty->getContainedType().isNull()) {
-      return;
-    }
-  }
-
   switch (ND->getVisibility()) {
   case Visibility::DefaultVisibility:
     // A lot of declarations have default visibility, so we only dump other
