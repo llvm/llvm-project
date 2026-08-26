@@ -1012,7 +1012,6 @@ def ProcessorFeatures {
     TuningFastScalarFSQRT,
     TuningFastVectorFSQRT,
     TuningFast15ByteNOP,
-    TuningFastVariableCrossLaneShuffle,
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
@@ -1525,7 +1524,6 @@ def ProcessorFeatures {
                                       TuningFastMOVBE,
                                       TuningFastImm16,
                                       TuningSlowPMADDWD];
-  // TODO Add AVX5124FMAPS/AVX5124VNNIW features
   list<SubtargetFeature> KNMFeatures =
     !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
 

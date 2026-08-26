@@ -26,6 +26,8 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
           Op<XeGPU_Dialect, mnemonic, traits> {
 
+  let hasCustomPropertiesPrinter = 1;
+
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop,

@@ -3267,12 +3267,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///
