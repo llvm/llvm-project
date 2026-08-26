@@ -208,7 +208,9 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
     AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(CPU);
     if (Kind == AMDGPU::GK_NONE)
       Kind = AMDGPU::getGPUKindFromSubArch(T.getSubArch());
-    if (Kind != AMDGPU::GK_NONE &&
+    // An unknown target gets the wider wavefront: too large a block only wastes
+    // threads, too small a one underflows the team size.
+    if (Kind == AMDGPU::GK_NONE ||
         !AMDGPU::getFeatureBitset(Kind).test(AMDGPU::FEAT_SUPPORTS_WAVE32))
       return omp::getAMDGPUGridValues<64>();
     return omp::getAMDGPUGridValues<32>();
