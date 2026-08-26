@@ -5190,46 +5190,6 @@ float64_t test_vrsqrtsd_f64(float64_t a, float64_t b) {
   return vrsqrtsd_f64(a, b);
 }
 
-// CHECK-LABEL: define dso_local float @test_vcvts_f32_s32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[A]] to float
-// CHECK-NEXT:    ret float [[TMP0]]
-//
-float32_t test_vcvts_f32_s32(int32_t a) {
-  return vcvts_f32_s32(a);
-}
-
-// CHECK-LABEL: define dso_local double @test_vcvtd_f64_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = sitofp i64 [[A]] to double
-// CHECK-NEXT:    ret double [[TMP0]]
-//
-float64_t test_vcvtd_f64_s64(int64_t a) {
-  return vcvtd_f64_s64(a);
-}
-
-// CHECK-LABEL: define dso_local float @test_vcvts_f32_u32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = uitofp i32 [[A]] to float
-// CHECK-NEXT:    ret float [[TMP0]]
-//
-float32_t test_vcvts_f32_u32(uint32_t a) {
-  return vcvts_f32_u32(a);
-}
-
-// CHECK-LABEL: define dso_local double @test_vcvtd_f64_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = uitofp i64 [[A]] to double
-// CHECK-NEXT:    ret double [[TMP0]]
-//
-float64_t test_vcvtd_f64_u64(uint64_t a) {
-  return vcvtd_f64_u64(a);
-}
-
 // CHECK-LABEL: define dso_local float @test_vrecpes_f32(
 // CHECK-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -11666,30 +11626,6 @@ float64x1_t test_vabs_f64(float64x1_t a) {
 //
 float64x1_t test_vneg_f64(float64x1_t a) {
   return vneg_f64(a);
-}
-
-// CHECK-LABEL: define dso_local <1 x double> @test_vcvt_f64_s64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[VCVT_I:%.*]] = sitofp <1 x i64> [[TMP1]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[VCVT_I]]
-//
-float64x1_t test_vcvt_f64_s64(int64x1_t a) {
-  return vcvt_f64_s64(a);
-}
-
-// CHECK-LABEL: define dso_local <1 x double> @test_vcvt_f64_u64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[VCVT_I:%.*]] = uitofp <1 x i64> [[TMP1]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[VCVT_I]]
-//
-float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
-  return vcvt_f64_u64(a);
 }
 
 // CHECK-LABEL: define dso_local <1 x double> @test_vrsqrte_f64(
