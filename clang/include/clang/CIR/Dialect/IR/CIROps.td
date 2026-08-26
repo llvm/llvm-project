@@ -1057,8 +1057,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```
-    cir.for cond {
-      cir.condition(%val) // Branches to `step` region or exits.
+    cir.for : cond {
+      cir.condition(%val) // Branches to `body` region or exits.
     } body {
       cir.yield
     } step {
@@ -2316,11 +2316,17 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 
     ```
     cir.while {
-      cir.break
-    ^bb2:
-      cir.yield
+      cir.condition(%cond)
     } do {
-      cir.condition %cond : cir.bool
+      cir.yield
+    }
+
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.yield
     }
     ```
   }];
@@ -2388,7 +2394,7 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     ^bb2:
       cir.yield
     } while {
-      cir.condition %cond : cir.bool
+      cir.condition(%cond)
     }
     ```
   }];
@@ -2419,13 +2425,23 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     Example:
 
     ```
-    cir.for cond {
+    cir.for : cond {
       cir.condition(%val)
     } body {
       cir.break
     ^bb2:
       cir.yield
     } step {
+      cir.yield
+    }
+
+    cir.for : cond {
+      cir.condition(%val)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
       cir.yield
     }
     ```
@@ -3343,6 +3359,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
     environment. LoweringPrepare forwards it to the `strictfp` attribute of the
     generated `__cxx_global_var_init` function.
+
+    The `init_priority` attribute records the priority specified by a
+    C++ `init_priority` attribute on the source variable declaration.
+    LoweringPrepare uses it to place the dynamic initializer emitted from
+    `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
+    instead of the default `_GLOBAL__sub_I_*` function.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3366,10 +3388,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       UnitAttr:$strictfp
+                       UnitAttr:$strictfp,
+                       OptionalAttr<I32Attr>:$init_priority
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -9175,31 +9199,43 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 // MemChrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+def CIR_MemChrOp : CIR_Op<"libc.memchr",
+    [AllTypesMatch<["src", "result"]>]> {
   let summary = "libc's `memchr`";
   let description = [{
     Search for `pattern` in data range from `src` to `src` + `len`.
     `len` provides a bound to the search in `src`. `result` is a pointer to
     found `pattern` or a null pointer.
 
+    `pattern` has the width of the target int and `len` has the width of
+    the target size_t. The module records these widths as
+    `cir.int_type_width` and `cir.size_type_width`, each a signless i32
+    holding a fundamental integer width, and the verifier checks the
+    operands against them. `src` must be a void pointer in the default
+    address space and `result` has the same type as `src`.
+
     Examples:
 
     ```
-    %p = cir.libc.memchr(%src, %pattern, %len)
+    %p = cir.libc.memchr(%src, %pattern, %len) : !cir.ptr<!void>, !s32i, !u64i
     ```
   }];
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
-    CIR_SInt32:$pattern,
-    CIR_UInt64:$len
+    CIR_AnyFundamentalSIntType:$pattern,
+    CIR_AnyFundamentalUIntType:$len
   );
 
   let results = (outs CIR_VoidPtrType:$result);
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
+    `:` qualified(type($src)) `,` qualified(type($pattern)) `,`
+    qualified(type($len))
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "MemRefDescriptor.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -95,14 +96,6 @@ void MemRefDescriptor::setAlignedPtr(OpBuilder &builder, Location loc,
   setPtr(builder, loc, kAlignedPtrPosInMemRefDescriptor, ptr);
 }
 
-// Creates a constant Op producing a value of `resultType` from an index-typed
-// integer attribute.
-static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
-                                     Type resultType, int64_t value) {
-  return LLVM::ConstantOp::create(builder, loc, resultType,
-                                  builder.getIndexAttr(value));
-}
-
 /// Builds IR extracting the offset from the descriptor.
 Value MemRefDescriptor::offset(OpBuilder &builder, Location loc) {
   return LLVM::ExtractValueOp::create(builder, loc, value,
@@ -120,7 +113,7 @@ void MemRefDescriptor::setOffset(OpBuilder &builder, Location loc,
 void MemRefDescriptor::setConstantOffset(OpBuilder &builder, Location loc,
                                          uint64_t offset) {
   setOffset(builder, loc,
-            createIndexAttrConstant(builder, loc, indexType, offset));
+            LLVM::createIndexAttrConstant(builder, loc, indexType, offset));
 }
 
 /// Builds IR extracting the pos-th size from the descriptor.
@@ -137,7 +130,7 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
   auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
 
   // Copy size values to stack-allocated memory.
-  auto one = createIndexAttrConstant(builder, loc, indexType, 1);
+  auto one = LLVM::createIndexAttrConstant(builder, loc, indexType, 1);
   auto sizes = LLVM::ExtractValueOp::create(
       builder, loc, value,
       llvm::ArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
@@ -162,7 +155,7 @@ void MemRefDescriptor::setSize(OpBuilder &builder, Location loc, unsigned pos,
 void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
                                        unsigned pos, uint64_t size) {
   setSize(builder, loc, pos,
-          createIndexAttrConstant(builder, loc, indexType, size));
+          LLVM::createIndexAttrConstant(builder, loc, indexType, size));
 }
 
 /// Builds IR extracting the pos-th stride from the descriptor.
@@ -183,7 +176,7 @@ void MemRefDescriptor::setStride(OpBuilder &builder, Location loc, unsigned pos,
 void MemRefDescriptor::setConstantStride(OpBuilder &builder, Location loc,
                                          unsigned pos, uint64_t stride) {
   setStride(builder, loc, pos,
-            createIndexAttrConstant(builder, loc, indexType, stride));
+            LLVM::createIndexAttrConstant(builder, loc, indexType, stride));
 }
 
 LLVM::LLVMPointerType MemRefDescriptor::getElementPtrType() {
@@ -209,7 +202,7 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
   Value offsetVal =
       ShapedType::isDynamic(offsetCst)
           ? offset(builder, loc)
-          : createIndexAttrConstant(builder, loc, indexType, offsetCst);
+          : LLVM::createIndexAttrConstant(builder, loc, indexType, offsetCst);
   Type elementType = converter.convertType(type.getElementType());
   ptr = LLVM::GEPOp::create(builder, loc, ptr.getType(), elementType, ptr,
                             offsetVal);
@@ -360,9 +353,9 @@ Value UnrankedMemRefDescriptor::computeSize(
   Type indexType = typeConverter.getIndexType();
 
   // Initialize shared constants.
-  Value one = createIndexAttrConstant(builder, loc, indexType, 1);
-  Value two = createIndexAttrConstant(builder, loc, indexType, 2);
-  Value indexSize = createIndexAttrConstant(
+  Value one = LLVM::createIndexAttrConstant(builder, loc, indexType, 1);
+  Value two = LLVM::createIndexAttrConstant(builder, loc, indexType, 2);
+  Value indexSize = LLVM::createIndexAttrConstant(
       builder, loc, indexType,
       llvm::divideCeil(typeConverter.getIndexTypeBitwidth(), 8));
 
@@ -373,7 +366,7 @@ Value UnrankedMemRefDescriptor::computeSize(
   //   2 * sizeof(pointer) + (1 + 2 * rank) * sizeof(index).
   // TODO: consider including the actual size (including eventual padding due
   // to data layout) into the unranked descriptor.
-  Value pointerSize = createIndexAttrConstant(
+  Value pointerSize = LLVM::createIndexAttrConstant(
       builder, loc, indexType,
       llvm::divideCeil(typeConverter.getPointerBitwidth(addressSpace), 8));
   Value doublePointerSize =

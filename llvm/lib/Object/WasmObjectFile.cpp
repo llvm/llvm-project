@@ -665,6 +665,12 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       for (uint32_t I = 0; I < Count; I++) {
         DataSegments[I].Data.Name = readString(Ctx);
         DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        if (DataSegments[I].Data.Alignment > 32)
+          return make_error<GenericBinaryError>(
+              "invalid data segment alignment: `" + DataSegments[I].Data.Name +
+                  "` (alignment: " + Twine(DataSegments[I].Data.Alignment) +
+                  ")",
+              object_error::parse_failed);
         DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
       }
       break;
@@ -829,23 +835,39 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
     case wasm::WASM_SYMBOL_TYPE_DATA:
       Info.Name = readString(Ctx);
       if (IsDefined) {
-        auto Index = readVaruint32(Ctx);
-        auto Offset = readVaruint64(Ctx);
-        auto Size = readVaruint64(Ctx);
-        if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (Index >= DataSegments.size())
+        if ((Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+            wasm::WASM_SYMBOL_BINDING_COMMON) {
+          if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
             return make_error<GenericBinaryError>(
-                "invalid data segment index: " + Twine(Index),
+                "common symbols cannot be absolute: " + Info.Name,
                 object_error::parse_failed);
-          size_t SegmentSize = DataSegments[Index].Data.Content.size();
-          if (Offset > SegmentSize)
+          auto Size = readVaruint64(Ctx);
+          auto Alignment = readUint8(Ctx);
+          if (Alignment > 32)
             return make_error<GenericBinaryError>(
-                "invalid data symbol offset: `" + Info.Name +
-                    "` (offset: " + Twine(Offset) +
-                    " segment size: " + Twine(SegmentSize) + ")",
+                "invalid common symbol alignment: `" + Info.Name +
+                    "` (alignment: " + Twine(unsigned(Alignment)) + ")",
                 object_error::parse_failed);
+          Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
+        } else {
+          auto Index = readVaruint32(Ctx);
+          auto Offset = readVaruint64(Ctx);
+          auto Size = readVaruint64(Ctx);
+          if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
+            if (Index >= DataSegments.size())
+              return make_error<GenericBinaryError>(
+                  "invalid data segment index: " + Twine(Index),
+                  object_error::parse_failed);
+            size_t SegmentSize = DataSegments[Index].Data.Content.size();
+            if (Offset > SegmentSize)
+              return make_error<GenericBinaryError>(
+                  "invalid data symbol offset: `" + Info.Name +
+                      "` (offset: " + Twine(Offset) +
+                      " segment size: " + Twine(SegmentSize) + ")",
+                  object_error::parse_failed);
+          }
+          Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
         }
-        Info.DataRef = wasm::WasmDataReference{Index, Offset, Size};
       }
       break;
 

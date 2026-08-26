@@ -132,32 +132,42 @@ static bool canRemat(const MachineInstr &MI) {
 static std::tuple<unsigned, unsigned, unsigned>
 splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
                              const MachineOperand &SrcOp) {
-  unsigned SrcFlags = SrcOp.getTargetFlags();
+  const unsigned BaseFlags = SrcOp.getTargetFlags() & ~SIInstrInfo::MO_MASK;
+  const unsigned Reloc = SrcOp.getTargetFlags() & SIInstrInfo::MO_MASK;
 
   // Infer the relocation type from the existing flags on the global operand.
   // The relocation type should have been determined earlier in the pipeline.
-  unsigned LoReloc = SIInstrInfo::MO_ABS32_LO;
-  unsigned HiReloc = SIInstrInfo::MO_ABS32_HI;
-
-  if (SrcFlags & SIInstrInfo::MO_REL32) {
+  unsigned LoReloc, HiReloc;
+  switch (Reloc) {
+  case SIInstrInfo::MO_REL32_LO:
+  case SIInstrInfo::MO_REL32_HI:
+  case SIInstrInfo::MO_REL64:
     LoReloc = SIInstrInfo::MO_REL32_LO;
     HiReloc = SIInstrInfo::MO_REL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL32_LO) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL32_LO:
+  case SIInstrInfo::MO_GOTPCREL32_HI:
     LoReloc = SIInstrInfo::MO_GOTPCREL32_LO;
     HiReloc = SIInstrInfo::MO_GOTPCREL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL64) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL:
+  case SIInstrInfo::MO_GOTPCREL64:
     // For 64-bit GOT-relative, use the 64-bit relocation.
     LoReloc = SIInstrInfo::MO_GOTPCREL64;
     HiReloc = SIInstrInfo::MO_GOTPCREL64;
+    break;
+  case SIInstrInfo::MO_ABS32_LO:
+  case SIInstrInfo::MO_ABS32_HI:
+  case SIInstrInfo::MO_ABS64:
+    LoReloc = SIInstrInfo::MO_ABS32_LO;
+    HiReloc = SIInstrInfo::MO_ABS32_HI;
+    break;
+  default:
+    llvm_unreachable("unknown relocation type for global address");
+    break;
   }
 
-  unsigned BaseFlags =
-      SrcFlags & ~(SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI |
-                   SIInstrInfo::MO_REL32_LO | SIInstrInfo::MO_REL32_HI |
-                   SIInstrInfo::MO_GOTPCREL32_LO |
-                   SIInstrInfo::MO_GOTPCREL32_HI | SIInstrInfo::MO_GOTPCREL64);
-
-  return std::make_tuple(BaseFlags, LoReloc, HiReloc);
+  return {BaseFlags, LoReloc, HiReloc};
 }
 
 bool SIInstrInfo::isReMaterializableImpl(
@@ -3355,6 +3365,84 @@ bool SIInstrInfo::reverseBranchCondition(
   }
 
   return true;
+}
+
+namespace {
+class AMDGPUPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+private:
+  /// The compare instruction for loop control
+  const MachineInstr *CmpInst = nullptr;
+  /// The normalized condition used by createTripCountGreaterCondition()
+  SmallVector<MachineOperand, 2> Cond;
+
+public:
+  AMDGPUPipelinerLoopInfo(MachineInstr *CmpInst,
+                          const SmallVectorImpl<MachineOperand> &Cond)
+      : CmpInst(CmpInst), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    return CmpInst && MI == CmpInst;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    CondParam = this->Cond;
+    return {};
+  }
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+};
+} // namespace
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+SIInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 2> Cond;
+  // Unanalyzable terminator.
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return nullptr;
+
+  // Infinite loops are not supported.
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch.
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Divergent (VCC/EXEC) back-edge is not supported.
+  BranchPredicate Pred = static_cast<BranchPredicate>(Cond[0].getImm());
+  if (Pred != SCC_TRUE && Pred != SCC_FALSE)
+    return nullptr;
+
+  // Calls and inline assembly are not supported.
+  for (const MachineInstr &MI : *LoopBB)
+    if (MI.isCall() || MI.isInlineAsm())
+      return nullptr;
+
+  // Normalization for createTripCountGreaterCondition(): make Cond mean
+  // "exit the loop" so the expander emits correct prolog guard branches.
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  auto Instructions = make_range(
+      MachineBasicBlock::reverse_iterator(LoopBB->getFirstTerminator()),
+      LoopBB->rend());
+  auto CmpI = llvm::find_if(Instructions, [&](const MachineInstr &MI) {
+    return MI.modifiesRegister(Cond[1].getReg(), &RI);
+  });
+
+  if (CmpI == Instructions.end() || CmpI->isPHI())
+    return nullptr;
+  MachineInstr *CmpInst = &*CmpI;
+
+  return std::make_unique<AMDGPUPipelinerLoopInfo>(CmpInst, Cond);
 }
 
 bool SIInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
@@ -8650,11 +8738,14 @@ void SIInstrInfo::moveToVALUImpl(
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
+        bool IsUndef = Inst.getOperand(1).isUndef();
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
           UseMO.setSubReg(
               RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
           UseMO.setReg(NewDstReg);
+          if (IsUndef)
+            UseMO.setIsUndef();
         }
         MRI.clearKillFlags(NewDstReg);
 

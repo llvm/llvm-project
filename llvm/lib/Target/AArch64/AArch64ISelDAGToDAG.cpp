@@ -1254,18 +1254,6 @@ static bool isWorthFoldingADDlow(SDValue N) {
   return true;
 }
 
-/// Check whether \p GAN is the low part of a TLS address computation, i.e. the
-/// second operand of an ADDlow. The target flags on their own do not tell the
-/// ELF local-exec (:tprel_lo12: and :tprel_lo12_nc:) cases apart from other
-/// uses, so callers that depend on local-exec semantics have to check the
-/// object format as well. Local dynamic never gets here because it does not
-/// build an ADDlow.
-static bool isTLSLo12(const GlobalAddressSDNode *GAN) {
-  unsigned Flags = GAN->getTargetFlags();
-  return (Flags & (AArch64II::MO_TLS | AArch64II::MO_FRAGMENT)) ==
-         (AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-}
-
 /// Check if the immediate offset is valid as a scaled immediate.
 static bool isValidAsScaledImmediate(int64_t Offset, unsigned Range,
                                      unsigned Size) {
@@ -1361,13 +1349,8 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
     if (!GAN)
       return true;
 
-    // Folding the low part of an ELF local-exec TLS address into a 128-bit
-    // access needs R_AARCH64_TLSLE_LDST128_TPREL_LO12 or its NC variant, which
-    // the GNU bfd linker does not support, so keep materialising the address
-    // with an add.
     if (GAN->getOffset() % Size == 0 &&
-        GAN->getGlobal()->getPointerAlignment(DL) >= Size &&
-        !(Size > 8 && Subtarget->isTargetELF() && isTLSLo12(GAN)))
+        GAN->getGlobal()->getPointerAlignment(DL) >= Size)
       return true;
   }
 
@@ -1888,6 +1871,10 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool InsertTo64 = false;
+  bool UseLd1 =
+      (VT.is64BitVector() || VT.is128BitVector()) &&
+      (!Subtarget->isLittleEndian() || (Subtarget->requiresStrictAlign() &&
+                                        LD->getAlign() < VT.getStoreSize()));
   if (VT == MVT::i64)
     Opcode = IsPre ? AArch64::LDRXpre : AArch64::LDRXpost;
   else if (VT == MVT::i32) {
@@ -1934,12 +1921,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     Opcode = IsPre ? AArch64::LDRHpre : AArch64::LDRHpost;
   } else if (VT == MVT::f32) {
     Opcode = IsPre ? AArch64::LDRSpre : AArch64::LDRSpost;
-  } else if (VT == MVT::f64 ||
-             (VT.is64BitVector() && Subtarget->isLittleEndian())) {
+  } else if (VT == MVT::f64 || (VT.is64BitVector() && !UseLd1)) {
     Opcode = IsPre ? AArch64::LDRDpre : AArch64::LDRDpost;
-  } else if (VT.is128BitVector() && Subtarget->isLittleEndian()) {
+  } else if (VT.is128BitVector() && !UseLd1) {
     Opcode = IsPre ? AArch64::LDRQpre : AArch64::LDRQpost;
-  } else if (VT.is64BitVector()) {
+  } else if (VT.is64BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 8)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1958,7 +1944,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
-  } else if (VT.is128BitVector()) {
+  } else if (VT.is128BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 16)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1983,9 +1969,8 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue Base = LD->getBasePtr();
   SDLoc dl(N);
   // LD1 encodes an immediate offset by using XZR as the offset register.
-  SDValue Offset = (VT.isVector() && !Subtarget->isLittleEndian())
-                       ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
-                       : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
+  SDValue Offset = UseLd1 ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
+                          : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);

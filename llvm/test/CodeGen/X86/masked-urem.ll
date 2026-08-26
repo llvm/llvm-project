@@ -766,152 +766,90 @@ define <2 x i128> @urem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SSE2-LABEL: urem_v3i10:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %r8d, %xmm1
-; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    movd %esi, %xmm1
+; SSE2-NEXT:    movd %edi, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movd %r9d, %xmm1
+; SSE2-NEXT:    movd %edx, %xmm1
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r8d, %xmm1
+; SSE2-NEXT:    movd %ecx, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; SSE2-NEXT:    pslld $31, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    movd %esi, %xmm3
-; SSE2-NEXT:    movd %edi, %xmm1
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSE2-NEXT:    movd %edx, %xmm3
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE2-NEXT:    movd %r9d, %xmm3
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1023,1023,1023,1023]
-; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    pand %xmm3, %xmm4
+; SSE2-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE2-NEXT:    pand %xmm0, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    divps %xmm4, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    pmuludq %xmm3, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pmuludq %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    psubd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %ecx
-; SSE2-NEXT:    movl %edx, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm2, %esi
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %esi
-; SSE2-NEXT:    movl %edx, %esi
-; SSE2-NEXT:    movd %xmm0, %edi
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    divl %edi
-; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    pextrw $2, %xmm0, %edx
+; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE2-NEXT:    movl %esi, %edx
+; SSE2-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE2-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: urem_v3i10:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movd %edi, %xmm1
-; SSE42-NEXT:    pinsrd $1, %esi, %xmm1
-; SSE42-NEXT:    pinsrd $2, %edx, %xmm1
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [1023,1023,1023,1023]
-; SSE42-NEXT:    movd %ecx, %xmm2
-; SSE42-NEXT:    pinsrd $1, %r8d, %xmm2
-; SSE42-NEXT:    pinsrd $2, %r9d, %xmm2
-; SSE42-NEXT:    pand %xmm0, %xmm1
-; SSE42-NEXT:    pand %xmm0, %xmm2
-; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE42-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SSE42-NEXT:    pslld $31, %xmm0
-; SSE42-NEXT:    movaps {{.*#+}} xmm3 = [1,1,1,1]
-; SSE42-NEXT:    blendvps %xmm0, %xmm2, %xmm3
-; SSE42-NEXT:    extractps $1, %xmm3, %ecx
-; SSE42-NEXT:    pextrd $1, %xmm1, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    movl %edx, %ecx
-; SSE42-NEXT:    movd %xmm3, %esi
-; SSE42-NEXT:    movd %xmm1, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %esi
-; SSE42-NEXT:    movl %edx, %esi
-; SSE42-NEXT:    movd %edx, %xmm0
-; SSE42-NEXT:    pinsrd $1, %ecx, %xmm0
-; SSE42-NEXT:    pextrd $2, %xmm3, %ecx
-; SSE42-NEXT:    pextrd $2, %xmm1, %eax
-; SSE42-NEXT:    xorl %edx, %edx
-; SSE42-NEXT:    divl %ecx
-; SSE42-NEXT:    pextrw $2, %xmm0, %edi
+; SSE42-NEXT:    movd %edi, %xmm0
+; SSE42-NEXT:    pinsrd $1, %esi, %xmm0
 ; SSE42-NEXT:    pinsrd $2, %edx, %xmm0
+; SSE42-NEXT:    movd %ecx, %xmm1
+; SSE42-NEXT:    pinsrd $1, %r8d, %xmm1
+; SSE42-NEXT:    pinsrd $2, %r9d, %xmm1
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [1023,1023,1023,1023]
+; SSE42-NEXT:    movdqa %xmm1, %xmm3
+; SSE42-NEXT:    pand %xmm2, %xmm3
+; SSE42-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE42-NEXT:    pand %xmm0, %xmm2
+; SSE42-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE42-NEXT:    divps %xmm3, %xmm2
+; SSE42-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE42-NEXT:    pmulld %xmm1, %xmm2
+; SSE42-NEXT:    psubd %xmm2, %xmm0
+; SSE42-NEXT:    pextrw $2, %xmm0, %edx
 ; SSE42-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE42-NEXT:    movl %esi, %eax
-; SSE42-NEXT:    movl %edi, %edx
+; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE42-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE42-NEXT:    # kill: def $cx killed $cx killed $ecx
 ; SSE42-NEXT:    retq
 ;
-; AVX2-LABEL: urem_v3i10:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1023,1023,1023,1023]
-; AVX2-NEXT:    vmovd %ecx, %xmm2
-; AVX2-NEXT:    vpinsrd $1, %r8d, %xmm2, %xmm2
-; AVX2-NEXT:    vpinsrd $2, %r9d, %xmm2, %xmm2
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vcvtdq2ps %xmm1, %xmm2
-; AVX2-NEXT:    vcvtdq2ps %xmm0, %xmm3
-; AVX2-NEXT:    vdivps %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vcvttps2dq %xmm2, %xmm3
-; AVX2-NEXT:    vpsrad $31, %xmm3, %xmm4
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm5 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; AVX2-NEXT:    vsubps %xmm5, %xmm2, %xmm2
-; AVX2-NEXT:    vcvttps2dq %xmm2, %xmm2
-; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; AVX2-NEXT:    vpor %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    vpextrw $2, %xmm0, %edx
-; AVX2-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX2-NEXT:    # kill: def $dx killed $dx killed $edx
-; AVX2-NEXT:    # kill: def $cx killed $cx killed $ecx
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: urem_v3i10:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovd %edi, %xmm0
-; AVX512-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1023,1023,1023,1023]
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %ecx, %xmm2
-; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm2, %xmm2
-; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm2, %xmm2
-; AVX512-NEXT:    vpand %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vcvtdq2ps %xmm1, %xmm2
-; AVX512-NEXT:    vcvtdq2ps %xmm0, %xmm3
-; AVX512-NEXT:    vdivps %xmm2, %xmm3, %xmm2
-; AVX512-NEXT:    vcvttps2udq %xmm2, %xmm2
-; AVX512-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    vpextrw $2, %xmm0, %edx
-; AVX512-NEXT:    vpextrw $4, %xmm0, %ecx
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    # kill: def $dx killed $dx killed $edx
-; AVX512-NEXT:    # kill: def $cx killed $cx killed $ecx
-; AVX512-NEXT:    retq
+; AVX-LABEL: urem_v3i10:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %edi, %xmm0
+; AVX-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
+; AVX-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1023,1023,1023,1023]
+; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm3
+; AVX-NEXT:    vcvtdq2ps %xmm3, %xmm3
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vcvtdq2ps %xmm2, %xmm2
+; AVX-NEXT:    vdivps %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vcvttps2dq %xmm2, %xmm2
+; AVX-NEXT:    vpmulld %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vpextrw $2, %xmm0, %edx
+; AVX-NEXT:    vpextrw $4, %xmm0, %ecx
+; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-NEXT:    # kill: def $dx killed $dx killed $edx
+; AVX-NEXT:    # kill: def $cx killed $cx killed $ecx
+; AVX-NEXT:    retq
   %res = call <3 x i10> @llvm.masked.urem(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res
 }
