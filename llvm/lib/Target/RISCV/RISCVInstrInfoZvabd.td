@@ -92,7 +92,6 @@ let Predicates = [HasStdExtZvabd] in {
 // CodeGen Patterns
 //===----------------------------------------------------------------------===//
 let HasPassthruOp = true, HasMaskOp = true in {
-def riscv_abs_vl  : RVSDNode<"ABS_VL", SDT_RISCVIntUnOp_VL>;
 def riscv_abds_vl : RVSDNode<"ABDS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_abdu_vl : RVSDNode<"ABDU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def rvv_vwabda_vl  : RVSDNode<"VWABDA_VL", SDT_RISCVVWIntTernOp_VL, [SDNPCommutative]>;
@@ -110,8 +109,8 @@ multiclass VPatTernaryW_VX_VS2First<string intrinsic, string instruction,
   foreach vtiTowti = vtilist in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let append Predicates = GetVTypePredicates<wti>.Predicates in
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
                                  "V"#vti.ScalarSuffix,
                                  wti.Vector, vti.Vector, vti.Scalar,
@@ -126,8 +125,8 @@ multiclass VPatWidenABDVL_VV_VX<SDNode op, string instruction> {
   foreach vtiTowti = ABDAIntVectors in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let append Predicates = GetVTypePredicates<wti>.Predicates in
     def : Pat<(op (SplatPat XLenVT:$rs1),
                   (vti.Vector vti.RegClass:$rs2),
                   (wti.Vector wti.RegClass:$rd),
@@ -139,7 +138,7 @@ multiclass VPatWidenABDVL_VV_VX<SDNode op, string instruction> {
   }
 }
 
-let Predicates = [HasStdExtZvabd] in {
+let append Predicates = [HasStdExtZvabd] in {
 defm : VPatBinarySDNode_VV_VX<abds, "PseudoVABD", AllIntegerVectors>;
 defm : VPatBinarySDNode_VV_VX<abdu, "PseudoVABDU", AllIntegerVectors>;
 
@@ -161,16 +160,9 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX)
                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                   (XLenVT X0), vti.AVL, vti.Log2SEW, TA_MA)>;
-    def : Pat<(riscv_abs_vl (vti.Vector vti.RegClass:$rs2),
-                             (vti.Vector vti.RegClass:$passthru),
-                             (vti.Mask VMV0:$vm), VLOpFrag),
-              (!cast<Instruction>("PseudoVABD_VX_"#vti.LMul.MX#"_MASK")
-                  vti.RegClass:$passthru, vti.RegClass:$rs2, (XLenVT X0),
-                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
-                  TAIL_AGNOSTIC)>;
   }
 }
 
 defm : VPatWidenABDVL_VV_VX<rvv_vwabda_vl, "PseudoVWABDA">;
 defm : VPatWidenABDVL_VV_VX<rvv_vwabdau_vl, "PseudoVWABDAU">;
-} // Predicates = [HasStdExtZvabd]
+} // append Predicates = [HasStdExtZvabd]

@@ -14999,14 +14999,14 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
+  SDValue SplatZero = DAG.getNode(
+      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
   SDValue Result;
   if (Subtarget.hasStdExtZvabd()) {
-    Result = DAG.getNode(RISCVISD::ABS_VL, DL, ContainerVT, X,
+    Result = DAG.getNode(RISCVISD::ABDS_VL, DL, ContainerVT, X, SplatZero,
                          DAG.getUNDEF(ContainerVT), Mask, VL);
   } else {
-    SDValue SplatZero = DAG.getNode(
-        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-        DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
     SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
                                DAG.getUNDEF(ContainerVT), Mask, VL);
     Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
