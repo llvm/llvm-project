@@ -778,22 +778,14 @@ void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
   int DataIndex = 6;
   uint16_t DataLength;
   RLDRecord::getDataLength(RldRecord, DataLength);
-  Expected<unsigned> BlocksConsumed =
-      getContinuousData(RelocationData, DataIndex, DataLength, RldRecord);
-  if (!BlocksConsumed)
-    llvm::handleAllErrors(BlocksConsumed.takeError(),
-                          [](const llvm::ErrorInfoBase &EIB) {
-                            llvm::errs() << "ERROR: " << EIB.message() << "\n";
-                          });
-  assert(static_cast<size_t>(DataLength + DataIndex) == RelocationData.size() &&
-         "Inconsistent rld size");
 
-  uint8_t *RldI = reinterpret_cast<uint8_t *>(RelocationData.data());
-  uint8_t *RldE = RldI + RelocationData.size();
+  // The record is already flattened if it's continued.
+  const uint8_t *RldI = RldRecord + DataIndex;
+  const uint8_t *RldE = RldI + DataLength;
   uint32_t CurREsdId = 0;
   uint32_t CurPEsdId = 0;
   uint64_t CurPOffset = 0;
-  for (uint8_t *Rld = RldI + DataIndex; Rld < RldE;) {
+  for (const uint8_t *Rld = RldI; Rld < RldE;) {
     GOFFRelEntry RelEntry;
     uint8_t Flags = Rld[0];
     int32_t Length = 8;
