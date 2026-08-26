@@ -47,6 +47,7 @@ Implemented Papers
 - P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
 - P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
 - P0528R3: The Curious Case of Padding Bits, Featuring Atomic Compare-and-Exchange (`Github <https://llvm.org/PR76180>`__)
+- P0226R1: Mathematical Special Functions for C++17 (`Github <https://github.com/llvm/llvm-project/issues/99939>`__) (``assoc_laguerre`` and ``hermite`` are implemented)
 
 Improvements and New Features
 -----------------------------
@@ -89,3 +90,7 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+
+- On platforms where ``feraiseexcept`` lives in libm, libc++ now links against it, since the mathematical special
+  functions use it to report the floating-point exception half of a domain or range error. ``libc++.so`` gains a
+  dependency on libm there. Windows and Apple are unaffected: the symbol is in the CRT and in libSystem respectively.
