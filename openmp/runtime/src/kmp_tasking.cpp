@@ -6367,6 +6367,18 @@ static kmp_taskgraph_record_t *__kmp_expire_taskgraph_records(
   return record;
 }
 
+// Format LOC_REF as "file:line:col" for a user-facing message.  The caller
+// frees the result with __kmp_str_free.
+static char *__kmp_taskgraph_src_loc(ident_t *loc_ref) {
+  if (!loc_ref || !loc_ref->psource)
+    return __kmp_str_format("unknown");
+  kmp_str_loc_t str_loc = __kmp_str_loc_init(loc_ref->psource, false);
+  char *src_loc =
+      __kmp_str_format("%s:%d:%d", str_loc.file, str_loc.line, str_loc.col);
+  __kmp_str_loc_free(&str_loc);
+  return src_loc;
+}
+
 // __kmpc_taskgraph: record or replay taskgraph
 // loc_ref:     Location of TDG, not used yet
 // gtid:        Global Thread ID of the encountering thread
@@ -6417,15 +6429,7 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     // already performing a record operation for this taskgraph/graph_id.
     // That's likely a bug, so fail with an error.
     if (old_status != KMP_TDG_READY) {
-      char *src_loc;
-      if (loc_ref && loc_ref->psource) {
-        kmp_str_loc_t str_loc = __kmp_str_loc_init(loc_ref->psource, false);
-        src_loc = __kmp_str_format("%s:%d:%d", str_loc.file, str_loc.line,
-                                   str_loc.col);
-        __kmp_str_loc_free(&str_loc);
-      } else {
-        src_loc = __kmp_str_format("unknown");
-      }
+      char *src_loc = __kmp_taskgraph_src_loc(loc_ref);
       KMP_FATAL(OmpTaskgraphConcurrentRecord, src_loc, graph_id);
       __kmp_str_free(&src_loc);
     }
@@ -6520,6 +6524,19 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
   if (rec) {
     kmp_taskgraph_status_t status = KMP_ATOMIC_LD_ACQ(&rec->status);
     if (status == KMP_TDG_RECORDING) {
+      // OpenMP 6.0 [14.3]: a detachable task must not be a replayable task in
+      // a taskgraph region.  Its completion event is created when the task is
+      // generated, and a replay does not generate the task again, so there
+      // would be no event for the program to fulfil and the node would never
+      // complete.  Clang rejects the lexically-nested case outright; this
+      // catches a replayable(cond) construct that reached a recording
+      // dynamically, which it cannot see.
+      if (KMP_TASK_TO_TASKDATA(new_task)->td_flags.detachable ==
+          TASK_DETACHABLE) {
+        char *src_loc = __kmp_taskgraph_src_loc(loc_ref);
+        KMP_FATAL(OmpTaskgraphDetachableTask, src_loc);
+        __kmp_str_free(&src_loc);
+      }
       kmp_task_t *cloned_task = __kmp_taskgraph_clone_task(
           thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds);
       // If the compiler emitted a task-clone helper, run it now so that any
