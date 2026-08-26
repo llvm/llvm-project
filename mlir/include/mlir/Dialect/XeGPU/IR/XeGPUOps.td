@@ -708,14 +708,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
   let description = [{ It (aka. load) load data per each lane. The output
     describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of lanes in a subgroup. When the chunk size
-    is larger than 2, the output vector is a 2D vector, with dim-0 correspoding
-    to lanes, and dim-1 corresponding to the chunk size loaded by each lane.
+    consistent with the number of lanes in a subgroup. At lane level each lane
+    may load a 1D vector of contiguous elements; that per-lane width is implied
+    by the result type and does not need a separate attribute.
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. Each mask element applies to one lane.
-
-    In lane level, the result is a 1D vector that represents the data to be loaded by
-    each lane. If size is not 1, size should be equal to the chunk size.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -732,8 +729,6 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 at lane level.
         scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
@@ -758,8 +753,9 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   ```
 
   Example 2 (lane level):
-  lane level only accepts the offsets variant. chunk_size can be inferred from result
-  type. In this example, chunk_size is 8.
+  lane level only accepts the offsets variant. Each lane loads a contiguous 1D
+  vector whose length is given by the result type; here each lane loads 8
+  elements.
   ```mlir
     %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
@@ -771,7 +767,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
   let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -817,13 +813,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
@@ -837,14 +831,9 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let summary = "store data to scattered memory locations.";
   let description =
       [{ It (aka. store) stores data to scattered memory locations. The value is
-  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
-  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
-  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
-  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
-  introduced on purpose, making sure users are aware of this implicit transformation.
-
-  In lane level, the result is a 1D vector that represents the data to be stored by
-  each lane. If size is not 1, size should be equal to the chunk size.
+  typically a 1D vector. At lane level each lane may store a 1D vector of
+  contiguous elements; that per-lane width is implied by the value type and does
+  not need a separate attribute.
 
   This operation serves as an anchor through which users assign a layout attribute
   to govern computation distribution.
@@ -863,8 +852,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
         mask is a vector of size equal to the subgroup size, or 1 at lane level.
         scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
@@ -888,8 +875,9 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   ```
 
   Example 2 (Lane level):
-  Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
-  type. In this example, chunk_size is 8.
+  Lane level IR only accepts the offsets variant. Each lane stores a contiguous
+  1D vector whose length is given by the value type; here each lane stores 8
+  elements.
   ```mlir
     xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
@@ -902,7 +890,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
       XeGPU_GatherScatterBaseAddrType:$dest,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -947,13 +935,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
