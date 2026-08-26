@@ -12,9 +12,9 @@ define void @split_signed(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; CHECK:       [[ENTRY]]:
@@ -67,12 +67,11 @@ define void @split_unsigned(ptr %a, i64 %n) {
 ; CHECK-LABEL: define void @split_unsigned(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN1]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN1]], i64 1)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN1]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp ule i64 0, [[UMIN]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; CHECK:       [[ENTRY]]:
@@ -127,9 +126,9 @@ define void @latch_compares_phi(ptr %a, i64 %m) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 0)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 50)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[SMAX]], i64 [[TMP0]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; CHECK:       [[ENTRY]]:
@@ -185,9 +184,9 @@ define void @nested_inner(ptr %a, i64 %n, i64 %m) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]

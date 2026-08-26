@@ -173,9 +173,9 @@ define void @symbolic_end_may_reach_umax(ptr %a, i8 %n) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP0]], i8 3)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[UMIN]], i8 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[UMIN]], i8 1)
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP0]], i8 [[TMP1]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[UMIN]], i8 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp ule i8 0, [[UMIN1]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; CHECK:       [[ENTRY]]:

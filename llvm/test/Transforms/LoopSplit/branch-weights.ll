@@ -13,9 +13,9 @@ define void @basic(ptr %a, i64 %n) !prof !0 {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[ENTRY]]:

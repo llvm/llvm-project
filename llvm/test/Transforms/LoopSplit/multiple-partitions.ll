@@ -13,13 +13,13 @@ define void @tile(ptr %a, i64 %n) {
 ; THREE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; THREE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; THREE-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 10)
-; THREE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; THREE-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; THREE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; THREE-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; THREE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; THREE-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 20)
-; THREE-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN1]], i64 1)
-; THREE-NEXT:    [[TMP2:%.*]] = add nsw i64 [[UMAX2]], -1
+; THREE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN1]], i64 1)
 ; THREE-NEXT:    [[SMIN1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP2]])
+; THREE-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN1]], i64 1)
 ; THREE-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; THREE-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; THREE:       [[ENTRY]]:
@@ -70,17 +70,17 @@ define void @tile(ptr %a, i64 %n) {
 ; FOUR-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; FOUR-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; FOUR-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 10)
-; FOUR-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; FOUR-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; FOUR-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; FOUR-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
-; FOUR-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 20)
-; FOUR-NEXT:    [[UMAX2:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN1]], i64 1)
-; FOUR-NEXT:    [[TMP2:%.*]] = add nsw i64 [[UMAX2]], -1
+; FOUR-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
+; FOUR-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 20)
+; FOUR-NEXT:    [[TMP2:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN4]], i64 1)
 ; FOUR-NEXT:    [[SMIN1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP2]])
-; FOUR-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 30)
 ; FOUR-NEXT:    [[UMAX5:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN4]], i64 1)
-; FOUR-NEXT:    [[TMP3:%.*]] = add nsw i64 [[UMAX5]], -1
+; FOUR-NEXT:    [[UMIN5:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 30)
+; FOUR-NEXT:    [[TMP3:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN5]], i64 1)
 ; FOUR-NEXT:    [[SMIN2:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP3]])
+; FOUR-NEXT:    [[UMAX6:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN5]], i64 1)
 ; FOUR-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; FOUR-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; FOUR:       [[ENTRY]]:
@@ -109,12 +109,12 @@ define void @tile(ptr %a, i64 %n) {
 ; FOUR:       [[LS_EXIT1]]:
 ; FOUR-NEXT:    br label %[[LS_GUARD2]]
 ; FOUR:       [[LS_GUARD2]]:
-; FOUR-NEXT:    [[ITR_CHK6:%.*]] = icmp sle i64 [[UMAX2]], [[SMIN2]]
+; FOUR-NEXT:    [[ITR_CHK6:%.*]] = icmp sle i64 [[UMAX5]], [[SMIN2]]
 ; FOUR-NEXT:    br i1 [[ITR_CHK6]], label %[[ENTRY_LS2:.*]], label %[[LS_GUARD3:.*]]
 ; FOUR:       [[ENTRY_LS2]]:
 ; FOUR-NEXT:    br label %[[LOOP_LS2:.*]]
 ; FOUR:       [[LOOP_LS2]]:
-; FOUR-NEXT:    [[IV_LS2:%.*]] = phi i64 [ [[UMAX2]], %[[ENTRY_LS2]] ], [ [[IV_NEXT_LS2:%.*]], %[[LOOP_LS2]] ]
+; FOUR-NEXT:    [[IV_LS2:%.*]] = phi i64 [ [[UMAX5]], %[[ENTRY_LS2]] ], [ [[IV_NEXT_LS2:%.*]], %[[LOOP_LS2]] ]
 ; FOUR-NEXT:    [[P_LS2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS2]]
 ; FOUR-NEXT:    store i64 [[IV_LS2]], ptr [[P_LS2]], align 4
 ; FOUR-NEXT:    [[IV_NEXT_LS2]] = add nsw i64 [[IV_LS2]], 1
@@ -123,12 +123,12 @@ define void @tile(ptr %a, i64 %n) {
 ; FOUR:       [[LS_EXIT2]]:
 ; FOUR-NEXT:    br label %[[LS_GUARD3]]
 ; FOUR:       [[LS_GUARD3]]:
-; FOUR-NEXT:    [[ITR_CHK8:%.*]] = icmp sle i64 [[UMAX5]], [[TMP0]]
+; FOUR-NEXT:    [[ITR_CHK8:%.*]] = icmp sle i64 [[UMAX6]], [[TMP0]]
 ; FOUR-NEXT:    br i1 [[ITR_CHK8]], label %[[ENTRY_LS3:.*]], label %[[LS_FINAL_EXIT:.*]]
 ; FOUR:       [[ENTRY_LS3]]:
 ; FOUR-NEXT:    br label %[[LOOP_LS3:.*]]
 ; FOUR:       [[LOOP_LS3]]:
-; FOUR-NEXT:    [[IV_LS3:%.*]] = phi i64 [ [[UMAX5]], %[[ENTRY_LS3]] ], [ [[IV_NEXT_LS3:%.*]], %[[LOOP_LS3]] ]
+; FOUR-NEXT:    [[IV_LS3:%.*]] = phi i64 [ [[UMAX6]], %[[ENTRY_LS3]] ], [ [[IV_NEXT_LS3:%.*]], %[[LOOP_LS3]] ]
 ; FOUR-NEXT:    [[P_LS3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS3]]
 ; FOUR-NEXT:    store i64 [[IV_LS3]], ptr [[P_LS3]], align 4
 ; FOUR-NEXT:    [[IV_NEXT_LS3]] = add nsw i64 [[IV_LS3]], 1
