@@ -1411,6 +1411,31 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
         return replaceInstUsesWith(Zext, IntCast);
       }
     }
+
+    // zext (X != CST) --> X - CST  if X in {CST, CST + 1}
+
+    if (Cmp->getPredicate() == ICmpInst::ICMP_NE) {
+
+      Value *LHS = Cmp->getOperand(0);
+      ConstantRange CR = computeConstantRange(LHS, false, SQ);
+      bool SkipTransform =
+          LHS->getType() != Zext.getType() && !Cmp->hasOneUse();
+
+      if (!CR.isSizeLargerThan(2) && CR.contains(*Op1CV) &&
+          CR.getLower().eq(*Op1CV) && !SkipTransform) {
+
+        Value *In =
+            Builder.CreateSub(LHS, ConstantInt::get(LHS->getType(), *Op1CV));
+
+        if (In->getType() == Zext.getType())
+          return replaceInstUsesWith(Zext, In);
+
+        if (Cmp->hasOneUse()) {
+          Value *IntCast = Builder.CreateIntCast(In, Zext.getType(), false);
+          return replaceInstUsesWith(Zext, IntCast);
+        }
+      }
+    }
   }
 
   if (Cmp->isEquality()) {
