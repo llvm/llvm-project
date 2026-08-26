@@ -35,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
@@ -2344,32 +2343,35 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
 
   Type *IntTy = I.getType();
 
-  auto MatchConstOrInst = [&](Value *V, Value *&Src) -> bool {
+  auto MatchConstOrInst = [&](Value *V) -> Value * {
+    Value *Src;
     // match uitofp
-    if (match(V, m_OneUse(m_UIToFP(m_Value(Src)))))
-      return Src->getType() == IntTy;
+    if (match(V, m_OneUse(m_UIToFP(m_Value(Src))))) {
+      if (Src->getType() != IntTy)
+        return nullptr;
+      return Src;
+    }
     // match FP constants that survive FP->integer->FP casts.
     Constant *C;
     if (match(V, m_Constant(C))) {
       Constant *IntC =
           ConstantFoldCastOperand(Instruction::FPToUI, C, IntTy, DL);
       if (!IntC)
-        return false;
+        return nullptr;
       Constant *FloatC =
           ConstantFoldCastOperand(Instruction::UIToFP, IntC, C->getType(), DL);
       if (C != FloatC)
-        return false;
-      Src = IntC;
-      return true;
+        return nullptr;
+      return IntC;
     }
-    return false;
+    return nullptr;
   };
 
-  Value *SrcX;
-  if (!MatchConstOrInst(X, SrcX))
+  Value *SrcX = MatchConstOrInst(X);
+  if (!SrcX)
     return false;
-  Value *SrcY;
-  if (!MatchConstOrInst(Y, SrcY))
+  Value *SrcY = MatchConstOrInst(Y);
+  if (!SrcY)
     return false;
 
   SimplifyQuery S = SQ.getWithInstruction(&I);
@@ -2377,19 +2379,12 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
   TTI::OperandValueInfo OpSrcX = TTI::getOperandInfo(SrcX);
   TTI::OperandValueInfo OpSrcY = TTI::getOperandInfo(SrcY);
 
-  // Require uitofp(x) and uitofp(y) to be exact conversions, i.e. IntWidth
-  // must fit within the float type's mantissa precision.
   Type *FloatTy = X->getType();
   unsigned Precision =
       APFloat::semanticsPrecision(FloatTy->getScalarType()->getFltSemantics());
-
-  auto NumActiveBits = [&](Value *V) -> bool {
-    KnownBits KB = computeKnownBits(V, S);
-    unsigned AB = KB.getBitWidth() - KB.countMinLeadingZeros();
-    return AB <= Precision;
-  };
-
-  if (!NumActiveBits(SrcX) || !NumActiveBits(SrcY))
+  // Use known bits so values narrower than their integer type can be accepted.
+  if (computeKnownBits(SrcX, S).countMaxActiveBits() > Precision ||
+      computeKnownBits(SrcY, S).countMaxActiveBits() > Precision)
     return false;
 
   // Integer division by zero is UB. We must prove the divisor
@@ -2407,7 +2402,7 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
     OldCost += TTI.getInstructionCost(InstY, CostKind);
   // NewCost = udiv
   InstructionCost NewCost = TTI.getArithmeticInstrCost(
-      Instruction::UDiv, IntTy, CostKind, OpSrcX, OpSrcY);
+      Instruction::UDiv, IntTy, CostKind, OpSrcX, OpSrcY, {SrcX, SrcY});
 
   LLVM_DEBUG(dbgs() << "Found division of vector float to unsigned integer: "
                     << I << "\n  OldCost: " << OldCost
