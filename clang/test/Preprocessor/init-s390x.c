@@ -120,7 +120,7 @@
 // S390X:#define __LONG_MAX__ 9223372036854775807L
 // S390X:#define __NO_INLINE__ 1
 // S390X:#define __POINTER_WIDTH__ 64
-// S390X:#define __PTRDIFF_TYPE__ long int
+// S390X:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // S390X:#define __PTRDIFF_WIDTH__ 64
 // S390X:#define __SCHAR_MAX__ 127
 // S390X:#define __SHRT_MAX__ 32767
@@ -138,7 +138,7 @@
 // S390X:#define __SIZEOF_SIZE_T__ 8
 // S390X:#define __SIZEOF_WCHAR_T__ 4
 // S390X:#define __SIZEOF_WINT_T__ 4
-// S390X:#define __SIZE_TYPE__ long unsigned int
+// S390X:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // S390X:#define __SIZE_WIDTH__ 64
 // S390X-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
 // S390X:#define __UINT16_C(c) c

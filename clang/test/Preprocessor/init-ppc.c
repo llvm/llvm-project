@@ -132,7 +132,7 @@
 // PPC603E:#define __POINTER_WIDTH__ 32
 // PPC603E:#define __POWERPC__ 1
 // PPC603E:#define __PPC__ 1
-// PPC603E:#define __PTRDIFF_TYPE__ long int
+// PPC603E:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC603E:#define __PTRDIFF_WIDTH__ 32
 // PPC603E:#define __REGISTER_PREFIX__
 // PPC603E:#define __SCHAR_MAX__ 127
@@ -152,7 +152,7 @@
 // PPC603E:#define __SIZEOF_WCHAR_T__ 4
 // PPC603E:#define __SIZEOF_WINT_T__ 4
 // PPC603E:#define __SIZE_MAX__ 4294967295UL
-// PPC603E:#define __SIZE_TYPE__ long unsigned int
+// PPC603E:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC603E:#define __SIZE_WIDTH__ 32
 // PPC603E-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // PPC603E:#define __UINT16_C(c) c
@@ -337,7 +337,7 @@
 // PPC:#define __POWERPC__ 1
 // PPC-NOT:#define __PPC 1
 // PPC:#define __PPC__ 1
-// PPC:#define __PTRDIFF_TYPE__ long int
+// PPC:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC:#define __PTRDIFF_WIDTH__ 32
 // PPC:#define __REGISTER_PREFIX__
 // PPC:#define __SCHAR_MAX__ 127
@@ -357,7 +357,7 @@
 // PPC:#define __SIZEOF_WCHAR_T__ 4
 // PPC:#define __SIZEOF_WINT_T__ 4
 // PPC:#define __SIZE_MAX__ 4294967295UL
-// PPC:#define __SIZE_TYPE__ long unsigned int
+// PPC:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC:#define __SIZE_WIDTH__ 32
 // PPC:#define __UINT16_C(c) c
 // PPC:#define __UINT16_C_SUFFIX__
@@ -546,7 +546,7 @@
 // PPC-AIX:#define __POWERPC__ 1
 // PPC-AIX:#define __PPC 1
 // PPC-AIX:#define __PPC__ 1
-// PPC-AIX:#define __PTRDIFF_TYPE__ long int
+// PPC-AIX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC-AIX:#define __PTRDIFF_WIDTH__ 32
 // PPC-AIX:#define __REGISTER_PREFIX__
 // PPC-AIX:#define __SCHAR_MAX__ 127
@@ -566,7 +566,7 @@
 // PPC-AIX:#define __SIZEOF_WCHAR_T__ 2
 // PPC-AIX:#define __SIZEOF_WINT_T__ 4
 // PPC-AIX:#define __SIZE_MAX__ 4294967295UL
-// PPC-AIX:#define __SIZE_TYPE__ long unsigned int
+// PPC-AIX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC-AIX:#define __SIZE_WIDTH__ 32
 // PPC-AIX:#define __THW_BIG_ENDIAN__ 1
 // PPC-AIX:#define __THW_PPC__ 1
@@ -928,7 +928,7 @@
 // PPC-LINUX:#define __POINTER_WIDTH__ 32
 // PPC-LINUX:#define __POWERPC__ 1
 // PPC-LINUX:#define __PPC__ 1
-// PPC-LINUX:#define __PTRDIFF_TYPE__ int
+// PPC-LINUX:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PPC-LINUX:#define __PTRDIFF_WIDTH__ 32
 // PPC-LINUX:#define __REGISTER_PREFIX__
 // PPC-LINUX:#define __SCHAR_MAX__ 127
@@ -948,7 +948,7 @@
 // PPC-LINUX:#define __SIZEOF_WCHAR_T__ 4
 // PPC-LINUX:#define __SIZEOF_WINT_T__ 4
 // PPC-LINUX:#define __SIZE_MAX__ 4294967295U
-// PPC-LINUX:#define __SIZE_TYPE__ unsigned int
+// PPC-LINUX:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PPC-LINUX:#define __SIZE_WIDTH__ 32
 // PPC-LINUX:#define __UINT16_C(c) c
 // PPC-LINUX:#define __UINT16_C_SUFFIX__
