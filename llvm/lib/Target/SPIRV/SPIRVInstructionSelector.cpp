@@ -4483,9 +4483,11 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
   } else {
     Opcode = SPIRV::OpKill;
     // OpKill must be the last operation of any basic block.
-    if (MachineInstr *NextI = I.getNextNode()) {
-      GR.invalidateMachineInstr(NextI);
-      NextI->eraseFromParent();
+    for (MachineInstr *NextI = I.getNextNode(); NextI;) {
+      MachineInstr *ToErase = NextI;
+      NextI = NextI->getNextNode();
+      GR.invalidateMachineInstr(ToErase);
+      ToErase->eraseFromParent();
     }
   }
 
