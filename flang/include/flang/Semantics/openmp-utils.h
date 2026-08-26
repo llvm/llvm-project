@@ -251,6 +251,10 @@ private:
 void AppendDirectiveContextTraits(llvm::omp::Directive directive,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
+/// Add the construct traits implied by an OpenMP directive to \p vmi.
+void AppendConstructTraitsForDirective(
+    llvm::omp::Directive, llvm::omp::VariantMatchInfo &vmi);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
