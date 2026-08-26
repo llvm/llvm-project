@@ -260,8 +260,6 @@ public:
   bool resultIsRememberedBlock() { return ResultIsRemembered; }
 };
 
-class StructurizeCFG; // forward declaration
-
 /// The state of the current flow tail, i.e. the node that is the current tail
 /// of our structurization chain:
 /// - None:        region entry, no pending tail yet
@@ -294,11 +292,6 @@ public:
     assert(Boundary && "closing requires a boundary node");
     Node = Boundary;
     State = TailState::Closed;
-  }
-
-  RegionNode *getClosedEntry() const {
-    assert(isClosed() && "FlowTail is not closed");
-    return Node;
   }
 
   bool isClosed() const { return State == TailState::Closed; }
@@ -1375,28 +1368,17 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
         NeedFixRegionExitDom = true;
         continue;
       }
-      // Already handled this target: route this edge to the same forwarder.
+      // Already handled this target: collapse this edge onto the same
+      // forwarder. A trivial target reused as its own forwarder keeps all of
+      // its callbr edges, so there is nothing to collapse.
       if (BasicBlock *Fwd = ForwarderFor.lookup(Target)) {
-        CallBr->setSuccessor(I, Fwd);
-        if (Fwd != Target && !is_contained(successors(CallBr), Target)) {
-          // Target is now reached only via Fwd; drop the duplicate Fwd phi
-          // incomings SplitCallBrEdge left (one per collapsed callbr edge).
-          DTU.applyUpdates({{DominatorTree::Delete, IslandBB, Target}});
-          for (PHINode &Phi : Target->phis()) {
-            bool Kept = false;
-            for (unsigned K = Phi.getNumIncomingValues(); K-- > 0;)
-              if (Phi.getIncomingBlock(K) == Fwd) {
-                if (Kept)
-                  Phi.removeIncomingValue(K, /*DeletePHIIfEmpty=*/false);
-                Kept = true;
-              }
-          }
-        }
+        if (Fwd != Target)
+          SplitMultiBrEdge(IslandBB, Target, I, Fwd, &DTU);
       } else {
         // A trivial in-region target is reused as its own forwarder; otherwise
         // split the edge into one.
         if (!isIntermediateTarget(*Target) || !ParentRegion->contains(Target)) {
-          Fwd = SplitCallBrEdge(IslandBB, Target, I, &DTU);
+          Fwd = SplitMultiBrEdge(IslandBB, Target, I, nullptr, &DTU);
           ParentRegion->getRegionInfo()->setRegionFor(Fwd, ParentRegion);
         } else {
           Fwd = Target;
@@ -1464,7 +1446,7 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
 
     DebugLoc DL = Fwd->getTerminator()->getDebugLoc();
     Fwd->getTerminator()->eraseFromParent();
-    UncondBrInst::Create(ExitFlow, Fwd)->setDebugLoc(DL);
+    UncondBrInst::Create(ExitFlow, Fwd)->setDebugLoc(std::move(DL));
     DTUpdates.emplace_back(DominatorTree::Delete, Fwd, Real);
     DTUpdates.emplace_back(DominatorTree::Insert, Fwd, ExitFlow);
   }
