@@ -106,8 +106,11 @@ class CombinedAllocator {
     uptr old_size = GetActuallyAllocatedSize(p);
     uptr memcpy_size = Min(new_size, old_size);
     void *new_p = Allocate(cache, new_size, alignment);
-    if (new_p)
-      internal_memcpy(new_p, p, memcpy_size);
+    // Keep the original allocation alive when the request cannot be satisfied,
+    // matching realloc(): the caller still owns p and is responsible for it.
+    if (!new_p)
+      return nullptr;
+    internal_memcpy(new_p, p, memcpy_size);
     Deallocate(cache, p);
     return new_p;
   }
