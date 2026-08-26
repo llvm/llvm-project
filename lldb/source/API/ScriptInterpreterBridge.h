@@ -31,6 +31,8 @@ class ScriptInterpreterBridge {
 public:
   static lldb::DataExtractorSP GetDataExtractor(const lldb::SBData &data);
 
+  static lldb::ThreadPlanSP GetThreadPlan(const lldb::SBThreadPlan &thread_plan);
+
   static Status GetStatus(const lldb::SBError &error);
 
   static Event *GetEvent(const lldb::SBEvent &event);
