@@ -2516,8 +2516,17 @@ void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(CGF, Loc, OutlinedFn,
                                                           CapturedArgsPtr);
     };
+    // A taskgraph region is a taskgroup region whether or not it records: the
+    // if clause governs recording, and nogroup is the only way to drop the
+    // implicit taskgroup.  __kmpc_taskgraph supplies one on the recording
+    // path, so emit an explicit one here, on the path that bypasses it.
+    //
+    // FIXME: nogroup should suppress this, but __kmpc_taskgraph ignores the
+    // flag it is handed and creates the taskgroup unconditionally, so
+    // honouring nogroup here alone would make the two paths disagree.  Both
+    // need doing together.
     RegionCodeGenTy RCG(CodeGen);
-    RCG(CGF);
+    emitTaskgroupRegion(CGF, RCG, Loc);
   };
 
   if (IfCond) {
