@@ -10,13 +10,16 @@
 ; RUN: %if riscv-registered-target   %{ llc < %s -mtriple=riscv32-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if systemz-registered-target %{ llc < %s -mtriple=s390x-unknown-linux-gnu      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-S390X %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-gnu       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=i686-unknown-linux-musl      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if x86-registered-target     %{ not llc -mtriple=i686-unknown-linux-musl   -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s %}
 ; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-gnu     | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
-; RUN: %if x86-registered-target     %{ llc < %s -mtriple=x86_64-unknown-linux-musl    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if x86-registered-target     %{ not llc -mtriple=x86_64-unknown-linux-musl -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s %}
 
 ; FIXME(#144006): Windows-MSVC should also be run but has a ldexp selection failure.
 ; %if x86-registered-target     %{ llc < %s -mtriple=x86_64-pc-windows-msvc       | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; %if aarch64-registered-target %{ llc < %s -mtriple=arm64ec-pc-windows-msvc      | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
+
+; x86 musl has x87 long double, so it provides neither exp10l_f128 (fp128 long
+; double) nor exp10f128 (a glibc _Float128 function), and must diagnose instead.
 
 ; ERR: error: no libcall available for fexp10
 define fp128 @test_exp10(fp128 %a) {
