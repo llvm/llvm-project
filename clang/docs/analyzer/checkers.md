@@ -3354,8 +3354,7 @@ int *bound(int *p [[clang::lifetimebound]]);
 
 int *direct_return() {
   int i = 5; // note: 'i' initialized here
-  return bound(&i); // warn: returning value bound to 'i' that will go
-                    //       out of scope
+  return bound(&i); // warn: returning value bound to 'i' that will go out of scope
 }
 ```
 
@@ -3367,7 +3366,7 @@ of this Clang attribute.
 ```cpp
 struct Wrapper {
   int value;
-  int &get() [[clang::lifetimebound]] { return value; }
+  int &get() [[clang::lifetimebound]];
 };
 
 int &method_return() {
@@ -3376,24 +3375,38 @@ int &method_return() {
 }
 ```
 
+**Related Checkers**
+
 {ref}`core-stackaddressescape` reports returning the address of a local object
 directly. This checker extends that detection through functions that are
 annotated with `[[clang::lifetimebound]]`.
 
-{ref}`alpha-core-danglingptrderef` reports the use of a dangling pointer inside
-a function while this checker reports the returned value at the point where the
-function returns.
+{ref}`alpha-core-danglingptrderef` reports use-after-scope errors anywhere in
+the function and does not rely on annotations. This checker reports the value
+that is returned from the function.
 
 {ref}`cplusplus-innerpointer` reports similar errors for inner pointers of C++
 containers that are used after re/deallocation without relying on annotations.
+
+```cpp
+void consume(std::string);
+
+void deref_inner_pointer() {
+  std::string s = "some string";
+  const char *c = s.data();
+  s = "a new string";
+  consume(c); // warn: Inner pointer of container used after re/deallocation
+}
+```
 
 **Limitations**
 
 The checker trusts the annotation, so any incorrect annotation can cause false
 positives.
 
-A dangling pointer that is held by a compound object (a struct field) is not
-tracked, so returning such an object is not reported.
+A dangling pointer that is stored in a compound value is never reported
+regardless of how the value is used. This includes struct fields and arrays of
+pointers.
 
 Only objects whose memory region is on the stack are tracked. A returned value
 that is bound to heap-allocated memory is not reported.
