@@ -492,9 +492,11 @@ public:
   MonotonicDescriptor() = default;
 
   MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
-                      Instruction *StepInst, const SCEVAddRecExpr *PhiSCEV)
+                      Instruction *StepInst, const SCEV *StartSCEV,
+                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
       : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
-        PhiSCEV(PhiSCEV) {}
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV),
+        SCEVNoWrapFlags(SCEVNoWrapFlags) {}
 
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
   /// is monotonic, the monotonic descriptor \p D will contain the data
@@ -511,10 +513,16 @@ public:
   /// Returns the instruction that updates the value of the monotonic PHI.
   Instruction *getStepInst() const { return StepInst; }
 
-  /// Returns the expression that represents the monotonic PHI. Note: The
-  /// conditional update is represented with a plain SCEVAddRec. This only holds
-  /// on iterations where the monotonic PHI is updated by StepInst.
-  const SCEVAddRecExpr *getPhiSCEV() const { return PhiSCEV; }
+  /// Returns a SCEV expression for the initial value of the monotonic PHI.
+  const SCEV *getStartSCEV() const { return StartSCEV; }
+
+  /// Returns a SCEV expression for the step of the monotonic PHI. This is
+  /// the value the monotonic PHI increments by on loop iterations where the
+  /// predicate is satisfied.
+  const SCEV *getStepSCEV() const { return StepSCEV; }
+
+  /// Returns the SCEV no-wrap flags that apply to StepInst.
+  unsigned getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
 
 private:
   /// The header PHI (this is the PHI described by the descriptor).
@@ -526,9 +534,14 @@ private:
   /// The instruction that updates the value of the monotonic PHI.
   Instruction *StepInst = nullptr;
 
-  /// Expression that represents the monotonic PHI. Within the expression, the
-  /// conditional update is represented as an (unconditional) SCEVAddRec.
-  const SCEVAddRecExpr *PhiSCEV = nullptr;
+  /// SCEV expression representing the start value for the monotonic PHI.
+  const SCEV *StartSCEV = nullptr;
+
+  /// SCEV expression representing the step value for the monotonic PHI.
+  const SCEV *StepSCEV = nullptr;
+
+  /// The SCEV no-wrap flags that apply to StepInst.
+  unsigned SCEVNoWrapFlags = 0;
 };
 
 } // end namespace llvm

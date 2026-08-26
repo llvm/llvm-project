@@ -438,26 +438,25 @@ TEST(IVDescriptorsTest, MonotonicIntVar) {
 
   std::unique_ptr<Module> M =
       parseIR(Context,
-              R"(define void @foo(ptr %dst, i1 %cond, i64 %n) {
+              R"(define void @foo(ptr %dst, i1 %cond, i32 %n) {
 entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %for.inc ]
   %monotonic = phi i32 [ 0, %entry ], [ %monotonic.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
   %inc = add nsw i32 %monotonic, 1
-  %monotonic.prom = sext i32 %monotonic to i64
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %monotonic.prom
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i32 %monotonic
   store i32 10, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:
   %monotonic.next = phi i32 [ %inc, %if.then ], [ %monotonic, %for.body ]
-  %i.next = add nuw nsw i64 %i, 1
-  %exitcond.not = icmp eq i64 %i.next, %n
+  %i.next = add i32 %i, 1
+  %exitcond.not = icmp eq i32 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:
@@ -473,8 +472,9 @@ for.end:
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
         BasicBlock::iterator BBI = Header->begin();
-        assert((&*BBI)->getName() == "i");
-        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        PHINode *Induction = cast<PHINode>(&*BBI);
+        assert(Induction->getName() == "i");
+        PHINode *Phi = cast<PHINode>(&*(++BBI));
         assert(Phi->getName() == "monotonic");
         BasicBlock *IfThen = &*(++FI);
         assert(IfThen->getName() == "if.then");
@@ -487,10 +487,15 @@ for.end:
             MonotonicDescriptor::isMonotonicPHI(Phi, L, Desc, SE);
         EXPECT_TRUE(IsMonotonicPhi);
         EXPECT_EQ(Desc.getStepInst(), StepInst);
-        auto *StartSCEV = SE.getConstant(Phi->getType(), 0);
-        auto *StepSCEV = SE.getConstant(Phi->getType(), 1);
-        EXPECT_EQ(Desc.getPhiSCEV(),
-                  SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
+        // Check the wrap flags for %i (the normal induction) don't include NSW.
+        // Note: `Induction` has the same start/step as the monotonic induction.
+        const SCEV *OrigInSCEV = SE.getSCEV(Induction);
+        auto *AR = cast<SCEVAddRecExpr>(OrigInSCEV);
+        EXPECT_EQ(AR->getNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+        // Check the expressions and wrap flags for the monotonic induction.
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNSW);
+        EXPECT_EQ(Desc.getStartSCEV(), AR->getStart());
+        EXPECT_EQ(Desc.getStepSCEV(), AR->getStepRecurrence(SE));
       });
 }
 
@@ -510,7 +515,7 @@ for.body:
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %inc = getelementptr inbounds i8, ptr %monotonic, i64 4
+  %inc = getelementptr inbounds i8, ptr %monotonic, i32 4
   br label %for.inc
 
 for.inc:
@@ -533,7 +538,7 @@ for.end:
         EXPECT_NE(L, nullptr);
         BasicBlock::iterator BBI = Header->begin();
         assert((&*BBI)->getName() == "i");
-        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        PHINode *Phi = cast<PHINode>(&*(++BBI));
         assert(Phi->getName() == "monotonic");
         BasicBlock *IfThen = &*(++FI);
         assert(IfThen->getName() == "if.then");
@@ -546,8 +551,9 @@ for.end:
         EXPECT_EQ(Desc.getStepInst(), StepInst);
         auto *StartSCEV = SE.getSCEV(F.getArg(0));
         auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
-        EXPECT_EQ(Desc.getPhiSCEV(),
-                  SE.getAddRecExpr(StartSCEV, StepSCEV, L, SCEV::FlagNW));
+        EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
+        EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNSW);
       });
 }
 
@@ -595,7 +601,7 @@ for.end:
         EXPECT_NE(L, nullptr);
         BasicBlock::iterator BBI = Header->begin();
         assert((&*BBI)->getName() == "i");
-        PHINode *Phi = dyn_cast<PHINode>(&*(++BBI));
+        PHINode *Phi = cast<PHINode>(&*(++BBI));
         assert(Phi->getName() == "monotonic");
         BasicBlock *IfThen = &*(++FI);
         assert(IfThen->getName() == "if.then");
