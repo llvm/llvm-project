@@ -1,0 +1,26 @@
+# RUN: not --crash llc -mtriple=x86_64-- -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# A loop header with arguments must be fed by every predecessor, including the
+# latch on the back-edge. Here the latch (bb.1) omits its SUCC_ARGS.
+# CHECK: *** Bad machine code: Missing SUCC_ARGS for a block with arguments ***
+---
+name: loop_missing_backedge
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 0
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    arguments: %1:gr32
+    ; Back-edge to bb.1 provides no SUCC_ARGS for the argument.
+    JCC_1 %bb.1, 4, implicit undef $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET64 %1
+...

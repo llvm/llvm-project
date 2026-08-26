@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -162,6 +163,10 @@ private:
   /// allowed to have virtual registers associated with them, stored in the
   /// second element.
   std::vector<std::pair<MCRegister, Register>> LiveIns;
+
+  /// Map from a block-argument virtual register to the block that defines it.
+  /// Such registers have no defining MachineInstr.
+  DenseMap<Register, MachineBasicBlock *> BlockArgDefs;
 
 public:
   LLVM_ABI explicit MachineRegisterInfo(MachineFunction *MF);
@@ -635,7 +640,9 @@ public:
 
   /// getVRegDef - Return the machine instr that defines the specified virtual
   /// register or null if none is found.  This assumes that the code is in SSA
-  /// form, so there should only be one definition.
+  /// form, so there should only be one definition. If you are only interested
+  /// in the defining block, use getDefBlock instead of checking the returned
+  /// instruction's parent.
   LLVM_ABI LLVM_READONLY MachineInstr *getVRegDef(Register Reg) const;
 
   /// getUniqueVRegDef - Return the unique machine instr that defines the
@@ -645,10 +652,25 @@ public:
 
   /// Return the machine basic block in which the specified virtual register is
   /// defined, or null if it has no definition. This assumes SSA form.
-  MachineBasicBlock *getDefBlock(Register Reg) const {
-    MachineInstr *DefMI = getVRegDef(Reg);
-    return DefMI ? DefMI->getParent() : nullptr;
+  LLVM_READONLY MachineBasicBlock *getDefBlock(Register Reg) const {
+    if (MachineInstr *DefMI = getVRegDef(Reg))
+      return DefMI->getParent();
+    return getBlockArgDef(Reg);
   }
+
+  /// If \p Reg is a block-argument register, return its defining block;
+  /// otherwise return null.
+  LLVM_READONLY MachineBasicBlock *getBlockArgDef(Register Reg) const {
+    return BlockArgDefs.lookup(Reg);
+  }
+
+  bool isBlockArgDef(Register Reg) const { return BlockArgDefs.contains(Reg); }
+
+  void setBlockArgDef(Register Reg, MachineBasicBlock *MBB) {
+    BlockArgDefs[Reg] = MBB;
+  }
+
+  void clearBlockArgDef(Register Reg) { BlockArgDefs.erase(Reg); }
 
   /// clearKillFlags - Iterate over all the uses of the given register and
   /// clear the kill flag from the MachineOperand. This function is used by

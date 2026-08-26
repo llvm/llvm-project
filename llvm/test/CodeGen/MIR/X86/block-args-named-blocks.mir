@@ -1,0 +1,32 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=none -o - %s | FileCheck %s
+# With an IR section providing block names, the string name is preserved after
+# the %bb.N prefix on the block label, alongside block arguments.
+
+--- |
+  define void @named_blocks() {
+  entry:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name: named_blocks
+tracksRegLiveness: true
+usesBlockArgs: true
+body: |
+  ; CHECK-LABEL: name: named_blocks
+  ; CHECK: bb.0.entry:
+  bb.0.entry:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    ; CHECK: SUCC_ARGS %bb.1, %0
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  ; CHECK: bb.1.exit:
+  ; CHECK: arguments: %1
+  bb.1.exit:
+    arguments: %1:gr32
+    RET64 %1
+...
