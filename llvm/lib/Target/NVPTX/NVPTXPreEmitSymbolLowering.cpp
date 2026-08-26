@@ -1,4 +1,4 @@
-//===-- NVPTXPreEmitSymbolLowering.cpp - Lower symbols before emission -*- C++ -*-===//
+//===-- NVPTXPreEmitSymbolLowering.cpp - Lower symbols before emission ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -81,7 +81,8 @@ public:
 
 char NVPTXPreEmitSymbolLoweringLegacy::ID = 0;
 
-INITIALIZE_PASS(NVPTXPreEmitSymbolLoweringLegacy, "nvptx-pre-emit-symbol-lowering",
+INITIALIZE_PASS(NVPTXPreEmitSymbolLoweringLegacy,
+                "nvptx-pre-emit-symbol-lowering",
                 "NVPTX Pre-Emit Symbol Lowering", false, false)
 
 MachineFunctionPass *
