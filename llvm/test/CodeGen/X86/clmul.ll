@@ -3751,48 +3751,17 @@ define i32 @clmul_i32_allones(i32 %x) nounwind {
 define i32 @clmul_i32_zext_allones(i16 %x) nounwind {
 ; SCALAR-LABEL: clmul_i32_zext_allones:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    andl $8738, %eax # imm = 0x2222
-; SCALAR-NEXT:    imull $4369, %eax, %edx # imm = 0x1111
-; SCALAR-NEXT:    movl %edi, %ecx
-; SCALAR-NEXT:    andl $4369, %ecx # imm = 0x1111
-; SCALAR-NEXT:    imull $8738, %ecx, %esi # imm = 0x2222
-; SCALAR-NEXT:    xorl %edx, %esi
-; SCALAR-NEXT:    movl %edi, %edx
-; SCALAR-NEXT:    andl $17476, %edx # imm = 0x4444
-; SCALAR-NEXT:    imull $34952, %edx, %r8d # imm = 0x8888
-; SCALAR-NEXT:    andl $34952, %edi # imm = 0x8888
-; SCALAR-NEXT:    imull $17476, %edi, %r9d # imm = 0x4444
-; SCALAR-NEXT:    xorl %r8d, %r9d
-; SCALAR-NEXT:    xorl %esi, %r9d
-; SCALAR-NEXT:    andl $572662306, %r9d # imm = 0x22222222
-; SCALAR-NEXT:    imull $34952, %eax, %esi # imm = 0x8888
-; SCALAR-NEXT:    imull $4369, %ecx, %r8d # imm = 0x1111
-; SCALAR-NEXT:    xorl %esi, %r8d
-; SCALAR-NEXT:    imull $17476, %edx, %esi # imm = 0x4444
-; SCALAR-NEXT:    imull $8738, %edi, %r10d # imm = 0x2222
-; SCALAR-NEXT:    xorl %esi, %r10d
-; SCALAR-NEXT:    xorl %r8d, %r10d
-; SCALAR-NEXT:    andl $286331153, %r10d # imm = 0x11111111
-; SCALAR-NEXT:    orl %r9d, %r10d
-; SCALAR-NEXT:    imull $8738, %eax, %esi # imm = 0x2222
-; SCALAR-NEXT:    imull $17476, %ecx, %r8d # imm = 0x4444
-; SCALAR-NEXT:    xorl %esi, %r8d
-; SCALAR-NEXT:    imull $4369, %edx, %esi # imm = 0x1111
-; SCALAR-NEXT:    imull $34952, %edi, %r9d # imm = 0x8888
-; SCALAR-NEXT:    xorl %esi, %r9d
-; SCALAR-NEXT:    xorl %r8d, %r9d
-; SCALAR-NEXT:    andl $1145324612, %r9d # imm = 0x44444444
-; SCALAR-NEXT:    orl %r10d, %r9d
-; SCALAR-NEXT:    imull $17476, %eax, %eax # imm = 0x4444
-; SCALAR-NEXT:    imull $34952, %ecx, %ecx # imm = 0x8888
+; SCALAR-NEXT:    movzwl %di, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
 ; SCALAR-NEXT:    xorl %eax, %ecx
-; SCALAR-NEXT:    imull $8738, %edx, %edx # imm = 0x2222
-; SCALAR-NEXT:    imull $4369, %edi, %eax # imm = 0x1111
-; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    leal (,%rcx,4), %eax
 ; SCALAR-NEXT:    xorl %ecx, %eax
-; SCALAR-NEXT:    andl $143165576, %eax # imm = 0x8888888
-; SCALAR-NEXT:    orl %r9d, %eax
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %ecx, %eax
+; SCALAR-NEXT:    shll $8, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
 ; SCALAR-NEXT:    retq
 ;
 ; SSE-PCLMUL-LABEL: clmul_i32_zext_allones:
