@@ -13688,7 +13688,6 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
-  EVT VT0 = N0.getValueType();
   SDLoc DL(N);
 
   // ct_select (not Cond), N1, N2 -> ct_select Cond, N2, N1
@@ -13698,30 +13697,30 @@ SDValue DAGCombiner::visitCT_SELECT(SDNode *N) {
   if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
     return DAG.getCTSelect(DL, VT, F, N2, N1);
 
-  if (VT0 == MVT::i1) {
-    // Merge nested i1 ct_selects. The AND/OR of the two conditions is itself
-    // constant-time and the result remains a CT_SELECT.
+  // Merge nested ct_selects. The AND/OR of the two conditions is itself
+  // constant-time and the result remains a CT_SELECT. The condition-type
+  // equality checks below keep this correct regardless of whether the scalar
+  // bool condition has been promoted past i1 by type legalization.
 
-    // ct_select C0, (ct_select C1, X, Y), Y -> ct_select (C0 & C1), X, Y
-    if (N1.getOpcode() == ISD::CT_SELECT && N1.hasOneUse()) {
-      SDValue N10 = N1.getOperand(0);
-      SDValue N11 = N1.getOperand(1);
-      SDValue N12 = N1.getOperand(2);
-      if (N12 == N2 && N0.getValueType() == N10.getValueType()) {
-        SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N10);
-        return DAG.getCTSelect(DL, N1.getValueType(), And, N11, N2);
-      }
+  // ct_select C0, (ct_select C1, X, Y), Y -> ct_select (C0 & C1), X, Y
+  if (N1.getOpcode() == ISD::CT_SELECT && N1.hasOneUse()) {
+    SDValue N10 = N1.getOperand(0);
+    SDValue N11 = N1.getOperand(1);
+    SDValue N12 = N1.getOperand(2);
+    if (N12 == N2 && N0.getValueType() == N10.getValueType()) {
+      SDValue And = DAG.getNode(ISD::AND, DL, N0.getValueType(), N0, N10);
+      return DAG.getCTSelect(DL, N1.getValueType(), And, N11, N2);
     }
+  }
 
-    // ct_select C0, X, (ct_select C1, X, Y) -> ct_select (C0 | C1), X, Y
-    if (N2.getOpcode() == ISD::CT_SELECT && N2.hasOneUse()) {
-      SDValue N20 = N2.getOperand(0);
-      SDValue N21 = N2.getOperand(1);
-      SDValue N22 = N2.getOperand(2);
-      if (N21 == N1 && N0.getValueType() == N20.getValueType()) {
-        SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N20);
-        return DAG.getCTSelect(DL, N1.getValueType(), Or, N1, N22);
-      }
+  // ct_select C0, X, (ct_select C1, X, Y) -> ct_select (C0 | C1), X, Y
+  if (N2.getOpcode() == ISD::CT_SELECT && N2.hasOneUse()) {
+    SDValue N20 = N2.getOperand(0);
+    SDValue N21 = N2.getOperand(1);
+    SDValue N22 = N2.getOperand(2);
+    if (N21 == N1 && N0.getValueType() == N20.getValueType()) {
+      SDValue Or = DAG.getNode(ISD::OR, DL, N0.getValueType(), N0, N20);
+      return DAG.getCTSelect(DL, N1.getValueType(), Or, N1, N22);
     }
   }
 
