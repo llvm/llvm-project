@@ -9750,10 +9750,20 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Work in an integer type matching the destination float width.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
-  EVT IntVT = DstVT.isVector()
-                  ? EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
-                                     DstVT.getVectorElementCount())
-                  : IntScalarVT;
+  EVT IntVT = IntScalarVT;
+  if (DstVT.isVector()) {
+    IntVT = EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
+                             DstVT.getVectorElementCount());
+  } else if (!isTypeLegal(IntScalarVT)) {
+    // Avoid generating illegal type as there is no other places that'll
+    // legalize it. Vector types don't have this problem because they
+    // are subject to LegalizeVectorOps and another type legalization phase
+    // will follow.
+    if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger)
+      // We only know how to handle situations where the legal type is wider.
+      return SDValue();
+    IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
+  }
 
   SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
 
@@ -9821,9 +9831,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Normal value conversion.
   const int BiasAdjust = DstBias - SrcBias;
-  SDValue NormDstExp =
-      DAG.getNode(ISD::ADD, dl, IntVT, ExpField,
-                  DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+  SDValue NormDstExp = DAG.getNode(
+      ISD::ADD, dl, IntVT, ExpField,
+      DAG.getConstant(APInt(IntVT.getScalarSizeInBits(), BiasAdjust, true), dl,
+                      IntVT));
 
   SDValue NormDstMant;
   if (DstMant > SrcMant) {
@@ -9851,10 +9862,12 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
     const int DenormExpConst =
         (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
-    SDValue DenormDstExp = DAG.getNode(
-        ISD::SUB, dl, IntVT,
-        DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
-        LeadingZeros);
+    SDValue DenormDstExp =
+        DAG.getNode(ISD::SUB, dl, IntVT,
+                    DAG.getConstant(APInt(IntVT.getScalarSizeInBits(),
+                                          DenormExpConst, true),
+                                    dl, IntVT),
+                    LeadingZeros);
 
     SDValue MantMSB =
         DAG.getNode(ISD::SUB, dl, IntVT,
@@ -9894,6 +9907,24 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+  if (!DstVT.bitsEq(IntVT)) {
+    // Store to stack before loading it back.
+    assert(!IntVT.isVector() && IntVT.bitsGT(DstVT));
+    // IntScalarVT is the original type that has the same width as DstVT.
+    Align Alignment = DAG.getReducedAlign(IntScalarVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(IntScalarVT.getStoreSize(), Alignment);
+    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(MF, FrameIndex);
+    SDValue Store = DAG.getTruncStore(DAG.getEntryNode(), dl, Result, StackPtr,
+                                      PtrInfo, IntScalarVT, Alignment);
+
+    SDValue Load = DAG.getLoad(DstVT, dl, Store, StackPtr, PtrInfo, Alignment);
+    return DAG.getMergeValues({Load, Load.getValue(1)}, dl);
+  }
 
   return DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
 }
