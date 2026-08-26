@@ -208,6 +208,14 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
                          "DW_OP_LLVM_form_aspace_address (2)>");
 }
 
+// Negative control for the test below: a sub-opcode that is not registered at
+// all cannot be named, so its diagnostic carries no sub-operation. The pair
+// pins that DW_OP_LLVM_NVIDIA_mux is registered rather than merely undecodable.
+TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unregistered_subop) {
+  TestExprPrinterFailure({DW_OP_LLVM_user, 0x0e, 0xa5, 0x01},
+                         "<unknown op DW_OP_LLVM_user (233)>");
+}
+
 // DW_OP_LLVM_NVIDIA_mux carries an opaque selector, so the compact printer
 // cannot know its stack effect and must bail out naming both opcodes.
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_NVIDIA_mux) {
