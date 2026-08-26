@@ -254,6 +254,60 @@ exit:
   ret void
 }
 
+; An eq/ne latch predicate with both nsw and nuw on the step leaves signedness
+; ambiguous, so the pass cannot pick guard and latch ordering.
+
+define void @ambiguous_signedness(ptr %a, i64 %n, i64 %s) {
+; CHECK-LABEL: define void @ambiguous_signedness(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[S:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[S]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %s, %entry ], [ %iv.next, %loop ]
+  %p = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add nuw nsw i64 %iv, 1
+  %c = icmp ne i64 %iv.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; rewriteLatch expects a conditional latch terminator. An unconditional backedge
+; has no latch compare, so isLegal() rejects the loop before splitting.
+
+define void @uncond_latch() {
+; CHECK-LABEL: define void @uncond_latch() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  br label %loop
+}
+
 ; The latch compare is rewritten in place, so it has to live in the latch. Here
 ; it sits in a block that merely dominates the latch.
 

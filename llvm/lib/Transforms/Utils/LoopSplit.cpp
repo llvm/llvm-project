@@ -64,6 +64,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopSplit.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -145,23 +146,38 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE) {
 
   // One compare operand must be the induction, either the PHI or its step. The
   // rebuilt latch always compares the PHI, so which operand it was is not used.
-  if (LatchCmp->getOperand(0) == Induction ||
-      LatchCmp->getOperand(0) == StepInst ||
-      LatchCmp->getOperand(1) == Induction ||
-      LatchCmp->getOperand(1) == StepInst)
+  if (any_of(LatchCmp->operands(), [&](Value *Op) {
+        return Op == Induction || Op == StepInst;
+      }))
     return AR;
   return nullptr;
 }
 
 // Decide whether the iteration ordering is signed or unsigned; returns the
 // signedness, or nullopt if it cannot be proven.
-static std::optional<bool> computeSignedness(Loop *L,
+static std::optional<bool> computeSignedness(ScalarEvolution &SE, Loop *L,
                                              const SCEVAddRecExpr *IndAR) {
   ICmpInst::Predicate P = L->getLatchCmpInst()->getPredicate();
   // A relational predicate gives the ordering directly; for eq/ne fall back to
   // the recurrence's no-wrap flags.
   if (ICmpInst::isRelational(P))
     return ICmpInst::isSigned(P);
+  if (IndAR->hasNoSignedWrap() && IndAR->hasNoUnsignedWrap()) {
+    const ConstantRange UR = SE.getUnsignedRange(IndAR);
+    const ConstantRange SR = SE.getSignedRange(IndAR);
+    if (UR.isFullSet() && SR.isFullSet()) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                 ": ambiguous iteration ordering with both nsw and nuw\n");
+      return std::nullopt;
+    }
+    if (!SR.isFullSet())
+      return true;
+    if (!UR.isFullSet())
+      return false;
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+               ": cannot prove iteration ordering signedness\n");
+    return std::nullopt;
+  }
   if (IndAR->hasNoSignedWrap())
     return true;
   if (IndAR->hasNoUnsignedWrap())
@@ -247,7 +263,7 @@ bool LoopSplit::isLegal() {
       return false;
     }
 
-  std::optional<bool> Signed = computeSignedness(L, IndAR);
+  std::optional<bool> Signed = computeSignedness(*SE, L, IndAR);
   if (!Signed)
     return false;
   InductionIsSigned = *Signed;
