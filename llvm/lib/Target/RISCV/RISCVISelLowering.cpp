@@ -20942,8 +20942,8 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
-  if (VT.getVectorElementType() != MVT::i8 &&
-      VT.getVectorElementType() != MVT::i16)
+  if (VT.getVectorElementType() != MVT::i16 &&
+      VT.getVectorElementType() != MVT::i32)
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
@@ -20954,15 +20954,19 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue Mask = N->getOperand(3);
   SDValue VL = N->getOperand(4);
-  auto IsABD = [](SDValue Op) {
+  auto IsCombinableABD = [&](SDValue Op) {
     if (Op->getOpcode() != RISCVISD::ABDS_VL &&
         Op->getOpcode() != RISCVISD::ABDU_VL)
+      return SDValue();
+    // The combine is only valid when both instructions share the same mask and VL.
+    if (!Op.getOperand(2).isUndef() || Op.getOperand(3) != Mask ||
+        Op.getOperand(4) != VL)
       return SDValue();
     return Op;
   };
 
-  SDValue Diff = IsABD(Op0);
-  Diff = Diff ? Diff : IsABD(Op1);
+  SDValue Diff = IsCombinableABD(Op0);
+  Diff = Diff ? Diff : IsCombinableABD(Op1);
   if (!Diff)
     return SDValue();
   SDValue Acc = Diff == Op0 ? Op1 : Op0;
@@ -20991,7 +20995,7 @@ static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
       VT.getVectorElementType() != MVT::i32)
     return SDValue();
 
-  SDValue Op0 = N->getOperand(0);
+  SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDValue Passthru = N->getOperand(2);
   if (!Passthru->isUndef())
@@ -21001,9 +21005,20 @@ static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
   SDValue VL = N->getOperand(4);
   unsigned ExtOpc = 0;
   MVT ExtVT;
+  auto IsCombinableABD = [&](SDValue Op) {
+    unsigned Opc = Op.getOpcode();
+    if (Opc != ISD::ABDS && Opc != ISD::ABDU && Opc != RISCVISD::ABDS_VL &&
+        Opc != RISCVISD::ABDU_VL)
+      return false;
+    return (Opc == ISD::ABDS || Opc == ISD::ABDU) ||
+           (Op.getOperand(2).isUndef() && Op.getOperand(3) == Mask &&
+            Op.getOperand(4) == VL);
+  };
   auto GetDiff = [&](SDValue Op) {
     unsigned Opc = Op.getOpcode();
     if (Opc == RISCVISD::VZEXT_VL) {
+      if (Op.getOperand(1) != Mask || Op.getOperand(2) != VL)
+        return SDValue();
       SDValue Src = Op->getOperand(0);
       unsigned SrcOpc = Src.getOpcode();
       switch (SrcOpc) {
@@ -21018,24 +21033,22 @@ static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
         ExtOpc = RISCVISD::VZEXT_VL;
         break;
       }
+      if (!IsCombinableABD(Src))
+        return SDValue();
       ExtVT = Op->getSimpleValueType(0);
       return Src;
     }
 
-    if (Opc != ISD::ABDS && Opc != ISD::ABDU && Opc != RISCVISD::ABDS_VL &&
-        Opc != RISCVISD::ABDU_VL)
+    if (!IsCombinableABD(Op))
       return SDValue();
     return Op;
   };
 
-  SDValue Diff = GetDiff(Op0);
-  if (!Diff) {
-    std::swap(Op0, Op1);
-    Diff = GetDiff(Op0);
-    if (!Diff)
-      return SDValue();
-  }
-  SDValue Acc = Op1;
+  // VWADDU_W_VL is not commutative, operand 0 is wide and operand 1 is
+  // narrow. Only the narrow operand can be folded into vwabda/vwabdau.
+  SDValue Diff = GetDiff(Op1);
+  if (!Diff)
+    return SDValue();
 
   SDLoc DL(N);
   SDValue DiffA = Diff.getOperand(0);
