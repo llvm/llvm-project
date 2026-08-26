@@ -195,7 +195,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-NEXT:    [[TMP3:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 50)
 ; TFCOMMON-NEXT:    [[TMP4:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i1> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP4]])
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP3]], <vscale x 2 x i64> [[TMP5]], <vscale x 2 x i64> zeroinitializer
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i64> [[TMP5]], <vscale x 2 x i64> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFCOMMON-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP6]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFCOMMON-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
@@ -234,8 +234,8 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[TMP7]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_MASKED_LOAD3]], <vscale x 2 x i1> [[TMP8]])
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> zeroinitializer
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> zeroinitializer
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI4:%.*]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP11]], i64 [[TMP1]]
 ; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[PREDPHI]], ptr align 8 [[TMP11]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
@@ -1006,7 +1006,10 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = load double, ptr [[P2]], align 8
 ; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = tail call double @llvm.exp.f64(double [[TMP1]]) #[[ATTR7:[0-9]+]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = fcmp ogt double [[TMP2]], 0.000000e+00
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP3]], double 0.000000e+00, double 1.000000e+00
+; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = select i1 [[ACTIVE_LANE_MASK]], i1 [[TMP3]], i1 false
+; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = select i1 [[ACTIVE_LANE_MASK2]], i1 [[TMP3]], i1 false
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP6]], double 0.000000e+00, double 1.000000e+00
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI2:%.*]] = select i1 [[TMP7]], double 0.000000e+00, double 1.000000e+00
 ; TFA_INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_IF]]:
 ; TFA_INTERLEAVE-NEXT:    store double [[PREDPHI]], ptr [[P]], align 8
@@ -1014,7 +1017,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE:       [[PRED_STORE_CONTINUE]]:
 ; TFA_INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK2]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_IF3]]:
-; TFA_INTERLEAVE-NEXT:    store double [[PREDPHI]], ptr [[P]], align 8
+; TFA_INTERLEAVE-NEXT:    store double [[PREDPHI2]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_CONTINUE4]]:
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
