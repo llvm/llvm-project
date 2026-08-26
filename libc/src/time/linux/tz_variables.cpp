@@ -12,8 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifdef LIBC_FULL_BUILD
-
 #include "src/time/tz_variables.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -27,5 +25,3 @@ LLVM_LIBC_VARIABLE(long, timezone) = 0;
 LLVM_LIBC_VARIABLE(int, daylight) = 0;
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_FULL_BUILD

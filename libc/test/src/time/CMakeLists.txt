@@ -318,5 +318,6 @@ add_libc_test(
   SRCS
     tzset_test.cpp
   DEPENDS
+    libc.src.time.tz_variables
     libc.src.time.tzset
 )
