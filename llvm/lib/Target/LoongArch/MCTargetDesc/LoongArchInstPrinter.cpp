@@ -65,7 +65,7 @@ void LoongArchInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void LoongArchInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
-  O << '$' << getRegisterName(Reg);
+  markup(O, Markup::Register) << '$' << getRegisterName(Reg);
 }
 
 void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -79,7 +79,7 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    O << MO.getImm();
+    markup(O, Markup::Immediate) << MO.getImm();
     return;
   }
 
@@ -103,6 +103,17 @@ void LoongArchInstPrinter::printCFRSetDest(const MCInst *MI, unsigned OpNo,
   printRegName(O, LoongArch::F0);
   O << ", ";
   printRegName(O, LoongArch::F0);
+}
+
+void LoongArchInstPrinter::printBranchOperand(const MCInst *MI,
+                                              uint64_t Address, unsigned OpNo,
+                                              const MCSubtargetInfo &STI,
+                                              raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
+  return printOperand(MI, OpNo, STI, O);
 }
 
 const char *LoongArchInstPrinter::getRegisterName(MCRegister Reg) {
