@@ -865,6 +865,12 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     }
 
     auto *TI = BB->getTerminator();
+
+    // Refund the accumulated cost of dead-end panic paths.
+    if (isa<UnreachableInst>(TI)) {
+      addCost(CostAtBBStart - Cost);
+    }
+
     // If we had any successors at this point, than post-inlining is likely to
     // have them as well. Note that we assume any basic blocks which existed
     // due to branches or switches which folded above will also fold after
@@ -2715,9 +2721,6 @@ bool CallAnalyzer::visitCatchReturnInst(CatchReturnInst &CRI) {
 }
 
 bool CallAnalyzer::visitUnreachableInst(UnreachableInst &I) {
-  // FIXME: It might be reasonably to discount the cost of instructions leading
-  // to unreachable as they have the lowest possible impact on both runtime and
-  // code size.
   return true; // No actual code is needed for unreachable.
 }
 
@@ -2746,6 +2749,8 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 InlineResult
 CallAnalyzer::analyzeBlock(BasicBlock *BB,
                            const SmallPtrSetImpl<const Value *> &EphValues) {
+  bool IsUnreachablePath = isa<UnreachableInst>(BB->getTerminator());
+
   for (Instruction &I : *BB) {
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
@@ -2762,9 +2767,13 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     if (EphValues.count(&I))
       continue;
 
-    ++NumInstructions;
-    if (isa<ExtractElementInst>(I) || I.getType()->isVectorTy())
-      ++NumVectorInstructions;
+    // Do not increment raw instruction counts for unreachable
+    // paths to prevent penalizing the vector bonus heuristic.
+    if (!IsUnreachablePath) {
+      ++NumInstructions;
+      if (isa<ExtractElementInst>(I) || I.getType()->isVectorTy())
+        ++NumVectorInstructions;
+    }
 
     // If the instruction simplified to a constant, there is no cost to this
     // instruction. Visit the instructions using our InstVisitor to account for
@@ -2823,7 +2832,7 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
       return IR;
     }
 
-    if (shouldStop())
+    if (!IsUnreachablePath && shouldStop())
       return InlineResult::failure(
           "Call site analysis is not favorable to inlining.");
   }
