@@ -207,12 +207,10 @@ RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
 Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
-  {
-    std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-    void *RPCBuffer = Buffers[Device.getDeviceId()];
-  }
+  void *RPCBuffer = Buffers[Device.getDeviceId()];
   if (!RPCBuffer) {
     auto RPCBufferOrErr = Device.allocate(
         rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts),
@@ -238,7 +236,6 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         static_cast<uint8_t *>(RPCBuffer) + rpc::Server::doorbell_offset());
     std::memcpy(DoorbellPtr, &Doorbell, sizeof(rpc::Doorbell));
 
-    std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
     Buffers[Device.getDeviceId()] = RPCBuffer;
     Devices[Device.getDeviceId()] = &Device;
   }
@@ -282,7 +279,7 @@ void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
 
 void RPCServerTy::setSleepFunction(std::function<void()> Sleep,
                                    std::function<void()> Wake) {
-  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  // Only called from 'initDevice', already under the BufferMutex lock.
   Thread->SleepFunction = std::move(Sleep);
   Thread->WakeFunction = std::move(Wake);
 }
