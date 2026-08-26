@@ -1,9 +1,14 @@
-//===-- Freestanding Code Coverage Extraction Support -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Freestanding code coverage extraction support for unit tests.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_UNITTEST_COVERAGE_H
@@ -44,6 +49,8 @@ namespace {
 
 using LIBC_NAMESPACE::cpp::string_view;
 
+/// Minimal fixed-size stack buffer for constructing file paths without dynamic
+/// memory allocation.
 struct FixedSizeBuffer {
   char data[64];
   size_t idx = 0;
@@ -77,6 +84,7 @@ LIBC_INLINE void report_error(string_view msg) {
 
 } // anonymous namespace
 
+/// Writes raw coverage profile data to disk using direct Linux syscalls.
 extern "C" void write_raw_profile() {
   if (!__llvm_profile_get_size_for_buffer || !__llvm_profile_write_buffer)
     return;

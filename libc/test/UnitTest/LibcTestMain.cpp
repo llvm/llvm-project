@@ -43,7 +43,7 @@ TestOptions parseOptions(int argc, char **argv) {
 
 } // anonymous namespace
 
-#if defined(LLVM_LIBC_ENABLE_COVERAGE) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ENABLE_COVERAGE)
 #include "Coverage.h"
 #endif
 
@@ -60,7 +60,7 @@ TEST_MAIN(int argc, char **argv, char **envp) {
 
   int result =
       LIBC_NAMESPACE::testing::Test::runTests(parseOptions(argc, argv));
-#if defined(LLVM_LIBC_ENABLE_COVERAGE) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ENABLE_COVERAGE)
   write_raw_profile();
 #endif
   return result;

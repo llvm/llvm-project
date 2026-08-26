@@ -44,7 +44,7 @@
 #define LIBC_IMPL
 #endif
 
-#if defined(LLVM_LIBC_ENABLE_COVERAGE)
+#if defined(LIBC_ENABLE_COVERAGE)
 extern "C" __attribute__((weak)) void write_raw_profile();
 #endif
 
@@ -64,7 +64,7 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-#if defined(LLVM_LIBC_ENABLE_COVERAGE)
+#if defined(LIBC_ENABLE_COVERAGE)
 static void coverage_fatal_signal_handler(int sig) {
   if (write_raw_profile)
     write_raw_profile();
@@ -100,8 +100,7 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   }
 
   if (!pid) {
-#if defined(LLVM_LIBC_ENABLE_COVERAGE)
-#ifdef LIBC_FULL_BUILD
+#if defined(LIBC_ENABLE_COVERAGE) && defined(LIBC_FULL_BUILD)
     struct sigaction sa = {};
     sa.sa_handler = coverage_fatal_signal_handler;
     LIBC_IMPL::sigaction(SIGABRT, &sa, nullptr);
@@ -109,18 +108,17 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
     LIBC_IMPL::sigaction(SIGILL, &sa, nullptr);
     LIBC_IMPL::sigaction(SIGFPE, &sa, nullptr);
     LIBC_IMPL::sigaction(SIGBUS, &sa, nullptr);
-#else
+#elif defined(LIBC_ENABLE_COVERAGE)
     ::signal(SIGABRT, coverage_fatal_signal_handler);
     ::signal(SIGSEGV, coverage_fatal_signal_handler);
     ::signal(SIGILL, coverage_fatal_signal_handler);
     ::signal(SIGFPE, coverage_fatal_signal_handler);
     ::signal(SIGBUS, coverage_fatal_signal_handler);
 #endif
-#endif
 
     (*func)();
     delete func;
-#if defined(LLVM_LIBC_ENABLE_COVERAGE)
+#if defined(LIBC_ENABLE_COVERAGE)
     if (write_raw_profile)
       write_raw_profile();
 #endif
