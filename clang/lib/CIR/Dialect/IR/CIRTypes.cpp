@@ -61,6 +61,18 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
   }
 }
 
+static bool isPureCIRType(mlir::Type ty) {
+  if (!ty)
+    return true;
+  return !ty.walk([](mlir::Type t) {
+              if (!t)
+                return mlir::WalkResult::advance();
+              return mlir::isa<cir::CIRDialect>(t.getDialect())
+                         ? mlir::WalkResult::advance()
+                         : mlir::WalkResult::interrupt();
+            }).wasInterrupted();
+}
+
 //===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
@@ -172,7 +184,8 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
-static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
+                                                  "bitfield"};
 
 static std::optional<RecordMemberKind>
 parseMemberKind(mlir::AsmParser &parser) {
@@ -680,14 +693,19 @@ void RecordType::removeABIConversionNamePrefix() {
   return mlir::cast<UnionType>(*this).removeABIConversionNamePrefix();
 }
 
+bool cir::isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind) {
+  if (kind != RecordMemberKind::BitField)
+    return false;
+  auto arrTy = mlir::dyn_cast<ArrayType>(memberTy);
+  return arrTy && arrTy.getSize() == 0;
+}
+
 bool RecordType::isEmptyForABI() const {
   // An incomplete record has no members yet, which must not read as vacuously
   // holding no data.
   if (isIncomplete())
     return false;
-  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
-    return kind == RecordMemberKind::Data;
-  });
+  return !anyMemberHoldsDataForABI(getMembers(), getMemberKinds());
 }
 
 //===----------------------------------------------------------------------===//
@@ -842,7 +860,9 @@ StructType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   unsigned recordSize = 0;
   uint64_t recordAlignment = 1;
 
-  for (mlir::Type ty : getMembers()) {
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     // This assumes that we're calculating size based on the ABI alignment, not
     // the preferred alignment for each type.
     const uint64_t tyAlign =
@@ -868,20 +888,24 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Tail padding is the trailing run of pad members.  An empty member stays
-  // inside the data size: it is storage the source declared, which a derived
-  // class may not reuse.
+  // Tail padding is the trailing run of pad members, which is what a derived
+  // class may reuse.  A zero-width bit-field holds no storage, so it does not
+  // end that run.  A member of any other kind stays inside the data size.
   llvm::ArrayRef<mlir::Type> members = getMembers();
   llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
   assert(kinds.size() == members.size() &&
          "the two drop_back calls below must stay in step");
-  while (!kinds.empty() && kinds.back() == RecordMemberKind::Pad) {
+  while (!kinds.empty() &&
+         (kinds.back() == RecordMemberKind::Pad ||
+          isZeroWidthBitField(members.back(), kinds.back()))) {
     kinds = kinds.drop_back();
     members = members.drop_back();
   }
 
   unsigned recordSize = 0;
-  for (mlir::Type ty : members) {
+  for (auto [ty, kind] : llvm::zip_equal(members, kinds)) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     const uint64_t tyAlign =
         (getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
     recordSize = llvm::alignTo(recordSize, tyAlign);
@@ -899,9 +923,12 @@ StructType::computeStructAlignment(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
   uint64_t recordAlignment = 1;
-  for (mlir::Type ty : getMembers())
+  for (auto [ty, kind] : llvm::zip_equal(getMembers(), getMemberKinds())) {
+    if (isZeroWidthBitField(ty, kind))
+      continue;
     recordAlignment =
         std::max(dataLayout.getTypeABIAlignment(ty), recordAlignment);
+  }
   return recordAlignment;
 }
 
@@ -914,15 +941,22 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
   assert(isComplete() && "Cannot get layout of incomplete records");
   assert(idx < getNumElements());
   llvm::ArrayRef<mlir::Type> members = getMembers();
+  llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
 
   unsigned offset = 0;
-  for (mlir::Type ty :
-       llvm::make_range(members.begin(), std::next(members.begin(), idx))) {
-    const llvm::Align tyAlign =
-        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+  for (unsigned i = 0; i != idx; ++i) {
+    if (isZeroWidthBitField(members[i], kinds[i]))
+      continue;
+    const llvm::Align tyAlign = llvm::Align(
+        getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[i]));
     offset = llvm::alignTo(offset, tyAlign);
-    offset += dataLayout.getTypeSize(ty);
+    offset += dataLayout.getTypeSize(members[i]);
   }
+
+  // A zero-width bit-field imposes no alignment, so its offset is where the
+  // storage ahead of it ends.
+  if (isZeroWidthBitField(members[idx], kinds[idx]))
+    return offset;
 
   const llvm::Align tyAlign = llvm::Align(
       getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
@@ -1243,6 +1277,18 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
     return emitError()
            << "!cir.func cannot have an explicit 'void' return type";
+
+  // The calling convention lowering pass expects all types in a function
+  // signature to be CIR types.
+  for (mlir::Type type : argTypes) {
+    if (!isPureCIRType(type))
+      return emitError()
+             << "expected all types in the function signature to be CIR types";
+  }
+  if (!isPureCIRType(returnType))
+    return emitError()
+           << "expected all types in the function signature to be CIR types";
+
   return mlir::success();
 }
 

@@ -2535,6 +2535,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       // actual module containing it exists (because the umbrella header is
       // incomplete).  Treat this as a textual inclusion.
       ModuleToImport = nullptr;
+      UsableClangHeaderModule = false;
     } else if (Imported.isConfigMismatch()) {
       // On a configuration mismatch, enter the header textually. We still know
       // that it's part of the corresponding module.
@@ -2884,10 +2885,12 @@ void Preprocessor::HandleImportDirective(SourceLocation HashLoc,
 /// effects on the preprocessor).
 void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
                                                 Token &IncludeMacrosTok) {
-  // This directive should only occur in the predefines buffer.  If not, emit an
+  // This directive should only occur in the predefines buffer or the internal
+  // buffer used to enter deferred implicit inputs in a GMF. If not, emit an
   // error and reject it.
   SourceLocation Loc = IncludeMacrosTok.getLocation();
-  if (SourceMgr.getBufferName(Loc) != "<built-in>") {
+  FileID FID = SourceMgr.getFileID(Loc);
+  if (FID != getPredefinesFileID() && FID != DeferredGMFInputsFileID) {
     Diag(IncludeMacrosTok.getLocation(),
          diag::pp_include_macros_out_of_predefines);
     DiscardUntilEndOfDirective();
@@ -4225,6 +4228,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     UseLoc = Tok.getLocation();
     Lex(Tok);
     [[fallthrough]];
+  case tok::code_completion:
   case tok::identifier: {
     if (HandleModuleName(ImportTok.getIdentifierInfo()->getName(), UseLoc, Tok,
                          Path, DirToks, /*AllowMacroExpansion=*/true,
@@ -4404,22 +4408,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     break;
   }
 
-  // Consume the pp-import-suffix and expand any macros in it now, if we're not
-  // at the semicolon already.
-  std::optional<Token> NextPPTok =
-      DirToks.back().is(tok::eod) ? peekNextPPToken() : DirToks.back();
-
-  // Only ';' and '[' are allowed after module name.
-  // We also check 'private' because the previous is not a module name.
-  if (NextPPTok) {
-    if (NextPPTok->is(tok::raw_identifier))
-      LookUpIdentifierInfo(*NextPPTok);
-    if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square,
-                            tok::kw_private))
-      Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
-          << getSpelling(*NextPPTok);
-  }
-
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add
     // it back into the token stream later.
@@ -4433,7 +4421,12 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
           : DirToks.pop_back_val().getLocation();
 
-  if (!IncludeMacroStack.empty()) {
+  bool IsGMFIntroducer = DirToks.size() == 2 && DirToks[0].is(tok::kw_module) &&
+                         DirToks[1].is(tok::semi);
+  bool IsSynthesizedGMF = IsGMFIntroducer && HasSynthesizedGMF &&
+                          CurPPLexer->getFileID() == getPredefinesFileID();
+
+  if (!IncludeMacroStack.empty() && !IsSynthesizedGMF) {
     Diag(StartLoc, diag::err_pp_module_decl_in_header)
         << SourceRange(StartLoc, End);
   }
@@ -4442,6 +4435,15 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     Diag(StartLoc, diag::err_pp_cond_span_module_decl)
         << SourceRange(StartLoc, End);
   }
+
+  // For the global-module-fragment introducer (`module;`), enter any implicit
+  // macro, PCH, and regular include files that were deferred to the GMF now,
+  // before re-entering the `module;` token stream. Because the include stack is
+  // LIFO, the `module;` tokens are consumed first and the included files are
+  // then lexed inside the fragment (ahead of the rest of the main file).
+  if (IsGMFIntroducer)
+    EnterDeferredGMFInputs(End);
+
   EnterModuleSuffixTokenStream(DirToks);
 }
 

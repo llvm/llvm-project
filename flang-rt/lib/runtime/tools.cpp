@@ -205,6 +205,7 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
 template <typename P>
 RT_API_ATTRS void ShallowCopyRank(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
+  INTERNAL_CHECK(to.rank() == from.rank());
   // Specialize only common low ranks; use generic fallback for higher ranks
   switch (to.rank()) {
   case 1:

@@ -1090,7 +1090,7 @@ public:
   /// @{
 
   /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
-  /// FloatABI::Default when the flag is absent (meaning the target default).
+  /// the ABI implied by the target triple when the flag is absent.
   FloatABI::ABIType getFloatABI() const;
   /// @}
 

@@ -23,6 +23,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -83,9 +84,11 @@ protected:
   // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
   unsigned DataCacheLineSize = 0;
 
+  /// The width, in bits, of the num_records field of a buffer resource (V#),
+  /// set from tablegen subtarget features, 0 is unknown.
+  unsigned BufferResourceNumRecordsWidth = 0;
+
   // Dynamically set bits that enable features.
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
@@ -352,6 +355,14 @@ public:
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
+
+  /// Return the width, in bits, of the num_records field of a buffer resource
+  /// (V#) on this subtarget, or std::nullopt if not yet known.
+  std::optional<unsigned> getBufferResourceNumRecordsWidth() const {
+    if (BufferResourceNumRecordsWidth == 0)
+      return std::nullopt;
+    return BufferResourceNumRecordsWidth;
+  }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
@@ -975,11 +986,6 @@ public:
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
   bool requiresWaitIdleBeforeGetReg() const { return HasGFX1250Insts; }
 
-  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
-  unsigned getDynamicVGPRBlockSize() const {
-    return DynamicVGPRBlockSize32 ? 32 : 16;
-  }
-
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
     // to the same register.
@@ -1044,6 +1050,10 @@ public:
   bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
     return getGeneration() >= GFX10 || TgSplit;
   }
+
+  bool useDFAforSMS() const override { return false; }
+
+  bool enableWindowScheduler() const override { return false; }
 };
 
 class GCNUserSGPRUsageInfo {
