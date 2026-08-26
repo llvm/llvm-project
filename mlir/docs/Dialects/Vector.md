@@ -134,7 +134,7 @@ Some existing Arith and Vector Dialect on `n-D` `vector` types comprise:
 %g = vector.outerproduct %0, %1, %2: vector<4xf32>, vector<8xf32>  // fma when adding %2
 
 // Returns a slice of type vector<2x2x16xf32>
-%h = vector.strided_slice %0
+%h = vector.extract_strided_slice %0
     {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]}:
   vector<4x8x16xf32>
 
