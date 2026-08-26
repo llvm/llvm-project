@@ -19983,7 +19983,6 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
   return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
 }
 
-
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        ArrayRef<Decl *> Fields, SourceLocation LBrac,
                        SourceLocation RBrac,
