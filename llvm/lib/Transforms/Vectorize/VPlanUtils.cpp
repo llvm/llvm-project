@@ -383,7 +383,8 @@ vputils::getOpcodeOrIntrinsicID(const VPValue *V) {
 /// Returns true if \p Opcode preserves uniformity, i.e., if all operands are
 /// uniform, the result will also be uniform.
 static bool preservesUniformity(unsigned Opcode) {
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+  if (Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode) ||
+      Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
   case Instruction::Freeze:

@@ -1497,9 +1497,9 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[C0]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = fneg double [[C0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP17]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fneg <vscale x 2 x double> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub double 0.000000e+00, [[C1]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT7]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
@@ -1524,7 +1524,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP10]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <vscale x 2 x double> [[BROADCAST_SPLAT2]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <vscale x 2 x double> [[BROADCAST_SPLAT6]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x double> @llvm.fmuladd.nxv2f64(<vscale x 2 x double> [[TMP3]], <vscale x 2 x double> [[BROADCAST_SPLAT8]], <vscale x 2 x double> [[TMP13]])
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x double> @llvm.fmuladd.nxv2f64(<vscale x 2 x double> [[BROADCAST_SPLAT]], <vscale x 2 x double> [[BROADCAST_SPLAT8]], <vscale x 2 x double> [[TMP13]])
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> [[TMP14]], <vscale x 2 x ptr> align 8 [[BROADCAST_SPLAT4]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP7]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP7]]
@@ -1552,10 +1552,10 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-UF2-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP4]], i32 [[N_MOD_VF]]
 ; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP8]]
-; CHECK-UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[C0]], i64 0
-; CHECK-UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = shl i32 [[N_VEC]], 2
-; CHECK-UF2-NEXT:    [[TMP10:%.*]] = fneg <vscale x 2 x double> [[BROADCAST_SPLAT]]
+; CHECK-UF2-NEXT:    [[TMP30:%.*]] = fneg double [[C0]]
+; CHECK-UF2-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP30]], i64 0
+; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-UF2-NEXT:    [[TMP11:%.*]] = fsub double 0.000000e+00, [[C1]]
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP11]], i64 0
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
