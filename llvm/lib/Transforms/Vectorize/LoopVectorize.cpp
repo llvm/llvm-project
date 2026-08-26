@@ -486,9 +486,13 @@ static std::optional<ElementCount> getSmallBestKnownTC(
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
+  // An estimate of zero means the loop is estimated not to be entered; it is
+  // not a usable trip count for the profitability decisions below (and would
+  // e.g. divide by zero when scaling runtime check cost), so treat it as
+  // unknown.
   if (LoopVectorizeWithBlockFrequency && !ComputeUpperBoundOnly)
-    if (auto EstimatedTC = getLoopEstimatedTripCount(L))
-      return ElementCount::getFixed(*EstimatedTC);
+    if (unsigned EstimatedTC = getLoopEstimatedTripCount(L).value_or(0))
+      return ElementCount::getFixed(EstimatedTC);
 
   if (!CanUseConstantMax)
     return std::nullopt;
@@ -4223,7 +4227,7 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
 
   if (Kind == CM_Widen_Reverse)
     Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                               VectorTy, {}, Config.CostKind, 0);
+                               VectorTy, Config.CostKind, {}, 0);
   return Cost;
 }
 
@@ -4243,7 +4247,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                Config.CostKind) +
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
-                              VectorTy, {}, Config.CostKind);
+                              VectorTy, Config.CostKind);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
@@ -4320,7 +4324,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
-                               VectorTy, {}, Config.CostKind, 0);
+                               VectorTy, Config.CostKind, {}, 0);
   }
   return Cost;
 }
@@ -4948,7 +4952,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
       return TTI.getShuffleCost(
           TargetTransformInfo::SK_Splice, cast<VectorType>(VectorTy),
-          cast<VectorType>(VectorTy), {}, Config.CostKind, -1);
+          cast<VectorType>(VectorTy), Config.CostKind, {}, -1);
     }
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
@@ -5752,8 +5756,7 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
-    assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
+  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
     assert(VPlans[0]->getSingleVF() == UserVF &&
            "expected second plan to be for the forced UserVF");
     assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&

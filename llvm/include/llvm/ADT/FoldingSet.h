@@ -299,14 +299,14 @@ public:
 class FoldingSetBase : public DebugEpochBase {
 protected:
   /// Array of bucket chains.
-  void **Buckets;
+  void **Buckets = nullptr;
 
   /// Length of the Buckets array.  Always a power of 2.
-  unsigned NumBuckets;
+  unsigned NumBuckets = 0;
 
   /// Number of nodes in the folding set. Growth occurs when NumNodes
   /// is greater than twice the number of buckets.
-  unsigned NumNodes;
+  unsigned NumNodes = 0;
 
   LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
