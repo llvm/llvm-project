@@ -54,3 +54,19 @@ struct DumpTypeConstraint {
 
 // CHECK-LABEL: Dumping DumpTypeConstraint:
 // CHECK: TemplateTypeParmDecl {{.*}} Concept {{.*}} 'CC...[0]' depth 1 index 0 T
+
+
+template <int N, template <class> class... TT>
+struct DumpDependentIndex {
+  using type = TT...[N + 1]<int>;
+};
+// CHECK-LABEL: Dumping DumpDependentIndex:
+// CHECK:      TypeAliasDecl {{.*}} type 'TT...[N + 1]<int>'
+// CHECK-NEXT: `-TemplateSpecializationType {{.*}} 'TT...[N + 1]<int>' dependent
+// CHECK-NEXT:   |-name: 'TT...[N + 1]':'template-parameter-0-1...[N + 1]' pack_indexing
+// CHECK-NEXT:   | |-pattern: 'TT':'template-parameter-0-1'
+// CHECK-NEXT:   | | `-TemplateTemplateParmDecl {{.*}} depth 0 index 1 ... TT
+// CHECK-NEXT:   | `-index: BinaryOperator {{.*}} '+'
+// CHECK-NEXT:   |   |-DeclRefExpr {{.*}} 'N' 'int'
+// CHECK-NEXT:   |   `-IntegerLiteral {{.*}} 1
+// CHECK-NEXT:   `-TemplateArgument type 'int'

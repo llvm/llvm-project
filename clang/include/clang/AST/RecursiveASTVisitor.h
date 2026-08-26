@@ -540,10 +540,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeConstraint(
     TRY_TO(TraverseConceptReference(C->getConceptReference()));
     return true;
   }
-  // A concept named through a template template parameter has no
-  // ConceptSpecializationExpr to carry its ConceptReference.
-  if (Expr *IDC = C->getImmediatelyDeclaredConstraint();
-      IDC && !C->getNamedConcept().getAsTemplateTemplateParmDecl()) {
+  if (Expr *IDC = C->getImmediatelyDeclaredConstraint()) {
     TRY_TO(TraverseStmt(IDC));
   } else {
     // Avoid traversing the ConceptReference in the TypeConstraint

@@ -126,7 +126,7 @@ PackIndexingTemplateStorage::PackIndexingTemplateStorage(
     : UncommonTemplateNameStorage(PackIndexing, /*Index=*/0,
                                   /*Data=*/Expansions.size()),
       Pattern(Pattern),
-      IndexAndIsFullySubstitited(IndexExpr, FullySubstituted) {
+      IndexAndIsFullySubstituted(IndexExpr, FullySubstituted) {
   llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 

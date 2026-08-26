@@ -539,23 +539,26 @@ class PackIndexingTemplateStorage final
   friend TrailingObjects;
 
   TemplateName Pattern;
-  llvm::PointerIntPair<Expr *, 1> IndexAndIsFullySubstitited;
+  llvm::PointerIntPair<Expr *, 1> IndexAndIsFullySubstituted;
 
   PackIndexingTemplateStorage(TemplateName Pattern, Expr *IndexExpr,
                               bool FullySubstituted,
                               ArrayRef<TemplateName> Expansions);
 
+  // We store the number of expansions in Bits.Data.
+  std::size_t getExpansionCount() const { return Bits.Data; }
+
 public:
   TemplateName getPattern() const { return Pattern; }
 
-  Expr *getIndexExpr() const { return IndexAndIsFullySubstitited.getPointer(); }
+  Expr *getIndexExpr() const { return IndexAndIsFullySubstituted.getPointer(); }
 
   bool isFullySubstituted() const {
-    return IndexAndIsFullySubstitited.getInt();
+    return IndexAndIsFullySubstituted.getInt();
   }
 
   ArrayRef<TemplateName> getExpansions() const {
-    return getTrailingObjects(Bits.Data);
+    return getTrailingObjects(getExpansionCount());
   }
 
   TemplateTemplateParmDecl *getParameterPack() const;
@@ -565,7 +568,7 @@ public:
   TemplateName getSelectedTemplate() const;
 
   bool expandsToEmptyPack() const {
-    return isFullySubstituted() && Bits.Data == 0;
+    return isFullySubstituted() && getExpansionCount() == 0;
   }
 
   TemplateNameDependence getDependence() const;
