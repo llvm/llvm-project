@@ -117,8 +117,7 @@ public:
     return Owner->getOption(Info->AliasID);
   }
 
-  /// Get the alias arguments as a \0 separated list terminated by an empty
-  /// string. E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
+  /// Get the alias arguments; see Info::AliasArgsOffset for the encoding.
   const char *getAliasArgs() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
@@ -127,7 +126,7 @@ public:
 
   bool hasAliasArgs() const {
     assert(Info && "Must have a valid info!");
-    return Info->AliasArgsOffset.value() != 0;
+    return Info->hasAliasArgs();
   }
 
   /// Get the default prefix for this option.

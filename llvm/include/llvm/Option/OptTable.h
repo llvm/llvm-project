@@ -60,8 +60,9 @@ public:
     const char *Usage;
   };
 
-  /// An option ID together with the values produced by TableGen `ValuesCode`.
-  using ValuesCodeEntry = std::pair<unsigned, const char *>;
+  /// Returns the values produced by TableGen `ValuesCode` for an option ID, or
+  /// the empty string. Generated code supplies this; see ValuesCodeFn.
+  using ValuesCodeFnTy = StringRef (*)(unsigned);
 
   /// Entry for a single option instance in the option data table.
   struct Info {
@@ -71,7 +72,7 @@ public:
     // Help text for specific visibilities. A list of pairs, where each pair
     // is a list of visibilities and a specific help string for those
     // visibilities. If no help text is found in this list for the visibility of
-    // the program, HelpText is used instead. This cannot use std::vector
+    // the program, HelpTextOffset is used instead. This cannot use std::vector
     // because OptTable is used in constexpr contexts. Increase the array sizes
     // here if you need more entries and adjust the constants in
     // OptionParserEmitter::EmitHelpTextsForVariants.
@@ -90,6 +91,8 @@ public:
     /// The alias arguments as a \0 separated list terminated by an empty
     /// string, e.g. "foo\0bar\0".
     StringTable::Offset AliasArgsOffset;
+
+    bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
     /// The possible values as a comma separated list; see ValuesCodeTable.
     StringTable::Offset ValuesOffset;
     // Offset into OptTable's SubCommandIDsTable.
@@ -108,6 +111,10 @@ public:
                            : PrefixesTable.slice(PrefixesOffset + 1,
                                                  getNumPrefixes(PrefixesTable));
     }
+
+    /// Whether the .td supplied a help text. An explicitly empty one is not the
+    /// same as none: it marks the option as deliberately undocumented.
+    bool hasHelpText() const { return HelpTextOffset.value() != 0; }
 
     bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
 
@@ -187,7 +194,7 @@ private:
 
   /// Values of options declared with TableGen `ValuesCode`: only the generated
   /// code knows them, so they cannot go in the string table.
-  ArrayRef<ValuesCodeEntry> ValuesCodeTable;
+  ValuesCodeFnTy ValuesCodeFn = nullptr;
 
   bool GroupedShortOptions = false;
   bool DashDashParsing = false;
@@ -217,20 +224,16 @@ private:
 
   StringTable::Offset getHelpTextOffset(const Info &I,
                                         Visibility VisibilityMask) const {
-    for (auto [Visibilities, TextOffset] : I.HelpTextsForVariants)
-      for (auto Visibility : Visibilities)
-        if (VisibilityMask & Visibility)
+    for (const auto &[Visibilities, TextOffset] : I.HelpTextsForVariants)
+      for (auto Vis : Visibilities)
+        if (VisibilityMask & Vis)
           return TextOffset;
     return I.HelpTextOffset;
   }
 
   StringRef getOptionValues(const Info &I) const {
-    if (I.ValuesOffset.value())
-      return (*StrTable)[I.ValuesOffset];
-    for (const auto &[ID, Values] : ValuesCodeTable)
-      if (ID == I.ID)
-        return Values;
-    return StringRef();
+    StringRef Values = (*StrTable)[I.ValuesOffset];
+    return Values.empty() && ValuesCodeFn ? ValuesCodeFn(I.ID) : Values;
   }
 
   std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,
@@ -244,7 +247,7 @@ protected:
            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
            ArrayRef<SubCommand> SubCommands = {},
            ArrayRef<unsigned> SubCommandIDsTable = {},
-           ArrayRef<ValuesCodeEntry> ValuesCodeTable = {});
+           ValuesCodeFnTy ValuesCodeFn = nullptr);
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
@@ -506,7 +509,7 @@ protected:
                            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
                            ArrayRef<SubCommand> SubCommands = {},
                            ArrayRef<unsigned> SubCommandIDsTable = {},
-                           ArrayRef<ValuesCodeEntry> ValuesCodeTable = {});
+                           ValuesCodeFnTy ValuesCodeFn = nullptr);
 };
 
 class PrecomputedOptTable : public OptTable {
@@ -518,9 +521,9 @@ protected:
                       bool IgnoreCase = false,
                       ArrayRef<SubCommand> SubCommands = {},
                       ArrayRef<unsigned> SubCommandIDsTable = {},
-                      ArrayRef<ValuesCodeEntry> ValuesCodeTable = {})
+                      ValuesCodeFnTy ValuesCodeFn = nullptr)
       : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-                 SubCommandIDsTable, ValuesCodeTable) {
+                 SubCommandIDsTable, ValuesCodeFn) {
     for (auto PrefixOffset : PrefixesUnionOffsets)
       PrefixesUnion.push_back(StrTable[PrefixOffset]);
     buildPrefixChars();

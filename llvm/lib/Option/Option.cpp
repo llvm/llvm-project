@@ -18,6 +18,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::opt;

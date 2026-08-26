@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
-#include <cstring>
 #include <map>
 #include <set>
 #include <string>
@@ -81,11 +80,11 @@ OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<Info> OptionInfos, bool IgnoreCase,
                    ArrayRef<SubCommand> SubCommands,
                    ArrayRef<unsigned> SubCommandIDsTable,
-                   ArrayRef<ValuesCodeEntry> ValuesCodeTable)
+                   ValuesCodeFnTy ValuesCodeFn)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
       OptionInfos(OptionInfos), IgnoreCase(IgnoreCase),
       SubCommands(SubCommands), SubCommandIDsTable(SubCommandIDsTable),
-      ValuesCodeTable(ValuesCodeTable) {
+      ValuesCodeFn(ValuesCodeFn) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
@@ -195,12 +194,12 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
   // Search all options and return possible values.
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    StringRef Values = getOptionValues(In);
-    if (Values.empty() || !optionMatches(*StrTable, PrefixesTable, In, Option))
+    if (!In.ValuesOffset.value() ||
+        !optionMatches(*StrTable, PrefixesTable, In, Option))
       continue;
 
     SmallVector<StringRef, 8> Candidates;
-    Values.split(Candidates, ",", -1, false);
+    getOptionValues(In).split(Candidates, ",", -1, false);
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
@@ -217,7 +216,7 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
   std::vector<std::string> Ret;
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (In.hasNoPrefix() || (!In.HelpTextOffset.value() && !In.GroupID))
+    if (In.hasNoPrefix() || (!In.hasHelpText() && !In.GroupID))
       continue;
     if (!(In.Visibility & VisibilityMask))
       continue;
@@ -620,8 +619,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     llvm_unreachable("Invalid option with help text.");
 
   case Option::MultiArgClass:
-    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id);
-        !MetaVarName.empty()) {
+    if (StringRef MetaVarName = O.getMetaVar(); !MetaVarName.empty()) {
       // For MultiArgs, metavar is full list of all argument names.
       Name += ' ';
       Name += MetaVarName;
@@ -645,7 +643,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     [[fallthrough]];
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
-    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id); !MetaVarName.empty())
+    if (StringRef MetaVarName = O.getMetaVar(); !MetaVarName.empty())
       Name += MetaVarName;
     else
       Name += "<value>";
@@ -755,7 +753,7 @@ void OptTable::internalPrintHelp(
 
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
-  std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
+  std::map<StringRef, std::vector<OptionInfo>> GroupedOptionHelp;
 
   auto ActiveSubCommand = llvm::find_if(
       SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
@@ -818,18 +816,19 @@ void OptTable::internalPrintHelp(
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
-    StringRef HelpText = getOptionHelpText(Id, VisibilityMask);
-    if (!getHelpTextOffset(CandidateInfo, VisibilityMask).value() &&
-        ShowAllAliases) {
+    StringTable::Offset HelpTextOffset =
+        getHelpTextOffset(CandidateInfo, VisibilityMask);
+    if (!HelpTextOffset.value() && ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
+        HelpTextOffset =
+            getHelpTextOffset(getInfo(Alias.getID()), VisibilityMask);
     }
 
-    if (!HelpText.empty()) {
+    if (StringRef HelpText = (*StrTable)[HelpTextOffset]; !HelpText.empty()) {
       StringRef HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
-      GroupedOptionHelp[HelpGroup.str()].push_back({OptName, HelpText});
+      GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});
     }
   }
 
@@ -847,9 +846,9 @@ GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<Info> OptionInfos, bool IgnoreCase,
                                  ArrayRef<SubCommand> SubCommands,
                                  ArrayRef<unsigned> SubCommandIDsTable,
-                                 ArrayRef<ValuesCodeEntry> ValuesCodeTable)
+                                 ValuesCodeFnTy ValuesCodeFn)
     : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-               SubCommandIDsTable, ValuesCodeTable) {
+               SubCommandIDsTable, ValuesCodeFn) {
 
   std::set<StringRef> TmpPrefixesUnion;
   for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))

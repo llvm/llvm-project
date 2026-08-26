@@ -43,7 +43,7 @@ public:
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                             OptionPrefixesUnion, /*IgnoreCase=*/false,
                             /*SubCommands=*/{}, /*SubCommandIDsTable=*/{},
-                            OptionValuesCodeTable) {}
+                            getOptionValuesCode) {}
 };
 } // anonymous namespace
 

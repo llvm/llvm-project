@@ -67,7 +67,7 @@ public:
   TestOptTable(bool IgnoreCase = false)
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                         IgnoreCase, /*SubCommands=*/{},
-                        /*SubCommandIDsTable=*/{}, OptionValuesCodeTable) {}
+                        /*SubCommandIDsTable=*/{}, getOptionValuesCode) {}
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
@@ -75,7 +75,7 @@ public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                             OptionPrefixesUnion, IgnoreCase, /*SubCommands=*/{},
-                            /*SubCommandIDsTable=*/{}, OptionValuesCodeTable) {}
+                            /*SubCommandIDsTable=*/{}, getOptionValuesCode) {}
 };
 }
 
