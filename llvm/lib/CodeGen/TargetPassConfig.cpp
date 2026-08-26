@@ -1592,10 +1592,6 @@ bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
 }
 
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
-}
-
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {
   return std::make_unique<CSEConfigBase>();
 }

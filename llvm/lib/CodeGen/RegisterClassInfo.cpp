@@ -213,7 +213,14 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   if (NAllocatableRegs == 0)
     return RegPressureSetLimit;
   unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
-  return RegPressureSetLimit - TRI->getRegClassWeight(RC).RegWeight * NReserved;
+  unsigned ReservedRegWeight = TRI->getRegClassWeight(RC).RegWeight * NReserved;
+  // A target-provided limit may already account for restricted register
+  // availability, such as an AMDGPU occupancy requirement. If the additional
+  // reserved-register adjustment would not leave a positive limit, preserve the
+  // target's nonzero limit; zero is the PSetLimits cache sentinel.
+  if (ReservedRegWeight >= RegPressureSetLimit)
+    return RegPressureSetLimit;
+  return RegPressureSetLimit - ReservedRegWeight;
 }
 
 INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass,

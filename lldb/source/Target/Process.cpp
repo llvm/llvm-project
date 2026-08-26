@@ -2102,7 +2102,8 @@ Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   // If the buffer is not large enough, this is a programmer error.
   // In production builds, gracefully fail by returning a length of 0 for all
   // ranges.
-  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
+  assert(buffer.size() >= total_ranges_len &&
+         "Process::DoReadMemoryRanges: provided buffer is too short");
   if (buffer.size() < total_ranges_len) {
     llvm::MutableArrayRef<uint8_t> empty;
     return {ranges.size(), empty};

@@ -278,7 +278,7 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
 
 /// The module is not registered with the Target until LoadBinaryInTarget.
 static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
-                         llvm::Expected<SymbolLocator::Result> located) {
+                         llvm::Expected<SymbolLocator::Result> &&located) {
   if (!located) {
     // Loading a binary that was never found already reports that, so a bare
     // not-found error would only say it a second time. Any other error says
