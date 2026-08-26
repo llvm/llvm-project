@@ -2773,6 +2773,12 @@ typedef struct kmp_taskgraph_target_node {
 typedef struct kmp_taskgraph_node {
   kmp_task_t *task;
   bool taskloop_task;
+  // True for undeferred (included) tasks.  For example target constructs within
+  // a taskgraph are 'included', which means that they block execution of the
+  // encountering task.  This allows e.g. "target enter data", "target", "target
+  // exit data" constructs with no explicit data dependencies between them to
+  // execute sequentially in taskgraph context as a user would expect.
+  bool undeferred;
   kmp_task_relocate_t relocate;
   kmp_taskgraph_reduce_input_data_t *reduce_input;
   // Non-NULL iff this node represents a target / target-data construct.

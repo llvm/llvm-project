@@ -368,6 +368,14 @@ kmp_taskgraph_region_dep_t *__kmp_region_deplist_add(
   return head;
 }
 
+static bool __kmp_region_deplist_contains(kmp_taskgraph_region_dep_t *list,
+                                          kmp_taskgraph_region_t *region) {
+  for (; list; list = list->next)
+    if (list->region == region)
+      return true;
+  return false;
+}
+
 kmp_taskgraph_region_t *
 __kmp_region_worklist_reverse(kmp_taskgraph_region_t *list) {
   kmp_taskgraph_region_t *last = nullptr;
@@ -3165,10 +3173,10 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           __kmp_region_deplist_add(thread, &taskgraph->recycled_deps, tg_succ,
                                    initial_regions[i].successors);
     }
-    // Handle control flow dependencies.  If a node (e.g. a taskloop task) has
-    // a wait after it corresponding to the end of an implicit taskgroup, join
-    // the task to the wait.  The wait then becomes a barrier; any tasks after
-    // it will depend on the barrier.
+    // Handle control flow dependencies.  If a node (e.g. a taskloop task) has a
+    // wait after it corresponding to the end of an implicit taskgroup, join the
+    // task to the wait.  The wait then becomes a barrier; any tasks after it
+    // will depend on the barrier.
     if (nodes[i].u.unresolved.cfg_successor != -1) {
       kmp_int32 cfg_succ = nodes[i].u.unresolved.cfg_successor;
       initial_regions[i].successors = __kmp_region_deplist_add(
@@ -3178,9 +3186,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           thread, &taskgraph->recycled_deps, &initial_regions[i],
           initial_regions[cfg_succ].predecessors);
     }
-    if (nodes[i].taskloop_task && !nodes[i].task) {
-      cfg_barrier = &initial_regions[i];
-    } else if (cfg_barrier) {
+    // Check for the TASKGRAPH_REGION_WAIT inserted after a taskloop.
+    bool is_taskgroup_marker = nodes[i].taskloop_task && !nodes[i].task;
+    // Avoid inserting duplicate edges.
+    if (cfg_barrier && !is_taskgroup_marker &&
+        !__kmp_region_deplist_contains(initial_regions[i].predecessors,
+                                       cfg_barrier)) {
       cfg_barrier->successors = __kmp_region_deplist_add(
           thread, &taskgraph->recycled_deps, &initial_regions[i],
           cfg_barrier->successors);
@@ -3188,6 +3199,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           thread, &taskgraph->recycled_deps, cfg_barrier,
           initial_regions[i].predecessors);
     }
+    // If we find a post-taskloop WAIT or an undeferred task, record it as a
+    // barrier.  For the undeferred case, this is what makes e.g. "target enter
+    // data", "target", "target exit data" execute in sequence within a
+    // taskgraph.
+    if (is_taskgroup_marker || nodes[i].undeferred)
+      cfg_barrier = &initial_regions[i];
   }
 
   __kmp_dephash_free<false>(thread, hash);
