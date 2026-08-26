@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -1529,33 +1528,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Type *FPType = V->getType()->getScalarType();
       KnownFPClass Result =
           computeKnownFPClass(V, DemandedElts, fcAllFlags, Q, Depth + 1);
-      FPClassTest FPClasses = Result.KnownFPClasses;
 
-      // TODO: Treat it as zero/poison if the use of I is unreachable.
-      if (FPClasses == fcNone)
-        break;
-
-      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
-        Known.setAllConflict();
-
-        if (FPClasses & fcInf)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
-
-        if (FPClasses & fcZero)
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APInt::getZero(FPType->getScalarSizeInBits())));
-
-        Known.Zero.clearSignBit();
-        Known.One.clearSignBit();
-      }
-
-      if (Result.SignBit) {
-        if (*Result.SignBit)
-          Known.makeNegative();
-        else
-          Known.makeNonNegative();
-      }
+      Known = Result.toKnownBits(FPType->getFltSemantics());
 
       break;
     }
@@ -2871,6 +2845,10 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         if (II->getArgOperand(0) == II->getArgOperand(1))
           return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Q, Depth);
         break;
+      case Intrinsic::riscv_vsetvlimax:
+        // VLMAX is VLEN * LMUL / SEW, which is always a non-zero power of two
+        // for any valid vtype, so it is a power of two regardless of OrZero.
+        return true;
       default:
         break;
       }
