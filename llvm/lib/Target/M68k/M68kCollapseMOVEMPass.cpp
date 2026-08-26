@@ -186,14 +186,14 @@ public:
     MachineInstrBuilder NewMIB;
     if (State.isLoad()) {
       NewMIB = BuildMI(MBB, End, DL, TII->get(M68k::MOVM32mp))
-          .addImm(State.getMask())
-          .addImm(State.getFinalOffset())
-          .addReg(State.getBase());
+                   .addImm(State.getMask())
+                   .addImm(State.getFinalOffset())
+                   .addReg(State.getBase());
     } else {
       NewMIB = BuildMI(MBB, End, DL, TII->get(M68k::MOVM32pm))
-          .addImm(State.getFinalOffset())
-          .addReg(State.getBase())
-          .addImm(State.getMask());
+                   .addImm(State.getFinalOffset())
+                   .addReg(State.getBase())
+                   .addImm(State.getMask());
     }
 
     // Delete all the old MOVEM instructions, and copy their implicit defs/uses
