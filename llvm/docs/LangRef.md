@@ -20409,16 +20409,7 @@ The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison and `nsz` semantics as the
-'`llvm.maximumnum.*`' intrinsic:
-
-- this intrinsic does not propagate NaNs: the result is a NaN only if every
-  element of the input vector is a NaN.
-- By default -0.0 is considered less than +0.0, so if the maximum is a zero,
-  the result is `-0.0` when every zero in the vector is `-0.0`, and `+0.0`
-  otherwise.
-- If the `nsz` flag is specified and the result is a zero, its sign is
-  unspecified when the vector contains zeros of both signs: if every zero in
-  the vector has the same sign, the result still has that sign.
+'`llvm.maximumnum.*`' intrinsic.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
@@ -20442,16 +20433,7 @@ The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison and `nsz` semantics as the
-'`llvm.minimumnum.*`' intrinsic:
-
-- this intrinsic does not propagate NaNs: the result is a NaN only if every
-  element of the input vector is a NaN.
-- By default -0.0 is considered less than +0.0, so if the minimum is a zero,
-  the result is `+0.0` when every zero in the vector is `+0.0`, and `-0.0`
-  otherwise.
-- If the `nsz` flag is specified and the result is a zero, its sign is
-  unspecified when the vector contains zeros of both signs: if every zero in
-  the vector has the same sign, the result still has that sign.
+'`llvm.minimumnum.*`' intrinsic.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
