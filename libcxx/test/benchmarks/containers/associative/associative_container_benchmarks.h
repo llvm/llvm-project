@@ -77,6 +77,8 @@ void associative_container_benchmarks(std::string container) {
 
   static constexpr bool is_map_like = requires { typename Container::mapped_type; };
 
+  static constexpr bool is_hash_table_based = requires(Container c) { c.bucket_count(); };
+
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
   // PauseTiming() and ResumeTiming().
@@ -732,7 +734,7 @@ void associative_container_benchmarks(std::string container) {
         "equal_range(key)", query_bench([](Container const& c, Key const& key) { return c.equal_range(key); }));
   }
 
-  if constexpr (is_multi_key_container) {
+  if constexpr (is_multi_key_container && is_hash_table_based) {
     bench_non_empty("rehash (half keys tripled)", [=](auto& st) TEST_ALIGN_BENCHMARK {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size));
