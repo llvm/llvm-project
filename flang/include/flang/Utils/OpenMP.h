@@ -53,12 +53,25 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 /// For values used inside a target region but defined outside, either clone
 /// these value inside the target region or map them to the region. This
 /// function first tries to clone values (if they are defined by
-/// memory-effect-free ops, otherwise, the values are mapped.
+/// memory-effect-free ops), otherwise, the values are mapped. It iterates to a
+/// fixpoint: every outsider is resolved (cloned or mapped) so the set of
+/// values-defined-above eventually drains.
 ///
 /// \param firOpBuilder - Operation builder.
 /// \param targetOp     - The target that needs to be extended by clones and/or
 /// maps.
 void cloneOrMapRegionOutsiders(
+    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
+
+/// A similar but lighter variation of cloneOrMapRegionOutsiders, which only
+/// clones values outside of the region that are memory effect free and does
+/// not resolve all values-defined-above if some require mapping. The intent
+/// is primarily to clone over constant values required for shape and extent
+/// creation.
+/// \param firOpBuilder - Operation builder.
+/// \param targetOp     - The target whose region-local clones need their
+/// defined-above operands sunk in.
+void cloneRegionOutsiders(
     fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
 
 using RecordMemberMapperMangler =

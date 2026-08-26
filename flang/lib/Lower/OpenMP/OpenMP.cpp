@@ -2202,7 +2202,8 @@ static void genBodyOfTargetOp(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::omp::TargetOp &targetOp, const ObjectEntryBlockArgs &args,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+    ConstructQueue::const_iterator item, DataSharingProcessor &dsp,
+    llvm::ArrayRef<const semantics::Symbol *> targetNestedPrivateSyms = {}) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
@@ -2249,6 +2250,13 @@ static void genBodyOfTargetOp(
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 
+  // Materialize region-local copies for the private list items of inner leaf
+  // constructs (e.g. distribute) of a combined/composite target directive,
+  // with the intent of replacing a host to device data-mapping (map info
+  // emission).
+  for (const semantics::Symbol *sym : targetNestedPrivateSyms)
+    converter.createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+
   bool immediatelyNestsTeams = false;
   if (std::next(item) != queue.end()) {
     immediatelyNestsTeams = llvm::omp::topTeamsSet.test(std::next(item)->id);
@@ -2272,6 +2280,13 @@ static void genBodyOfTargetOp(
   } else {
     genNestedEvaluations(converter, eval);
   }
+
+  // When materializing arrays inside of the target region for composite
+  // directives with leaf-bound private clauses, we can end up with the
+  // constants populating the shape being bound to constants external to the
+  // target region, so we perform a final clone step to resolve these, we
+  // intentionally avoid introducing new maps at this stage.
+  cloneRegionOutsiders(firOpBuilder, targetOp);
 
   dsp.processStep2(targetOp, /*isLoop=*/false);
 }
@@ -3952,6 +3967,147 @@ static void collectSymbolsWithDynamicSubstring(
   symbolsWithDynamicSubstring = visitor.symbolsWithDynamicSubstring;
 }
 
+// Reverse search the composite/combined directive and return the first leaf
+// carrying a private clause, the OpenMP specification dictates that the first
+// leaf that can legally have a private clause becomes the owner.
+//
+// The function intentionally skips the node representing the root target
+// directive by setting the end (begin) point to the second leaf, the private
+// clauses on a standalone target region should apply through regular
+// privatization means. Otherwise, if we find no relevant leaf node (carrying a
+// private clause) we return the end of the iterator.
+static ConstructQueue::const_iterator
+findInnermostPrivateLeaf(ConstructQueue::const_iterator item,
+                         const ConstructQueue &queue) {
+  auto hasPrivate = [](ConstructQueue::const_iterator it) {
+    return llvm::any_of(it->clauses, [](const Clause &clause) {
+      return std::holds_alternative<clause::Private>(clause.u);
+    });
+  };
+  auto begin = std::next(item);
+  for (auto it = queue.end(); it != begin;) {
+    --it;
+    if (hasPrivate(it))
+      return it;
+  }
+  return queue.end();
+}
+
+// Verify if it's safe to drop the map and materialize a clone. Certain cases
+// still currently require a map to be OpenMP specification compliant, a
+// rewording of the specfications privatization rules made to be a bit more
+// concise, if the type is an:
+//
+//  Allocatable -
+//    1) If the status is unallocated, the private allocatable is unallocated
+//    2) If the allocation status is allocated, the private allocatable is
+//    allocated 3) If it's an array, the allocatables shape and bounds will be
+//    the same.
+//  Pointer - The intial status of a private pointer is undefined.
+//  Other - If the type of the list item has default initialization, the new
+//  list item has default initialization. Otherwise, it's undefined.
+//
+// From the above list, it is currently fine to drop maps and materialize clones
+// for scalars, pointers, and constant arrays. As their creation does not
+// neccesitate referencing dynamic extent/shape/allocation-status values defined
+// outside the target region. Types that fall into this category and that need a
+// map still (just to populate the initial state) are allocatables (and by
+// extension this unfortunately precludes derived types with allocatables in
+// them for now), and assumed shape arrays (size being illegal on a private
+// clause). Currently we leave these as they were before, but in the future we
+// can minimize the mapping by sending across exactly what we require to be
+// specification compliant.
+static bool isTargetLocalCloneable(const semantics::Symbol &sym,
+                                   semantics::SemanticsContext &semaCtx) {
+  const semantics::Symbol &ult = sym.GetUltimate();
+  // Allocatable descriptors cannot be cloned and have their implicit map
+  // blocked, the clone requires the host descriptor for allocation
+  // status/bounds.
+  if (semantics::IsAllocatable(ult))
+    return false;
+
+  // A derived type with an allocatable ultimate component cannot be cloned and
+  // have its implicit map dropped for the same reasons we currently have to
+  // do it for the allocatable case.
+  if (const semantics::DeclTypeSpec *declType = ult.GetType())
+    if (const semantics::DerivedTypeSpec *derived = declType->AsDerived())
+      if (semantics::FindAllocatableUltimateComponent(*derived))
+        return false;
+
+  // Pointers initial status is undefined, so we can just materialize it with
+  // the correct typing, but we need to be a little more careful with anything
+  // else that isn't a scalar and verify that it has constant extents and shape.
+  if (ult.Rank() > 0 && !semantics::IsPointer(ult)) {
+    evaluate::FoldingContext &foldingContext = semaCtx.foldingContext();
+    std::optional<evaluate::Shape> shape =
+        evaluate::GetShape(foldingContext, ult);
+    std::optional<evaluate::ConstantSubscripts> extents =
+        evaluate::AsConstantExtents(foldingContext, shape);
+    if (!extents || evaluate::HasNegativeExtent(*extents))
+      return false;
+  }
+  return true;
+}
+
+// Discover the `private` list items of the inner leaf construct of a
+// combined/composite clause e.g. the "s" in `target teams distribute
+// private(a)`. These are not privatized on the target itself, and without
+// intervention would normally be implicitly mapped unnecesarily. This function
+// collects the relevant symbols so we can prevent their implicit mapping and
+// materialize in region replacements for the private clause to redirect to,
+// this prevents IFA errors during verification. The blocking of implicit maps
+// is done during implicit map generating utilising these symbols, and the
+// materialization occurs during the intitial stages of the targe body
+// generation, however, materializaiton only occurs in cases where the innerleaf
+// is not a team as it does its own materialization.
+static void collectTargetNestedPrivateSyms(
+    semantics::SemanticsContext &semaCtx, ConstructQueue::const_iterator item,
+    const ConstructQueue &queue, llvm::ArrayRef<Object> mapObjects,
+    const DataSharingProcessor &dsp,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &targetNestedPrivateSyms,
+    bool &innermostLeafIsTeams) {
+  innermostLeafIsTeams = false;
+
+  // Avoid capturing symbols on anything with explicit mapping or privatization.
+  auto isExcluded = [&](const semantics::Symbol *sym) {
+    const semantics::Symbol &ult = sym->GetUltimate();
+    if (llvm::any_of(mapObjects, [&](const Object &o) {
+          return o.sym() && o.sym()->GetUltimate() == ult;
+        }))
+      return true;
+    return llvm::any_of(
+        dsp.getAllSymbolsToPrivatize(),
+        [&](const semantics::Symbol *p) { return p->GetUltimate() == ult; });
+  };
+
+  ConstructQueue::const_iterator innermostPrivateLeaf =
+      findInnermostPrivateLeaf(item, queue);
+
+  // No private clause owning leaf found.
+  if (innermostPrivateLeaf == queue.end())
+    return;
+
+  // if the leaf node is a teams leaf, it already performs what target region
+  // must do for other leaf nodes, creates new host-associate clones inside the
+  // region, altough, there is no redirection through inner private clauses in
+  // this case. The main caveat of this is that we can skip the inner clone step
+  // for teams, and simply have to skip the extra implicit maps.
+  innermostLeafIsTeams = llvm::omp::topTeamsSet.test(innermostPrivateLeaf->id);
+
+  for (const Clause &clause : innermostPrivateLeaf->clauses) {
+    if (const auto *priv = std::get_if<clause::Private>(&clause.u)) {
+      for (const Object &object : priv->v) {
+        const semantics::Symbol *sym = object.sym();
+        if (!sym || isExcluded(sym))
+          continue;
+        if (!isTargetLocalCloneable(*sym, semaCtx))
+          continue;
+        targetNestedPrivateSyms.push_back(sym);
+      }
+    }
+  }
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -4046,6 +4202,23 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
                                      symbolsWithDynamicSubstring);
 
+  // Collect private clause symbols on the innermost leaf (that can legally own
+  // the clause) for composite directives. For example the "s" in
+  // "target teams distribute private(s)" belongs to the distribute directive
+  // and not the target region. So we would like to gather these symbols so we
+  // can appropriately block the unrequired implicit maps and create a seperate
+  // in region copy of the variable, which may then be further privatized or
+  // used directly. This is somewhat analogus to what the teams directive
+  // already does when privatizing, but our main reasons here are specification
+  // legality as the prviate clause shouldn't apply to the target region in this
+  // scenario and more importantly if there is no private clause we have to
+  // placate the target regions IFA restrictions with an alternative block
+  // argument or in this case materialize an in region replacement.
+  llvm::SmallVector<const semantics::Symbol *> targetNestedPrivateSyms;
+  bool innermostLeafIsTeams = false;
+  collectTargetNestedPrivateSyms(semaCtx, item, queue, mapObjects, dsp,
+                                 targetNestedPrivateSyms, innermostLeafIsTeams);
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
   // symbols used inside the region that do not have explicit data-environment
@@ -4098,6 +4271,17 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     // Skip groupprivate symbols - they don't need to be mapped because
     // groupprivate creates its own storage.
     if (sym.GetUltimate().test(semantics::Symbol::Flag::OmpGroupPrivate))
+      return;
+
+    // Skip mapping of symbols that appear in private clauses of composite
+    // directive leaf nodes. For example "target teams distribute private(s)",
+    // in this case "s" does not need a map as any usage at a user-level is
+    // privatized and does not neccesitate a data transfer in most cases
+    // (assumed shape arrays being an exception as we need there shape to create
+    // the private copy).
+    if (llvm::any_of(targetNestedPrivateSyms, [&](const semantics::Symbol *s) {
+          return s == &sym || s->GetUltimate() == sym.GetUltimate();
+        }))
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
@@ -4262,8 +4446,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   args.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   args.priv.vars = clauseOps.privateVars;
 
-  genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, args, loc,
-                    queue, item, dsp);
+  genBodyOfTargetOp(
+      converter, symTable, semaCtx, eval, targetOp, args, loc, queue, item, dsp,
+      innermostLeafIsTeams ? llvm::ArrayRef<const semantics::Symbol *>{}
+                           : targetNestedPrivateSyms);
 
   // Remove the host_eval information structure created for this target region.
   if (!isTargetDevice)
