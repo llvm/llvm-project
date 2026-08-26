@@ -1658,8 +1658,10 @@ public:
       if (N == 1)
         return InstructionCost(0);
 
-      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0, CostKind) -
-        N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0, CostKind);
+      return TTI.getMemoryOpCost(Instruction::Load, VecTy, Align(1), 0,
+                                 CostKind) -
+             N * TTI.getMemoryOpCost(Instruction::Load, EltTy, Align(1), 0,
+                                     CostKind);
     };
 
     // Iterate over LHS and operations feeding LHS and check if it is profitable
