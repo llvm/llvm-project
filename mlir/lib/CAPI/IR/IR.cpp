@@ -1406,8 +1406,8 @@ MlirStringRef mlirSymbolTableGetSymbolAttributeName() {
   return wrap(SymbolTable::getSymbolAttrName());
 }
 
-MlirStringRef mlirSymbolTableGetVisibilityAttributeName() {
-  return wrap(SymbolTable::getVisibilityAttrName());
+MlirStringRef mlirSymbolTableGetDefaultVisibilityAttributeName() {
+  return wrap(SymbolOpInterface::getDefaultVisibilityAttrName());
 }
 
 MlirSymbolTable mlirSymbolTableCreate(MlirOperation operation) {

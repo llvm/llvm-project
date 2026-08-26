@@ -298,8 +298,8 @@ public:
     newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
     newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
     if (StringAttr visibility = funcOp.getSymVisibilityAttr())
-      newFuncOp->setDiscardableAttr(SymbolTable::getVisibilityAttrName(),
-                                    visibility);
+      newFuncOp->setDiscardableAttr(
+          SymbolOpInterface::getDefaultVisibilityAttrName(), visibility);
 
     // Copy over all attributes other than the function name and type.
     for (const auto &namedAttr :
