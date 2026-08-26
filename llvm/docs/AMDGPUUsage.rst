@@ -1919,9 +1919,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    the intrinsic in the same way as llvm.amdgcn.sched.barrier. Takes two parameters:
 
                                                    - Priority (i16): Hardware wave priority level. 0 = lowest, 3 = highest.
-                                                   - Mask (i32): Scheduling barrier mask. Memory mask bits (VMEM, VMEM_READ,
-                                                     VMEM_WRITE, DS, DS_READ, DS_WRITE, LDSDMA) may not be set since they
-                                                     contradict the S_SETPRIO instruction's inherent scheduling dependencies.
+                                                   - Mask (i32): Scheduling barrier mask.
 
   llvm.amdgcn.s.setprio                            Like llvm.amdgcn.s.setprio.mask with Mask = 0.
 
