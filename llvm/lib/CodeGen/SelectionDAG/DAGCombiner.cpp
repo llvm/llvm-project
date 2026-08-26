@@ -16720,13 +16720,12 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                                ISD::ZEXTLOAD, ISD::ZERO_EXTEND))
       return foldedExt;
   } else {
-    bool Frozen = N0.getOpcode() == ISD::FREEZE;
+    // TODO: Support multiple uses of the load when frozen.
+    bool Frozen = N0.getOpcode() == ISD::FREEZE && N0.getOperand(0).hasOneUse();
     SDValue LoadOp = Frozen ? N0.getOperand(0) : N0;
     EVT LoadVT = LoadOp.getValueType();
-    // TODO: Support multiple uses of the load when frozen.
     if (ISD::isNON_EXTLoad(LoadOp.getNode()) &&
-        ISD::isUNINDEXEDLoad(LoadOp.getNode()) &&
-        (!Frozen || LoadOp->hasNUsesOfValue(1, 0))) {
+        ISD::isUNINDEXEDLoad(LoadOp.getNode())) {
       LoadSDNode *LN0 = cast<LoadSDNode>(LoadOp);
       if (TLI.isLoadLegalOrCustom(VT, LoadVT, LN0->getAlign(),
                                   LN0->getAddressSpace(), ISD::EXTLOAD,
