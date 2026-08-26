@@ -2304,7 +2304,32 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
         if (SemaRef.CurContext->isTranslationUnit()) {
           /// Global module fragment can only be declared in the beginning of
           /// the file. CurrentModule should be null in this case.
-          if (!CurrentModule) {
+          bool CanGlobalModuleFragment = !CurrentModule;
+          /// Named module should be declared in the beginning of the file,
+          /// or after the global module fragment.
+          bool CanNamedModule =
+              !CurrentModule ||
+              CurrentModule->Kind == Module::ExplicitGlobalModuleFragment ||
+              CurrentModule->Kind == Module::ImplicitGlobalModuleFragment;
+          /// Import can occur in non module file or after the named module
+          /// declaration.
+          bool CanImport =
+              !CurrentModule ||
+              CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+              CurrentModule->Kind == Module::ModulePartitionInterface;
+          bool CanPrivateFragment =
+              CurrentModule &&
+              (CurrentModule->Kind == Module::ModuleInterfaceUnit ||
+               CurrentModule->Kind == Module::ModulePartitionInterface);
+
+          // Bare 'module' and 'import' keywords, in addition to the pattern
+          // results below, so that clients can render them as keywords.
+          if (CanGlobalModuleFragment || CanNamedModule || CanPrivateFragment)
+            Results.AddResult(Result("module", CCP_Keyword));
+          if (CanImport)
+            Results.AddResult(Result("import", CCP_Keyword));
+
+          if (CanGlobalModuleFragment) {
             // module;
             Builder.AddTypedTextChunk("module");
             Builder.AddChunk(CodeCompletionString::CK_SemiColon);
@@ -2312,11 +2337,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
             Results.AddResult(Result(Builder.TakeString()));
           }
 
-          /// Named module should be declared in the beginning of the file,
-          /// or after the global module fragment.
-          if (!CurrentModule ||
-              CurrentModule->Kind == Module::ExplicitGlobalModuleFragment ||
-              CurrentModule->Kind == Module::ImplicitGlobalModuleFragment) {
+          if (CanNamedModule) {
             // export module;
             // module name;
             Builder.AddTypedTextChunk("module");
@@ -2327,11 +2348,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
             Results.AddResult(Result(Builder.TakeString()));
           }
 
-          /// Import can occur in non module file or after the named module
-          /// declaration.
-          if (!CurrentModule ||
-              CurrentModule->Kind == Module::ModuleInterfaceUnit ||
-              CurrentModule->Kind == Module::ModulePartitionInterface) {
+          if (CanImport) {
             // import name;
             Builder.AddTypedTextChunk("import");
             Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
@@ -2341,9 +2358,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
             Results.AddResult(Result(Builder.TakeString()));
           }
 
-          if (CurrentModule &&
-              (CurrentModule->Kind == Module::ModuleInterfaceUnit ||
-               CurrentModule->Kind == Module::ModulePartitionInterface)) {
+          if (CanPrivateFragment) {
             // module: private;
             Builder.AddTypedTextChunk("module");
             Builder.AddChunk(CodeCompletionString::CK_Colon);

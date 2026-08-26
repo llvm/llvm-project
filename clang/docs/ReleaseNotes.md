@@ -659,6 +659,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Code Completion
 
+- Added bare `module` and `import` keyword completions for C++20 modules, in
+  addition to the existing `module;`, `module name;` and `import name;` snippet
+  completions. This allows LSP clients such as clangd to present them with a
+  keyword icon. ([clangd/clangd#2626](https://github.com/clangd/clangd/issues/2626))
+
 ### Static Analyzer
 
 #### Crash and bug fixes
