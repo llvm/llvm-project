@@ -1704,7 +1704,7 @@ public:
   /// for loads.
   LLVM_ABI InstructionCost getMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::TargetCostKind CostKind,
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
