@@ -323,13 +323,9 @@ void CodeMetaDataOutputSection::finalizeContents() {
     if (section->discarded)
       continue;
 
-    // Apply relocations to a copy of the input section's raw data.
-    std::vector<uint8_t> relocatedData(section->data().size());
-    memcpy(relocatedData.data(), section->data().data(), section->data().size());
-    section->relocate(relocatedData.data());
-
-    const uint8_t *buf = relocatedData.data();
-    const uint8_t *end = buf + relocatedData.size();
+    const uint8_t *start = section->data().data();
+    const uint8_t *buf = start;
+    const uint8_t *end = buf + section->data().size();
 
     auto readULEB = [&](StringRef desc) {
       const char *err = nullptr;
@@ -340,24 +336,36 @@ void CodeMetaDataOutputSection::finalizeContents() {
     };
 
     const unsigned numFunctions = readULEB("number of functions");
+    ArrayRef<WasmRelocation> relocs = section->getRelocations();
+    size_t relocIdx = 0;
 
     for (unsigned i = 0; i < numFunctions; ++i) {
-      const uint8_t *functionStartOffset = buf;
+      if (relocIdx >= relocs.size())
+        fatal("Missing relocation for function index in " + name);
 
-      const unsigned funcIndex = readULEB("function index");
+      const WasmRelocation &rel = relocs[relocIdx++];
+      assert(rel.Offset == static_cast<uint64_t>(buf - start));
+
+      // Advance past the un-relocated func_idx in the input buffer.
+      readULEB("function index");
+
+      const uint8_t *hintsStart = buf;
       const unsigned numHints = readULEB("hint size");
-
       for (unsigned j = 0; j < numHints; ++j) {
         readULEB("hint opcode");
         const unsigned hintSize = readULEB("hint operand");
         buf += hintSize;
       }
-      // Skip entries for removed functions.
-      if (funcIndex == static_cast<uint32_t>(section->getTombstone()))
+
+      // Check if target function symbol is live.
+      Symbol *sym = section->file->getSymbols()[rel.Index];
+      if (!sym->isLive())
         continue;
 
-      entriesOs.write(reinterpret_cast<const char *>(functionStartOffset),
-                      buf - functionStartOffset);
+      auto *funcSym = cast<FunctionSymbol>(sym);
+      encodeULEB128(funcSym->getFunctionIndex(), entriesOs);
+      entriesOs.write(reinterpret_cast<const char *>(hintsStart),
+                      buf - hintsStart);
       numFunctionsTotal++;
     }
     assert(buf == end && "CodeMetaDataOutputSection: not all data was consumed");
