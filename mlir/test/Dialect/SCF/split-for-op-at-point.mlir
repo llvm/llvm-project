@@ -69,7 +69,7 @@ func.func @invalid_split_not_multiple(%mem: memref<?xf32>) {
 
 // -----
 
-// Dynamic upper bound: split happens and `split < ub` is checked at runtime.
+// Dynamic upper bound.
 func.func @dynamic_ub_split(%mem: memref<?xf32>, %ub: index) {
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
@@ -82,8 +82,6 @@ func.func @dynamic_ub_split(%mem: memref<?xf32>, %ub: index) {
 // CHECK-LABEL: func @dynamic_ub_split
 //  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>, %[[UB:.*]]: index
 //       CHECK: %[[C9:.*]] = arith.constant 9 : index
-//       CHECK: %[[CMP:.*]] = arith.cmpi slt, %[[C9]], %[[UB]]
-//       CHECK: cf.assert %[[CMP]]
 //       CHECK: scf.for %{{.*}} = %c0 to %[[C9]] step %c1
 //  CHECK-NEXT: memref.store
 //       CHECK: scf.for %{{.*}} = %[[C9]] to %[[UB]] step %c1
@@ -91,7 +89,7 @@ func.func @dynamic_ub_split(%mem: memref<?xf32>, %ub: index) {
 
 // -----
 
-// Dynamic step: split happens and lattice alignment is checked at runtime.
+// Dynamic step.
 func.func @dynamic_step_split(%mem: memref<?xf32>, %step: index) {
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
@@ -104,12 +102,6 @@ func.func @dynamic_step_split(%mem: memref<?xf32>, %step: index) {
 // CHECK-LABEL: func @dynamic_step_split
 //  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>, %[[STEP:.*]]: index
 //       CHECK: %[[C6:.*]] = arith.constant 6 : index
-//       CHECK: arith.cmpi sgt, %[[STEP]]
-//       CHECK: cf.assert
-//       CHECK: %[[DIFF:.*]] = arith.subi %[[C6]], %c0
-//       CHECK: %[[REM:.*]] = arith.remsi %[[DIFF]], %[[STEP]]
-//       CHECK: %[[ALIGNED:.*]] = arith.cmpi eq, %[[REM]]
-//       CHECK: cf.assert %[[ALIGNED]]
 //       CHECK: scf.for %{{.*}} = %c0 to %[[C6]] step %[[STEP]]
 //       CHECK: scf.for %{{.*}} = %[[C6]] to %c12 step %[[STEP]]
 
@@ -199,7 +191,7 @@ func.func @split_integer_iv() -> i32 {
 
 // -----
 
-// Unsigned i32 split uses unsigned compares when a bound is dynamic.
+// Unsigned i32 split.
 func.func @split_unsigned_i32() -> i32 {
   %c0 = arith.constant 0 : i32
   %c10 = arith.constant 10 : i32
@@ -242,7 +234,7 @@ func.func @split_unsigned_i3() -> i32 {
 
 // -----
 
-// Dynamic unsigned upper bound: `split < ub` is an unsigned compare.
+// Dynamic unsigned upper bound.
 func.func @unsigned_dynamic_ub(%ub: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %c1 = arith.constant 1 : i32
@@ -258,14 +250,12 @@ func.func @unsigned_dynamic_ub(%ub: i32) -> i32 {
 // CHECK-LABEL: func @unsigned_dynamic_ub
 //  CHECK-SAME: %[[UB:.*]]: i32
 //       CHECK: %[[C9:.*]] = arith.constant 9 : i32
-//       CHECK: %[[CMP:.*]] = arith.cmpi ult, %[[C9]], %[[UB]]
-//       CHECK: cf.assert %[[CMP]]
 //       CHECK: scf.for unsigned %{{.*}} = %{{.*}} to %[[C9]]
 //       CHECK: scf.for unsigned %{{.*}} = %[[C9]] to %[[UB]]
 
 // -----
 
-// Dynamic unsigned step: `step > 0` and lattice use unsigned ops.
+// Dynamic unsigned step.
 func.func @unsigned_dynamic_step(%step: i32) -> i32 {
   %c0 = arith.constant 0 : i32
   %c12 = arith.constant 12 : i32
@@ -281,18 +271,12 @@ func.func @unsigned_dynamic_step(%step: i32) -> i32 {
 // CHECK-LABEL: func @unsigned_dynamic_step
 //  CHECK-SAME: %[[STEP:.*]]: i32
 //       CHECK: %[[C6:.*]] = arith.constant 6 : i32
-//       CHECK: arith.cmpi ugt, %[[STEP]]
-//       CHECK: cf.assert
-//       CHECK: %[[DIFF:.*]] = arith.subi %[[C6]], %c0_i32
-//       CHECK: %[[REM:.*]] = arith.remui %[[DIFF]], %[[STEP]]
-//       CHECK: %[[ALIGNED:.*]] = arith.cmpi eq, %[[REM]]
-//       CHECK: cf.assert %[[ALIGNED]]
 //       CHECK: scf.for unsigned %{{.*}} = %{{.*}} to %[[C6]] step %[[STEP]]
 //       CHECK: scf.for unsigned %{{.*}} = %[[C6]] to %{{.*}} step %[[STEP]]
 
 // -----
 
-// Dynamic lower bound: `lb <= split` and lattice alignment are runtime checks.
+// Dynamic lower bound.
 func.func @dynamic_lb_split(%mem: memref<?xf32>, %lb: index) {
   %cst = arith.constant 0.0 : f32
   %c10 = arith.constant 10 : index
@@ -305,18 +289,12 @@ func.func @dynamic_lb_split(%mem: memref<?xf32>, %lb: index) {
 // CHECK-LABEL: func @dynamic_lb_split
 //  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>, %[[LB:.*]]: index
 //       CHECK: %[[C9:.*]] = arith.constant 9 : index
-//       CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[LB]], %[[C9]]
-//       CHECK: cf.assert %[[CMP]]
-//       CHECK: %[[DIFF:.*]] = arith.subi %[[C9]], %[[LB]]
-//       CHECK: %[[REM:.*]] = arith.remsi %[[DIFF]], %c1
-//       CHECK: %[[ALIGNED:.*]] = arith.cmpi eq, %[[REM]]
-//       CHECK: cf.assert %[[ALIGNED]]
 //       CHECK: scf.for %{{.*}} = %[[LB]] to %[[C9]] step %c1
 //       CHECK: scf.for %{{.*}} = %[[C9]] to %c10 step %c1
 
 // -----
 
-// Fully dynamic bounds: every check is a runtime assert.
+// Fully dynamic bounds.
 func.func @dynamic_all_split(%mem: memref<?xf32>, %lb: index, %ub: index,
                              %step: index) {
   %cst = arith.constant 0.0 : f32
@@ -328,22 +306,12 @@ func.func @dynamic_all_split(%mem: memref<?xf32>, %lb: index, %ub: index,
 // CHECK-LABEL: func @dynamic_all_split
 //  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>, %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
 //       CHECK: %[[C9:.*]] = arith.constant 9 : index
-//       CHECK: arith.cmpi sle, %[[LB]], %[[C9]]
-//       CHECK: cf.assert
-//       CHECK: arith.cmpi slt, %[[C9]], %[[UB]]
-//       CHECK: cf.assert
-//       CHECK: arith.cmpi sgt, %[[STEP]]
-//       CHECK: cf.assert
-//       CHECK: %[[DIFF:.*]] = arith.subi %[[C9]], %[[LB]]
-//       CHECK: %[[REM:.*]] = arith.remsi %[[DIFF]], %[[STEP]]
-//       CHECK: %[[ALIGNED:.*]] = arith.cmpi eq, %[[REM]]
-//       CHECK: cf.assert %[[ALIGNED]]
 //       CHECK: scf.for %{{.*}} = %[[LB]] to %[[C9]] step %[[STEP]]
 //       CHECK: scf.for %{{.*}} = %[[C9]] to %[[UB]] step %[[STEP]]
 
 // -----
 
-// Dynamic split point (function argument): range and lattice are runtime.
+// Dynamic split point (function argument).
 func.func @dynamic_split_point(%mem: memref<?xf32>, %split: index) {
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
@@ -356,14 +324,6 @@ func.func @dynamic_split_point(%mem: memref<?xf32>, %split: index) {
 }
 // CHECK-LABEL: func @dynamic_split_point
 //  CHECK-SAME: %[[MEM:.*]]: memref<?xf32>, %[[SPLIT:.*]]: index
-//       CHECK: arith.cmpi sle, %c0, %[[SPLIT]]
-//       CHECK: cf.assert
-//       CHECK: arith.cmpi slt, %[[SPLIT]], %c10
-//       CHECK: cf.assert
-//       CHECK: %[[DIFF:.*]] = arith.subi %[[SPLIT]], %c0
-//       CHECK: %[[REM:.*]] = arith.remsi %[[DIFF]], %c1
-//       CHECK: %[[ALIGNED:.*]] = arith.cmpi eq, %[[REM]]
-//       CHECK: cf.assert %[[ALIGNED]]
 //       CHECK: scf.for %{{.*}} = %c0 to %[[SPLIT]] step %c1
 //       CHECK: scf.for %{{.*}} = %[[SPLIT]] to %c10 step %c1
 

@@ -38,17 +38,6 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-2-DAG:  %[[V7:.*]] = arith.addi %[[LB]], %[[V6]] : index
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-2-DAG:  %[[V8:.*]] = arith.muli %[[STEP]], %[[C2]] : index
-// Runtime checks from splitForOpAtPoint (dynamic split = lb + evenMult * step).
-//       UNROLL-BY-2:  %[[LB_OK:.*]] = arith.cmpi sle, %[[LB]], %[[V7]]
-//       UNROLL-BY-2:  cf.assert %[[LB_OK]]
-//       UNROLL-BY-2:  %[[UB_OK:.*]] = arith.cmpi slt, %[[V7]], %[[UB]]
-//       UNROLL-BY-2:  cf.assert %[[UB_OK]]
-//       UNROLL-BY-2:  arith.cmpi sgt, %[[STEP]]
-//       UNROLL-BY-2:  cf.assert
-//       UNROLL-BY-2:  %[[SPLIT_DIFF:.*]] = arith.subi %[[V7]], %[[LB]]
-//       UNROLL-BY-2:  %[[SPLIT_REM:.*]] = arith.remsi %[[SPLIT_DIFF]], %[[STEP]]
-//       UNROLL-BY-2:  %[[ALIGNED:.*]] = arith.cmpi eq, %[[SPLIT_REM]]
-//       UNROLL-BY-2:  cf.assert %[[ALIGNED]]
 //       UNROLL-BY-2:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
 //  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-2-NEXT:    %[[C1_IV:.*]] = arith.constant 1 : index
@@ -82,17 +71,6 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-3-DAG:  %[[V7:.*]] = arith.addi %[[LB]], %[[V6]] : index
 //       Compute step of unrolled loop in V8.
 //   UNROLL-BY-3-DAG:  %[[V8:.*]] = arith.muli %[[STEP]], %[[C3]] : index
-// Runtime checks from splitForOpAtPoint (dynamic split = lb + evenMult * step).
-//       UNROLL-BY-3:  %[[LB_OK:.*]] = arith.cmpi sle, %[[LB]], %[[V7]]
-//       UNROLL-BY-3:  cf.assert %[[LB_OK]]
-//       UNROLL-BY-3:  %[[UB_OK:.*]] = arith.cmpi slt, %[[V7]], %[[UB]]
-//       UNROLL-BY-3:  cf.assert %[[UB_OK]]
-//       UNROLL-BY-3:  arith.cmpi sgt, %[[STEP]]
-//       UNROLL-BY-3:  cf.assert
-//       UNROLL-BY-3:  %[[SPLIT_DIFF:.*]] = arith.subi %[[V7]], %[[LB]]
-//       UNROLL-BY-3:  %[[SPLIT_REM:.*]] = arith.remsi %[[SPLIT_DIFF]], %[[STEP]]
-//       UNROLL-BY-3:  %[[ALIGNED:.*]] = arith.cmpi eq, %[[SPLIT_REM]]
-//       UNROLL-BY-3:  cf.assert %[[ALIGNED]]
 //       UNROLL-BY-3:  scf.for %[[IV:.*]] = %[[LB]] to %[[V7]] step %[[V8]] {
 //  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:    %[[C1_IV:.*]] = arith.constant 1 : index

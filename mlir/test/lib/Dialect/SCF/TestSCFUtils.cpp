@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -285,7 +284,7 @@ struct TestSplitForOpAtPointPass
   TestSplitForOpAtPointPass(const TestSplitForOpAtPointPass &) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, cf::ControlFlowDialect>();
+    registry.insert<arith::ArithDialect>();
   }
 
   void runOnOperation() override {
@@ -296,13 +295,15 @@ struct TestSplitForOpAtPointPass
         loopsToSplit.push_back(forOp);
     });
 
+    IRRewriter rewriter(func.getContext());
     for (scf::ForOp forOp : loopsToSplit) {
       Value splitPoint;
       if (auto splitAttr = forOp->getAttrOfType<IntegerAttr>(kSplitAtAttr)) {
-        OpBuilder builder(forOp);
+        rewriter.setInsertionPoint(forOp);
         splitPoint =
-            arith::ConstantOp::create(builder, forOp.getLoc(), splitAttr);
-        forOp->removeAttr(kSplitAtAttr);
+            arith::ConstantOp::create(rewriter, forOp.getLoc(), splitAttr);
+        rewriter.modifyOpInPlace(forOp,
+                                 [&] { forOp->removeAttr(kSplitAtAttr); });
       } else if (auto argAttr =
                      forOp->getAttrOfType<IntegerAttr>(kSplitArgAttr)) {
         int64_t argNo = argAttr.getInt();
@@ -312,11 +313,12 @@ struct TestSplitForOpAtPointPass
           return signalPassFailure();
         }
         splitPoint = func.getArgument(argNo);
-        forOp->removeAttr(kSplitArgAttr);
+        rewriter.modifyOpInPlace(forOp,
+                                 [&] { forOp->removeAttr(kSplitArgAttr); });
       } else {
         continue;
       }
-      if (failed(splitForOpAtPoint(forOp, splitPoint))) {
+      if (failed(splitForOpAtPoint(rewriter, forOp, splitPoint))) {
         emitError(forOp.getLoc(), "failed to split scf.for");
         return signalPassFailure();
       }

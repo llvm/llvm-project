@@ -11,7 +11,6 @@ add_mlir_library(MLIRSCFTestPasses
   EXCLUDE_FROM_LIBMLIR
   )
 mlir_target_link_libraries(MLIRSCFTestPasses PUBLIC
-  MLIRControlFlowDialect
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

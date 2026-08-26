@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
@@ -366,106 +365,51 @@ void mlir::generateUnrolledLoop(
 
 /// Splits `forOp` into two consecutive loops at `splitPoint`.
 FailureOr<std::pair<scf::ForOp, scf::ForOp>>
-mlir::splitForOpAtPoint(scf::ForOp forOp, Value splitPoint) {
+mlir::splitForOpAtPoint(RewriterBase &rewriter, scf::ForOp forOp,
+                        Value splitPoint) {
   if (splitPoint.getType() != forOp.getLowerBound().getType())
     return failure();
 
-  // When a bound is constant, require a valid lattice-aligned split point.
-  // When it is dynamic, emit the same checks as runtime asserts.
-  OpBuilder runtimeBuilder(forOp);
-  Location loc = forOp.getLoc();
+  // Reject statically known violations of the split preconditions.
   bool isUnsigned = forOp.getUnsignedCmp();
   Value lbVal = forOp.getLowerBound();
   Value ubVal = forOp.getUpperBound();
   Value stepVal = forOp.getStep();
-  // Fail at runtime if `cond` is false.
-  auto emitAssert = [&](Value cond, StringRef msg) {
-    forOp->getContext()->getOrLoadDialect<cf::ControlFlowDialect>();
-    cf::AssertOp::create(runtimeBuilder, loc, cond,
-                         runtimeBuilder.getStringAttr(msg));
-  };
-  // Compare according to the loop's signedness.
-  auto emitICmp = [&](arith::CmpIPredicate signedPred,
-                      arith::CmpIPredicate unsignedPred, Value lhs, Value rhs) {
-    return arith::CmpIOp::create(
-        runtimeBuilder, loc, isUnsigned ? unsignedPred : signedPred, lhs, rhs);
-  };
-  // Check the split point statically when constant, otherwise at runtime.
   auto checkSplitPoint = [&](auto getBound) -> LogicalResult {
     auto lb = getBound(lbVal);
     auto ub = getBound(ubVal);
     auto step = getBound(stepVal);
     auto split = getBound(splitPoint);
-    // lowerBound <= splitPoint
-    if (lb && split) {
-      if (*lb > *split)
-        return failure();
-    } else {
-      emitAssert(emitICmp(arith::CmpIPredicate::sle, arith::CmpIPredicate::ule,
-                          lbVal, splitPoint),
-                 "splitForOpAtPoint: split point below lower bound");
-    }
-    // splitPoint < upperBound
-    if (split && ub) {
-      if (*split >= *ub)
-        return failure();
-    } else {
-      emitAssert(emitICmp(arith::CmpIPredicate::slt, arith::CmpIPredicate::ult,
-                          splitPoint, ubVal),
-                 "splitForOpAtPoint: split point not below upper bound");
-    }
-    // step > 0
-    if (step) {
-      if (*step <= 0)
-        return failure();
-    } else {
-      Value zero = arith::ConstantOp::create(
-          runtimeBuilder, loc,
-          runtimeBuilder.getIntegerAttr(stepVal.getType(), 0));
-      emitAssert(emitICmp(arith::CmpIPredicate::sgt, arith::CmpIPredicate::ugt,
-                          stepVal, zero),
-                 "splitForOpAtPoint: step must be positive");
-    }
-    // splitPoint == lowerBound + k * step
-    if (lb && step && split) {
-      if ((*split - *lb) % *step != 0)
-        return failure();
-    } else {
-      Value zero = arith::ConstantOp::create(
-          runtimeBuilder, loc,
-          runtimeBuilder.getIntegerAttr(stepVal.getType(), 0));
-      Value diff =
-          arith::SubIOp::create(runtimeBuilder, loc, splitPoint, lbVal);
-      Value rem = isUnsigned ? static_cast<Value>(arith::RemUIOp::create(
-                                   runtimeBuilder, loc, diff, stepVal))
-                             : static_cast<Value>(arith::RemSIOp::create(
-                                   runtimeBuilder, loc, diff, stepVal));
-      emitAssert(arith::CmpIOp::create(runtimeBuilder, loc,
-                                       arith::CmpIPredicate::eq, rem, zero),
-                 "splitForOpAtPoint: split point is not lattice-aligned");
-    }
+    if ((lb && split && *lb > *split) || (split && ub && *split >= *ub) ||
+        (step && *step <= 0))
+      return failure();
+    if (lb && step && split && (*split - *lb) % *step != 0)
+      return failure();
     return success();
   };
   if (failed(isUnsigned ? checkSplitPoint(getConstantUIntValue)
                         : checkSplitPoint(getConstantIntValue)))
     return failure();
 
-  OpBuilder builder(forOp->getContext());
-  builder.setInsertionPointAfter(forOp);
-  auto firstForOp = cast<scf::ForOp>(builder.clone(*forOp));
-  auto secondForOp = cast<scf::ForOp>(builder.clone(*forOp));
-  firstForOp.setUpperBound(splitPoint);
-  secondForOp.setLowerBound(splitPoint);
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(forOp);
+  auto firstForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  auto secondForOp = cast<scf::ForOp>(rewriter.clone(*forOp));
+  rewriter.modifyOpInPlace(firstForOp,
+                           [&] { firstForOp.setUpperBound(splitPoint); });
+  rewriter.modifyOpInPlace(secondForOp,
+                           [&] { secondForOp.setLowerBound(splitPoint); });
 
   // Chain iter-args across the split:
   //   - `secondForOp` is initialized from `firstForOp`'s results.
   //   - Users of `forOp`'s results are redirected to `secondForOp`'s results,
   //     so downstream code observes the final carried values.
-  secondForOp->setOperands(secondForOp.getNumControlOperands(),
-                           secondForOp.getInitArgs().size(),
-                           firstForOp.getResults());
-  forOp->replaceAllUsesWith(secondForOp.getResults());
-  forOp.erase();
+  rewriter.modifyOpInPlace(secondForOp, [&] {
+    secondForOp->setOperands(secondForOp.getNumControlOperands(),
+                             secondForOp.getInitArgs().size(),
+                             firstForOp.getResults());
+  });
+  rewriter.replaceOp(forOp, secondForOp.getResults());
 
   return std::pair<scf::ForOp, scf::ForOp>{firstForOp, secondForOp};
 }
@@ -591,7 +535,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
-    auto splitLoops = splitForOpAtPoint(forOp, upperBoundUnrolled);
+    auto splitLoops = splitForOpAtPoint(rewriter, forOp, upperBoundUnrolled);
     if (failed(splitLoops))
       return failure();
     forOp = splitLoops->first;

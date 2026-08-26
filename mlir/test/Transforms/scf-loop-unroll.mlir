@@ -38,10 +38,6 @@ func.func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : ind
   // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
   // CHECK-NEXT: %[[REM:.*]] = arith.remsi %[[N]], %[[C3]]
   // CHECK-NEXT: %[[UB:.*]] = arith.subi %[[N]], %[[REM]]
-  // CHECK-NEXT: %[[LB_OK:.*]] = arith.cmpi sge, %[[UB]], %[[C0]]
-  // CHECK-NEXT: cf.assert %[[LB_OK]]
-  // CHECK-NEXT: %[[UB_OK:.*]] = arith.cmpi slt, %[[UB]], %[[N]]
-  // CHECK-NEXT: cf.assert %[[UB_OK]]
   // CHECK-NEXT: %[[SUM:.*]]:2 = scf.for {{.*}} = %[[C0]] to %[[UB]] step %[[C3]] iter_args
   // CHECK:      }
   // CHECK-NEXT: %[[SUM1:.*]]:2 = scf.for {{.*}} = %[[UB]] to %[[N]] step %[[C1]] iter_args(%[[V1:.*]] = %[[SUM]]#0, %[[V2:.*]] = %[[SUM]]#1)
