@@ -2671,6 +2671,27 @@ LogicalResult GlobalOp::verify() {
       return emitError() << "alignment attribute is not a power of 2";
   }
 
+  if (FlatSymbolRefAttr associated = getAssociatedAttr()) {
+    if (associated.getValue() == getSymName())
+      return emitOpError("associated cannot refer to the global itself");
+  }
+
+  if (ArrayAttr absSym = getAbsoluteSymbolAttr()) {
+    if (absSym.empty() || absSym.size() % 2 != 0)
+      return emitOpError(
+          "absolute_symbol must contain one or more integer range pairs");
+    Type pairType;
+    for (Attribute attr : absSym) {
+      auto intAttr = dyn_cast<IntegerAttr>(attr);
+      if (!intAttr)
+        return emitOpError("absolute_symbol operands must be integers");
+      if (!pairType)
+        pairType = intAttr.getType();
+      else if (intAttr.getType() != pairType)
+        return emitOpError("absolute_symbol range pair types must match");
+    }
+  }
+
   return success();
 }
 

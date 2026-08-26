@@ -1648,6 +1648,50 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   if (globalVar->hasComdat())
     globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
 
+  if (llvm::MDNode *associatedMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_associated)) {
+    if (associatedMD->getNumOperands() == 1) {
+      if (auto *valueAsMD = dyn_cast_or_null<llvm::ValueAsMetadata>(
+              associatedMD->getOperand(0).get())) {
+        llvm::Value *value = valueAsMD->getValue();
+        llvm::GlobalValue *gv = dyn_cast<llvm::GlobalValue>(value);
+        if (!gv)
+          gv = dyn_cast<llvm::GlobalValue>(value->stripPointerCastsAndAliases());
+        if (gv) {
+          StringRef name = gv->getName();
+          FlatSymbolRefAttr symbolRef;
+          if (name.empty()) {
+            if (auto *namelessVar = dyn_cast<llvm::GlobalVariable>(gv))
+              symbolRef = getOrCreateNamelessSymbolName(namelessVar);
+          } else {
+            symbolRef = FlatSymbolRefAttr::get(context, name);
+          }
+          if (symbolRef)
+            globalOp.setAssociatedAttr(symbolRef);
+        }
+      }
+    }
+  }
+
+  if (llvm::MDNode *absSymMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_absolute_symbol)) {
+    SmallVector<Attribute> rangeAttrs;
+    rangeAttrs.reserve(absSymMD->getNumOperands());
+    bool valid = absSymMD->getNumOperands() >= 2 &&
+                 absSymMD->getNumOperands() % 2 == 0;
+    for (const llvm::MDOperand &op : absSymMD->operands()) {
+      auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(op);
+      if (!constInt) {
+        valid = false;
+        break;
+      }
+      auto intType = IntegerType::get(context, constInt->getBitWidth());
+      rangeAttrs.push_back(IntegerAttr::get(intType, constInt->getValue()));
+    }
+    if (valid)
+      globalOp.setAbsoluteSymbolAttr(ArrayAttr::get(context, rangeAttrs));
+  }
+
   processTargetSpecificAttrs(globalVar, globalOp);
 
   return success();

@@ -45,6 +45,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
@@ -1381,6 +1382,37 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
 
     aliasesMapping.try_emplace(op, var);
+  }
+
+  // Attach global metadata after all globals, aliases, and function signatures
+  // exist so symbol references can be resolved.
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
+    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
+    if (FlatSymbolRefAttr associated = op.getAssociatedAttr()) {
+      auto mdAttr = MDGlobalValueAttr::get(op.getContext(), associated);
+      FailureOr<llvm::Metadata *> md = convertMetadataAttr(mdAttr, [&]() {
+        return op.emitError("failed to convert associated metadata");
+      });
+      if (failed(md))
+        return failure();
+      var->setMetadata(llvm::LLVMContext::MD_associated,
+                       llvm::MDNode::get(var->getContext(), *md));
+    }
+
+    if (ArrayAttr absSym = op.getAbsoluteSymbolAttr()) {
+      SmallVector<llvm::Metadata *> mdOps;
+      llvm::LLVMContext &ctx = var->getContext();
+      mdOps.reserve(absSym.size());
+      for (Attribute attr : absSym) {
+        auto intAttr = llvm::cast<IntegerAttr>(attr);
+        llvm::IntegerType *ty = llvm::IntegerType::get(
+            ctx, intAttr.getType().getIntOrFloatBitWidth());
+        mdOps.push_back(llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(ty, intAttr.getValue())));
+      }
+      var->setMetadata(llvm::LLVMContext::MD_absolute_symbol,
+                       llvm::MDNode::get(ctx, mdOps));
+    }
   }
 
   // Convert global variable bodies.

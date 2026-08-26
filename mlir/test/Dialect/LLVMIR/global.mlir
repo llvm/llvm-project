@@ -292,3 +292,37 @@ llvm.mlir.global external @global_with_expr1() {addr_space = 0 : i32, dbg_expr =
 llvm.mlir.global external @global_with_expr2() {addr_space = 0 : i32, dbg_expr = [#llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_2", linkageName = "global_with_expr_2", file = #di_file, line = 371, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_push_object_address, DW_OP_deref]>>]} : i64
 llvm.mlir.global external @global_with_expr3() {addr_space = 0 : i32, dbg_expr = [#llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_3", linkageName = "global_with_expr_3", file = #di_file, line = 372, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_LLVM_arg(0), DW_OP_LLVM_arg(1), DW_OP_plus]>>]} : i64
 llvm.mlir.global external @global_with_expr4() {addr_space = 0 : i32, dbg_expr = [#llvm.di_global_variable_expression<var = <scope = #di_compile_unit, name = "global_with_expr_4", linkageName = "global_with_expr_4", file = #di_file, line = 373, type = #di_basic_type, isLocalToUnit = true, isDefined = true, alignInBits = 8>, expr = <[DW_OP_LLVM_convert(16, DW_ATE_signed)]>>]} : i64
+
+// -----
+
+// CHECK: llvm.mlir.global external @associated_target(0 : i32) {addr_space = 0 : i32} : i32
+// CHECK: llvm.mlir.global external @associated_global(0 : i32) {addr_space = 0 : i32, associated = @associated_target} : i32
+llvm.mlir.global external @associated_target(0 : i32) : i32
+llvm.mlir.global external @associated_global(0 : i32) {associated = @associated_target} : i32
+
+// CHECK: llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0, 42], addr_space = 0 : i32} : i8
+llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8
+
+// CHECK: llvm.mlir.global external @absolute_symbol_full() {absolute_symbol = [-1, -1], addr_space = 0 : i32} : i8
+llvm.mlir.global external @absolute_symbol_full() {absolute_symbol = [-1 : i64, -1 : i64]} : i8
+
+// -----
+
+// expected-error @+1 {{associated cannot refer to the global itself}}
+llvm.mlir.global @self_associated(0 : i32) {associated = @self_associated} : i32
+
+// -----
+
+// expected-error @+1 {{absolute_symbol must contain one or more integer range pairs}}
+llvm.mlir.global @odd_absolute_symbol() {absolute_symbol = [0 : i64]} : i8
+
+// -----
+
+// expected-error @+1 {{absolute_symbol operands must be integers}}
+llvm.mlir.global @non_int_absolute_symbol() {absolute_symbol = ["foo", "bar"]} : i8
+
+// -----
+
+// expected-error @+1 {{absolute_symbol range pair types must match}}
+llvm.mlir.global @mixed_absolute_symbol() {absolute_symbol = [0 : i32, 42 : i64]} : i8
+
