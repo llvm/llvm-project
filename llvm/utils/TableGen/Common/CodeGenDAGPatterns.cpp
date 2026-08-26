@@ -188,21 +188,14 @@ bool TypeSetByHwMode::assign_if(const TypeSetByHwMode &VTS, Predicate P) {
 }
 
 void TypeSetByHwMode::writeToStream(raw_ostream &OS) const {
-  SmallVector<unsigned, 4> Modes;
-  Modes.reserve(Map.size());
-
-  for (const auto &I : *this)
-    Modes.push_back(I.first);
-  if (Modes.empty()) {
+  if (Map.empty()) {
     OS << "{}";
     return;
   }
-  array_pod_sort(Modes.begin(), Modes.end());
-
   OS << '{';
-  for (unsigned M : Modes) {
-    OS << ' ' << getModeName(M) << ':';
-    get(M).writeToStream(OS);
+  for (const auto &[Mode, Types] : Map) {
+    OS << ' ' << getModeName(Mode) << ':';
+    Types.writeToStream(OS);
   }
   OS << " }";
 }
