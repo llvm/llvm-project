@@ -3756,13 +3756,13 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   // so generic value analyses can reason about it. The verifier guarantees an
   // XLen result and constant VSEW/VLMUL encoding a valid vtype, so no defensive
   // validation is needed here.
-  if (II.getIntrinsicID() == Intrinsic::riscv_vsetvli ||
-      II.getIntrinsicID() == Intrinsic::riscv_vsetvlimax) {
+  if (is_contained({Intrinsic::riscv_vsetvli, Intrinsic::riscv_vsetvlimax},
+                   II.getIntrinsicID())) {
     bool HasAVL = II.getIntrinsicID() == Intrinsic::riscv_vsetvli;
     unsigned Offset = HasAVL ? 1 : 0;
-    unsigned Width = II.getType()->getScalarSizeInBits();
-    ConstantRange VLenRange(APInt(Width, ST->getRealMinVLen()),
-                            APInt(Width, ST->getRealMaxVLen()) + 1);
+    unsigned BitWidth = II.getType()->getIntegerBitWidth();
+    ConstantRange VLenRange(APInt(BitWidth, ST->getRealMinVLen()),
+                            APInt(BitWidth, ST->getRealMaxVLen()) + 1);
 
     uint64_t VSEW = cast<ConstantInt>(II.getArgOperand(Offset))->getZExtValue();
     auto VLMUL = static_cast<RISCVVType::VLMUL>(
@@ -3772,8 +3772,8 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // VLMAX = VLEN / (SEW / LMUL), clamped to >= 1 for any usable vtype.
     ConstantRange VLMAXRange =
-        VLenRange.udiv(ConstantRange(APInt(Width, Ratio)))
-            .umax(ConstantRange(APInt(Width, 1)));
+        VLenRange.udiv(ConstantRange(APInt(BitWidth, Ratio)))
+            .umax(ConstantRange(APInt(BitWidth, 1)));
 
     // vsetvlimax returns exactly VLMAX; vsetvli returns vl with
     // 0 <= vl <= min(AVL, VLMAX). vl == AVL only when AVL <= the smallest
@@ -3787,15 +3787,16 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         if (C.ule(VLMAXRange.getUnsignedMin()))
           VLRange = ConstantRange(C);
         else
-          VLRange = ConstantRange::getNonEmpty(APInt::getZero(Width),
-                                               (C.ult(MaxVL) ? C : MaxVL) + 1);
+          VLRange = ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
+                                               APIntOps::umin(C, MaxVL) + 1);
       } else {
-        VLRange = ConstantRange::getNonEmpty(APInt::getZero(Width), MaxVL + 1);
+        VLRange =
+            ConstantRange::getNonEmpty(APInt::getZero(BitWidth), MaxVL + 1);
       }
     }
 
     ConstantRange OldRange =
-        II.getRange().value_or(ConstantRange::getFull(Width));
+        II.getRange().value_or(ConstantRange::getFull(BitWidth));
     ConstantRange NewRange = VLRange.intersectWith(OldRange);
     if (NewRange != OldRange) {
       II.addRangeRetAttr(NewRange);
