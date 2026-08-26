@@ -164,54 +164,58 @@ return:                                           ; preds = %if.end, %entry, %if
 define dso_local ptr @test3(ptr nocapture %p1, i8 zeroext %p2) local_unnamed_addr uwtable  {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    ldr x19, [x0]
-; CHECK-NEXT:    cbz x19, .LBB2_2
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr x0, [x0]
+; CHECK-NEXT:    cbz x0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %land.rhs
-; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    str x0, [sp, #8] // 8-byte Spill
+; CHECK-NEXT:    mov x19, x8
 ; CHECK-NEXT:    bl bar
-; CHECK-NEXT:    str x0, [x20]
-; CHECK-NEXT:  .LBB2_2: // %land.end
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
+; CHECK-NEXT:    str x8, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
-; CHECK-NEXT:    .cfi_restore w20
 ; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:  .LBB2_2: // %land.end
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-APPLE-LABEL: test3:
 ; CHECK-APPLE:       ; %bb.0: ; %entry
-; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    mov x8, x0
+; CHECK-APPLE-NEXT:    ldr x0, [x0]
+; CHECK-APPLE-NEXT:    cbz x0, LBB2_2
+; CHECK-APPLE-NEXT:  ; %bb.1: ; %land.rhs
+; CHECK-APPLE-NEXT:    sub sp, sp, #48
+; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-APPLE-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-APPLE-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-APPLE-NEXT:    .cfi_offset w30, -8
 ; CHECK-APPLE-NEXT:    .cfi_offset w29, -16
 ; CHECK-APPLE-NEXT:    .cfi_offset w19, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset w20, -32
-; CHECK-APPLE-NEXT:    ldr x19, [x0]
-; CHECK-APPLE-NEXT:    cbz x19, LBB2_2
-; CHECK-APPLE-NEXT:  ; %bb.1: ; %land.rhs
-; CHECK-APPLE-NEXT:    mov x20, x0
-; CHECK-APPLE-NEXT:    mov x0, x19
+; CHECK-APPLE-NEXT:    str x0, [sp, #8] ; 8-byte Spill
+; CHECK-APPLE-NEXT:    mov x19, x8
 ; CHECK-APPLE-NEXT:    bl _bar
-; CHECK-APPLE-NEXT:    str x0, [x20]
-; CHECK-APPLE-NEXT:  LBB2_2: ; %land.end
-; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; CHECK-APPLE-NEXT:    mov x0, x19
-; CHECK-APPLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    mov x8, x0
+; CHECK-APPLE-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    str x8, [x19]
+; CHECK-APPLE-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; CHECK-APPLE-NEXT:    add sp, sp, #48
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-APPLE-NEXT:    .cfi_restore w30
 ; CHECK-APPLE-NEXT:    .cfi_restore w29
 ; CHECK-APPLE-NEXT:    .cfi_restore w19
 ; CHECK-APPLE-NEXT:    .cfi_restore w20
+; CHECK-APPLE-NEXT:  LBB2_2: ; %land.end
 ; CHECK-APPLE-NEXT:    ret
 entry:
   %0 = load ptr, ptr %p1, align 8, !tbaa !6

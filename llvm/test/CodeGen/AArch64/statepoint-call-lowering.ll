@@ -157,28 +157,29 @@ declare void @consume(ptr addrspace(1) %obj)
 define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov w20, w1
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    str x0, [sp, #8]
 ; CHECK-NEXT:    bl return_i1
 ; CHECK-NEXT:  .Ltmp8:
-; CHECK-NEXT:    tbz w20, #0, .LBB8_2
+; CHECK-NEXT:    tbz w19, #0, .LBB8_2
 ; CHECK-NEXT:  // %bb.1: // %left
+; CHECK-NEXT:    ldr x8, [sp, #8]
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    ldr x0, [sp, #8]
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    bl consume
+; CHECK-NEXT:    mov w8, w19
 ; CHECK-NEXT:    b .LBB8_3
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    mov w19, #1 // =0x1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB8_3: // %common.ret
-; CHECK-NEXT:    and w0, w19, #0x1
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]

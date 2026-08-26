@@ -582,26 +582,30 @@ declare void @do_something() #1
 define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-LABEL: do_nothing_if_resultant_opcodes_would_differ:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    adrp x19, :got:a
-; CHECK-NEXT:    ldr x19, [x19, :got_lo12:a]
-; CHECK-NEXT:    ldr w8, [x19]
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    cmn w8, #2
 ; CHECK-NEXT:    b.gt .LBB10_4
 ; CHECK-NEXT:  // %bb.1: // %while.body.preheader
-; CHECK-NEXT:    sub w20, w8, #1
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    sub w19, w8, #1
 ; CHECK-NEXT:  .LBB10_2: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl do_something
-; CHECK-NEXT:    adds w20, w20, #1
+; CHECK-NEXT:    adds w19, w19, #1
 ; CHECK-NEXT:    b.mi .LBB10_2
 ; CHECK-NEXT:  // %bb.3: // %while.cond.while.end_crit_edge
-; CHECK-NEXT:    ldr w8, [x19]
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:  .LBB10_4: // %while.end
 ; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    b.gt .LBB10_7
@@ -616,16 +620,9 @@ define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-NEXT:    b.ne .LBB10_7
 ; CHECK-NEXT:  // %bb.6:
 ; CHECK-NEXT:    mov w0, #123 // =0x7b
-; CHECK-NEXT:    b .LBB10_8
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB10_7: // %if.end
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:  .LBB10_8: // %return
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w19
-; CHECK-NEXT:    .cfi_restore w20
-; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr @a, align 4

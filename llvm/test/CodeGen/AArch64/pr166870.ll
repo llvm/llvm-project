@@ -23,7 +23,7 @@ define i32 @widget(i32 %arg, i32 %arg1, i1 %arg2, ptr %arg3, i1 %arg4) #0 nounwi
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x19, x3
 ; CHECK-NEXT:    mov x21, x0
-; CHECK-NEXT:    mov x22, x1
+; CHECK-NEXT:    str w1, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    bl baz
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cbnz w8, .LBB0_8
@@ -31,7 +31,8 @@ define i32 @widget(i32 %arg, i32 %arg1, i1 %arg2, ptr %arg3, i1 %arg4) #0 nounwi
 ; CHECK-NEXT:    mov w20, #0 // =0x0
 ; CHECK-NEXT:    mov w8, w21
 ; CHECK-NEXT:    mov x21, x8
-; CHECK-NEXT:    mov w8, w22
+; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
+; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    mov x22, x8
 ; CHECK-NEXT:  .LBB0_6: // %bb10
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
