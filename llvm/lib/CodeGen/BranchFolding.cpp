@@ -105,6 +105,11 @@ TailMergeSize("tail-merge-size",
               cl::desc("Min number of instructions to consider tail merging"),
               cl::init(3), cl::Hidden);
 
+static cl::opt<unsigned> EmptyBlockThreshold(
+    "branch-folder-empty-block-threshold",
+    cl::desc("Min number of empty blocks to skip predecessor debug salvage"),
+    cl::init(500), cl::Hidden);
+
 namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
@@ -1283,8 +1288,21 @@ void BranchFolder::setCommonTailEdgeWeights(MachineBasicBlock &TailMBB) {
 //  Branch Optimization
 //===----------------------------------------------------------------------===//
 
+static bool IsEmptyBlock(MachineBasicBlock *MBB);
+
+static bool shouldSkipPredDebugSalvage(MachineFunction &MF) {
+  unsigned NumEmptyBlocks = 0;
+  for (MachineBasicBlock &MBB : MF)
+    if (IsEmptyBlock(&MBB))
+      if (++NumEmptyBlocks > EmptyBlockThreshold)
+        return true;
+  return false;
+}
+
 bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
   bool MadeChange = false;
+
+  SkipPredDebugSalvage = shouldSkipPredDebugSalvage(MF);
 
   // Make sure blocks are numbered in order
   MF.RenumberBlocks();
@@ -1378,13 +1396,21 @@ static void copyDebugInfoToSuccessor(const TargetInstrInfo *TII,
 // to run a heavier analysis, such as the LiveDebugValues pass, before we do
 // branch folding.
 static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
-                                           MachineBasicBlock &MBB) {
+                                           MachineBasicBlock &MBB,
+                                           bool SkipPredDebugSalvage) {
   assert(IsEmptyBlock(&MBB) && "Expected an empty block (except debug info).");
   // If this MBB is the only predecessor of a successor it is legal to copy
   // DBG_VALUE instructions to the beginning of the successor.
   for (MachineBasicBlock *SuccBB : MBB.successors())
     if (SuccBB->pred_size() == 1)
       copyDebugInfoToSuccessor(TII, MBB, *SuccBB);
+
+  // Avoid creating very long predecessor debug tails in functions with many
+  // empty blocks. Those tails make later backward terminator scans such as
+  // analyzeBranch() quadratic.
+  if (SkipPredDebugSalvage)
+    return;
+
   // If this MBB is the only successor of a predecessor it is legal to copy the
   // DBG_VALUE instructions to the end of the predecessor (just before the
   // terminators, assuming that the terminator isn't affecting the DBG_VALUE).
@@ -1433,7 +1459,7 @@ ReoptimizeBlock:
   // optimized away.
   if (IsEmptyBlock(MBB) && !MBB->isEHPad() && !MBB->hasAddressTaken() &&
       SameEHScope) {
-    salvageDebugInfoFromEmptyBlock(TII, *MBB);
+    salvageDebugInfoFromEmptyBlock(TII, *MBB, SkipPredDebugSalvage);
     // Dead block?  Leave for cleanup later.
     if (MBB->pred_empty()) return MadeChange;
 

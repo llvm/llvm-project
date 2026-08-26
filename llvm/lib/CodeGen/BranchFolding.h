@@ -128,6 +128,7 @@ class TargetRegisterInfo;
     bool EnableHoistCommonCode = false;
     bool EnableBasicBlockReordering = false;
     bool UpdateLiveIns = false;
+    bool SkipPredDebugSalvage = false;
     unsigned MinCommonTailLength;
     const TargetInstrInfo *TII = nullptr;
     const MachineRegisterInfo *MRI = nullptr;
