@@ -25,9 +25,10 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP6]], <4 x i1> [[REVERSE]], <4 x i32> poison)
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[REVERSE1]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP7]], splat (i32 10)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP8]], <4 x i32> [[REVERSE1]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP8]], <4 x i32> [[REVERSE1]]
 ; CHECK-NEXT:    [[TMP11]] = or <4 x i32> [[PREDPHI]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 -4)

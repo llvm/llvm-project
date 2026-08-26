@@ -1862,24 +1862,10 @@ static void simplifyBlends(VPlan &Plan) {
       // Normalize the blend so its first incoming value is used as the initial
       // value with the others blended into it.
 
-      unsigned StartIndex = 0;
-      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-        // If a value's mask is used only by the blend then is can be deadcoded.
-        // TODO: Find the most expensive mask that can be deadcoded, or a mask
-        // that's used by multiple blends where it can be removed from them all.
-        VPValue *Mask = Blend->getMask(I);
-        if (Mask->hasOneUse() && !match(Mask, m_False())) {
-          StartIndex = I;
-          break;
-        }
-      }
-
       SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
+      OperandsWithMask.push_back(Blend->getIncomingValue(0));
 
-      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-        if (I == StartIndex)
-          continue;
+      for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I) {
         OperandsWithMask.push_back(Blend->getIncomingValue(I));
         OperandsWithMask.push_back(Blend->getMask(I));
       }
@@ -1889,7 +1875,7 @@ static void simplifyBlends(VPlan &Plan) {
                             OperandsWithMask, *Blend, Blend->getDebugLoc());
       NewBlend->insertBefore(&R);
 
-      VPValue *DeadMask = Blend->getMask(StartIndex);
+      VPValue *DeadMask = Blend->getMask(0);
       Blend->replaceAllUsesWith(NewBlend);
       Blend->eraseFromParent();
       vputils::recursivelyDeleteDeadRecipes(DeadMask);

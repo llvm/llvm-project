@@ -25,8 +25,8 @@ define void @simplify_udiv_1_in_replicate_region(i8 %arg, ptr %src) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i8> zeroinitializer, <4 x i8> [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP8]], <4 x i8> [[TMP1]], <4 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i8> [[PREDPHI]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
