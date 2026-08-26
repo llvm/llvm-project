@@ -1508,10 +1508,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VPOPCNTDQ);
 
-  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    setFeature(X86::FEATURE_AVX5124VNNIW);
-  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    setFeature(X86::FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VP2INTERSECT);
 

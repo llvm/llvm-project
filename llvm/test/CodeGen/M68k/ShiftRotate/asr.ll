@@ -9,8 +9,8 @@ define zeroext i8 @asrb(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    asr.b %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = ashr i8 %a, %b
   ret i8 %1
@@ -22,8 +22,8 @@ define zeroext i16 @asrw(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d0
 ; CHECK-NEXT:    move.w (6,%sp), %d1
 ; CHECK-NEXT:    asr.w %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = ashr i16 %a, %b
   ret i16 %1
@@ -58,7 +58,9 @@ define zeroext i16 @asriw(i16 zeroext %a) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    asr.w #5, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
   %1 = ashr i16 %a, 5
   ret i16 %1
