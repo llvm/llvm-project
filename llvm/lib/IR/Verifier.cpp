@@ -1618,7 +1618,7 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
               "invalid retained nodes, retained node is not local", &N, Node,
               RetainedNode);
 
-      DISubprogram *RetainedNodeSP = RetainedNodeScope->getSubprogram();
+      DISubprogram *RetainedNodeSP = getSubprogram(RetainedNodeScope);
       DICompileUnit *RetainedNodeUnit =
           RetainedNodeSP ? RetainedNodeSP->getUnit() : nullptr;
       CheckDI(
@@ -6057,10 +6057,11 @@ void Verifier::visitInstruction(Instruction &I) {
 
     if (auto *DL = dyn_cast<DILocation>(N)) {
       if (DL->getAtomGroup()) {
-        CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
+        DISubprogram *SP = getSubprogram(DL->getRawScope());
+        CheckDI(SP && SP->getKeyInstructionsEnabled(),
                 "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
                 "Instructions enabled",
-                DL, DL->getScope()->getSubprogram());
+                DL, SP);
       }
     }
   }
