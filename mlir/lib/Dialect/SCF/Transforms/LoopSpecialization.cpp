@@ -136,6 +136,13 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   // Fast path: lb, ub and step are constants.
   if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
     return failure();
+
+  // Only the dynamic path computes the peeling bound with affine.apply, which
+  // accepts only index operands.
+  if ((!lbInt || !ubInt || !stepInt) &&
+      !forOp.getInductionVar().getType().isIndex())
+    return failure();
+
   // Slow path: Examine the ops that define lb, ub and step.
   AffineExpr sym0, sym1, sym2;
   bindSymbols(b.getContext(), sym0, sym1, sym2);

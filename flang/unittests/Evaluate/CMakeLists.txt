@@ -20,13 +20,6 @@ add_flang_nongtest_unittest(expression
   FortranParser
 )
 
-add_flang_nongtest_unittest(designator-path
-  FortranSupport
-  NonGTestTesting
-  FortranEvaluate
-  FortranSemantics
-)
-
 add_flang_nongtest_unittest(integer
   NonGTestTesting
   FortranEvaluate
