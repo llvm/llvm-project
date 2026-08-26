@@ -270,7 +270,7 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   // If it defines an SGPR it depends on EXEC, unless it's dead.
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   for (const MachineOperand &Def : MI.defs()) {
-    if (!Def.isReg() || Def.isDead())
+    if (Def.isDead())
       continue;
 
     Register Reg = Def.getReg();
