@@ -14,7 +14,7 @@
 
 namespace llvm {
 class GCNBreakLoadClusterDepsPass
-  : public PassInfoMixin<GCNBreakLoadClusterDepsPass> {
+  : public RequiredPassInfoMixin<GCNBreakLoadClusterDepsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
