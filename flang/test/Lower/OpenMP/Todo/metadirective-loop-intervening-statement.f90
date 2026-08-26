@@ -9,6 +9,9 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -o - %t/prefetch.f90 2>&1 | FileCheck --check-prefix=PREFETCH %s
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -o - %t/begin-prefetch.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=BEGIN-PREFETCH %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -o - %t/entry.f90 2>&1 | FileCheck --check-prefix=ENTRY %s
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -o - %t/format.f90 2>&1 | FileCheck --check-prefix=FORMAT %s
@@ -25,6 +28,8 @@
 ! REQ-SAME: METADIRECTIVE and its associated DO
 ! PREFETCH: not yet implemented: PREFETCH compiler directive between
 ! PREFETCH-SAME: loop-associated METADIRECTIVE and its associated DO
+! BEGIN-PREFETCH: not yet implemented: PREFETCH compiler directive between
+! BEGIN-PREFETCH-SAME: loop-associated METADIRECTIVE and its associated DO
 ! ENTRY: not yet implemented: ENTRY statement between loop-associated
 ! ENTRY-SAME: METADIRECTIVE and its associated DO
 ! FORMAT: not yet implemented: FORMAT statement between loop-associated
@@ -71,6 +76,21 @@ subroutine prefetch_between(a, n)
   do i = 1, n
     a(i) = i
   end do
+end subroutine
+
+!--- begin-prefetch.f90
+subroutine begin_prefetch_between(a, n)
+  integer :: a(n), n, i, idx
+  logical :: choose
+  external :: idx, choose
+  !$omp begin metadirective &
+  !$omp & when(user={condition(choose())}: do) &
+  !$omp & otherwise(nothing)
+  !dir$ prefetch a(idx())
+  do i = 1, n
+    a(i) = i
+  end do
+  !$omp end metadirective
 end subroutine
 
 !--- entry.f90

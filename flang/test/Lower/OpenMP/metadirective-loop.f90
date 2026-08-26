@@ -2,8 +2,14 @@
 
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 %s -o - | FileCheck %s
 
-! CHECK: #loop_unroll = #llvm.loop_unroll<disable = false, count = 4 : i64>
-! CHECK: #loop_annotation = #llvm.loop_annotation<unroll = #loop_unroll>
+! CHECK: #[[UNROLL:loop_unroll[0-9]*]] =
+! CHECK-SAME: #llvm.loop_unroll<disable = false, count = 4 : i64>
+! CHECK: #[[VECTORIZE:loop_vectorize[0-9]*]] =
+! CHECK-SAME: #llvm.loop_vectorize<disable = false>
+! CHECK: #[[UNROLL_ANNOTATION:loop_annotation[0-9]*]] =
+! CHECK-SAME: #llvm.loop_annotation<unroll = #[[UNROLL]]>
+! CHECK: #[[VECTOR_ANNOTATION:loop_annotation[0-9]*]] =
+! CHECK-SAME: #llvm.loop_annotation<vectorize = #[[VECTORIZE]]>
 
 ! CHECK-LABEL: func.func @_QPtest_do(
 ! CHECK-NOT:     omp.parallel
@@ -402,7 +408,8 @@ end subroutine
 ! CHECK:         fir.if {{.*}} {
 ! CHECK:           omp.wsloop
 ! CHECK:         } else {
-! CHECK:           fir.do_loop {{.*}} attributes {loopAnnotation = #loop_annotation}
+! CHECK:           fir.do_loop
+! CHECK-SAME:        attributes {loopAnnotation = #[[UNROLL_ANNOTATION]]}
 ! CHECK:         }
 ! CHECK:         return
 subroutine test_dynamic_unroll_fallback(flag, n, a)
@@ -417,6 +424,29 @@ subroutine test_dynamic_unroll_fallback(flag, n, a)
   end do
 end subroutine
 
+! A supported compiler directive nested inside a begin/end metadirective is
+! attached to the associated loop before runtime selection.
+! CHECK-LABEL: func.func @_QPtest_begin_unroll_fallback(
+! CHECK:         fir.if {{.*}} {
+! CHECK:           omp.wsloop
+! CHECK:         } else {
+! CHECK:           fir.do_loop
+! CHECK-SAME:        attributes {loopAnnotation = #[[UNROLL_ANNOTATION]]}
+! CHECK:         }
+! CHECK:         return
+subroutine test_begin_unroll_fallback(flag, n, a)
+  logical, intent(in) :: flag
+  integer :: n, a(n), i
+  !$omp begin metadirective &
+  !$omp & when(user={condition(flag)}: do) &
+  !$omp & otherwise(nothing)
+  !dir$ unroll 4
+  do i = 1, n
+    a(i) = i
+  end do
+  !$omp end metadirective
+end subroutine
+
 ! Other compiler directives that do not emit executable operations may also
 ! appear between the metadirective and its associated loop. Check a loop
 ! annotation, an inlining annotation, and an unrecognized no-op directive.
@@ -427,7 +457,7 @@ end subroutine
 ! CHECK:               fir.call @_QPconsume
 ! CHECK:         } else {
 ! CHECK:           fir.do_loop
-! CHECK-SAME:        attributes {loopAnnotation = #loop_annotation{{[0-9]*}}}
+! CHECK-SAME:        attributes {loopAnnotation = #[[VECTOR_ANNOTATION]]}
 ! CHECK:             fir.call @_QPconsume
 ! CHECK-SAME:          inline_attr = #fir.inline_attrs<always_inline>
 ! CHECK:         }
