@@ -9370,6 +9370,16 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   // expansion stays vector when ResVT is a vector.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), SrcBits);
   EVT IntVT = ResVT.changeElementType(*DAG.getContext(), IntScalarVT);
+  if (!IntVT.isVector() && !isTypeLegal(IntScalarVT)) {
+    if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger) {
+      // We only know how to handle situations where the legal type is wider.
+      DAG.getContext()->emitError(
+          "CONVERT_TO_ARBITRARY_FP: the requested integer value type for its "
+          "legalization is not supported");
+      return SDValue();
+    }
+    IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
+  }
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
   EVT FPSetCCVT =
@@ -9378,8 +9388,17 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   SDValue Zero = DAG.getConstant(0, dl, IntVT);
   SDValue One = DAG.getConstant(1, dl, IntVT);
 
-  // Bitcast source float to integer to extract the sign bit.
-  SDValue Src = DAG.getNode(ISD::BITCAST, dl, IntVT, FloatVal);
+  SDValue Src;
+  if (!IntVT.bitsEq(SrcVT)) {
+    // Store to stack before loading it back.
+    assert(!IntVT.isVector() && IntVT.bitsGT(SrcVT));
+    // IntScalarVT is the original type that has the same width as SrcVT.
+    Src = DAG.emitStackConvert(FloatVal, IntScalarVT, IntVT, dl,
+                               DAG.getEntryNode());
+  } else {
+    // Bitcast source float to integer to extract the sign bit.
+    Src = DAG.getNode(ISD::BITCAST, dl, IntVT, FloatVal);
+  }
   SDValue SignBit =
       DAG.getNode(ISD::SRL, dl, IntVT, Src,
                   DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
@@ -9398,12 +9417,31 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   EVT FrexpExpScalarVT =
       getValueType(DAG.getDataLayout(), Type::getInt32Ty(*DAG.getContext()));
   EVT FrexpExpVT = SrcVT.changeElementType(*DAG.getContext(), FrexpExpScalarVT);
+  if (!FrexpExpVT.isVector() && !isTypeLegal(FrexpExpVT)) {
+    if (getTypeAction(*DAG.getContext(), FrexpExpScalarVT) !=
+        TypePromoteInteger) {
+      // We only know how to handle situations where the legal type is wider.
+      DAG.getContext()->emitError("CONVERT_TO_ARBITRARY_FP: the requested i32 "
+                                  "type for its legalization is not supported");
+      return SDValue();
+    }
+    FrexpExpVT = getTypeToTransformTo(*DAG.getContext(), FrexpExpScalarVT);
+  }
   SDValue Frexp =
       DAG.getNode(ISD::FFREXP, dl, DAG.getVTList(SrcVT, FrexpExpVT), FloatVal);
   SDValue FrexpFrac = Frexp.getValue(0);
   SDValue FrexpExp = Frexp.getValue(1);
 
-  SDValue FrexpFracInt = DAG.getNode(ISD::BITCAST, dl, IntVT, FrexpFrac);
+  SDValue FrexpFracInt;
+  if (!IntVT.bitsEq(SrcVT)) {
+    // Store to stack before loading it back.
+    assert(!IntVT.isVector() && IntVT.bitsGT(SrcVT));
+    // IntScalarVT is the original type that has the same width as SrcVT.
+    FrexpFracInt = DAG.emitStackConvert(FrexpFrac, IntScalarVT, IntVT, dl,
+                                        DAG.getEntryNode());
+  } else {
+    FrexpFracInt = DAG.getNode(ISD::BITCAST, dl, IntVT, FrexpFrac);
+  }
   SDValue EffSrcMant = DAG.getNode(ISD::AND, dl, IntVT, FrexpFracInt,
                                    DAG.getConstant(SrcMantMask, dl, IntVT));
 
@@ -9432,7 +9470,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       SDValue IsPositive = DAG.getSetCC(dl, SetCCVT, SignBit, Zero, ISD::SETEQ);
       SDValue DoRound =
           DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsPositive);
-      return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
+      return DAG.getZExtOrTrunc(DoRound, dl, IntVT);
     }
     case RoundingMode::TowardNegative: {
       // Round up if negative and any truncated bits are set (to -Inf).
@@ -9443,7 +9481,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       SDValue IsNegative = DAG.getSetCC(dl, SetCCVT, SignBit, Zero, ISD::SETNE);
       SDValue DoRound =
           DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsNegative);
-      return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
+      return DAG.getZExtOrTrunc(DoRound, dl, IntVT);
     }
     case RoundingMode::NearestTiesToAway:
       return RoundBit;
@@ -9478,7 +9516,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       StickyBits = DAG.getNode(ISD::AND, dl, IntVT, EffSrcMant,
                                DAG.getConstant(StickyMask, dl, IntVT));
       StickyBits = DAG.getSetCC(dl, SetCCVT, StickyBits, Zero, ISD::SETNE);
-      StickyBits = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, StickyBits);
+      StickyBits = DAG.getZExtOrTrunc(StickyBits, dl, IntVT);
     } else {
       StickyBits = Zero;
     }
@@ -9505,9 +9543,8 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
                    DAG.getConstant(DstMantMask, dl, IntVT), ISD::SETGT);
   // On overflow: mant = 0, exp += 1.
   SDValue AdjMant = DAG.getSelect(dl, IntVT, MantOverflow, Zero, RoundedMant);
-  SDValue AdjExp =
-      DAG.getNode(ISD::ADD, dl, IntVT, NewExp,
-                  DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, MantOverflow));
+  SDValue AdjExp = DAG.getNode(ISD::ADD, dl, IntVT, NewExp,
+                               DAG.getZExtOrTrunc(MantOverflow, dl, IntVT));
 
   // Precompute sign shifted to MSB of destination. Unsigned formats have no
   // sign bit to merge in.
@@ -9570,9 +9607,9 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
           DAG.getNode(ISD::SHL, dl, IntVT, One, RoundBitPosAmt), One);
       SDValue DenormStickyBits =
           DAG.getNode(ISD::AND, dl, IntVT, FullSrcMant, StickyMask);
-      SDValue HasSticky = DAG.getNode(
-          ISD::ZERO_EXTEND, dl, IntVT,
-          DAG.getSetCC(dl, SetCCVT, DenormStickyBits, Zero, ISD::SETNE));
+      SDValue HasSticky = DAG.getZExtOrTrunc(
+          DAG.getSetCC(dl, SetCCVT, DenormStickyBits, Zero, ISD::SETNE), dl,
+          IntVT);
 
       SDValue DenormLSB =
           DAG.getNode(ISD::AND, dl, IntVT, DenormTruncMant, One);
