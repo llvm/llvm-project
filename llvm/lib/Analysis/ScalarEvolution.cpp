@@ -16304,6 +16304,30 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         Bitwidth = Bitwidth / 2;
       }
 
+      // Pull a leading constant out of the zext:
+      //   zext(C + X) -> zext(X) - zext(-C), if X >=u -C.
+      const SCEVAddExpr *Add;
+      const APInt *C;
+      if (match(Op, m_scev_Add(Add)) &&
+          match(Add->getOperand(0), m_scev_APInt(C))) {
+        SmallVector<SCEVUse, 4> XOps(llvm::drop_begin(Add->operands()));
+        const SCEV *X = SE.getAddExpr(XOps);
+        // Rewrite X first so guard clamps (e.g. umax(X, K)) can
+        // supply the lower bound for the range check below.
+        const SCEV *GuardedX = visit(X);
+        // Let NegC = -C modulo the narrow bit width. If X >=u NegC:
+        //   zext(C + X) == zext(X) - zext(NegC)
+        //
+        // For C < 0, the addition acts as subtraction without underflow.
+        // For C > 0, the guard guarantees narrow-width wrap. In both cases,
+        // it prevents the widened subtraction from underflowing.
+        APInt NegC = -*C;
+        if (SE.getUnsignedRangeMin(GuardedX).uge(NegC))
+          return SE.getMinusSCEV(
+              SE.getZeroExtendExpr(GuardedX, Ty),
+              SE.getConstant(NegC.zext(Ty->getScalarSizeInBits())));
+      }
+
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitZeroExtendExpr(
           Expr);
     }

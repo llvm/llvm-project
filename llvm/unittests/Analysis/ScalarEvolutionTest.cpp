@@ -1674,6 +1674,70 @@ TEST_F(ScalarEvolutionsTest, ApplyLoopGuards) {
   });
 }
 
+// Cover the LoopGuards rule zext(C + X) -> zext(X) - zext(-C), when X >=u -C.
+TEST_F(ScalarEvolutionsTest, ApplyLoopGuardsZextAddConst) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      // Guard %n uge 1 clamps %n to umax(1, %n) in the LoopGuards map.
+      "define void @neg_const(i32 %n) { "
+      "entry: "
+      "  %g = icmp uge i32 %n, 1 "
+      "  br i1 %g, label %ph, label %exit "
+      "ph: "
+      "  br label %loop "
+      "loop: "
+      "  %iv = phi i32 [ 0, %ph ], [ %iv.next, %loop ] "
+      "  %iv.next = add nuw nsw i32 %iv, 1 "
+      "  %ec = icmp ult i32 %iv, %n "
+      "  br i1 %ec, label %loop, label %exit "
+      "exit: "
+      "  ret void "
+      "} "
+      // Negative: no guard, no clamp. Transform must NOT fire.
+      "define void @no_guard(i32 %n) { "
+      "entry: "
+      "  br label %loop "
+      "loop: "
+      "  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] "
+      "  %iv.next = add nuw nsw i32 %iv, 1 "
+      "  %ec = icmp ult i32 %iv, %n "
+      "  br i1 %ec, label %loop, label %exit "
+      "exit: "
+      "  ret void "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  Type *I32 = Type::getInt32Ty(C);
+  Type *I64 = Type::getInt64Ty(C);
+
+  auto Rewrite = [&](ScalarEvolution &SE, LoopInfo &LI, const SCEV *Inner) {
+    return SE.applyLoopGuards(SE.getZeroExtendExpr(Inner, I64), *LI.begin());
+  };
+
+  // Guard %n uge 1: zext(-1 + %n) -> -1 + zext(umax(1, %n)).
+  runWithSE(*M, "neg_const",
+            [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+              const SCEV *N = SE.getSCEV(getArgByName(F, "n"));
+              const SCEV *Inner = SE.getAddExpr(SE.getMinusOne(I32), N);
+              const SCEV *Clamped = SE.getUMaxExpr(SE.getConstant(I32, 1), N);
+              const SCEV *Expected = SE.getAddExpr(
+                  SE.getMinusOne(I64), SE.getZeroExtendExpr(Clamped, I64));
+              EXPECT_EQ(Rewrite(SE, LI, Inner), Expected);
+            });
+
+  // No guard, plain %n: transform must not fire, zext stays fused.
+  runWithSE(
+      *M, "no_guard", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        const SCEV *N = SE.getSCEV(getArgByName(F, "n"));
+        const SCEV *Inner = SE.getAddExpr(SE.getMinusOne(I32), N);
+        EXPECT_EQ(Rewrite(SE, LI, Inner), SE.getZeroExtendExpr(Inner, I64));
+      });
+}
+
 TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
   LLVMContext C;
   SMDiagnostic Err;
