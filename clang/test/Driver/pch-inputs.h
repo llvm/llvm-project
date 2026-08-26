@@ -19,6 +19,12 @@
 // An actual linker input file (object0.o) triggers an error, not a warning
 // RUN: not %clang %s %S/Inputs/object0.o -o %t/tmp3.pch -### 2>&1 | FileCheck %s --check-prefix=MULTIOUTPUT
 
+// Other input types that do not link
+// RUN: %clang -x cl-header %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
+// RUN: %clang -x objective-c++-header %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
+// RUN: %clang -x hlsl %s -Xlinker -somelinkerflag -### 2>&1 | FileCheck %s --check-prefix=UNUSED-XLINKER
+// UNUSED-XLINKER: clang: warning: -Xlinker -somelinkerflag: 'linker' input unused [-Wunused-command-line-argument]
+
 
 // Normal case: Single header file input compiles to .pch even without --precompile
 // RUN: %clang %s -o %t/tmp1.pch -### 2>&1 | FileCheck %s --check-prefix=SINGLEHEADER
@@ -38,3 +44,5 @@
 // MULTIHEADER: "-emit-pch"
 // MULTIHEADER: "-o"
 // MULTIHEADER: header2.h.pch"
+
+

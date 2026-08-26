@@ -74,7 +74,6 @@
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
@@ -353,7 +352,8 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
-// option we used to determine the final phase.
+// option we used to determine the final phase. In absence of any explicit
+// action command line option, derive the compilation mode from the inputs.
 phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
                                  llvm::ArrayRef<InputTy> Inputs,
                                  Arg **FinalPhaseArg) const {
@@ -403,24 +403,34 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
-    // Otherwise, autodetect from last phase triggered by input file
+    // Otherwise autodetect from last phase triggered by input file.
   } else {
-    llvm::BitVector UsedPhases(phases::MaxNumberOfPhases);
+    FinalPhase = phases::Preprocess;
+    bool AnyPhase = false;
     for (auto &I : Inputs) {
       types::ID InputType = I.first;
       const Arg *InputArg = I.second;
 
-      // Linker options should not trigger more phases
+      // Linker options should not trigger more phases.
       if (InputArg->getOption().hasFlag(options::LinkerInput))
         continue;
 
+      // Relies on the compilation phases being ordered.
       auto PL = types::getCompilationPhases(InputType);
-      for (phases::ID P : PL)
-        UsedPhases.set(P);
+      if (PL.empty())
+        continue;
+
+      phases::ID LastPL = PL.back();
+      if (LastPL > FinalPhase || !AnyPhase) {
+        PhaseArg = const_cast<Arg *>(InputArg);
+        FinalPhase = LastPL;
+      }
+      AnyPhase = true;
     }
-    FinalPhase = UsedPhases.any()
-                     ? static_cast<phases::ID>(UsedPhases.find_last())
-                     : phases::Link;
+
+    // Fall back to "do everything" when consistency check fails.
+    if (!AnyPhase || FinalPhase > phases::Link)
+      FinalPhase = phases::Link;
   }
 
   if (FinalPhaseArg)
