@@ -76,6 +76,9 @@ bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
   LLDB_INSTRUMENT_VA(this, name, value, overwrite);
 
   llvm::StringRef name_ref{name};
+  if (name_ref.trim().empty())
+    return false;
+
   llvm::StringRef value_ref{value};
   if (overwrite) {
     m_opaque_up->insert_or_assign(name_ref, value_ref.str());
@@ -86,6 +89,10 @@ bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
 
 bool SBEnvironment::Unset(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
+
+  llvm::StringRef name_ref{name};
+  if (name_ref.trim().empty())
+    return false;
 
   return m_opaque_up->erase(llvm::StringRef(name));
 }
