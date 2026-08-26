@@ -274,6 +274,9 @@ LLVM_ABI LLVM_READONLY StringRef computeDefaultTargetABI(const Triple &TT);
 LLVM_ABI LLVM_READONLY ARMABI computeTargetABI(const Triple &TT,
                                                StringRef ABIName = "");
 
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf}?
+LLVM_ABI bool isARMEABIBareMetal(const Triple &TT);
+
 /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
 ///
 /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
