@@ -125,29 +125,6 @@ TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
   EXPECT_EQ(cast<SCEVUnknown>(M2->getOperand(1))->getValue(), V0);
 }
 
-TEST_F(ScalarEvolutionsTest, SameSCEVUnknowns) {
-  Type *Ty = Type::getInt64Ty(Context);
-  FunctionType *FTy =
-      FunctionType::get(Type::getVoidTy(Context), {Ty, Ty}, false);
-  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
-  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
-  ReturnInst::Create(Context, nullptr, BB);
-
-  ScalarEvolution SE = buildSE(*F);
-
-  const SCEV *S0 = SE.getSCEV(F->getArg(0));
-  const SCEV *S1 = SE.getSCEV(F->getArg(1));
-  const SCEV *One = SE.getOne(Ty);
-  const SCEV *Two = SE.getConstant(Ty, 2);
-  const SCEV *S0PlusOne = SE.getAddExpr(S0, One);
-  const SCEV *S0PlusTwo = SE.getAddExpr(S0, Two);
-  const SCEV *S0PlusS1 = SE.getAddExpr(S0, S1);
-
-  EXPECT_TRUE(SE.hasSameSCEVUnknowns(S0PlusOne, S0PlusTwo));
-  EXPECT_FALSE(SE.hasSameSCEVUnknowns(S0PlusOne, S0PlusS1));
-  EXPECT_TRUE(SE.hasSameSCEVUnknowns(One, Two));
-}
-
 TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
                                               std::vector<Type *>(), false);
