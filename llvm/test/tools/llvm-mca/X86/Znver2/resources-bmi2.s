@@ -66,14 +66,14 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT:  1      7     2.00    *                   mulxl	(%rax), %ebx, %ecx
 # CHECK-NEXT:  1      3     2.00                        mulxq	%rax, %rbx, %rcx
 # CHECK-NEXT:  1      7     2.00    *                   mulxq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  6      17    18.00                       pdepl	%eax, %ebx, %ecx
-# CHECK-NEXT:  100    23    44.25   *                   pdepl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  6      17    18.00                       pdepq	%rax, %rbx, %rcx
-# CHECK-NEXT:  100    23    44.25   *                   pdepq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  7      17    18.00                       pextl	%eax, %ebx, %ecx
-# CHECK-NEXT:  100    23    44.25   *                   pextl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  7      17    18.00                       pextq	%rax, %rbx, %rcx
-# CHECK-NEXT:  100    23    44.25   *                   pextq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  95     53    53.00                       pdepl	%eax, %ebx, %ecx
+# CHECK-NEXT:  96     56    55.00   *                   pdepl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  165    86    86.00                       pdepq	%rax, %rbx, %rcx
+# CHECK-NEXT:  166    89    89.00   *                   pdepq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  95     53    53.00                       pextl	%eax, %ebx, %ecx
+# CHECK-NEXT:  96     56    55.00   *                   pextl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  165    86    86.00                       pextq	%rax, %rbx, %rcx
+# CHECK-NEXT:  166    89    89.00   *                   pextq	(%rax), %rbx, %rcx
 # CHECK-NEXT:  1      1     0.25                        rorxl	$1, %eax, %ecx
 # CHECK-NEXT:  2      5     0.33    *                   rorxl	$1, (%rax), %ecx
 # CHECK-NEXT:  1      1     0.25                        rorxq	$1, %rax, %rcx
@@ -108,7 +108,7 @@ shrx        %rax, (%rbx), %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 5.33   5.33   5.33   254.00 258.00 254.00 254.00  -      -      -      -      -     8.00
+# CHECK-NEXT: 5.33   5.33   5.33   7.00   11.00  7.00   7.00    -      -      -      -      -     574.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -120,14 +120,14 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -     2.00   mulxl	(%rax), %ebx, %ecx
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -     2.00   mulxq	%rax, %rbx, %rcx
 # CHECK-NEXT: 0.33   0.33   0.33    -     1.00    -      -      -      -      -      -      -     2.00   mulxq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  -      -      -     18.00  18.00  18.00  18.00   -      -      -      -      -      -     pdepl	%eax, %ebx, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33   44.25  44.25  44.25  44.25   -      -      -      -      -      -     pdepl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -      -      -     18.00  18.00  18.00  18.00   -      -      -      -      -      -     pdepq	%rax, %rbx, %rcx
-# CHECK-NEXT: 0.33   0.33   0.33   44.25  44.25  44.25  44.25   -      -      -      -      -      -     pdepq	(%rax), %rbx, %rcx
-# CHECK-NEXT:  -      -      -     18.00  18.00  18.00  18.00   -      -      -      -      -      -     pextl	%eax, %ebx, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33   44.25  44.25  44.25  44.25   -      -      -      -      -      -     pextl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -      -      -     18.00  18.00  18.00  18.00   -      -      -      -      -      -     pextq	%rax, %rbx, %rcx
-# CHECK-NEXT: 0.33   0.33   0.33   44.25  44.25  44.25  44.25   -      -      -      -      -      -     pextq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -     53.00  pdepl	%eax, %ebx, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -     55.00  pdepl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -     86.00  pdepq	%rax, %rbx, %rcx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -     89.00  pdepq	(%rax), %rbx, %rcx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -     53.00  pextl	%eax, %ebx, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -     55.00  pextl	(%rax), %ebx, %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -     86.00  pextq	%rax, %rbx, %rcx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -     89.00  pextq	(%rax), %rbx, %rcx
 # CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     rorxl	$1, %eax, %ecx
 # CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -     rorxl	$1, (%rax), %ecx
 # CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     rorxq	$1, %rax, %rcx
