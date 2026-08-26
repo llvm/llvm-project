@@ -68,6 +68,23 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+static bool addRPathCmdArg(const llvm::opt::ArgList &Args,
+                           ArgStringList &CmdArgs,
+                           const std::string pathCandidate,
+                           bool onlyIfPathExists = true) {
+  SmallString<0> simplifiedPathCandidate(pathCandidate);
+  llvm::sys::path::remove_dots(simplifiedPathCandidate, true);
+
+  bool pathExists = llvm::sys::fs::exists(simplifiedPathCandidate);
+
+  if (onlyIfPathExists && !pathExists)
+    return false;
+
+  CmdArgs.push_back("-rpath");
+  CmdArgs.push_back(Args.MakeArgString(simplifiedPathCandidate));
+  return pathExists;
+}
+
 OffloadJobsOpt tools::parseOffloadJobs(const ArgList &Args) {
   Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ);
   if (!A)
@@ -1452,6 +1469,65 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
+void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
+                                          const ArgList &Args,
+                                          ArgStringList &CmdArgs) {
+  if (!Args.hasFlag(options::OPT_fopenmp_implicit_rpath,
+                    options::OPT_fno_openmp_implicit_rpath, false))
+    return;
+
+  const Driver &D = TC.getDriver();
+  std::string LibSuffix = "lib";
+  if (TC.getSanitizerArgs(Args).needsAsanRt())
+    LibSuffix.append("/asan");
+  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_runtimelib_EQ)) {
+    LibSuffix = A->getValue();
+    if (LibSuffix != "lib-perf" && LibSuffix != "lib-debug" &&
+        LibSuffix != "lib")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << LibSuffix;
+    if (TC.getSanitizerArgs(Args).needsAsanRt())
+      LibSuffix.append("/asan");
+  }
+
+  // Add an rpath entry for each existing LIBRARY_PATH directory.
+  ArgStringList EnvLibraryPaths;
+  addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
+  for (auto &EnvLibraryPath : EnvLibraryPaths)
+    addRPathCmdArg(Args, CmdArgs, EnvLibraryPath);
+
+  // Default to clang lib / lib64 folder, i.e. the same location as device
+  // runtime
+  SmallString<256> DefaultLibPath =
+      llvm::sys::path::parent_path(TC.getDriver().Dir);
+  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
+  if (TC.getSanitizerArgs(Args).needsAsanRt())
+    addRPathCmdArg(Args, CmdArgs, TC.getCompilerRTPath(),
+                   /*onlyIfPathExists=*/false);
+
+  // In case LibSuffix was not built, try lib
+  std::string CandidateRPath_suf = D.Dir + "/../" + LibSuffix;
+  // Add lib directory in case LibSuffix does not exist
+  std::string CandidateRPath_lib = D.Dir + "/../lib";
+  if (!addRPathCmdArg(Args, CmdArgs, CandidateRPath_suf,
+                      /*onlyIfPathExists=*/false))
+    addRPathCmdArg(Args, CmdArgs, CandidateRPath_lib);
+
+  std::string rocmPath =
+      Args.getLastArgValue(clang::options::OPT_rocm_path_EQ).str();
+  if (rocmPath.size() != 0) {
+    std::string rocmPath_lib = rocmPath + "/lib";
+    std::string rocmPath_suf = rocmPath + "/" + LibSuffix;
+    if (!addRPathCmdArg(Args, CmdArgs, rocmPath_suf))
+      addRPathCmdArg(Args, CmdArgs, rocmPath_lib);
+  }
+
+  // Add Default lib path to ensure llvm dynamic library is picked up for
+  // lib-debug/lib-perf
+  if (LibSuffix != "lib")
+    addRPathCmdArg(Args, CmdArgs, DefaultLibPath.c_str());
+}
+
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                         const ArgList &Args,
                                         ArgStringList &CmdArgs) {
@@ -1544,6 +1620,9 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
     CmdArgs.push_back("-lomptarget");
 
   addArchSpecificRPath(TC, Args, CmdArgs);
+
+  if (RTKind == Driver::OMPRT_OMP)
+    addOpenMPRuntimeSpecificRPath(TC, Args, CmdArgs);
 
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);
 

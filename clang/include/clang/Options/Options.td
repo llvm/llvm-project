@@ -4215,6 +4215,10 @@ def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams
            "teams; this flag is accepted for backwards compatibility only "
            "and emits a deprecation warning when used.">;
 
+def fopenmp_runtimelib_EQ : Joined<["-"], "fopenmp-runtimelib=">, Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Flags<[NoArgumentUnused]>,
+  HelpText<"Select lib, lib-perf, or lib-debug openmp runtime"
+           " <arg> must be: lib, lib-perf or lib-debug.">;
+
 //===----------------------------------------------------------------------===//
 // Shared cc1 + fc1 OpenMP Target Options
 //===----------------------------------------------------------------------===//
@@ -6775,6 +6779,10 @@ def no_offload_add_rpath: Flag<["--"], "no-offload-add-rpath">,
   Alias<frtlib_add_rpath>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput, NoArgumentUnused]>,
         Group<Link_Group>;
+defm openmp_implicit_rpath : BoolOptionWithoutMarshalling<"f", "openmp-implicit-rpath",
+  PosFlag<SetTrue, [], [ClangOption], "Set rpath implicitly on OpenMP executables">,
+  NegFlag<SetFalse, [], [ClangOption], "Do not set rpath implicitly on OpenMP executables">,
+  BothFlags<[NoArgumentUnused]>>, Group<f_Group>;
 def regcall4 : Flag<["-"], "regcall4">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set __regcall4 as a default calling convention to respect __regcall ABI v.4">,
