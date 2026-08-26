@@ -3307,9 +3307,8 @@ remove the const qualifier from the original declaration or use a mutable copy.
 Check for dereferences of pointers that refer to an object whose
 lifetime has already ended. Such a pointer is dangling. The checker
 reports it when it is dereferenced and when it is passed to a function.
-This includes a dereference in a return statement. A return statement that
-does not dereference the pointer does not lead to a report. Such a case is
-reported by the {ref}`core-StackAddressEscape` checker.
+A return statement that does not dereference the pointer does not lead to a report.
+Such a case is reported by the {ref}`core-StackAddressEscape` checker.
 
 Each object is reported at most once on an execution path. If the same dangling
 pointer is used several times then only the first use is reported.
@@ -3322,15 +3321,6 @@ void test_deref() {
     ptr = &num;
   } // note: 'num' is destroyed here
   *ptr = 6; // warn: use of 'num' after its lifetime ended
-}
-
-int test_deref_in_return() {
-  int *ptr = 0;
-  {
-    int num = 5;
-    ptr = &num;
-  } // note: 'num' is destroyed here
-  return *ptr; // warn: use of 'num' after its lifetime ended
 }
 
 void test_in_scope() {
