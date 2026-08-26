@@ -88,7 +88,9 @@ for bin in "${TEST_BINS[@]:1}"; do
 done
 ```
 
-#### Terminal Summary Table
+Reports can be generated in different formats:
+
+#### Option 1: Terminal Summary Report
 Prints an aggregated terminal summary showing line, region, and branch coverage percentages for each file:
 
 ```bash
@@ -99,7 +101,7 @@ llvm-cov report \
   -ignore-filename-regex=".*(test|utils).*"
 ```
 
-#### Interactive HTML Dashboard
+#### Option 2: Interactive HTML Dashboard
 Generates an interactive HTML dashboard containing sortable directory metrics and syntax-highlighted source views:
 
 ```bash
@@ -167,7 +169,9 @@ for bin in "${TEST_BINS[@]:1}"; do
 done
 ```
 
-#### Terminal Summary Table
+Reports can be generated in two formats depending on your needs:
+
+#### Option 1: Terminal Summary Report
 Displays the terminal coverage summary including MC/DC Condition and Missed Condition percentages:
 
 ```bash
@@ -179,7 +183,7 @@ llvm-cov report \
   -ignore-filename-regex=".*(test|utils).*"
 ```
 
-#### Interactive HTML Dashboard
+#### Option 2: Interactive HTML Dashboard
 Produces an HTML report with expandable MC/DC decision truth tables and test vector coverage breakdowns:
 
 ```bash
@@ -231,16 +235,18 @@ llvm-profdata merge -sparse -f profraw_list.txt -o libc_single.profdata
 
 ### 3. View the Terminal Report
 
-Renders the coverage metrics or line-by-line truth table for the specific source file being tested:
+Reports can be viewed as an overall file summary or an annotated line-by-line breakdown:
 
+#### Option 1: Summary Table Report
 ```bash
-# Standard summary report
 llvm-cov report \
   -instr-profile=libc_single.profdata \
   ./build-cov/libc/test/src/ctype/libc.test.src.ctype.isalpha_test.__build__ \
   libc/src/ctype/isalpha.cpp
+```
 
-# Line-by-line coverage and truth table inspection
+#### Option 2: Line-by-Line & Truth Table View
+```bash
 llvm-cov show \
   -instr-profile=libc_single.profdata \
   ./build-cov-mcdc/libc/test/src/ctype/libc.test.src.ctype.isalpha_test.__build__ \
@@ -262,7 +268,7 @@ llvm-cov show \
 * **MC/DC Coverage:**  
   Evaluates compound boolean expressions (such as `if (A && B)` or `if (A || B)`). It verifies that each individual condition was tested as both True and False, and demonstrated that it could independently change the overall outcome of the decision.
 
-### Interpreting Summary Reports (`llvm-cov report`)
+### Interpreting Reports 
 
 The summary table produced by `llvm-cov report` displays metrics across individual source files and overall totals:
 
