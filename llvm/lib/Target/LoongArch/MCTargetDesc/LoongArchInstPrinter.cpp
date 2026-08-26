@@ -95,6 +95,16 @@ void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   printRegName(O, MO.getReg());
 }
 
+void LoongArchInstPrinter::printCFRSetDest(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  printRegName(O, MI->getOperand(OpNo).getReg());
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+  O << ", ";
+  printRegName(O, LoongArch::F0);
+}
+
 const char *LoongArchInstPrinter::getRegisterName(MCRegister Reg) {
   // Default print reg alias name
   return getRegisterName(Reg, NumericReg ? LoongArch::NoRegAltName
