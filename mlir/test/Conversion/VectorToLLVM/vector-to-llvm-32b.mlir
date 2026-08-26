@@ -1,10 +1,11 @@
 // The memref descriptor fields use the converted index type, which is not
-// necessarily `i64`.
+// necessarily `i64`. Note that dynamic=true is needed to ensure that the data
+// layout is considered.
 
-// RUN: mlir-opt %s --convert-to-llvm | FileCheck %s
+// RUN: mlir-opt %s --convert-to-llvm="dynamic=true" | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<
-  #dlti.dl_entry<index, 32>,
+  #dlti.dl_entry<index, 32>
 >} {
   // CHECK-LABEL: llvm.func @type_cast
   //       CHECK:   %[[OFFSET:.*]] = llvm.mlir.constant(0 : index) : i32
