@@ -85,15 +85,15 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
 // in-process CIRGen (where the same TargetInfo also drives the AST) and for
 // the .cir input path, where there is no AST at all.
 static std::unique_ptr<cir::LowerModule>
-makeLowerModuleFromInvocation(CompilerInstance &CI, mlir::ModuleOp module) {
+makeLowerModuleFromInvocation(CompilerInstance &CI, mlir::ModuleOp Module) {
   // Clone TargetInfo: LowerModule takes ownership and CI keeps its copy.
-  auto target =
+  auto Target =
       std::unique_ptr<clang::TargetInfo>(clang::TargetInfo::CreateTargetInfo(
           CI.getDiagnostics(), CI.getInvocation().getTargetOpts()));
-  if (!target)
+  if (!Target)
     return nullptr;
-  return cir::createLowerModule(module, CI.getLangOpts(), CI.getCodeGenOpts(),
-                                std::move(target));
+  return cir::createLowerModule(Module, CI.getLangOpts(), CI.getCodeGenOpts(),
+                                std::move(Target));
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -183,14 +183,14 @@ public:
       // Setup and run CIR pipeline.
       const bool EnableLibOpt =
           FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
-      std::unique_ptr<cir::LowerModule> lowerModule =
+      std::unique_ptr<cir::LowerModule> LowerMod =
           makeLowerModuleFromInvocation(CI, MlirModule);
-      if (!lowerModule) {
+      if (!LowerMod) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
       }
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, *lowerModule, &CI.getVirtualFileSystem(),
+              MlirModule, MlirCtx, *LowerMod, &CI.getVirtualFileSystem(),
               !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
               EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
@@ -316,14 +316,14 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
-static void registerCIRInputDialects(mlir::MLIRContext &ctx) {
-  mlir::DialectRegistry registry;
-  registry.insert<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+static void registerCIRInputDialects(mlir::MLIRContext &Ctx) {
+  mlir::DialectRegistry Registry;
+  Registry.insert<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                   mlir::omp::OpenMPDialect, cir::CIRDialect>();
-  cir::acc::registerOpenACCExtensions(registry);
-  cir::omp::registerOpenMPExtensions(registry);
-  ctx.appendDialectRegistry(registry);
-  ctx.loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+  cir::acc::registerOpenACCExtensions(Registry);
+  cir::omp::registerOpenMPExtensions(Registry);
+  Ctx.appendDialectRegistry(Registry);
+  Ctx.loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                   mlir::omp::OpenMPDialect, cir::CIRDialect>();
 }
 
@@ -394,24 +394,24 @@ void CIRGenAction::ExecuteAction() {
 
   // Honor the cc1 -triple flag: rewrite cir.triple if it disagrees so the
   // downstream lowering sees the invocation's target.
-  llvm::StringRef invocationTriple = CI.getTargetOpts().Triple;
-  if (auto modTriple = Mod->getAttrOfType<mlir::StringAttr>(
+  llvm::StringRef InvocationTriple = CI.getTargetOpts().Triple;
+  if (auto ModTriple = Mod->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getTripleAttrName())) {
-    if (modTriple.getValue() != invocationTriple) {
+    if (ModTriple.getValue() != InvocationTriple) {
       CI.getDiagnostics().Report(diag::warn_fe_override_module)
-          << invocationTriple;
+          << InvocationTriple;
       Mod->setAttr(cir::CIRDialect::getTripleAttrName(),
-                   mlir::StringAttr::get(MLIRCtx, invocationTriple));
+                   mlir::StringAttr::get(MLIRCtx, InvocationTriple));
     }
   } else {
     Mod->setAttr(cir::CIRDialect::getTripleAttrName(),
-                 mlir::StringAttr::get(MLIRCtx, invocationTriple));
+                 mlir::StringAttr::get(MLIRCtx, InvocationTriple));
   }
 
   if (Action == OutputType::EmitCIR) {
-    mlir::OpPrintingFlags flags;
-    flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-    Mod.print(*OS, flags);
+    mlir::OpPrintingFlags Flags;
+    Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+    Mod.print(*OS, Flags);
     return;
   }
 
@@ -420,9 +420,9 @@ void CIRGenAction::ExecuteAction() {
   // cc1 invocation, so it needs no live ASTContext. IdiomRecognizer is
   // skipped here -- it documents an AST dependency and is opt-in even on the
   // source path.
-  std::unique_ptr<cir::LowerModule> lowerModule =
+  std::unique_ptr<cir::LowerModule> LowerMod =
       makeLowerModuleFromInvocation(CI, Mod);
-  if (!lowerModule) {
+  if (!LowerMod) {
     CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
     return;
   }
@@ -430,7 +430,7 @@ void CIRGenAction::ExecuteAction() {
   const CodeGenOptions &CGO = CI.getCodeGenOpts();
   const bool EnableLibOpt =
       FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
-  if (runCIRToCIRPasses(Mod, *MLIRCtx, *lowerModule, &CI.getVirtualFileSystem(),
+  if (runCIRToCIRPasses(Mod, *MLIRCtx, *LowerMod, &CI.getVirtualFileSystem(),
                         !FEOptions.ClangIRDisableCIRVerifier,
                         /*enableIdiomRecognizer=*/false,
                         CGO.OptimizationLevel > 0, EnableLibOpt,
@@ -453,6 +453,14 @@ void CIRGenAction::ExecuteAction() {
       CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
     return;
   }
+
+  // TODO(cir): this emission tail (CIR-to-LLVM lowering + backend output)
+  // duplicates CIRGenConsumer::HandleTranslationUnit. Extract it into a shared
+  // helper both paths call.
+  // TODO(cir): the .cir path does not link the modules loaded from
+  // -mlink-builtin-bitcode (LinkModules is populated in BeginSourceFileAction
+  // but ignored here). Sharing the tail above reaches parity with the source
+  // path's linkInModules.
 
   // emitBackendOutput compares the module's data layout against the target's
   // expected description. The .cir input path bypasses BeginSourceFile, which
