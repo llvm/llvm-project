@@ -731,6 +731,28 @@ void associative_container_benchmarks(std::string container) {
     bench_non_empty(
         "equal_range(key)", query_bench([](Container const& c, Key const& key) { return c.equal_range(key); }));
   }
+
+  if constexpr (is_multi_key_container) {
+      bench_non_empty("rehash (half keys tripled)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+        const std::size_t size = st.range(0);
+        std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+        for (std::size_t i = 0; i != size / 2; ++i) {
+          in.push_back(in.at(i * 2));
+          in.push_back(in.at(i * 2));
+        }
+        Container c(in.begin(), in.end());
+
+        for ([[maybe_unused]] auto _ : st) {
+          c.rehash(c.bucket_count() * 2);
+          benchmark::DoNotOptimize(c);
+          benchmark::ClobberMemory();
+
+          st.PauseTiming();
+          c = Container(in.begin(), in.end());
+          st.ResumeTiming();
+        }
+      });
+  }
 }
 
 } // namespace support
