@@ -268,10 +268,7 @@ APSInt DataExtractor::getSLEB128APSInt(uint64_t *OffsetPtr, Error *Err) const {
     Shift += 7;
   } while (Byte & 0x80);
 
-  // Value is currently an exact, Shift-bit two's complement representation
-  // of the decoded number, with the top bit doubling as its sign. Sign
-  // extend it to a canonical minimum width to match getSLEB128(), growing
-  // it further only if the encoding actually needs more than 64 bits.
+  // Sign extend Value to at least 64 bits to match getSLEB128.
   if (Shift < 64)
     Value = Value.sext(64);
 

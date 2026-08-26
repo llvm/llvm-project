@@ -234,36 +234,9 @@ TEST(DataExtractorTest, SLEB128APSInt) {
   }
 
   {
-    // Same idea, at the INT64_MAX/UINT64_MAX boundary: 2^63 is representable
-    // as an unsigned 64-bit value but overflows int64_t.
-    const char twoPow63Data[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01";
-    DataExtractor DE(StringRef(twoPow63Data), false);
-    uint64_t Offset = 0;
-    APSInt Result = DE.getSLEB128APSInt(&Offset);
-    EXPECT_EQ(strlen(twoPow63Data), Offset);
-    EXPECT_FALSE(Result.isNegative());
-    EXPECT_EQ(1ULL << 63, Result.getZExtValue());
-  }
-
-  {
-    // INT64_MAX + 1 (aka 2^63 + 1): one past the previous boundary.
-    const char twoPow63Plus1Data[] = "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x01";
-    DataExtractor DE(StringRef(twoPow63Plus1Data), false);
-    uint64_t Offset = 0;
-    APSInt Result = DE.getSLEB128APSInt(&Offset);
-    EXPECT_EQ(strlen(twoPow63Plus1Data), Offset);
-    EXPECT_FALSE(Result.isNegative());
-    EXPECT_EQ((1ULL << 63) + 1, Result.getZExtValue());
-  }
-
-  {
-    // A value greater than INT64_MAX (but no greater than UINT64_MAX) does not
-    // fit in the 64-bit accumulator that getSLEB128() uses, so it requires 65
-    // significant bits (64 magnitude bits, plus a 0 sign bit) to encode as a
-    // positive number. getSLEB128() rejects such an encoding outright, while
-    // getSLEB128APSInt() should grow to accommodate it.
-    const char uint64MaxData[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x01";
-    DataExtractor DE(StringRef(uint64MaxData), false);
+    // 2^63 is representable as a uint64_t, but overflows int64_t.
+    const char TwoPow63Data[] = "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+    DataExtractor DE(StringRef(TwoPow63Data), false);
     uint64_t Offset = 0;
     {
       llvm::Error Err = llvm::Error::success();
@@ -272,7 +245,30 @@ TEST(DataExtractorTest, SLEB128APSInt) {
     }
     Offset = 0;
     APSInt Result = DE.getSLEB128APSInt(&Offset);
-    EXPECT_EQ(strlen(uint64MaxData), Offset);
+    EXPECT_EQ(strlen(TwoPow63Data), Offset);
+    EXPECT_FALSE(Result.isNegative());
+    EXPECT_EQ(1ULL << 63, Result.getZExtValue());
+  }
+
+  {
+    // A value in the [INT64_MAX+1, UINT64_MAX] range does not fit the 64-bit
+    // accumulator used by getSLEB128 -- it requires 65 significant bits (64
+    // magnitude bits, plus a 0 sign bit). These encoded values are rejected by
+    // getSLEB128, while getSLEB128APSInt uses APSInt to accommodate it.
+    //
+    // Test an all-ones pattern to verify a bit pattern surviving the growth
+    // past 64 bits (unlike the all-zero data pattern of TwoPow63Data above).
+    const char UInt64MaxData[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x01";
+    DataExtractor DE(StringRef(UInt64MaxData), false);
+    uint64_t Offset = 0;
+    {
+      llvm::Error Err = llvm::Error::success();
+      EXPECT_EQ(0, DE.getSLEB128(&Offset, &Err));
+      EXPECT_THAT_ERROR(std::move(Err), Failed());
+    }
+    Offset = 0;
+    APSInt Result = DE.getSLEB128APSInt(&Offset);
+    EXPECT_EQ(strlen(UInt64MaxData), Offset);
     EXPECT_FALSE(Result.isNegative());
     EXPECT_EQ(UINT64_MAX, Result.getZExtValue());
   }
