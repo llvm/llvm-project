@@ -1177,7 +1177,7 @@ void ScopedAliasMetadataDeepCloner::clone() {
         NewOps.push_back(const_cast<Metadata *>(Op));
     }
 
-    MDNode *NewM = MDNode::get(I->getContext(), NewOps);
+    MDNode *NewM = MDNode::getDistinct(I->getContext(), NewOps);
     MDTuple *TempM = cast<MDTuple>(MDMap[I]);
     assert(TempM->isTemporary() && "Expected temporary node");
 
