@@ -435,6 +435,11 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 
   // Compute the common result types of all return ops.
   SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  // There is nothing to fold if the function body does not end in a
+  // func::ReturnOp (e.g., the terminator is from a different dialect). Bail
+  // out gracefully instead of asserting inside `getReturnTypes`.
+  if (returnOps.empty())
+    return;
   SmallVector<Type> resultTypes = getReturnTypes(returnOps);
 
   // Remove direct casts.

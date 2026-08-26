@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 using namespace llvm;
 
@@ -445,12 +446,15 @@ private:
     IntelExprState State = IES_INIT, PrevState = IES_ERROR;
     MCRegister BaseReg, IndexReg, TmpReg;
     unsigned Scale = 0;
+    std::optional<unsigned> TmpScale = {};
     int64_t Imm = 0;
     const MCExpr *Sym = nullptr;
     StringRef SymName;
     InfixCalculator IC;
     InlineAsmIdentifierInfo Info;
     short BracCount = 0;
+    short ParenCount = 0;
+    SMLoc LParenLoc;
     bool MemExpr = false;
     bool BracketUsed = false;
     bool NegativeAdditiveTerm = false;
@@ -458,7 +462,6 @@ private:
     bool OffsetOperator = false;
     bool AttachToOperandIdx = false;
     bool IsPIC = false;
-    SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
@@ -479,7 +482,6 @@ private:
     bool isMemExpr() const { return MemExpr; }
     bool isBracketUsed() const { return BracketUsed; }
     bool isOffsetOperator() const { return OffsetOperator; }
-    SMLoc getOffsetLoc() const { return OffsetOperatorLoc; }
     MCRegister getBaseReg() const { return BaseReg; }
     MCRegister getIndexReg() const { return IndexReg; }
     unsigned getScale() const { return Scale; }
@@ -495,6 +497,8 @@ private:
              State == IES_INTEGER || State == IES_REGISTER ||
              State == IES_OFFSET;
     }
+    bool hasUnmatchedParen() const { return ParenCount != 0; }
+    SMLoc getLParenLoc() const { return LParenLoc; }
 
     // Is the intel expression appended after an operand index.
     // [OperandIdx][Intel Expression]
@@ -698,22 +702,33 @@ private:
       case IES_OFFSET:
         State = IES_PLUS;
         IC.pushOperator(IC_PLUS);
-        NegativeAdditiveTerm = false;
-        NegativeAdditiveTermLoc = SMLoc();
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
+        if (TmpReg) {
+          // A pending scale forces this to be the IndexReg; otherwise a free
+          // BaseReg takes it as an unscaled base.
+          if (!BaseReg && !TmpScale.has_value()) {
             BaseReg = TmpReg;
+            TmpReg = MCRegister::NoRegister;
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
             IndexReg = TmpReg;
-            Scale = 0;
+            TmpReg = MCRegister::NoRegister;
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
+            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
+              return true;
+            }
+            Scale = TmpScale.value_or(0);
           }
         }
         break;
       }
+      NegativeAdditiveTerm = false;
+      NegativeAdditiveTermLoc = SMLoc();
+      // A '+' ends the current additive term, so clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
@@ -748,33 +763,41 @@ private:
       case IES_INIT:
       case IES_OFFSET:
         State = IES_MINUS;
+        NegativeAdditiveTerm = true;
+        NegativeAdditiveTermLoc = MinusLoc;
         // push minus operator if it is not a negate operator
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
             CurrState == IES_INTEGER || CurrState == IES_RBRAC ||
             CurrState == IES_OFFSET) {
           IC.pushOperator(IC_MINUS);
-          NegativeAdditiveTerm = true;
-          NegativeAdditiveTermLoc = MinusLoc;
+          if (TmpReg) {
+            // A pending scale forces this to be the IndexReg; otherwise a free
+            // BaseReg takes it as an unscaled base.
+            if (!BaseReg && !TmpScale.has_value()) {
+              BaseReg = TmpReg;
+              TmpReg = MCRegister::NoRegister;
+            } else {
+              if (IndexReg)
+                return regsUseUpError(ErrMsg);
+              IndexReg = TmpReg;
+              TmpReg = MCRegister::NoRegister;
+              if (TmpScale.has_value() &&
+                  checkScale(TmpScale.value(), ErrMsg)) {
+                return true;
+              }
+              Scale = TmpScale.value_or(0);
+            }
+          }
         } else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // We have negate operator for Scale: it's illegal
           ErrMsg = "Scale can't be negative";
           return true;
         } else
           IC.pushOperator(IC_NEG);
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
-            BaseReg = TmpReg;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
-            IndexReg = TmpReg;
-            Scale = 0;
-          }
-        }
         break;
       }
+      // A '-' ends the current additive term, so clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
@@ -818,31 +841,39 @@ private:
         break;
       case IES_PLUS:
       case IES_MINUS:
-      case IES_LPAREN:
       case IES_LBRAC:
         State = IES_REGISTER;
         TmpReg = Reg;
         IC.pushOperand(IC_REGISTER);
+        if (NegativeAdditiveTerm) {
+          ErrMsg = "Scale can't be negative";
+          return true;
+        }
         break;
+      case IES_LPAREN:
       case IES_MULTIPLY:
-        // Index Register - Scale * Register
-        if (PrevState == IES_INTEGER) {
+        // A register already held in TmpReg means we are multiplying two reg
+        if (TmpReg) {
+          ErrMsg = "Register can't be multiplied with register!";
+          return true;
+        }
+        State = IES_REGISTER;
+        TmpReg = Reg;
+        // Recognize this register as a scaled index register. This covers
+        // 'scale * reg' and 'scale * (reg)', including parenthesized or
+        // multi-factor scales where the accumulated value is held in TmpScale.
+        if (TmpScale.has_value()) {
           if (IndexReg)
             return regsUseUpError(ErrMsg);
           if (NegativeAdditiveTerm) {
             ErrMsg = "Scale can't be negative";
             return true;
           }
-          State = IES_REGISTER;
-          IndexReg = Reg;
-          // Get the scale and replace the 'Scale * Register' with '0'.
-          Scale = IC.popOperand();
-          if (checkScale(Scale, ErrMsg))
-            return true;
+          // Push an immediate, not the register, so the infix calculator
+          // won't evaluate reg * int; this is a scaled index reg.
           IC.pushOperand(IC_IMM);
-          IC.popOperator();
         } else {
-          State = IES_ERROR;
+          IC.pushOperand(IC_REGISTER);
         }
         break;
       }
@@ -874,6 +905,8 @@ private:
       case IES_LPAREN:
         if (setSymRef(SymRef, SymRefName, ErrMsg))
           return true;
+        // Mark TmpScale as invalid, in case of multiplying by register
+        TmpScale = 0;
         MemExpr = true;
         State = IES_INTEGER;
         IC.pushOperand(IC_IMM);
@@ -890,6 +923,20 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_DIVIDE:
+        if (TmpInt == 0) {
+          ErrMsg = "division by zero in assembly expression";
+          State = IES_ERROR;
+          return true;
+        }
+        [[fallthrough]];
+      case IES_MOD:
+        if (TmpInt == 0) {
+          ErrMsg = "modulo by zero in assembly expression";
+          State = IES_ERROR;
+          return true;
+        }
+        [[fallthrough]];
       case IES_PLUS:
       case IES_MINUS:
       case IES_NOT:
@@ -904,30 +951,25 @@ private:
       case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
-      case IES_DIVIDE:
-      case IES_MOD:
       case IES_MULTIPLY:
       case IES_LPAREN:
       case IES_INIT:
       case IES_LBRAC:
         State = IES_INTEGER;
-        if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
-          // Index Register - Register * Scale
-          if (IndexReg)
-            return regsUseUpError(ErrMsg);
-          if (NegativeAdditiveTerm) {
-            ErrMsg = "Scale can't be negative";
-            return true;
-          }
-          IndexReg = TmpReg;
-          Scale = TmpInt;
-          if (checkScale(Scale, ErrMsg))
-            return true;
-          // Get the scale and replace the 'Register * Scale' with '0'.
-          IC.popOperator();
+        // Accumulate the scale: multiply into a pending scale or seed it.
+        if (TmpScale.has_value()) {
+          TmpScale.value() *= TmpInt;
         } else {
-          IC.pushOperand(IC_IMM, TmpInt);
+          TmpScale = TmpInt;
         }
+        // Once an index register is pending, check if TmpScale is valid.
+        if (TmpReg && NegativeAdditiveTerm) {
+          ErrMsg = "Scale can't be negative";
+          return true;
+        }
+        if (TmpReg && checkScale(TmpScale.value(), ErrMsg))
+          return true;
+        IC.pushOperand(IC_IMM, TmpInt);
         break;
       }
       PrevState = CurrState;
@@ -940,8 +982,18 @@ private:
         State = IES_ERROR;
         break;
       case IES_INTEGER:
+        State = IES_MULTIPLY;
+        IC.pushOperator(IC_MULTIPLY);
+        break;
       case IES_REGISTER:
       case IES_RPAREN:
+        // A register before '*' is a scaled index register. If no scale is
+        // pending yet, replace its operand-stack entry with an immediate so
+        // the infix calculator does not evaluate a reg * int product.
+        if (TmpReg && (!TmpScale.has_value())) {
+          IC.popOperand();
+          IC.pushOperand(IC_IMM);
+        }
         State = IES_MULTIPLY;
         IC.pushOperator(IC_MULTIPLY);
         break;
@@ -995,6 +1047,10 @@ private:
         State = IES_LBRAC;
         break;
       }
+      NegativeAdditiveTerm = false;
+      NegativeAdditiveTermLoc = SMLoc();
+      // Entering a new memory expression; clear the pending scale.
+      TmpScale.reset();
       MemExpr = true;
       BracketUsed = true;
       BracCount++;
@@ -1015,30 +1071,38 @@ private:
           return true;
         }
         State = IES_RBRAC;
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
+
+        if (TmpReg) {
+          // A pending scale forces this to be the IndexReg; otherwise a free
+          // BaseReg takes it as an unscaled base.
+          if (!BaseReg && !TmpScale.has_value()) {
             BaseReg = TmpReg;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
+            TmpReg = MCRegister::NoRegister;
+          } else if (!IndexReg) {
             if (NegativeAdditiveTerm) {
               ErrMsg = "Scale can't be negative";
               return true;
             }
             IndexReg = TmpReg;
-            Scale = 0;
+            TmpReg = MCRegister::NoRegister;
+            if (TmpScale.has_value() && checkScale(TmpScale.value(), ErrMsg)) {
+              return true;
+            }
+            Scale = TmpScale.value_or(0);
+          } else {
+            return regsUseUpError(ErrMsg);
           }
         }
         NegativeAdditiveTerm = false;
         NegativeAdditiveTermLoc = SMLoc();
         break;
       }
+      // Leaving the memory expression; clear the pending scale.
+      TmpScale.reset();
       PrevState = CurrState;
       return false;
     }
-    void onLParen() {
+    void onLParen(SMLoc Loc) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -1064,6 +1128,8 @@ private:
       case IES_LPAREN:
       case IES_INIT:
       case IES_LBRAC:
+        ParenCount++;
+        LParenLoc = Loc;
         State = IES_LPAREN;
         IC.pushOperator(IC_LPAREN);
         break;
@@ -1081,34 +1147,19 @@ private:
       case IES_REGISTER:
       case IES_RBRAC:
       case IES_RPAREN:
-        State = IES_RPAREN;
-        // In the case of a multiply, onRegister has already set IndexReg
-        // directly, with appropriate scale.
-        // Otherwise if we just saw a register it has only been stored in
-        // TmpReg, so we need to store it into the state machine.
-        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
-          // If we already have a BaseReg, then assume this is the IndexReg with
-          // no explicit scale.
-          if (!BaseReg) {
-            BaseReg = TmpReg;
-          } else {
-            if (IndexReg)
-              return regsUseUpError(ErrMsg);
-            if (NegativeAdditiveTerm) {
-              ErrMsg = "Scale can't be negative";
-              return true;
-            }
-            IndexReg = TmpReg;
-            Scale = 0;
-          }
+        if (ParenCount == 0) {
+          ErrMsg = "unmatched parenthesis";
+          return true;
         }
+        ParenCount--;
+        State = IES_RPAREN;
         IC.pushOperator(IC_RPAREN);
         break;
       }
       PrevState = CurrState;
       return false;
     }
-    bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
+    bool onOffset(const MCExpr *Val, StringRef ID,
                   const InlineAsmIdentifierInfo &IDInfo,
                   bool ParsingMSInlineAsm, StringRef &ErrMsg) {
       PrevState = State;
@@ -1122,7 +1173,6 @@ private:
         if (setSymRef(Val, ID, ErrMsg))
           return true;
         OffsetOperator = true;
-        OffsetOperatorLoc = OffsetLoc;
         State = IES_OFFSET;
         // As we cannot yet resolve the actual value (offset), we retain
         // the requested semantics by pushing a '0' to the operands stack
@@ -1133,6 +1183,25 @@ private:
         break;
       }
       return false;
+    }
+    // Unlike onOffset, we do not set OffsetOperator here. The IMAGEREL
+    // specifier is already encoded in the MCExpr with VK_COFF_IMGREL32,
+    // so no additional rewriting is needed for inline asm.
+    bool onImagerel(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
+      PrevState = State;
+      switch (State) {
+      case IES_PLUS:
+      case IES_INIT:
+      case IES_LBRAC:
+        if (setSymRef(Val, ID, ErrMsg))
+          return true;
+        State = IES_OFFSET;
+        IC.pushOperand(IC_IMM);
+        return false;
+      default:
+        ErrMsg = "unexpected imagerel operator expression";
+        return true;
+      }
     }
     void onCast(AsmTypeInfo Info) {
       PrevState = State;
@@ -1178,6 +1247,8 @@ private:
   bool parseIntelOperand(OperandVector &Operands, StringRef Name);
   bool ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
                                 InlineAsmIdentifierInfo &Info, SMLoc &End);
+  bool ParseIntelImagerelOperator(const MCExpr *&Val, StringRef &ID,
+                                  InlineAsmIdentifierInfo &Info, SMLoc &End);
   bool ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End);
   unsigned IdentifyIntelInlineAsmOperator(StringRef Name);
   unsigned ParseIntelInlineAsmOperator(unsigned OpKind);
@@ -1871,6 +1942,9 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   if (Name != Name.lower() && Name != Name.upper() &&
       !getParser().isParsingMasm())
     return false;
+  // Operators like 'offset' and 'imagerel' consume their operand tokens
+  // internally; other named operators need a trailing consumeToken().
+  bool AlreadyConsumed = false;
   if (Name.equals_insensitive("not")) {
     SM.onNot();
   } else if (Name.equals_insensitive("or")) {
@@ -1886,7 +1960,6 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   } else if (Name.equals_insensitive("mod")) {
     SM.onMod();
   } else if (Name.equals_insensitive("offset")) {
-    SMLoc OffsetLoc = getTok().getLoc();
     const MCExpr *Val = nullptr;
     StringRef ID;
     InlineAsmIdentifierInfo Info;
@@ -1894,14 +1967,26 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
     if (ParseError)
       return true;
     StringRef ErrMsg;
-    ParseError =
-        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingMSInlineAsm(), ErrMsg);
+    ParseError = SM.onOffset(Val, ID, Info, isParsingMSInlineAsm(), ErrMsg);
     if (ParseError)
       return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
+    AlreadyConsumed = true;
+  } else if (Name.equals_insensitive("imagerel")) {
+    const MCExpr *Val;
+    StringRef ID;
+    InlineAsmIdentifierInfo Info;
+    ParseError = ParseIntelImagerelOperator(Val, ID, Info, End);
+    if (ParseError)
+      return true;
+    StringRef ErrMsg;
+    ParseError = SM.onImagerel(Val, ID, ErrMsg);
+    if (ParseError)
+      return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
+    AlreadyConsumed = true;
   } else {
     return false;
   }
-  if (!Name.equals_insensitive("offset"))
+  if (!AlreadyConsumed)
     End = consumeToken();
   return true;
 }
@@ -2227,7 +2312,9 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
-    case AsmToken::LParen:  SM.onLParen(); break;
+    case AsmToken::LParen:
+      SM.onLParen(Tok.getLoc());
+      break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
         return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
@@ -2242,6 +2329,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
 
     PrevTK = TK;
   }
+  if (SM.hasUnmatchedParen())
+    return Error(SM.getLParenLoc(), "unmatched parenthesis");
   return false;
 }
 
@@ -2497,6 +2586,33 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
   } else if (Info.isKind(InlineAsmIdentifierInfo::IK_EnumVal)) {
     return Error(Start, "offset operator cannot yet handle constants");
   }
+  return false;
+}
+
+/// Parse the 'imagerel' operator.
+/// This operator is used to specify an image-relative reference to a symbol.
+bool X86AsmParser::ParseIntelImagerelOperator(const MCExpr *&Val, StringRef &ID,
+                                              InlineAsmIdentifierInfo &Info,
+                                              SMLoc &End) {
+  // Eat imagerel, mark start of identifier.
+  SMLoc Start = Lex().getLoc();
+  ID = getTok().getString();
+  if (!isParsingMSInlineAsm()) {
+    if ((getTok().isNot(AsmToken::Identifier) &&
+         getTok().isNot(AsmToken::String)) ||
+        getParser().parsePrimaryExpr(Val, End, nullptr))
+      return Error(Start, "unexpected token!");
+  } else if (ParseIntelInlineAsmIdentifier(Val, ID, Info, false, End, true)) {
+    return Error(Start, "unable to lookup expression");
+  } else if (Info.isKind(InlineAsmIdentifierInfo::IK_EnumVal)) {
+    return Error(Start, "imagerel operator cannot yet handle constants");
+  }
+
+  const MCExpr *ModifiedVal =
+      getParser().applySpecifier(Val, MCSymbolRefExpr::VK_COFF_IMGREL32);
+  if (!ModifiedVal)
+    return Error(Start, "cannot apply 'imagerel' to this expression");
+  Val = ModifiedVal;
   return false;
 }
 

@@ -514,6 +514,11 @@ def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "PMADDWD is slower than PMULLD",
                                           [], InlineIgnore>;
 
+def TuningSlowVecMaskStore
+    : SubtargetFeature<"slow-vec-mask-store", "IsVecMaskStoreSlow", "true",
+                        "Vector mask store instruction is slow",
+                        [], InlineIgnore>;
+
 // FIXME: This should not apply to CPUs that do not have SSE.
 def TuningSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
                                 "IsUnalignedMem16Slow", "true",
@@ -990,7 +995,8 @@ def ProcessorFeatures {
     TuningLZCNTFalseDeps,
     TuningTZCNTFalseDeps,
     TuningInsertVZEROUPPER,
-    TuningAllowLight256Bit
+    TuningAllowLight256Bit,
+    TuningSlowVecMaskStore
   ];
 
   list<SubtargetFeature> X86_64V4Features = !listconcat(X86_64V3Features, [
@@ -1006,7 +1012,6 @@ def ProcessorFeatures {
     TuningFastScalarFSQRT,
     TuningFastVectorFSQRT,
     TuningFast15ByteNOP,
-    TuningFastVariableCrossLaneShuffle,
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
@@ -1519,7 +1524,6 @@ def ProcessorFeatures {
                                       TuningFastMOVBE,
                                       TuningFastImm16,
                                       TuningSlowPMADDWD];
-  // TODO Add AVX5124FMAPS/AVX5124VNNIW features
   list<SubtargetFeature> KNMFeatures =
     !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
 
@@ -1695,7 +1699,8 @@ def ProcessorFeatures {
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
-                                     TuningAllowLight256Bit];
+                                     TuningAllowLight256Bit,
+                                     TuningSlowVecMaskStore];
   list<SubtargetFeature> ZN2AdditionalFeatures = [FeatureCLWB,
                                                   FeatureRDPID,
                                                   FeatureRDPRU,
@@ -1718,7 +1723,8 @@ def ProcessorFeatures {
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
-    !listconcat(ZN3Tuning, ZN4AdditionalTuning);
+    !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning),
+                [TuningSlowVecMaskStore]);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureCDI,
                                                   FeatureDQI,

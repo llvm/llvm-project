@@ -201,11 +201,30 @@ void UninitializedObjectChecker::checkEndFunction(
       BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getStackFrame()->getDecl());
 
-  for (const auto &Pair : UninitFields) {
-    Report->addNote(Pair.second,
-                    PathDiagnosticLocation::create(Pair.first->getDecl(),
-                                                   Context.getSourceManager()));
+  using NoteTy = std::pair<PathDiagnosticLocation, StringRef>;
+  SmallVector<NoteTy> Notes;
+  const auto &SM = Context.getSourceManager();
+  for (const auto &[FieldRegion, NoteMsg] : UninitFields) {
+    auto FieldLoc = PathDiagnosticLocation::create(FieldRegion->getDecl(), SM);
+    Notes.emplace_back(FieldLoc, NoteMsg);
   }
+
+  // Make the order deterministic.
+  llvm::sort(Notes, [](const NoteTy &LHS, const NoteTy &RHS) {
+    FullSourceLoc L = LHS.first.asLocation();
+    FullSourceLoc R = RHS.first.asLocation();
+    if (L != R)
+      return L.isBeforeInTranslationUnitThan(R);
+    // Comparing the field locs might not be enough so we might need a tie
+    // breaker.
+    // See the `cxx-uninitialized-object-note-order.cpp:fTwoInstances` test
+    // demonstrating this.
+    return LHS.second < RHS.second;
+  });
+
+  for (const auto &[Loc, NoteMsg] : Notes)
+    Report->addNote(NoteMsg, Loc);
+
   Context.emitReport(std::move(Report));
 }
 

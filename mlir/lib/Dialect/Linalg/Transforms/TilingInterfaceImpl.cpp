@@ -82,6 +82,119 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   return success();
 }
 
+/// Verify that tiling can be applied in presence of semi-affine maps.
+static LogicalResult
+validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> sizes) {
+  // Precompute each dimension's constant tile-size upper bound once.
+  // A failed entry marks a dynamic tile with no static bound.
+  SmallVector<FailureOr<int64_t>> tileSizeBounds =
+      llvm::map_to_vector(sizes, [](OpFoldResult size) {
+        return ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::UB, size,
+            /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
+      });
+  SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
+
+  // Dynamic tiles or dynamic loop ranges are conservatively treated as tiled.
+  SmallVector<bool> tiledDims(loopRanges.size(), false);
+  for (auto [pos, tileSize] : llvm::enumerate(tileSizeBounds)) {
+    if (failed(tileSize)) {
+      tiledDims[pos] = true;
+      continue;
+    }
+    if (*tileSize == 0)
+      continue;
+    tiledDims[pos] =
+        ShapedType::isDynamic(loopRanges[pos]) || *tileSize < loopRanges[pos];
+  }
+
+  for (AffineMap map : linalgOp.getIndexingMapsArray()) {
+    for (AffineExpr result : map.getResults()) {
+      WalkResult status = result.walk([&](AffineExpr expr) -> WalkResult {
+        auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+        if (!binExpr)
+          return WalkResult::advance();
+        AffineExprKind kind = binExpr.getKind();
+        if (kind != AffineExprKind::Mod && kind != AffineExprKind::FloorDiv &&
+            kind != AffineExprKind::CeilDiv)
+          return WalkResult::advance();
+
+        // Skip if the semi-affine expression does not involve any tiled
+        // dimension: an untiled dimension keeps its full extent in every tile,
+        // so re-applying the map on the slice is exact.
+        bool involvesTiledDim = expr.walk([&](AffineExpr e) -> WalkResult {
+                                      auto dim = dyn_cast<AffineDimExpr>(e);
+                                      if (dim && tiledDims[dim.getPosition()])
+                                        return WalkResult::interrupt();
+                                      return WalkResult::advance();
+                                    })
+                                    .wasInterrupted();
+        if (!involvesTiledDim)
+          return WalkResult::advance();
+
+        // Allow only `d OP C` map where `d` is a dimension and `C` is a
+        // constant. A compound LHS (e.g. `(d0 + d1)`, `(d0 * 2)`, a nested
+        // semi-affine expression) or a non-constant step is not provably safe,
+        // so reject it.
+        auto dimExpr = dyn_cast<AffineDimExpr>(binExpr.getLHS());
+        auto stepExpr = dyn_cast<AffineConstantExpr>(binExpr.getRHS());
+        if (!dimExpr || !stepExpr || stepExpr.getValue() <= 0) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "only a single iteration dimension divided by a positive "
+                 "constant step can be tiled over a tiled dimension";
+          return WalkResult::interrupt();
+        }
+
+        // Tiles are spaced by the full tile size, so tile origins are its
+        // multiples (0, tileSize, 2*tileSize, ...).
+        // A tile's indices are `origin + d'`, with `origin` the tile's start
+        // and `0 <= d' < tileSize`. A trailing partial tile is a full tile
+        // truncated at the same origin, spanning a subset of the same `d'`, so
+        // full-tile validity implies partial-tile validity and validating the
+        // upper-bound tile size suffices.
+        unsigned dimPos = dimExpr.getPosition();
+        FailureOr<int64_t> tileSize = tileSizeBounds[dimPos];
+
+        // Dynamic tile sizes are assumed to be valid.
+        // Unit tile is always valid.
+        if (failed(tileSize) || *tileSize == 1)
+          return WalkResult::advance();
+
+        // Tiled op reuses the same map on a slice whose base offset is
+        // `m(origin) - m(0)`, so it is correct only when
+        // `m(origin + d') == (m(origin) - m(0)) + m(d')` for every `d'`.
+        // Slice origins are tile-size multiples, so this reduces to a relation
+        // between the tile size and the step `C`:
+        //  - `floordiv`/`mod` are locally affine within a step window (floordiv
+        //    is constant, mod is linear), so they compose when the origin is
+        //    step-aligned (`C | tileSize`) or the whole tile fits in one window
+        //    (`tileSize | C`);
+        //  - `ceildiv` jumps at `k * C + 1` instead of `k * C`, so a
+        //    non-step-aligned origin already straddles the jump. It composes
+        //    only from a step-aligned origin, i.e. `C | tileSize`.
+        int64_t step = stepExpr.getValue();
+        bool isCeil = kind == AffineExprKind::CeilDiv;
+        bool safe = *tileSize % step == 0 || (!isCeil && step % *tileSize == 0);
+        if (!safe) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "tile size "
+              << *tileSize << " for dimension d" << dimPos
+              << (isCeil ? " must be a multiple of the step "
+                         : " must divide or be divisible by the step ")
+              << step;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+      if (status.wasInterrupted())
+        return failure();
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // External Model for implementing `TilingInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
@@ -138,6 +251,14 @@ struct LinalgOpTilingInterface
     // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
+    // In case of a semi-affine expression, generalized tracking of tiles would
+    // require a per-tile-position shift that cannot be expressed by the
+    // symbol-free indexing maps.
+    // Thus, tiling is allowed only when the semi-affine maps can be proven safe
+    // for the current tiling configuration. Otherwise, tiling can end up
+    // producing incorrect results.
+    if (failed(validateTilingSemiAffineMaps(linalgOp, sizes)))
+      return failure();
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);

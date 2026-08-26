@@ -83,13 +83,13 @@ func.func @load_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>, 
   //     CHECK: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : index to i32
   //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
   // CHECK-NOT: spirv.SDiv
-  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
   //     CHECK: spirv.Load "StorageBuffer" %[[PTR]] : i64
   // CHECK-NOT: spirv.ShiftRightArithmetic
 
   //   INDEX64: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %{{.+}} : index to i64
   //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
-  //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i64, i64
+  //   INDEX64: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i64, i64
   //   INDEX64: spirv.Load "StorageBuffer" %[[PTR]] : i64
   %0 = memref.load %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
   return %0: i64
@@ -179,12 +179,12 @@ func.func @store_i64(%arg0: memref<10xi64, #spirv.storage_class<StorageBuffer>>,
   //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
   //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
   // CHECK-NOT: spirv.AtomicAnd
-  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
+  //     CHECK: %[[PTR:.+]] = spirv.InBoundsAccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ARG1_CAST]]] : {{.+}}, i32, i32
   //     CHECK: spirv.Store "StorageBuffer" %[[PTR]], %[[ARG2]] : i64
   // CHECK-NOT: spirv.AtomicOr
 
   //   INDEX64: %[[ZERO:.+]] = spirv.Constant 0 : i64
-  //   INDEX64: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %{{.+}}] : {{.+}}, i64, i64
+  //   INDEX64: %[[PTR:.+]] = spirv.InBoundsAccessChain %{{.+}}[%[[ZERO]], %{{.+}}] : {{.+}}, i64, i64
   //   INDEX64: spirv.Store "StorageBuffer" %[[PTR]], %{{.+}} : i64
   memref.store %value, %arg0[%index] : memref<10xi64, #spirv.storage_class<StorageBuffer>>
   return

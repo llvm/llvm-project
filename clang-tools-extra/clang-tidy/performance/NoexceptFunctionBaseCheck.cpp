@@ -35,7 +35,7 @@ void NoexceptFunctionBaseCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  auto Diag = reportMissingNoexcept(FuncDecl);
+  const auto Diag = reportMissingNoexcept(FuncDecl);
 
   // Add FixIt hints.
   const SourceManager &SM = *Result.SourceManager;

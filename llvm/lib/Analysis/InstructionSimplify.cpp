@@ -4087,7 +4087,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
         if (AnyEq->isNullValue()) {
-          switch (Pred) {
+          switch (Pred.getPreferredSignedPredicate()) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
@@ -7352,7 +7352,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (all_of(Args, IsaPred<Constant>))
     if (Constant *C = ConstantFoldIntrinsic(
             IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
-            ReturnType, CxtF))
+            ReturnType, Q.DL, CxtF))
       return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.

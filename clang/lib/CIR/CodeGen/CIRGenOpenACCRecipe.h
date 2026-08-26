@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/OpenACCKinds.h"
 

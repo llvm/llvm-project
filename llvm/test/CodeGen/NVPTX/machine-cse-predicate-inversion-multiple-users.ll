@@ -13,8 +13,8 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r3, [test_multiple_users_param_1];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_multiple_users_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_multiple_users_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_multiple_users_param_0];
 ; CHECK-NEXT:    setp.eq.b32 %p1, %r2, %r3;
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_2;
@@ -28,7 +28,7 @@ define i32 @test_multiple_users(i32 %a, i32 %b) {
 ; CHECK-NEXT:    mov.b32 %r5, 0;
 ; CHECK-NEXT:  $L__BB0_4: // %merge2
 ; CHECK-NEXT:    add.s32 %r4, %r5, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
 entry:
   %cmp1 = icmp eq i32 %a, %b
