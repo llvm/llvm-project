@@ -127,6 +127,17 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
+static bool is64BitReloc(unsigned TargetFlags) {
+  switch (TargetFlags & SIInstrInfo::MO_MASK) {
+  case SIInstrInfo::MO_ABS64:
+  case SIInstrInfo::MO_REL64:
+  case SIInstrInfo::MO_GOTPCREL64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Split relocation flags for 64-bit global-address materialization into a
 // common base and the hi/lo relocation variants.
 static std::tuple<unsigned, unsigned, unsigned>
@@ -5431,6 +5442,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "illegal 64-bit immediate value for operand.";
         return false;
       }
+      // A global with a 64-bit relocation resolves to a 64-bit literal at link
+      // time. It cannot be encoded without 64-bit literal support, nor in
+      // 8-byte encodings (e.g. VOP3, VOP3P, VOPD) which cannot carry one.
+      // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO are exempt: they split the
+      // relocation into lo/hi halves when expanded in expandPostRAPseudo.
+      if (MO.isGlobal() && is64BitReloc(MO.getTargetFlags()) &&
+          MI.getOpcode() != AMDGPU::V_MOV_B64_PSEUDO &&
+          MI.getOpcode() != AMDGPU::S_MOV_B64_IMM_PSEUDO &&
+          (!ST.has64BitLiterals() || Desc.getSize() != 4)) {
+        ErrInfo = "illegal 64-bit relocation for operand.";
+        return false;
+      }
       break;
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     case AMDGPU::OPERAND_INPUT_MODS:
@@ -6780,6 +6803,14 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
   // Handle non-register types that are treated like immediates.
   assert(MO->isImm() || MO->isTargetIndex() || MO->isFI() || MO->isGlobal());
+
+  // A global address with a 64-bit relocation resolves to a 64-bit literal at
+  // link time. The 64-bit literal encoding is only available on targets with
+  // has64BitLiterals(), and even then only for single-DWORD (4-byte) base
+  // instructions.
+  if (MO->isGlobal() && is64BitReloc(MO->getTargetFlags()) &&
+      (!ST.has64BitLiterals() || InstDesc.getSize() != 4))
+    return false;
 
   if (!DefinedRC) {
     // This operand expects an immediate.
