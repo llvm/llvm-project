@@ -19,6 +19,8 @@
 #include "L0Memory.h"
 #include "PerThreadTable.h"
 #include "level_zero/ze_api.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm::omp::target::plugin {
 
@@ -93,11 +95,6 @@ public:
 
     UsesFuncPtr = true;
     return true;
-  }
-
-  void setFallbackFunction(decltype(Fn) FallbackFunc) {
-    UsesFuncPtr = true;
-    FuncPtr = FallbackFunc;
   }
 
 private:

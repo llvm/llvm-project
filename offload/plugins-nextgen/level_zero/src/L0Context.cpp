@@ -86,13 +86,6 @@ Error L0ContextTy::init() {
   ODBG(OLDT_Init) << "  zeDriverGetDefaultContext: "
                   << (DriverGetDefaultContext.available() ? "yes" : "no");
 
-  if (!LaunchKernelWithArguments.available() &&
-      KernelGetArgumentSize.available()) {
-    // Launch kernel was not available, both through dlopen and experimental API
-    // use fallback with KernelGetArgumentSize
-    // LaunchKernelWithArguments.addFallbackFunction(zeCommandListAppendLaunchKernelWithArgumentsFallback);
-  }
-
   if (!CommandListAppendHostFunction.available()) {
     // Try again with a name used in compute runtime 25.35 to 25.48
     CommandListAppendHostFunction.tryLoadingExperimental(
