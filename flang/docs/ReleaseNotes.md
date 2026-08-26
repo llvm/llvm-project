@@ -38,7 +38,6 @@ page](https://llvm.org/releases/).
   and `!$ompx` in free source form. These sentinels are recognized like their
   `omp` counterparts when OpenMP is enabled.
 
-## New Compiler Flags
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,
   `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
