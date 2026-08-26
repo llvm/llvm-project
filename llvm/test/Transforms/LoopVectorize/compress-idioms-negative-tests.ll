@@ -65,33 +65,32 @@ exit:
 ; CHECK: loop not vectorized
 
 ; Pre-increment is currently not matched as we require one use of the step instruction.
-define i32 @test_pre_increment_compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+define void @test_pre_increment_compress_store(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %idx = phi i32 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
   %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
   %load.src = load i32, ptr %src.ptr, align 4
   %cmp = icmp slt i32 %load.src, %c
   br i1 %cmp, label %if.then, label %for.inc
 
 if.then:
-  %idx.next = add nsw i32 %idx, 1
-  %dst.idx = sext i32 %idx.next to i64
-  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %dst.idx
+  %idx.next = add nsw i64 %idx, 1
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx.next
   store i32 %load.src, ptr %dst.ptr, align 4
   br label %for.inc
 
 for.inc:
-  %idx.1 = phi i32 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:
-  ret i32 %idx.1
+  ret void
 }
 
 ; CHECK: the cost-model indicates that vectorization is not beneficial
@@ -176,7 +175,39 @@ early.exit:
 ; CHECK: loop not vectorized
 
 ; Negative test: Using the monotonic phi outside the loop is not supported.
-define i32 @out_of_loop_use_of_monotonic_phi(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+define i64 @out_of_loop_use_of_monotonic_phi(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i32, ptr %dst, i64 %idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i64 %idx
+}
+
+; CHECK: loop not vectorized
+
+; Negative test: Matching an extended monotonic phi index is not supported yet.
+; Note: We should be able to support this case by using the no-wrap flags on %idx.next.
+define void @test_compress_store_with_extended_index(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
 
@@ -202,5 +233,5 @@ for.inc:
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:
-  ret i32 %idx
+  ret void
 }
