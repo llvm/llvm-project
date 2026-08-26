@@ -2212,6 +2212,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
     }
 
+    if (RdxKind == RecurKind::FMaximumNum ||
+        RdxKind == RecurKind::FMinimumNum) {
+      auto *StartValue = dyn_cast<VPIRValue>(MinOrMaxPhiR->getStartValue());
+      auto *StartC = StartValue
+                         ? dyn_cast<ConstantFP>(StartValue->getLiveInIRValue())
+                         : nullptr;
+      if (!StartC || StartC->isNaN())
+        return false;
+    }
+
     auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
     auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
     auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
@@ -2261,11 +2271,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     auto *FinalMinOrMaxCmp =
         (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
             ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
-            : B.createFCmp((RdxKind == RecurKind::FMaximum ||
-                            RdxKind == RecurKind::FMinimum)
-                               ? CmpInst::FCMP_UEQ
-                               : CmpInst::FCMP_OEQ,
-                           MinOrMaxExiting, MinOrMaxResult);
+            : B.createFCmp(CmpInst::FCMP_OEQ, MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
     VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
