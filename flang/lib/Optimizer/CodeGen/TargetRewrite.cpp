@@ -107,6 +107,17 @@ public:
     if (!forcedTargetABI.empty())
       fir::setTargetABI(mod, forcedTargetABI);
 
+    // If no data layout is set, derive it from the target triple to get
+    // correct target-specific alignments rather than a generic default.
+    if (!mod.getDataLayoutSpec()) {
+      llvm::Triple triple(fir::getTargetTriple(mod));
+      std::string dlStr = triple.computeDataLayout();
+      if (!dlStr.empty()) {
+        llvm::DataLayout llvmDL(dlStr);
+        fir::support::setMLIRDataLayout(mod, llvmDL);
+      }
+    }
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -241,7 +252,10 @@ public:
     // We are going to generate an alloca, so save the stack pointer.
     if (!savedStackPtr)
       savedStackPtr = genStackSave(loc);
-    if (attr.isByVal()) {
+    if (attr.isByVal() || attr.isIndirect()) {
+      // Both forms require the caller to materialize a copy of the value and
+      // pass the address of that copy. They differ only in the attribute that
+      // is attached to the argument in the signature.
       mlir::Value mem = fir::AllocaOp::create(*rewriter, loc, oldType);
       fir::StoreOp::create(*rewriter, loc, oper, mem);
       if (mem.getType() != resTy)
@@ -359,11 +373,11 @@ public:
                         newInTyAndAttrs);
   }
 
-  static bool hasByValOrSRetArgs(
+  static bool hasAbiArgAttributes(
       const fir::CodeGenSpecifics::Marshalling &newInTyAndAttrs) {
     return llvm::any_of(newInTyAndAttrs, [](auto arg) {
       const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
-      return attr.isByVal() || attr.isSRet();
+      return attr.isByVal() || attr.isSRet() || attr.isIndirect();
     });
   }
 
@@ -525,13 +539,13 @@ public:
     // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
       mlir::Value asyncToken = callOp.getAsyncToken();
-      auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
-                               callOp.getGridSizeOperandValues(),
-                               callOp.getBlockSizeOperandValues(),
-                               callOp.getDynamicSharedMemorySize(), newOpers,
-                               asyncToken ? asyncToken.getType() : nullptr,
-                               callOp.getAsyncDependencies(),
-                               /*clusterSize=*/std::nullopt);
+      auto newCall = A::create(
+          *rewriter, loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
+          callOp.getBlockSizeOperandValues(),
+          callOp.getDynamicSharedMemorySize(), newOpers,
+          asyncToken ? asyncToken.getType() : nullptr,
+          callOp.getAsyncDependencies(), callOp.getAsyncObject(),
+          /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())
@@ -559,7 +573,7 @@ public:
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.
-      if (hasByValOrSRetArgs(newInTyAndAttrs)) {
+      if (hasAbiArgAttributes(newInTyAndAttrs)) {
         llvm::SmallVector<mlir::Attribute> argAttrsArray;
         for (const auto &arg :
              llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(newInTyAndAttrs)
@@ -1296,27 +1310,28 @@ public:
       auto index = e.index();
       auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
       auto argNo = newInTyAndAttrs.size();
-      if (attr.isByVal()) {
-        if (auto align = attr.getAlignment())
-          fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, argNo,
-                              [=](OpTy func) {
+      if (attr.isByVal() || attr.isIndirect()) {
+        // In both cases the callee receives a pointer to a copy made by the
+        // caller and loads the value from it. They differ only in the attribute
+        // attached to the argument: `byval` marks it as a by-value aggregate
+        // for the target to lower, whereas an indirect argument is passed as a
+        // plain pointer.
+        const bool setByVal = attr.isByVal();
+        const unsigned align = attr.getAlignment();
+        fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, argNo,
+                            [=](OpTy func) {
+                              if (setByVal) {
                                 auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
                                     func.getFunctionType().getInput(argNo));
                                 func.setArgAttr(argNo, "llvm.byval",
                                                 mlir::TypeAttr::get(elemType));
+                              }
+                              if (align)
                                 func.setArgAttr(
                                     argNo, "llvm.align",
                                     rewriter->getIntegerAttr(
                                         rewriter->getIntegerType(32), align));
-                              });
-        else
-          fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad,
-                              newInTyAndAttrs.size(), [=](OpTy func) {
-                                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
-                                    func.getFunctionType().getInput(argNo));
-                                func.setArgAttr(argNo, "llvm.byval",
-                                                mlir::TypeAttr::get(elemType));
-                              });
+                            });
       } else {
         if (auto align = attr.getAlignment())
           fixups.emplace_back(

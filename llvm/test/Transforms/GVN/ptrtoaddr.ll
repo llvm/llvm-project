@@ -33,8 +33,7 @@ define i64 @ptrtoaddr_reuses_dominating_ptrtoint(ptr %p) {
 ; CHECK-LABEL: define i64 @ptrtoaddr_reuses_dominating_ptrtoint(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[I]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[I]], [[I]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %i = ptrtoint ptr %p to i64
@@ -72,5 +71,50 @@ define i64 @ptrtoaddr_wrong_type(ptr %p) {
   %a = ptrtoaddr ptr %p to i64
   %z = zext i32 %i to i64
   %r = add i64 %z, %a
+  ret i64 %r
+}
+
+define i64 @ptrtoint_not_pred_from_ptrtoaddr(ptr %p, i1 %c) {
+; CHECK-LABEL: define i64 @ptrtoint_not_pred_from_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[MERGE:.*]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    ret i64 [[I]]
+;
+  %a = ptrtoaddr ptr %p to i64
+  br i1 %c, label %then, label %else
+
+then:
+  br label %merge
+
+else:
+  br label %merge
+
+merge:
+  %i = ptrtoint ptr %p to i64
+  ret i64 %i
+}
+
+define i64 @no_transitive_merge_of_ptrtoint_and_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: define i64 @no_transitive_merge_of_ptrtoint_and_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[ADDA:%.*]] = add i64 [[A]], 7
+; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[ADDI:%.*]] = add i64 [[I]], 7
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[ADDA]], [[ADDI]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %a = ptrtoaddr ptr %p to i64
+  %adda = add i64 %a, 7
+  %i = ptrtoint ptr %p to i64
+  %addi = add i64 %i, 7
+  %r = add i64 %adda, %addi
   ret i64 %r
 }

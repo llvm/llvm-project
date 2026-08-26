@@ -10,18 +10,14 @@ define amdgpu_kernel void @divrem24_assume(ptr addrspace(1) %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = uitofp fast i32 [[TMP]] to float
 ; CHECK-NEXT:    [[TMP1:%.*]] = uitofp fast i32 [[ARG1]] to float
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP8]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.trunc.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fneg fast float [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP5]], float [[TMP1]], float [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = fptoui float [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.fabs.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.fabs.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp fast oge float [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i32 1, i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP7]], [[TMP11]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;

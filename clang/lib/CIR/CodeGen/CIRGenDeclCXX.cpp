@@ -68,7 +68,8 @@ void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
   if (!getLangOpts().CPlusPlus)
     return;
 
-  if (globalOp.getTlsModel() != cir::TLS_Model::GeneralDynamic)
+  // TLS Static doesn't need a wrapper.
+  if (vd.getTLSKind() != VarDecl::TLS_Dynamic)
     return;
 
   llvm::SmallString<256> wrapperFuncName;
@@ -94,7 +95,7 @@ void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
              "setGlobalTlsReferences: non-itanium mangler");
     return;
   }
-  globalOp.setDynTlsRefsAttr(cir::ThreadLocalGlobalWrapperInitAttr::get(
+  globalOp.setTlsRefsAttr(cir::ThreadLocalGlobalWrapperInitAttr::get(
       &getMLIRContext(), wrapperFuncName, initFuncName, guardName));
 }
 

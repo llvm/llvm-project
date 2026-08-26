@@ -10,7 +10,8 @@ STRING_EXTENSION_OUTSIDE(SBCompileUnit)
 
         def __iter__(self):
             '''Iterate over all line entries in a lldb.SBCompileUnit object.'''
-            return lldb_iter(self, 'GetNumLineEntries', 'GetLineEntryAtIndex')
+            for i in range(self.GetNumLineEntries()):
+                yield self.GetLineEntryAtIndex(i)
 
         def __len__(self):
             '''Return the number of line entries in a lldb.SBCompileUnit

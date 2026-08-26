@@ -1075,7 +1075,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // If the destination wasn't sufficiently aligned then increase its alignment.
   if (!isDestSufficientlyAligned) {
     assert(isa<AllocaInst>(cpyDest) && "Can only increase alloca alignment!");
-    cast<AllocaInst>(cpyDest)->setAlignment(srcAlign);
+    AllocaInst *DestAlloca = cast<AllocaInst>(cpyDest);
+    DestAlloca->setAlignment(std::max(DestAlloca->getAlign(), srcAlign));
   }
 
   if (NeedMoveGEP) {
@@ -1569,6 +1570,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (Size != *DestSize || *DestOffset != 0) {
     LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
     return false;
+  }
+
+  if (*SrcOffset) {
+    // Make sure that the copied offset is actually part of the alloca. There
+    // might be an out-of-bounds copy in dead code.
+    if (!Size.isFixed() || *SrcOffset + Size > *SrcSize)
+      return false;
   }
 
   // Check if it will be legal to combine allocas without breaking dominator.

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-c/config.h"
-#include "orc-rt/Error.h"
+#include "orc-rt/bedrock/Error.h"
 #include "gtest/gtest.h"
 
 #include <system_error>
@@ -25,7 +25,7 @@ public:
   std::string toString() const noexcept override { return "CustomError"; }
 };
 
-} // anonymous namespace
+} // namespace
 
 #if ORC_RT_ENABLE_EXCEPTIONS
 #define EXCEPTION_TEST(X)                                                      \

@@ -1,21 +1,22 @@
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx810 --check-prefixes=ALL,GCN,GFX8,PREGFX10,NOWGP,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX11,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1200 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1170 %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX1170,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx90a --check-prefixes=ALL,GFX90A,PREGFX10,NOWGP,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1250 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx810 --check-prefixes=ALL,GCN,GFX8,PREGFX10,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu10.10-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu11.00-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX11,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu12.00-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1200 --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu11.70-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX1170,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu8.10-amd- -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu9.0a-amd-amdhsa -mattr=+xnack %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx90a --check-prefixes=ALL,GFX90A,PREGFX10,NOWGP,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple=amdgpu12.50-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -DMCPU=gfx1250 --check-prefixes=ALL,GCN,GFX10PLUS,GFX1250,NOWGP,AMDHSA
 
 .text
 
 // GCN-LABEL: warning: test_target
 // GFX8-NOT: error:
-// GFX10: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1010:xnack+
-// GFX11: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1100
-// GFX12: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-[[MCPU]]
-// GFX1170: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-amdhsa-unknown-gfx1170
-// NONAMDHSA: error: .amdgcn_target directive's target id amdgcn-amd-amdhsa-unknown-gfx810:xnack+ does not match the specified target id amdgcn-amd-unknown-unknown-gfx810
+// GFX10: error: target id 'amdgcn-amd-amdhsa--gfx810:xnack+' specifies a processor that is not valid for subarch 'amdgpu10.10'
+// GFX11: error: target id 'amdgcn-amd-amdhsa--gfx810:xnack+' specifies a processor that is not valid for subarch 'amdgpu11.00'
+// GFX12: error: target id 'amdgcn-amd-amdhsa--gfx810:xnack+' specifies a processor that is not valid for subarch 'amdgpu12.00'
+// GFX1250: error: target id 'amdgcn-amd-amdhsa--gfx810:xnack+' specifies a processor that is not valid for subarch 'amdgpu12.50'
+// GFX1170: error: target id 'amdgcn-amd-amdhsa--gfx810:xnack+' specifies a processor that is not valid for subarch 'amdgpu11.70'
+// NONAMDHSA: error: .amdgcn_target amdgcn-amd-amdhsa-unknown-gfx810:xnack+ is incompatible with amdgpu8.10-amd-unknown-unknown-gfx810
 .warning "test_target"
 .amdgcn_target "amdgcn-amd-amdhsa--gfx810:xnack+"
 
@@ -235,6 +236,7 @@
 // GFX10: error: .amdhsa_next_free_vgpr directive is required
 // GFX11: error: .amdhsa_next_free_vgpr directive is required
 // GFX12: error: directive requires gfx10 or gfx11
+// GFX1250: error: directive requires gfx10 or gfx11
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_shared_vgpr_count_invalid1"
 .amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid1
@@ -246,6 +248,7 @@
 // GFX10: error: shared_vgpr_count directive not valid on wavefront size 32
 // GFX11: error: shared_vgpr_count directive not valid on wavefront size 32
 // GFX12: error: directive requires gfx10 or gfx11
+// GFX1250: error: directive requires gfx10 or gfx11
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_shared_vgpr_count_invalid2"
 .amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid2
@@ -260,6 +263,7 @@
 // GFX10: error: value out of range
 // GFX11: error: value out of range
 // GFX12: error: directive requires gfx10 or gfx11
+// GFX1250: error: directive requires gfx10 or gfx11
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_shared_vgpr_count_invalid3"
 .amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid3
@@ -273,6 +277,7 @@
 // GFX10: error: shared_vgpr_count*2 + compute_pgm_rsrc1.GRANULATED_WORKITEM_VGPR_COUNT cannot exceed 63
 // GFX11: error: shared_vgpr_count*2 + compute_pgm_rsrc1.GRANULATED_WORKITEM_VGPR_COUNT cannot exceed 63
 // GFX12: error: directive requires gfx10 or gfx11
+// GFX1250: error: directive requires gfx10 or gfx11
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_shared_vgpr_count_invalid4"
 .amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid4
@@ -294,6 +299,7 @@
 // GCN-LABEL: warning: test_amdhsa_dx10_clamp_bit
 // GFX1170: error: directive unsupported on gfx1170+
 // GFX12: error: directive unsupported on gfx1170+
+// GFX1250: error: directive unsupported on gfx1170+
 .warning "test_amdhsa_dx10_clamp_bit"
 .amdhsa_kernel test_amdhsa_dx10_clamp_bit
   .amdhsa_next_free_vgpr 32
@@ -304,6 +310,7 @@
 // GCN-LABEL: warning: test_amdhsa_ieee_mode_bit
 // GFX1170: error: directive unsupported on gfx1170+
 // GFX12: error: directive unsupported on gfx1170+
+// GFX1250: error: directive unsupported on gfx1170+
 .warning "test_amdhsa_ieee_mode_bit"
 .amdhsa_kernel test_amdhsa_ieee_mode_bit
   .amdhsa_next_free_vgpr 32

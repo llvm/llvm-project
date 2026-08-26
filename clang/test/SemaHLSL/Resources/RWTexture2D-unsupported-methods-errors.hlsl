@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2D -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2DArray -verify %s
 
 // SRV-style texture methods are not available on RWTexture2D or RWTexture2DArray (UAV).
 

@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
+#include <variant>
 
 namespace llvm {
 class CallInst;
@@ -371,14 +372,20 @@ enum class ResourceCounterDirection {
 class ResourceInfo {
 public:
   struct ResourceBinding {
-    uint32_t RecordID;
+    uint32_t BindingID = 0;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
 
+    ResourceBinding() : BindingID(0), Space(0), LowerBound(0), Size(0) {}
+    ResourceBinding(uint32_t BindingID, uint32_t Space, uint32_t LowerBound,
+                    uint32_t Size)
+        : BindingID(BindingID), Space(Space), LowerBound(LowerBound),
+          Size(Size) {}
+
     bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) ==
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      return std::tie(BindingID, Space, LowerBound, Size) ==
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
@@ -388,8 +395,8 @@ public:
       // guarantees a well ordered results.
       const bool LHSIsUnbounded = Size == 0;
       const bool RHSIsUnbounded = RHS.Size == 0;
-      return std::tie(RecordID, Space, LowerBound, LHSIsUnbounded, Size) <
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
+      return std::tie(BindingID, Space, LowerBound, LHSIsUnbounded, Size) <
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
                       RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
@@ -402,7 +409,7 @@ public:
   };
 
 private:
-  ResourceBinding Binding;
+  std::variant<ResourceBinding, uint32_t> BindingOrHeapID;
   TargetExtType *HandleTy;
   StringRef Name;
   GlobalVariable *Symbol = nullptr;
@@ -410,20 +417,44 @@ private:
 public:
   bool GloballyCoherent = false;
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+  bool HasAtomic64Use = false;
 
-  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-               uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
+  ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
+               TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Name(Name), Symbol(Symbol) {}
+      : BindingOrHeapID{ResourceBinding{0, Space, LowerBound, Size}},
+        HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
 
-  void setBindingID(unsigned ID) { Binding.RecordID = ID; }
+  ResourceInfo(uint32_t HeapResourceID, TargetExtType *HandleTy)
+      : BindingOrHeapID{HeapResourceID}, HandleTy(HandleTy), Name(""),
+        Symbol(nullptr) {}
+
+  bool hasBinding() const {
+    return std::holds_alternative<ResourceBinding>(BindingOrHeapID);
+  }
+  void setBindingID(unsigned ID) {
+    assert(hasBinding() && "Resource does not have a binding");
+    std::get<ResourceBinding>(BindingOrHeapID).BindingID = ID;
+  }
 
   bool hasCounter() const {
     return CounterDirection != ResourceCounterDirection::Unknown;
   }
 
-  const ResourceBinding &getBinding() const { return Binding; }
+  const ResourceBinding &getBinding() const {
+    assert(hasBinding() && "Resource does not have a binding");
+    return std::get<ResourceBinding>(BindingOrHeapID);
+  }
+
+  uint32_t getHeapID() const {
+    assert(!hasBinding() && "Resource does not have a heap ID");
+    return std::get<uint32_t>(BindingOrHeapID);
+  }
+
+  uint32_t getSize() const {
+    return hasBinding() ? std::get<ResourceBinding>(BindingOrHeapID).Size : 1;
+  }
+
   TargetExtType *getHandleTy() const { return HandleTy; }
   StringRef getName() const { return Name; }
 
@@ -435,12 +466,12 @@ public:
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol, Name) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name);
+    return std::tie(BindingOrHeapID, HandleTy, Symbol, Name) ==
+           std::tie(RHS.BindingOrHeapID, RHS.HandleTy, RHS.Symbol, RHS.Name);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {
-    return Binding < RHS.Binding;
+    return BindingOrHeapID < RHS.BindingOrHeapID;
   }
 
   LLVM_ABI void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
@@ -514,8 +545,11 @@ class DXILResourceMap {
   void populate(Module &M, DXILResourceTypeMap &DRTM);
   /// Populate the map given the resource binding calls in the given module.
   void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
-  /// Analyze and populate the directions of the resource counters.
-  void populateCounterDirections(Module &M);
+  /// Analyze uses to fill in per-resource dynamic state — counter directions
+  /// and 64-bit atomic use.
+  void populateFromInstructions(Module &M);
+  void populateAtomicUses(Instruction &I);
+  void populateRecordCounterDirection(Instruction &I);
 
   /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are

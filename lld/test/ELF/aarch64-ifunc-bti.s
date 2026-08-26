@@ -49,8 +49,10 @@
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 
+# SHARED: Disassembly of section .iplt:
+# SHARED-EMPTY:
 ## The address of ifunc2 (STT_FUNC) escapes, so it must have `bti c`.
-# SHARED:      <ifunc2>:
+# SHARED-NEXT: <ifunc2>:
 # SHARED-NEXT:    bti     c
 
 # SHARED:         nop

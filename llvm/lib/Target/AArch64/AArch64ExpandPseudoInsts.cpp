@@ -1840,6 +1840,38 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return expandMultiVecPseudo(
         MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
         AArch64::LDNT1D_2Z_IMM, AArch64::LDNT1D_2Z_STRIDED_IMM);
+  case AArch64::ST1B_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::ST1B_2Z_IMM, AArch64::ST1B_2Z_STRIDED_IMM);
+  case AArch64::ST1H_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::ST1H_2Z_IMM, AArch64::ST1H_2Z_STRIDED_IMM);
+  case AArch64::ST1W_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::ST1W_2Z_IMM, AArch64::ST1W_2Z_STRIDED_IMM);
+  case AArch64::ST1D_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::ST1D_2Z_IMM, AArch64::ST1D_2Z_STRIDED_IMM);
+  case AArch64::STNT1B_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::STNT1B_2Z_IMM, AArch64::STNT1B_2Z_STRIDED_IMM);
+  case AArch64::STNT1H_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::STNT1H_2Z_IMM, AArch64::STNT1H_2Z_STRIDED_IMM);
+  case AArch64::STNT1W_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::STNT1W_2Z_IMM, AArch64::STNT1W_2Z_STRIDED_IMM);
+  case AArch64::STNT1D_2Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR2RegClass, AArch64::ZPR2StridedRegClass,
+        AArch64::STNT1D_2Z_IMM, AArch64::STNT1D_2Z_STRIDED_IMM);
   case AArch64::LD1B_2Z_PSEUDO:
     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR2RegClass,
                                 AArch64::ZPR2StridedRegClass, AArch64::LD1B_2Z,
@@ -1904,6 +1936,38 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return expandMultiVecPseudo(
         MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
         AArch64::LDNT1D_4Z_IMM, AArch64::LDNT1D_4Z_STRIDED_IMM);
+  case AArch64::ST1B_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::ST1B_4Z_IMM, AArch64::ST1B_4Z_STRIDED_IMM);
+  case AArch64::ST1H_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::ST1H_4Z_IMM, AArch64::ST1H_4Z_STRIDED_IMM);
+  case AArch64::ST1W_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::ST1W_4Z_IMM, AArch64::ST1W_4Z_STRIDED_IMM);
+  case AArch64::ST1D_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::ST1D_4Z_IMM, AArch64::ST1D_4Z_STRIDED_IMM);
+  case AArch64::STNT1B_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::STNT1B_4Z_IMM, AArch64::STNT1B_4Z_STRIDED_IMM);
+  case AArch64::STNT1H_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::STNT1H_4Z_IMM, AArch64::STNT1H_4Z_STRIDED_IMM);
+  case AArch64::STNT1W_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::STNT1W_4Z_IMM, AArch64::STNT1W_4Z_STRIDED_IMM);
+  case AArch64::STNT1D_4Z_IMM_PSEUDO:
+    return expandMultiVecPseudo(
+        MBB, MBBI, AArch64::ZPR4RegClass, AArch64::ZPR4StridedRegClass,
+        AArch64::STNT1D_4Z_IMM, AArch64::STNT1D_4Z_STRIDED_IMM);
   case AArch64::LD1B_4Z_PSEUDO:
     return expandMultiVecPseudo(MBB, MBBI, AArch64::ZPR4RegClass,
                                 AArch64::ZPR4StridedRegClass, AArch64::LD1B_4Z,

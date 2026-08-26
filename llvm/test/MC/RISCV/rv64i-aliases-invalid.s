@@ -113,62 +113,62 @@ rdtimeh x28    # CHECK: :[[@LINE]]:1: error: instruction requires the following:
 
 sll x2, x3, 64
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 srl x2, x3, 64
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 sra x2, x3, 64
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 sll x2, x3, -1
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 srl x2, x3, -2
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 sra x2, x3, -3
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: immediate must be an integer in the range [0, 63]
 
 sllw x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 srlw x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 sraw x2, x3, 32
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 sllw x2, x3, -1
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 srlw x2, x3, -2
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 sraw x2, x3, -3
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:14: note: invalid operand for instruction
+# CHECK: :[[@LINE-2]]:14: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:14: note: immediate must be an integer in the range [0, 31]
 
 foo:

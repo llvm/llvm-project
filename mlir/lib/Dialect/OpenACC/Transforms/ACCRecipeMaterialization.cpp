@@ -88,12 +88,13 @@ static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
   if (Operation *dstOp = dst.getDefiningOp()) {
-    if (dstOp->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName()))
+    if (dstOp->getDiscardableAttrOfType<acc::VarNameAttr>(
+            acc::getVarNameAttrName()))
       return;
     if (isa<ACC_DATA_ENTRY_OPS>(dstOp))
       return;
-    dstOp->setAttr(acc::getVarNameAttrName(),
-                   acc::VarNameAttr::get(dstOp->getContext(), name));
+    dstOp->setDiscardableAttr(acc::getVarNameAttrName(),
+                              acc::VarNameAttr::get(dstOp->getContext(), name));
     return;
   }
   auto blockArg = dyn_cast<BlockArgument>(dst);
@@ -126,13 +127,14 @@ static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
                                        StringRef name) {
   StringRef placeholder = acc::getVarNamePlaceholder();
   for (auto it = block->begin(); it != std::next(ip); ++it) {
-    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    auto attr = it->getDiscardableAttrOfType<acc::VarNameAttr>(
+        acc::getVarNameAttrName());
     if (attr && attr.getName() == placeholder) {
       if (name.empty())
-        it->removeAttr(acc::getVarNameAttrName());
+        it->removeDiscardableAttr(acc::getVarNameAttrName());
       else
-        it->setAttr(acc::getVarNameAttrName(),
-                    acc::VarNameAttr::get(it->getContext(), name));
+        it->setDiscardableAttr(acc::getVarNameAttrName(),
+                               acc::VarNameAttr::get(it->getContext(), name));
     }
   }
 }
@@ -344,8 +346,10 @@ LogicalResult ACCRecipeMaterialization::materialize(
     else
       llvm_unreachable("unexpected acc op with reduction recipe");
 
-    auto reductionOp = acc::ReductionInitOp::create(
-        b, op.getLoc(), origPtr, recipe.getReductionOperatorAttr());
+    SmallVector<Value> reductionBounds(acc::getBounds(op));
+    auto reductionOp =
+        acc::ReductionInitOp::create(b, op.getLoc(), origPtr, reductionBounds,
+                                     recipe.getReductionOperatorAttr());
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
@@ -383,25 +387,29 @@ LogicalResult ACCRecipeMaterialization::materialize(
     cloneRegionIntoAccRegion(&combinerRegion, &combineRegionOp.getRegion(),
                              /*hasResult=*/false);
 
-    auto ctx = b.getContext();
+    auto *ctx = b.getContext();
 
     // For reductions that come from parallel constructs, explicitly set the
     // GPU parallel dimensions attribute to blockXDim since they will always be
     // gang private. GPU parallel dimensions cannot be determined for acc.loop
     // at this point.
     if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>) {
-      auto parDimsAttr = acc::GPUParallelDimsAttr::get(
-          ctx, {policy.gangDim(ctx, acc::ParLevel::gang_dim1)});
+      acc::GPUParallelDimsAttr parDimsAttr;
+      if (accOp.isEffectivelySerial()) {
+        // If acc.serial has been lowered to a parallel op that is effectively
+        // sequential
+        parDimsAttr = acc::getSeqParDimsAttr(ctx, policy);
+      } else {
+        parDimsAttr = acc::getGangDim1ParDimsAttr(ctx, policy);
+      }
       acc::setParDimsAttr(reductionOp, parDimsAttr);
       acc::setParDimsAttr(combineRegionOp, parDimsAttr);
     }
 
     // Set sequential parallel dimensions attribute for loops in the recipe.
-    auto seqParDimsAttr =
-        acc::GPUParallelDimsAttr::get(ctx, {policy.seqDim(ctx)});
     auto setSeqParDimsForRecipeLoops = [&](Region *r) {
       r->walk([&](LoopLikeOpInterface loopLike) {
-        acc::setParDimsAttr(loopLike, seqParDimsAttr);
+        acc::setParDimsAttr(loopLike, acc::getSeqParDimsAttr(ctx, policy));
       });
     };
     setSeqParDimsForRecipeLoops(&reductionOp.getRegion());

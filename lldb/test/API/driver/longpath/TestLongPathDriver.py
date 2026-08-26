@@ -10,16 +10,17 @@ import subprocess
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 MAX_PATH = 260
 
 
-@skipUnlessWindows
+@requireWindows
 class DriverLongPathTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def _long_path(self, path):
-        return "\\\\?\\" + os.path.abspath(path)
+        return lldbutil.get_extended_windows_path(path)
 
     def _make_long_dir(self):
         components = [self.getBuildArtifact("deep")] + ["d" * 80] * 3

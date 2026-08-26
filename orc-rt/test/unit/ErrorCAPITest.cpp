@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-c/Error.h"
-#include "orc-rt/Error.h"
+#include "orc-rt/bedrock/Error.h"
 #include "gtest/gtest.h"
 
 #include <cstring>
@@ -173,4 +173,4 @@ TEST(ErrorCAPITest, CustomErrorTypeId) {
   orc_rt_Error_freeErrorMessage(Msg);
 }
 
-} // end anonymous namespace
+} // namespace

@@ -4626,8 +4626,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 }
 
 llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
-  llvm::CallInst *TrapCall =
-      Builder.CreateCall(CGM.getIntrinsic(IntrID));
+  llvm::Function *TrapIntrinsic = CGM.getIntrinsic(IntrID);
+  llvm::CallInst *TrapCall = Builder.CreateCall(TrapIntrinsic);
 
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4637,6 +4637,13 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (TrapIntrinsic->doesNotThrow())
+    TrapCall->setDoesNotThrow();
+  if (TrapIntrinsic->doesNotReturn()) {
+    TrapCall->setDoesNotReturn();
+    Builder.CreateUnreachable();
+    EmitBlock(createBasicBlock());
+  }
   return TrapCall;
 }
 
@@ -6639,7 +6646,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
+        CGCalleeInfo CalleeInfo(FunctionType->castAs<clang::FunctionType>(),
+                                GD);
         CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
                         Result.second);
         return Callee;
@@ -6683,7 +6691,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
     GD = GlobalDecl(VD);
 
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CGCalleeInfo calleeInfo(functionType->castAs<clang::FunctionType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
   CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
@@ -7134,7 +7142,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      Args, FnType, /*ChainCall=*/Chain);
+      Args, FnType, /*ChainCall=*/Chain, getCurrentFunctionDecl());
 
   if (ResolvedFnInfo)
     *ResolvedFnInfo = &FnInfo;

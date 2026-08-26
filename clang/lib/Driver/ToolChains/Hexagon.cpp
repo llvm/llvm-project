@@ -356,19 +356,28 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_shared, options::OPT_static, options::OPT_r))
       CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
 
-    if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib, options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crt1.o"));
-    else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
-                          options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
-
+    StringRef MLSuffix;
     if (!HTC.getSelectedMultilibs().empty() &&
-        !HTC.getSelectedMultilibs().back().isDefault()) {
-      CmdArgs.push_back(
-          Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib" +
-                             HTC.getSelectedMultilibs().back().gccSuffix()));
+        !HTC.getSelectedMultilibs().back().isDefault())
+      MLSuffix = HTC.getSelectedMultilibs().back().gccSuffix();
+    auto StartFile = [&](StringRef Name) -> std::string {
+      return D.SysRoot + "/usr/lib" + MLSuffix.str() + "/" + Name.str();
+    };
+
+    if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
+                     options::OPT_nostdlib, options::OPT_r)) {
+      if (IsStatic && IsPIE)
+        CmdArgs.push_back(Args.MakeArgString(StartFile("rcrt1.o")));
+      else
+        CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
+    } else if (Args.hasArg(options::OPT_shared) &&
+               !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                            options::OPT_r))
+      CmdArgs.push_back(Args.MakeArgString(StartFile("crti.o")));
+
+    if (!MLSuffix.empty()) {
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + D.SysRoot +
+                                           "/usr/lib" + MLSuffix));
     }
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
@@ -743,12 +752,17 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
     Multilibs.push_back(MultilibBuilder("asan", {}, {})
                             .flag("-fsanitize=address")
                             .makeMultilib());
+    Multilibs.push_back(MultilibBuilder("scs", {}, {})
+                            .flag("-fsanitize=shadow-call-stack")
+                            .makeMultilib());
 
     Multilib::flags_list Flags;
     addMultilibFlag(getSanitizerArgs(Args).needsMsanRt(), "-fsanitize=memory",
                     Flags);
     addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
                     Flags);
+    addMultilibFlag(getSanitizerArgs(Args).hasShadowCallStack(),
+                    "-fsanitize=shadow-call-stack", Flags);
 
     if (Multilibs.select(D, Flags, SelectedMultilibs)) {
       Multilib LastSelected = SelectedMultilibs.back();
@@ -833,7 +847,9 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              BoundArch BA,
                                              Action::OffloadKind) const {
 
-  bool UseInitArrayDefault = getTriple().isMusl();
+  bool UseInitArrayDefault =
+      getTriple().isMusl() ||
+      GetCStdlibType(DriverArgs) == ToolChain::CST_Picolibc;
 
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array,
@@ -877,6 +893,23 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
       CC1Args.push_back(Feature);
     }
   }
+
+  // Select the shadow call stack pointer register.  It has to hold a value
+  // across arbitrary calls, so only the callee-saved registers r16-r27 are
+  // allowed (Hexagon ABI, "Register usage across calls").
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_mhexagon_scs_reg)) {
+    StringRef Val(A->getValue());
+    unsigned RegNo = 0;
+    if (!Val.consume_front("r") || Val.getAsInteger(10, RegNo) || RegNo < 16 ||
+        RegNo > 27) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getSpelling() << A->getValue();
+    } else {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back(DriverArgs.MakeArgString("+scs-reg-r" + Twine(RegNo)));
+    }
+  }
+
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");

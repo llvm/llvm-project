@@ -18,6 +18,7 @@ set(NVPTXCodeGen_sources
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
+  NVPTXCodeGenPassBuilder.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
@@ -35,8 +36,8 @@ set(NVPTXCodeGen_sources
   NVPTXMCExpr.cpp
   NVPTXMarkKernelPtrsGlobal.cpp
   NVPTXPeephole.cpp
-  NVPTXSetByValParamAlign.cpp
   NVPTXPrologEpilogPass.cpp
+  NVPTXPromoteParamAlign.cpp
   NVPTXProxyRegErasure.cpp
   NVPTXRegisterInfo.cpp
   NVPTXReplaceImageHandles.cpp
@@ -61,9 +62,12 @@ add_llvm_target(NVPTXCodeGen
   CodeGenTypes
   Core
   IPO
+  IRPrinter
   MC
   NVPTXDesc
   NVPTXInfo
+  ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

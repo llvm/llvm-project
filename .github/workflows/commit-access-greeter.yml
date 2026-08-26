@@ -14,7 +14,7 @@ jobs:
       issues: write
       pull-requests: read
     container:
-      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:82b5304c5d99cf5d75a2334885aca57490cbb04f37d07fc49a10a2649824e526"
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:f4193631559b3a6ccd815280f80fd9211305a3f246e75aec84c6c8caea01d2a9"
     if: >-
       github.repository_owner == 'llvm' &&
       github.event.label.name == 'infra:commit-access-request'

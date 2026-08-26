@@ -2007,14 +2007,18 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       }
       return New;
     }
-    case Instruction::ICmp:
+    case Instruction::ICmp: {
       assert(NewOps.size() == 2 && "icmp with #ops != 2");
-      return Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      Value *New = Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(),
+                                      NewOps[0], NewOps[1]);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
+    }
     case Instruction::FCmp:
       assert(NewOps.size() == 2 && "fcmp with #ops != 2");
-      return Builder.CreateFCmp(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
-                                NewOps[1]);
+      return Builder.CreateFCmpFMF(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                                   NewOps[1], I);
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -2030,8 +2034,11 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
           I->getType()->getScalarType(),
           cast<VectorType>(NewOps[0]->getType())->getElementCount());
       assert(NewOps.size() == 1 && "cast with #ops != 1");
-      return Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0],
-                                DestTy);
+      Value *New =
+          Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0], DestTy);
+      if (auto *NewI = dyn_cast<Instruction>(New))
+        NewI->copyIRFlags(I);
+      return New;
     }
     case Instruction::GetElementPtr: {
       Value *Ptr = NewOps[0];

@@ -42,9 +42,6 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
 
 } // end namespace llvm
 
-InsertPosition::InsertPosition(Instruction *InsertBefore)
-    : InsertAt(InsertBefore ? InsertBefore->getIterator()
-                            : InstListType::iterator()) {}
 InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
     : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
@@ -114,10 +111,6 @@ BasicBlock::iterator Instruction::eraseFromParent() {
   return getParent()->getInstList().erase(getIterator());
 }
 
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertBefore(InsertPos->getIterator());
-}
-
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
 void Instruction::insertBefore(BasicBlock::iterator InsertPos) {
@@ -185,16 +178,8 @@ void Instruction::insertBefore(BasicBlock &BB,
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
-void Instruction::moveBefore(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
-}
-
 void Instruction::moveBefore(BasicBlock::iterator MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos, false);
-}
-
-void Instruction::moveBeforePreserving(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
@@ -927,12 +912,14 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
             IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
+           LI->isElementwise() == cast<LoadInst>(I2)->isElementwise() &&
            (LI->getAlign() == cast<LoadInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            LI->getOrdering() == cast<LoadInst>(I2)->getOrdering() &&
            LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
+           SI->isElementwise() == cast<StoreInst>(I2)->isElementwise() &&
            (SI->getAlign() == cast<StoreInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&
@@ -1500,6 +1487,14 @@ void Instruction::swapProfMetadata() {
   Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
+}
+
+void Instruction::copyProfileAndDebugMetadata(const Instruction &SrcInst) {
+  // TODO: Include additional metadata in the future if appropriate.
+  static const unsigned SafeIDs[] = {
+      LLVMContext::MD_dbg, LLVMContext::MD_prof, LLVMContext::MD_memprof,
+      LLVMContext::MD_callsite};
+  copyMetadata(SrcInst, SafeIDs);
 }
 
 void Instruction::copyMetadata(const Instruction &SrcInst,

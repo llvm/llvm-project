@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/LockedAccess.h"
+#include "orc-rt/bedrock/LockedAccess.h"
 #include "gtest/gtest.h"
 
 #include <mutex>
@@ -33,7 +33,7 @@ template <typename T> struct Foo {
   auto getConst() { return LockedAccess(std::as_const(Val), M); }
 };
 
-} // anonymous namespace
+} // namespace
 
 TEST(LockedAccessTest, ArrowRead) {
   Foo<std::pair<int, int>> F({42, 7});

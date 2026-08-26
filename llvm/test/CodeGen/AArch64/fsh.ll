@@ -5,13 +5,10 @@
 define i8 @rotl_i8(i8 %a, i8 %c) {
 ; CHECK-SD-LABEL: rotl_i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    neg w8, w1
-; CHECK-SD-NEXT:    and w9, w0, #0xff
-; CHECK-SD-NEXT:    and w10, w1, #0x7
-; CHECK-SD-NEXT:    and w8, w8, #0x7
-; CHECK-SD-NEXT:    lsl w10, w0, w10
-; CHECK-SD-NEXT:    lsr w8, w9, w8
-; CHECK-SD-NEXT:    orr w0, w10, w8
+; CHECK-SD-NEXT:    bfi w0, w0, #8, #24
+; CHECK-SD-NEXT:    and w8, w1, #0x7
+; CHECK-SD-NEXT:    lsl w8, w0, w8
+; CHECK-SD-NEXT:    lsr w0, w8, #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: rotl_i8:
@@ -63,13 +60,10 @@ entry:
 define i16 @rotl_i16(i16 %a, i16 %c) {
 ; CHECK-SD-LABEL: rotl_i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    neg w8, w1
-; CHECK-SD-NEXT:    and w9, w0, #0xffff
-; CHECK-SD-NEXT:    and w10, w1, #0xf
-; CHECK-SD-NEXT:    and w8, w8, #0xf
-; CHECK-SD-NEXT:    lsl w10, w0, w10
-; CHECK-SD-NEXT:    lsr w8, w9, w8
-; CHECK-SD-NEXT:    orr w0, w10, w8
+; CHECK-SD-NEXT:    bfi w0, w0, #16, #16
+; CHECK-SD-NEXT:    and w8, w1, #0xf
+; CHECK-SD-NEXT:    lsl w8, w0, w8
+; CHECK-SD-NEXT:    lsr w0, w8, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: rotl_i16:

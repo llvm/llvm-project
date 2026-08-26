@@ -274,7 +274,11 @@ public:
   /// \param message The message to report.
   /// \return An in-flight diagnostic object that can be used to report the
   ///         unsupported case.
-  InFlightDiagnostic emitNYI(Location loc, const Twine &message);
+  InFlightDiagnostic emitNYI(Location loc, const Twine &message) {
+    if (impl)
+      return impl->emitNYI(loc, message);
+    return mlir::emitError(loc, "not yet implemented: " + message);
+  }
 
   /// Emit an OpenACC remark with lazy message generation.
   ///

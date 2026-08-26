@@ -938,7 +938,7 @@ def : Pat<(vec.vt (vselect
           (ANDNOT $c, $x)>;
 
 // Also implement vselect in terms of bitselect
-foreach vec = StdVecs in
+foreach vec = AllVecs in
 def : Pat<(vec.vt (vselect
             (vec.int_vt V128:$c), (vec.vt V128:$v1), (vec.vt V128:$v2))),
           (BITSELECT $v1, $v2, $c)>;
@@ -948,7 +948,7 @@ defm SELECT_V128 :
   I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, I32:$cond), (outs), (ins), [],
     "v128.select\t$dst, $lhs, $rhs, $cond", "v128.select", 0x1b>;
 
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 def : Pat<(select I32:$cond, (vec.vt V128:$lhs), (vec.vt V128:$rhs)),
           (SELECT_V128 $lhs, $rhs, $cond)>;
 
@@ -1863,21 +1863,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(0))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
-          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(0)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

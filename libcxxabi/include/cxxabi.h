@@ -19,7 +19,7 @@
 
 #include <__cxxabi_config.h>
 
-#define _LIBCPPABI_VERSION 230000
+#define _LIBCPPABI_VERSION 240000
 #define _LIBCXXABI_ALWAYS_COLD __attribute__((cold))
 
 #ifdef __cplusplus

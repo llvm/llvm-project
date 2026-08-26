@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-enable-object-linking < %s | FileCheck %s --implicit-check-not=.amdgpu_num_agpr
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --sections - | FileCheck %s --check-prefix=ELF
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck %s --implicit-check-not=.amdgpu_num_agpr
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --sections - | FileCheck %s --check-prefix=ELF
 
 ; Verify object linking codegen for named barriers on GFX1250:
 ; 1. Barrier instructions use M0-based forms with relocation references

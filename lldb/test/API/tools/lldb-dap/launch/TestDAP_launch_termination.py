@@ -2,7 +2,7 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.utils import DebugAdapter
 
 

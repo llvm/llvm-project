@@ -699,3 +699,77 @@ define void @sdiv_neg(ptr %p, i32 %arg) {
   store i32 %div, ptr %p
   ret void
 }
+
+; The loop guard `%sub > 47` proves %sub non-negative at %div1's only use, so
+; %div1 is converted to udiv.
+define i64 @sdiv_partially_dominated_redundant_pair(i64 %x) {
+; CHECK-LABEL: @sdiv_partially_dominated_redundant_pair(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[X:%.*]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv i64 [[SUB]], 24
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i64 [[SUB]], 47
+; CHECK-NEXT:    br i1 [[C1]], label [[BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    store volatile i32 0, ptr null, align 4
+; CHECK-NEXT:    [[NEXT]] = shl i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[NEXT]], [[DIV1]]
+; CHECK-NEXT:    br i1 [[C]], label [[BODY]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i64 [[SUB]], 24
+; CHECK-NEXT:    ret i64 [[DIV2]]
+;
+entry:
+  %sub = sub i64 0, %x
+  %div1 = sdiv i64 %sub, 24
+  %c1 = icmp sgt i64 %sub, 47
+  br i1 %c1, label %body, label %exit
+
+body:
+  %iv = phi i64 [ 1, %entry ], [ %next, %body ]
+  store volatile i32 0, ptr null, align 4
+  %next = shl i64 %iv, 1
+  %c = icmp slt i64 %next, %div1
+  br i1 %c, label %body, label %exit
+
+exit:
+  %div2 = sdiv i64 %sub, 24
+  ret i64 %div2
+}
+
+define i64 @sdiv_narrowed_breaks_divrem_pairing(ptr %p) {
+; CHECK-LABEL: @sdiv_narrowed_breaks_divrem_pairing(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[DIV_LHS_TRUNC:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[DIV1:%.*]] = sdiv i16 [[DIV_LHS_TRUNC]], 1000
+; CHECK-NEXT:    [[DIV_SEXT:%.*]] = sext i16 [[DIV1]] to i32
+; CHECK-NEXT:    [[OFF:%.*]] = add i32 [[X]], -4000
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[OFF]], -4999
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[USE:%.*]]
+; CHECK:       use:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[DIV_SEXT]], 255
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[AND]] to i64
+; CHECK-NEXT:    ret i64 [[Z]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[REM]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %x = load i32, ptr %p, align 4
+  %rem = srem i32 %x, 1000
+  %div = sdiv i32 %x, 1000
+  %off = add i32 %x, -4000
+  %c = icmp ult i32 %off, -4999
+  br i1 %c, label %exit, label %use
+
+use:
+  %and = and i32 %div, 255
+  %z = zext nneg i32 %and to i64
+  ret i64 %z
+
+exit:
+  %r = zext i32 %rem to i64
+  ret i64 %r
+}

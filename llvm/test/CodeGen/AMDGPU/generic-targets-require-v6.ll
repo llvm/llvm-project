@@ -1,22 +1,22 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX9-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx9-4-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX9-4-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx10-1-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX101-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx10-3-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX103-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX11-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx11-7-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX117-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx12-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX12-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx12-5-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX125-V5 %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx13-generic --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX13-V5 %s
+; RUN: not llc -mtriple=amdgpu9 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX9-V5 %s
+; RUN: not llc -mtriple=amdgpu9.4 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX9-4-V5 %s
+; RUN: not llc -mtriple=amdgpu10.1 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX101-V5 %s
+; RUN: not llc -mtriple=amdgpu10.3 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX103-V5 %s
+; RUN: not llc -mtriple=amdgpu11 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX11-V5 %s
+; RUN: not llc -mtriple=amdgpu11.7 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX117-V5 %s
+; RUN: not llc -mtriple=amdgpu12 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX12-V5 %s
+; RUN: not llc -mtriple=amdgpu12.5 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX125-V5 %s
+; RUN: not llc -mtriple=amdgpu13 --amdhsa-code-object-version=5 -o - %s 2>&1 | FileCheck --check-prefix=GFX13-V5 %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx9-4-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx10-1-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx10-3-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx11-7-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx12-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx12-5-generic --amdhsa-code-object-version=6 -o - %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx13-generic --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu9 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu9.4 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu10.1 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu10.3 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu11 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu11.7 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu12 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu12.5 --amdhsa-code-object-version=6 -o - %s
+; RUN: llc -mtriple=amdgpu13 --amdhsa-code-object-version=6 -o - %s
 
 ; GFX9-V5:   gfx9-generic is only available on code object version 6 or better
 ; GFX9-4-V5: gfx9-4-generic is only available on code object version 6 or better

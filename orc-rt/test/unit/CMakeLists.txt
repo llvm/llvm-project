@@ -1,5 +1,5 @@
 add_custom_target(OrcRTUnitTests)
-set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/Tests")
+set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/bedrock/Tests")
 
 if (NOT TARGET llvm_gtest)
   message(WARNING "orc-rt unittests disabled due to GTest being unavailable; "
@@ -15,14 +15,15 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   BootstrapInfoTest.cpp
+  CCallbackTest.cpp
   CallSPSCITest.cpp
   CallableTraitsHelperTest.cpp
-  SimpleSymbolTableTest.cpp
+  CommandLineTest.cpp
+  CompilerTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
-  CommandLineTest.cpp
-  ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
+  ErrorTest.cpp
   ExecutorAddressTest.cpp
   ExecutorProcessInfoTest.cpp
   InProcessControllerAccessTest.cpp
@@ -34,19 +35,23 @@ add_orc_rt_unittest(CoreTests
   MathTest.cpp
   MemoryAccessSPSCITest.cpp
   MemoryFlagsTest.cpp
-  NativeDylibManagerTest.cpp
   NativeDylibManagerSPSCITest.cpp
+  NativeDylibManagerTest.cpp
+  ProxyTest.cpp
   QueueingRunnerTest.cpp
   RTTITest.cpp
-  SessionTest.cpp
-  SimpleNativeMemoryMapTest.cpp
-  SimpleNativeMemoryMapSPSCITest.cpp
-  SimplePackedSerializationTest.cpp
   SPSAllocActionTest.cpp
   SPSMemoryFlagsTest.cpp
-  SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
+  SPSWrapperFunctionTest.cpp
+  SessionTest.cpp
+  SimpleNativeMemoryMapSPSCITest.cpp
+  SimpleNativeMemoryMapTest.cpp
+  SimplePackedSerializationTest.cpp
+  SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
+  StringExtrasTest.cpp
+  StringPoolTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp
@@ -60,7 +65,10 @@ add_orc_rt_unittest(CoreTests
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})
-target_link_libraries(CoreTests PRIVATE orc-rt-executor)
+target_link_libraries(CoreTests PRIVATE
+  orc-rt-bedrock
+  orc-rt-bedrock-impl-headers
+  )
 
 # Build a shared library for NativeDylibManager tests.
 add_library(NativeDylibManagerTestLib SHARED

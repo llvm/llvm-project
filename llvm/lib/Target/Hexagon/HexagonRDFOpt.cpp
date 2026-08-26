@@ -14,6 +14,7 @@
 #include "RDFCopy.h"
 #include "RDFDeadCode.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -426,11 +427,26 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
     // lists. Skip:
     //   - the entry block: handled above from the RDF LiveMap;
     //   - EH pads: exception pointer/selector are runtime-established.
-    SmallVector<MachineBasicBlock *, 16> Blocks;
-    for (MachineBasicBlock &B : MF)
-      if (!B.isEntryBlock() && !B.isEHPad())
-        Blocks.push_back(&B);
-    fullyRecomputeLiveIns(Blocks);
+    //
+    // Recompute live-ins one block at a time, visiting successors before
+    // predecessors (post-order). This way each block already has fresh
+    // live-in info from its successors when it is processed.
+    SmallVector<MachineBasicBlock *, 16> Candidates;
+    for (MachineBasicBlock *MBB : post_order(&MF))
+      if (!MBB->isEntryBlock() && !MBB->isEHPad())
+        Candidates.push_back(MBB);
+
+    // One pass is usually enough. If any block's live-ins changed, repeat
+    // because its predecessors may need updating too. Stop after
+    // MaxLiveInSweeps passes to keep compile time bounded.
+    constexpr unsigned MaxLiveInSweeps = 8;
+    for (unsigned Sweep = 0; Sweep != MaxLiveInSweeps; ++Sweep) {
+      bool AnyChanged = false;
+      for (MachineBasicBlock *MBB : Candidates)
+        AnyChanged |= recomputeLiveIns(*MBB);
+      if (!AnyChanged)
+        break;
+    }
 
     // Recompute kill flags against the updated live-in lists.
     LV.resetKills();

@@ -27,27 +27,59 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
+// Experimentation showed that serial deletion is most efficient, hence
+// a single thread.
+lto::DTLTO::BackgroundDeletion::BackgroundDeletion()
+    : DefaultThreadPool(hardware_concurrency(1)) {}
+
+lto::DTLTO::BackgroundDeletion::~BackgroundDeletion() { waitForTasks(); }
+
+void lto::DTLTO::BackgroundDeletion::waitForTasks() {
+  wait();
+  for (const std::string &Warning : Warnings)
+    errs() << "warning: could not remove the file " << Warning << "\n";
+  Warnings.clear();
+}
+
+void lto::DTLTO::BackgroundDeletion::removeFiles(
+    std::vector<std::string> &&Files, const Config &Conf) {
+  if (Files.empty())
+    return;
+
+  async([this, Files = std::move(Files), TTE = Conf.TimeTraceEnabled,
+         TTG = Conf.TimeTraceGranularity] {
+    if (LLVM_ENABLE_THREADS && TTE)
+      timeTraceProfilerInitialize(TTG, "Remove DTLTO temporary files");
+    {
+      TimeTraceScope TimeScope("Remove DTLTO temporary files");
+      for (const std::string &Path : Files) {
+        std::error_code EC = sys::fs::remove(Path, true);
+        if (!EC ||
+            EC == std::make_error_code(std::errc::no_such_file_or_directory))
+          continue;
+
+        Warnings.emplace_back("'" + Path + "': " + EC.message());
+      }
+    }
+    if (LLVM_ENABLE_THREADS && TTE)
+      timeTraceProfilerFinishThread();
+  });
+}
+
+void lto::DTLTO::waitForCleanup() { BackgroundDeleter.waitForTasks(); }
+
 // Remove temporary files created to enable distribution.
 void lto::DTLTO::cleanup() {
-  if (!SaveTemps) {
-    // Remove one file, report error if any.
-    auto removeFile = [](StringRef FileName) -> void {
-      std::error_code EC = sys::fs::remove(FileName, true);
-      if (EC &&
-          EC != std::make_error_code(std::errc::no_such_file_or_directory))
-        errs() << "warning: could not remove the file '" << FileName
-               << "': " << EC.message() << "\n";
-    };
+  if (SaveTemps)
+    return;
 
-    TimeTraceScope JobScope("Remove DTLTO temporary files");
-    for (const auto &Name : CleanupList)
-      removeFile(Name);
-    // Clean the CleanupList for safety.
-    CleanupList.clear();
-  }
+  BackgroundDeleter.removeFiles(std::move(CleanupList), Conf);
 }
 
 // Runs the DTLTO thin link phase, producing per-module summary indices,
@@ -90,7 +122,7 @@ LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
 
   if (Error Err = prepareDtltoJobs())
     return Err;
-  if (Error Err = serializeLTOInputs())
+  if (Error Err = extractLTOInputs())
     return Err;
   if (Error Err = performCodegen())
     return Err;
@@ -154,9 +186,9 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
   if (Error Err = checkCacheHit(J))
     return Err;
   if (!J.Cached) {
-    InputModuleIDsToSerialize.insert(J.ModuleID);
+    InputModuleIDsToExtract.insert(J.ModuleID);
     for (StringRef ImportPath : J.ImportsFilesList)
-      InputModuleIDsToSerialize.insert(ImportPath);
+      InputModuleIDsToExtract.insert(ImportPath);
 
     TimeTraceScope JobScope("Emit individual index for DTLTO",
                             J.SummaryIndexPath);
@@ -195,6 +227,8 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
     Ops.push_back("-ffunction-sections");
   if (C.Options.DataSections)
     Ops.push_back("-fdata-sections");
+  if (C.PTO.LoopInterchange)
+    Ops.push_back("-floop-interchange");
 
   if (C.RelocModel == Reloc::PIC_)
     // Clang doesn't have -fpic for all triples.
@@ -229,7 +263,7 @@ Error lto::DTLTO::prepareDtltoJobs() {
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
-  InputModuleIDsToSerialize.clear();
+  InputModuleIDsToExtract.clear();
 
   if (ModuleMap.empty())
     return Error::success();

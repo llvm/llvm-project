@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2D -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -finclude-default-header -DTEXTURE=RWTexture2DArray -verify %s
 
 // RWTexture2D has no mips view (contrast with Texture2D-mips-errors.hlsl,
 // which exercises private/protected mips_type on Texture2D).

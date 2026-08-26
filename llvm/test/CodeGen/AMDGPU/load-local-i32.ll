@@ -1,13 +1,13 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu9.08 -mattr=-flat-for-global,-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 ; Testing for ds_read/write_128
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i32:
 ; GCN-NOT: s_wqm_b64

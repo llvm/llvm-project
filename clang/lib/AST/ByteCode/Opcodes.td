@@ -381,6 +381,14 @@ def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
 }
+def GetPtrVirtBase : Opcode {
+  // RecordDecl of base class.
+  let Args = [ArgRecordDecl];
+}
+
+def IsBaseClass : SuccessOpcode;
+
+
 // [] -> [Pointer]
 def GetPtrThisBase : Opcode {
   // Offset of field, which is a base.
@@ -525,11 +533,6 @@ def GetField : AccessOpcode;
 def GetFieldPop : AccessOpcode;
 // [] -> [Value]
 def GetThisField : AccessOpcode;
-
-// [Pointer, Value] -> [Pointer]
-def SetField : AccessOpcode;
-// [Value] -> []
-def SetThisField : AccessOpcode;
 
 // [Value] -> []
 def InitThisField : AccessOpcode;
@@ -787,8 +790,9 @@ def APOnlyTypeClass : TypeClass {
   let Types = [IntAP, IntAPS];
 }
 
-// Cast from an AP integer type to Sint64, failing if the value doesn't fit.
-def CastNoOverflow : Opcode {
+// Cast from an AP integer type to Sint64 for use as an offsetof array index,
+// failing if the value is negative or doesn't fit in Sint64.
+def CastAPToOffsetIndex : Opcode {
   let Types = [APOnlyTypeClass];
   let HasGroup = 1;
 }
@@ -1034,3 +1038,7 @@ def PushCC : SuccessOpcode {
 def PopCC : SuccessOpcode;
 def PushMSVCCE : SuccessOpcode;
 def PopMSVCCE : SuccessOpcode;
+
+def GetStringPtr : SuccessOpcode {
+  let Args = [ArgExpr];
+}

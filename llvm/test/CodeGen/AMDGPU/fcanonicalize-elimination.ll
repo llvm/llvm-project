@@ -500,7 +500,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(ptr addrspace
 ; FIXME: Should there be more checks here? minnum with sNaN operand is simplified to qNaN.
 
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
-; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00000
+; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00001
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
@@ -912,10 +912,6 @@ define float @v_test_canonicalize_maximumnum(float %a, float %b) {
   %canonicalized = call float @llvm.canonicalize.f32(float %min)
   ret float %canonicalized
 }
-
-; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
-; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
-; GCN: .amd_amdgpu_isa
 
 declare float @llvm.canonicalize.f32(float) #0
 declare float @llvm.copysign.f32(float, float) #0

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -79,4 +78,25 @@ mlir::Value mif::genImageIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   if (subCastAndCleanup.second)
     (*subCastAndCleanup.second)();
   return imageIndex;
+}
+
+mlir::func::FuncOp mif::getOrCreateInitFunc(fir::FirOpBuilder &builder,
+                                            mlir::ModuleOp mod,
+                                            llvm::StringRef name) {
+  mlir::Location loc = mod.getLoc();
+  auto funcType = builder.getFunctionType({}, {});
+  auto func = builder.createFunction(loc, name, funcType);
+  if (!func.empty())
+    return func;
+
+  func.setPublic();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+
+  func.addEntryBlock();
+  builder.setInsertionPointToEnd(&func.getBody().front());
+  mif::InitOp::create(builder, loc);
+  mlir::func::ReturnOp::create(builder, loc);
+
+  return func;
 }

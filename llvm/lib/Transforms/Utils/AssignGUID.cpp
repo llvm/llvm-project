@@ -36,6 +36,6 @@ void AssignGUIDPass::assignGUIDForMergedGV(GlobalVariable &GV) {
   // that metadata from GV first, but we may want to remember those later, if
   // we had a motivation for that. In that case, we need some other metadata
   // to maintain that association.
-  GV.eraseMetadata(LLVMContext::MD_unique_id);
+  GV.eraseMetadata(LLVMContext::MD_guid);
   GV.assignGUID();
 }

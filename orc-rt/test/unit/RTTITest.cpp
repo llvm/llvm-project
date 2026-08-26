@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/RTTI.h"
+#include "orc-rt/bedrock/RTTI.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
@@ -25,7 +25,7 @@ class MyDerivedA : public RTTIExtends<MyDerivedA, MyBase> {};
 
 class MyDerivedB : public RTTIExtends<MyDerivedB, MyBase> {};
 
-} // end anonymous namespace
+} // namespace
 
 TEST(ExtensibleRTTITest, BaseCheck) {
   MyBase MB;
