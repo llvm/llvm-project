@@ -247,8 +247,7 @@ TEST(DataExtractorTest, SLEB128APSInt) {
 
   {
     // INT64_MAX + 1 (aka 2^63 + 1): one past the previous boundary.
-    const char twoPow63Plus1Data[] =
-        "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+    const char twoPow63Plus1Data[] = "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x01";
     DataExtractor DE(StringRef(twoPow63Plus1Data), false);
     uint64_t Offset = 0;
     APSInt Result = DE.getSLEB128APSInt(&Offset);

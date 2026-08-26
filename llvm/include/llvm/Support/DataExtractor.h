@@ -678,19 +678,19 @@ public:
   /// 64 bits. The offset pointed to by \a OffsetPtr will be updated with the
   /// offset of the byte following the last extracted byte.
   ///
-  /// @param[in,out] OffsetPtr
+  /// \param[in,out] OffsetPtr
   ///     A pointer to an offset within the data that will be advanced by the
   ///     appropriate number of bytes if the value is extracted correctly. If
   ///     the offset is out of bounds or there are not enough bytes to extract
   ///     this value, the offset will be left unmodified.
   ///
-  /// @param[in,out] Err
+  /// \param[in,out] Err
   ///     A pointer to an Error object. Upon return the Error object is set to
   ///     indicate the result (success/failure) of the function. If the Error
   ///     object is already set when calling this function, no extraction is
   ///     performed.
   ///
-  /// @return
+  /// \return
   ///     The extracted signed integer value, represented with just enough bits
   ///     to hold it.
   LLVM_ABI APSInt getSLEB128APSInt(uint64_t *OffsetPtr,
