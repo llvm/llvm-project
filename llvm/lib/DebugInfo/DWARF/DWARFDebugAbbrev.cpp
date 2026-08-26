@@ -71,6 +71,13 @@ void DWARFAbbreviationDeclarationSet::dump(raw_ostream &OS) const {
     Decl.dump(OS);
 }
 
+json::Array llvm::toJSON(const DWARFAbbreviationDeclarationSet &Set) {
+  json::Array Decls;
+  for (const auto &Decl : Set)
+    Decls.push_back(toJSON(Decl));
+  return Decls;
+}
+
 const DWARFAbbreviationDeclaration *
 DWARFAbbreviationDeclarationSet::getAbbreviationDeclaration(
     uint32_t AbbrCode) const {
@@ -152,6 +159,19 @@ void DWARFDebugAbbrev::dump(raw_ostream &OS) const {
     OS << formatv("Abbrev table for offset: {0:x+8}\n", I.first);
     I.second.dump(OS);
   }
+}
+
+json::Array llvm::toJSON(const DWARFDebugAbbrev &Abbrev) {
+  if (Error Err = Abbrev.parse())
+    // FIXME: We should propagate this error or otherwise display it.
+    llvm::consumeError(std::move(Err));
+
+  json::Array Tables;
+  for (const auto &I : Abbrev)
+    Tables.push_back(json::Object{
+        {"Offset", formatv("{0:x+8}", I.first).str()},
+        {"Declarations", toJSON(I.second)}});
+  return Tables;
 }
 
 Expected<const DWARFAbbreviationDeclarationSet *>

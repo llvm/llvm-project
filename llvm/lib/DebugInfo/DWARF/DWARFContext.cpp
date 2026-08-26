@@ -49,9 +49,11 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <deque>
@@ -1339,6 +1341,42 @@ void DWARFContext::dump(
   if (shouldDump(Explicit, ".debug_names", DIDT_ID_DebugNames,
                  DObj->getNamesSection().Data))
     getDebugNames().dump(OS);
+}
+
+Error DWARFContext::dumpJSON(
+    raw_ostream &OS, DIDumpOptions DumpOpts,
+    std::array<std::optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
+  uint64_t DumpType = DumpOpts.DumpType;
+
+  StringRef Extension = sys::path::extension(DObj->getFileName());
+  bool IsDWO = (Extension == ".dwo") || (Extension == ".dwp");
+
+  bool Explicit = DumpType != DIDT_All && !IsDWO;
+  bool ExplicitDWO = Explicit && IsDWO;
+  auto shouldDump = [&](bool Explicit, unsigned ID, StringRef Section) {
+    unsigned Mask = 1U << ID;
+    return (DumpType & Mask) && (Explicit || !Section.empty());
+  };
+
+  // Only sections with JSON support implemented are included here; other
+  // sections are silently skipped unless explicitly requested (see the
+  // warning below).
+  json::Object Root;
+  if (shouldDump(Explicit, DIDT_ID_DebugAbbrev, DObj->getAbbrevSection()))
+    Root["DebugAbbrev"] = toJSON(*getDebugAbbrev());
+  if (shouldDump(ExplicitDWO, DIDT_ID_DebugAbbrev, DObj->getAbbrevDWOSection()))
+    Root["DebugAbbrevDWO"] = toJSON(*getDebugAbbrevDWO());
+
+  // Warn if the user explicitly asked for a section that doesn't have JSON
+  // support yet. Don't warn in the default/--all case, since that would be
+  // noisy today and would need updating on every subsequent per-section PR.
+  if (Explicit && (DumpType & ~static_cast<uint64_t>(DIDT_DebugAbbrev)))
+    WithColor::warning() << "--output-style=JSON does not yet support the "
+                             "requested section(s); only .debug_abbrev is "
+                             "currently supported\n";
+
+  OS << formatv("{0}", json::Value(std::move(Root))) << "\n";
+  return Error::success();
 }
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {

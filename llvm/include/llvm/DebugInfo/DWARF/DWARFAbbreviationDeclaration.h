@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/JSON.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -219,6 +220,10 @@ private:
   /// variable below will have a value.
   std::optional<FixedSizeInfo> FixedAttributeSize;
 };
+
+/// Serialize \p Decl as JSON, matching the symbolic tag/attribute/form names
+/// (and unknown-value fallback) used by DWARFAbbreviationDeclaration::dump.
+LLVM_ABI json::Object toJSON(const DWARFAbbreviationDeclaration &Decl);
 
 } // end namespace llvm
 

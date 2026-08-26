@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -66,6 +67,9 @@ private:
   void clear();
 };
 
+/// Serialize \p Set as a JSON array of its abbreviation declarations.
+LLVM_ABI json::Array toJSON(const DWARFAbbreviationDeclarationSet &Set);
+
 class DWARFDebugAbbrev {
   using DWARFAbbreviationDeclarationSetMap =
       std::map<uint64_t, DWARFAbbreviationDeclarationSet>;
@@ -92,6 +96,11 @@ public:
     return AbbrDeclSets.end();
   }
 };
+
+/// Serialize \p Abbrev as a JSON array, with one entry per abbreviation
+/// table (each an object with an "Offset" and a "Declarations" array).
+/// Parses \p Abbrev first, as dump() does.
+LLVM_ABI json::Array toJSON(const DWARFDebugAbbrev &Abbrev);
 
 } // end namespace llvm
 

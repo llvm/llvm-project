@@ -160,6 +160,12 @@ public:
     dump(OS, DumpOpts, DumpOffsets);
   }
 
+  /// Dump a JSON representation to \p OS. Only sections with JSON support
+  /// implemented are included; if a section without JSON support is
+  /// explicitly requested via \p DumpOpts, a warning is emitted for it.
+  Error dumpJSON(raw_ostream &OS, DIDumpOptions DumpOpts,
+                 std::array<std::optional<uint64_t>, DIDT_ID_Count> DumpOffsets);
+
   bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) override;
 
   using unit_iterator_range = DWARFUnitVector::iterator_range;

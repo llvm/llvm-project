@@ -158,6 +158,21 @@ void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {
   OS << '\n';
 }
 
+json::Object llvm::toJSON(const DWARFAbbreviationDeclaration &Decl) {
+  json::Array Attributes;
+  for (const auto &Spec : Decl.attributes()) {
+    json::Object Attr{{"Attribute", formatv("{0}", Spec.Attr).str()},
+                       {"Form", formatv("{0}", Spec.Form).str()}};
+    if (Spec.isImplicitConst())
+      Attr["Value"] = Spec.getImplicitConstValue();
+    Attributes.push_back(std::move(Attr));
+  }
+  return json::Object{{"Code", Decl.getCode()},
+                      {"Tag", formatv("{0}", Decl.getTag()).str()},
+                      {"Children", Decl.hasChildren()},
+                      {"Attributes", std::move(Attributes)}};
+}
+
 std::optional<uint32_t>
 DWARFAbbreviationDeclaration::findAttributeIndex(dwarf::Attribute Attr) const {
   for (uint32_t i = 0, e = AttributeSpecs.size(); i != e; ++i) {
