@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -13,7 +14,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -82,7 +82,7 @@ void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
   // Give the frame recognizers a chance to provide a step through:
   StackFrameSP frame_zero_sp = thread.GetStackFrameAtIndex(0);
   if (RecognizedStackFrameSP frame_recognizer_sp =
-      frame_zero_sp->GetRecognizedFrame()) {
+          frame_zero_sp->GetRecognizedFrame()) {
     m_sub_plan_sp = frame_recognizer_sp->GetStepThroughPlan();
     if (m_sub_plan_sp)
       return;

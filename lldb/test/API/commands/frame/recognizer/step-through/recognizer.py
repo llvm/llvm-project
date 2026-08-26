@@ -4,12 +4,12 @@ import lldb
 from lldb.plugins.scripted_thread_plan import ScriptedThreadPlan
 from lldb.plugins.scripted_stackframe_recognizer import ScriptedStackFrameRecognizer
 
+
 class NestedFrameRecognizer(ScriptedStackFrameRecognizer):
-    """Exercises the step-through feature of frame recognizers.
-    """
+    """Exercises the step-through feature of frame recognizers."""
 
     def get_step_through_plan(self, thread):
-        """ Step through from baz to bar """
+        """Step through from baz to bar"""
         frame = thread.frames[0]
 
         if frame.name == "baz":
@@ -23,42 +23,48 @@ class NestedFrameRecognizer(ScriptedStackFrameRecognizer):
             address = bar_func.addr
             if not address.IsValid():
                 return None
-            
+
             load_addr = address.GetLoadAddress(target)
 
-            dict = {"class_name" : "recognizer.StepThrough", "extra_args" : {"address" : str(load_addr)}}
-            
+            dict = {
+                "class_name": "recognizer.StepThrough",
+                "extra_args": {"address": str(load_addr)},
+            }
+
             return dict
 
+
 class StepThrough(ScriptedThreadPlan):
-    def __init__(self, thread_plan: lldb.SBThreadPlan, extra_args: lldb.SBStructuredData):
-      super().__init__(thread_plan)
+    def __init__(
+        self, thread_plan: lldb.SBThreadPlan, extra_args: lldb.SBStructuredData
+    ):
+        super().__init__(thread_plan)
 
-      target = thread_plan.GetThread().process.target
-      
-      addr_val = extra_args.GetValueForKey("address")
-      if not addr_val.IsValid():
-          thread_plan.SetPlanComplete(False)
-          return
+        target = thread_plan.GetThread().process.target
 
-      strm = lldb.SBStream()
-      addr_val.GetDescription(strm)
-      addr_str = addr_val.GetStringValue(32)
-      addr_int = int(addr_str)
-      if addr_int == 0:
-          thread_plan.SetPlanComplete(False)
-          return
+        addr_val = extra_args.GetValueForKey("address")
+        if not addr_val.IsValid():
+            thread_plan.SetPlanComplete(False)
+            return
 
-      address = lldb.SBAddress(addr_int, target)
-      if not address.IsValid():
-          thread_plan.SetPlanComplete(False)
-          return
+        strm = lldb.SBStream()
+        addr_val.GetDescription(strm)
+        addr_str = addr_val.GetStringValue(32)
+        addr_int = int(addr_str)
+        if addr_int == 0:
+            thread_plan.SetPlanComplete(False)
+            return
 
-      error = lldb.SBError()
-      self.addr_plan = thread_plan.QueueThreadPlanForRunToAddress(address, error)
-      if error.Fail():
-          thread_plan.SetPlanComplete(False)
-          return
+        address = lldb.SBAddress(addr_int, target)
+        if not address.IsValid():
+            thread_plan.SetPlanComplete(False)
+            return
+
+        error = lldb.SBError()
+        self.addr_plan = thread_plan.QueueThreadPlanForRunToAddress(address, error)
+        if error.Fail():
+            thread_plan.SetPlanComplete(False)
+            return
 
     def explains_stop(self, event: lldb.SBEvent):
         if self.addr_plan.IsPlanComplete():

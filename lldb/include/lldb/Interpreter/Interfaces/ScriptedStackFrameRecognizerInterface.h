@@ -41,7 +41,6 @@ public:
   virtual lldb::ThreadPlanSP GetStepThroughPlan(lldb::ThreadSP thread_sp) {
     return {};
   }
-
 };
 } // namespace lldb_private
 

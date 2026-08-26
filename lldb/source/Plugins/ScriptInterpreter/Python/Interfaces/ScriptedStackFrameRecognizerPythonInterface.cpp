@@ -81,19 +81,19 @@ std::string ScriptedStackFrameRecognizerPythonInterface::GetStopDescription(
   return obj->GetStringValue().str();
 }
 
-lldb::ThreadPlanSP ScriptedStackFrameRecognizerPythonInterface::GetStepThroughPlan(
+lldb::ThreadPlanSP
+ScriptedStackFrameRecognizerPythonInterface::GetStepThroughPlan(
     lldb::ThreadSP thread_sp) {
   Status error;
-    StructuredData::DictionarySP dict_sp =
-      Dispatch<StructuredData::DictionarySP>("get_step_through_plan", error,
-          thread_sp);
+  StructuredData::DictionarySP dict_sp = Dispatch<StructuredData::DictionarySP>(
+      "get_step_through_plan", error, thread_sp);
   if (error.Fail())
     return {};
 
   // The return value is an StructuredData::Dictionary with the class name and
   // the extra args for the call:
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION,
-      dict_sp, error))
+                                                    dict_sp, error))
     return {};
 
   StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");
@@ -108,14 +108,14 @@ lldb::ThreadPlanSP ScriptedStackFrameRecognizerPythonInterface::GetStepThroughPl
   StructuredData::Dictionary *extra_args_ptr = nullptr;
   StructuredData::DictionarySP extra_args_sp;
   if (dict_sp->GetValueForKeyAsDictionary("extra_args", extra_args_ptr))
-    extra_args_sp =  std::static_pointer_cast<StructuredData::Dictionary>(
+    extra_args_sp = std::static_pointer_cast<StructuredData::Dictionary>(
         extra_args_ptr->shared_from_this());
 
   // Now make a new thread plan for stepping using the provided class name and
   // extra args.
   ScriptedMetadata plan_metadata(class_string, extra_args_sp);
-  ThreadPlanSP step_through_plan_sp(new ScriptedThreadPlan(*thread_sp.get(),
-      plan_metadata));
+  ThreadPlanSP step_through_plan_sp(
+      new ScriptedThreadPlan(*thread_sp.get(), plan_metadata));
   step_through_plan_sp->SetStopOthers(true);
 
   return step_through_plan_sp;
