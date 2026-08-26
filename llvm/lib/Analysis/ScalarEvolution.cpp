@@ -8856,6 +8856,19 @@ void ScalarEvolution::forgetValue(Value *V) {
   forgetMemoizedResults(ToForget);
 }
 
+void ScalarEvolution::forgetValues(ArrayRef<Value *> Values) {
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallVector<SCEVUse, 8> ToForget;
+  for (Value *V : Values)
+    if (auto *I = dyn_cast<Instruction>(V))
+      if (Visited.insert(I).second)
+        Worklist.push_back(I);
+  visitAndClearUsers(Worklist, Visited, ToForget);
+
+  forgetMemoizedResults(ToForget);
+}
+
 void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   if (!isSCEVable(V->getType()))
     return;
