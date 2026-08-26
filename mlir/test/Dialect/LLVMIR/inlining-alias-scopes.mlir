@@ -257,6 +257,41 @@ llvm.func @missing_noalias_on_one_ptr(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2:
 
 // -----
 
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>, disjointScopes = true, description = "foo_disjoint">
+#alias_scope = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain, description = "foo_disjoint: pre-existing">
+
+// CHECK-DAG: #[[ORIG_DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}disjointScopes = true{{.*}}>
+// CHECK-DAG: #[[$ORIG_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[ORIG_DOMAIN]]{{(,.*)?}}>
+// CHECK-DAG: #[[ARG_DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}>
+// CHECK-DAG: #[[$ARG_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[ARG_DOMAIN]]{{(,.*)?}}>
+// CHECK-DAG: #[[CLONE_DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}disjointScopes = true{{.*}}>
+// CHECK-DAG: #[[$CLONE_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[CLONE_DOMAIN]]{{(,.*)?}}>
+
+// CHECK-LABEL: llvm.func @foo_disjoint
+// CHECK: llvm.load
+// CHECK-SAME: alias_scopes = [#[[$ORIG_SCOPE]]]
+// CHECK: llvm.store
+// CHECK-SAME: noalias_scopes = [#[[$ORIG_SCOPE]]]
+llvm.func @foo_disjoint(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr) {
+  %0 = llvm.mlir.constant(5 : i64) : i64
+  %1 = llvm.load %arg0 {alias_scopes = [#alias_scope], alignment = 4 : i64} : !llvm.ptr -> f32
+  %2 = llvm.getelementptr inbounds %arg1[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  llvm.store %1, %2 {noalias_scopes = [#alias_scope], alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @clone_disjoint_domain
+// CHECK: llvm.load
+// CHECK-SAME: alias_scopes = [#[[$CLONE_SCOPE]], #[[$ARG_SCOPE]]]
+// CHECK: llvm.store
+// CHECK-SAME: noalias_scopes = [#[[$CLONE_SCOPE]], #[[$ARG_SCOPE]]]
+llvm.func @clone_disjoint_domain(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+  llvm.call @foo_disjoint(%arg0, %arg2) : (!llvm.ptr, !llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
 // CHECK-DAG: #[[DOMAIN:.*]] = #llvm.alias_scope_domain<{{.*}}>
 // CHECK-DAG: #[[$ARG0_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
 // CHECK-DAG: #[[$ARG1_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
