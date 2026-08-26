@@ -17,7 +17,6 @@
 #include "clang/Basic/BuiltinTraits.h"
 #include <cstdint>
 #include <optional>
-#include <utility>
 
 namespace llvm {
 class APFloat;
@@ -31,8 +30,6 @@ class ASTContext;
 class CharUnits;
 class Expr;
 class CallExpr;
-class NamedDecl;
-class VarDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -81,12 +78,6 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
-
-/// Given an implicit variable of a range-based for statement ('__range',
-/// '__begin' or '__end'), return the range expression the loop iterates over
-/// and, if that expression names a variable, the variable.
-std::pair<const Expr *, const NamedDecl *>
-GetCXXForRangeRange(const VarDecl *ImplicitVar);
 
 /// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators
 /// dispatch on in their x86 target-specific cases.

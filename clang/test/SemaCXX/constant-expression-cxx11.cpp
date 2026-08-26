@@ -1943,9 +1943,30 @@ namespace InitializerList {
     constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
     static_assert(il.begin()[1] == 2.0, "");
   }
+}
 
-  void constexpr_loop_var() {
-    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{iterator of the range-based for loop is not a constant expression}}
+namespace ConstexprForRangeVar {
+  void invalid() {
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{'begin' variable of range-based 'for' loop is not a constant expression}}
+  }
+
+  struct S {
+    struct iterator {
+      constexpr iterator operator++() const { return {}; }
+      constexpr bool operator!=(const iterator &) const { return false; }
+      constexpr int operator*() const { return 42; }
+    };
+    static constexpr iterator begin() { return iterator(); }
+    static constexpr iterator end() { return iterator(); }
+  };
+
+  template <int x> constexpr int g() { return x; }
+
+  void valid() {
+    for (constexpr int x : S()) {
+      static_assert(x == 42, "");
+      static_assert(g<x>() == 42, "");
+    }
   }
 }
 

@@ -426,9 +426,9 @@ features cannot lower the translation-unit ABI level;
 - Clang now diagnoses more details when a constraint evaluates to false.
 
 - When a `constexpr` range-based for loop variable cannot be initialized by a
-  constant expression, Clang now notes that the loop's iterator is not a
-  constant expression, naming the range being iterated, instead of referring
-  to the compiler-synthesized `__begin` variable. (#GH211926)
+  constant expression, Clang now emits a single note explaining that the
+  loop's `begin` variable is not a constant expression, instead of two notes
+  about reading the compiler-synthesized `__begin1` variable. (#GH211926)
 
 ### Improvements to Clang's time-trace
 
