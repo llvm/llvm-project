@@ -62512,7 +62512,7 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     if (VT == MVT::v2i64 && SrcOp.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
     // Combine (v8i16 (scalar_to_vector (i16 (bitcast (f16/bf16))))) to VMOVW.
-    if (Subtarget.hasFP16() && VT == MVT::v8i16) {
+    if (VT == MVT::v8i16 && Subtarget.hasFP16()) {
       if (SrcOp.getValueType() == MVT::f16)
         return DAG.getBitcast(
             VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, SrcOp));
