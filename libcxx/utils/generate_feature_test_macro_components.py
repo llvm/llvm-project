@@ -960,7 +960,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_map_lookup",
-            "values": {"c++29": 202606},  # P3091R6 Better Lookups for map , unordered_map , and flat_map
+            "values": {
+                "c++29": 202606
+            },  # P3091R6 Better Lookups for map , unordered_map , and flat_map
             "headers": ["map"],
             "unimplemented": True,
         },
@@ -1341,13 +1343,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_simd",
-            "values": {"c++26": 202606}, # P3319R6 Add an iota object for simd (and more)
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_simd_bitops",
-            "values": {"c++29": 202607},  # P3772R2 std::simd overloads for bit permutations
+            "values": {
+                "c++29": 202607
+            },  # P3772R2 std::simd overloads for bit permutations 
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1359,13 +1365,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_simd_permutations",
-            "values": {"c++26": 202606}, # P3319R6 Add an iota object for simd (and more)
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_smart_ptr_for_overwrite",
-            "values": {"c++20": 202002},  # P1020R1 Smart pointer creation with default initialization
+            "values": {
+                "c++20": 202002
+            },  # P1020R1 Smart pointer creation with default initialization
             # P1973R1 Rename “_default_init” Functions
             "headers": ["memory"],
             "unimplemented": True,
