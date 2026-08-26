@@ -171,6 +171,54 @@ private:
   }
 };
 
+/// MCInstMutableReference represents a reference to an MCInst as stored either
+/// in a BinaryFunction (i.e. before a CFG is created), or in a BinaryBasicBlock
+/// (after a CFG is created).
+///
+/// The reference may be invalidated when the function containing the referenced
+/// instruction is modified.
+class MCInstMutableReference {
+public:
+  using nocfg_iterator = std::map<uint32_t, MCInst>::iterator;
+
+  /// Constructs an empty reference.
+  MCInstMutableReference() : Impl() {}
+
+  /// Constructs a reference to the instruction inside the basic block.
+  MCInstMutableReference(BinaryBasicBlock &BB, MCInst &Inst) : Impl(BB, Inst) {}
+  /// Constructs a reference to the instruction inside the basic block.
+  MCInstMutableReference(BinaryBasicBlock &BB, unsigned Index)
+      : Impl(BB, Index) {}
+
+  /// Constructs a reference to the instruction inside the function without
+  /// CFG information.
+  MCInstMutableReference(BinaryFunction &BF, nocfg_iterator It)
+      : Impl(BF, It) {}
+
+  /// Constructs a mutable reference from a constant reference.
+  explicit MCInstMutableReference(const MCInstReference &Other) : Impl(Other) {}
+
+  /// Locates an instruction inside a function and returns a reference.
+  static MCInstMutableReference get(MCInst &Inst, BinaryFunction &BF);
+
+  operator const MCInstReference &() const { return Impl; }
+
+  MCInst &getMCInst() const { return const_cast<MCInst &>(Impl.getMCInst()); }
+
+  operator MCInst &() const { return getMCInst(); }
+
+  BinaryFunction *getFunction() const {
+    return const_cast<BinaryFunction *>(Impl.getFunction());
+  }
+
+  BinaryBasicBlock *getBasicBlock() const {
+    return const_cast<BinaryBasicBlock *>(Impl.getBasicBlock());
+  }
+
+private:
+  MCInstReference Impl;
+};
+
 static inline raw_ostream &operator<<(raw_ostream &OS,
                                       const MCInstReference &Ref) {
   return Ref.print(OS);
