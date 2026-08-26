@@ -1,0 +1,48 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck --check-prefix=DEBUG %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o - | FileCheck --check-prefix=ORDER %s
+
+# DEBUG: Effective stalls: try=4 (ready=0, struct=0, lat=0, buffer=4) cand=0 (ready=0, struct=0, lat=0, buffer=0)
+
+# ORDER-LABEL: name: ds_fifo_stall
+# ORDER: body: |
+# ORDER-NEXT: bb.0:
+# ORDER-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# ORDER-COUNT-16: DS_READ_B32
+# ORDER-NEXT: %18:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
+# ORDER-NEXT: %17:vgpr_32 = DS_READ_B32
+
+--- |
+  @lds = internal addrspace(3) global [17 x i32] undef
+
+  define void @ds_fifo_stall() #0 { ret void }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
+...
+
+---
+name: ds_fifo_stall
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 0)`, addrspace 3)
+    %2:vgpr_32 = DS_READ_B32 %0, 4, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 1)`, addrspace 3)
+    %3:vgpr_32 = DS_READ_B32 %0, 8, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 2)`, addrspace 3)
+    %4:vgpr_32 = DS_READ_B32 %0, 12, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 3)`, addrspace 3)
+    %5:vgpr_32 = DS_READ_B32 %0, 16, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 4)`, addrspace 3)
+    %6:vgpr_32 = DS_READ_B32 %0, 20, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 5)`, addrspace 3)
+    %7:vgpr_32 = DS_READ_B32 %0, 24, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 6)`, addrspace 3)
+    %8:vgpr_32 = DS_READ_B32 %0, 28, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 7)`, addrspace 3)
+    %9:vgpr_32 = DS_READ_B32 %0, 32, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 8)`, addrspace 3)
+    %10:vgpr_32 = DS_READ_B32 %0, 36, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 9)`, addrspace 3)
+    %11:vgpr_32 = DS_READ_B32 %0, 40, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 10)`, addrspace 3)
+    %12:vgpr_32 = DS_READ_B32 %0, 44, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 11)`, addrspace 3)
+    %13:vgpr_32 = DS_READ_B32 %0, 48, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 12)`, addrspace 3)
+    %14:vgpr_32 = DS_READ_B32 %0, 52, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 13)`, addrspace 3)
+    %15:vgpr_32 = DS_READ_B32 %0, 56, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 14)`, addrspace 3)
+    %16:vgpr_32 = DS_READ_B32 %0, 60, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 15)`, addrspace 3)
+    %17:vgpr_32 = DS_READ_B32 %0, 64, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) getelementptr ([17 x i32], ptr addrspace(3) @lds, i32 0, i32 16)`, addrspace 3)
+    %18:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %16, implicit %17, implicit %18
+...

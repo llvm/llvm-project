@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -29,6 +30,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -760,9 +762,12 @@ struct RankReducedExtractSliceOp
     SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
     SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
     SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
-    auto rankReducedType = cast<RankedTensorType>(
-        tensor::ExtractSliceOp::inferCanonicalRankReducedResultType(
-            reassociation->size(), sliceOp.getSourceType(), sizes));
+    SmallVector<int64_t> staticSizes;
+    std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+    llvm::SmallBitVector droppedDims = getPositionsOfShapeOne(
+        sizes.size() - reassociation->size(), staticSizes);
+    RankedTensorType rankReducedType =
+        tensor::inferSliceType(sliceOp.getSourceType(), sizes, droppedDims);
 
     Location loc = sliceOp.getLoc();
     Value newSlice = tensor::ExtractSliceOp::create(

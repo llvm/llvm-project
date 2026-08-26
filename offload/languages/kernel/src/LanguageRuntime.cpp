@@ -31,10 +31,6 @@
 using RuntimeState = llvm::offload::StateTy;
 using ThreadState = llvm::offload::ThreadStateTy;
 
-static inline Error_t convertAndSetLastError(ol_result_t Result) {
-  return setLastError(convertResult(Result));
-}
-
 Error_t Malloc(void **DevPtr, size_t Size) {
   ol_device_handle_t Device = ThreadState::getDefaultDevice();
   ol_result_t Result = olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, DevPtr);

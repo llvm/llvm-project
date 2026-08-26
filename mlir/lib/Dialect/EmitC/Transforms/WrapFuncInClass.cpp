@@ -114,6 +114,15 @@ public:
     Location loc = funcOp.getLoc();
     FuncOp newFuncOp = FuncOp::create(rewriter, loc, (funcName), funcType);
 
+    // Rewrite globals while they are still descendants of the matched op.
+    funcOp.walk([&](GetGlobalOp getGlobalOp) {
+      rewriter.setInsertionPoint(getGlobalOp);
+      GetFieldOp getFieldOp =
+          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
+                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
+      rewriter.replaceOp(getGlobalOp, getFieldOp);
+    });
+
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
 
@@ -134,14 +143,6 @@ public:
     llvm::BitVector argsToErase(newFuncOp.getNumArguments(), true);
     if (failed(newFuncOp.eraseArguments(argsToErase)))
       newFuncOp->emitOpError("failed to erase all arguments using BitVector");
-
-    newFuncOp.walk([&](GetGlobalOp getGlobalOp) {
-      rewriter.setInsertionPoint(getGlobalOp);
-      GetFieldOp getFieldOp =
-          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
-                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
-      rewriter.replaceOp(getGlobalOp, getFieldOp);
-    });
 
     rewriter.replaceOp(funcOp, newClassOp);
     return success();

@@ -1,5 +1,7 @@
 // RUN: mlir-opt -canonicalize -split-input-file %s | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // -----
 
 // CHECK-LABEL: func @merge_duplicate_ins

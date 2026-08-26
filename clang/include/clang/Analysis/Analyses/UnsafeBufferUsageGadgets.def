@@ -33,7 +33,7 @@
 
 WARNING_GADGET(Increment)
 WARNING_GADGET(Decrement)
-WARNING_GADGET(PointerArithmetic)
+WARNING_OPTIONAL_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
 WARNING_GADGET(UnsafeBufferUsageCtorAttr)
 WARNING_GADGET(DataInvocation)

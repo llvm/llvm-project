@@ -24,15 +24,15 @@ namespace llvm::slpvectorizer {
 
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
-                               ArrayRef<int> Mask, TTI::TargetCostKind CostKind,
-                               int Index, VectorType *SubTp,
+                               const TTI::TargetCostKind CostKind,
+                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
                                ArrayRef<const Value *> Args) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
-    return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+    return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
                               Args);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
@@ -40,16 +40,16 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                              Mask, NumSrcElts, NumSubElts, Index)) {
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
-      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
-                                TTI::TCK_RecipThroughput, Index, Tp);
+      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
+                                Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
                             Args);
 }
 
 std::pair<InstructionCost, InstructionCost>
 getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
-            Value *BasePtr, unsigned Opcode, TTI::TargetCostKind CostKind,
+            Value *BasePtr, unsigned Opcode, const TTI::TargetCostKind CostKind,
             Type *ScalarTy, VectorType *VecTy) {
   InstructionCost ScalarCost = 0;
   InstructionCost VecCost = 0;
@@ -130,7 +130,7 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 
 InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
                                    Align Alignment, unsigned AddressSpace,
-                                   TTI::TargetCostKind CostKind) {
+                                   const TTI::TargetCostKind CostKind) {
   Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
   return 2 * TTI.getMemIntrinsicInstrCost(
                  MemIntrinsicCostAttributes(Intrinsic::masked_load, VecTy,
