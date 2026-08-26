@@ -119,9 +119,7 @@ public:
   /// @name Compiler Invocation
   /// {
 
-  CompilerInvocation &getInvocation() {
-    return *invocation;
-  };
+  CompilerInvocation &getInvocation() { return *invocation; };
 
   /// }
   /// @name File manager
