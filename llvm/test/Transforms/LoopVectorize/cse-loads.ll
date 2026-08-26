@@ -347,10 +347,10 @@ define void @no_cse_different_type(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP9]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i64 3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i32> [[TMP14]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i64> [[TMP15]], [[WIDE_LOAD]]
