@@ -60,6 +60,24 @@ define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> 
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 16 x i1> @match_nxv16i8_v3i8(<vscale x 16 x i8> %op1, <3 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv16i8_v3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, w1
+; CHECK-NEXT:    mov z2.b, w0
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov z3.b, w2
+; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z2.b
+; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z3.b
+; CHECK-NEXT:    mov p2.b, p3/m, p3.b
+; CHECK-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p3.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <3 x i8> %op2, <vscale x 16 x i1> %mask)
+  ret <vscale x 16 x i1> %r
+}
+
 define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v4i8:
 ; CHECK:       // %bb.0:
@@ -139,6 +157,24 @@ define <16 x i1> @match_v16i8_v2i8(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
+define <16 x i1> @match_v16i8_v3i8(<16 x i8> %op1, <3 x i8> %op2, <16 x i1> %mask) #0 {
+; CHECK-LABEL: match_v16i8_v3i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v2.16b, w1
+; CHECK-NEXT:    dup v3.16b, w0
+; CHECK-NEXT:    dup v4.16b, w2
+; CHECK-NEXT:    cmeq v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    orr v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <3 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
 }
 
