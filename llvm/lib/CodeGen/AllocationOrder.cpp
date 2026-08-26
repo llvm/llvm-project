@@ -9,7 +9,8 @@
 // This file implements an allocation order for virtual registers.
 //
 // The preferred allocation order for a virtual register depends on allocation
-// hints and target hooks. The AllocationOrder class encapsulates all of that.
+// hints, anti-hints, and target hooks. The AllocationOrder class encapsulates
+// all of that.
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,19 +60,16 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     }
   });
 
-  // Storage for filtered order (used if anti-hints cause reordering)
+  // Storage for shuffled order (used if anti-hints cause reordering)
   SmallVector<MCPhysReg, 16> ShuffledOrder;
 
   if (!AntiHintedPhysRegs.empty()) {
     TRI->applyRegAllocationAntiHints(VirtReg, Order, ShuffledOrder,
                                      AntiHintedPhysRegs, MF, &VRM, Matrix);
   }
-  // Use ShuffledOrder as the order if it was populated by anti-hints
-  // processing
-  ArrayRef<MCPhysReg> FinalOrder =
-      ShuffledOrder.empty() ? Order : ShuffledOrder;
+
   // Create allocation order object
-  AllocationOrder AO(std::move(Hints), FinalOrder, HardHints,
+  AllocationOrder AO(std::move(Hints), Order, HardHints,
                      std::move(ShuffledOrder));
 
   assert(all_of(AO.Hints,
