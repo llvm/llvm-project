@@ -1078,11 +1078,9 @@ public:
   }
 
   bool runOnModuleNormal(Module &M) {
-    // Nothing left to lower on the codegen-partition rerun.
-    if (none_of(M.globals(), isNotYetLoweredLDSVariable))
-      return false;
+    bool Changed = superAlignLDSGlobals(M);
 
-    superAlignLDSGlobals(M);
+    Changed |= any_of(M.globals(), isNotYetLoweredLDSVariable);
 
     CallGraph CG(M);
 
@@ -1268,7 +1266,7 @@ public:
           GV.eraseFromParent();
       }
 
-    return true;
+    return Changed;
   }
 
 private:
