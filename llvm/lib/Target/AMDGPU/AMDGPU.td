@@ -1561,6 +1561,11 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "Use s_add_pc_i64 instruction."
 >;
 
+defm GFX1250_STRICT : AMDGPUSubtargetFeature<"gfx1250-strict",
+  "gfx1250 strict mode",
+  /*GenPredicate=*/0
+>;
+
 defm VOP3PX2IncrementsVaVdstTwice : AMDGPUSubtargetFeature<"vop3px2-increments-va-vdst-twice",
   "VOP3PX2 encoded instructions increment the VaVdst counter twice", GenPredicate=false
 >;
@@ -2398,6 +2403,31 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
 ]>;
+
+def FeatureISAVersion12_50_STRICT : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureGFX1250_STRICT,
+   FeatureAddressableLocalMemorySize327680,
+   FeatureVOP3PX2IncrementsVaVdstTwice,
+   FeatureSetregVGPRMSBFixup,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards,
+   FeatureDataCacheLineSize128,
+   FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
+   ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,

@@ -1733,14 +1733,17 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumThreadsClause(OpenMPNumThreadsClauseModifier Modifier,
-                                        Expr *NumThreads,
-                                        SourceLocation StartLoc,
-                                        SourceLocation LParenLoc,
-                                        SourceLocation ModifierLoc,
-                                        SourceLocation EndLoc) {
+  OMPClause *RebuildOMPNumThreadsClause(
+      ArrayRef<Expr *> VarList,
+      OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
+      SourceLocation PrescriptivenessModifierLoc,
+      OpenMPNumThreadsClauseModifier DimsModifier, Expr *DimsModifierExpr,
+      SourceLocation DimsModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPNumThreadsClause(
-        Modifier, NumThreads, StartLoc, LParenLoc, ModifierLoc, EndLoc);
+        VarList, PrescriptivenessModifier, PrescriptivenessModifierLoc,
+        DimsModifier, DimsModifierExpr, DimsModifierLoc, StartLoc, LParenLoc,
+        EndLoc);
   }
 
   /// Build a new OpenMP 'safelen' clause.
@@ -10834,12 +10837,26 @@ OMPClause *TreeTransform<Derived>::TransformOMPFinalClause(OMPFinalClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNumThreadsClause(OMPNumThreadsClause *C) {
-  ExprResult NumThreads = getDerived().TransformExpr(C->getNumThreads());
-  if (NumThreads.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  Expr *DimsModifierExpr = C->getDimsModifierExpr();
+  if (DimsModifierExpr) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(DimsModifierExpr));
+    if (EVar.isInvalid())
+      return nullptr;
+    DimsModifierExpr = EVar.get();
+  }
   return getDerived().RebuildOMPNumThreadsClause(
-      C->getModifier(), NumThreads.get(), C->getBeginLoc(), C->getLParenLoc(),
-      C->getModifierLoc(), C->getEndLoc());
+      Vars, C->getPrescriptivenessModifier(),
+      C->getPrescriptivenessModifierLoc(), C->getDimsModifier(),
+      DimsModifierExpr, C->getDimsModifierLoc(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

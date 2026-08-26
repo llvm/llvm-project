@@ -407,18 +407,6 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
-bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI) {
-  // Instructions that are "markers" and have implied meaning on code around
-  // them (without explicit uses), are not dead on unused paths.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::stacksave ||
-        II->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-        II->isLifetimeStartOrEnd())
-      return false;
-  return wouldInstructionBeTriviallyDead(I, TLI);
-}
-
 bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
                                            const TargetLibraryInfo *TLI) {
   if (I->isTerminator())
@@ -1671,9 +1659,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   assert(DIVar && "Missing variable");
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
-
-  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
-    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 

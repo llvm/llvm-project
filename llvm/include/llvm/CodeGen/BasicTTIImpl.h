@@ -2086,6 +2086,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
@@ -2546,6 +2548,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {
