@@ -45,9 +45,7 @@ protected:
 
   std::error_code ec;
 
-  std::shared_ptr<CompilerInvocation> invoc =
-      std::make_shared<CompilerInvocation>();
-  CompilerInstance compInst(invoc);
+  CompilerInstance compInst;
 
   void SetUp() override {
     // Generate a unique test file name.
@@ -71,9 +69,9 @@ protected:
 
     // Set-up default target triple and initialize LLVM Targets so that the
     // target data layout can be passed to the frontend.
-    invoc->getTargetOpts().triple =
+    compInst.getInvocation().getTargetOpts().triple =
         llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-    invoc->getLangOpts().OpenMPVersion = 60;
+    compInst.getInvocation().getLangOpts().OpenMPVersion = 60;
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
 
