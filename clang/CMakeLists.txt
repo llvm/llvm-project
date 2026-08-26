@@ -45,7 +45,9 @@ if(CLANG_BUILT_STANDALONE)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+  if(NOT LLVM_FOUND)
+    find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+  endif()
   list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
   # Turn into CACHE PATHs for overwritting
