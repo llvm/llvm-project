@@ -312,11 +312,11 @@ static Expected<uint64_t> getUncompressedSize(ArrayRef<uint8_t> InputBuffer) {
   lzma_index *xzindex;
   uint64_t memlimit(UINT64_MAX);
   size_t inpos = 0;
-  xzerr = lzma_index_buffer_decode(
-      &xzindex, &memlimit, nullptr,
-      InputBuffer.take_back(LZMA_STREAM_HEADER_SIZE + opts.backward_size)
-          .data(),
-      &inpos, InputBuffer.size());
+  ArrayRef<uint8_t> IndexBuffer = InputBuffer.drop_back(LZMA_STREAM_HEADER_SIZE)
+                                      .take_back(opts.backward_size);
+  xzerr =
+      lzma_index_buffer_decode(&xzindex, &memlimit, nullptr, IndexBuffer.data(),
+                               &inpos, IndexBuffer.size());
   if (xzerr != LZMA_OK) {
     return createStringError(inconvertibleErrorCode(),
                              "lzma_index_buffer_decode()=%s",
