@@ -12,7 +12,6 @@
 #include <__algorithm/is_heap_until.h>
 #include <__config>
 #include <__functional/operations.h>
-#include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
@@ -46,6 +45,8 @@ struct __cpu_parallel_is_heap_until {
           __first + 1,
           __last,
           [__first, &__comp](_RandomAccessIterator __child_first, _RandomAccessIterator __child_last) {
+            // This algorithm assumes that __parallel_find() will never pass an empty brick,
+            // i.e. that __child_first != __child_last.
             using _DifferenceType = typename std::iterator_traits<_RandomAccessIterator>::difference_type;
 
             // Derive the indices of the children and the iterators of their parents
@@ -80,7 +81,7 @@ struct __cpu_parallel_is_heap_until {
                 return __child_first;
             }
 
-            return __child_last; // No violations found
+            return __child_last; // No violations found in this brick
           },
           less<>{}, // `less` here means the lowest index among the matches
           true      // `true` here means we want the first match, not the last
