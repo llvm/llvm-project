@@ -283,7 +283,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     return ClassifyMemberExpr(Ctx, cast<MemberExpr>(E));
 
   case Expr::UnaryOperatorClass:
-    switch (auto UnaryOp = cast<UnaryOperator>(E)->getOpcode()) {
+    switch (cast<UnaryOperator>(E)->getOpcode()) {
       // C++ [expr.unary.op]p1: The unary * operator performs indirection:
       //   [...] the result is an lvalue referring to the object or function
       //   to which the expression points.
@@ -298,7 +298,8 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // expressions:  l-value only if the operand is a true l-value.
     case UO_Real:
     case UO_Imag: {
-      const Expr *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
+      const auto *UnaryOp = cast<UnaryOperator>(E);
+      const Expr *Op = UnaryOp->getSubExpr()->IgnoreParens();
       Cl::Kinds K = ClassifyInternal(Ctx, Op);
       if (K != Cl::CL_LValue) return K;
 
@@ -306,7 +307,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
         return Cl::CL_SubObjCPropertySetting;
 
       // _Imag with non-complex operand is not a valid l-value
-      if (UnaryOp == UO_Imag && !Op->getType()->isAnyComplexType())
+      if (UnaryOp->getOpcode() == UO_Imag && !Op->getType()->isAnyComplexType())
         return Cl::CL_PRValue;
 
       return Cl::CL_LValue;
