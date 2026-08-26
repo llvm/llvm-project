@@ -18,6 +18,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/pair.h>
 
@@ -79,13 +80,18 @@ __find_longest_suffix(_RAIter __first, _RAIter __last, const _ValueT& __value, _
 template <class _AlgPolicy, class _Pred, class _Iter, class _SizeT, class _Type, class _Proj, class _DiffT>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
     _Iter __first, _SizeT __count_in, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size) {
-  auto __last  = __first + __size;
-  auto __count = static_cast<_DiffT>(__count_in);
-
-  if (__count == 0)
+  // Trivially match if count is non-positive. This must be checked before we perform arithmetic on the count.
+  if (__count_in <= 0)
     return std::make_pair(__first, __first);
-  if (__size < __count)
+
+  auto __last = __first + __size;
+
+  // If count is larger than the sequence size, no match is possible. Compare as unsigned to prevent
+  // truncation between _DiffT and _SizeT.
+  if (std::__to_unsigned_like(__size) < std::__to_unsigned_like(__count_in))
     return std::make_pair(__last, __last);
+
+  auto __count = static_cast<_DiffT>(__count_in); // representable as _DiffT since `0 < __count_in <= __size`
 
   // [__match_start, __match_start + __count) is the subrange which we currently check whether it only contains matching
   // elements. This subrange is returned in case all the elements match.
