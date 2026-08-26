@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -112,26 +113,24 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
   MCSymbol *Symbol = Out.getContext().createTempSymbol();
 
   // leaq .Ltmp(%rip), %r11
-  MCInst Lea;
-  Lea.setOpcode(X86::LEA64r);
-  Lea.addOperand(MCOperand::createReg(LFIScratchReg));
-  Lea.addOperand(MCOperand::createReg(X86::RIP));
-  Lea.addOperand(MCOperand::createImm(1));
-  Lea.addOperand(MCOperand::createReg(X86::NoRegister));
-  Lea.addOperand(
-      MCOperand::createExpr(MCSymbolRefExpr::create(Symbol, Out.getContext())));
-  Lea.addOperand(MCOperand::createReg(X86::NoRegister));
-  Out.emitInstruction(Lea, STI);
+  Out.emitInstruction(
+      MCInstBuilder(X86::LEA64r)
+          .addReg(LFIScratchReg)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(X86::NoRegister)
+          .addExpr(MCSymbolRefExpr::create(Symbol, Out.getContext()))
+          .addReg(X86::NoRegister),
+      STI);
 
   // jmpq *-8(%r14)
-  MCInst Jmp;
-  Jmp.setOpcode(X86::JMP64m);
-  Jmp.addOperand(MCOperand::createReg(LFIBaseReg));
-  Jmp.addOperand(MCOperand::createImm(1));
-  Jmp.addOperand(MCOperand::createReg(X86::NoRegister));
-  Jmp.addOperand(MCOperand::createImm(-8));
-  Jmp.addOperand(MCOperand::createReg(X86::NoRegister));
-  Out.emitInstruction(Jmp, STI);
+  Out.emitInstruction(MCInstBuilder(X86::JMP64m)
+                          .addReg(LFIBaseReg)
+                          .addImm(1)
+                          .addReg(X86::NoRegister)
+                          .addImm(-8)
+                          .addReg(X86::NoRegister),
+                      STI);
 
   Out.emitLabel(Symbol);
   Out.emitBundleUnlock(STI);
@@ -144,19 +143,15 @@ void X86::X86MCLFIRewriter::emitSandboxBranchReg(MCRegister Reg,
                                                  const MCSubtargetInfo &STI) {
   MCRegister Reg32 = RegInfo->getSubReg(Reg, X86::sub_32bit);
 
-  MCInst And;
-  And.setOpcode(X86::AND32ri8);
-  And.addOperand(MCOperand::createReg(Reg32));
-  And.addOperand(MCOperand::createReg(Reg32));
-  And.addOperand(MCOperand::createImm(-static_cast<int64_t>(LFIBundleSize)));
-  Out.emitInstruction(And, STI);
+  Out.emitInstruction(MCInstBuilder(X86::AND32ri8)
+                          .addReg(Reg32)
+                          .addReg(Reg32)
+                          .addImm(-static_cast<int64_t>(LFIBundleSize)),
+                      STI);
 
-  MCInst Add;
-  Add.setOpcode(X86::ADD64rr);
-  Add.addOperand(MCOperand::createReg(Reg));
-  Add.addOperand(MCOperand::createReg(Reg));
-  Add.addOperand(MCOperand::createReg(LFIBaseReg));
-  Out.emitInstruction(Add, STI);
+  Out.emitInstruction(
+      MCInstBuilder(X86::ADD64rr).addReg(Reg).addReg(Reg).addReg(LFIBaseReg),
+      STI);
 }
 
 // Rewrite an indirect jump or call so that it can only target a bundle
@@ -190,9 +185,8 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
     Target = LFIScratchReg;
 
     // Construct the load and then apply the rewriter to it.
-    MCInst Mov;
-    Mov.setOpcode(X86::MOV64rm);
-    Mov.addOperand(MCOperand::createReg(Target));
+    MCInstBuilder Mov(X86::MOV64rm);
+    Mov.addReg(Target);
     for (unsigned I = 0; I < X86::AddrNumOperands; ++I)
       Mov.addOperand(Inst.getOperand(MemIdx + I));
     doRewriteInst(Mov, Out, STI);
@@ -207,9 +201,8 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
 
   emitSandboxBranchReg(Target, Out, STI);
 
-  MCInst Branch;
-  Branch.setOpcode(isCall(Inst) ? X86::CALL64r : X86::JMP64r);
-  Branch.addOperand(MCOperand::createReg(Target));
+  MCInst Branch =
+      MCInstBuilder(isCall(Inst) ? X86::CALL64r : X86::JMP64r).addReg(Target);
   if (hasNoTrackPrefix(Inst, *InstInfo))
     Branch.setFlags(Branch.getFlags() | X86::IP_HAS_NOTRACK);
   Out.emitInstruction(Branch, STI);
@@ -240,30 +233,23 @@ void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
   if (Inst.getOpcode() != X86::RET64 && Inst.getOpcode() != X86::RETI64)
     return error(Inst, "unsupported return instruction");
 
-  MCInst Pop;
-  Pop.setOpcode(X86::POP64r);
-  Pop.addOperand(MCOperand::createReg(LFIScratchReg));
-  Out.emitInstruction(Pop, STI);
+  Out.emitInstruction(MCInstBuilder(X86::POP64r).addReg(LFIScratchReg), STI);
 
   if (Inst.getOpcode() == X86::RETI64) {
     // Return with an immediate is rewritten recursively so that the stack
     // pointer modification goes through the rewriter.
-    MCInst Add;
-    Add.setOpcode(X86::ADD64ri32);
-    Add.addOperand(MCOperand::createReg(X86::RSP));
-    Add.addOperand(MCOperand::createReg(X86::RSP));
-    Add.addOperand(Inst.getOperand(0));
-    doRewriteInst(Add, Out, STI);
+    doRewriteInst(MCInstBuilder(X86::ADD64ri32)
+                      .addReg(X86::RSP)
+                      .addReg(X86::RSP)
+                      .addOperand(Inst.getOperand(0)),
+                  Out, STI);
   }
 
   Out.emitBundleLock(/*AlignToEnd=*/false, STI);
 
   emitSandboxBranchReg(LFIScratchReg, Out, STI);
 
-  MCInst Jmp;
-  Jmp.setOpcode(X86::JMP64r);
-  Jmp.addOperand(MCOperand::createReg(LFIScratchReg));
-  Out.emitInstruction(Jmp, STI);
+  Out.emitInstruction(MCInstBuilder(X86::JMP64r).addReg(LFIScratchReg), STI);
 
   Out.emitBundleUnlock(STI);
 }
@@ -271,15 +257,14 @@ void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
 // Emit: movq TPOffset(%r15), %Reg
 static void emitTPLoad(MCRegister Reg, MCStreamer &Out,
                        const MCSubtargetInfo &STI) {
-  MCInst Mov;
-  Mov.setOpcode(X86::MOV64rm);
-  Mov.addOperand(MCOperand::createReg(Reg));
-  Mov.addOperand(MCOperand::createReg(LFITPReg));
-  Mov.addOperand(MCOperand::createImm(1));
-  Mov.addOperand(MCOperand::createReg(X86::NoRegister));
-  Mov.addOperand(MCOperand::createImm(TPOffset));
-  Mov.addOperand(MCOperand::createReg(X86::NoRegister));
-  Out.emitInstruction(Mov, STI);
+  Out.emitInstruction(MCInstBuilder(X86::MOV64rm)
+                          .addReg(Reg)
+                          .addReg(LFITPReg)
+                          .addImm(1)
+                          .addReg(X86::NoRegister)
+                          .addImm(TPOffset)
+                          .addReg(X86::NoRegister),
+                      STI);
 }
 
 bool X86::X86MCLFIRewriter::isFSAccess(const MCInst &Inst) {
@@ -357,15 +342,14 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
   // leaq (%rax,%rdi), %rax
   // movq 8(%rax,%rsi,2), %rax
   if (HasBase && HasIndex) {
-    MCInst Lea;
-    Lea.setOpcode(X86::LEA64r);
-    Lea.addOperand(MCOperand::createReg(TPDest));
-    Lea.addOperand(MCOperand::createReg(TPDest));
-    Lea.addOperand(MCOperand::createImm(1));
-    Lea.addOperand(MCOperand::createReg(BaseReg));
-    Lea.addOperand(MCOperand::createImm(0));
-    Lea.addOperand(MCOperand::createReg(X86::NoRegister));
-    Out.emitInstruction(Lea, STI);
+    Out.emitInstruction(MCInstBuilder(X86::LEA64r)
+                            .addReg(TPDest)
+                            .addReg(TPDest)
+                            .addImm(1)
+                            .addReg(BaseReg)
+                            .addImm(0)
+                            .addReg(X86::NoRegister),
+                        STI);
   }
 
   // Emit the access with TPDest as the new base, and the original base
