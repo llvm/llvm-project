@@ -476,6 +476,28 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
 //===----------------------------------------------------------------------===//
 // Define predicate-controlled types
 
+def V1Write_ArithI : SchedWriteVariant<[
+                       SchedVar<IsCheapLSL,  [V1Write_1c_1I]>,
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
+
+def V1Write_ArithS : SchedWriteVariant<[
+                       SchedVar<IsCheapLSL,  [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M_1Flg]>]>;
+
+def V1Write_ArithWExtend : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V1Write_2c_1M]>,
+                       SchedVar<NoSchedPred,	    [V1Write_1c_1I]>]>;
+
+def V1Write_ArithWExtendS : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V1Write_2c_1M_1Flg]>,
+                       SchedVar<NoSchedPred,	    [V1Write_1c_1I_1Flg]>]>;
+
+def V1Write_Logical : SchedWriteVariant<[
+                       SchedVar<NeoverseShift0, [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred,   [V1Write_2c_1M_1Flg]>]>;
+
 def V1Write_0or1c_1I : SchedWriteVariant<[
                       SchedVar<NeoverseZeroMove, [V1Write_0c]>,
                       SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
@@ -610,34 +632,32 @@ def : SchedAlias<WriteI, V1Write_1c_1I>;
 def : InstRW<[V1Write_1c_1I_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
-                        "^ANDS[WX]ri$",
-                        "^(AND|BIC)S[WX]rr$")>;
+                        "^ANDS[WX]ri$")>;
 def : InstRW<[V1Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V1Write_2c_1M>;
 
+def : InstRW<[V1Write_ArithWExtend], (instrs ADDWrx, SUBWrx)>;
+def : InstRW<[V1Write_1c_1I], (instrs ADDXrx64, SUBXrx64)>;
+
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
-def V1WriteISReg : SchedWriteVariant<
-                     [SchedVar<IsCheapLSL,  [V1Write_1c_1I]>,
-                      SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
-def              : SchedAlias<WriteISReg, V1WriteISReg>;
+def : SchedAlias<WriteISReg, V1Write_ArithI>;
 
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, flagset, LSR/ASR/ROR shift or LSL shift > 4
-def V1WriteISRegS : SchedWriteVariant<
-                      [SchedVar<IsCheapLSL,  [V1Write_1c_1I_1Flg]>,
-                       SchedVar<NoSchedPred, [V1Write_2c_1M_1Flg]>]>;
-def               : InstRW<[V1WriteISRegS],
-                           (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
+def : InstRW<[V1Write_ArithWExtendS], (instrs ADDSWrx, SUBSWrx)>;
+def : InstRW<[V1Write_2c_1M_1Flg], (instrs ADDSXrx, SUBSXrx)>;
+def : InstRW<[V1Write_1c_1I_1Flg], (instrs ADDSXrx64, SUBSXrx64)>;
+def : InstRW<[V1Write_ArithS], (instregex "^(ADD|SUB)S(Wrs|Xrs)$")>;
 
 // Logical, shift, no flagset
 def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
 def : InstRW<[V1Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
-def : InstRW<[V1Write_2c_1M_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;
+def : InstRW<[V1Write_Logical], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Flag manipulation instructions
 def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
