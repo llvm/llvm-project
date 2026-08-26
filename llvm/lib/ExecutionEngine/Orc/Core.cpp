@@ -908,7 +908,8 @@ Error JITDylib::resolve(MaterializationResponsibility &MR,
                      "Resolving symbol with incorrect flags");
 
             } else
-              assert(KV.second.getFlags() == SymI->second.getFlags() &&
+              assert(KV.second.getFlags() ==
+                         (SymI->second.getFlags() & ~JITSymbolFlags::Weak) &&
                      "Resolved flags should match the declared flags");
 
             Worklist.push_back(
@@ -2787,7 +2788,7 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
                  (I->second & ~JITSymbolFlags::Common) &&
              "Resolving symbol with incorrect flags");
     } else
-      assert(KV.second.getFlags() == I->second &&
+      assert(KV.second.getFlags() == (I->second & ~JITSymbolFlags::Weak) &&
              "Resolving symbol with incorrect flags");
   }
 #endif
