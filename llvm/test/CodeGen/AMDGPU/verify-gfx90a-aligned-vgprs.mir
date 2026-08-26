@@ -193,16 +193,12 @@ body:            |
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 
     ; src %14 is an AGPR - a bank mismatch, not an alignment problem
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 
     ; src %14 is an AGPR - a bank mismatch, not an alignment problem
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
     ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
@@ -219,16 +215,12 @@ body:            |
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 
     ; src %14 is an AGPR - a bank mismatch, not an alignment problem
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 
     ; src %14 is an AGPR - a bank mismatch, not an alignment problem
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
     ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
@@ -249,8 +241,6 @@ body:            |
     $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13, 8, %12, 11, %14.sub0_sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 
     ; src %14 is an AGPR - a bank mismatch (both %13 sources are aligned)
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13:vreg_64_align2, 8, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
     ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13:vreg_64_align2, 8, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
     ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.

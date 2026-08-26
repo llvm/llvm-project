@@ -5456,44 +5456,48 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     }
 
+    // Operands without a fixed register class (RegClass == -1), such as inline
+    // asm operands, are not verified here.
+    if (RegClass == -1)
+      continue;
+
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
 
-    // FIXME: Ideally we would have separate instruction definitions with the
-    // aligned register constraint.
-    // FIXME: We do not verify inline asm operands, but custom inline asm
-    // verification is broken anyway
-    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
-      const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
-      if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        if (const TargetRegisterClass *SubRC =
-                RI.getSubRegisterClass(RC, MO.getSubReg())) {
-          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-          if (RC)
-            RC = SubRC;
-        }
-      }
+    const TargetRegisterClass *OpRC = RI.getRegClass(RegClass);
 
-      // Check that this is the aligned version of the class.
-      if (!RC || !RI.isProperlyAlignedRC(*RC)) {
-        ErrInfo = "Subtarget requires even aligned vector registers";
-        return false;
+    if (ST.needsAlignedVGPRs()) {
+      const TargetRegisterClass *RegRC = RI.getRegClassForReg(MRI, Reg);
+      if (RI.hasVectorRegisters(RegRC)) {
+        if (MO.getSubReg()) {
+          // Narrow to the sub-register's class. getSubRegisterClass already
+          // accounts for the sub-register index's alignment within the tuple
+          // (an odd-aligned slice yields an unaligned class, caught below); a
+          // null result means an invalid sub-register index and is left to the
+          // sub-register check.
+          RegRC = RI.getSubRegisterClass(RegRC, MO.getSubReg());
+        }
+        // Flag an alignment-only mismatch: the register does not satisfy the
+        // operand's class, but its even-aligned same-bank/width equivalent
+        // would. A bank or size mismatch fails even when aligned, so it is left
+        // to the illegal-register / sub-register checks.
+        if (RegRC && !OpRC->hasSubClassEq(RegRC)) {
+          const TargetRegisterClass *AlignedRegRC =
+              RI.getAlignedEquivalentRC(RegRC);
+          if (AlignedRegRC && OpRC->hasSubClassEq(AlignedRegRC)) {
+            ErrInfo = "Subtarget requires even aligned vector registers";
+            return false;
+          }
+        }
       }
     }
 
-    if (RegClass != -1) {
-      if (Reg.isVirtual())
-        continue;
-
-      const TargetRegisterClass *RC = RI.getRegClass(RegClass);
-      if (!RC->contains(Reg)) {
-        ErrInfo = "Operand has incorrect register class.";
-        return false;
-      }
+    if (Reg.isPhysical() && !OpRC->contains(Reg)) {
+      ErrInfo = "Operand has incorrect register class.";
+      return false;
     }
   }
 
@@ -6039,16 +6043,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return RI.getRegSizeInBits(RC) > 32 && RI.isProperlyAlignedRC(RC) &&
              !(RI.getChannelFromSubReg(Op->getSubReg()) & 1);
     };
-
-    if (Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_SEMA_BR ||
-        Opcode == AMDGPU::DS_GWS_BARRIER) {
-
-      if (!isAlignedReg(AMDGPU::OpName::data0)) {
-        ErrInfo = "Subtarget requires even aligned vector registers "
-                  "for DS_GWS instructions";
-        return false;
-      }
-    }
 
     if (isMIMG(MI)) {
       if (!isAlignedReg(AMDGPU::OpName::vaddr)) {
