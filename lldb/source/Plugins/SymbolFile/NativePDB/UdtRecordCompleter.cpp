@@ -473,8 +473,8 @@ void UdtRecordCompleter::FinishRecord() {
 
 void UdtRecordCompleter::Member::RestoreOriginalOrder() {
   llvm::stable_sort(fields, [](const MemberUP &lhs, const MemberUP &rhs) {
-    return std::tie(lhs->original_order, lhs->bit_offset) <
-           std::tie(rhs->original_order, rhs->bit_offset);
+    return std::tie(lhs->original_index, lhs->bit_offset) <
+           std::tie(rhs->original_index, rhs->bit_offset);
   });
 
   for (MemberUP &field : fields)
@@ -572,7 +572,7 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (parent->kind == Member::Struct) {
         parent->fields.push_back(std::make_unique<Member>(Member::Union));
         parent = parent->fields.back().get();
-        parent->original_order = std::numeric_limits<uint32_t>::max();
+        parent->original_index = std::numeric_limits<uint32_t>::max();
         parent->bit_offset = offset;
       } else {
         assert(parent == &record &&
@@ -581,8 +581,8 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       for (auto &field : fields) {
         int64_t bit_size = field->bit_size;
         // Use the lowest index of the union members.
-        parent->original_order =
-            std::min(parent->original_order, field->original_order);
+        parent->original_index =
+            std::min(parent->original_index, field->original_index);
         parent->fields.push_back(std::move(field));
         end_offset_map[offset + bit_size].push_back(
             parent->fields.back().get());

@@ -43,9 +43,9 @@ private:
                                        const WrappedMember &w) {
     os << llvm::formatv(
         "Member{.kind={0}, .name=\"{1}\", .bit_offset={2}, "
-        ".bit_size={3}, .base_offset={4}, .original_order={5}, .fields=[",
+        ".bit_size={3}, .base_offset={4}, .original_index={5}, .fields=[",
         w.m_obj.kind, w.m_obj.name, w.m_obj.bit_offset, w.m_obj.bit_size,
-        w.m_obj.base_offset, w.m_obj.original_order);
+        w.m_obj.base_offset, w.m_obj.original_index);
     llvm::ListSeparator sep;
     for (auto &f : w.m_obj.fields)
       os << sep << WrappedMember(*f);
@@ -104,7 +104,7 @@ Member *AddField(Member *member, StringRef name, uint64_t byte_offset,
                  uint64_t base_offset = 0) {
   auto field = std::make_unique<Member>(
       name, byte_offset * 8, byte_size * 8, clang::QualType(),
-      lldb::eAccessPublic, /*bitfield_width=*/0, /*original_order=*/0);
+      lldb::eAccessPublic, /*bitfield_width=*/0, /*original_index=*/0);
   field->kind = kind;
   field->base_offset = base_offset * 8;
   member->fields.push_back(std::move(field));

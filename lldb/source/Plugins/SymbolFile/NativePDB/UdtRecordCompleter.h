@@ -85,7 +85,8 @@ public:
     clang::QualType qt;
     lldb::AccessType access;
     uint32_t bitfield_width;
-    uint32_t original_order = 0;
+    /// Index of the member inside the LF_FIELDLIST.
+    uint32_t original_index = 0;
     // Following are Only used for struct or union.
     uint64_t base_offset;
     llvm::SmallVector<MemberUP, 1> fields;
@@ -96,21 +97,21 @@ public:
           access(lldb::eAccessPublic), bitfield_width(0), base_offset(0) {}
     Member(llvm::StringRef name, uint64_t bit_offset, uint64_t bit_size,
            clang::QualType qt, lldb::AccessType access, uint32_t bitfield_width,
-           uint32_t original_order)
+           uint32_t original_index)
         : kind(Field), name(name), bit_offset(bit_offset), bit_size(bit_size),
           qt(qt), access(access), bitfield_width(bitfield_width),
-          original_order(original_order), base_offset(0) {}
+          original_index(original_index), base_offset(0) {}
     void ConvertToStruct() {
       kind = Struct;
       base_offset = bit_offset;
       fields.push_back(std::make_unique<Member>(name, bit_offset, bit_size, qt,
                                                 access, bitfield_width,
-                                                original_order));
+                                                original_index));
       name = llvm::StringRef();
       qt = clang::QualType();
       access = lldb::eAccessPublic;
       bit_offset = bit_size = bitfield_width = 0;
-      // Keep original_order.
+      // Keep original_index.
     }
 
     void RestoreOriginalOrder();
