@@ -114,7 +114,8 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContainingFile() const { return File; }
 
-  /// Set deterministic priority for type DIE allocation ordering.
+  /// Set deterministic priority for type DIE allocation ordering. Units compare
+  /// by \p ObjFileIdx first and by \p LocalIdx second.
   /// Lower priority values win when multiple CUs race to define the same type.
   llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
 
