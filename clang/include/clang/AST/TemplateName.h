@@ -49,6 +49,25 @@ class TemplateDecl;
 class TemplateTemplateParmDecl;
 class UsingShadowDecl;
 
+} // namespace clang
+
+namespace llvm {
+
+// Provide PointerLikeTypeTraits for clang::Expr*, this default one requires a
+// full definition of Expr, but this file only sees a forward del because of
+// the dependency.
+template <> struct PointerLikeTypeTraits<clang::Expr *> {
+  static inline void *getAsVoidPointer(clang::Expr *P) { return P; }
+  static inline clang::Expr *getFromVoidPointer(void *P) {
+    return static_cast<clang::Expr *>(P);
+  }
+  static constexpr int NumLowBitsAvailable = 2;
+};
+
+} // namespace llvm
+
+namespace clang {
+
 /// Implementation class used to describe either a set of overloaded
 /// template names or an already-substituted template template parameter pack.
 class UncommonTemplateNameStorage {
@@ -520,8 +539,7 @@ class PackIndexingTemplateStorage final
   friend TrailingObjects;
 
   TemplateName Pattern;
-  Expr *IndexExpr;
-  bool FullySubstituted;
+  llvm::PointerIntPair<Expr *, 1> IndexAndIsFullySubstitited;
 
   PackIndexingTemplateStorage(TemplateName Pattern, Expr *IndexExpr,
                               bool FullySubstituted,
@@ -530,9 +548,11 @@ class PackIndexingTemplateStorage final
 public:
   TemplateName getPattern() const { return Pattern; }
 
-  Expr *getIndexExpr() const { return IndexExpr; }
+  Expr *getIndexExpr() const { return IndexAndIsFullySubstitited.getPointer(); }
 
-  bool isFullySubstituted() const { return FullySubstituted; }
+  bool isFullySubstituted() const {
+    return IndexAndIsFullySubstitited.getInt();
+  }
 
   ArrayRef<TemplateName> getExpansions() const {
     return getTrailingObjects(Bits.Data);

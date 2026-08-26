@@ -1401,8 +1401,7 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
 TemplateName Sema::ActOnPackIndexingTemplateName(TemplateName Pattern,
                                                  SourceLocation NameLoc,
                                                  Expr *IndexExpr) {
-  if (Pattern.isNull() || !IndexExpr)
-    return TemplateName();
+  assert(!Pattern.isNull() && IndexExpr);
 
   // C++29 [temp.names]p3:
   //   The simple-template-name P in a pack-index-template-name shall denote a

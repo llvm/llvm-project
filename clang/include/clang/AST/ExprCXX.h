@@ -3508,7 +3508,9 @@ public:
 
   TemplateTemplateParmDecl *getParameter() const {
     TemplateTemplateParmDecl *P = Name.getAsTemplateTemplateParmDecl();
-    assert(P && "A dependent template-id always names a template parameter");
+    assert(
+        P &&
+        "A dependent template-id always names a template template parameter");
     return P;
   }
 

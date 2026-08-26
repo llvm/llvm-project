@@ -1246,7 +1246,7 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
   if (T.consumeOpen())
     return true;
   ExprResult IndexExpr = ParseConstantExpression();
-  if (T.consumeClose() || IndexExpr.isInvalid())
+  if (T.consumeClose() || !IndexExpr.isUsable() || Template.get().isNull())
     return true;
 
   TemplateName Indexed = Actions.ActOnPackIndexingTemplateName(

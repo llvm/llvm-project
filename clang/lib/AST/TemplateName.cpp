@@ -125,8 +125,8 @@ PackIndexingTemplateStorage::PackIndexingTemplateStorage(
     ArrayRef<TemplateName> Expansions)
     : UncommonTemplateNameStorage(PackIndexing, /*Index=*/0,
                                   /*Data=*/Expansions.size()),
-      Pattern(Pattern), IndexExpr(IndexExpr),
-      FullySubstituted(FullySubstituted) {
+      Pattern(Pattern),
+      IndexAndIsFullySubstitited(IndexExpr, FullySubstituted) {
   llvm::uninitialized_copy(Expansions, getTrailingObjects());
 }
 
@@ -140,9 +140,9 @@ PackIndexingTemplateStorage::getParameterPack() const {
 }
 
 UnsignedOrNone PackIndexingTemplateStorage::getSelectedIndex() const {
-  if (IndexExpr->isInstantiationDependent())
+  if (getIndexExpr()->isInstantiationDependent())
     return std::nullopt;
-  auto *CE = dyn_cast<ConstantExpr>(IndexExpr);
+  auto *CE = dyn_cast<ConstantExpr>(getIndexExpr());
   if (!CE)
     return std::nullopt;
   llvm::APSInt Index = CE->getResultAsAPSInt();
@@ -151,21 +151,20 @@ UnsignedOrNone PackIndexingTemplateStorage::getSelectedIndex() const {
 }
 
 TemplateName PackIndexingTemplateStorage::getSelectedTemplate() const {
-  if (!isFullySubstituted())
+  if (!isFullySubstituted() || getIndexExpr()->isInstantiationDependent())
     return TemplateName();
   UnsignedOrNone Index = getSelectedIndex();
   ArrayRef<TemplateName> Expansions = getExpansions();
-  if (!Index || *Index >= Expansions.size())
-    return TemplateName();
+  assert(Index && *Index < Expansions.size());
   return Expansions[*Index];
 }
 
 TemplateNameDependence PackIndexingTemplateStorage::getDependence() const {
   TemplateNameDependence IndexD =
-      toTemplateNameDependence(IndexExpr->getDependence());
+      toTemplateNameDependence(getIndexExpr()->getDependence());
 
   TemplateNameDependence D =
-      IndexD | (IndexExpr->isInstantiationDependent()
+      IndexD | (getIndexExpr()->isInstantiationDependent()
                     ? TemplateNameDependence::DependentInstantiation
                     : TemplateNameDependence::None);
   if (ArrayRef<TemplateName> Expansions = getExpansions(); Expansions.empty())
@@ -192,7 +191,7 @@ TemplateNameDependence PackIndexingTemplateStorage::getDependence() const {
 
 void PackIndexingTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
                                           const ASTContext &Context) const {
-  Profile(ID, Context, Pattern, IndexExpr, isFullySubstituted(),
+  Profile(ID, Context, Pattern, getIndexExpr(), isFullySubstituted(),
           getExpansions());
 }
 

@@ -904,7 +904,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
         // indexing
         if (TryAnnotateTypeOrScopeToken())
           return ExprError();
-        if (Tok.isAnnotation())
+        if (Tok.isOneOf(tok::annot_cxxscope, tok::annot_pack_indexing_type,
+                        tok::annot_template_id))
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      CorrectionBehavior, isVectorLiteral,
                                      NotPrimaryExpression);

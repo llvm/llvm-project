@@ -152,6 +152,19 @@ struct Nested {
 static_assert(__is_same(Nested<A>::apply<int, long>, List<A<int>, A<long>>));
 }
 
+namespace partial_substitution2 {
+template <template <typename> typename... TT>
+struct S {
+    using A = TT...[1]<int>;
+};
+
+template <typename>
+struct T;
+
+template <template <typename> typename... TT>
+using X = S<T, TT...>;
+}
+
 namespace empty_pack {
 template <template <class> class... TT>
 using U = TT...[0]<int>; // expected-error {{invalid index 0 for pack 'TT' of size 0}}
