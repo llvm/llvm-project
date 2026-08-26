@@ -5439,6 +5439,95 @@ static bool checkIfClauses(Sema &S, OpenMPDirectiveKind Kind,
   return ErrorFound;
 }
 
+// If we're inside a taskgraph region, determine if a construct is (or might be)
+// replayable.
+static bool isReplayableConstruct(Sema &S, ArrayRef<OMPClause *> Clauses) {
+  const auto *RC =
+      OMPExecutableDirective::getSingleClause<OMPReplayableClause>(Clauses);
+  if (!RC)
+    return true;
+  // An omitted argument means replayable.
+  const Expr *Cond = RC->getCondition();
+  if (!Cond)
+    return true;
+  bool Result;
+  if (!Cond->EvaluateAsBooleanCondition(Result, S.getASTContext()))
+    return true;
+  return Result;
+}
+
+// OpenMP 6.0 [14.3, taskgraph Construct, Restrictions] Some tasks cannot be
+// recorded as a graph node and replayed: this applies to detachable,
+// transparent and undeferred tasks.  This restriction applies only to a
+// replayable construct, so can be overridden with replayable(false).  Kept in
+// step with the flang checks in OmpStructureChecker's TaskgraphVisitor
+// (check-omp-structure.cpp).
+static bool
+checkTaskgraphReplayableRestrictions(Sema &S, OpenMPDirectiveKind Kind,
+                                     ArrayRef<OMPClause *> Clauses) {
+  // A dependent replayable condition is left to the instantiation, which comes
+  // back through here with the argument substituted.  Deciding now would
+  // diagnose every instantiation, including the ones that opt out.
+  if (const auto *RC =
+          OMPExecutableDirective::getSingleClause<OMPReplayableClause>(Clauses))
+    if (const Expr *Cond = RC->getCondition())
+      if (Cond->isValueDependent())
+        return false;
+
+  if (!isReplayableConstruct(S, Clauses))
+    return false;
+
+  // The if clause only generates an undeferred *task* on these two, and the
+  // body of the generated task is not part of the taskgraph region.
+  OpenMPDirectiveKind Leaf = getLeafConstructsOrSelf(Kind).front();
+  bool IsTaskGenerating = Leaf == OMPD_task || Leaf == OMPD_taskloop;
+
+  enum { Detachable, Transparent, Undeferred };
+  bool ErrorFound = false;
+  for (const OMPClause *C : Clauses) {
+    std::optional<unsigned> Which;
+    switch (C->getClauseKind()) {
+    case OMPC_detach:
+      Which = Detachable;
+      break;
+    case OMPC_transparent: {
+      const Expr *Impex = cast<OMPTransparentClause>(C)->getImpexType();
+      if (!Impex) {
+        Which = Transparent;
+        break;
+      }
+      Expr::EvalResult Eval;
+      if (!Impex->isValueDependent() &&
+          Impex->EvaluateAsInt(Eval, S.getASTContext()) &&
+          !Eval.Val.getInt().isZero())
+        Which = Transparent;
+      break;
+    }
+    case OMPC_if: {
+      const auto *IC = cast<OMPIfClause>(C);
+      OpenMPDirectiveKind NM = IC->getNameModifier();
+      if (!IsTaskGenerating || (NM != OMPD_unknown && NM != Leaf))
+        break;
+      const Expr *Cond = IC->getCondition();
+      bool Result;
+      if (Cond && !Cond->isValueDependent() &&
+          Cond->EvaluateAsBooleanCondition(Result, S.getASTContext()) &&
+          !Result)
+        Which = Undeferred;
+      break;
+    }
+    default:
+      break;
+    }
+    if (Which) {
+      S.Diag(C->getBeginLoc(), diag::err_omp_taskgraph_replayable_task)
+          << *Which << SourceRange(C->getBeginLoc(), C->getEndLoc());
+      ErrorFound = true;
+    }
+  }
+  return ErrorFound;
+}
+
 static std::pair<ValueDecl *, bool>
 getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
                SourceRange &ERange, bool AllowArraySection,
@@ -7013,6 +7102,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   }
   if (!AllowedNameModifiers.empty())
     ErrorFound = checkIfClauses(SemaRef, Kind, Clauses, AllowedNameModifiers) ||
+                 ErrorFound;
+
+  if (DSAStack->getParentDirective() == OMPD_taskgraph)
+    ErrorFound = checkTaskgraphReplayableRestrictions(SemaRef, Kind, Clauses) ||
                  ErrorFound;
 
   if (ErrorFound)

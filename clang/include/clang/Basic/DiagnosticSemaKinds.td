@@ -12404,6 +12404,8 @@ def err_omp_nowait_clause_without_depend: Error<
   "directive '#pragma omp taskwait' cannot use 'nowait' clause without 'depend' clause">;
 def err_omp_taskgraph_taskwait_without_depend: Error<
   "directive '#pragma omp taskwait' within '#pragma omp taskgraph' must use 'depend' clause to be task-generating">;
+def err_omp_taskgraph_replayable_task: Error<
+  "%select{detachable|transparent|undeferred}0 replayable task is not allowed within '#pragma omp taskgraph'">;
 def err_omp_taskgraph_not_task_generating: Error<
   "'%0' directive is not task-generating and cannot be used within '#pragma omp taskgraph'">;
 def note_omp_nowait_clause_here : Note<
