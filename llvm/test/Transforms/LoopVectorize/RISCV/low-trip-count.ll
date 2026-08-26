@@ -286,11 +286,14 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <vscale x 4 x i1> [[TMP13]], [[BROADCAST_SPLAT5]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C3]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i1> [[BROADCAST_SPLAT2]], <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x float> [[PREDPHI]], <vscale x 4 x float> splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP3]], <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = or <vscale x 4 x i1> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1> [[TMP12]], <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> splat (float 1.000000e+00), i32 57)
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x float> splat (float 2.000000e+00), <vscale x 4 x float> [[TMP8]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[PREDPHI5]], ptr align 4 [[DST:%.*]], <vscale x 4 x i1> splat (i1 true), i32 57)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:

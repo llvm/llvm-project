@@ -125,14 +125,14 @@ define void @two_masked_same_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp>
 ; CHECK-NEXT:    WIDEN ir<%s> = add ir<%x>, ir<%x>
-; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp>, ir<%s>, ir<0>
+; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP2:%[0-9]+]]> = call llvm.vp.merge(ir<%cmp>, ir<%s>, ir<0>, vp<%evl>)
 ; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
-; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, vp<%predphi>, vp<%evl>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
-; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
-; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
+; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, vp<[[VP2]]>, vp<%evl>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = zext vp<%evl> to i64
+; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP3]]>, vp<%index>
+; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ;
 entry:
@@ -185,20 +185,20 @@ define void @two_masked_diff_mask(ptr noalias %a, ptr noalias %b, ptr noalias %c
 ; CHECK-NEXT:    WIDEN ir<%v1> = vp.load ir<%gp1>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp ne ir<%v1>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%x> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp1>
-; CHECK-NEXT:    EMIT vp<%predphi> = select ir<%cmp1>, ir<%x>, ir<0>
+; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP2:%[0-9]+]]> = call llvm.vp.merge(ir<%cmp1>, ir<%x>, ir<0>, vp<%evl>)
 ; CHECK-NEXT:    CLONE ir<%gp2> = getelementptr inbounds ir<%c2>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%v2> = vp.load ir<%gp2>, vp<%evl>
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp ne ir<%v2>, ir<0>
 ; CHECK-NEXT:    WIDEN ir<%y> = vp.load ir<%gep.a>, vp<%evl>, ir<%cmp2>
-; CHECK-NEXT:    EMIT vp<%predphi>.1 = select ir<%cmp2>, ir<%y>, ir<0>
-; CHECK-NEXT:    WIDEN ir<%sum> = add vp<%predphi>, vp<%predphi>.1
+; CHECK-NEXT:    WIDEN-INTRINSIC vp<[[VP3:%[0-9]+]]> = call llvm.vp.merge(ir<%cmp2>, ir<%y>, ir<0>, vp<%evl>)
+; CHECK-NEXT:    WIDEN ir<%sum> = add vp<[[VP2]]>, vp<[[VP3]]>
 ; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN vp.store ir<%gep.b>, ir<%sum>, vp<%evl>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = zext vp<%evl> to i64
-; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP2]]>, vp<%index>
-; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP3]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = zext vp<%evl> to i64
+; CHECK-NEXT:    EMIT vp<%current.iteration.next> = add vp<[[VP4]]>, vp<%index>
+; CHECK-NEXT:    EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%avl.next>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ;
 entry:

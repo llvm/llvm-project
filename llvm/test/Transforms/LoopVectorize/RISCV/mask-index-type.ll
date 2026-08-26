@@ -28,7 +28,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) vs
 ; VLENUNK-NEXT:    [[TMP13:%.*]] = icmp ult <vscale x 4 x i64> [[VEC_IND]], splat (i64 512)
 ; VLENUNK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; VLENUNK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> [[TMP13]], i32 [[TMP7]])
-; VLENUNK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> zeroinitializer
+; VLENUNK-NEXT:    [[PREDPHI:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> [[VP_OP_LOAD]], <vscale x 4 x i32> zeroinitializer, i32 [[TMP7]])
 ; VLENUNK-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[PREDPHI]], [[BROADCAST_SPLAT]]
 ; VLENUNK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; VLENUNK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP17]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP7]])

@@ -35,12 +35,12 @@ define void @icmp_predicate_and_branch_cost(i32 %size, ptr %dst, i64 %conv5.i) #
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i32> [[VEC_IND]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i64> [[TMP4]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt <16 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge <16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp ult <16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> [[TMP18]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <16 x i32> [[BROADCAST_SPLAT2]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <16 x i32> [[TMP8]] to <16 x i8>
-; CHECK-NEXT:    [[TMP10:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> [[TMP7]], <16 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP10]], <16 x i8> zeroinitializer, <16 x i8> [[TMP9]]
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> [[PREDPHI]], <16 x i8> splat (i8 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> splat (i8 1)
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <16 x i1> [[TMP10]], <16 x i8> [[TMP9]], <16 x i8> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[PREDPHI3]], i64 15
 ; CHECK-NEXT:    store i8 [[TMP11]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
@@ -73,12 +73,12 @@ define void @icmp_predicate_and_branch_cost(i32 %size, ptr %dst, i64 %conv5.i) #
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i32> [[VEC_IND14]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i64> [[TMP15]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp ugt <4 x i64> [[TMP16]], [[BROADCAST_SPLAT8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp uge <4 x i32> [[VEC_IND14]], [[BROADCAST_SPLAT10]]
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp ult <4 x i32> [[VEC_IND14]], [[BROADCAST_SPLAT10]]
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP17]], <4 x i1> [[TMP23]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = or <4 x i32> [[BROADCAST_SPLAT10]], [[VEC_IND14]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc <4 x i32> [[TMP19]] to <4 x i8>
-; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP17]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI17:%.*]] = select <4 x i1> [[TMP21]], <4 x i8> zeroinitializer, <4 x i8> [[TMP20]]
-; CHECK-NEXT:    [[PREDPHI18:%.*]] = select <4 x i1> [[TMP17]], <4 x i8> [[PREDPHI17]], <4 x i8> splat (i8 1)
+; CHECK-NEXT:    [[PREDPHI16:%.*]] = select <4 x i1> [[TMP17]], <4 x i8> zeroinitializer, <4 x i8> splat (i8 1)
+; CHECK-NEXT:    [[PREDPHI18:%.*]] = select <4 x i1> [[TMP21]], <4 x i8> [[TMP20]], <4 x i8> [[PREDPHI16]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i8> [[PREDPHI18]], i64 3
 ; CHECK-NEXT:    store i8 [[TMP22]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[CMP_N19:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC6]]
