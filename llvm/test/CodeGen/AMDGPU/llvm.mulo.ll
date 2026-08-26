@@ -352,11 +352,11 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, s5, v2
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, s4, v2
-; SI-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; SI-NEXT:    s_mul_i32 s2, s0, s2
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s0, 0, s2
-; SI-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; SI-NEXT:    s_cselect_b32 s0, s2, 0
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -384,9 +384,9 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_add_i32 s1, s8, s7
 ; GFX9-NEXT:    s_add_i32 s1, s1, s6
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s2
-; GFX9-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX9-NEXT:    s_cselect_b32 s1, 0, s1
-; GFX9-NEXT:    s_cselect_b32 s0, 0, s0
+; GFX9-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; GFX9-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX9-NEXT:    s_cselect_b32 s0, s0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
@@ -413,9 +413,9 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX10-NEXT:    s_add_i32 s1, s8, s7
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s2
 ; GFX10-NEXT:    s_add_i32 s1, s1, s6
-; GFX10-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX10-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX10-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX10-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; GFX10-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX10-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
@@ -442,9 +442,9 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_add_i32 s1, s8, s7
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s2
 ; GFX11-NEXT:    s_add_i32 s1, s1, s6
-; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX11-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX11-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX11-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; GFX11-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX11-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
@@ -469,9 +469,9 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_mul_u64 s[0:1], s[0:1], s[2:3]
 ; GFX12-NEXT:    s_add_nc_u64 s[4:5], s[4:5], s[8:9]
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; GFX12-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX12-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX12-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX12-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_endpgm
@@ -523,11 +523,11 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    s_cselect_b32 s5, s5, s1
 ; SI-NEXT:    s_cselect_b32 s4, s8, s4
 ; SI-NEXT:    v_mov_b32_e32 v1, v0
-; SI-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
 ; SI-NEXT:    s_mul_i32 s2, s0, s2
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s0, 0, s2
-; SI-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; SI-NEXT:    s_cselect_b32 s0, s2, 0
+; SI-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -567,9 +567,9 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX9-NEXT:    s_ashr_i32 s6, s1, 31
 ; GFX9-NEXT:    s_mov_b32 s7, s6
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s2
-; GFX9-NEXT:    s_cmp_lg_u64 s[4:5], s[6:7]
-; GFX9-NEXT:    s_cselect_b32 s1, 0, s1
-; GFX9-NEXT:    s_cselect_b32 s0, 0, s0
+; GFX9-NEXT:    s_cmp_eq_u64 s[4:5], s[6:7]
+; GFX9-NEXT:    s_cselect_b32 s1, s1, 0
+; GFX9-NEXT:    s_cselect_b32 s0, s0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
@@ -608,9 +608,9 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, s6
 ; GFX10-NEXT:    s_ashr_i32 s6, s1, 31
 ; GFX10-NEXT:    s_mov_b32 s7, s6
-; GFX10-NEXT:    s_cmp_lg_u64 s[4:5], s[6:7]
-; GFX10-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX10-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX10-NEXT:    s_cmp_eq_u64 s[4:5], s[6:7]
+; GFX10-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX10-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
@@ -651,9 +651,9 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_ashr_i32 s6, s1, 31
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s7, s6
-; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], s[6:7]
-; GFX11-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX11-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX11-NEXT:    s_cmp_eq_u64 s[4:5], s[6:7]
+; GFX11-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX11-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
@@ -691,9 +691,9 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_ashr_i32 s4, s1, 31
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s5, s4
-; GFX12-NEXT:    s_cmp_lg_u64 s[2:3], s[4:5]
-; GFX12-NEXT:    s_cselect_b32 s0, 0, s0
-; GFX12-NEXT:    s_cselect_b32 s1, 0, s1
+; GFX12-NEXT:    s_cmp_eq_u64 s[2:3], s[4:5]
+; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX12-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off

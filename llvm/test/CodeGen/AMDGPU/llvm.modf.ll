@@ -363,13 +363,14 @@ define { double, double } @test_modf_f64(double %x) {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
-; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x204
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s4
-; GFX9-SDAG-NEXT:    s_brev_b32 s6, -2
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX9-SDAG-NEXT:    s_brev_b32 s4, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v4, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v5, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s6, v4, v1
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v5, vcc
+; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s4, v4, v1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_modf_f64:
@@ -395,13 +396,14 @@ define double @test_modf_f64_only_use_fract(double %x) {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[2:3], v[0:1]
-; GFX9-SDAG-NEXT:    s_movk_i32 s4, 0x204
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s4
-; GFX9-SDAG-NEXT:    s_brev_b32 s6, -2
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX9-SDAG-NEXT:    s_brev_b32 s4, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v3, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s6, v2, v1
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
+; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s4, v2, v1
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_modf_f64_only_use_fract:
@@ -440,18 +442,19 @@ define { <2 x double>, <2 x double> } @test_modf_v2f64(<2 x double> %x) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[4:5], v[0:1]
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[6:7], v[2:3]
-; GFX9-SDAG-NEXT:    s_movk_i32 s6, 0x204
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s6
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[6:7], v[2:3], s6
-; GFX9-SDAG-NEXT:    s_brev_b32 s8, -2
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 s[4:5], |v[2:3]|, s[4:5]
+; GFX9-SDAG-NEXT:    s_brev_b32 s6, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[8:9], v[0:1], -v[4:5]
 ; GFX9-SDAG-NEXT:    v_add_f64 v[10:11], v[2:3], -v[6:7]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v8, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v8, v9, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v9, v11, 0, s[6:7]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v10, 0, s[6:7]
-; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s8, v8, v1
-; GFX9-SDAG-NEXT:    v_bfi_b32 v3, s8, v9, v3
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v8, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v8, 0, v9, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v9, 0, v11, s[4:5]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, v10, s[4:5]
+; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s6, v8, v1
+; GFX9-SDAG-NEXT:    v_bfi_b32 v3, s6, v9, v3
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_modf_v2f64:
@@ -485,18 +488,19 @@ define <2 x double> @test_modf_v2f64_only_use_fract(<2 x double> %x) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[4:5], v[0:1]
 ; GFX9-SDAG-NEXT:    v_trunc_f64_e32 v[6:7], v[2:3]
-; GFX9-SDAG-NEXT:    s_movk_i32 s6, 0x204
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s6
-; GFX9-SDAG-NEXT:    v_cmp_class_f64_e64 s[6:7], v[2:3], s6
-; GFX9-SDAG-NEXT:    s_brev_b32 s8, -2
+; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0
+; GFX9-SDAG-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX9-SDAG-NEXT:    v_cmp_neq_f64_e64 s[4:5], |v[2:3]|, s[4:5]
+; GFX9-SDAG-NEXT:    s_brev_b32 s6, -2
 ; GFX9-SDAG-NEXT:    v_add_f64 v[4:5], v[0:1], -v[4:5]
 ; GFX9-SDAG-NEXT:    v_add_f64 v[6:7], v[2:3], -v[6:7]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v0, v4, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v4, v5, 0, s[4:5]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v5, v7, 0, s[6:7]
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, 0, s[6:7]
-; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s8, v4, v1
-; GFX9-SDAG-NEXT:    v_bfi_b32 v3, s8, v5, v3
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v5, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, v7, s[4:5]
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, v6, s[4:5]
+; GFX9-SDAG-NEXT:    v_bfi_b32 v1, s6, v4, v1
+; GFX9-SDAG-NEXT:    v_bfi_b32 v3, s6, v5, v3
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_modf_v2f64_only_use_fract:

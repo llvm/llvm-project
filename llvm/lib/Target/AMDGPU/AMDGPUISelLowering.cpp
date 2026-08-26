@@ -5079,6 +5079,18 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static bool isSelectSwapCandidate(SDNode *User, const SDNode *Cond,
+                                  SelectionDAG &DAG) {
+  if (User->getOpcode() != ISD::SELECT)
+    return false;
+  if (User->getOperand(0).getNode() != Cond)
+    return false;
+  SDValue True = User->getOperand(1);
+  SDValue False = User->getOperand(2);
+  return DAG.isConstantValueOfAnyType(True) &&
+         !DAG.isConstantValueOfAnyType(False);
+}
+
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
@@ -5096,22 +5108,48 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   SDValue True = N->getOperand(1);
   SDValue False = N->getOperand(2);
 
-  if (Cond.hasOneUse()) { // TODO: Look for multiple select uses.
-    SelectionDAG &DAG = DCI.DAG;
-    if (DAG.isConstantValueOfAnyType(True) &&
-        !DAG.isConstantValueOfAnyType(False)) {
-      // Swap cmp + select pair to move constant to false input.
-      // This will allow using VOPC cndmasks more often.
-      // select (setcc x, y), k, x -> select (setccinv x, y), x, k
+  SelectionDAG &DAG = DCI.DAG;
+  if (DAG.isConstantValueOfAnyType(True) &&
+      !DAG.isConstantValueOfAnyType(False)) {
+    // Swap cmp + select pair to move constant to false input.
+    // This will allow using VOPC cndmasks more often.
+    // select (setcc x, y), k, x -> select (setccinv x, y), x, k
 
+    bool CanSwap = true;
+    if (!Cond.hasOneUse()) {
+      for (SDNode *User : Cond->users()) {
+        if (User == N)
+          continue;
+        if (!isSelectSwapCandidate(User, Cond.getNode(), DAG)) {
+          CanSwap = false;
+          break;
+        }
+      }
+    }
+
+    if (CanSwap) {
       SDLoc SL(N);
       ISD::CondCode NewCC =
           getSetCCInverse(cast<CondCodeSDNode>(CC)->get(), LHS.getValueType());
 
       SDValue NewCond = DAG.getSetCC(SL, Cond.getValueType(), LHS, RHS, NewCC);
+
+      for (SDNode *User : llvm::make_early_inc_range(Cond->users())) {
+        if (User == N)
+          continue;
+        EVT UserVT = User->getValueType(0);
+        SDValue UserTrue = User->getOperand(1);
+        SDValue UserFalse = User->getOperand(2);
+        SDValue NewUserSelect = DAG.getNode(ISD::SELECT, SDLoc(User), UserVT,
+                                            NewCond, UserFalse, UserTrue);
+        DCI.CombineTo(User, NewUserSelect);
+      }
+
       return DAG.getNode(ISD::SELECT, SL, VT, NewCond, False, True);
     }
+  }
 
+  if (Cond.hasOneUse()) {
     if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
       SDValue MinMax
         = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
