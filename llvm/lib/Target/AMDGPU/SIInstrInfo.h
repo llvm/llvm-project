@@ -1252,6 +1252,19 @@ public:
     }
   }
 
+  /// \returns true if \p Opcode is any S_SETREG_B32/S_SETREG_IMM32_B32 variant.
+  static bool isSSetReg(unsigned Opcode) {
+    switch (Opcode) {
+    case AMDGPU::S_SETREG_B32:
+    case AMDGPU::S_SETREG_B32_mode:
+    case AMDGPU::S_SETREG_IMM32_B32:
+    case AMDGPU::S_SETREG_IMM32_B32_mode:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();
