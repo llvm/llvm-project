@@ -9355,7 +9355,6 @@ SDValue SITargetLowering::getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
                                                  SelectionDAG &DAG) const {
   const bool IsLDS = (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::BARRIER);
 
-
   if (Subtarget->hasApertureRegs()) {
     const unsigned ApertureRegNo =
         IsLDS ? AMDGPU::SRC_SHARED_BASE : AMDGPU::SRC_PRIVATE_BASE;
