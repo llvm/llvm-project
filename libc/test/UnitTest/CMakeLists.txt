@@ -50,6 +50,9 @@ function(_create_unittest_framework_library fq_target_name)
   endif()
 
   if(LLVM_LIBC_FULL_BUILD)
+    target_include_directories(
+      ${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR}
+    )
     _get_hermetic_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
     target_compile_options(${fq_target_name} PRIVATE ${compile_options} -nostdinc++)
   else()
