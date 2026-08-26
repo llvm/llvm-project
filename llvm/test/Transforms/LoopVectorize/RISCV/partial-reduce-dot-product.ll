@@ -153,22 +153,22 @@ define i32 @vdot4a(ptr %a, ptr %b) #0 {
 ; TAILFOLD:       vector.ph:
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
-; TAILFOLD-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[EVL_BASED_IV]]
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = sext <vscale x 4 x i8> [[VP_OP_LOAD]] to <vscale x 4 x i32>
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = sext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], [[TMP2]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[TMP5]], [[VEC_PHI]]
 ; TAILFOLD-NEXT:    [[TMP7]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP6]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
-; TAILFOLD-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP11]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
@@ -344,22 +344,22 @@ define i32 @vdot4au(ptr %a, ptr %b) #0 {
 ; TAILFOLD:       vector.ph:
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
-; TAILFOLD-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[EVL_BASED_IV]]
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD]] to <vscale x 4 x i32>
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], [[TMP2]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[TMP5]], [[VEC_PHI]]
 ; TAILFOLD-NEXT:    [[TMP7]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP6]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
-; TAILFOLD-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP11]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; TAILFOLD:       middle.block:
@@ -535,22 +535,22 @@ define i32 @vdot4asu(ptr %a, ptr %b) #0 {
 ; TAILFOLD:       vector.ph:
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
-; TAILFOLD-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[EVL_BASED_IV]]
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD]] to <vscale x 4 x i32>
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = sext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], [[TMP2]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[TMP5]], [[VEC_PHI]]
 ; TAILFOLD-NEXT:    [[TMP7]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP6]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
-; TAILFOLD-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP11]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TAILFOLD:       middle.block:
@@ -725,22 +725,22 @@ define i32 @vdot4asu2(ptr %a, ptr %b) #0 {
 ; TAILFOLD:       vector.ph:
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
-; TAILFOLD-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A]], [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = phi ptr [ [[B]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; TAILFOLD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; TAILFOLD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[EVL_BASED_IV]]
+; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = sext <vscale x 4 x i8> [[VP_OP_LOAD]] to <vscale x 4 x i32>
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP3]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; TAILFOLD-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i8> [[VP_OP_LOAD1]] to <vscale x 4 x i32>
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], [[TMP2]]
 ; TAILFOLD-NEXT:    [[TMP6:%.*]] = add <vscale x 4 x i32> [[TMP5]], [[VEC_PHI]]
 ; TAILFOLD-NEXT:    [[TMP7]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP6]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP0]])
-; TAILFOLD-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
-; TAILFOLD-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[EVL_BASED_IV]]
 ; TAILFOLD-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP11]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP8]]
+; TAILFOLD-NEXT:    [[TMP12]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TAILFOLD:       middle.block:

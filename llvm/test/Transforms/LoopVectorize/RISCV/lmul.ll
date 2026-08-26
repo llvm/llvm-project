@@ -44,16 +44,16 @@ define void @load_store(ptr %p) {
 ; LMUL2:       vector.ph:
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
-; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; LMUL2-NEXT:    [[TMP5:%.*]] = phi ptr [ [[P:%.*]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; LMUL2-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL2-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; LMUL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
+; LMUL2-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL2-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP6]])
 ; LMUL2-NEXT:    [[TMP7:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL2-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP7]], ptr align 8 [[TMP5]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP6]])
-; LMUL2-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
-; LMUL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL2-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; LMUL2-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 3
+; LMUL2-NEXT:    [[TMP8]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP4]]
 ; LMUL2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL2-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL2:       middle.block:
@@ -67,16 +67,16 @@ define void @load_store(ptr %p) {
 ; LMUL4:       vector.ph:
 ; LMUL4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL4:       vector.body:
-; LMUL4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; LMUL4-NEXT:    [[TMP5:%.*]] = phi ptr [ [[P:%.*]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; LMUL4-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL4-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; LMUL4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
+; LMUL4-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL4-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP5]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
 ; LMUL4-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL4-NEXT:    call void @llvm.vp.store.nxv4i64.p0(<vscale x 4 x i64> [[TMP7]], ptr align 8 [[TMP5]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
-; LMUL4-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
-; LMUL4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL4-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; LMUL4-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 3
+; LMUL4-NEXT:    [[TMP8]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP4]]
 ; LMUL4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL4-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL4:       middle.block:
@@ -90,16 +90,16 @@ define void @load_store(ptr %p) {
 ; LMUL8:       vector.ph:
 ; LMUL8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL8:       vector.body:
-; LMUL8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; LMUL8-NEXT:    [[TMP5:%.*]] = phi ptr [ [[P:%.*]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; LMUL8-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL8-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; LMUL8-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[INDEX]]
+; LMUL8-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
 ; LMUL8-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x i64> @llvm.vp.load.nxv8i64.p0(ptr align 8 [[TMP5]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
 ; LMUL8-NEXT:    [[TMP7:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL8-NEXT:    call void @llvm.vp.store.nxv8i64.p0(<vscale x 8 x i64> [[TMP7]], ptr align 8 [[TMP5]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
-; LMUL8-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP6]] to i64
-; LMUL8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], [[INDEX]]
 ; LMUL8-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
+; LMUL8-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP10]], 3
+; LMUL8-NEXT:    [[TMP8]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP4]]
 ; LMUL8-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; LMUL8-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL8:       middle.block:

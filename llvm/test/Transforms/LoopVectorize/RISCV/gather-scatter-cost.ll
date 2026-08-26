@@ -98,15 +98,14 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23:       vector.ph:
 ; RVA23-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; RVA23:       vector.body:
-; RVA23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23-NEXT:    [[TMP1:%.*]] = phi ptr [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
-; RVA23-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 7
-; RVA23-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
-; RVA23-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP2]], i64 7, <vscale x 16 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
-; RVA23-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP3]], [[INDEX]]
+; RVA23-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP1]], i64 7, <vscale x 16 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; RVA23-NEXT:    [[TMP6:%.*]] = mul i64 7, [[TMP3]]
+; RVA23-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP6]]
 ; RVA23-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; RVA23-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; RVA23:       middle.block:
@@ -120,15 +119,14 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23ZVL1024B:       vector.ph:
 ; RVA23ZVL1024B-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; RVA23ZVL1024B:       vector.body:
-; RVA23ZVL1024B-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; RVA23ZVL1024B-NEXT:    [[TMP1:%.*]] = phi ptr [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; RVA23ZVL1024B-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 7
-; RVA23ZVL1024B-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
-; RVA23ZVL1024B-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i64(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP2]], i64 7, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23ZVL1024B-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
-; RVA23ZVL1024B-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP3]], [[INDEX]]
+; RVA23ZVL1024B-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i64(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP1]], i64 7, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23ZVL1024B-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; RVA23ZVL1024B-NEXT:    [[TMP6:%.*]] = mul i64 7, [[TMP3]]
+; RVA23ZVL1024B-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP6]]
 ; RVA23ZVL1024B-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; RVA23ZVL1024B-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; RVA23ZVL1024B:       middle.block:
@@ -162,11 +160,10 @@ define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p0, ptr no
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi ptr [ [[P1:%.*]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P1:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2p0.p0.i64(<vscale x 2 x ptr> [[BROADCAST_SPLAT1]], ptr align 8 [[TMP5]], i64 4, <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P3:%.*]], i64 [[TMP6]]
@@ -175,9 +172,9 @@ define void @store_to_addr_generated_from_invariant_addr(ptr noalias %p0, ptr no
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> zeroinitializer, <vscale x 2 x ptr> align 4 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8> zeroinitializer, <vscale x 2 x ptr> align 1 [[TMP7]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP4]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP10]] = getelementptr i8, ptr [[TMP5]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
@@ -279,6 +276,3 @@ exit:
 }
 
 attributes #0 = { "target-features"="+zve64x,+zvl256b" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; RVA23: {{.*}}
-; RVA23ZVL1024B: {{.*}}

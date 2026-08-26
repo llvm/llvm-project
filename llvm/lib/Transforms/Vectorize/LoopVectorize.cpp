@@ -6565,6 +6565,13 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
     if (CM.foldTailWithEVL()) {
+      // After addExplicitVectorLength the loop step is no longer
+      // loop-invariant, so SCEV can't analyze the step and LoopStrengthReduce
+      // can't optimize any induction variables. Perform a simple version
+      // of LSR restricted to addresses before the step is no longer
+      // analyzable.
+      RUN_VPLAN_PASS(VPlanTransforms::strengthReduceAddrs, *Plan, PSE,
+                     *OrigLoop, TTI);
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);

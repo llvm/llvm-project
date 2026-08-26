@@ -14,15 +14,17 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = phi ptr [ [[B:%.*]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = phi ptr [ [[A:%.*]], [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = phi i32 [ [[N:%.*]], [[ENTRY]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[TMP11]], i32 4, i1 true)
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP_LOAD]], ptr align 4 [[TMP16]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP12]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[TMP11]], [[TMP12]]
+; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP12]] to i64
+; IF-EVL-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 2
+; IF-EVL-NEXT:    [[TMP4]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP6]]
+; IF-EVL-NEXT:    [[TMP5]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
