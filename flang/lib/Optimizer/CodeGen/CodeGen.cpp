@@ -1931,14 +1931,14 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       // destination box.
       if (hasAddendum) {
         auto maskAttr = mlir::IntegerAttr::get(
-            rewriter.getIntegerType(8, /*isSigned=*/false),
+            rewriter.getI8Type(),
             llvm::APInt(8, (uint64_t)_CFI_ADDENDUM_FLAG, /*isSigned=*/false));
         mlir::LLVM::ConstantOp mask = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rewriter.getI8Type(), maskAttr);
         extraField = mlir::LLVM::OrOp::create(rewriter, loc, extraField, mask);
       } else {
         auto maskAttr = mlir::IntegerAttr::get(
-            rewriter.getIntegerType(8, /*isSigned=*/false),
+            rewriter.getI8Type(),
             llvm::APInt(8, (uint64_t)~_CFI_ADDENDUM_FLAG, /*isSigned=*/true));
         mlir::LLVM::ConstantOp mask = mlir::LLVM::ConstantOp::create(
             rewriter, loc, rewriter.getI8Type(), maskAttr);
@@ -3755,25 +3755,41 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       // initialization is on the full range.
       auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
       for (auto insertOp : insertOnRangeOps) {
-        if (insertOp.isFullRange()) {
-          auto seqTyAttr = convertType(insertOp.getType());
-          auto *op = insertOp.getVal().getDefiningOp();
-          auto constant = mlir::dyn_cast<mlir::arith::ConstantOp>(op);
-          if (!constant) {
-            auto convertOp = mlir::dyn_cast<fir::ConvertOp>(op);
-            if (!convertOp)
-              continue;
-            constant = mlir::cast<mlir::arith::ConstantOp>(
-                convertOp.getValue().getDefiningOp());
-          }
-          mlir::Type vecType = mlir::VectorType::get(
-              insertOp.getType().getShape(), constant.getType());
-          auto denseAttr = mlir::DenseElementsAttr::get(
-              mlir::cast<mlir::ShapedType>(vecType), constant.getValue());
-          rewriter.setInsertionPointAfter(insertOp);
-          rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
-              insertOp, seqTyAttr, denseAttr);
+        if (!insertOp.isFullRange())
+          continue;
+        // The dense attribute must use the converted element type of the
+        // array, not the type of whatever constant feeds the insertion.
+        mlir::Type elementType = convertType(insertOp.getType().getEleTy());
+        mlir::Value val = insertOp.getVal();
+        // Logical constants reach the insertion through a `fir.convert`.
+        auto convertOp = val.getDefiningOp<fir::ConvertOp>();
+        if (convertOp)
+          val = convertOp.getValue();
+        auto constant = val.getDefiningOp<mlir::arith::ConstantOp>();
+        if (!constant)
+          continue;
+        mlir::TypedAttr valueAttr = constant.getValue();
+        if (valueAttr.getType() != elementType) {
+          // Looking through the `fir.convert` leaves the constant with the
+          // source type. Only an integer<->logical conversion is folded here:
+          // it normalizes any integer operand to a canonical 0/1, see
+          // ConvertOpConversion. Any other mismatching conversion is left to
+          // the regular lowering.
+          auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
+          auto intType = mlir::dyn_cast<mlir::IntegerType>(elementType);
+          if (!intAttr || !intType || !convertOp ||
+              (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
+               !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
+            continue;
+          valueAttr = mlir::IntegerAttr::get(
+              intType, intAttr.getValue().isZero() ? 0 : 1);
         }
+        auto vecType =
+            mlir::VectorType::get(insertOp.getType().getShape(), elementType);
+        auto denseAttr = mlir::DenseElementsAttr::get(vecType, valueAttr);
+        rewriter.setInsertionPointAfter(insertOp);
+        rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+            insertOp, convertType(insertOp.getType()), denseAttr);
       }
     }
 

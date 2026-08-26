@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,cplusplus.NewDelete -verify %s
 
 // expected-no-diagnostics:
-// From now the profile of the 'StackFrame' also contains the
-// 'NodeBuilderContext::blockCount()'. With this addition we can distinguish
-// between the 'StackArgumentsSpaceRegion' of the 'P' arguments being different
-// on every iteration.
+// From now the profile of the 'StackFrame' also contains the 'BlockCount'
+// ('ExprEngine::getNumVisitedCurrent()') value at the call site. With this
+// addition we can distinguish between the 'StackArgumentsSpaceRegion' of the
+// 'P' arguments being different on every iteration.
 
 typedef __INTPTR_TYPE__ intptr_t;
 

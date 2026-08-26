@@ -2046,7 +2046,8 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
 // Replaces ExtractVectorForPart instructions with ICMP when the VF is scalar
 // and the source is a WideActiveLaneMask. The unused mask is removed later
 // when removing dead recipes.
-static bool replaceMaskWithCompare(VPlan &Plan, ElementCount BestVF) {
+static bool replaceMaskWithCompareForScalarPlan(VPlan &Plan,
+                                                ElementCount BestVF) {
   if (!BestVF.isScalar())
     return false;
 
@@ -2150,7 +2151,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
   bool MadeChange =
       simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
-  MadeChange |= replaceMaskWithCompare(Plan, BestVF);
+  MadeChange |= replaceMaskWithCompareForScalarPlan(Plan, BestVF);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
 
   if (MadeChange) {
@@ -4920,6 +4921,12 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
                                              WidenRecipe->getDebugLoc())
                      : BlendCond;
   }
+
+  // When folding the tail, the inactive lanes of the reduction update are
+  // computed from values that do not correspond to any scalar iteration
+  // and must not be accumulated.
+  if (!Cond)
+    Cond = Plan.getVectorLoopRegion()->getHeaderMask();
 
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue ||

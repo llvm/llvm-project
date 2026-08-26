@@ -202,24 +202,7 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[MUL_X:%.*]] = add i32 [[X]], 1
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; DEFAULT:       [[VECTOR_SCEVCHECK]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[MUL_X]], 0
-; DEFAULT-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 [[MUL_X]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = trunc i64 [[N]] to i32
-; DEFAULT-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP3]], i32 [[TMP4]])
-; DEFAULT-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i32 0, [[MUL_RESULT]]
-; DEFAULT-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP5]], 0
-; DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 false
-; DEFAULT-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[N]], 4294967295
-; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[MUL_X]], 0
-; DEFAULT-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; DEFAULT-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
@@ -253,7 +236,7 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -313,25 +296,7 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[X]]
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; DEFAULT:       [[VECTOR_SCEVCHECK]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[X]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
-; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[MUL]], 0
-; DEFAULT-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 [[MUL]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = trunc i64 [[N]] to i32
-; DEFAULT-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP4]], i32 [[TMP5]])
-; DEFAULT-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i32 0, [[MUL_RESULT]]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], 0
-; DEFAULT-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 false
-; DEFAULT-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[N]], 4294967295
-; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[MUL]], 0
-; DEFAULT-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; DEFAULT-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
-; DEFAULT-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = and i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP14]]
@@ -369,12 +334,12 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; DEFAULT-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
 ; DEFAULT-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP]] ]
-; DEFAULT-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[IV_2:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP]] ]
 ; DEFAULT-NEXT:    [[IV_1_TRUNC:%.*]] = trunc i64 [[IV_1]] to i32
 ; DEFAULT-NEXT:    [[IV_1_MUL:%.*]] = mul i32 [[MUL]], [[IV_1_TRUNC]]
 ; DEFAULT-NEXT:    [[IV_2_NEXT]] = add i32 [[IV_2]], 1
@@ -435,24 +400,7 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; DEFAULT:       [[VECTOR_SCEVCHECK]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[ADD]], 0
-; DEFAULT-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 [[ADD]]
-; DEFAULT-NEXT:    [[TMP4:%.*]] = trunc i64 [[N]] to i32
-; DEFAULT-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[TMP3]], i32 [[TMP4]])
-; DEFAULT-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; DEFAULT-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i32 0, [[MUL_RESULT]]
-; DEFAULT-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[TMP5]], 0
-; DEFAULT-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 false
-; DEFAULT-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; DEFAULT-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[N]], 4294967295
-; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp ne i32 [[ADD]], 0
-; DEFAULT-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
-; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; DEFAULT-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP13]]
@@ -490,8 +438,8 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
 ; DEFAULT-NEXT:    [[IV_1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], %[[LOOP]] ]

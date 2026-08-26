@@ -10,8 +10,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCGOFFAttributes.h"
-#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
@@ -489,6 +487,18 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
+}
+
+void SystemZHLASMAsmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                               Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+  MCSectionGOFF *Section =
+      Symbol->getSectionForCommonSymbol(getContext(), ByteAlignment);
+  pushSection();
+  switchSection(Section);
+  emitLabel(Symbol, SMLoc());
+  emitZeros(Size);
+  popSection();
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {
