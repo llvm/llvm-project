@@ -14,9 +14,13 @@
 
 // <cmath>
 
-// floating-point-type assoc_laguerre( unsigned n, unsigned m, floating-point-type x);
-// float               assoc_laguerref(unsigned n, unsigned m, float x              );
-// long double         assoc_laguerrel(unsigned n, unsigned m, long double x        );
+// double         assoc_laguerre(unsigned n, unsigned m, double x);
+// float          assoc_laguerre(unsigned n, unsigned m, float x);
+// long double    assoc_laguerre(unsigned n, unsigned m, long double x);
+// float          assoc_laguerref(unsigned n, unsigned m, float x);
+// long double    assoc_laguerrel(unsigned n, unsigned m, long double x);
+// template <class Integer>
+// double         assoc_laguerre(unsigned n, unsigned m, Integer x);
 
 #include <cassert>
 #include <cmath>

@@ -51,9 +51,9 @@ assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexcept {
   return __cmath::__assoc_laguerre(__n, __m, __x);
 }
 
-template <class _Int, std::enable_if_t<std::is_integral_v<_Int>, int> = 0>
+template <class _Integer, std::enable_if_t<std::is_integral_v<_Integer>, int> = 0>
 [[nodiscard]] _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_HIDE_FROM_ABI double
-assoc_laguerre(unsigned __n, unsigned __m, _Int __x) noexcept {
+assoc_laguerre(unsigned __n, unsigned __m, _Integer __x) noexcept {
   return __cmath::__assoc_laguerre(__n, __m, static_cast<double>(__x));
 }
 
