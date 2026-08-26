@@ -33,8 +33,6 @@
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
-#include <limits>
-
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::sys;
@@ -1008,15 +1006,7 @@ static void orderObjCStubsByCallerPriority(
   if (stubPriority.empty())
     return;
 
-  auto priorityOf = [&](const Defined *sym) {
-    auto it = stubPriority.find(sym);
-    // Stubs with no prioritized caller sort last, keeping their original order.
-    return it == stubPriority.end() ? std::numeric_limits<int>::max()
-                                    : it->second;
-  };
-  in.objcStubs->sortSymbols([&](const Defined *a, const Defined *b) {
-    return priorityOf(a) < priorityOf(b);
-  });
+  in.objcStubs->sortSymbols(stubPriority);
 }
 
 // Sorting only can happen once all outputs have been collected. Here we sort

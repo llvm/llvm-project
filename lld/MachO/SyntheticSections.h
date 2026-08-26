@@ -346,10 +346,9 @@ public:
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
-  /// Stably sort the stubs by \p less and reassign their offsets. Must run
-  /// before addresses are assigned.
-  void
-  sortSymbols(llvm::function_ref<bool(const Defined *, const Defined *)> less);
+  /// Stably sort the stubs by \p priorities and reassign their offsets. Must
+  /// run before addresses are assigned.
+  void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
 
 private:
   std::vector<Defined *> symbols;

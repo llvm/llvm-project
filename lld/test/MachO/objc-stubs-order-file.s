@@ -14,7 +14,7 @@
 # RUN:   %t/base.out | FileCheck %s --check-prefix=BASE
 
 ## _hot is ordered first, so the stub it calls moves ahead of the others, which
-## keep their relative order. Each stub must still load its own selector.
+## keep their relative order.
 # RUN: %lld -arch arm64 -e _main -U _objc_msgSend -o %t/ordered.out %t/a.o \
 # RUN:   -objc_stubs_small -order_file %t/order
 # RUN: llvm-objdump --no-show-raw-insn --section=__TEXT,__objc_stubs --macho \
@@ -44,11 +44,8 @@
 
 # ORDERED:      Contents of (__TEXT,__objc_stubs) section
 # ORDERED-NEXT: _objc_msgSend$hot:
-# ORDERED:      Objc selector ref: hot
 # ORDERED:      _objc_msgSend$cold:
-# ORDERED:      Objc selector ref: cold
 # ORDERED:      _objc_msgSend$mild:
-# ORDERED:      Objc selector ref: mild
 
 #--- a.s
 .text

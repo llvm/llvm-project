@@ -26,6 +26,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
+#include <limits>
+
 #if defined(__APPLE__)
 #include <sys/mman.h>
 
@@ -945,11 +947,18 @@ uint64_t ObjCStubsSection::getSize() const {
 }
 
 void ObjCStubsSection::sortSymbols(
-    llvm::function_ref<bool(const Defined *, const Defined *)> less) {
+    const llvm::DenseMap<const Symbol *, int> &priorities) {
   auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
                       ? target->objcStubsFastSize
                       : target->objcStubsSmallSize;
-  llvm::stable_sort(symbols, less);
+  llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
+    auto priority = [&](const Defined *sym) {
+      auto it = priorities.find(sym);
+      return it == priorities.end() ? std::numeric_limits<int>::max()
+                                    : it->second;
+    };
+    return priority(a) < priority(b);
+  });
   for (auto [idx, sym] : llvm::enumerate(symbols))
     sym->value = idx * stubSize;
 }

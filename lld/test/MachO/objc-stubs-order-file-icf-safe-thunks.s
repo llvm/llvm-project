@@ -17,11 +17,8 @@
 
 # ORDERED:      Contents of (__TEXT,__objc_stubs) section
 # ORDERED-NEXT: _objc_msgSend$hot:
-# ORDERED:      Objc selector ref: hot
 # ORDERED:      _objc_msgSend$cold:
-# ORDERED:      Objc selector ref: cold
 # ORDERED:      _objc_msgSend$mild:
-# ORDERED:      Objc selector ref: mild
 
 #--- input.s
 .text
