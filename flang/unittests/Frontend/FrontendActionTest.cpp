@@ -39,7 +39,7 @@ protected:
 
   std::shared_ptr<CompilerInvocation> invoc =
       std::make_shared<CompilerInvocation>();
-  CompilerInstance compInst{invoc};
+  CompilerInstance compInst(invoc);
 
   void SetUp() override {
     // Generate a unique test file name.
