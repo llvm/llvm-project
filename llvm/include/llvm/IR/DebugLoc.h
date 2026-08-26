@@ -239,8 +239,11 @@ public:
   appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt, LLVMContext &Ctx,
                   DenseMap<const MDNode *, MDNode *> &Cache);
 
-  /// Return true if the source locations match, ignoring isImplicitCode and
-  /// source atom info.
+  /// Return true if the source locations match, ignoring isImplicitCode,
+  /// source atom info and intermediate-IR layers. Layers are deliberately not
+  /// part of this comparison: two locations at the same source position are the
+  /// same source position regardless of which intermediate IR they came from.
+  /// Callers that must also match layers use isSameSourceLocationAndIRLayers.
   bool isSameSourceLocation(const DebugLoc &Other) const {
     if (get() == Other.get())
       return true;
@@ -249,10 +252,22 @@ public:
            getInlinedAt() == Other.getInlinedAt();
   }
 
+  /// As isSameSourceLocation, and additionally requires the intermediate-IR
+  /// layers to match. For callers that replace a location wholesale, or that
+  /// emit something derived from the layers.
+  bool isSameSourceLocationAndIRLayers(const DebugLoc &Other) const {
+    return isSameSourceLocation(Other) &&
+           getRawIRLayers() == Other.getRawIRLayers();
+  }
+
   LLVM_ABI unsigned getLine() const;
   LLVM_ABI unsigned getCol() const;
   LLVM_ABI MDNode *getScope() const;
   LLVM_ABI DILocation *getInlinedAt() const;
+  /// The raw intermediate-IR layer list (\a DILayerLocList) of the underlying
+  /// location, or null. Out-of-line so this header need not see DILocation's
+  /// definition.
+  LLVM_ABI MDNode *getRawIRLayers() const;
 
   /// Get the fully inlined-at scope for a DebugLoc.
   ///

@@ -854,11 +854,16 @@ private:
   DILocation *getReplacementMDLocation(DILocation *MLD) {
     auto *Scope = map(MLD->getScope());
     auto *InlinedAt = map(MLD->getInlinedAt());
+    // Intermediate-IR layers are line-table data (a line/column in a DIFile),
+    // so they survive the downgrade to line-tables-only.
+    Metadata *IRLayers = map(MLD->getRawIRLayers());
     if (MLD->isDistinct())
-      return DILocation::getDistinct(MLD->getContext(), MLD->getLine(),
-                                     MLD->getColumn(), Scope, InlinedAt);
+      return DILocation::getDistinct(
+          MLD->getContext(), MLD->getLine(), MLD->getColumn(), Scope, InlinedAt,
+          /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
     return DILocation::get(MLD->getContext(), MLD->getLine(), MLD->getColumn(),
-                           Scope, InlinedAt);
+                           Scope, InlinedAt, /*ImplicitCode=*/false,
+                           /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
   }
 
   /// Create a new generic MDNode, to replace the one given
@@ -889,6 +894,12 @@ private:
       if (auto *CU = dyn_cast<DICompileUnit>(N))
         return getReplacementCU(CU);
       if (isa<DIFile>(N))
+        return N;
+      // Intermediate-IR layer nodes hold only a kind string and a DIFile, so
+      // none of their content is part of the type hierarchy being stripped. The
+      // generic fallback below would rebuild them as plain MDTuples, which
+      // DILocation::getIRLayers() cannot cast.
+      if (isa<DILayerLoc>(N) || isa<DILayerLocList>(N))
         return N;
       if (auto *MDLB = dyn_cast<DILexicalBlockBase>(N))
         // Remap to our referenced scope (recursively).
@@ -993,8 +1004,12 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);
           InlinedAt = remap(InlinedAt);
+          // Layers need no remapping (Mapper maps them to themselves), but they
+          // do need carrying over -- they are line-table data.
           return DILocation::get(M.getContext(), DL.getLine(), DL.getCol(),
-                                 Scope, InlinedAt);
+                                 Scope, InlinedAt, /*ImplicitCode=*/false,
+                                 /*AtomGroup=*/0, /*AtomRank=*/0,
+                                 DL.getRawIRLayers());
         };
 
         if (I.getDebugLoc() != DebugLoc())

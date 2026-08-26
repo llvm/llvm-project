@@ -918,11 +918,17 @@ public:
 
   /// This implements the DWARF2 '.loc fileno lineno ...' assembler
   /// directive.
+  ///
+  /// \p LocOpcode selects the directive mnemonic, allowing a target to emit a
+  /// variant such as NVPTX's `.loc_intermediate`. It only affects textual
+  /// output: MCAsmStreamer prints it, while this implementation and
+  /// MCObjectStreamer record the location in the line table and ignore it, so a
+  /// non-default mnemonic is silently dropped when not emitting assembly.
   virtual void emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                      unsigned Column, unsigned Flags,
                                      unsigned Isa, unsigned Discriminator,
-                                     StringRef FileName,
-                                     StringRef Comment = {});
+                                     StringRef FileName, StringRef Comment = {},
+                                     StringRef LocOpcode = ".loc");
 
   /// This is same as emitDwarfLocDirective, except it has the capability to
   /// add inlined_at information.

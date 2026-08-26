@@ -154,6 +154,63 @@ Example: 32-bit PTX for CUDA Driver API: `nvptx-nvidia-cuda`
 
 Example: 64-bit PTX for CUDA Driver API: `nvptx64-nvidia-cuda`
 
+### Multi-Level Line Tables
+
+A GPU program is often lowered through one or more intermediate IRs before
+reaching LLVM IR, and a tool may want to map an address back to a position in
+each of them, not just to the original source. A `DILocation` can carry those
+extra positions in its `irlayers:` field, which points at a `DILayerLocList` of
+`DILayerLoc` entries — see
+[LangRef](LangRef.md#dilayerloc). NVPTX is currently the only
+consumer; other targets ignore the field.
+
+For each layer on an instruction's location, the backend emits a secondary
+directive immediately after the primary `.loc`:
+
+```text
+.loc 1 2 5                  // primary source position
+.loc_intermediate 2 100 10  // position in the intermediate IR
+```
+
+The layer's `DIFile` becomes an ordinary `.file` entry, so `.loc_intermediate`
+refers to it by file number exactly as `.loc` does.
+
+The layer's intermediate IR text travels with it, in a
+`.nv_intermediate_source_section`, so a consumer can show that IR without needing
+the file on disk:
+
+```text
+.nv_intermediate_source_section {
+  .code_block {
+    .ir_name: "tile ir"
+    .sourceFileName: 2
+    .source_begin
+...intermediate IR text...
+.source_end
+  }
+}
+```
+
+`.ir_name` comes from `DILayerLoc`'s `kind:` and `.sourceFileName` is the file
+number the `.code_block` describes. `ptxas` stores that text keyed by the
+secondary file's *name*, so the name must be unique per file rather than
+human-readable: the backend uses the `DIFile`'s checksum digest when it has one
+and a hash of the file's path otherwise.
+
+The text comes from the layer `DIFile`'s `source:` field, and a layer is only
+emitted when that field is present. A `.loc_intermediate` pointing at a file with
+no `.code_block` is not accepted, so rather than emit a reference that cannot be
+resolved, a layer whose `DIFile` has no `source:` is dropped entirely — it
+contributes no `.loc_intermediate`, no `.file` entry, and no `.code_block`. A
+producer that wants intermediate positions in the output must therefore also
+carry the intermediate text.
+
+Layer positions are preserved across inlining and location merging. A layer
+attaches to the inline frame it originated from, and emission resolves an
+instruction to the nearest enclosing frame that carries one, so code inlined into
+a layered region is attributed to the enclosing layer position rather than
+losing its intermediate attribution.
+
 (nvptx-arch-hierarchy)=
 
 ## NVPTX Architecture Hierarchy and Ordering

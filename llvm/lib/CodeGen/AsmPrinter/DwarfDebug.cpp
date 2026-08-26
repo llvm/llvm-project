@@ -2276,6 +2276,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
         // Reinstate the source location but not marked as a statement.
         RecordSourceLine(DL, Flags);
       }
+      // No new line-table row is needed for an unchanged primary location, but
+      // a target may still have to emit directives derived from operands the
+      // line table ignores.
+      recordTargetSameSourceLine(DL, Flags);
       return;
     }
   }

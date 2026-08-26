@@ -1356,6 +1356,14 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     GlobalsEmitted = true;
   }
 
+  // Take the intermediate files while the DwarfDebug is still alive
+  // (AsmPrinter::doFinalization destroys it). Only the borrowed descriptors
+  // move; the source text stays in metadata and is streamed below, after the
+  // .file directives, so ptxas can resolve .sourceFileName references.
+  NVPTXDwarfDebug::IntermediateFileVec IntermediateFiles;
+  if (auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug()))
+    IntermediateFiles = NVDD->takeIntermediateFiles();
+
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
 
@@ -1372,6 +1380,23 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   // Output last DWARF .file directives, if any.
   TS->outputDwarfFileDirectives();
+
+  // Every recorded file has source text (recordIntermediateLoc drops the
+  // others), so each entry produces a .code_block. Each block streams straight
+  // from metadata rather than through an owning copy of the whole payload.
+  if (!IntermediateFiles.empty()) {
+    OutStreamer->emitRawText(".nv_intermediate_source_section {");
+    for (const auto &[FileNo, Info] : IntermediateFiles) {
+      OutStreamer->emitRawText("  .code_block {");
+      OutStreamer->emitRawText(Twine("    .ir_name: \"") + Info.Kind + "\"");
+      OutStreamer->emitRawText(Twine("    .sourceFileName: ") + Twine(FileNo));
+      OutStreamer->emitRawText("    .source_begin");
+      OutStreamer->emitRawText(Info.Source);
+      OutStreamer->emitRawText(".source_end");
+      OutStreamer->emitRawText("  }");
+    }
+    OutStreamer->emitRawText("}");
+  }
 
   return ret;
 }

@@ -734,6 +734,12 @@ protected:
   /// Target-specific source line recording.
   virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
 
+  /// Target-specific recording for an instruction whose primary source location
+  /// matches the previous instruction's, so the line table needs no new row. A
+  /// target that emits directives derived from location operands the line table
+  /// ignores can still emit them here.
+  virtual void recordTargetSameSourceLine(const DebugLoc &DL, unsigned Flags) {}
+
   /// Target-specific compile unit attribute finalization.
   virtual void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                           DwarfCompileUnit &NewCU) {}

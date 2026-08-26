@@ -1938,7 +1938,8 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
   auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
   return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
                          OrigDL.getScope(), IA, OrigDL.isImplicitCode(),
-                         OrigDL->getAtomGroup(), OrigDL->getAtomRank());
+                         OrigDL->getAtomGroup(), OrigDL->getAtomRank(),
+                         OrigDL.getRawIRLayers());
 }
 
 /// Update inlined instructions' line numbers to
@@ -1960,9 +1961,13 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Create a unique call site, not to be confused with any other call from the
   // same location.
+  // Preserve the call site's irlayers so the (outermost) inlined-at
+  // frame keeps its intermediate-IR snapshot instead of being stripped.
   InlinedAtNode = DILocation::getDistinct(
       Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
-      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt());
+      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt(),
+      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+      InlinedAtNode->getRawIRLayers());
 
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each
