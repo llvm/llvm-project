@@ -47,11 +47,12 @@ following properties:
     -   This attribute defines the symbolic 'name' of the operation.
 *   A [visibility](#symbol-visibility) (`getVisibility`/`setVisibility`)
     -   The visibility defines in which scopes the symbol may be accessed.
-    -   By default this is stored in an optional `StringAttr` attribute named
+    -   By default this is stored in an optional inherent `StringAttr` named
         'SymbolOpInterface::getDefaultVisibilityAttrName()'(`sym_visibility`),
         where the absence of the attribute means public visibility. Operations
         may override `getVisibility`/`setVisibility` to use a different
-        representation.
+        representation. Client code should not make any assumptions about the
+        presence of a visibility attribute.
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.
