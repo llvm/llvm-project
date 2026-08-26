@@ -811,6 +811,15 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
           return E;
         if (Error E = readVaruint32(Ctx, DataSegments[I].Data.LinkingFlags))
           return E;
+        DataSegments[I].Data.Name = readString(Ctx);
+        DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        if (DataSegments[I].Data.Alignment > 32)
+          return make_error<GenericBinaryError>(
+              "invalid data segment alignment: `" + DataSegments[I].Data.Name +
+                  "` (alignment: " + Twine(DataSegments[I].Data.Alignment) +
+                  ")",
+              object_error::parse_failed);
+        DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
       }
       break;
     }
@@ -1016,6 +1025,11 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                 object_error::parse_failed);
           auto Size = readVaruint64(Ctx);
           auto Alignment = readUint8(Ctx);
+          if (Alignment > 32)
+            return make_error<GenericBinaryError>(
+                "invalid common symbol alignment: `" + Info.Name +
+                    "` (alignment: " + Twine(unsigned(Alignment)) + ")",
+                object_error::parse_failed);
           Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
         } else {
           auto Index = readVaruint32(Ctx);

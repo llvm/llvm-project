@@ -717,7 +717,7 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult ForOp::verifyRegions() {
@@ -740,7 +740,7 @@ LogicalResult ForOp::verifyRegions() {
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -955,7 +955,7 @@ void IfOp::print(OpAsmPrinter &p) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -1747,7 +1747,8 @@ void DoOp::print(OpAsmPrinter &p) {
   p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
   p << " while ";
   p.printRegion(getConditionRegion());
-  p.printOptionalAttrDictWithKeyword(getOperation()->getAttrs());
+  p.printOptionalAttrDictWithKeyword(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult emitc::DoOp::verify() {

@@ -94,7 +94,7 @@ static bool isOpInSerialRegion(Operation *op) {
     return computeRegion.isEffectivelySerial();
   if (auto funcOp = op->getParentOfType<FunctionOpInterface>()) {
     if (isSpecializedAccRoutine(funcOp)) {
-      auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
+      auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
           getSpecializedRoutineAttrName());
       if (attr && attr.getLevel().getValue() == ParLevel::seq)
         return true;
