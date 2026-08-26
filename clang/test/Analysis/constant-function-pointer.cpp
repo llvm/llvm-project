@@ -1,8 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -verify %s
 
-void clang_analyzer_dump(const char *);
-void clang_analyzer_dump(const bool);
+template <class T>
+void clang_analyzer_dump(T);
 void clang_analyzer_eval(bool);
 
 using Callback = void (*)(const char *);
@@ -17,7 +17,7 @@ static void pointerTarget(const char *Value) {
     Ptr = &Storage;
 
   clang_analyzer_dump(Value); // expected-warning{{"pointer"}}
-  *Ptr = 0;
+  *Ptr = 0; // no-warning: Ptr is never null here.
 }
 
 static void referenceTarget(const char *Value) {
@@ -27,7 +27,7 @@ static void referenceTarget(const char *Value) {
     Ptr = &Storage;
 
   clang_analyzer_dump(Value); // expected-warning{{"reference"}}
-  *Ptr = 0;
+  *Ptr = 0; // no-warning: Ptr is never null here.
 }
 
 static Callback const ConstPointer = pointerTarget;
@@ -38,13 +38,7 @@ static CallbackRef Reference = referenceTarget;
 
 extern CallbackRef ExternalReference;
 
-void myGlobalFn();
-static const bool Truthy = &myGlobalFn;
-
 void testPointers(unsigned Value) {
-  if (Value != 1)
-    return;
-
   clang_analyzer_eval(ConstPointer == pointerTarget); // expected-warning{{TRUE}}
   ConstPointer("pointer");
   clang_analyzer_eval(AddressPointer == pointerTarget); // expected-warning{{TRUE}}
@@ -53,9 +47,6 @@ void testPointers(unsigned Value) {
 }
 
 void testReference(unsigned Value) {
-  if (Value != 1)
-    return;
-
   clang_analyzer_eval(Reference == referenceTarget); // expected-warning{{TRUE}}
   Reference("reference");
 }
@@ -66,6 +57,9 @@ void testExternalReference() {
   Callback Before = ExternalReference;
   clang_analyzer_eval(ExternalReference == Before); // expected-warning{{TRUE}}
 }
+
+void myGlobalFn();
+static const bool Truthy = &myGlobalFn;
 
 // Verify that a function pointer converted to bool
 // is modeled as `true`, not as FunctionCodeRegion.
