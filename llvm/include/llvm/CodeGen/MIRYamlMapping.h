@@ -228,13 +228,13 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
                        StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("flags", Reg.RegisterFlags,
                        std::vector<FlowStringValue>());
-    if (!YamlIO.outputting() || !Reg.AntiHints.empty())
-      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
-                         std::vector<FlowStringValue>());
     // MIRPrinter sets WriteDefaultValues=true unless -simplify-mir is passed,
     // so a plain mapOptional with an empty default would still emit the keys
     // and change every existing test's output.
     // Skip the call on output when empty to keep them off entirely.
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty())
+      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
+                         std::vector<FlowStringValue>());
     if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
       YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
     if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())
