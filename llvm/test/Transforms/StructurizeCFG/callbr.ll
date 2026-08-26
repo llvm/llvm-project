@@ -5,7 +5,7 @@
 ; untouched and structurizing the surrounding CFG around it. Every callbr edge
 ; (if it's reachable and not already in a trivial bypass shape, aka an
 ; unconditional branch as the only instruction) is interposed with a bypass
-; block (via SplitCallBrEdge) so the targets are not direct successors of the
+; block (via SplitMultiBrEdge) so the targets are not direct successors of the
 ; immutable callbr; the bypasses then converge into a Flow block whose
 ; "island.sel" phis recover, as data, which target the callbr selected, and a
 ; ladder of 2-way Flow branches re-dispatches to the targets.  Loop back-edges
@@ -256,7 +256,7 @@ join:
 }
 
 ; A shared target that also has a non-callbr predecessor, so the callbr does not
-; dominate it. SplitCallBrEdge then omits the forwarder->target dominator edge;
+; dominate it. SplitMultiBrEdge then omits the forwarder->target dominator edge;
 ; collapsing the duplicate edge must still leave a correct dominator tree.
 define void @callbr_shared_target_not_dominated(i1 %c, i1 %d) {
 ; CHECK-LABEL: define void @callbr_shared_target_not_dominated(
@@ -328,6 +328,69 @@ a:
   br label %join
 join:
   ret void
+}
+
+; A shared target whose phi cannot be folded away: an extra non-callbr
+; predecessor contributes a different value, so the phi survives
+; simplification. Collapsing the duplicate callbr edge must drop the stale
+; island incoming itself, which the shared-target tests above cannot catch
+; because a duplicate edge forces identical incoming values.
+define i32 @callbr_shared_target_unfoldable_phi(i1 %c, i1 %d) {
+; CHECK-LABEL: define i32 @callbr_shared_target_unfoldable_phi(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_INV:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br i1 [[C_INV]], label %[[W:.*]], label %[[FLOW4:.*]]
+; CHECK:       [[W]]:
+; CHECK-NEXT:    br label %[[FLOW4]]
+; CHECK:       [[FLOW4]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, %[[W]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %[[W]] ], [ true, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[FLOW2:.*]], label %[[FLOW5:.*]]
+; CHECK:       [[FLOW2]]:
+; CHECK-NEXT:    br label %[[PRE:.*]]
+; CHECK:       [[FLOW5]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 7, %[[FLOW3:.*]] ], [ 9, %[[FLOW4]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[ISLAND_SEL:%.*]], %[[FLOW3]] ], [ [[TMP0]], %[[FLOW4]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[X:.*]], label %[[JOIN:.*]]
+; CHECK:       [[PRE]]:
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[PRE_TARGET_X:.*]] [label %[[PRE_TARGET_X]], label %[[Y:.*]]]
+; CHECK:       [[X]]:
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[TMP2]], 1
+; CHECK-NEXT:    br i1 [[D]], label %[[A:.*]], label %[[FLOW:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[Y]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[FLOW3]]:
+; CHECK-NEXT:    [[ISLAND_SEL]] = phi i1 [ true, %[[PRE_TARGET_X]] ], [ false, %[[Y]] ]
+; CHECK-NEXT:    br label %[[FLOW5]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[Q:%.*]] = phi i32 [ 0, %[[FLOW5]] ], [ [[S]], %[[FLOW]] ]
+; CHECK-NEXT:    ret i32 [[Q]]
+; CHECK:       [[PRE_TARGET_X]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+;
+entry:
+  br i1 %c, label %pre, label %w
+w:
+  br label %x
+pre:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %y]
+x:
+  %p = phi i32 [ 7, %pre ], [ 7, %pre ], [ 9, %w ]
+  %s = add i32 %p, 1
+  br i1 %d, label %a, label %join
+a:
+  br label %join
+y:
+  br label %join
+join:
+  %q = phi i32 [ %s, %a ], [ %s, %x ], [ 0, %y ]
+  ret i32 %q
 }
 
 ; One indirect target is already trivial (single unconditional branch);
