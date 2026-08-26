@@ -786,6 +786,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen)
       .unsupported();
 
+  getActionDefinitionsBuilder(G_PREFETCH).legalIf(typeIs(0, p0));
+
   LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
     LLT VecTy = Query.Types[0];
     LLT EltTy = Query.Types[1];
