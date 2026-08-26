@@ -18,9 +18,7 @@
 #include <cstddef>
 #include <iterator>
 
-#include "test_macros.h"
-
-struct TEST_ALIGNAS(8) Foo {
+struct alignas(8) Foo {
   int x;
 
   constexpr Foo(int y) : x(y) {}
@@ -29,7 +27,7 @@ struct TEST_ALIGNAS(8) Foo {
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX14 bool tests() {
+constexpr bool tests() {
   Foo array[]       = {40, 41, 42, 43, 44};
   Foo* b            = array + 0;
   Foo* e            = array + 5;

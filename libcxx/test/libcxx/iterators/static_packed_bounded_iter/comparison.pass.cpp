@@ -27,7 +27,7 @@ struct alignas(4) Foo {
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX14 bool tests() {
+constexpr bool tests() {
   Foo array[]             = {0, 1};
   Foo* b                  = array + 0;
   using BoundedIter       = std::__static_packed_bounded_iterator<Iter, decltype(array), std::size(array)>;
@@ -70,11 +70,8 @@ TEST_CONSTEXPR_CXX14 bool tests() {
     assert(iter1 >= iter1);
   }
 
-#if TEST_STD_VER >= 20
-  // P1614
   std::same_as<std::strong_ordering> decltype(auto) r1 = iter1 <=> iter2;
   assert(r1 == std::strong_ordering::less);
-#endif
 
   return true;
 }

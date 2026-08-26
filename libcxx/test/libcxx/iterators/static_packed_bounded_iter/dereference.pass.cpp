@@ -17,15 +17,13 @@
 #include <cassert>
 #include <iterator>
 
-#include "test_macros.h"
-
 struct alignas(8) Foo {
   char x;
   constexpr bool operator==(Foo const& other) const { return x == other.x; }
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX14 bool tests() {
+constexpr bool tests() {
   Foo array[] = {Foo{40}, Foo{41}, Foo{42}, Foo{43}, Foo{44}};
   Foo* b      = array + 0;
 
