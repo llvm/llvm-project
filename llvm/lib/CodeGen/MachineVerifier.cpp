@@ -159,6 +159,7 @@ struct MachineVerifier {
 
   const MachineInstr *FirstNonPHI = nullptr;
   const MachineInstr *FirstTerminator = nullptr;
+  const MachineInstr *FirstSuccArgs = nullptr;
   BlockSet FunctionBlocks;
 
   BitVector regsReserved;
@@ -742,6 +743,7 @@ void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
+  FirstSuccArgs = nullptr;
 
   if (MRI->tracksLiveness() && hasPHIs(*MF)) {
     // If this block has allocatable physical registers live-in, check that
@@ -956,6 +958,19 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
       report("Non-terminator instruction after the first terminator", MI);
       OS << "First terminator was:\t" << *FirstTerminator;
     }
+  }
+
+  // SUCC_ARGS instructions must be clustered contiguously immediately before
+  // the terminators, mirroring how PHIs are clustered at the top of a block.
+  // Once a SUCC_ARGS has been seen, only more SUCC_ARGS or terminators may
+  // follow - not even debug instructions, so that the succ_args() range (which
+  // spans getFirstSuccArgs()..getFirstTerminator()) yields only SUCC_ARGS.
+  if (MI->isSuccArgs()) {
+    if (!FirstSuccArgs)
+      FirstSuccArgs = MI;
+  } else if (FirstSuccArgs && !MI->isTerminator()) {
+    report("Non-terminator instruction after SUCC_ARGS", MI);
+    OS << "First SUCC_ARGS was:\t" << *FirstSuccArgs;
   }
 }
 
@@ -2359,6 +2374,13 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Found PHI instruction after non-PHI", MI);
   } else if (FirstNonPHI == nullptr)
     FirstNonPHI = MI;
+
+  if (MI->isSuccArgs()) {
+    if (MI->getNumOperands() < 1 || !MI->getOperand(0).isMBB())
+      report("SUCC_ARGS must have a successor block operand", MI);
+    else if (MI->getNumOperands() < 2)
+      report("SUCC_ARGS must forward at least one value", MI);
+  }
 
   // Check the tied operands.
   if (MI->isInlineAsm())

@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=dead-mi-elimination -o - %s | FileCheck %s
+# A SUCC_ARGS defines no register but is not dead: dead-MI elimination must
+# preserve it.
+
+---
+name: f
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: f
+  bb.0:
+    successors: %bb.1
+    %0:gr32 = MOV32ri 7
+    ; CHECK: SUCC_ARGS %bb.1, %0
+    SUCC_ARGS %bb.1, %0
+    JMP_1 %bb.1
+
+  bb.1:
+    %1:gr32 = COPY %0
+    RET64
+...

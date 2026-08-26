@@ -251,6 +251,19 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminator() {
   return I;
 }
 
+MachineBasicBlock::iterator MachineBasicBlock::getFirstSuccArgs() {
+  // SUCC_ARGS are clustered contiguously immediately before the terminators,
+  // mirroring how PHIs are clustered at the top of a block. Walk backward from
+  // the first terminator over that cluster; the result is the first SUCC_ARGS,
+  // or the first terminator if there are none. Nothing (not even a debug
+  // instruction) may be interspersed in the cluster, so the succ_args() range
+  // yields only SUCC_ARGS.
+  iterator B = begin(), I = getFirstTerminator();
+  while (I != B && std::prev(I)->isSuccArgs())
+    --I;
+  return I;
+}
+
 MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   instr_iterator B = instr_begin(), E = instr_end(), I = E;
   while (I != B && ((--I)->isTerminator() || I->isDebugInstr()))

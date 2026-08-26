@@ -1332,6 +1332,12 @@ def PHI : StandardPseudoInstruction {
   let AsmString = "PHINODE";
   let hasSideEffects = false;
 }
+def SUCC_ARGS : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$succ, unknown:$val0, variable_ops);
+  let AsmString = "SUCC_ARGS";
+  let hasSideEffects = false;
+}
 def INLINEASM : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
