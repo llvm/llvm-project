@@ -11,24 +11,24 @@
 
 // Compile the module interface unit to verify that the exported inline
 // definition is owned by this TU and retained.
-// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 \
+// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 -triple powerpc64-ibm-aix-xcoff \
 // RUN:   %t/Hello.cppm -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MODULE
 
 // Build the PCM for the import tests below.
-// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -emit-module-interface \
+// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -triple powerpc64-ibm-aix-xcoff -emit-module-interface \
 // RUN:   %t/Hello.cppm -o %t/Hello.pcm
 
 // Compile a TU that imports but does not call hello().
 // The definition is not deserialized, so it is not retained.
-// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 \
+// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 -triple powerpc64-ibm-aix-xcoff \
 // RUN:   -fmodule-file=Hello=%t/Hello.pcm %t/no-use.cpp -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-USE
 
 // Compile a TU that imports and calls hello().
 // Calling hello() deserializes its definition, allowing
 // -fkeep-inline-functions to retain it.
-// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 \
+// RUN: %clang_cc1 -std=c++20 -fkeep-inline-functions -O2 -triple powerpc64-ibm-aix-xcoff \
 // RUN:   -fmodule-file=Hello=%t/Hello.pcm %t/use.cpp -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-USE
 
