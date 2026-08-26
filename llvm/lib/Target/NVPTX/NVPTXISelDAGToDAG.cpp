@@ -1184,11 +1184,9 @@ static std::optional<NVPTX::L2Prefetch> parseL2Prefetch(StringRef Str) {
 }
 
 template <typename T>
-static std::optional<T>
-parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
-                             const Metadata *Value,
-                             std::optional<T> (*Parse)(StringRef),
-                             bool EmitDiagnostics) {
+static std::optional<T> parseMemCacheHintStringValue(
+    LLVMContext &Ctx, StringRef Key, const Metadata *Value,
+    std::optional<T> (*Parse)(StringRef), bool EmitDiagnostics) {
   const auto *Val = dyn_cast<MDString>(Value);
   if (!Val) {
     if (EmitDiagnostics)
