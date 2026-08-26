@@ -13,9 +13,9 @@ define void @two_loops(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; CHECK:       [[ENTRY]]:
@@ -47,9 +47,9 @@ define void @two_loops(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[SMAX6:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[SMAX6]], -1
 ; CHECK-NEXT:    [[UMIN7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 50)
-; CHECK-NEXT:    [[UMAX8:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN7]], i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[UMAX8]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN7]], i64 1)
 ; CHECK-NEXT:    [[SMIN9:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP2]], i64 [[TMP3]])
+; CHECK-NEXT:    [[UMAX8:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN7]], i64 1)
 ; CHECK-NEXT:    [[ITR_CHK12:%.*]] = icmp sle i64 0, [[SMIN9]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK12]], label %[[LS_FINAL_EXIT:.*]], label %[[LS_GUARD111:.*]]
 ; CHECK:       [[LS_FINAL_EXIT]]:

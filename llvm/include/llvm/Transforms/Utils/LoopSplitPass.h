@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class LoopSplitPass : public PassInfoMixin<LoopSplitPass> {
+class LoopSplitPass : public OptionalPassInfoMixin<LoopSplitPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

@@ -146,9 +146,8 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE) {
 
   // One compare operand must be the induction, either the PHI or its step. The
   // rebuilt latch always compares the PHI, so which operand it was is not used.
-  if (any_of(LatchCmp->operands(), [&](Value *Op) {
-        return Op == Induction || Op == StepInst;
-      }))
+  if (any_of(LatchCmp->operands(),
+             [&](Value *Op) { return Op == Induction || Op == StepInst; }))
     return AR;
   return nullptr;
 }

@@ -17,9 +17,9 @@ define void @nest2(ptr %a, i64 %n, i64 %m) {
 ; INNERMOST-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; INNERMOST-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; INNERMOST-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; INNERMOST-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; INNERMOST-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; INNERMOST-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; INNERMOST-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; INNERMOST-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; INNERMOST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; INNERMOST:       [[OUTER_HEADER]]:
 ; INNERMOST-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
@@ -69,9 +69,9 @@ define void @nest2(ptr %a, i64 %n, i64 %m) {
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; DEPTH1-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; DEPTH1-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; DEPTH1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; DEPTH1-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; DEPTH1:       [[ENTRY]]:
@@ -132,9 +132,9 @@ define void @nest2(ptr %a, i64 %n, i64 %m) {
 ; DEPTH2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; DEPTH2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; DEPTH2-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; DEPTH2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; DEPTH2-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; DEPTH2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; DEPTH2-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; DEPTH2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; DEPTH2-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; DEPTH2:       [[OUTER_HEADER]]:
 ; DEPTH2-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
@@ -219,9 +219,9 @@ define void @nest3(ptr %a, i64 %n) {
 ; INNERMOST-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; INNERMOST-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; INNERMOST-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; INNERMOST-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; INNERMOST-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; INNERMOST-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; INNERMOST-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; INNERMOST-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; INNERMOST-NEXT:    br label %[[O_HEADER:.*]]
 ; INNERMOST:       [[O_HEADER]]:
 ; INNERMOST-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[O_LATCH:.*]] ]
@@ -282,9 +282,9 @@ define void @nest3(ptr %a, i64 %n) {
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; DEPTH1-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; DEPTH1-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; DEPTH1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; DEPTH1-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; DEPTH1:       [[ENTRY]]:
@@ -367,9 +367,9 @@ define void @nest3(ptr %a, i64 %n) {
 ; DEPTH2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; DEPTH2-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; DEPTH2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; DEPTH2-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; DEPTH2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; DEPTH2-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; DEPTH2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; DEPTH2-NEXT:    br label %[[O_HEADER:.*]]
 ; DEPTH2:       [[O_HEADER]]:
 ; DEPTH2-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[O_LATCH:.*]] ]
@@ -519,9 +519,9 @@ define void @inner_carried_outer_clean(ptr %a, i64 %n, i64 %m) {
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
 ; DEPTH1-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 2)
-; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; DEPTH1-NEXT:    [[TMP1:%.*]] = add nsw i64 [[UMAX]], -1
+; DEPTH1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; DEPTH1-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
 ; DEPTH1-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
 ; DEPTH1-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
 ; DEPTH1:       [[ENTRY]]:
