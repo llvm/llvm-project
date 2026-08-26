@@ -29,15 +29,15 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
 // Helpers for declaring vector constants containing all lanes the same, in a
 // way that varies between little- and big-endian AArch64. Use as follows:
 //
-//  - define a type for the constant using V2_SPLAT_TYPE or V4_SPLAT_TYPE,
-//    with a parameter like `float64` or `int32` which the macro will extend
-//    into a full scalar or vector type name.
+//  - define a type for the constant using V2_SPLAT_TYPE or V4_SPLAT_TYPE, with
+//    a type-prefix parameter like `float64` or `int32` which the macro will
+//    extend into a full scalar or vector type name.
 //
 //  - define the constant using V2_SPLAT_INITIALIZER or V4_SPLAT_INITIALIZER
 //
-//  - to get the actual vector, use MAKE_SPLAT_VECTOR(constant, type), where
-//    'type' this time is something like `f64` or `u32` which can be used as a
-//    suffix on a NEON intrinsic.
+//  - to get the actual vector, use MAKE_SPLAT_VECTOR(constant, suffix), where
+//    'suffix' is something like `f64` or `u32` which appears in the name of a
+//    NEON intrinsic to specify its element type.
 
 #if __LITTLE_ENDIAN__
 
