@@ -141,6 +141,10 @@ public:
     return FixDataAddress(pc);
   }
 
+  virtual lldb::addr_t FixAnyAddressPreservingAuthentication(lldb::addr_t pc) {
+    return FixAnyAddress(pc);
+  }
+
   llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
 
   virtual void
