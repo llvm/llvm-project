@@ -595,6 +595,7 @@ set(LLVM_ALL_TARGETS
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
   ARC
   CSKY
+  Connex
   DirectX
   M68k
   Xtensa
