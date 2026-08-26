@@ -53,9 +53,6 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
-    environment:
-      deployment: false
-      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
@@ -74,34 +71,23 @@ jobs:
     steps:
     - name: Validate Release Version
       if: inputs.release-version != ''
-      uses: ./.github/workflows/validate-release-version
+      uses: $/.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
-
-    - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-          persist-credentials: false
-
-    - name: Check Permissions
-      if: github.event_name != 'pull_request'
-      uses: ./.github/workflows/require-team-membership
-      with:
-        team-slug: llvm-release-managers
-        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
     # The name of the Windows binaries uses the version from source, so we need
     # to fetch it here.
     - id: version-from-source
       if: runner.os == 'Windows'
-      uses: ./.github/workflows/get-llvm-version
+      uses: $/.github/workflows/get-llvm-version
 
     - name: Collect Variables
       id: vars
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
+        LLVM_VERSION_MAJOR: ${{ steps.version-from-source.outputs.major }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
+        INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -112,7 +98,7 @@ jobs:
       # | X.Y.Z-rcN | -rc N -test-asserts
       # | X.Y.Z     | -final
       run: |
-        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        trimmed=$(echo "$INPUTS_RELEASE_VERSION" | xargs)
         if [ -n "$trimmed" ]; then
           release_version="$trimmed"
           ref="llvmorg-$release_version"
@@ -124,6 +110,14 @@ jobs:
           fi
           ref="$GITHUB_SHA"
         fi
+
+        if [ "$RUNNER_OS" = "Windows" ] && grep -q 'rc' <<< "$release_version"; then
+          # The Wix installer generator does not support strings in the version number,
+          # so we need to fixup the version number for release candidates.
+          # For Example: 23.1.0-rc2 will become 23.0.0.2
+          release_version="$LLVM_VERSION_MAJOR.0.0.$(cut -d c -f2 <<< $release_version)"
+        fi
+
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
         else
@@ -159,6 +153,13 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
+          else
+            arches=x86_64
+            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
+            # 2-3 hours to build on macOS, much slower than on Linux.
+            # The long build time causes the release build to time out on x86_64,
+            # so we need to disable flang there.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
@@ -228,7 +229,7 @@ jobs:
     # to do that we need to specify a specific python version.  It's also
     # good practice to do this on other OSes so the version of python doesn't
     # get changed unexpectedly.
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
         python-version: '3.14.6'
 
@@ -244,7 +245,7 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
@@ -285,6 +286,14 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    # Wix is not installed by default on Windows ARM64
+    - name: Install Wix (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset --version 3.14.1.20250415
+        # Add wix install directory to PATH.
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName >> $env:GITHUB_PATH
+
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
@@ -307,7 +316,7 @@ jobs:
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && always()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
@@ -368,6 +377,9 @@ jobs:
 
   upload-release-binaries:
     name: "Upload Release Binaries"
+    environment:
+      deployment: false
+      name: release
     needs:
       - prepare
       - build-release-package
@@ -380,20 +392,12 @@ jobs:
       attestations: write # For artifact attestations
 
     steps:
-      - name: Checkout Release Scripts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            .github/workflows/upload-release-artifact
-            llvm/utils/release/github-upload-release.py
-            llvm/utils/git/requirements.txt
-          sparse-checkout-cone-mode: false
-
       - name: Upload Artifacts
-        uses: ./.github/workflows/upload-release-artifact
+        uses: $/.github/workflows/upload-release-artifact
         with:
-          release-version: ${{ needs.prepare.outputs.release-version }}
+          # We need to use the inputs.release-version here, because on Windows we
+          # need to fixup the rc version that's stored in needs.prepare.outputs.release-version
+          release-version: ${{ inputs.release-version || needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}

@@ -109,7 +109,7 @@ LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
     return success();
 
   auto getDecorationAttr = [op](spirv::Decoration decoration) {
-    return op->getAttr(spirv::getDecorationString(decoration));
+    return op->getDiscardableAttr(spirv::getDecorationString(decoration));
   };
 
   bool hasAliasedPtr =
@@ -132,13 +132,17 @@ LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
 
 void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary().getValue());
+  op->getName().populateInherentAttrs(op, attrs);
+
   // Print optional descriptor binding
   auto descriptorSetName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::DescriptorSet));
   auto bindingName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::Binding));
-  auto descriptorSet = op->getAttrOfType<IntegerAttr>(descriptorSetName);
-  auto binding = op->getAttrOfType<IntegerAttr>(bindingName);
+  auto descriptorSet =
+      dyn_cast_or_null<IntegerAttr>(attrs.get(descriptorSetName));
+  auto binding = dyn_cast_or_null<IntegerAttr>(attrs.get(bindingName));
   if (descriptorSet && binding) {
     elidedAttrs.push_back(descriptorSetName);
     elidedAttrs.push_back(bindingName);
@@ -149,12 +153,12 @@ void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
   // Print BuiltIn attribute if present
   auto builtInName = llvm::convertToSnakeFromCamelCase(
       stringifyDecoration(spirv::Decoration::BuiltIn));
-  if (auto builtin = op->getAttrOfType<StringAttr>(builtInName)) {
+  if (auto builtin = dyn_cast_or_null<StringAttr>(attrs.get(builtInName))) {
     printer << " " << builtInName << "(\"" << builtin.getValue() << "\")";
     elidedAttrs.push_back(builtInName);
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDict(attrs, elidedAttrs);
 }
 
 static ParseResult parseOneResultSameOperandTypeOp(OpAsmParser &parser,
@@ -200,7 +204,7 @@ static void printOneResultOp(Operation *op, OpAsmPrinter &p) {
 
   p << ' ';
   p.printOperands(op->getOperands());
-  p.printOptionalAttrDict(op->getAttrs());
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue());
   // Now we can output only one type for all operands and the result.
   p << " : " << resultType;
 }
@@ -330,7 +334,7 @@ static ParseResult parseArithmeticExtendedBinaryOp(OpAsmParser &parser,
 static void printArithmeticExtendedBinaryOp(Operation *op,
                                             OpAsmPrinter &printer) {
   printer << ' ';
-  printer.printOptionalAttrDict(op->getAttrs());
+  printer.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue());
   printer.printOperands(op->getOperands());
   printer << " : " << op->getResultTypes().front();
 }
@@ -930,6 +934,59 @@ LogicalResult spirv::EntryPointOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionMode / spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+namespace {
+// Describes the extra operands a SPIR-V ExecutionMode expects: whether they
+// are <id> operands (only valid on spirv.ExecutionModeId) or literal integers
+// (only valid on spirv.ExecutionMode), and how many of them are required.
+struct ExecutionModeOperandSchema {
+  bool isIdOperand;
+  unsigned numOperands;
+};
+
+ExecutionModeOperandSchema
+getExecutionModeOperandSchema(spirv::ExecutionMode mode) {
+  switch (mode) {
+  case spirv::ExecutionMode::Invocations:
+  case spirv::ExecutionMode::OutputVertices:
+  case spirv::ExecutionMode::VecTypeHint:
+  case spirv::ExecutionMode::SubgroupSize:
+  case spirv::ExecutionMode::SubgroupsPerWorkgroup:
+  case spirv::ExecutionMode::DenormPreserve:
+  case spirv::ExecutionMode::DenormFlushToZero:
+  case spirv::ExecutionMode::SignedZeroInfNanPreserve:
+  case spirv::ExecutionMode::RoundingModeRTE:
+  case spirv::ExecutionMode::RoundingModeRTZ:
+  case spirv::ExecutionMode::OutputPrimitivesEXT:
+  case spirv::ExecutionMode::SharedLocalMemorySizeINTEL:
+  case spirv::ExecutionMode::RoundingModeRTPINTEL:
+  case spirv::ExecutionMode::RoundingModeRTNINTEL:
+  case spirv::ExecutionMode::FloatingPointModeALTINTEL:
+  case spirv::ExecutionMode::FloatingPointModeIEEEINTEL:
+  case spirv::ExecutionMode::MaxWorkDimINTEL:
+  case spirv::ExecutionMode::NumSIMDWorkitemsINTEL:
+  case spirv::ExecutionMode::SchedulerTargetFmaxMhzINTEL:
+  case spirv::ExecutionMode::StreamingInterfaceINTEL:
+  case spirv::ExecutionMode::NamedBarrierCountINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSize:
+  case spirv::ExecutionMode::LocalSizeHint:
+  case spirv::ExecutionMode::MaxWorkgroupSizeINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/3};
+  case spirv::ExecutionMode::SubgroupsPerWorkgroupId:
+    return {/*isIdOperand=*/true, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSizeId:
+  case spirv::ExecutionMode::LocalSizeHintId:
+    return {/*isIdOperand=*/true, /*numOperands=*/3};
+  default:
+    return {/*isIdOperand=*/false, /*numOperands=*/0};
+  }
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // spirv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
@@ -977,6 +1034,23 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
     printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
+LogicalResult spirv::ExecutionModeOp::verify() {
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (schema.isIdOperand)
+    return emitOpError("expected ExecutionMode that takes extra operands "
+                       "that are not <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.ExecutionModeId
 //===----------------------------------------------------------------------===//
@@ -1018,20 +1092,18 @@ void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::ExecutionModeIdOp::verify() {
-  // Valid as of SPIRV 1.6
-  switch (getExecutionMode()) {
-  case ExecutionMode::SubgroupsPerWorkgroupId:
-  case ExecutionMode::LocalSizeId:
-  case ExecutionMode::LocalSizeHintId:
-    break;
-  default:
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (!schema.isIdOperand)
     return emitOpError("expected ExecutionMode that takes extra operands that "
                        "are <id> operands, got: ")
            << stringifyExecutionMode(getExecutionMode());
-  }
 
-  if (getValues().empty())
-    return emitOpError("expected at least one value operand");
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
 
   for (Attribute value : getValues()) {
     auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
@@ -1430,8 +1502,7 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
-  if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
-          this->getInitializerAttrName())) {
+  if (FlatSymbolRefAttr init = getInitializerAttr()) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), init.getAttr());
     // TODO: Currently only variable initialization with specialization
@@ -1685,7 +1756,8 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
     elidedAttrs.push_back(spirv::ModuleOp::getVCETripleAttrName());
   }
 
-  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(), elidedAttrs);
+  printer.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue(), elidedAttrs);
   printer << ' ';
   printer.printRegion(getRegion());
 }
@@ -1821,13 +1893,15 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
 void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ';
   printer.printSymbolName(getSymName());
-  if (auto specID = (*this)->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID =
+          (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
     printer << ' ' << kSpecIdAttrName << '(' << specID.getInt() << ')';
   printer << " = " << getDefaultValue();
 }
 
 LogicalResult spirv::SpecConstantOp::verify() {
-  if (auto specID = (*this)->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID =
+          (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
     if (specID.getValue().isNegative())
       return emitOpError("SpecId cannot be negative");
 
@@ -2083,8 +2157,9 @@ LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
     return emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())
-    if (!isa<spirv::ConstantOp, spirv::ReferenceOfOp,
-             spirv::SpecConstantOperationOp>(operand.getDefiningOp()))
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp,
+                         spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
       return emitOpError(
           "invalid operand, must be defined by a constant operation");
 

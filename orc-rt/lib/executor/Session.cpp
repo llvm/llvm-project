@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt-c/Logging.h"
+#include "orc-rt-c/Session.h"
 
 namespace orc_rt {
 
@@ -49,18 +51,24 @@ private:
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
+Session::Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
                  ErrorReporterFn ReportError)
-    : EPI(std::move(EPI)), RunCall(std::move(RunCall)),
+    : EPI(std::move(EPI)), Dispatch(std::move(Dispatch)),
       ReportError(std::move(ReportError)),
-      Notifiers(createService<NotificationService>()) {}
+      Notifiers(createService<NotificationService>()) {
+  ORC_RT_LOG(Info, Session, "Session %p constructed", this);
+}
 
 Session::~Session() {
+  ORC_RT_LOG(Info, Session, "Session %p destructor called", this);
   shutdown();
+  ORC_RT_LOG(Info, Session,
+             "Session %p destructor waiting for shutdown state...", this);
   std::unique_lock<std::mutex> Lock(M);
   CV.wait(Lock, [&]() {
     return CurrentState == State::Shutdown && TargetState == State::None;
   });
+  ORC_RT_LOG(Info, Session, "Session %p destructor complete", this);
 }
 
 void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
@@ -68,10 +76,17 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    // Controller can only be attached from the start state if no
-    // other operation has been requested.
-    if (CurrentState != State::Start || TargetState != State::None)
-      return;
+    // A controller can only be attached from the start state, with no other
+    // operation requested: a Session is attached at most once, and attach must
+    // not be called after -- or concurrently with -- detach or shutdown. See
+    // the Session::attach contract.
+    //
+    // TODO: Settle on a policy for contract violations in release builds
+    // (probably abort) and apply it here. Without the assertions below a
+    // violating attach proceeds, clobbering TargetState and potentially
+    // regressing CurrentState from Detached back to Attached.
+    assert(CurrentState == State::Start && TargetState == State::None &&
+           "attach raced detach / shutdown, or Session already attached");
     assert(std::atomic_load(&this->CA) == nullptr &&
            "ControllerAccess object already attached?");
     std::atomic_store(&this->CA, CA);
@@ -120,10 +135,12 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     CurrentState = State::Attached;
   }
 
+  // Fall through to disconnect from case (3) above.
   CA->disconnect();
 }
 
 void Session::detach(OnDetachFn OnDetach) {
+  ORC_RT_LOG(Info, Session, "Session %p detach called", this);
   addOnDetach(std::move(OnDetach));
 
   std::shared_ptr<ControllerAccess> TmpCA;
@@ -150,7 +167,13 @@ void Session::detach(OnDetachFn OnDetach) {
       TmpCA = std::atomic_load(&this->CA);
     } else {
       assert(CurrentState == State::Start);
-      proceedToDetach(Lock, std::atomic_exchange(&this->CA, {}));
+      // A CA is only ever stored with TargetState raised to Attached, and
+      // TargetState is not lowered back to None until CurrentState reaches
+      // Attached, so reaching the Start state here implies no CA was attached.
+      assert(std::atomic_load(&this->CA) == nullptr &&
+             "Start state, but a ControllerAccess is attached?");
+      // No controller was ever attached, so the disconnect trivially succeeds.
+      proceedToDetach(Lock, nullptr, Error::success());
       return;
     }
   }
@@ -159,6 +182,7 @@ void Session::detach(OnDetachFn OnDetach) {
 }
 
 void Session::shutdown(OnShutdownFn OnShutdown) {
+  ORC_RT_LOG(Info, Session, "Session %p shutdown called", this);
   addOnShutdown(std::move(OnShutdown));
 
   std::shared_ptr<ControllerAccess> TmpCA;
@@ -182,14 +206,15 @@ void Session::shutdown(OnShutdownFn OnShutdown) {
 
     switch (CurrentState) {
     case State::Start:
-      proceedToDetach(Lock, nullptr);
+      // No controller was ever attached, so the disconnect trivially succeeds.
+      proceedToDetach(Lock, nullptr, Error::success());
       return;
     case State::Attached:
       TmpCA = std::atomic_load(&this->CA);
       break;
     case State::Detached:
       Lock.unlock();
-      waitForManagedCodeTasksThenShutdown();
+      waitForKeepalivesThenShutdown();
       return;
     default:
       assert(false && "Illegal state");
@@ -265,16 +290,18 @@ void Session::appendService(std::unique_ptr<Service> Srv) {
   }
 }
 
-void Session::handleDisconnect() {
+void Session::handleDisconnect(Error Err) {
+  ORC_RT_LOG(Info, Session, "Session %p handle-disconnect", this);
   // If we get here we _don't_ need to call disconnect.
   std::unique_lock<std::mutex> Lock(M);
   assert(CurrentState <= State::Attached);
   TargetState = std::max(TargetState, State::Detached);
-  proceedToDetach(Lock, std::atomic_exchange(&this->CA, {}));
+  proceedToDetach(Lock, std::atomic_exchange(&this->CA, {}), std::move(Err));
 }
 
 void Session::proceedToDetach(std::unique_lock<std::mutex> &Lock,
-                              std::shared_ptr<ControllerAccess> TmpCA) {
+                              std::shared_ptr<ControllerAccess> TmpCA,
+                              Error DisconnectErr) {
   std::vector<Service *> ToNotify;
   ToNotify.reserve(Services.size());
   for (auto &Srv : Services)
@@ -283,10 +310,39 @@ void Session::proceedToDetach(std::unique_lock<std::mutex> &Lock,
   CurrentState = State::Detached;
   Lock.unlock();
 
+  // Report how the controller connection ended: to the on-disconnect handler if
+  // one was installed, otherwise via reportError if it ended abnormally. Every
+  // detach path funnels through here, so this runs exactly once per Session --
+  // including for a Session that never attached, which reports success.
+  //
+  // This runs without holding M, since it is client code: holding M across it
+  // would deadlock any Session call the handler makes. It also runs before the
+  // controller is released below, so the handler can rely on the
+  // ControllerAccess outliving it, and before Services are notified.
+  //
+  // The handler is documented to be able to call shutdown. That works because
+  // CurrentState is already Detached and every caller raises TargetState to at
+  // least Detached before getting here, so a re-entrant shutdown or detach is
+  // absorbed by the early-return in those functions: it registers its callback
+  // and raises TargetState, which completeDetach then acts on. Preserve those
+  // two properties when reordering this.
+  //
+  // OnDisconnect is only ever written before attach, so the unlocked read is
+  // safe.
+  if (OnDisconnect) {
+    OnDisconnect(std::move(DisconnectErr));
+    // Release anything the handler captured now, rather than holding it until
+    // the Session is destroyed. Exactly-once is structural (proceedToDetach
+    // runs once), so this is not guarding against a second call.
+    OnDisconnect = {};
+  } else if (DisconnectErr)
+    reportError(std::move(DisconnectErr));
+
   // Throw away controller if present.
   TmpCA.reset();
 
   // Notify services.
+  ORC_RT_LOG(Debug, Session, "Session %p detaching services", this);
   detachServices(std::move(ToNotify), ShutdownRequested);
 }
 
@@ -316,12 +372,13 @@ void Session::completeDetach() {
     assert(TargetState == State::Shutdown);
   }
 
-  waitForManagedCodeTasksThenShutdown();
+  waitForKeepalivesThenShutdown();
 }
 
-void Session::waitForManagedCodeTasksThenShutdown() {
-  ManagedCodeTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
-  ManagedCodeTaskGroup->close();
+void Session::waitForKeepalivesThenShutdown() {
+  ORC_RT_LOG(Info, Session, "Session %p waiting for keepalives", this);
+  KeepaliveTaskGroup->addOnComplete([this]() { proceedToShutdown(); });
+  KeepaliveTaskGroup->close();
 }
 
 void Session::proceedToShutdown() {
@@ -334,6 +391,7 @@ void Session::proceedToShutdown() {
     CurrentState = State::Shutdown;
   }
 
+  ORC_RT_LOG(Debug, Session, "Session %p shutting down services", this);
   shutdownServices(std::move(ToNotify));
 }
 
@@ -349,6 +407,7 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 }
 
 void Session::completeShutdown() {
+  ORC_RT_LOG(Info, Session, "Session %p completing shutdown", this);
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(CurrentState == State::Shutdown);
@@ -358,16 +417,29 @@ void Session::completeShutdown() {
   CV.notify_all();
 }
 
-void Session::sendWrapperResult(uint64_t CallId,
-                                WrapperFunctionBuffer ResultBytes) {
+void Session::sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                uint64_t CallId) {
   if (auto TmpCA = std::atomic_load(&CA))
-    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-  ManagedCodeTaskGroup->releaseToken();
+    TmpCA->sendWrapperResult(std::move(ResultBytes), CallId);
 }
 
-void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
-                            orc_rt_WrapperFunctionBuffer ResultBytes) {
-  unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
+void Session::wrapperReturn(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ResultBytes,
+                            uint64_t CallId) {
+  unwrap(S)->sendWrapperResult(WrapperFunctionBuffer(ResultBytes), CallId);
+}
+
+// --- C API Implementation ---
+
+extern "C" void orc_rt_Session_callController(
+    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
+    orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx) {
+  unwrap(S)->callController(
+      [S, Return, ReturnCtx](WrapperFunctionBuffer ResultBytes) {
+        Return(S, ResultBytes.release(), ReturnCtx);
+      },
+      T, WrapperFunctionBuffer(ArgBytes));
 }
 
 } // namespace orc_rt

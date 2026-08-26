@@ -57,6 +57,7 @@ LANGOPT(CPlusPlus17       , 1, 0, NotCompatible, "C++17")
 LANGOPT(CPlusPlus20       , 1, 0, NotCompatible, "C++20")
 LANGOPT(CPlusPlus23       , 1, 0, NotCompatible, "C++23")
 LANGOPT(CPlusPlus26       , 1, 0, NotCompatible, "C++26")
+LANGOPT(CPlusPlus29       , 1, 0, NotCompatible, "C++29")
 LANGOPT(ObjC              , 1, 0, NotCompatible, "Objective-C")
 LANGOPT(ObjCDefaultSynthProperties , 1, 0, Benign,
         "Objective-C auto-synthesized properties")
@@ -125,6 +126,7 @@ LANGOPT(PointerAuthIndirectGotos, 1, 0, NotCompatible, "indirect gotos pointer a
 LANGOPT(PointerAuthAuthTraps, 1, 0, NotCompatible, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, NotCompatible, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, NotCompatible, "incorporate type discrimination in authenticated vtable pointers")
+LANGOPT(PointerAuthVTTVTPtrDiscrimination, 1, 0, NotCompatible, "incorporate discrimination in authenticated vtable pointers in VTTs")
 LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, NotCompatible, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
 LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0, Benign,
         "Use type discrimination when signing function pointers")
@@ -240,6 +242,7 @@ LANGOPT(OpenMPNoThreadState  , 1, 0, NotCompatible, "Assume that no thread in a 
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, NotCompatible, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, NotCompatible, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, NotCompatible, "Enable OpenMP unified shared memory mode via compiler.")
+LANGOPT(OpenMPTargetAtomicReduction , 1, 0, NotCompatible, "Use atomic operations for OpenMP GPU cross-team reductions where supported.")
 LANGOPT(NoGPULib  , 1, 0, NotCompatible, "Indicate a build without the standard GPU libraries.")
 
 LANGOPT(HLSL, 1, 0, NotCompatible, "HLSL")
@@ -262,6 +265,7 @@ LANGOPT(GPUDeferDiag, 1, 0, NotCompatible, "defer host/device related diagnostic
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, NotCompatible, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 LANGOPT(OffloadingNewDriver, 1, 0, NotCompatible, "use the new driver for generating offloading code.")
 LANGOPT(OffloadViaLLVM, 1, 0, NotCompatible, "target LLVM/Offload as portable offloading runtime.")
+LANGOPT(CUDANVCCABI, 1, 0, NotCompatible, "emit the NVCC-compatible host registration ABI for CUDA")
 
 LANGOPT(SYCLIsDevice      , 1, 0, NotCompatible, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, NotCompatible, "SYCL host compilation")
@@ -425,7 +429,7 @@ LANGOPT(ForceEmitVTables, 1, 0, NotCompatible, "whether to emit all vtables")
 LANGOPT(AllowEditorPlaceholders, 1, 0, Benign,
         "allow editor placeholders in source")
 
-ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
+ENUM_LANGOPT(ClangABICompat, ClangABI, 5, ClangABI::Latest, NotCompatible,
              "version of Clang that we should attempt to be ABI-compatible "
              "with")
 
@@ -532,6 +536,8 @@ LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, Benign, "Lifetime safety at transl
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
+
+LANGOPT(StablePointerSubtraction, 1, 0, NotCompatible, "Make unaligned pointer subtraction stable")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

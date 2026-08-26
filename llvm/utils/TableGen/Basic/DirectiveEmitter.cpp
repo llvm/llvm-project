@@ -311,6 +311,11 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
                       DirLang.getClausePrefix(),
                       DirLang.hasMakeEnumAvailableInNamespace());
 
+    // Emit LoopModifier
+    generateEnumClass(DirLang.getLoopModifiers(), OS, "LoopModifier",
+                      DirLang.getLoopModifierPrefix(),
+                      DirLang.hasMakeEnumAvailableInNamespace());
+
     // Emit ClauseVals enumeration
     std::string EnumHelperFuncs;
     generateClauseEnumVal(DirLang.getClauses(), OS, DirLang, EnumHelperFuncs);
@@ -354,11 +359,16 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "\n";
     OS << "constexpr std::size_t getMaxLeafCount() { return "
        << getMaxLeafCount(DirLang) << "; }\n";
+    OS << "LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier "
+          "LM);\n";
+    OS << "LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned "
+          "Ver = 0);\n";
     OS << EnumHelperFuncs;
   } // close DirLangNS
 
   // These specializations need to be in ::llvm.
-  for (StringRef Enum : {"Association", "Category", "Directive", "Clause"}) {
+  for (StringRef Enum :
+       {"Association", "Category", "Directive", "Clause", "LoopModifier"}) {
     OS << "\n";
     OS << "template <> struct enum_iteration_traits<"
        << DirLang.getCppNamespace() << "::" << Enum << "> {\n";
@@ -384,12 +394,11 @@ orderSpellings(ArrayRef<Spelling::Value> Spellings) {
 // Generate function implementation for get<Enum>Name(StringRef Str)
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
-                            StringRef Prefix) {
-  StringRef Lang = DirLang.getName();
+                            StringRef LangName, StringRef Prefix) {
   std::string Qual = getQualifier(DirLang);
   OS << "\n";
-  OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
-     << Enum << " Kind, unsigned Version) {\n";
+  OS << "llvm::StringRef " << Qual << "get" << LangName << Enum << "Name("
+     << Qual << Enum << " Kind, unsigned Version) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
     BaseRecord Rec(R);
@@ -416,7 +425,8 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
     }
   }
   OS << "  }\n"; // switch
-  OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum << " kind\");\n";
+  OS << "  llvm_unreachable(\"Invalid " << LangName << " " << Enum
+     << " kind\");\n";
   OS << "}\n";
 }
 
@@ -450,6 +460,15 @@ static void generateGetKind(ArrayRef<const Record *> Records, raw_ostream &OS,
 
   directive::VersionRange All;
 
+  // When a given spelling maps to more than one enum kind, this function
+  // will return one of them, but it's unspecified which one.
+  // This can happen whem a directive/clause uses the same spelling as
+  // another directive/clause, e.g. when it varies depending on the version:
+  //    OMPC_foo : {"foo", v1.0}, {"bar", v2.0}
+  //    OMPC_bar : {"bar", v1.0}, {"baz", v2.0}
+  // or when the same spelling can be used to mean different things:
+  //    OMPC_do_one_thing : {"doit"}
+  //    OMPC_do_something_else : {"doit"}
   for (const Record *R : Records) {
     BaseRecord Rec(R);
     std::string Ident = ImplicitAsUnknown && R->getValueAsBit("isImplicit")
@@ -880,6 +899,30 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
+static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
+                                          raw_ostream &OS) {
+  // Must match the sentinel in DirectiveBase.td and in
+  // OmpStructureChecker::CheckDirectiveInPureProcedure.
+  constexpr int NeverPure = 0x7FFFFFFF;
+  OS << "constexpr unsigned getDirectivePureSince(Directive Dir) {\n";
+  OS << "  switch (Dir) {\n";
+
+  StringRef Prefix = DirLang.getDirectivePrefix();
+
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive D(R);
+    int PureSince = D.getPureSince();
+    if (PureSince == NeverPure)
+      continue;
+    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+    OS << "    return " << PureSince << ";\n";
+  }
+  OS << "  default:\n";
+  OS << "    return 0x7FFFFFFF;\n";
+  OS << "  } // switch (Dir)\n";
+  OS << "}\n";
+}
+
 static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
   OS << "constexpr SourceLanguage getDirectiveLanguages(Directive D) {\n";
@@ -907,6 +950,47 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "#endif\n";
   OS << "}\n";
+}
+
+// Generate the isAllowedLoopModifier function implementation.
+static void generateIsAllowedLoopModifier(const DirectiveLanguage &DirLang,
+                                          raw_ostream &OS) {
+  std::string Qual = getQualifier(DirLang);
+
+  OS << "\n";
+  OS << "bool " << Qual << "isAllowedLoopModifier(" << Qual << "Directive D, "
+     << Qual << "LoopModifier LM) {\n";
+  OS << "  assert(unsigned(D) <= Directive_enumSize);\n";
+
+  OS << "  switch (D) {\n";
+
+  StringRef DPrefix = DirLang.getDirectivePrefix();
+  StringRef LMPrefix = DirLang.getLoopModifierPrefix();
+  for (const Record *R : DirLang.getDirectives()) {
+    Directive Dir(R);
+    OS << "    case " << getIdentifierName(R, DPrefix) << ":\n";
+    if (Dir.getAllowedLoopModifiers().empty()) {
+      OS << "      return false;\n";
+    } else {
+      OS << "      switch (LM) {\n";
+
+      for (const Record *LMR : Dir.getAllowedLoopModifiers()) {
+        std::string Name = getIdentifierName(LMR, LMPrefix);
+        OS << "        case LoopModifier::" << Name << ":\n";
+        OS << "          return true;\n";
+      }
+
+      OS << "        default:\n";
+      OS << "          return false;\n";
+      OS << "      }\n"; // End of modifier switch
+    }
+    OS << "      break;\n";
+  }
+
+  OS << "  }\n"; // End of directives switch
+  OS << "  llvm_unreachable(\"Invalid " << DirLang.getName()
+     << " Directive kind\");\n";
+  OS << "}\n"; // End of function isAllowedLoopModifier
 }
 
 // Generate a simple enum set with the give clauses.
@@ -1189,7 +1273,7 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
       OS << "nonemptyList(";
 
     if (!C.getPrefix().empty())
-      OS << "\"" << C.getPrefix() << ":\" >> ";
+      OS << "\"" << C.getPrefix() << " :\" >> ";
 
     // The common Flang parser are used directly. Their name is identical to
     // the Flang class with first letter as lowercase. If the Flang class is
@@ -1323,6 +1407,8 @@ static void emitDirectivesConstexprImpl(const DirectiveLanguage &DirLang,
   OS << "\n";
   generateGetDirectiveCategory(DirLang, OS);
   OS << "\n";
+  generateGetDirectivePureSince(DirLang, OS);
+  OS << "\n";
   generateGetDirectiveLanguages(DirLang, OS);
 }
 
@@ -1344,14 +1430,16 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
                   /*ImplicitAsUnknown=*/false);
 
   // getDirectiveName(Directive Kind)
-  generateGetName(DirLang.getDirectives(), OS, "Directive", DirLang, DPrefix);
+  generateGetName(DirLang.getDirectives(), OS, "Directive", DirLang,
+                  DirLang.getName(), DPrefix);
 
   // getClauseKind(StringRef Str)
   generateGetKind(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix,
                   /*ImplicitAsUnknown=*/true);
 
   // getClauseName(Clause Kind)
-  generateGetName(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix);
+  generateGetName(DirLang.getClauses(), OS, "Clause", DirLang,
+                  DirLang.getName(), CPrefix);
 
   // <enumClauseValue> get<enumClauseValue>(StringRef Str) ; string -> value
   // StringRef get<enumClauseValue>Name(<enumClauseValue>) ; value -> string
@@ -1359,6 +1447,13 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   generateIsAllowedClause(DirLang, OS);
+
+  // isAllowedLoopModifier(Directive D, LoopModifier LM)
+  generateIsAllowedLoopModifier(DirLang, OS);
+
+  // getLoopModifierName(LoopModifier Kind)
+  generateGetName(DirLang.getLoopModifiers(), OS, "LoopModifier", DirLang, "",
+                  DirLang.getLoopModifierPrefix());
 
   // Leaf table for getLeafConstructs, etc.
   emitLeafTable(DirLang, OS, "LeafConstructTable");

@@ -91,9 +91,8 @@ class VPHierarchicalChildrenIterator
     return Current;
   }
 
-  /// Templated helper to dereference successor/predecessor \p EdgeIdx of \p
-  /// Block. Used by both the const and non-const operator* implementations.
-  template <typename T1> static T1 deref(T1 Block, unsigned EdgeIdx) {
+  /// Helper to dereference successor/predecessor \p EdgeIdx of \p Block.
+  static BlockPtrTy deref(BlockPtrTy Block, unsigned EdgeIdx) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
       assert(EdgeIdx == 0);
       if constexpr (Forward)
@@ -129,9 +128,7 @@ public:
     return Block == R.Block && EdgeIdx == R.EdgeIdx;
   }
 
-  const VPBlockBase *operator*() const { return deref(Block, EdgeIdx); }
-
-  BlockPtrTy operator*() { return deref(Block, EdgeIdx); }
+  BlockPtrTy operator*() const { return deref(Block, EdgeIdx); }
 
   VPHierarchicalChildrenIterator &operator++() {
     EdgeIdx++;
@@ -313,6 +310,8 @@ template <> struct GraphTraits<VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<const VPBlockBase *> {
@@ -328,6 +327,8 @@ template <> struct GraphTraits<const VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
@@ -344,6 +345,8 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<VPlan *> {
@@ -362,6 +365,11 @@ template <> struct GraphTraits<VPlan *> {
     // matter.
     return nodes_iterator::end(N->getEntry());
   }
+
+  static unsigned getMaxNumber(GraphRef N) { return N->getMaxBlockNumber(); }
+
+  // Nodes are never renumbered.
+  static unsigned getNumberEpoch(GraphRef) { return 0; }
 };
 
 } // namespace llvm

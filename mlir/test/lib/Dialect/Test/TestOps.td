@@ -534,6 +534,12 @@ def OpWithTestBitEnum : TEST_Op<"op_with_bit_enum_prop"> {
   let assemblyFormat = "$value1 ($value2^)? attr-dict `:` `(``)`";
 }
 
+def OpWithTestBitEnumPropDict
+    : TEST_Op<"op_with_bit_enum_prop_dict"> {
+  let arguments = (ins TestBitEnumProp:$flags, I64Prop:$next);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
 def TestBitEnumPropNamed : NamedEnumProp<TestBitEnum, "bit_enum"> {
   let defaultValue = TestBitEnum.cppType # "::Read";
 }
@@ -3313,6 +3319,8 @@ def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
 //===----------------------------------------------------------------------===//
 
 def TestResource : Resource<"TestResource">;
+def ParameterizedTestResource : Resource<"TestResource",
+    [{::mlir::StringAttr::get(getContext(), "test parameter")}]>;
 
 def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
   let arguments = (ins
@@ -3327,6 +3335,11 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
     [MemoryEffects<[MemWrite<TestResource, 0>]>]>;
+
+def TestParameterizedEffectsOp : TEST_Op<"op_with_parameterized_effects"> {
+  let arguments =
+      (ins Arg<AnyMemRef, "", [MemRead<ParameterizedTestResource>]>:$input);
+}
 
 def TestEffectsRead : TEST_Op<"op_with_memread",
     [MemoryEffects<[MemRead]>]> {
@@ -3620,6 +3633,28 @@ def TestOpWithPropertiesAndAttr
   let arguments = (ins I32Attr:$lhs, IntProp<"int64_t">:$rhs);
 }
 
+def TestOpWithCustomPropDict : TEST_Op<"with_custom_prop_dict"> {
+  let assemblyFormat = "prop-dict attr-dict";
+
+  let arguments = (ins
+    I32Attr:$attr,
+    I64Prop:$prop,
+    DefaultValuedProp<I64Prop, "42">:$defaulted,
+    OptionalAttr<StrAttr>:$optional,
+    UnitProp:$unit
+  );
+}
+
+def TestOpWithCustomAttrPropDict
+    : TEST_Op<"with_custom_attr_prop_dict"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    TestEnumAttr:$attr,
+    OptionalAttr<TestEnumAttr>:$optionalAttr,
+    I64Prop:$prop
+  );
+}
+
 def TestOpWithPropertiesAndInferredType
   : TEST_Op<"with_properties_and_inferred_type", [
     DeclareOpInterfaceMethods<InferTypeOpInterface>
@@ -3635,12 +3670,274 @@ def MyStructProperty : Property<"MyPropStruct"> {
   let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
   let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
   let hashProperty = "$_storage.hash();";
+  // An optional parser does not imply that the default required FieldParser is
+  // available. `prop-dict` must still use attribute conversion as its fallback.
+  let optionalParser = "return std::nullopt;";
 }
 
 def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
     MyStructProperty:$prop
+  );
+}
+
+def TestOpWithDefaultWrappedProperties
+    : TEST_Op<"with_default_wrapped_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    DefaultValuedProp<MyStructProperty, "MyPropStruct{}">:$prop
+  );
+}
+
+def MyStructArrayProperty
+    : Property<"::llvm::SmallVector<MyPropStruct>"> {
+  let hashProperty =
+      "::llvm::hash_combine_range($_storage.begin(), $_storage.end())";
+  let readFromMlirBytecode = [{
+    uint64_t size;
+    if (::mlir::failed($_reader.readVarInt(size)))
+      return ::mlir::failure();
+    $_storage.clear();
+    while (size--) {
+      MyPropStruct value;
+      if (::mlir::failed(readFromMlirBytecode($_reader, value)))
+        return ::mlir::failure();
+      $_storage.push_back(std::move(value));
+    }
+  }];
+  let writeToMlirBytecode = [{
+    $_writer.writeVarInt($_storage.size());
+    for (MyPropStruct &value : $_storage)
+      writeToMlirBytecode($_writer, value);
+  }];
+  let convertToAttribute = [{
+    ::llvm::SmallVector<::mlir::Attribute> attrs;
+    for (const MyPropStruct &value : $_storage)
+      attrs.push_back(value.asAttribute($_ctxt));
+    return ::mlir::ArrayAttr::get($_ctxt, attrs);
+  }];
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::ArrayAttr>($_attr);
+    if (!array)
+      return ::mlir::failure();
+    $_storage.clear();
+    for (::mlir::Attribute attr : array) {
+      MyPropStruct value;
+      if (::mlir::failed(MyPropStruct::setFromAttr(value, attr, $_diag)))
+        return ::mlir::failure();
+      $_storage.push_back(std::move(value));
+    }
+    return ::mlir::success();
+  }];
+}
+
+def TestOpWithWrappedArrayProperties
+    : TEST_Op<"with_wrapped_array_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins MyStructArrayProperty:$prop);
+}
+
+// The default FieldParser specializations for optional integers and generic
+// containers do not consume exactly one value in an outer comma-separated
+// list. The generated prop-dict parser must use attribute conversion for
+// these storage types instead.
+def KeyValueListProperty : Property<"::llvm::SmallVector<int64_t>"> {
+  let convertToAttribute =
+      "return ::mlir::DenseI64ArrayAttr::get($_ctxt, $_storage);";
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::DenseI64ArrayAttr>($_attr);
+    if (!array)
+      return $_diag() << "expected a dense i64 array";
+    auto values = array.asArrayRef();
+    $_storage.assign(values.begin(), values.end());
+    return ::mlir::success();
+  }];
+  let hashProperty =
+      "::llvm::hash_combine_range($_storage.begin(), $_storage.end())";
+  let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+  let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+}
+
+def KeyValueOptionalProperty : Property<"std::optional<int64_t>"> {
+  let convertToAttribute = [{
+    if (!$_storage)
+      return ::mlir::ArrayAttr::get($_ctxt, {});
+    auto value = ::mlir::IntegerAttr::get(
+        ::mlir::IntegerType::get($_ctxt, 64), *$_storage);
+    return ::mlir::ArrayAttr::get($_ctxt, {value});
+  }];
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::ArrayAttr>($_attr);
+    if (!array || array.size() > 1)
+      return $_diag() << "expected a zero- or one-element array";
+    if (array.empty()) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    auto value = ::llvm::dyn_cast<::mlir::IntegerAttr>(array[0]);
+    if (!value)
+      return $_diag() << "expected an integer element";
+    $_storage = value.getInt();
+    return ::mlir::success();
+  }];
+  let hashProperty = "::llvm::hash_value($_storage.value_or(0))";
+  let readFromMlirBytecode = [{
+    bool isPresent;
+    if (::mlir::failed($_reader.readBool(isPresent)))
+      return ::mlir::failure();
+    if (!isPresent) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    int64_t value;
+    if (::mlir::failed($_reader.readSignedVarInt(value)))
+      return ::mlir::failure();
+    $_storage = value;
+  }];
+  let writeToMlirBytecode = [{
+    $_writer.writeOwnedBool($_storage.has_value());
+    if ($_storage)
+      $_writer.writeSignedVarInt(*$_storage);
+  }];
+}
+
+def KeyValueOptionalEnumProperty
+    : Property<"std::optional<test::TestEnum>"> {
+  let convertToAttribute = [{
+    if (!$_storage)
+      return ::mlir::ArrayAttr::get($_ctxt, {});
+    auto value = ::mlir::IntegerAttr::get(
+        ::mlir::IntegerType::get($_ctxt, 32),
+        static_cast<uint32_t>(*$_storage));
+    return ::mlir::ArrayAttr::get($_ctxt, {value});
+  }];
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::ArrayAttr>($_attr);
+    if (!array || array.size() > 1)
+      return $_diag() << "expected a zero- or one-element array";
+    if (array.empty()) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    auto value = ::llvm::dyn_cast<::mlir::IntegerAttr>(array[0]);
+    if (!value)
+      return $_diag() << "expected an integer element";
+    $_storage = static_cast<test::TestEnum>(value.getInt());
+    return ::mlir::success();
+  }];
+  let hashProperty = [{
+    ::llvm::hash_value(static_cast<uint32_t>(
+        $_storage.value_or(test::TestEnum::First)))
+  }];
+  let readFromMlirBytecode = [{
+    bool isPresent;
+    if (::mlir::failed($_reader.readBool(isPresent)))
+      return ::mlir::failure();
+    if (!isPresent) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    uint64_t value;
+    if (::mlir::failed($_reader.readVarInt(value)))
+      return ::mlir::failure();
+    $_storage = static_cast<test::TestEnum>(value);
+  }];
+  let writeToMlirBytecode = [{
+    $_writer.writeOwnedBool($_storage.has_value());
+    if ($_storage)
+      $_writer.writeVarInt(static_cast<uint64_t>(*$_storage));
+  }];
+}
+
+def KeyValueSpecializedListProperty
+    : Property<"test::KeyValueSpecializedList"> {
+  let printer = [{
+    [&]() {
+      $_printer << "[";
+      ::llvm::interleaveComma($_storage, $_printer);
+      $_printer << "]";
+    }()
+  }];
+  let convertToAttribute =
+      "return ::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage);";
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::DenseI32ArrayAttr>($_attr);
+    if (!array)
+      return $_diag() << "expected a dense i32 array";
+    auto values = array.asArrayRef();
+    $_storage.assign(values.begin(), values.end());
+    return ::mlir::success();
+  }];
+  let hashProperty =
+      "::llvm::hash_combine_range($_storage.begin(), $_storage.end())";
+  let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+  let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+}
+
+def KeyValueSpecializedOptionalProperty
+    : Property<"std::optional<int16_t>"> {
+  let printer = [{
+    [&]() {
+      if (!$_storage) {
+        $_printer << "none";
+        return;
+      }
+      $_printer << "some<" << *$_storage << ">";
+    }()
+  }];
+  let convertToAttribute = [{
+    if (!$_storage)
+      return ::mlir::ArrayAttr::get($_ctxt, {});
+    auto value = ::mlir::IntegerAttr::get(
+        ::mlir::IntegerType::get($_ctxt, 16), *$_storage);
+    return ::mlir::ArrayAttr::get($_ctxt, {value});
+  }];
+  let convertFromAttribute = [{
+    auto array = ::llvm::dyn_cast<::mlir::ArrayAttr>($_attr);
+    if (!array || array.size() > 1)
+      return $_diag() << "expected a zero- or one-element array";
+    if (array.empty()) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    auto value = ::llvm::dyn_cast<::mlir::IntegerAttr>(array[0]);
+    if (!value)
+      return $_diag() << "expected an integer element";
+    $_storage = static_cast<int16_t>(value.getInt());
+    return ::mlir::success();
+  }];
+  let hashProperty = "::llvm::hash_value($_storage.value_or(0))";
+  let readFromMlirBytecode = [{
+    bool isPresent;
+    if (::mlir::failed($_reader.readBool(isPresent)))
+      return ::mlir::failure();
+    if (!isPresent) {
+      $_storage = std::nullopt;
+      return ::mlir::success();
+    }
+    int64_t value;
+    if (::mlir::failed($_reader.readSignedVarInt(value)))
+      return ::mlir::failure();
+    $_storage = static_cast<int16_t>(value);
+  }];
+  let writeToMlirBytecode = [{
+    $_writer.writeOwnedBool($_storage.has_value());
+    if ($_storage)
+      $_writer.writeSignedVarInt(*$_storage);
+  }];
+}
+
+def TestOpWithKeyValueParserBoundaries
+    : TEST_Op<"with_key_value_parser_boundaries"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    KeyValueListProperty:$values,
+    KeyValueOptionalProperty:$maybe,
+    KeyValueOptionalEnumProperty:$maybeEnum,
+    KeyValueSpecializedListProperty:$specializedValues,
+    KeyValueSpecializedOptionalProperty:$specializedMaybe,
+    I64Prop:$next
   );
 }
 
@@ -3686,6 +3983,22 @@ def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
   }];
 }
 
+// Same as `TestOpWithVariadicSegmentProperties`, but the assembly format uses
+// the bulk `type(operands)` / `type(results)` directives instead of spelling
+// out the type of each individual variadic group. This prevents the printer
+// from eliding `operandSegmentSizes` / `resultSegmentSizes` from the
+// `<{...}>` properties dictionary (since there is no other way to recover the
+// segment sizes on re-parse), so this op exercises the parser's ability to
+// read those trait-injected properties back out of `prop-dict`.
+def TestOpWithBulkTypesAndSegmentProperties : TEST_Op<"variadic_segment_prop_bulk_type",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results) prop-dict attr-dict
+  }];
+}
+
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
   let arguments = (ins IntProp<"int64_t">:$first, IntProp<"int64_t">:$second);
@@ -3718,6 +4031,7 @@ def PropertiesWithCustomPrint : Property<"PropertiesWithCustomPrint"> {
 }
 
 def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
+  let hasCustomPropertiesPrinter = 1;
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
      PropertiesWithCustomPrint:$prop
@@ -3782,6 +4096,7 @@ def VersionedProperties : Property<"VersionedProperties"> {
 }
 
 def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
+  let hasCustomPropertiesPrinter = 1;
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
      VersionedProperties:$prop
@@ -3975,6 +4290,27 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
   let assemblyFormat =
     "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
     "attr-dict `:` functional-type(operands, results)";
+}
+
+// A call-like operation whose first result is produced by the operation itself
+// and is *not* forwarded from the callee. Only the trailing results are
+// forwarded.
+def TestCallAndProduceOp : TEST_Op<"call_and_produce",
+    [DeclareOpInterfaceMethods<CallOpInterface, ["getForwardedResults"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Variadic<AnyType>:$forwarded_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+  let results = (outs
+    I1:$produced_status,
+    Variadic<AnyType>:$forwarded
+  );
+  let assemblyFormat =
+    "$callee `(` $forwarded_operands `)` attr-dict "
+    "`:` functional-type(operands, results)";
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",

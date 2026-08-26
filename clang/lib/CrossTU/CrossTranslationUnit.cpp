@@ -20,6 +20,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
@@ -150,6 +151,8 @@ static llvm::ManagedStatic<IndexErrorCategory> Category;
 static std::string getLangDescription(const LangOptions &LO) {
   if (!LO.CPlusPlus)
     return "non-C++";
+  if (LO.CPlusPlus29)
+    return "C++29";
   if (LO.CPlusPlus26)
     return "C++26";
   if (LO.CPlusPlus23)

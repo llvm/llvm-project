@@ -10,6 +10,7 @@
 #define LLDB_HOST_COMMON_NATIVEREGISTERCONTEXT_H
 
 #include "lldb/Host/common/NativeWatchpointList.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

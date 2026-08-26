@@ -1,13 +1,8 @@
-"""
-Test lldb-dap launch request.
-"""
-
-from lldbsuite.test.decorators import expectedFailureWindows
-from lldbsuite.test.lldbtest import line_number
-import lldbdap_testcase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
-class TestDAP_launch_version(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_launch_version(DAPTestCaseBase):
     """
     Tests that "initialize" response contains the "version" string the same
     as the one returned by "version" command.
@@ -15,21 +10,14 @@ class TestDAP_launch_version(lldbdap_testcase.DAPTestCaseBase):
 
     def test(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        session = self.build_and_create_session()
 
-        source = "main.c"
-        breakpoint_line = line_number(source, "// breakpoint 1")
-        lines = [breakpoint_line]
-        # Set breakpoint in the thread function so we can step the threads
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.continue_to_breakpoints(breakpoint_ids)
+        process_event = session.launch(LaunchArgs(program=program, stopOnEntry=True))
+        session.verify_stopped_on_entry(after=process_event)
 
-        version_eval_response = self.dap_server.request_evaluate(
-            "`version", context="repl"
-        )
-        version_eval_output = version_eval_response["body"]["result"]
+        version_eval_output = session.evaluate("`version", context="repl").result
+        version_string = self.expect_not_none(session.capabilities().lldb_version)
 
-        version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(
             version_eval_output.splitlines(),
             version_string.splitlines(),

@@ -1237,6 +1237,12 @@ SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
   return {};
 }
 
+FailureOr<TilingResult> TilingNoDpsOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
                                       ArrayRef<OpFoldResult> offsets,
@@ -1436,6 +1442,37 @@ Operation::operand_range TestCallOnDeviceOp::getArgOperands() {
 
 MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
   return getForwardedOperandsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCallAndProduceOp
+//===----------------------------------------------------------------------===//
+
+CallInterfaceCallable TestCallAndProduceOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallAndProduceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
+}
+
+Operation::operand_range TestCallAndProduceOp::getArgOperands() {
+  return getForwardedOperands();
+}
+
+MutableOperandRange TestCallAndProduceOp::getArgOperandsMutable() {
+  return getForwardedOperandsMutable();
+}
+
+Operation::result_range TestCallAndProduceOp::getForwardedResults() {
+  // The first result (`produced_status`) is produced by this operation and is
+  // not forwarded from the callee.
+  return getForwarded();
+}
+
+LogicalResult
+TestCallAndProduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return call_interface_impl::verifyCallOpInterface(*this, symbolTable);
 }
 
 //===----------------------------------------------------------------------===//

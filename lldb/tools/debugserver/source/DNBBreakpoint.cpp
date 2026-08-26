@@ -125,34 +125,38 @@ DNBBreakpointList::FindNearestWatchpoint(nub_addr_t addr) const {
 size_t DNBBreakpointList::FindBreakpointsThatOverlapRange(
     nub_addr_t addr, nub_addr_t size, std::vector<DNBBreakpoint *> &bps) {
   bps.clear();
+
+  if (m_breakpoints.empty())
+    return bps.size();
+
   iterator end = m_breakpoints.end();
   // Find the first breakpoint with an address >= to "addr"
   iterator pos = m_breakpoints.lower_bound(addr);
-  if (pos != end) {
-    if (pos != m_breakpoints.begin()) {
-      // Watch out for a breakpoint at an address less than "addr" that might
-      // still overlap
-      iterator prev_pos = pos;
-      --prev_pos;
-      if (prev_pos->second.IntersectsRange(addr, size, NULL, NULL, NULL))
-        bps.push_back(&pos->second);
-    }
 
-    while (pos != end) {
-      // When we hit a breakpoint whose start address is greater than "addr +
-      // size" we are done.
-      // Do the math in a way that doesn't risk unsigned overflow with bad
-      // input.
-      if ((pos->second.Address() - addr) >= size)
-        break;
-
-      // Check if this breakpoint overlaps, and if it does, add it to the list
-      if (pos->second.IntersectsRange(addr, size, NULL, NULL, NULL)) {
-        bps.push_back(&pos->second);
-        ++pos;
-      }
-    }
+  if (pos != m_breakpoints.begin()) {
+    // Watch out for a breakpoint at an address less than "addr" that might
+    // still overlap
+    iterator prev_pos = pos;
+    --prev_pos;
+    if (prev_pos->second.IntersectsRange(addr, size, NULL, NULL, NULL))
+      bps.push_back(&prev_pos->second);
   }
+
+  while (pos != end) {
+    // When we hit a breakpoint whose start address is greater than "addr +
+    // size" we are done.
+    // Do the math in a way that doesn't risk unsigned overflow with bad
+    // input.
+    if ((pos->second.Address() - addr) >= size)
+      break;
+
+    // Check if this breakpoint overlaps, and if it does, add it to the list
+    if (pos->second.IntersectsRange(addr, size, NULL, NULL, NULL))
+      bps.push_back(&pos->second);
+
+    ++pos;
+  }
+
   return bps.size();
 }
 
@@ -171,9 +175,18 @@ void DNBBreakpointList::DisableAll() {
 
 void DNBBreakpointList::RemoveTrapsFromBuffer(nub_addr_t addr, nub_size_t size,
                                               void *p) const {
+  if (m_breakpoints.empty())
+    return;
+
   uint8_t *buf = (uint8_t *)p;
   const_iterator end = m_breakpoints.end();
   const_iterator pos = m_breakpoints.lower_bound(addr);
+
+  // lower_bound finds a breakpoint starting >= addr. The breakpoint prior to
+  // that may start before addr but extend beyond it, so it must be checked too.
+  if (pos != m_breakpoints.begin())
+    --pos;
+
   while (pos != end && (pos->first < (addr + size))) {
     nub_addr_t intersect_addr;
     nub_size_t intersect_size;

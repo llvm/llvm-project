@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
-! RUN: bbc -emit-hlfir %openmp_flags -o - %s 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir %openmp_flags -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir %openmp_flags -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL:  omp.private
 ! CHECK-SAME:       {type = private} @[[LAST_PRIVATE_I:.*]] : i32

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -53,6 +54,43 @@ static cl::opt<unsigned>
                  cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
+
+static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
+  // Legacy triples without a subarch default to the first target that supports
+  // flat addressing for HSA, otherwise the first amdgcn target.
+  if (TT.getSubArch() == Triple::NoSubArch)
+    return TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
+                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+
+  switch (AMDGPU::getMajorSubArch(TT.getSubArch())) {
+  case Triple::AMDGPUSubArch6:
+    return AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  case Triple::AMDGPUSubArch7:
+    return AMDGPUSubtarget::SEA_ISLANDS;
+  case Triple::AMDGPUSubArch8:
+  case Triple::AMDGPUSubArch810:
+    return AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  case Triple::AMDGPUSubArch9:
+  case Triple::AMDGPUSubArch908:
+  case Triple::AMDGPUSubArch90A:
+  case Triple::AMDGPUSubArch9_4:
+    return AMDGPUSubtarget::GFX9;
+  case Triple::AMDGPUSubArch10_1:
+  case Triple::AMDGPUSubArch10_3:
+    return AMDGPUSubtarget::GFX10;
+  case Triple::AMDGPUSubArch11:
+  case Triple::AMDGPUSubArch11_7:
+    return AMDGPUSubtarget::GFX11;
+  case Triple::AMDGPUSubArch12:
+  case Triple::AMDGPUSubArch12_5:
+  case Triple::AMDGPUSubArch1250_STRICT:
+    return AMDGPUSubtarget::GFX12;
+  case Triple::AMDGPUSubArch13:
+    return AMDGPUSubtarget::GFX13;
+  default:
+    reportFatalUsageError("invalid subarch for amdgpu");
+  }
+}
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                                             StringRef GPU,
@@ -94,8 +132,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // the first amdgcn target that supports flat addressing. Other OSes defaults
   // to the first amdgcn target.
   if (Gen == AMDGPUSubtarget::INVALID) {
-    Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
-                                       : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+    Gen = computeDefaultGeneration(TT);
     // Assume wave64 for the unknown target, if not explicitly set.
     if (getWavefrontSizeLog2() == 0)
       WavefrontSizeLog2 = 6;
@@ -137,13 +174,12 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (AddressableLocalMemorySize == 0)
-    AddressableLocalMemorySize = 32768;
-
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  AddressableLocalMemorySize =
+      AMDGPU::IsaInfo::getAddressableLocalMemorySize(*this);
   // LDS Allocation Granularity calculated in bytes from dwords
   LDSAllocationGranularity =
       AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
@@ -160,11 +196,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
 
-  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
-                    << TargetID.getXnackSetting() << '\n');
-  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
-                    << TargetID.getSramEccSetting() << '\n');
-
   return *this;
 }
 
@@ -177,13 +208,17 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   }
 }
 
+// TODO: Validate subarch for subtarget
+
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM, bool BufferOOBRelaxed,
-                           bool TBufferOOBRelaxed)
+                           bool TBufferOOBRelaxed,
+                           AMDGPU::TargetIDSetting XnackSetting,
+                           AMDGPU::TargetIDSetting SramEccSetting)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(AMDGPU::createAMDGPUTargetID(*this, FS)),
+    TargetID(AMDGPU::createAMDGPUTargetID(*this, "")),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
@@ -192,7 +227,24 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     // Frame index expansion sometimes assumes the low bit of SP is 0
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
                   /*TransAl=*/Align(4)) {
+
   // clang-format on
+
+  // Apply the module flag's xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support have xnack always on and ignore module
+  // flags.
+  if (hasXNACKOnOffModes())
+    TargetID.setXnackSetting(XnackSetting);
+
+  // Apply the module flag's sramecc setting if the target supports it.
+  if (supportsSRAMECC())
+    TargetID.setSramEccSetting(SramEccSetting);
+
+  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
+                    << TargetID.getXnackSetting() << '\n');
+  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
+                    << TargetID.getSramEccSetting() << '\n');
+
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 
@@ -464,11 +516,6 @@ std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
@@ -578,12 +625,7 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
   return getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),

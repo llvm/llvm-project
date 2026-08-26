@@ -131,7 +131,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureJMPABS | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -245,7 +245,7 @@ static constexpr FeatureBitset FeaturesZNVER5 =
 
 static constexpr FeatureBitset FeaturesZNVER6 =
     FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
-    FeatureAVXNECONVERT;
+    FeatureAVXNECONVERT | FeatureAVX512BMM;
 
 // Hygon architecture processors.
 constexpr FeatureBitset FeaturesC86_4G_M4 =
@@ -420,7 +420,7 @@ constexpr EnumStringDef<ProcInfo> ProcessorDefs[] = {
   { {"knl"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false} },
   { {"mic_avx512"}, {CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true} },
   // Knights Mill processor.
-  { {"knm"}, {CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false} },
+  { {"knm"}, {CK_KNM, FEATURE_AVX512F, FeaturesKNM, 'j', false} },
   // Lakemont microarchitecture based processors.
   { {"lakemont"}, {CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false} },
   // K6 architecture processors.
@@ -616,17 +616,13 @@ constexpr FeatureBitset ImpliedFeaturesAVX512VL = FeatureAVX512F;
 
 constexpr FeatureBitset ImpliedFeaturesAVX512BF16 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512BITALG = FeatureAVX512BW;
+constexpr FeatureBitset ImpliedFeaturesAVX512BMM = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512IFMA = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VNNI = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VPOPCNTDQ = FeatureAVX512F;
 constexpr FeatureBitset ImpliedFeaturesAVX512VBMI = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512VBMI2 = FeatureAVX512BW;
 constexpr FeatureBitset ImpliedFeaturesAVX512VP2INTERSECT = FeatureAVX512F;
-
-// FIXME: These two aren't really implemented and just exist in the feature
-// list for __builtin_cpu_supports. So omit their dependencies.
-constexpr FeatureBitset ImpliedFeaturesAVX5124FMAPS = {};
-constexpr FeatureBitset ImpliedFeaturesAVX5124VNNIW = {};
 
 // SSE4_A->FMA4->XOP chain.
 constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSE3;
@@ -643,7 +639,6 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
-constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
@@ -793,6 +788,7 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   // Processor features and mapping to processor feature value.
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
+    // ABI_VALUE is used to match values in compiler-rt/libgcc
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
 #define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \

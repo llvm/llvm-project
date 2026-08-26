@@ -450,20 +450,20 @@ bool ExprEngine::isHuge(AnalysisDeclContext *ADC) const {
   return Cfg->getNumBlockIDs() > AMgr.options.MaxInlinableSize;
 }
 
-void ExprEngine::examineStackFrames(const Decl *D, const StackFrame *SF,
-                                    bool &IsRecursive, unsigned &StackDepth) {
+void ExprEngine::examineStackFrames(
+    const Decl *D, llvm::iterator_range<StackFrame::parent_iterator> Frames,
+    bool &IsRecursive, unsigned &StackDepth) {
   IsRecursive = false;
   StackDepth = 0;
 
-  while (SF) {
-    const Decl *DI = SF->getDecl();
+  for (const StackFrame &Frame : Frames) {
+    const Decl *DI = Frame.getDecl();
 
     // Mark recursive (and mutually recursive) functions and always count
     // them when measuring the stack depth.
     if (DI == D) {
       IsRecursive = true;
       ++StackDepth;
-      SF = SF->getParent();
       continue;
     }
 
@@ -471,7 +471,6 @@ void ExprEngine::examineStackFrames(const Decl *D, const StackFrame *SF,
     AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(DI);
     if (!isSmall(CalleeADC))
       ++StackDepth;
-    SF = SF->getParent();
   }
 }
 
@@ -774,7 +773,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
     std::tie(State, Target) =
-        handleConstructionContext(Call.getOriginExpr(), State, currBldrCtx, SF,
+        handleConstructionContext(Call.getOriginExpr(), State, SF,
                                   RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
@@ -1123,7 +1122,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   // Do not inline if recursive or we've reached max stack frame count.
   bool IsRecursive = false;
   unsigned StackDepth = 0;
-  examineStackFrames(D, Pred->getStackFrame(), IsRecursive, StackDepth);
+  examineStackFrames(D, Pred->stackframes(), IsRecursive, StackDepth);
   if ((StackDepth >= Opts.InlineMaxStackDepth) &&
       (!isSmall(CalleeADC) || IsRecursive))
     return false;

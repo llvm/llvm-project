@@ -14,6 +14,19 @@ __attribute__((nodebug)) void t1(void) {
   a++;
 }
 
+// A deferred caller is emitted after the nodebug definition, so its call site
+// declaration would attach to a function that already has a body.
+void t2(void);
+
+__attribute__((nodebug)) void t2(void) {
+  int a = 10;
+  a++;
+}
+
+static inline void deferred_caller(void) { t2(); }
+
+void use2(void) { deferred_caller(); }
+
 #ifdef __cplusplus
 }
 #endif
@@ -28,6 +41,12 @@ __attribute__((nodebug)) void t1(void) {
 // illegal (non-distinct) !dbg metadata was being added to _Z2t1v definition
 
 // CHECK-LABEL: define{{.*}} void @t1()
+// CHECK-NOT:   !dbg
+// CHECK-SAME:  {
+// CHECK-NOT:   !dbg
+// CHECK:       }
+
+// CHECK-LABEL: define{{.*}} void @t2()
 // CHECK-NOT:   !dbg
 // CHECK-SAME:  {
 // CHECK-NOT:   !dbg

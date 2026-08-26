@@ -35,7 +35,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -273,6 +272,9 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBuiltinZOSVaList : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -283,6 +285,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasAMDGPUTypes : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -693,19 +698,7 @@ public:
 
   // Different targets may support a different maximum width for the _BitInt
   // type, depending on what operations are supported.
-  virtual size_t getMaxBitIntWidth() const {
-    // Consider -fexperimental-max-bitint-width= first.
-    if (MaxBitIntWidth)
-      return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
-
-    // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
-    // maximum bit width that LLVM claims its IR can support. However, most
-    // backends currently have a bug where they only support float to int
-    // conversion (and vice versa) on types that are <= 128 bits and crash
-    // otherwise. We're setting the max supported value to 128 to be
-    // conservative.
-    return 128;
-  }
+  virtual size_t getMaxBitIntWidth() const;
 
   /// Determine whether the target has fast native support for operations
   /// on half types.
@@ -1017,16 +1010,6 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether conversions to and from __fp16 should go through an integer
-  /// bitcast with i16.
-  ///
-  /// FIXME: This function should be removed. The intrinsics / no longer exist,
-  /// and are emulated with bitcast + fp cast. This only exists because of
-  /// misuse in ABI determining contexts.
-  virtual bool useFP16ConversionIntrinsics() const {
-    return true;
-  }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {
@@ -1072,9 +1055,17 @@ public:
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
 
+  /// Returns whether or not type \c __builtin_zos_va_list type is
+  /// available on this target.
+  bool hasBuiltinZOSVaList() const { return HasBuiltinZOSVaList; }
+
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
   bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
+
+  /// Returns whether or not the AMDGPU built-in types are
+  /// available on this target.
+  bool hasAMDGPUTypes() const { return HasAMDGPUTypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.
@@ -1588,6 +1579,13 @@ public:
             getTriple().isOSFreeBSD());
   }
 
+  // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
+  StringRef getDefaultOrdinaryLiteralEncoding() const {
+    if (getTriple().getOS() == llvm::Triple::ZOS)
+      return "IBM-1047";
+    return "UTF-8";
+  }
+
   // Identify whether this target supports __builtin_cpu_supports and
   // __builtin_cpu_is.
   virtual bool supportsCpuSupports() const { return false; }
@@ -1697,7 +1695,7 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const {
     if (isTargetAddressSpace(AS))
       return toTargetAddressSpace(AS);
-    return getAddressSpaceMap()[(unsigned)AS];
+    return getAddressSpaceMap()[AS];
   }
 
   /// Determine whether the given pointer-authentication key is valid.
@@ -1798,6 +1796,10 @@ public:
   /// with GCC/Itanium ABI, and remains disqualifying for targets that need
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+
+  /// Returns whether the target's ABI guarantees that a class's vtable has a
+  /// unique address program-wide.
+  virtual VTableUniquenessKind getVTableUniqueness() const;
 
   /// Controls whether global operator delete is called by the deleting
   /// destructor or at the point where ::delete was called. Historically Clang

@@ -162,7 +162,7 @@ private:
 
 protected:
   // This is user data for subclasses.
-  const void *Data;
+  const void *Data = nullptr;
 
   // This is user data for subclasses.
   // This should come right before RefCount, so that the two fields can be
