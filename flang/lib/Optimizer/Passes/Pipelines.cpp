@@ -208,7 +208,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   // -gpu=mem:unified|managed the unified/managed allocators are required for
   // correctness, so this must not depend on which placement pass is selected
   // or on -disable-memory-allocation-opt.
-  pm.addPass(fir::createCudaHeapAllocPromotion());
+  pm.addPass(fir::createCudaHeapAllocPromotion(
+      fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
   if (enableAllocationPlacement)
     fir::addAllocationPlacement(pm, pc.StackArrays);
