@@ -967,9 +967,16 @@ void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
-void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
+void StmtPrinter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *Node) {
   Indent() << "#pragma omp ordered";
-  PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());
+  PrintOMPExecutableDirective(Node, true);
+}
+
+void StmtPrinter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *Node) {
+  Indent() << "#pragma omp ordered";
+  PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPAtomicDirective(OMPAtomicDirective *Node) {
@@ -2686,6 +2693,12 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   assert(false && "not implemented yet");
 }
 
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  OS << Node->getNameInfo();
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {
@@ -2802,7 +2815,7 @@ void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   OS << E->getFoundDecl()->getName();
   printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
                             Policy,
-                            E->getNamedConcept()->getTemplateParameters());
+                            E->getConceptDecl()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {

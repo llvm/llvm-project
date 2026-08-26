@@ -41,6 +41,10 @@ macro(append_string_if condition value)
   endif()
 endmacro()
 
+macro(remove_rtti_flags list)
+  list(REMOVE_ITEM ${list} -frtti -fno-rtti /GR /GR-)
+endmacro()
+
 macro(append_rtti_flag polarity list)
   if(${polarity})
     append_list_if(COMPILER_RT_HAS_FRTTI_FLAG -frtti ${list})
@@ -591,9 +595,9 @@ function(add_compiler_rt_install_targets name)
                               -DCMAKE_INSTALL_DO_STRIP=1
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     set_target_properties(install-${ARG_PARENT_TARGET} PROPERTIES
-                          FOLDER "Compiler-RT/Installation")
+                          FOLDER "compiler-rt/Installation")
     set_target_properties(install-${ARG_PARENT_TARGET}-stripped PROPERTIES
-                          FOLDER "Compiler-RT/Installation")
+                          FOLDER "compiler-rt/Installation")
     add_dependencies(install-compiler-rt install-${ARG_PARENT_TARGET})
     add_dependencies(install-compiler-rt-stripped install-${ARG_PARENT_TARGET}-stripped)
   endif()

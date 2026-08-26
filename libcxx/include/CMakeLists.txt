@@ -294,6 +294,8 @@ set(files
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
   __chrono/zoned_time.h
+  __cmath/lerp.h
+  __cmath/special_functions.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -422,6 +424,7 @@ set(files
   __format/formatter_tuple.h
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
+  __format/parser_std_format_spec_data.h
   __format/range_default_formatter.h
   __format/range_format.h
   __format/range_formatter.h
@@ -534,7 +537,6 @@ set(files
   __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __locale
   __locale_dir/check_grouping.h
   __locale_dir/codecvt.h
   __locale_dir/collate.h
@@ -587,7 +589,6 @@ set(files
   __math/remainder.h
   __math/roots.h
   __math/rounding_functions.h
-  __math/special_functions.h
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
@@ -619,6 +620,7 @@ set(files
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pstl.h
   __memory/ranges_construct_at.h
   __memory/ranges_destroy.h
   __memory/ranges_uninitialized_algorithms.h
@@ -698,6 +700,8 @@ set(files
   __pstl/cpu_algos/merge.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
+  __pstl/cpu_algos/search.h
+  __pstl/cpu_algos/search_n.h
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
@@ -901,6 +905,7 @@ set(files
   __type_traits/is_polymorphic.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
+  __type_traits/is_relocatable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -913,7 +918,6 @@ set(files
   __type_traits/is_trivially_copyable.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_relocatable.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
@@ -1711,9 +1715,11 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
-# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
-# make __config_site modular when per-target runtime directories are used.
-if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+# We generate the main modulemap file so that we can include __config_site in it. When using a target-specific
+# include directory, give it its own modulemap.
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  configure_file("target.modulemap" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap" COPYONLY)
+else()
   set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
 endif()
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
@@ -1721,6 +1727,9 @@ configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.mod
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap")
+endif()
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1788,6 +1797,14 @@ if (LIBCXX_INSTALL_HEADERS)
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
+
+  # Install the per-target modulemap when we use per-target include dirs.
+  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap"
+      DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      COMPONENT cxx-headers)
+  endif()
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers

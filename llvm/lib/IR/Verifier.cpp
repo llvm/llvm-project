@@ -64,6 +64,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
@@ -98,6 +99,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -125,6 +127,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
@@ -358,7 +361,7 @@ private:
   void visitNoFPClassMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
-  void visitNofreeMetadata(Instruction &I, MDNode *MD);
+  void visitNoFreeObjMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
@@ -1009,18 +1012,12 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
-    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    // Enforce the single-operand form of the loop enable/disable pairs.
     if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
-      Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.distribute metadata",
-            CurrentMD);
-
-    // Enforce the single-operand form of llvm.loop.vectorize.enable metadata.
-    if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
+        any_of(OldBooleanLoopTags, [CurrentMD](const BooleanLoopTags &Tags) {
+          return CurrentMD->getOperand(0).equalsStr(Tags.Enable) ||
+                 CurrentMD->getOperand(0).equalsStr(Tags.Disable);
+        }))
       Check(CurrentMD->getNumOperands() == 1,
             "Expecting only the metadata name", CurrentMD);
 
@@ -2026,6 +2023,12 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+  }
+
+  if (ID->getString() == "target-abi") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "target-abi metadata requires a non-empty string argument", Op);
   }
 
   if (ID->getString() == "Linker Options") {
@@ -3927,9 +3930,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  // FIXME: Missing verifier check to forbid a call site marked strictfp without
-  // caller function marked strictfp.
-
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4665,6 +4665,19 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
+
+    if (SI.isElementwise()) {
+      Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise store cannot be sequentially consistent.", &SI);
+
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise store operand must have fixed vector type!",
+            &SI, ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4673,6 +4686,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
+    Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }
@@ -5286,11 +5300,12 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         &I);
 }
 
-void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
-  Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
-  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
+void Verifier::visitNoFreeObjMetadata(Instruction &I, MDNode *MD) {
+  Check(I.getType()->isPointerTy(), "nofreeobj applies only to pointer types",
         &I);
-  Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
+  Check((isa<IntToPtrInst>(I)),
+        "nofreeobj applies only to inttoptr instruction", &I);
+  Check(MD->getNumOperands() == 0, "nofreeobj metadata must be empty", &I);
 }
 
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
@@ -5577,11 +5592,15 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
     return MD->getNumOperands() == 0 && MD->isDistinct();
   };
 
-  // It must be either an access scope itself...
-  if (IsValidAccessScope(MD))
+  // An empty node is an access scope, and it must be 'distinct'. It is never a
+  // list, because an empty list is not allowed: it would look the same as an
+  // access scope.
+  if (MD->getNumOperands() == 0) {
+    Check(MD->isDistinct(), "Access scope must be 'distinct'", MD);
     return;
+  }
 
-  // ...or a list of access scopes.
+  // A non-empty node is a list of access scopes.
   for (const MDOperand &Op : MD->operands()) {
     const auto *OpMD = dyn_cast<MDNode>(Op);
     Check(OpMD != nullptr, "Access scope list must consist of MDNodes", MD);
@@ -5893,8 +5912,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
     visitDereferenceableMetadata(I, MD);
 
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofree))
-    visitNofreeMetadata(I, MD);
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofreeobj))
+    visitNoFreeObjMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
@@ -6846,6 +6865,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_insert index must be a constant multiple of "
           "the subvector's known minimum vector length.");
 
+    // The only allowed 'mixed' case is inserting a fixed vector into a
+    // scalable vector.
+    if (SubVecEC.isScalable()) {
+      Check(VecEC.isScalable(), "cannot vector_insert a scalable vector into "
+                                "a fixed vector.");
+    }
+
     // If this insertion is not the 'mixed' case where a fixed vector is
     // inserted into a scalable vector, ensure that the insertion of the
     // subvector does not overrun the parent vector.
@@ -6875,6 +6901,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(IdxN % ResultEC.getKnownMinValue() == 0,
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
+
+    // The only allowed 'mixed' case is extracting a fixed vector from a
+    // scalable vector.
+    if (ResultEC.isScalable()) {
+      Check(VecEC.isScalable(), "cannot vector_extract a scalable vector from "
+                                "a fixed vector.");
+    }
 
     // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
@@ -6943,6 +6976,26 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
           Call);
+    break;
+  }
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax: {
+    // The result models VLMAX (or a VL bounded by it) and is only defined for
+    // XLen (i32/i64). Narrower types cannot represent the architectural VLMAX
+    // range of [1, 65536], which value analyses rely on.
+    Check(Call.getType()->isIntegerTy(32) || Call.getType()->isIntegerTy(64),
+          "llvm.riscv.vsetvli/vsetvlimax result must be i32 or i64", &Call);
+
+    // VSEW and VLMUL select the vtype and must encode a valid SEW/LMUL pair.
+    bool HasAVL = ID == Intrinsic::riscv_vsetvli;
+    unsigned Offset = HasAVL ? 1 : 0;
+    uint64_t VSEW =
+        cast<ConstantInt>(Call.getArgOperand(Offset))->getZExtValue();
+    uint64_t VLMUL =
+        cast<ConstantInt>(Call.getArgOperand(Offset + 1))->getZExtValue();
+    Check(VSEW <= 3, "llvm.riscv.vsetvli/vsetvlimax VSEW must be 0-3", &Call);
+    Check(VLMUL <= 7 && VLMUL != RISCVVType::LMUL_RESERVED,
+          "llvm.riscv.vsetvli/vsetvlimax VLMUL is reserved", &Call);
     break;
   }
   case Intrinsic::callbr_landingpad: {
@@ -7273,64 +7326,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
-  if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
-    auto *RetTy = cast<VectorType>(VPCast->getType());
-    auto *ValTy = cast<VectorType>(VPCast->getOperand(0)->getType());
-    Check(RetTy->getElementCount() == ValTy->getElementCount(),
-          "VP cast intrinsic first argument and result vector lengths must be "
-          "equal",
-          *VPCast);
-
-    switch (VPCast->getIntrinsicID()) {
-    case Intrinsic::vp_trunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.trunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_zext:
-    case Intrinsic::vp_sext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.zext or llvm.vp.sext intrinsic the bit size of first "
-            "argument must be smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fptrunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.fptrunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fpext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.fpext intrinsic the bit size of first argument must be "
-            "smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    default:
-      break;
-    }
-  }
-
   switch (VPI.getIntrinsicID()) {
-  case Intrinsic::vp_fcmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isFPPredicate(Pred),
-          "invalid predicate for VP FP comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_icmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isIntPredicate(Pred),
-          "invalid predicate for VP integer comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_is_fpclass: {
-    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
-    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
-          "unsupported bits for llvm.vp.is.fpclass test mask");
-    break;
-  }
   case Intrinsic::experimental_vp_splice: {
     VectorType *VecTy = cast<VectorType>(VPI.getType());
     int64_t Idx = cast<ConstantInt>(VPI.getArgOperand(2))->getSExtValue();

@@ -1358,3 +1358,94 @@ k.exit.7:                                         ; preds = %k.exit, %k.exit.thr
   %6 = phi i32 [ %.reass5.4, %k.exit ], [ %4, %k.exit.thread ]
   br label %.preheader
 }
+
+@a = global i32 0, align 4
+@b = global i64 0, align 8
+@c = global i32 0, align 4
+
+; The copyable element %add4 is peeled into the flattened node; its schedule
+; data must be released exactly once.
+define void @test_reassoc_copyable_chain_link() {
+; CHECK-LABEL: define void @test_reassoc_copyable_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @b, align 8
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i64 [[TMP2]], [[CONV2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[REASS_SUB]], 1
+; CHECK-NEXT:    [[ADD4:%.*]] = sub nsw i64 7, [[CONV1]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[CONV1]], [[ADD4]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], [[REM]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END:.*]], label %[[WHILE_BODY:.*]]
+; CHECK:       [[WHILE_BODY]]:
+; CHECK-NEXT:    br label %[[WHILE_BODY]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @c, align 4
+  %conv1 = sext i32 %1 to i64
+  %2 = load i64, ptr @b, align 8
+  %conv2 = zext i32 %0 to i64
+  %reass.sub = sub i64 %2, %conv2
+  %add = add i64 %reass.sub, 1
+  %add4 = sub nsw i64 7, %conv1
+  %rem = srem i64 %conv1, %add4
+  %and = and i64 %add, %rem
+  %tobool.not = icmp eq i64 %and, 0
+  br i1 %tobool.not, label %if.end, label %while.body
+
+while.body:
+  br label %while.body
+
+if.end:
+  ret void
+}
+
+; Same as above, but the copyable element is a sub in an add-family node.
+define i32 @test_reassoc_copyable_sub_chain_link() {
+; CHECK-LABEL: define i32 @test_reassoc_copyable_sub_chain_link(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 2
+; CHECK-NEXT:    store i32 [[ADD]], ptr @c, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[ADD]], 30
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i32 1073741824, [[TMP1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 2, [[ADD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i32 [[DIV]], [[TMP2]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[REASS_SUB]], -5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD1]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    store i32 0, ptr @a, align 4
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = load i32, ptr @b, align 4
+  %add = add nsw i32 %0, 2
+  store i32 %add, ptr @c, align 4
+  %1 = shl i32 %add, 30
+  %add1 = sub i32 1073741824, %1
+  %div = sdiv i32 2, %add
+  %2 = shl i32 %0, 1
+  %reass.sub = sub i32 %div, %2
+  %sub = add i32 %reass.sub, -5
+  %cmp = icmp slt i32 %add1, %sub
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 0, ptr @a, align 4
+  br label %if.end
+
+if.end:
+  ret i32 0
+}

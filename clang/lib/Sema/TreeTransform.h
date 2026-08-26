@@ -1145,8 +1145,9 @@ public:
                            AutoTypeKeyword Keyword,
                            ConceptDecl *TypeConstraintConcept,
                            ArrayRef<TemplateArgument> TypeConstraintArgs) {
-    return SemaRef.Context.getAutoType(
-        DK, DeducedAsType, Keyword, TypeConstraintConcept, TypeConstraintArgs);
+    return SemaRef.Context.getAutoType(DK, DeducedAsType, Keyword,
+                                       TemplateName(TypeConstraintConcept),
+                                       TypeConstraintArgs);
   }
 
   /// By default, builds a new DeducedTemplateSpecializationType with the given
@@ -1732,14 +1733,17 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPNumThreadsClause(OpenMPNumThreadsClauseModifier Modifier,
-                                        Expr *NumThreads,
-                                        SourceLocation StartLoc,
-                                        SourceLocation LParenLoc,
-                                        SourceLocation ModifierLoc,
-                                        SourceLocation EndLoc) {
+  OMPClause *RebuildOMPNumThreadsClause(
+      ArrayRef<Expr *> VarList,
+      OpenMPNumThreadsClauseModifier PrescriptivenessModifier,
+      SourceLocation PrescriptivenessModifierLoc,
+      OpenMPNumThreadsClauseModifier DimsModifier, Expr *DimsModifierExpr,
+      SourceLocation DimsModifierLoc, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPNumThreadsClause(
-        Modifier, NumThreads, StartLoc, LParenLoc, ModifierLoc, EndLoc);
+        VarList, PrescriptivenessModifier, PrescriptivenessModifierLoc,
+        DimsModifier, DimsModifierExpr, DimsModifierLoc, StartLoc, LParenLoc,
+        EndLoc);
   }
 
   /// Build a new OpenMP 'safelen' clause.
@@ -7569,7 +7573,8 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   if (T->isConstrained()) {
     assert(TL.getConceptReference());
     NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
-        TL.getConceptNameLoc(), T->getTypeConstraintConcept()));
+        TL.getConceptNameLoc(),
+        T->getTypeConstraintConcept().getAsTemplateDecl()));
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
@@ -7609,10 +7614,12 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   NewTL.setConceptReference(nullptr);
 
   if (T->isConstrained()) {
-    DeclarationNameInfo DNI = DeclarationNameInfo(
-        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
-        TL.getConceptNameLoc(),
-        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName());
+    DeclarationName ConceptName = TL.getTypePtr()
+                                      ->getTypeConstraintConcept()
+                                      .getAsTemplateDecl()
+                                      ->getDeclName();
+    DeclarationNameInfo DNI =
+        DeclarationNameInfo(ConceptName, TL.getConceptNameLoc(), ConceptName);
     auto *CR = ConceptReference::Create(
         SemaRef.Context, NewNestedNameSpec, TL.getTemplateKWLoc(), DNI,
         TL.getFoundDecl(), TL.getTypePtr()->getTypeConstraintConcept(),
@@ -7846,11 +7853,21 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     ContainedTy = ContainedTSI->getType();
   }
 
+  HLSLAttributedResourceType::Attributes Attrs = oldType->getAttrs();
+  if (Attrs.SampleCountExpr) {
+    ExprResult SampleCountResult =
+        getDerived().TransformExpr(Attrs.SampleCountExpr);
+    if (SampleCountResult.isInvalid())
+      return QualType();
+    Attrs.SampleCountExpr = SampleCountResult.get();
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
-      ContainedTy != oldType->getContainedType()) {
-    Result = SemaRef.Context.getHLSLAttributedResourceType(
-        WrappedTy, ContainedTy, oldType->getAttrs());
+      ContainedTy != oldType->getContainedType() ||
+      Attrs.SampleCountExpr != oldType->getSampleCountExpr()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(WrappedTy,
+                                                           ContainedTy, Attrs);
   }
 
   HLSLAttributedResourceTypeLoc NewTL =
@@ -10281,11 +10298,22 @@ TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
 }
 
 template <typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
+StmtResult TreeTransform<Derived>::TransformOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
-      OMPD_ordered, DirName, nullptr, D->getBeginLoc());
+      OMPD_ordered_standalone, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_ordered_blockassoc, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -10810,12 +10838,26 @@ OMPClause *TreeTransform<Derived>::TransformOMPFinalClause(OMPFinalClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPNumThreadsClause(OMPNumThreadsClause *C) {
-  ExprResult NumThreads = getDerived().TransformExpr(C->getNumThreads());
-  if (NumThreads.isInvalid())
-    return nullptr;
+  llvm::SmallVector<Expr *, 3> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlist()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  Expr *DimsModifierExpr = C->getDimsModifierExpr();
+  if (DimsModifierExpr) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(DimsModifierExpr));
+    if (EVar.isInvalid())
+      return nullptr;
+    DimsModifierExpr = EVar.get();
+  }
   return getDerived().RebuildOMPNumThreadsClause(
-      C->getModifier(), NumThreads.get(), C->getBeginLoc(), C->getLParenLoc(),
-      C->getModifierLoc(), C->getEndLoc());
+      Vars, C->getPrescriptivenessModifier(),
+      C->getPrescriptivenessModifierLoc(), C->getDimsModifier(),
+      DimsModifierExpr, C->getDimsModifierLoc(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -15622,7 +15664,7 @@ TreeTransform<Derived>::TransformConceptSpecializationExpr(
 
   return getDerived().RebuildConceptSpecializationExpr(
       E->getNestedNameSpecifierLoc(), E->getTemplateKWLoc(),
-      E->getConceptNameInfo(), E->getFoundDecl(), E->getNamedConcept(),
+      E->getConceptNameInfo(), E->getFoundDecl(), E->getConceptDecl(),
       &TransArgs);
 }
 
@@ -16523,6 +16565,36 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
   // FIXME: we're faking the locations of the commas
   return getDerived().RebuildCXXUnresolvedConstructExpr(
       T, E->getLParenLoc(), Args, E->getRParenLoc(), E->isListInitialization());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
+    DependentTemplateIdExpr *E) {
+
+  NestedNameSpecifierLoc Loc;
+  TemplateName Name = getDerived().TransformTemplateName(
+      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
+      E->getNameLoc());
+  if (Name.isNull())
+    return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+
+  assert(TD && "A dependent template id always refers to a template decl");
+
+  TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+  if (getDerived().TransformTemplateArguments(
+          E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
+    return ExprError();
+
+  CXXScopeSpec SS;
+
+  LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
+  R.addDecl(TD);
+  R.resolveKind();
+  return getDerived().RebuildTemplateIdExpr(
+      SS, /*Template Keyword=*/SourceLocation(), R,
+      /*RequiresADL=*/false, &TransArgs);
 }
 
 template<typename Derived>

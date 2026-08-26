@@ -130,35 +130,38 @@ static void renderDependencyGenerationOptions(Compilation &C,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
-                            options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenacc,
-                            options::OPT_finput_charset_EQ,
-                            options::OPT_fimplicit_none,
-                            options::OPT_fimplicit_none_ext,
-                            options::OPT_fno_implicit_none,
-                            options::OPT_fbackslash,
-                            options::OPT_fno_backslash,
-                            options::OPT_flogical_abbreviations,
-                            options::OPT_fno_logical_abbreviations,
-                            options::OPT_fxor_operator,
-                            options::OPT_fno_xor_operator,
-                            options::OPT_falternative_parameter_statement,
-                            options::OPT_fdefault_integer_4,
-                            options::OPT_fdefault_real_4,
-                            options::OPT_fdefault_real_8,
-                            options::OPT_fdefault_integer_8,
-                            options::OPT_fdefault_double_8,
-                            options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files,
-                            options::OPT_frealloc_lhs,
-                            options::OPT_fno_realloc_lhs,
-                            options::OPT_fsave_main_program,
-                            options::OPT_fd_lines_as_code,
-                            options::OPT_fd_lines_as_comments,
-                            options::OPT_fno_save_main_program});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_ffixed_form,
+                   options::OPT_ffree_form,
+                   options::OPT_ffixed_line_length_EQ,
+                   options::OPT_fopenacc,
+                   options::OPT_finput_charset_EQ,
+                   options::OPT_fimplicit_none,
+                   options::OPT_fimplicit_none_ext,
+                   options::OPT_fno_implicit_none,
+                   options::OPT_fbackslash,
+                   options::OPT_fno_backslash,
+                   options::OPT_flogical_abbreviations,
+                   options::OPT_fno_logical_abbreviations,
+                   options::OPT_fxor_operator,
+                   options::OPT_fno_xor_operator,
+                   options::OPT_falternative_parameter_statement,
+                   options::OPT_fdefault_integer_4,
+                   options::OPT_fdefault_real_4,
+                   options::OPT_fdefault_real_8,
+                   options::OPT_fdefault_integer_8,
+                   options::OPT_fdefault_double_8,
+                   options::OPT_flarge_sizes,
+                   options::OPT_fno_automatic,
+                   options::OPT_fhermetic_module_files,
+                   options::OPT_frealloc_lhs,
+                   options::OPT_fno_realloc_lhs,
+                   options::OPT_fsave_main_program,
+                   options::OPT_fd_lines_as_code,
+                   options::OPT_fd_lines_as_comments,
+                   options::OPT_fno_save_main_program,
+                   options::OPT_fprefer_intrinsic_module_use_association,
+                   options::OPT_fno_prefer_intrinsic_module_use_association});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -248,7 +251,14 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  if (hasDwarfNArg) {
+  // Pass on the DWARF version when debug information is being generated, or
+  // when -gdwarf-N names a version. Leaving it out means the version stays
+  // unset and the backend falls back to dwarf::DWARF_VERSION (4) instead of
+  // honouring toolchain default like clang does.
+  //
+  // Note that both conditions are needed to match clang for cases like
+  // "-gdwarf-5 -g0".
+  if (hasDwarfNArg || DebugInfoKind != llvm::codegenoptions::NoDebugInfo) {
     const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
@@ -337,8 +347,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
-  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
-                    options::OPT_fno_real_sum_reassociation);
+  Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
+                  options::OPT_fno_fp_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -894,6 +904,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
+  StringRef LastSeenFfpContractOption;
+  StringRef LastFpContractOverrideOption;
   bool HonorINFs = true;
   bool HonorNaNs = true;
   bool ApproxFunc = false;
@@ -903,23 +915,6 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   StringRef LastComplexRangeOption;
   LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
-
-  if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
-    const StringRef Val = A->getValue();
-    if (Val == "fast" || Val == "off") {
-      FPContract = Val;
-    } else if (Val == "on") {
-      // Warn instead of error because users might have makefiles written for
-      // gfortran (which accepts -ffp-contract=on)
-      D.Diag(diag::warn_drv_unsupported_option_for_flang)
-          << Val << A->getOption().getName() << "off";
-      FPContract = "off";
-    } else
-      // Clang's "fast-honor-pragmas" option is not supported because it is
-      // non-standard
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Val;
-  }
 
   for (const Arg *A : Args) {
     auto optId = A->getOption().getID();
@@ -983,6 +978,32 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_reciprocal_math:
       ReciprocalMath = false;
       break;
+    case options::OPT_ffp_contract: {
+      StringRef Val = A->getValue();
+      if (Val == "fast" || Val == "off") {
+        if (Val != FPContract && LastFpContractOverrideOption != "") {
+          D.Diag(clang::diag::warn_drv_overriding_option)
+              << LastFpContractOverrideOption
+              << Args.MakeArgString("-ffp-contract=" + Val);
+        }
+        FPContract = Val;
+        LastSeenFfpContractOption = Val;
+      } else if (Val == "on") {
+        // Warn instead of error because users might have makefiles written for
+        // gfortran (which accepts -ffp-contract=on)
+        D.Diag(diag::warn_drv_unsupported_option_for_flang)
+            << Val << A->getOption().getName() << "off";
+        FPContract = "off";
+        LastSeenFfpContractOption = "off";
+      } else {
+        // Clang's "fast-honor-pragmas" option is not supported because it is
+        // non-standard
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+      }
+      LastFpContractOverrideOption = "";
+      break;
+    }
     case options::OPT_Ofast:
       [[fallthrough]];
     case options::OPT_ffast_math:
@@ -993,6 +1014,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = true;
       SignedZeros = false;
       FPContract = "fast";
+      if (A->getOption().getID() == options::OPT_Ofast)
+        LastFpContractOverrideOption = "-Ofast";
+      else
+        LastFpContractOverrideOption = "-ffast-math";
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_Basic,
                       LastComplexRangeOption, Range);
@@ -1005,13 +1030,17 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       ApproxFunc = false;
       SignedZeros = true;
       // -fno-fast-math should undo -ffast-math so I return FPContract to the
-      // default. It is important to check it is "fast" (the default) so that
-      // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
-      if (FPContract == "fast")
+      // default. If -ffp-contract= was explicitly specified, restore the
+      // user-requested value from LastSeenFfpContractOption so that
+      // -ffp-contract=off -fno-fast-math --> -ffp-contract=off
+      if (LastSeenFfpContractOption != "")
+        FPContract = LastSeenFfpContractOption;
+      else
         FPContract = "";
       setComplexRange(D, A->getSpelling(),
                       LangOptions::ComplexRangeKind::CX_None,
                       LastComplexRangeOption, Range);
+      LastFpContractOverrideOption = "";
       break;
     }
 
@@ -1066,6 +1095,72 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (ReciprocalMath)
     CmdArgs.push_back("-freciprocal-math");
+}
+
+// Add options related to IEEE Floating point modes
+//
+// Initial halting mode:
+// Validate -ffpe-trap= and forward it to -fc1. This is handled separately from
+// addFloatingPointOptions() on purpose: -ffpe-trap= is not part of the
+// fast-math option set, so it must not be skipped by that function's
+// -ffast-math fast path. The value check and the target-support warnings depend
+// only on the option value and the target triple (no frontend-only state), so
+// they are done here in the driver rather than deferred to -fc1; -fc1 only
+// translates the list into its LangOptions bitmask.
+//
+// TODO:
+// Rounding modes
+// Underflow mode
+static void addIEEEFPModesOptions(const Driver &D, const ArgList &Args,
+                                  ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  const Arg *A = Args.getLastArg(options::OPT_ffpe_trap_EQ);
+  if (!A)
+    return;
+
+  // The value is a comma-separated list of exception mnemonics. "none" and an
+  // empty list request no halting and reset any earlier request in the list;
+  // any other unrecognized mnemonic is an error.
+  llvm::SmallVector<StringRef, 6> Traps;
+  StringRef(A->getValue())
+      .split(Traps, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+  bool RequestsTrap = false;
+  bool RequestsDenormal = false;
+  for (StringRef Trap : Traps) {
+    if (Trap == "none") {
+      RequestsTrap = false;
+      RequestsDenormal = false;
+      continue;
+    }
+    bool IsKnown = llvm::StringSwitch<bool>(Trap)
+                       .Cases({"invalid", "zero", "overflow", "underflow",
+                               "inexact", "denormal"},
+                              true)
+                       .Default(false);
+    if (!IsKnown) {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Trap;
+      return;
+    }
+    RequestsTrap = true;
+    RequestsDenormal |= (Trap == "denormal");
+  }
+
+  // Run-time halting is implemented in flang-rt only where the target's
+  // floating-point environment can trap: it relies on glibc's feenableexcept
+  // (in practice Linux), and "denormal" additionally requires an x86 target.
+  // Warn (conservatively) when the target cannot honor the request; the runtime
+  // otherwise ignores it. The denormal-specific warning names just
+  // "-ffpe-trap=denormal" to point at the unsupported mnemonic.
+  if (RequestsTrap && !Triple.isX86() && !Triple.isOSLinux())
+    D.Diag(diag::warn_drv_unsupported_option_for_target)
+        << A->getAsString(Args) << Triple.str();
+  else if (RequestsDenormal && !Triple.isX86())
+    D.Diag(diag::warn_drv_unsupported_option_for_target)
+        << "-ffpe-trap=denormal" << Triple.str();
+
+  A->render(Args, CmdArgs);
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -1148,6 +1243,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
+
+  addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1246,6 +1343,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Floating point related options
   addFloatingPointOptions(D, Args, CmdArgs);
+
+  // Initial floating-point exception halting mode. Handled separately so it is
+  // not skipped by the -ffast-math fast path in addFloatingPointOptions().
+  addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

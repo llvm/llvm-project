@@ -22,6 +22,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <memory>
 #include <numeric>
