@@ -3311,7 +3311,9 @@ A return statement that does not dereference the pointer does not lead to a repo
 Such a case is reported by the {ref}`core-StackAddressEscape` checker.
 
 Each object is reported at most once on an execution path. If the same dangling
-pointer is used several times then only the first use is reported.
+pointer is used several times then only the first use is reported. Setting the pointer
+to null when the object goes out of scope avoids the dangling pointer and suppresses
+the report.
 
 ```cpp
 void test_deref() {
