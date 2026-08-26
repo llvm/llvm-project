@@ -2221,6 +2221,10 @@ public:
         Base, IsAppleKext);
   }
 
+  CXXSpecialMemberKind getSpecialMemberKind() const {
+    return getDefaultedFunctionKind().asSpecialMember();
+  }
+
   /// Determine whether this is a usual deallocation function (C++
   /// [basic.stc.dynamic.deallocation]p2), which is an overloaded delete or
   /// delete[] operator with a particular signature. Populates \p PreventedBy
@@ -4205,7 +4209,7 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  ValueDecl *Decomp = nullptr;
+  DecompositionDecl *Decomp = nullptr;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
@@ -4236,7 +4240,7 @@ public:
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
-  ValueDecl *getDecomposedDecl() const { return Decomp; }
+  DecompositionDecl *getDecomposedDecl() const { return Decomp; }
 
   /// Set the binding for this BindingDecl, along with its declared type (which
   /// should be a possibly-cv-qualified form of the type of the binding, or a
@@ -4247,7 +4251,7 @@ public:
   }
 
   /// Set the decomposed variable for this BindingDecl.
-  void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
+  void setDecomposedDecl(DecompositionDecl *Decomposed) { Decomp = Decomposed; }
 
   /// Get the variable (if any) that holds the value of evaluating the binding.
   /// Only present for user-defined bindings for tuple-like types.

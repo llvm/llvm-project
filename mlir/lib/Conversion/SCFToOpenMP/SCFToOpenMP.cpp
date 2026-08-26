@@ -503,6 +503,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
+        /* allocate_alignments = */ nullptr,
         /* allocate_private_indices = */ nullptr,
         /* if_expr = */ Value{},
         /* num_threads_vars = */ numThreadsVars,

@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
+// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
+// supports parameters of an empty or tag class.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -fno-clangir-call-conv-lowering -fexceptions -fcxx-exceptions -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir  2> %t-before-lp.cir
 // RUN: FileCheck --input-file=%t-before-lp.cir %s -check-prefix=CIR-BEFORE-LPP
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
@@ -820,3 +822,164 @@ void test_init_list_partial_array_cleanup() {
 //
 // OGCG:     [[EH_RESUME]]:
 // OGCG:       resume { ptr, i32 }
+
+struct Temp2 {
+  Temp2();
+  ~Temp2();
+};
+
+struct CausesTemp2 {
+  CausesTemp2(Temp2 = Temp2());
+  ~CausesTemp2();
+};
+
+void Temp2InArray() {
+  CausesTemp2 ct2[42];
+}
+// CIR-BEFORE-LPP-LABEL: cir.func {{.*}}@_Z12Temp2InArrayv()
+// CIR-BEFORE-LPP-NEXT:   %[[ARR:.*]] = cir.alloca "ct2" {{.*}}init : !cir.ptr<!cir.array<!rec_CausesTemp2 x 42>>
+// CIR-BEFORE-LPP-NEXT:   %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Temp2>
+// CIR-BEFORE-LPP-NEXT:   cir.array.ctor %[[ARR]] : !cir.ptr<!cir.array<!rec_CausesTemp2 x 42>> {
+// CIR-BEFORE-LPP-NEXT:   ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CausesTemp2>):
+// CIR-BEFORE-LPP-NEXT:     cir.call @_ZN5Temp2C1Ev(%[[TMP]])
+// CIR-BEFORE-LPP-NEXT:     cir.cleanup.scope {
+// CIR-BEFORE-LPP-NEXT:       %[[CURRENT:.*]] = cir.load {{.*}}%[[TMP]] : !cir.ptr<!rec_Temp2>, !rec_Temp2
+// CIR-BEFORE-LPP-NEXT:       cir.call @_ZN11CausesTemp2C1E5Temp2(%[[ARG]], %[[CURRENT]])
+// CIR-BEFORE-LPP-NEXT:       cir.yield
+// CIR-BEFORE-LPP-NEXT:     } cleanup all {
+// CIR-BEFORE-LPP-NEXT:       cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
+// CIR-BEFORE-LPP-NEXT:       cir.yield
+// CIR-BEFORE-LPP-NEXT:     }
+// CIR-BEFORE-LPP-NEXT:   } partial_dtor {
+// CIR-BEFORE-LPP-NEXT:   ^bb0(%[[ARG]]: !cir.ptr<!rec_CausesTemp2>):
+// CIR-BEFORE-LPP-NEXT:     cir.call @_ZN11CausesTemp2D1Ev(%[[ARG]]) nothrow : ({{.*}})
+// CIR-BEFORE-LPP-NEXT:   }
+// CIR-BEFORE-LPP-NEXT:   cir.cleanup.scope {
+// CIR-BEFORE-LPP-NEXT:     cir.yield
+// CIR-BEFORE-LPP-NEXT:   } cleanup all {
+// CIR-BEFORE-LPP-NEXT:     cir.array.dtor %[[ARR]] : !cir.ptr<!cir.array<!rec_CausesTemp2 x 42>> {
+// CIR-BEFORE-LPP-NEXT:     ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CausesTemp2>):
+// CIR-BEFORE-LPP-NEXT:       cir.call @_ZN11CausesTemp2D1Ev(%[[ARG]]) nothrow : ({{.*}})
+// CIR-BEFORE-LPP-NEXT:     }
+// CIR-BEFORE-LPP-NEXT:     cir.yield
+// CIR-BEFORE-LPP-NEXT:   }
+// CIR-BEFORE-LPP-NEXT:   cir.return
+// CIR-BEFORE-LPP-NEXT: }
+
+// CIR-LABEL: cir.func {{.*}}@_Z12Temp2InArrayv()
+// CIR:       %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}}: !cir.ptr<!rec_Temp2>
+// CIR:       %[[ARR_IDX:.*]] = cir.alloca "__array_idx" {{.*}}: !cir.ptr<!cir.ptr<!rec_CausesTemp2>>
+// CIR:       cir.cleanup.scope {
+// CIR-NEXT:    cir.do {
+// CIR-NEXT:      %[[CURRENT:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
+// CIR-NEXT:      cir.call @_ZN5Temp2C1Ev(%[[TMP]])
+// CIR-NEXT:      cir.cleanup.scope {
+// CIR-NEXT:        %[[LOAD_TMP:.*]] = cir.load {{.*}}%[[TMP]] : !cir.ptr<!rec_Temp2>, !rec_Temp2
+// CIR-NEXT:        cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[LOAD_TMP]])
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } cleanup all {
+// CIR-NEXT:        cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR:           cir.yield
+// CIR-NEXT:    } while {
+// CIR:         }
+// CIR-NEXT:    cir.yield
+// CIR-NEXT:  } cleanup eh {
+// CIR:           cir.do {
+// CIR-NEXT:        %[[CURRENT:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
+// CIR-NEXT:        %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR-NEXT:        %[[STRIDE:.*]] = cir.ptr_stride %[[CURRENT]], %[[NEG_1]] : (!cir.ptr<!rec_CausesTemp2>, !s64i) -> !cir.ptr<!rec_CausesTemp2>
+// CIR:             cir.call @_ZN11CausesTemp2D1Ev(%[[STRIDE]]) nothrow 
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } while {
+// CIR:           }
+// CIR-NEXT:    }
+// CIR-NEXT:    cir.yield
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.cleanup.scope {
+// CIR-NEXT:    cir.yield
+// CIR-NEXT:  } cleanup all {
+// CIR:         %[[ARR_IDX:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>
+// CIR:         cir.do {
+// CIR-NEXT:      %[[ARR_LOAD:.*]] = cir.load %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
+// CIR-NEXT:      %[[NEG_1:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR-NEXT:      %[[STRIDE:.*]] = cir.ptr_stride %[[ARR_LOAD]], %[[NEG_1]] : (!cir.ptr<!rec_CausesTemp2>, !s64i) -> !cir.ptr<!rec_CausesTemp2>
+// CIR:           cir.call @_ZN11CausesTemp2D1Ev(%[[STRIDE]]) nothrow
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } while {
+// CIR:         }
+// CIR-NEXT:    cir.yield
+// CIR-NEXT:  }
+// CIR-NEXT:  cir.return
+
+// LLVM: define {{.*}}@_Z12Temp2InArrayv()
+// LLVM: %[[TMP:.*]] = alloca %struct.Temp2
+// LLVM: %[[ARR_IDX:.*]] = alloca ptr
+// LLVM: br label %[[EMPTY:.*]]
+// LLVM: [[EMPTY]]:
+// LLVM: br label %[[CONSTRUCT_TEMP:.*]]
+// LLVM: [[CONSTRUCT_TEMP]]:
+// LLVM: invoke void @_ZN5Temp2C1Ev(ptr {{.*}}%[[TMP]])
+// LLVM-NEXT:        to label %[[EMPTY2:.*]] unwind label %[[EXCEPT_TEMP:.*]]
+// LLVM: [[EMPTY2]]:
+// LLVM: br label %[[CONSTRUCT_CT:.*]]
+// LLVM: [[CONSTRUCT_CT]]:
+// LLVM: %[[LOAD:.*]] = load %struct.Temp2, ptr %[[TMP]]
+// LLVM: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr noundef nonnull align 1 dereferenceable(1) %12, %struct.Temp2 %15)
+// LLVM-NEXT:         to label %[[EMPTY3:.*]] unwind label %[[EXCEPT:.*]]
+// LLVM: [[EMPTY3]]:
+// LLVM: br label %[[DTOR_TEMP:.*]]
+// LLVM: [[DTOR_TEMP]]:
+// LLVM: call void @_ZN5Temp2D1Ev(ptr {{.*}} %[[TMP]])
+
+// LLVM: [[EXCEPT]]:
+// LLVM: br label %[[DO_DTOR:.*]]
+// LLVM: [[DO_DTOR]]:
+// LLVM: call void @_ZN5Temp2D1Ev(ptr {{.*}}%[[TMP]])
+
+// LLVM: [[EXCEPT_TEMP]]:
+// LLVM: br label %[[CHECK_TEMP:.*]]
+// LLVM: [[CHECK_TEMP]]:
+// LLVM: br i1 %37, label %[[EMPTY4:.*]], 
+// LLVM: [[EMPTY4]]:
+// LLVM: br label %[[DTOR_TMP:.*]]
+//
+// LLVM: [[DTOR_TMP]]:
+// LLVM: %[[DTOR_ELT:.*]] = getelementptr %struct.CausesTemp2, ptr %{{.*}}, i64 -1
+// LLVM: call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])
+//
+// Array destruction:
+// LLVM: %[[GET_ELT:.*]] = getelementptr %struct.CausesTemp2, ptr %{{.*}}, i64 -1
+// LLVM: call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[GET_ELT]])
+
+// OGCG-LABEL: define {{.*}}@_Z12Temp2InArrayv()
+// OGCG: %[[TMP:.*]] = alloca %struct.Temp2
+// OGCG: invoke void @_ZN5Temp2C1Ev(ptr {{.*}}%[[TMP]])
+// OGCG-NEXT:         to label %[[TMP_CTD:.*]] unwind label %[[TMP_UNWIND:.*]]
+
+// OGCG: [[TMP_CTD]]:
+// OGCG-NEXT: invoke void @_ZN11CausesTemp2C1E5Temp2(ptr {{.*}}%{{.*}}, ptr {{.*}}%[[TMP]])
+// OGCG-NEXT:      to label %[[CTD:.*]] unwind label %[[UNWIND:.*]]
+
+// OGCG: [[CTD]]:
+// OGCG-NEXT: call void @_ZN5Temp2D1Ev(ptr {{.*}}%[[TMP]])
+
+// Array destruction is before cleanups.
+// OGCG: %[[DTOR_ELT:.*]] = getelementptr inbounds %struct.CausesTemp2, ptr %{{.*}}, i64 -1
+// OGCG: call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])
+
+// OGCG: [[TMP_UNWIND]]:
+// OGCG: br label %[[EH_CLEANUP:.*]]
+
+// OGCG: [[UNWIND]]:
+// OGCG: call void @_ZN5Temp2D1Ev(ptr {{.*}} %[[TMP]])
+//
+// OGCG: [[EH_CLEANUP]]:
+// OGCG-NEXT: %[[IS_EMPTY:.*]] = icmp eq
+// OGCG-NEXT: br i1 %[[IS_EMPTY]], label %{{.*}}, label %[[CLEANUP_DTOR:.*]]
+//
+// OGCG: [[CLEANUP_DTOR]]:
+// OGCG: %[[DTOR_ELT:.*]] = getelementptr inbounds %struct.CausesTemp2, ptr %{{.*}}, i64 -1
+// OGCG: call void @_ZN11CausesTemp2D1Ev(ptr {{.*}}%[[DTOR_ELT]])
+

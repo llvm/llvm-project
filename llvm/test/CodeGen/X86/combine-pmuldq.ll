@@ -447,9 +447,9 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; AVX2-LABEL: PR49658_zext:
 ; AVX2:       # %bb.0: # %start
 ; AVX2-NEXT:    movl %esi, %eax
-; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm1
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; AVX2-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
@@ -472,8 +472,8 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; AVX512VL-LABEL: PR49658_zext:
 ; AVX512VL:       # %bb.0: # %start
 ; AVX512VL-NEXT:    movl %esi, %eax
-; AVX512VL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512VL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX512VL-NEXT:    vpmovqd %zmm1, %ymm1
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]
@@ -495,8 +495,8 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; AVX512DQVL-LABEL: PR49658_zext:
 ; AVX512DQVL:       # %bb.0: # %start
 ; AVX512DQVL-NEXT:    movl %esi, %eax
-; AVX512DQVL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512DQVL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512DQVL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX512DQVL-NEXT:    vpmovqd %zmm1, %ymm1
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]
@@ -639,9 +639,9 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; AVX2-LABEL: PR49658_sext:
 ; AVX2:       # %bb.0: # %start
 ; AVX2-NEXT:    movslq %esi, %rax
-; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm1
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; AVX2-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
@@ -664,8 +664,8 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; AVX512VL-LABEL: PR49658_sext:
 ; AVX512VL:       # %bb.0: # %start
 ; AVX512VL-NEXT:    movslq %esi, %rax
-; AVX512VL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512VL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX512VL-NEXT:    vpmovqd %zmm1, %ymm1
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]
@@ -687,8 +687,8 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; AVX512DQVL-LABEL: PR49658_sext:
 ; AVX512DQVL:       # %bb.0: # %start
 ; AVX512DQVL-NEXT:    movslq %esi, %rax
-; AVX512DQVL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512DQVL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpbroadcastq %rax, %zmm1
 ; AVX512DQVL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; AVX512DQVL-NEXT:    vpmovqd %zmm1, %ymm1
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]

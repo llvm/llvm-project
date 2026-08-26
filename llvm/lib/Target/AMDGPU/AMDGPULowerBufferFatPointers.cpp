@@ -435,8 +435,6 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
     : public InstVisitor<StoreFatPtrsAsIntsAndExpandMemcpyVisitor, bool> {
   BufferFatPtrToIntTypeMap *TypeMap;
 
-  ValueToValueMapTy ConvertedForStore;
-
   IRBuilder<InstSimplifyFolder> IRB;
 
   // Used for memcpy() lowering.
@@ -476,14 +474,8 @@ Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::fatPtrsToInts(
     Value *V, Type *From, Type *To, const Twine &Name) {
   if (From == To)
     return V;
-  ValueToValueMapTy::iterator Find = ConvertedForStore.find(V);
-  if (Find != ConvertedForStore.end())
-    return Find->second;
-  if (isBufferFatPtrOrVector(From)) {
-    Value *Cast = IRB.CreatePtrToInt(V, To, Name + ".int");
-    ConvertedForStore[V] = Cast;
-    return Cast;
-  }
+  if (isBufferFatPtrOrVector(From))
+    return IRB.CreatePtrToInt(V, To, Name + ".int");
   if (From->getNumContainedTypes() == 0)
     return V;
   // Structs, arrays, and other compound types.
@@ -506,7 +498,6 @@ Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::fatPtrsToInts(
       Ret = IRB.CreateInsertValue(Ret, NewField, Idx);
     }
   }
-  ConvertedForStore[V] = Ret;
   return Ret;
 }
 
@@ -560,7 +551,6 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
   for (WeakTrackingVH VH : make_early_inc_range(CanBecomeLoops)) {
     Changed |= visit(cast<Instruction>(VH));
   }
-  ConvertedForStore.clear();
   this->TTI = nullptr;
   this->SE = nullptr;
   return Changed;
@@ -896,21 +886,27 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
   if (!NumRecordsIfKnown->second)
     return Result;
   const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
-  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
-  // on arcihtecture) no bounds check.
-  if (NumRecords->isAllOnesValue())
+
+  // We'll normalize all bounds to the num_records width on the hardware.
+  std::optional<unsigned> MaybeNumRecordsWidth =
+      ST->getBufferResourceNumRecordsWidth();
+  if (!MaybeNumRecordsWidth)
+    return Result;
+  unsigned NumRecordsWidth = *MaybeNumRecordsWidth;
+  Type *NumRecordsTy = IRB.getIntNTy(NumRecordsWidth);
+  // Compare in i64 so wraparound is visible as a negative.
+  Type *CompareTy = IRB.getInt64Ty();
+  const SCEV *Bound = SE->getNoopOrZeroExtend(
+      SE->getTruncateOrZeroExtend(NumRecords, NumRecordsTy), CompareTy);
+
+  // All-1s is (per ISA or as a consequence of the bounds check rules, depending
+  // on architecture) no bounds check.
+  if (Bound == SE->getConstant(APInt::getMaxValue(NumRecordsWidth)
+                                   .zext(CompareTy->getIntegerBitWidth())))
     Result.NoPartialOOB = true;
 
-  const SCEV *BoundsDiff;
-  if (ST->has45BitNumRecordsBufferResource()) {
-    const SCEV *PtrDiffExt =
-        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
-    BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
-  } else {
-    const SCEV *NumRecordsI32 =
-        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
-    BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
-  }
+  const SCEV *BoundsDiff =
+      SE->getMinusSCEV(Bound, SE->getNoopOrZeroExtend(PtrDiff, CompareTy));
 
   if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
       SE->isKnownNonPositive(BoundsDiff))
@@ -2224,10 +2220,16 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   auto *RetTy = cast<StructType>(IP.getType());
   Type *RsrcTy = RetTy->getElementType(0);
   Type *OffTy = RetTy->getElementType(1);
-  Value *RsrcPart = IRB.CreateLShr(
-      Int,
-      ConstantExpr::getIntegerValue(IntTy, APInt(Width, BufferOffsetWidth)));
-  Value *RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  // inttoptr zero-extends, so narrow inputs contribute nothing to the resource
+  // part.
+  Value *RsrcInt;
+  if (Width <= BufferOffsetWidth) {
+    RsrcInt = Constant::getNullValue(RsrcIntTy);
+  } else {
+    Value *RsrcPart =
+        IRB.CreateLShr(Int, ConstantInt::get(IntTy, BufferOffsetWidth));
+    RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  }
   Value *Rsrc = IRB.CreateIntToPtr(RsrcInt, RsrcTy, IP.getName() + ".rsrc");
   Value *Off =
       IRB.CreateIntCast(Int, OffTy, /*IsSigned=*/false, IP.getName() + ".off");
@@ -2459,8 +2461,9 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Type *RsrcType = SplitType->getElementType(0);
     Type *OffType = SplitType->getElementType(1);
     IRB.SetInsertPoint(&I);
-    Value *Rsrc = IRB.CreateIntrinsic(IID, {RsrcType, Base->getType()},
-                                      {Base, Stride, NumRecords, Flags});
+    Value *Rsrc = IRB.CreateIntrinsic(
+        IID, {RsrcType, Base->getType(), NumRecords->getType()},
+        {Base, Stride, NumRecords, Flags});
     copyMetadata(Rsrc, &I);
     Rsrc->takeName(&I);
     Value *Zero = Constant::getNullValue(OffType);

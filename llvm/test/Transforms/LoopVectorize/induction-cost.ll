@@ -46,10 +46,7 @@ exit:
 
 define void @trunc_induction(ptr noalias %dst, i64 %n) {
 ; CHECK-LABEL: 'trunc_induction'
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.trunc = trunc i64 %iv to i32
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]> (truncated to i32)
+; CHECK:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]> (truncated to i32)
 ;
 entry:
   br label %loop
@@ -69,11 +66,8 @@ exit:
 
 define void @trunc_and_wide_induction(ptr noalias %dst, ptr noalias %dst2, i64 %n) {
 ; CHECK-LABEL: 'trunc_and_wide_induction'
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.trunc = trunc i64 %iv to i32
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; CHECK:  Cost of 0 for VF 4: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
+; CHECK:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 2 for VF 4: ir<%iv>.1 = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]> (truncated to i32)
 ;
 entry:
   br label %loop

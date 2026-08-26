@@ -127,6 +127,18 @@ MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
 }
 
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
@@ -806,13 +818,13 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
   return static_cast<intptr_t>(
-      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
+      llvm::range_size(unwrap(op)->getDiscardableAttrDictionary().getValue()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr =
-      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
+  NamedAttribute attr = *std::next(
+      unwrap(op)->getDiscardableAttrDictionary().getValue().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 

@@ -110,14 +110,15 @@ static PluginProperties &GetGlobalPluginProperties() {
 static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
                                  std::string &gnu_debuglink_file,
                                  uint32_t &gnu_debuglink_crc) {
-  static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+  static constexpr llvm::StringLiteral g_sect_name_gnu_debuglink(
+      ".gnu_debuglink");
   for (const auto &section : coff_obj.sections()) {
     auto name = section.getName();
     if (!name) {
       llvm::consumeError(name.takeError());
       continue;
     }
-    if (*name == g_sect_name_gnu_debuglink.GetStringRef()) {
+    if (*name == g_sect_name_gnu_debuglink) {
       auto content = section.getContents();
       if (!content) {
         llvm::consumeError(content.takeError());
@@ -960,30 +961,26 @@ bool ObjectFilePECOFF::IsStripped() {
 
 SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
                                              const section_header_t &sect) {
-  ConstString const_sect_name(sect_name);
-  static ConstString g_code_sect_name(".code");
-  static ConstString g_CODE_sect_name("CODE");
-  static ConstString g_data_sect_name(".data");
-  static ConstString g_DATA_sect_name("DATA");
-  static ConstString g_bss_sect_name(".bss");
-  static ConstString g_BSS_sect_name("BSS");
+  static constexpr llvm::StringLiteral g_code_sect_name(".code");
+  static constexpr llvm::StringLiteral g_CODE_sect_name("CODE");
+  static constexpr llvm::StringLiteral g_data_sect_name(".data");
+  static constexpr llvm::StringLiteral g_DATA_sect_name("DATA");
+  static constexpr llvm::StringLiteral g_bss_sect_name(".bss");
+  static constexpr llvm::StringLiteral g_BSS_sect_name("BSS");
 
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-      ((const_sect_name == g_code_sect_name) ||
-       (const_sect_name == g_CODE_sect_name))) {
+      ((sect_name == g_code_sect_name) || (sect_name == g_CODE_sect_name))) {
     return eSectionTypeCode;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-             ((const_sect_name == g_data_sect_name) ||
-              (const_sect_name == g_DATA_sect_name))) {
+      ((sect_name == g_data_sect_name) || (sect_name == g_DATA_sect_name))) {
     if (sect.size == 0 && sect.offset == 0)
       return eSectionTypeZeroFill;
     else
       return eSectionTypeData;
   }
   if (sect.flags & llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-             ((const_sect_name == g_bss_sect_name) ||
-              (const_sect_name == g_BSS_sect_name))) {
+      ((sect_name == g_bss_sect_name) || (sect_name == g_BSS_sect_name))) {
     if (sect.size == 0)
       return eSectionTypeZeroFill;
     else

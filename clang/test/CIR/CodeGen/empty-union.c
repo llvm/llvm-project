@@ -20,7 +20,7 @@ void useEmpty() {
 // CIR: cir.func {{.*}}@useEmpty()
 // CIR:   cir.alloca "e" align(1) : !cir.ptr<!rec_Empty>
 // LLVM: define {{.*}} void @useEmpty()
-// LLVM:   alloca %union.Empty, i64 1, align 1
+// LLVM:   alloca %union.Empty, align 1
 // OGCG: define {{.*}} void @useEmpty()
 // OGCG:   alloca %union.Empty, align 1
 
@@ -30,6 +30,6 @@ void useEmptyAligned() {
 // CIR: cir.func {{.*}}@useEmptyAligned()
 // CIR:   cir.alloca "e" align(16) : !cir.ptr<!rec_EmptyAligned>
 // LLVM: define {{.*}} void @useEmptyAligned()
-// LLVM:   alloca %union.EmptyAligned, i64 1, align 16
+// LLVM:   alloca %union.EmptyAligned, align 16
 // OGCG: define {{.*}} void @useEmptyAligned()
 // OGCG:   alloca %union.EmptyAligned, align 16

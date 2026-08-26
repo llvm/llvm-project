@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PdbSymUid.h"
+#include "llvm/Support/NativeFormatting.h"
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -172,4 +173,17 @@ void llvm::format_provider<lldb_private::npdb::PdbGlobalSymId>::format(
   if (V.is_public)
     Stream << "public, ";
   Stream << V.offset << ')';
+}
+
+void llvm::format_provider<lldb_private::npdb::PdbTypeSymId>::format(
+    const lldb_private::npdb::PdbTypeSymId &V, raw_ostream &Stream,
+    StringRef Style) {
+  Stream << "TypeSym(";
+  if (V.is_ipi)
+    Stream << "IPI, ";
+  else
+    Stream << "TPI, ";
+
+  write_hex(Stream, V.index.getIndex(), HexPrintStyle::PrefixLower);
+  Stream << ')';
 }

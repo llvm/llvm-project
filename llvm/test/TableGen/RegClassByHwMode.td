@@ -102,7 +102,7 @@ include "Common/RegClassByHwModeCommon.td"
 
 // ASMMATCHER: switch (Kind) {
 
-// ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
+// ASMMATCHER: if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
 // ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
 // ASMMATCHER-NEXT:      { // DefaultMode
 // ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC

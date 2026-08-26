@@ -19,7 +19,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
       %co = arith.addf %cij, %p : f32
       memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
       acc.yield
-    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
+    } collapse([3]) collapseDeviceType([#acc.device_type<none>]) inclusiveUpperbound(array<i1: true, true, true>) independent
     acc.yield
   }
 
@@ -40,7 +40,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:       %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:       memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
+//  CHECK-NEXT:     } inclusiveUpperbound(array<i1: true, true, true>) collapse([3]) collapseDeviceType([#acc.device_type<none>]) independent
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -66,7 +66,7 @@ func.func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
         }
       }
       acc.yield
-    } attributes {seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+    } seq inclusiveUpperbound(array<i1: true>)
     acc.yield
   }
 
@@ -90,7 +90,7 @@ func.func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+//  CHECK-NEXT:     } inclusiveUpperbound(array<i1: true>) seq
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -129,7 +129,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %tmp = arith.addf %axy, %bxy : f32
           memref.store %tmp, %c[%y] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+        } inclusiveUpperbound(array<i1: true>) independent
 
         acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
           // for i = 0 to 10 step 1
@@ -139,9 +139,9 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %z = arith.addf %ci, %dx : f32
           memref.store %z, %d[%x] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
+        } inclusiveUpperbound(array<i1: true>) independent seq([#acc.device_type<nvidia>])
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+      } inclusiveUpperbound(array<i1: true>) independent
       acc.yield
     }
     acc.terminator
@@ -166,16 +166,16 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+// CHECK-NEXT:         } inclusiveUpperbound(array<i1: true>) independent
 // CHECK-NEXT:         acc.loop control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
+// CHECK-NEXT:         } inclusiveUpperbound(array<i1: true>) seq ([#acc.device_type<nvidia>]) independent
 // CHECK-NEXT:         acc.yield
-// CHECK-NEXT:       } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+// CHECK-NEXT:       } inclusiveUpperbound(array<i1: true>) independent
 // CHECK-NEXT:       acc.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:     acc.terminator
@@ -196,72 +196,72 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
   acc.loop gang vector worker control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop worker(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop worker(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop worker(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop vector(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop vector(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({num=%i64Value: i64}) worker vector control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({num=%i64Value: i64, static=%i64Value: i64}) worker(%i64Value: i64) vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({num=%i32Value: i32, static=%idxValue: index}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop tile({%i64Value : i64, %i64Value : i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop tile({%i32Value : i32, %i32Value : i32}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({static=%i64Value: i64, num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   acc.loop gang({dim=%i64Value : i64, static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   %b = acc.cache varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.loop cache(%b : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   return
 }
 
@@ -271,7 +271,7 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
 // CHECK:      acc.loop
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
-// CHECK-NEXT: attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+// CHECK-NEXT: inclusiveUpperbound(array<i1: true>) independent
 // CHECK:      acc.loop gang({num=[[I64VALUE]] : i64})
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
@@ -343,7 +343,7 @@ func.func @acc_loop_multiple_block() {
       cf.br ^bb1(%22 : index)
     ^bb3:
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -379,7 +379,7 @@ func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.loop firstprivate(%firstprivate : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+  } inclusiveUpperbound(array<i1: true>) independent
   return
 }
 
@@ -389,7 +389,7 @@ func.func @testloopfirstprivate(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 // CHECK:         acc.loop firstprivate(%[[FIRSTPRIVATE]] : memref<10xf32>) control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK:           "test.openacc_dummy_op"() : () -> ()
 // CHECK:           acc.yield
-// CHECK:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+// CHECK:         } inclusiveUpperbound(array<i1: true>) independent
 
 // -----
 
@@ -470,15 +470,15 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   acc.parallel private(%private_a, %private_c : memref<10xf32>, memref<10x10xf32>) firstprivate(%firstprivate_b : memref<10xf32>) {
   }
   acc.parallel {
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   acc.parallel {
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   acc.parallel async {
   }
   acc.parallel wait {
   }
   acc.parallel {
-  } attributes {selfAttr}
+  } selfAttr
   return
 }
 
@@ -526,15 +526,15 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: acc.parallel firstprivate(%[[FIRSTPRIVATE_B]] : memref<10xf32>) private(%[[PRIVATE_A]], %[[PRIVATE_C]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 // CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK-NEXT: } defaultAttr(present)
 // CHECK:      acc.parallel async {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel wait {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {selfAttr}
+// CHECK-NEXT: } selfAttr
 
 // -----
 
@@ -608,18 +608,18 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   acc.serial private(%private_a, %private_c : memref<10xf32>, memref<10x10xf32>) firstprivate(%firstprivate : memref<10xf32>) {
   }
   acc.serial {
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   acc.serial {
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   acc.serial async {
   }
   acc.serial wait {
   }
   acc.serial {
-  } attributes {selfAttr}
+  } selfAttr
   acc.serial {
     acc.yield
-  } attributes {selfAttr}
+  } selfAttr
   return
 }
 
@@ -647,18 +647,18 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: acc.serial firstprivate(%[[FIRSTP]] : memref<10xf32>) private(%[[PRIVATE_A]], %[[PRIVATE_C]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 // CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK-NEXT: } defaultAttr(present)
 // CHECK:      acc.serial async {
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait {
 // CHECK-NEXT: }
 // CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {selfAttr}
+// CHECK-NEXT: } selfAttr
 // CHECK:      acc.serial {
 // CHECK:        acc.yield
-// CHECK-NEXT: } attributes {selfAttr}
+// CHECK-NEXT: } selfAttr
 
 // -----
 
@@ -682,18 +682,18 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   acc.kernels wait({%i64value : i64, %i32value : i32, %idxValue : index}) {
   }
   acc.kernels {
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   acc.kernels {
-  } attributes {defaultAttr = #acc<defaultvalue present>}
+  } defaultAttr(present)
   acc.kernels async {
   }
   acc.kernels wait {
   }
   acc.kernels {
-  } attributes {selfAttr}
+  } selfAttr
   acc.kernels {
     acc.terminator
-  } attributes {selfAttr}
+  } selfAttr
   return
 }
 
@@ -716,18 +716,18 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.kernels wait({[[I64VALUE]] : i64, [[I32VALUE]] : i32, [[IDXVALUE]] : index}) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 // CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK-NEXT: } defaultAttr(present)
 // CHECK:      acc.kernels async {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels wait {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {selfAttr}
+// CHECK-NEXT: } selfAttr
 // CHECK:      acc.kernels {
 // CHECK:        acc.terminator
-// CHECK-NEXT: } attributes {selfAttr}
+// CHECK-NEXT: } selfAttr
 
 // -----
 
@@ -807,47 +807,47 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   acc.data dataOperands(%5, %6, %7 : memref<f32>, memref<f32>, memref<f32>) {
   }
 
-  %8 = acc.copyin varPtr(%a : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
-  %9 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
-  %10 = acc.copyin varPtr(%c : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
+  %8 = acc.copyin varPtr(%a : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
+  %9 = acc.copyin varPtr(%b : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
+  %10 = acc.copyin varPtr(%c : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
   acc.data dataOperands(%8, %9, %10 : memref<f32>, memref<f32>, memref<f32>) {
   }
 
-  %11 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
-  %12 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
-  %13 = acc.create varPtr(%c : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+  %11 = acc.create varPtr(%a : memref<f32>) dataClause(acc_copyout) -> memref<f32>
+  %12 = acc.create varPtr(%b : memref<f32>) dataClause(acc_copyout) -> memref<f32>
+  %13 = acc.create varPtr(%c : memref<f32>) dataClause(acc_copyout) -> memref<f32>
   acc.data dataOperands(%11, %12, %13 : memref<f32>, memref<f32>, memref<f32>) {
   }
   acc.copyout accPtr(%11 : memref<f32>) to varPtr(%a : memref<f32>)
   acc.copyout accPtr(%12 : memref<f32>) to varPtr(%b : memref<f32>)
   acc.copyout accPtr(%13 : memref<f32>) to varPtr(%c : memref<f32>)
 
-  %14 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
-  %15 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
-  %16 = acc.create varPtr(%c : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
+  %14 = acc.create varPtr(%a : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
+  %15 = acc.create varPtr(%b : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
+  %16 = acc.create varPtr(%c : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
   acc.data dataOperands(%14, %15, %16 : memref<f32>, memref<f32>, memref<f32>) {
   }
-  acc.copyout accPtr(%14 : memref<f32>) to varPtr(%a : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
-  acc.copyout accPtr(%15 : memref<f32>) to varPtr(%b : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
-  acc.copyout accPtr(%16 : memref<f32>) to varPtr(%c : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
+  acc.copyout accPtr(%14 : memref<f32>) to varPtr(%a : memref<f32>) dataClause(acc_copyout_zero)
+  acc.copyout accPtr(%15 : memref<f32>) to varPtr(%b : memref<f32>) dataClause(acc_copyout_zero)
+  acc.copyout accPtr(%16 : memref<f32>) to varPtr(%c : memref<f32>) dataClause(acc_copyout_zero)
 
   %17 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
   %18 = acc.create varPtr(%b : memref<f32>) -> memref<f32>
   %19 = acc.create varPtr(%c : memref<f32>) -> memref<f32>
   acc.data dataOperands(%17, %18, %19 : memref<f32>, memref<f32>, memref<f32>) {
   }
-  acc.delete accPtr(%17 : memref<f32>) {dataClause = #acc<data_clause acc_create>}
-  acc.delete accPtr(%18 : memref<f32>) {dataClause = #acc<data_clause acc_create>}
-  acc.delete accPtr(%19 : memref<f32>) {dataClause = #acc<data_clause acc_create>}
+  acc.delete accPtr(%17 : memref<f32>) dataClause(acc_create)
+  acc.delete accPtr(%18 : memref<f32>) dataClause(acc_create)
+  acc.delete accPtr(%19 : memref<f32>) dataClause(acc_create)
   
-  %20 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
-  %21 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
-  %22 = acc.create varPtr(%c : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
+  %20 = acc.create varPtr(%a : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
+  %21 = acc.create varPtr(%b : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
+  %22 = acc.create varPtr(%c : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
   acc.data dataOperands(%20, %21, %22 : memref<f32>, memref<f32>, memref<f32>) {
   }
-  acc.delete accPtr(%20 : memref<f32>) {dataClause = #acc<data_clause acc_create_zero>}
-  acc.delete accPtr(%21 : memref<f32>) {dataClause = #acc<data_clause acc_create_zero>}
-  acc.delete accPtr(%22 : memref<f32>) {dataClause = #acc<data_clause acc_create_zero>}
+  acc.delete accPtr(%20 : memref<f32>) dataClause(acc_create_zero)
+  acc.delete accPtr(%21 : memref<f32>) dataClause(acc_create_zero)
+  acc.delete accPtr(%22 : memref<f32>) dataClause(acc_create_zero)
 
   %23 = acc.nocreate varPtr(%a : memref<f32>) -> memref<f32>
   %24 = acc.nocreate varPtr(%b : memref<f32>) -> memref<f32>
@@ -868,7 +868,7 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   }
 
   %32 = acc.copyin varPtr(%a : memref<f32>) -> memref<f32>
-  %33 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+  %33 = acc.create varPtr(%b : memref<f32>) dataClause(acc_copyout) -> memref<f32>
   %34 = acc.present varPtr(%c : memref<f32>) -> memref<f32>
   acc.data dataOperands(%32, %33, %34 : memref<f32>, memref<f32>, memref<f32>) {
   }
@@ -876,33 +876,33 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
   %35 = acc.present varPtr(%a : memref<f32>) -> memref<f32>
   acc.data dataOperands(%35 : memref<f32>) {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
   
 
   %36 = acc.present varPtr(%a : memref<f32>) -> memref<f32>
   acc.data dataOperands(%36 : memref<f32>) {
-  } attributes { defaultAttr = #acc<defaultvalue present> }
+  } defaultAttr(present)
 
   acc.data {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   acc.data async {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   %a1 = arith.constant 1 : i64
   acc.data async(%a1 : i64) {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   acc.data wait {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   %w1 = arith.constant 1 : i64
   acc.data wait({%w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   %wd1 = arith.constant 1 : i64
   acc.data wait({devnum: %wd1 : i64, %w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none> }
+  } defaultAttr(none)
 
   return
 }
@@ -930,29 +930,29 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
 
-// CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
-// CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
-// CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
+// CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[ARGA]] : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
+// CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
+// CHECK:      %[[COPYIN_C:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[COPYIN_A]], %[[COPYIN_B]], %[[COPYIN_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
 
-// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
-// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
-// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) dataClause(acc_copyout) -> memref<f32>
+// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyout) -> memref<f32>
+// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copyout) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.copyout accPtr(%[[CREATE_A]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>)
 // CHECK:      acc.copyout accPtr(%[[CREATE_B]] : memref<f32>) to varPtr(%[[ARGB]] : memref<f32>)
 // CHECK:      acc.copyout accPtr(%[[CREATE_C]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>)
 
-// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
-// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
-// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout_zero>}
+// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
+// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
+// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copyout_zero) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.copyout accPtr(%[[CREATE_A]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
-// CHECK:      acc.copyout accPtr(%[[CREATE_B]] : memref<f32>) to varPtr(%[[ARGB]] : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
-// CHECK:      acc.copyout accPtr(%[[CREATE_C]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) {dataClause = #acc<data_clause acc_copyout_zero>}
+// CHECK:      acc.copyout accPtr(%[[CREATE_A]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) dataClause(acc_copyout_zero)
+// CHECK:      acc.copyout accPtr(%[[CREATE_B]] : memref<f32>) to varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyout_zero)
+// CHECK:      acc.copyout accPtr(%[[CREATE_C]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copyout_zero)
 
 // CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
 // CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32>
@@ -960,9 +960,9 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
 
-// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
-// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
-// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_create_zero>}
+// CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
+// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
+// CHECK:      %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_create_zero) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
 
@@ -986,7 +986,7 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
 
 // CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
-// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+// CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyout) -> memref<f32>
 // CHECK:      %[[PRESENT_C:.*]] = acc.present varPtr(%[[ARGC]] : memref<f32>) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[PRESENT_C]] : memref<f32>, memref<f32>, memref<f32>) {
 // CHECK-NEXT: }
@@ -994,54 +994,54 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
 // CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[PRESENT_A]] : memref<f32>) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
 // CHECK:      acc.data dataOperands(%[[PRESENT_A]] : memref<f32>) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK-NEXT: } defaultAttr(present)
 
 // CHECK:      acc.data {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      acc.data async {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      acc.data async(%{{.*}} : i64) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      acc.data wait {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      acc.data wait({%{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // CHECK:      acc.data wait({devnum: %{{.*}} : i64, %{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } defaultAttr(none)
 
 // -----
 
 func.func @testdataopmodifiers(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
-  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier capture,zero>}
-  %1 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,capture,always>}
-  %2 = acc.copyin varPtr(%c : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
-  %3 = acc.create varPtr(%c : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
+  %0 = acc.create varPtr(%a : memref<f32>) <{modifiers = #acc<data_clause_modifier capture,zero>}> -> memref<f32>
+  %1 = acc.copyin varPtr(%b : memref<f32>) <{modifiers = #acc<data_clause_modifier readonly,capture,always>}> -> memref<f32>
+  %2 = acc.copyin varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
+  %3 = acc.create varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
   acc.data dataOperands(%0, %1, %2, %3 : memref<f32>, memref<f32>, memref<f32>, memref<f32>) {
   }
-  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) {modifiers = #acc<data_clause_modifier zero,capture,always>}
-  acc.delete accPtr(%2 : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
-  acc.copyout accPtr(%3 : memref<f32>) to varPtr(%c : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
+  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) <{modifiers = #acc<data_clause_modifier zero,capture,always>}>
+  acc.delete accPtr(%2 : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
+  acc.copyout accPtr(%3 : memref<f32>) to varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
 
   func.return
 }
 
 // CHECK:      func @testdataopmodifiers(%[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>) {
-// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero,capture>}
-// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always,readonly,capture>}
-// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
-// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
-// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) {modifiers = #acc<data_clause_modifier always,zero,capture>}
-// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
-// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
+// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) <modifiers = "zero,capture"> -> memref<f32>
+// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) <modifiers = "always,readonly,capture"> -> memref<f32>
+// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
+// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
+// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) <modifiers = "always,zero,capture">
+// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) <modifiers = "always">
+// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always">
 
 // -----
 
@@ -1064,7 +1064,7 @@ func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> ()
   acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
   acc.update async dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
   acc.update wait dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
-  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) ifPresent
   return
 }
 
@@ -1083,7 +1083,7 @@ func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> ()
 // CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
 // CHECK:   acc.update async dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
 // CHECK:   acc.update wait dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
-// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) ifPresent
 
 // -----
 
@@ -1214,7 +1214,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
   acc.delete accPtr(%1 : !llvm.ptr)
 
   %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data async dataOperands(%2 : !llvm.ptr) attributes {finalize}
+  acc.exit_data async dataOperands(%2 : !llvm.ptr) finalize
   acc.delete accPtr(%2 : !llvm.ptr)
 
   %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1263,7 +1263,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {finalize}
+// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr) finalize
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1306,8 +1306,8 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
   %0 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data dataOperands(%0 : !llvm.ptr)
   %1 = acc.create varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  %2 = acc.create varPtr(%b : !llvm.ptr) varType(f64) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
-  %3 = acc.create varPtr(%c : !llvm.ptr) varType(f64) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+  %2 = acc.create varPtr(%b : !llvm.ptr) varType(f64) dataClause(acc_create_zero) -> !llvm.ptr<0>
+  %3 = acc.create varPtr(%c : !llvm.ptr) varType(f64) dataClause(acc_create_zero) -> !llvm.ptr<0>
   acc.enter_data dataOperands(%1, %2, %3 : !llvm.ptr, !llvm.ptr, !llvm.ptr)
   %4 = acc.attach varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data dataOperands(%4 : !llvm.ptr)
@@ -1335,8 +1335,8 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr)
 // CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : !llvm.ptr) varType(f64) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
-// CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : !llvm.ptr) varType(f64) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+// CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : !llvm.ptr) varType(f64) dataClause(acc_create_zero) -> !llvm.ptr
+// CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : !llvm.ptr) varType(f64) dataClause(acc_create_zero) -> !llvm.ptr
 // CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
 // CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr)
@@ -1356,7 +1356,7 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
 // -----
 
 func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10xf32>>, %c: memref<10x20xf32>) -> () {
-  %deviceptr = acc.deviceptr varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arrayA"}
+  %deviceptr = acc.deviceptr varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) name("arrayA") -> memref<10xf32>
   acc.parallel dataOperands(%deviceptr : memref<10xf32>) {
   }
 
@@ -1368,36 +1368,36 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   acc.parallel dataOperands(%copyin : memref<10xf32>) {
   }
 
-  %copyinreadonly = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyin_readonly>}
+  %copyinreadonly = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyin_readonly) -> memref<10xf32>
   acc.kernels dataOperands(%copyinreadonly : memref<10xf32>) {
   }
 
-  %copyinfromcopy = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+  %copyinfromcopy = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy) -> memref<10xf32>
   acc.serial dataOperands(%copyinfromcopy : memref<10xf32>) {
   }
-  acc.copyout accPtr(%copyinfromcopy : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+  acc.copyout accPtr(%copyinfromcopy : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
   %create = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-  %createimplicit = acc.create varPtr(%c : memref<10x20xf32>) varType(tensor<10x20xf32>) -> memref<10x20xf32> {implicit = true}
+  %createimplicit = acc.create varPtr(%c : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) -> memref<10x20xf32>
   acc.parallel dataOperands(%create, %createimplicit : memref<10xf32>, memref<10x20xf32>) {
   }
-  acc.delete accPtr(%create : memref<10xf32>) {dataClause = #acc<data_clause acc_create>}
-  acc.delete accPtr(%createimplicit : memref<10x20xf32>) {dataClause = #acc<data_clause acc_create>, implicit = true}
+  acc.delete accPtr(%create : memref<10xf32>) dataClause(acc_create)
+  acc.delete accPtr(%createimplicit : memref<10x20xf32>) dataClause(acc_create) implicit(true)
 
-  %copyoutzero = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout_zero>}
+  %copyoutzero = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
   acc.parallel dataOperands(%copyoutzero: memref<10xf32>) {
   }
-  acc.copyout accPtr(%copyoutzero : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copyout_zero>}
+  acc.copyout accPtr(%copyoutzero : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero)
 
   %attach = acc.attach varPtr(%b : memref<memref<10xf32>>) -> memref<memref<10xf32>>
   acc.parallel dataOperands(%attach : memref<memref<10xf32>>) {
   }
-  acc.detach accPtr(%attach : memref<memref<10xf32>>) {dataClause = #acc<data_clause acc_attach>}
+  acc.detach accPtr(%attach : memref<memref<10xf32>>) dataClause(acc_attach)
 
-  %copyinparent = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) varPtrPtr(%b : memref<memref<10xf32>>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+  %copyinparent = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) varPtrPtr(%b : memref<memref<10xf32>>) dataClause(acc_copy) -> memref<10xf32>
   acc.parallel dataOperands(%copyinparent : memref<10xf32>) {
   }
-  acc.copyout accPtr(%copyinparent : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+  acc.copyout accPtr(%copyinparent : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -1407,24 +1407,24 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   %c20 = arith.constant 20 : index
 
   %bounds1full = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index) stride(%c1 : index)
-  %copyinfullslice1 = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1full) -> memref<10xf32> {name = "arrayA[0:9]"}
+  %copyinfullslice1 = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1full) name("arrayA[0:9]") -> memref<10xf32>
   // Specify full-bounds but assume that startIdx of array reference is 1.
-  %bounds2full = acc.bounds lowerbound(%c1 : index) upperbound(%c20 : index) extent(%c20 : index) stride(%c4 : index) startIdx(%c1 : index) {strideInBytes = true}
+  %bounds2full = acc.bounds lowerbound(%c1 : index) upperbound(%c20 : index) extent(%c20 : index) stride(%c4 : index) startIdx(%c1 : index) strideInBytes(true)
   %copyinfullslice2 = acc.copyin varPtr(%c : memref<10x20xf32>) varType(tensor<10x20xf32>) bounds(%bounds1full, %bounds2full) -> memref<10x20xf32>
   acc.parallel dataOperands(%copyinfullslice1, %copyinfullslice2 : memref<10xf32>, memref<10x20xf32>) {
   }
 
   %bounds1partial = acc.bounds lowerbound(%c4 : index) upperbound(%c9 : index) stride(%c1 : index)
-  %copyinpartial = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1partial) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+  %copyinpartial = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1partial) dataClause(acc_copy) -> memref<10xf32>
   acc.parallel dataOperands(%copyinpartial : memref<10xf32>) {
   }
-  acc.copyout accPtr(%copyinpartial : memref<10xf32>) bounds(%bounds1partial) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+  acc.copyout accPtr(%copyinpartial : memref<10xf32>) bounds(%bounds1partial) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
   return
 }
 
 // CHECK: func.func @teststructureddataclauseops([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<memref<10xf32>>, [[ARGC:%.*]]: memref<10x20xf32>) {
-// CHECK: [[DEVICEPTR:%.*]] = acc.deviceptr varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arrayA"}
+// CHECK: [[DEVICEPTR:%.*]] = acc.deviceptr varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) name("arrayA") -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[DEVICEPTR]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK: [[PRESENT:%.*]] = acc.present varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
@@ -1433,73 +1433,73 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYIN]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK: [[COPYINRO:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyin_readonly>}
+// CHECK: [[COPYINRO:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyin_readonly) -> memref<10xf32>
 // CHECK-NEXT: acc.kernels dataOperands([[COPYINRO]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK: [[COPYINCOPY:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+// CHECK: [[COPYINCOPY:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy) -> memref<10xf32>
 // CHECK-NEXT: acc.serial dataOperands([[COPYINCOPY]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.copyout accPtr([[COPYINCOPY]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: acc.copyout accPtr([[COPYINCOPY]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 // CHECK: [[CREATE:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
-// CHECK-NEXT: [[CREATEIMP:%.*]] = acc.create varPtr([[ARGC]] : memref<10x20xf32>) varType(tensor<10x20xf32>) -> memref<10x20xf32> {implicit = true}
+// CHECK-NEXT: [[CREATEIMP:%.*]] = acc.create varPtr([[ARGC]] : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) -> memref<10x20xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[CREATE]], [[CREATEIMP]] : memref<10xf32>, memref<10x20xf32>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.delete accPtr([[CREATE]] : memref<10xf32>) {dataClause = #acc<data_clause acc_create>}
-// CHECK-NEXT: acc.delete accPtr([[CREATEIMP]] : memref<10x20xf32>) {dataClause = #acc<data_clause acc_create>, implicit = true}
-// CHECK: [[COPYOUTZ:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout_zero>}
+// CHECK-NEXT: acc.delete accPtr([[CREATE]] : memref<10xf32>) dataClause(acc_create)
+// CHECK-NEXT: acc.delete accPtr([[CREATEIMP]] : memref<10x20xf32>) dataClause(acc_create) implicit(true)
+// CHECK: [[COPYOUTZ:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYOUTZ]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.copyout accPtr([[COPYOUTZ]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copyout_zero>}
+// CHECK-NEXT: acc.copyout accPtr([[COPYOUTZ]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero)
 // CHECK: [[ATTACH:%.*]] = acc.attach varPtr([[ARGB]] : memref<memref<10xf32>>) -> memref<memref<10xf32>>
 // CHECK-NEXT: acc.parallel dataOperands([[ATTACH]] : memref<memref<10xf32>>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.detach accPtr([[ATTACH]] : memref<memref<10xf32>>) {dataClause = #acc<data_clause acc_attach>}
-// CHECK: [[COPYINP:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) varPtrPtr([[ARGB]] : memref<memref<10xf32>>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: acc.detach accPtr([[ATTACH]] : memref<memref<10xf32>>) dataClause(acc_attach)
+// CHECK: [[COPYINP:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) varPtrPtr([[ARGB]] : memref<memref<10xf32>>) dataClause(acc_copy) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYINP]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.copyout accPtr([[COPYINP]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: acc.copyout accPtr([[COPYINP]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 // CHECK-DAG: [[CON0:%.*]] = arith.constant 0 : index
 // CHECK-DAG: [[CON1:%.*]] = arith.constant 1 : index
 // CHECK-DAG: [[CON4:%.*]] = arith.constant 4 : index
 // CHECK-DAG: [[CON9:%.*]] = arith.constant 9 : index
 // CHECK-DAG: [[CON20:%.*]] = arith.constant 20 : index
 // CHECK: [[BOUNDS1F:%.*]] = acc.bounds lowerbound([[CON0]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
-// CHECK-NEXT: [[COPYINF1:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1F]]) -> memref<10xf32> {name = "arrayA[0:9]"}
-// CHECK-NEXT: [[BOUNDS2F:%.*]] = acc.bounds lowerbound([[CON1]] : index) upperbound([[CON20]] : index) extent([[CON20]] : index) stride([[CON4]] : index) startIdx([[CON1]] : index) {strideInBytes = true}
+// CHECK-NEXT: [[COPYINF1:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1F]]) name("arrayA[0:9]") -> memref<10xf32>
+// CHECK-NEXT: [[BOUNDS2F:%.*]] = acc.bounds lowerbound([[CON1]] : index) upperbound([[CON20]] : index) extent([[CON20]] : index) stride([[CON4]] : index) startIdx([[CON1]] : index) strideInBytes(true)
 // CHECK-NEXT: [[COPYINF2:%.*]] = acc.copyin varPtr([[ARGC]] : memref<10x20xf32>) varType(tensor<10x20xf32>) bounds([[BOUNDS1F]], [[BOUNDS2F]]) -> memref<10x20xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYINF1]], [[COPYINF2]] : memref<10xf32>, memref<10x20xf32>) {
 // CHECK-NEXT: }
 // CHECK: [[BOUNDS1P:%.*]] = acc.bounds lowerbound([[CON4]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
-// CHECK-NEXT: [[COPYINPART:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1P]]) -> memref<10xf32> {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: [[COPYINPART:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1P]]) dataClause(acc_copy) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYINPART]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK-NEXT: acc.copyout accPtr([[COPYINPART]] : memref<10xf32>) bounds([[BOUNDS1P]]) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: acc.copyout accPtr([[COPYINPART]] : memref<10xf32>) bounds([[BOUNDS1P]]) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
 // -----
 
 func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
-  %copyin = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {structured = false}
+  %copyin = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) structured(false) -> memref<10xf32>
   acc.enter_data dataOperands(%copyin : memref<10xf32>)
 
-  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout>}
+  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout) -> memref<10xf32>
   acc.exit_data dataOperands(%devptr : memref<10xf32>)
-  acc.copyout accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) {structured = false}
+  acc.copyout accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) structured(false)
 
   return
 }
 
 // CHECK: func.func @testunstructuredclauseops([[ARGA:%.*]]: memref<10xf32>) {
-// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {structured = false}
+// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) structured(false) -> memref<10xf32>
 // CHECK-NEXT: acc.enter_data dataOperands([[COPYIN]] : memref<10xf32>)
-// CHECK: [[DEVPTR:%.*]] = acc.getdeviceptr varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {dataClause = #acc<data_clause acc_copyout>}
+// CHECK: [[DEVPTR:%.*]] = acc.getdeviceptr varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout) -> memref<10xf32>
 // CHECK-NEXT: acc.exit_data dataOperands([[DEVPTR]] : memref<10xf32>)
-// CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) {structured = false}
+// CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) structured(false)
 
 // -----
 
 func.func @host_device_ops(%a: memref<f32>) -> () {
   %devptr = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
-  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>) {structured = false}
+  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>) structured(false)
   acc.update dataOperands(%devptr : memref<f32>)
 
   %accPtr = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
@@ -1510,7 +1510,7 @@ func.func @host_device_ops(%a: memref<f32>) -> () {
 // CHECK-LABEL: func.func @host_device_ops(
 // CHECK-SAME:    %[[A:.*]]: memref<f32>)
 // CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[A]] : memref<f32>)   -> memref<f32>
-// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>) {structured = false}
+// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>) structured(false)
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
 // CHECK: %[[DEVPTR_A:.*]] = acc.update_device varPtr(%[[A]] : memref<f32>)   -> memref<f32>
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
@@ -1522,7 +1522,7 @@ func.func @host_data_ops(%a: !llvm.ptr, %ifCond: i1) -> () {
   acc.host_data dataOperands(%0: !llvm.ptr) {
   }
   acc.host_data dataOperands(%0: !llvm.ptr) {
-  } attributes {if_present}
+  } ifPresent
   acc.host_data if(%ifCond) dataOperands(%0: !llvm.ptr) {
   }
   return
@@ -1533,7 +1533,7 @@ func.func @host_data_ops(%a: !llvm.ptr, %ifCond: i1) -> () {
 // CHECK: %[[PTR:.*]] = acc.use_device varPtr(%[[A]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr)
 // CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr) {
-// CHECK: } attributes {if_present}
+// CHECK: } ifPresent
 // CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr)
 
 // -----
@@ -1624,7 +1624,7 @@ func.func @acc_reduc_test(%a : memref<i64>) -> () {
   acc.parallel reduction(%reduction_a :  memref<i64>) {
     acc.loop reduction(%reduction_a :  memref<i64>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.yield
   }
   return
@@ -1699,14 +1699,14 @@ func.func @acc_kernels_reduc_test(%a : memref<i64>) -> () {
 func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %0 = acc.copyin varPtr(%a : memref<f32>) -> memref<f32>
   // copyin(zero)
-  %1 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
+  %1 = acc.copyin varPtr(%b : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
   // copy
-  %2 = acc.copyin varPtr(%c : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copy>}
+  %2 = acc.copyin varPtr(%c : memref<f32>) dataClause(acc_copy) -> memref<f32>
   acc.declare_enter dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
 
   %3 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
   // copyout
-  %4 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+  %4 = acc.create varPtr(%b : memref<f32>) dataClause(acc_copyout) -> memref<f32>
   %5 = acc.present varPtr(%c : memref<f32>) -> memref<f32>
   acc.declare_enter dataOperands(%3, %4, %5 : memref<f32>, memref<f32>, memref<f32>)
 
@@ -1716,18 +1716,18 @@ func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> (
   acc.declare_enter dataOperands(%6, %7, %8 : memref<f32>, memref<f32>, memref<f32>)
 
   acc.declare_exit dataOperands(%7, %8 : memref<f32>, memref<f32>)
-  acc.delete accPtr(%7 : memref<f32>) {dataClause = #acc<data_clause acc_declare_device_resident> }
-  acc.delete accPtr(%8 : memref<f32>) {dataClause = #acc<data_clause acc_declare_link> }
+  acc.delete accPtr(%7 : memref<f32>) dataClause(acc_declare_device_resident)
+  acc.delete accPtr(%8 : memref<f32>) dataClause(acc_declare_link)
 
   acc.declare_exit dataOperands(%3, %4, %5 : memref<f32>, memref<f32>, memref<f32>)
-  acc.delete accPtr(%3 : memref<f32>) {dataClause = #acc<data_clause acc_create> }
+  acc.delete accPtr(%3 : memref<f32>) dataClause(acc_create)
   acc.copyout accPtr(%4 : memref<f32>) to varPtr(%b : memref<f32>)
-  acc.delete accPtr(%5 : memref<f32>) {dataClause = #acc<data_clause acc_present> }
+  acc.delete accPtr(%5 : memref<f32>) dataClause(acc_present)
 
   acc.declare_exit dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
-  acc.delete accPtr(%0 : memref<f32>) {dataClause = #acc<data_clause acc_copyin> }
-  acc.delete accPtr(%1 : memref<f32>) {dataClause = #acc<data_clause acc_copyin_readonly> }
-  acc.copyout accPtr(%2 : memref<f32>) to varPtr(%c : memref<f32>) { dataClause = #acc<data_clause acc_copy> }
+  acc.delete accPtr(%0 : memref<f32>) dataClause(acc_copyin)
+  acc.delete accPtr(%1 : memref<f32>) dataClause(acc_copyin_readonly)
+  acc.copyout accPtr(%2 : memref<f32>) to varPtr(%c : memref<f32>) dataClause(acc_copy)
 
   return
 }
@@ -1735,11 +1735,11 @@ func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> (
 // CHECK-LABEL: func.func @testdeclareop(
 // CHECK-SAME: %[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
-// CHECK-NEXT: %[[COPYINRO:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyin_readonly>}
-// CHECK-NEXT: %[[COPY:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: %[[COPYINRO:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyin_readonly) -> memref<f32>
+// CHECK-NEXT: %[[COPY:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copy) -> memref<f32>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[COPYIN]], %[[COPYINRO]], %[[COPY]] : memref<f32>, memref<f32>, memref<f32>)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
-// CHECK-NEXT: %[[COPYOUT:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = #acc<data_clause acc_copyout>}
+// CHECK-NEXT: %[[COPYOUT:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) dataClause(acc_copyout) -> memref<f32>
 // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[ARGC]] : memref<f32>) -> memref<f32>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]], %[[COPYOUT]], %[[PRESENT]] : memref<f32>, memref<f32>, memref<f32>)
 // CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
@@ -1747,16 +1747,16 @@ func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> (
 // CHECK-NEXT: %[[LINK:.*]] = acc.declare_link varPtr(%[[ARGC]] : memref<f32>) -> memref<f32>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[DEVICEPTR]], %[[DEVICERES]], %[[LINK]] : memref<f32>, memref<f32>, memref<f32>)
 // CHECK: acc.declare_exit dataOperands(%[[DEVICERES]], %[[LINK]] : memref<f32>, memref<f32>)
-// CHECK-NEXT: acc.delete accPtr(%[[DEVICERES]] : memref<f32>) {dataClause = #acc<data_clause acc_declare_device_resident>}
-// CHECK-NEXT: acc.delete accPtr(%[[LINK]] : memref<f32>) {dataClause = #acc<data_clause acc_declare_link>}
+// CHECK-NEXT: acc.delete accPtr(%[[DEVICERES]] : memref<f32>) dataClause(acc_declare_device_resident)
+// CHECK-NEXT: acc.delete accPtr(%[[LINK]] : memref<f32>) dataClause(acc_declare_link)
 // CHECK: acc.declare_exit dataOperands(%[[CREATE]], %[[COPYOUT]], %[[PRESENT]] : memref<f32>, memref<f32>, memref<f32>)
-// CHECK-NEXT: acc.delete accPtr(%[[CREATE]] : memref<f32>) {dataClause = #acc<data_clause acc_create>}
+// CHECK-NEXT: acc.delete accPtr(%[[CREATE]] : memref<f32>) dataClause(acc_create)
 // CHECK-NEXT: acc.copyout accPtr(%[[COPYOUT]] : memref<f32>) to varPtr(%[[ARGB]] : memref<f32>)
-// CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : memref<f32>) {dataClause = #acc<data_clause acc_present>}
+// CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : memref<f32>) dataClause(acc_present)
 // CHECK: acc.declare_exit dataOperands(%[[COPYIN]], %[[COPYINRO]], %[[COPY]] : memref<f32>, memref<f32>, memref<f32>)
-// CHECK-NEXT: acc.delete accPtr(%[[COPYIN]] : memref<f32>) {dataClause = #acc<data_clause acc_copyin>}
-// CHECK-NEXT: acc.delete accPtr(%[[COPYINRO]] : memref<f32>) {dataClause = #acc<data_clause acc_copyin_readonly>}
-// CHECK-NEXT: acc.copyout accPtr(%[[COPY]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) {dataClause = #acc<data_clause acc_copy>}
+// CHECK-NEXT: acc.delete accPtr(%[[COPYIN]] : memref<f32>) dataClause(acc_copyin)
+// CHECK-NEXT: acc.delete accPtr(%[[COPYINRO]] : memref<f32>) dataClause(acc_copyin_readonly)
+// CHECK-NEXT: acc.copyout accPtr(%[[COPY]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) dataClause(acc_copy)
 
 // -----
 
@@ -1774,7 +1774,7 @@ acc.global_ctor @acc_constructor {
 
 acc.global_dtor @acc_destructor {
   %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr
-  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) varType(i32) dataClause(acc_create) -> !llvm.ptr<0>
   acc.declare_exit dataOperands(%1 : !llvm.ptr)
   acc.delete accPtr(%1 : !llvm.ptr)
   acc.terminator
@@ -1786,7 +1786,7 @@ acc.global_dtor @acc_destructor {
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !llvm.ptr)
 // CHECK: acc.global_dtor @acc_destructor
 // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr
-// CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr) varType(i32) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+// CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr) varType(i32) dataClause(acc_create) -> !llvm.ptr
 // CHECK-NEXT: acc.declare_exit dataOperands(%[[DELETE]] : !llvm.ptr)
 // CHECK-NEXT: acc.delete accPtr(%[[DELETE]] : !llvm.ptr)
 
@@ -1894,7 +1894,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 
   %c20 = arith.constant 20 : i32
   %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr
-  %createlocal = acc.create varPtr(%alloc : !llvm.ptr) varType(!llvm.array<20 x i32>) -> !llvm.ptr {implicit = true}
+  %createlocal = acc.create varPtr(%alloc : !llvm.ptr) varType(!llvm.array<20 x i32>) implicit(true) -> !llvm.ptr<0>
 
   %pa = acc.present varPtr(%a : memref<10x10xf32>) varType(tensor<10x10xf32>) -> memref<10x10xf32>
   %pb = acc.present varPtr(%b : memref<10x10xf32>) varType(tensor<10x10xf32>) -> memref<10x10xf32>
@@ -1916,7 +1916,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 %i32Value2 = arith.constant 2 : i32
 %idxValue = arith.constant 1 : index
 %ifCond = arith.constant true
-acc.set attributes {device_type = #acc.device_type<nvidia>}
+acc.set device_type(#acc.device_type<nvidia>)
 acc.set device_num(%i64Value : i64)
 acc.set device_num(%i32Value : i32)
 acc.set device_num(%idxValue : index)
@@ -1928,7 +1928,7 @@ acc.set default_async(%i32Value : i32)
 // CHECK: [[I32VALUE2:%.*]] = arith.constant 2 : i32
 // CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
 // CHECK: [[IFCOND:%.*]] = arith.constant true
-// CHECK: acc.set attributes {device_type = #acc.device_type<nvidia>}
+// CHECK: acc.set device_type(#acc.device_type<nvidia>)
 // CHECK: acc.set device_num([[I64VALUE]] : i64)
 // CHECK: acc.set device_num([[I32VALUE]] : i32)
 // CHECK: acc.set device_num([[IDXVALUE]] : index)
@@ -2142,21 +2142,21 @@ func.func @acc_combined() {
   acc.parallel combined(loop) {
     acc.loop combined(parallel) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.terminator
   }
 
   acc.kernels combined(loop) {
     acc.loop combined(kernels) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
     acc.terminator
   }
 
   acc.serial combined(loop) {
     acc.loop combined(serial) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes {seq = [#acc.device_type<none>]}
+    } seq
     acc.terminator
   }
 
@@ -2286,7 +2286,7 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -2308,7 +2308,7 @@ func.func @acc_loop_container() {
       scf.yield
     }
     acc.yield
-  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  } collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent
   return
 }
 
@@ -2322,14 +2322,14 @@ func.func @acc_loop_container() {
 func.func @acc_unstructured_loop() {
   acc.loop {
     acc.yield
-  } attributes {independent = [#acc.device_type<none>], unstructured}
+  } independent unstructured
   return
 }
 
 // CHECK-LABEL: func.func @acc_unstructured_loop
 // CHECK:       acc.loop
 // CHECK:         acc.yield
-// CHECK:       } attributes {independent = [#acc.device_type<none>], unstructured}
+// CHECK:       } independent unstructured
 
 // -----
 

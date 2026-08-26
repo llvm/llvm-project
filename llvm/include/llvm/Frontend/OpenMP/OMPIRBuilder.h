@@ -132,6 +132,11 @@ public:
   /// Separator used between all of the rest consecutive parts of s name.
   std::optional<StringRef> Separator;
 
+  /// Flag for specifying whether the no-signed-wrap (nsw) flag should be added
+  /// to loop induction variable arithmetic. Set when the frontend guarantees
+  /// that signed integer overflow is undefined (with -fno-wrapv).
+  std::optional<bool> NoSignedWrap;
+
   // Grid Value for the GPU target.
   std::optional<omp::GV> GridValue;
 
@@ -175,6 +180,9 @@ public:
   }
 
   unsigned getDefaultTargetAS() const { return DefaultTargetAS; }
+
+  bool hasNoSignedWrap() const { return NoSignedWrap.value_or(false); }
+  void setNoSignedWrap(bool Value) { NoSignedWrap = Value; }
 
   CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
@@ -1830,7 +1838,8 @@ private:
   Value *castValueToType(InsertPointTy AllocaIP, Value *From, Type *ToType);
 
   /// This function creates calls to one of two shuffle functions to copy
-  /// variables between lanes in a warp.
+  /// variables between lanes in a warp. The returned value has \p ElementType,
+  /// even though the shuffle runtime functions operate on 32- or 64-bit values.
   Value *createRuntimeShuffleFunction(InsertPointTy AllocaIP, Value *Element,
                                       Type *ElementType, Value *Offset);
 
@@ -2833,9 +2842,9 @@ public:
     omp::OMPTgtExecModeFlags ExecFlags =
         omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
     SmallVector<int32_t, 3> MaxTeams = {-1};
-    int32_t MinTeams = 1;
+    SmallVector<int32_t, 3> MinTeams = {1};
     SmallVector<int32_t, 3> MaxThreads = {-1};
-    int32_t MinThreads = 1;
+    SmallVector<int32_t, 3> MinThreads = {1};
     int32_t ReductionDataSize = 0;
   };
 
@@ -2846,13 +2855,13 @@ public:
   /// launch OpenMP RTL function.
   struct TargetKernelRuntimeAttrs {
     SmallVector<Value *, 3> MaxTeams = {nullptr};
-    Value *MinTeams = nullptr;
+    SmallVector<Value *, 3> MinTeams = {nullptr};
     SmallVector<Value *, 3> TargetThreadLimit = {nullptr};
     SmallVector<Value *, 3> TeamsThreadLimit = {nullptr};
 
     /// 'parallel' construct 'num_threads' clause value, if present and it is an
     /// SPMD kernel.
-    Value *MaxThreads = nullptr;
+    SmallVector<Value *> MaxThreads = {nullptr};
 
     /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
     /// it is a generic kernel.
@@ -2881,7 +2890,8 @@ public:
     bool HasNoWait = false;
     /// True if the kernel strictly requires the number of blocks and threads
     /// above to run.
-    bool StrictBlocksAndThreads = false;
+    bool StrictBlocks = false;
+    bool StrictThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2891,12 +2901,13 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait, bool StrictBlocksAndThreads,
+                     bool HasNoWait, bool StrictBlocks, bool StrictThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
-          HasNoWait(HasNoWait), StrictBlocksAndThreads(StrictBlocksAndThreads),
+          HasNoWait(HasNoWait), StrictBlocks(StrictBlocks),
+          StrictThreads(StrictThreads),
           DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
@@ -3693,8 +3704,14 @@ public:
   ///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer
   ///       // map clause are propagated to each component, except ATTACH
   ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
-  ///       // modifier bits have no meaning for ATTACH).
-  ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE);
+  ///       // modifier bits have no meaning for ATTACH). PRESENT is
+  ///       // additionally propagated to components with HasAttachPtr (the
+  ///       // pointee data) when PropagatePresentToPointee is set
+  ///       // (OpenMP >= 6.0).
+  ///       present_bit = (PropagatePresentToPointee && c.hasAttachPtr())
+  ///                         ? PRESENT : 0;
+  ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE |
+  ///                                        present_bit);
   ///       effective_type = c.isAttach() ? c.arg_type
   ///                                     : c.arg_type | imported_modifier_bits;
   ///       if (c.hasMapper())
@@ -3719,13 +3736,18 @@ public:
   /// \param FuncName Optional param to specify mapper function name.
   /// \param CustomMapperCB Optional callback to generate code related to
   /// custom mappers.
+  /// \param PropagatePresentToPointee If true, the PRESENT map-type modifier
+  /// from the outer clause is propagated to the pointee entries the mapper
+  /// inserts, i.e. those with HasAttachPtr. Callers set this only for
+  /// OpenMP >= 6.0; at earlier versions the present modifier is treated as not
+  /// applying to the pointee.
   LLVM_ABI Expected<Function *> emitUserDefinedMapper(
       function_ref<MapInfosOrErrorTy(
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB,
-      bool PreserveMemberOfFlags = false);
+      CustomMapperCallbackTy CustomMapperCB, bool PreserveMemberOfFlags = false,
+      bool PropagatePresentToPointee = false);
 
   /// Generator for '#omp target data'
   ///
@@ -4187,13 +4209,13 @@ public:
   /// \param PostInsertBefore Where to insert BBs that execute after the body.
   /// \param Name      Base name used to derive BB
   ///                  and instruction names.
+  /// \param IsCollapsed  Whether this is a collapsed loop.
   ///
   /// \returns The CanonicalLoopInfo that represents the emitted loop.
-  LLVM_ABI CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
-                                                 Function *F,
-                                                 BasicBlock *PreInsertBefore,
-                                                 BasicBlock *PostInsertBefore,
-                                                 const Twine &Name = {});
+  LLVM_ABI CanonicalLoopInfo *
+  createLoopSkeleton(DebugLoc DL, Value *TripCount, Function *F,
+                     BasicBlock *PreInsertBefore, BasicBlock *PostInsertBefore,
+                     const Twine &Name = {}, bool IsCollapsed = false);
   /// OMP Offload Info Metadata name string
   const std::string ompOffloadInfoName = "omp_offload.info";
 

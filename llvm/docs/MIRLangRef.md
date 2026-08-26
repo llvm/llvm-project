@@ -1,9 +1,9 @@
 # Machine IR (MIR) Format Reference Manual
 
 
-```{warning}
+:::{warning}
 This is a work in progress.
-```
+:::
 
 ## Introduction
 

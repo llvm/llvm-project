@@ -2151,7 +2151,13 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
       // behavior to prevent inlining of hot callsites during ThinLTO
       // compile phase.
       Threshold = *HotCallSiteThreshold;
-    } else if (isColdCallSite(Call, CallerBFI)) {
+    } else if (isCallableCC(Caller->getCallingConv()) &&
+               isColdCallSite(Call, CallerBFI)) {
+      // In a function that is a hardware entry point rather than something
+      // callable, e.g. a GPU kernel, register allocation is whole-function and
+      // occupancy is set by the worst case over it. A call left out of line
+      // there costs the hot path too, however cold the call itself is, so the
+      // reduced threshold does not apply.
       LLVM_DEBUG(dbgs() << "Cold callsite.\n");
       // Do not apply bonuses for a cold callsite including the
       // LastCallToStatic bonus. While this bonus might result in code size
@@ -2431,8 +2437,11 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallBase &Call) {
 
 bool CallAnalyzer::isLoweredToCall(Function *F, CallBase &Call) {
   const TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
-  LibFunc LF;
-  if (!TLI || !TLI->getLibFunc(*F, LF) || !TLI->has(LF))
+  if (!TLI)
+    return TTI.isLoweredToCall(F);
+
+  LibFunc LF = TLI->getLibFunc(*F);
+  if (!TLI->has(LF))
     return TTI.isLoweredToCall(F);
 
   switch (LF) {

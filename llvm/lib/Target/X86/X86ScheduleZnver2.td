@@ -266,10 +266,10 @@ defm : X86WriteRes<WriteFStoreY,       [Zn2AGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [Zn2AGU,Zn2FPU2], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [Zn2AGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [Zn2AGU], 1, [1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32,  [Zn2AGU,Zn2FPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [Zn2AGU,Zn2FPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [Zn2AGU,Zn2FPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [Zn2AGU,Zn2FPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [Zn2AGU,Zn2FPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [Zn2AGU,Zn2FPU01], 5, [1,24], 44>;
+defm : X86WriteRes<WriteFMaskedStore64,  [Zn2AGU,Zn2FPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [Zn2AGU,Zn2FPU01], 5, [1,12], 19>;
 
 defm : X86WriteRes<WriteFMove,         [Zn2FPU], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [Zn2FPU], 1, [1], 1>;
@@ -385,10 +385,10 @@ defm : X86WriteRes<WriteVecStoreX,       [Zn2AGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [Zn2AGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNT,      [Zn2AGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,     [Zn2AGU], 1, [1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [Zn2AGU,Zn2FPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [Zn2AGU,Zn2FPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [Zn2AGU,Zn2FPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [Zn2AGU,Zn2FPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [Zn2AGU,Zn2FPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [Zn2AGU,Zn2FPU01], 5, [1,24], 44>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [Zn2AGU,Zn2FPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [Zn2AGU,Zn2FPU01], 5, [1,12], 19>;
 defm : X86WriteRes<WriteVecMove,         [Zn2FPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [Zn2FPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [Zn2FPU], 2, [1], 2>;
@@ -930,8 +930,6 @@ def : InstRW<[WriteMicrocoded], (instregex "(V?)MASKMOVDQU(64)?")>;
 // ymm
 def : InstRW<[WriteMicrocoded],
                                (instregex "VPMASKMOVD(Y?)rm")>;
-// m, v,v.
-def : InstRW<[WriteMicrocoded], (instregex "VPMASKMOV(D|Q)(Y?)mr")>;
 
 // VPBROADCAST B/W.
 // x, m8/16.

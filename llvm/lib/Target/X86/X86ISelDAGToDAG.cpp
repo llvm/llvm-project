@@ -31,6 +31,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -2036,8 +2037,11 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   }
 
   // Post-processing: Convert lea(,%reg,2) to lea(%reg,%reg), which has
-  // a smaller encoding and avoids a scaled-index.
-  if (AM.Scale == 2 &&
+  // a smaller encoding and avoids a scaled-index. Not valid when the index is
+  // negated: this copies the index into the base, but only the index is negated
+  // when the address is emitted, so the result would be index + (-index) - that
+  // is, zero - rather than (-index) * 2.
+  if (AM.Scale == 2 && !AM.NegateIndex &&
       AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr) {
     AM.Base_Reg = AM.IndexReg;
@@ -2789,12 +2793,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     break;
 
   case ISD::SUB: {
-    // Given A-B, if A can be completely folded into the address and
-    // the index field with the index field unused, use -B as the index.
-    // This is a win if a has multiple parts that can be folded into
-    // the address. Also, this saves a mov if the base register has
-    // other uses, since it avoids a two-address sub instruction, however
-    // it costs an additional mov if the index register has other uses.
+    // Given A-B, if A can be completely folded into the address leaving the
+    // index field unused, use -B as the index. This is a win if A has multiple
+    // parts that can be folded into the address. Also, this saves a mov if the
+    // base register has other uses, since it avoids a two-address sub
+    // instruction, however it costs an additional mov if the index register
+    // has other uses.
+    // B may itself be a constant shift, in which case the shift folds into
+    // the scale - see below.
 
     // Add an artificial use to this node so that we can keep track of
     // it if it gets CSE'd with a different node.
@@ -2816,21 +2822,56 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     int Cost = 0;
     SDValue RHS = N.getOperand(1);
+
+    // A-(B<<C) can use -B as a scaled index for C in [1,3], which folds the
+    // shift into the address as well as the subtract. When B is not a foldable
+    // shift, NegScale stays empty and this is the plain A-B fold, which only
+    // breaks even on instruction count - a-b is mov+sub either way. Absorbing
+    // the shift saves one:
+    //
+    //   a - (b << 2)    movq %rdi, %rax     ->   negq %rsi
+    //                   shlq $2, %rsi            leaq (%rdi,%rsi,4), %rax
+    //                   subq %rsi, %rax
+    //
+    // That pays for the negate, so drop the cost by one.
+    std::optional<unsigned> NegScale;
+    if (RHS.getOpcode() == ISD::SHL && RHS.hasOneUse()) {
+      if (auto *ShAmt = dyn_cast<ConstantSDNode>(RHS.getOperand(1))) {
+        uint64_t ShVal = ShAmt->getZExtValue();
+        if (ShVal >= 1 && ShVal <= 3) {
+          NegScale = 1u << ShVal;
+          RHS = RHS.getOperand(0);
+          --Cost;
+        }
+      }
+    }
+
     // If the RHS involves a register with multiple uses, this
     // transformation incurs an extra mov, due to the neg instruction
-    // clobbering its operand.
+    // clobbering its operand. The CopyFromReg part of that is a guess -
+    // SelectionDAG is per-block, so uses elsewhere are invisible - and it is
+    // not applied to a folded shift, where it is wrong often enough to matter.
+    // The multiple-use part still is; see @y_outlives_lea.
     if (!RHS.getNode()->hasOneUse() ||
-        RHS.getNode()->getOpcode() == ISD::CopyFromReg ||
+        (!NegScale && RHS.getNode()->getOpcode() == ISD::CopyFromReg) ||
         RHS.getNode()->getOpcode() == ISD::TRUNCATE ||
         RHS.getNode()->getOpcode() == ISD::ANY_EXTEND ||
         (RHS.getNode()->getOpcode() == ISD::ZERO_EXTEND &&
          RHS.getOperand(0).getValueType() == MVT::i32))
       ++Cost;
-    // If the base is a register with multiple uses, this
-    // transformation may save a mov.
-    if ((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
-         !AM.Base_Reg.getNode()->hasOneUse()) ||
-        AM.BaseType == X86ISelAddressMode::FrameIndexBase)
+    // A - (A << C), where the base is itself the value being negated.
+    bool BaseIsNegatedValue = NegScale &&
+                              AM.BaseType == X86ISelAddressMode::RegBase &&
+                              AM.Base_Reg == RHS;
+    // If the base is a register with multiple uses, this transformation may
+    // save a mov - but not for BaseIsNegatedValue, where the baseline emits the
+    // shift non-destructively into another register and the SUB writes A in
+    // place, so there is no copy for the LEA to save. The copy the NEG needs
+    // there is charged by the multiple-use test above.
+    if (((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
+          !AM.Base_Reg.getNode()->hasOneUse()) ||
+         AM.BaseType == X86ISelAddressMode::FrameIndexBase) &&
+        !BaseIsNegatedValue)
       --Cost;
     // If the folded LHS was interesting, this transformation saves
     // address arithmetic.
@@ -2849,7 +2890,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // was an unprofitable LEA.
     AM.IndexReg = RHS;
     AM.NegateIndex = true;
-    AM.Scale = 1;
+    AM.Scale = NegScale.value_or(1);
     return false;
   }
 

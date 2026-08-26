@@ -2516,6 +2516,8 @@ TEST(TargetParserTest, testAMDGPUArch) {
     EXPECT_EQ(Triple("amdgpu12.01--").getSubArch(), Triple::AMDGPUSubArch1201);
     EXPECT_EQ(Triple("amdgpu12.5--").getSubArch(), Triple::AMDGPUSubArch12_5);
     EXPECT_EQ(Triple("amdgpu12.50--").getSubArch(), Triple::AMDGPUSubArch1250);
+    EXPECT_EQ(Triple("amdgpu12.50s--").getSubArch(),
+              Triple::AMDGPUSubArch1250_STRICT);
     EXPECT_EQ(Triple("amdgpu12.51--").getSubArch(), Triple::AMDGPUSubArch1251);
     EXPECT_EQ(Triple("amdgpu122--").getSubArch(), Triple::NoSubArch); // Unknown
     EXPECT_EQ(Triple("amdgpu12.59--").getSubArch(),
@@ -2798,6 +2800,10 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE64));
   EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE32));
 
+  EXPECT_TRUE(AMDGPU::getFeatureBitset(AMDGPU::GK_GFX802)
+                  .test(AMDGPU::FEAT_SGPR_INIT_BUG));
+  EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_SGPR_INIT_BUG));
+
   // An unknown kind yields an empty bitset.
   EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
 
@@ -2942,6 +2948,7 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
       {Triple::AMDGPUSubArch1200, AMDGPU::GK_GFX1200},
       {Triple::AMDGPUSubArch1201, AMDGPU::GK_GFX1201},
       {Triple::AMDGPUSubArch12_5, AMDGPU::GK_GFX12_5_GENERIC},
+      {Triple::AMDGPUSubArch1250_STRICT, AMDGPU::GK_GFX1250_STRICT},
       {Triple::AMDGPUSubArch1250, AMDGPU::GK_GFX1250},
       {Triple::AMDGPUSubArch1251, AMDGPU::GK_GFX1251},
 
@@ -2961,6 +2968,8 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch900),
             (AMDGPU::IsaVersion{9, 0, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250_STRICT),
             (AMDGPU::IsaVersion{12, 5, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1251),
             (AMDGPU::IsaVersion{12, 5, 1}));
