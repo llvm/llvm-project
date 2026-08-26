@@ -1072,9 +1072,8 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::VTableAttr vtableArr) {
 /// ZeroAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
   mlir::Location loc = parentOp->getLoc();
-  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
-  return mlir::LLVM::ZeroOp::create(
-      rewriter, loc, convertTypeForMemory(*converter, layout, attr.getType()));
+  mlir::Type llvmTy = converter->convertType(attr.getType());
+  return mlir::LLVM::ZeroOp::create(rewriter, loc, llvmTy);
 }
 
 // This class handles rewriting initializer attributes for types that do not
