@@ -150,10 +150,7 @@ protected:
       ADD_FAILURE_AT(__FILE__, Line) << llvm::toString(ROrErr.takeError());
       return std::nullopt;
     }
-    EntityPointerLevelSet Result;
-    for (const auto &[Id, EPLs] : ROrErr->Reachables)
-      Result.insert(EPLs.begin(), EPLs.end());
-    return Result;
+    return ROrErr->Reachables;
   }
 
   using Node = std::pair<char, unsigned>;
