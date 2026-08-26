@@ -263,7 +263,7 @@ PreservedAnalyses RABasicPass::run(MachineFunction &MF,
   ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(
       *MF.getFunction().getParent());
 
-  RABasic Impl;
+  RABasic Impl(Opts.Filter);
   bool Changed =
       Impl.run(MF, MFAM.getResult<VirtRegMapAnalysis>(MF),
                MFAM.getResult<LiveIntervalsAnalysis>(MF),

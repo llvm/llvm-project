@@ -269,13 +269,12 @@ static cl::opt<RegAllocType, false, RegAllocTypeParser> WWMRegAllocNPM(
     cl::desc("Register allocator for WWM registers (new pass manager)"));
 
 /// Check if the given RegAllocType is supported for AMDGPU NPM register
-/// allocation. Only Fast and Greedy are supported; Basic and PBQP are not.
+/// allocation. Fast, Greedy, and Basic are supported; PBQP is not.
 static Error checkRegAllocSupported(RegAllocType RAType, StringRef RegName) {
-  if (RAType == RegAllocType::Basic || RAType == RegAllocType::PBQP) {
+  if (RAType == RegAllocType::PBQP) {
     return make_error<StringError>(
-        Twine("unsupported register allocator '") +
-            (RAType == RegAllocType::Basic ? "basic" : "pbqp") + "' for " +
-            RegName + " registers",
+        Twine("unsupported register allocator 'pbqp' for ") + RegName +
+            " registers",
         inconvertibleErrorCode());
   }
   return Error::success();
@@ -301,7 +300,7 @@ Error AMDGPUCodeGenPassBuilder::validateRegAllocOptions() const {
         inconvertibleErrorCode());
   }
 
-  // 3. Only Fast and Greedy allocators are supported for AMDGPU.
+  // 3. Only Fast, Greedy, and Basic allocators are supported for AMDGPU.
   if (auto Err = checkRegAllocSupported(SGPRRegAllocNPM, "SGPR"))
     return Err;
   if (auto Err = checkRegAllocSupported(WWMRegAllocNPM, "WWM"))
@@ -2562,6 +2561,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
   // SGPR allocation - default to fast at -O0.
   if (SGPRRegAllocNPM == RegAllocType::Greedy)
     addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
+  else if (SGPRRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateSGPRs, "sgpr"}), PMW);
   else
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
                            PMW);
@@ -2575,6 +2576,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
   // WWM allocation - default to fast at -O0.
   if (WWMRegAllocNPM == RegAllocType::Greedy)
     addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
+  else if (WWMRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateWWMRegs, "wwm"}), PMW);
   else
     addMachineFunctionPass(
         RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
@@ -2585,6 +2588,8 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
   // VGPR allocation - default to fast at -O0.
   if (VGPRRegAllocNPM == RegAllocType::Greedy)
     addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else if (VGPRRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateVGPRs, "vgpr"}), PMW);
   else
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 
@@ -2646,6 +2651,8 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   if (SGPRRegAllocNPM == RegAllocType::Fast)
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
                            PMW);
+  else if (SGPRRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateSGPRs, "sgpr"}), PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
 
@@ -2670,6 +2677,8 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   if (WWMRegAllocNPM == RegAllocType::Fast)
     addMachineFunctionPass(
         RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}), PMW);
+  else if (WWMRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateWWMRegs, "wwm"}), PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}), PMW);
   addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
@@ -2679,6 +2688,8 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   // VGPR allocation - default to greedy at -O1 and above.
   if (VGPRRegAllocNPM == RegAllocType::Fast)
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+  else if (VGPRRegAllocNPM == RegAllocType::Basic)
+    addMachineFunctionPass(RABasicPass({onlyAllocateVGPRs, "vgpr"}), PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
 

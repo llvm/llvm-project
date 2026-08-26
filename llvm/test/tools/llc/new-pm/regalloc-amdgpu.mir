@@ -13,8 +13,10 @@
 # RUN: llc -mtriple=amdgcn -enable-new-pm -O3 -sgpr-regalloc-npm=greedy -wwm-regalloc-npm=greedy -vgpr-regalloc-npm=greedy -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-GREEDY
 # RUN: llc -mtriple=amdgcn -enable-new-pm -O3 -sgpr-regalloc-npm=fast -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-MIXED
 
+# Test basic allocator with AMDGPU-specific NPM regalloc options
+# RUN: llc -mtriple=amdgcn -enable-new-pm -O3 -sgpr-regalloc-npm=basic -wwm-regalloc-npm=basic -vgpr-regalloc-npm=basic -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-BASIC
+
 # Test error cases for unsupported allocators
-# RUN: not llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc-npm=basic -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-BASIC
 # RUN: not llc -mtriple=amdgcn -enable-new-pm -vgpr-regalloc-npm=pbqp -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-PBQP
 
 # Test error when legacy PM options are used with NPM
@@ -52,8 +54,9 @@
 # NPM-MIXED: greedy<wwm>
 # NPM-MIXED: greedy<vgpr>
 
+# NPM-BASIC: ra-basic
+
 # Error messages for unsupported allocators.
-# ERR-BASIC: unsupported register allocator 'basic' for SGPR registers
 # ERR-PBQP: unsupported register allocator 'pbqp' for VGPR registers
 
 # Error message for legacy PM options with NPM.
