@@ -2845,6 +2845,10 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
         if (II->getArgOperand(0) == II->getArgOperand(1))
           return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Q, Depth);
         break;
+      case Intrinsic::riscv_vsetvlimax:
+        // VLMAX is VLEN * LMUL / SEW, which is always a non-zero power of two
+        // for any valid vtype, so it is a power of two regardless of OrZero.
+        return true;
       default:
         break;
       }
@@ -5558,6 +5562,43 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass::log(KnownSrc, Mode);
       }
 
+      break;
+    }
+    case Intrinsic::pow: {
+      const bool WantNaN = (InterestedClasses & fcNan) != fcNone;
+      const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+      if (!WantNaN && !WantNegative)
+        break;
+
+      FPClassTest InterestedLHS = fcNone;
+      FPClassTest InterestedRHS = fcNone;
+      if (WantNaN) {
+        // pow may return NaN if one of the arguments is NaN. NaN may also be
+        // produced from a negative, non-zero finite base and a non-integer
+        // exponent.
+        InterestedLHS |= fcNan | fcNegNormal | fcNegSubnormal;
+        InterestedRHS |= fcNan;
+      }
+      if (WantNegative) {
+        // A negative value is returned when a negative base is raised to an odd
+        // integer power. Only normal values can be odd integers.
+        InterestedLHS |= fcNegative;
+        InterestedRHS |= fcNormal;
+      }
+
+      KnownFPClass KnownLHS;
+      computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedLHS,
+                          KnownLHS, Q, Depth + 1);
+
+      // If the LHS is unknown, then querying the RHS is only useful for rare
+      // edge cases.
+      if (KnownLHS.isUnknown())
+        break;
+
+      KnownFPClass KnownRHS;
+      computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedRHS,
+                          KnownRHS, Q, Depth + 1);
+      Known = KnownFPClass::pow(KnownLHS, KnownRHS);
       break;
     }
     case Intrinsic::powi: {

@@ -5,7 +5,7 @@
 
 // REQUIRES: plugins
 
-// UNSUPPORTED: *
+// UNSUPPORTED: target={{.*}}
 
 // RUN: rm -rf %t && mkdir -p %t
 

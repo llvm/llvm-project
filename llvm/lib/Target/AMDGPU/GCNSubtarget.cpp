@@ -83,6 +83,7 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
     return AMDGPUSubtarget::GFX11;
   case Triple::AMDGPUSubArch12:
   case Triple::AMDGPUSubArch12_5:
+  case Triple::AMDGPUSubArch1250_STRICT:
     return AMDGPUSubtarget::GFX12;
   case Triple::AMDGPUSubArch13:
     return AMDGPUSubtarget::GFX13;

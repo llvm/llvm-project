@@ -1630,6 +1630,42 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::log(KnownSrc, Mode);
     break;
   }
+  case TargetOpcode::G_FPOW: {
+    const bool WantNaN = (InterestedClasses & fcNan) != fcNone;
+    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+    if (!WantNaN && !WantNegative)
+      break;
+
+    FPClassTest InterestedLHS = fcNone;
+    FPClassTest InterestedRHS = fcNone;
+    if (WantNaN) {
+      // pow may return NaN if one of the arguments is NaN. NaN may be produced
+      // from a non-zero-finite-negative base and a non-integer exponent.
+      InterestedLHS |= fcNan | fcNegNormal | fcNegSubnormal;
+      InterestedRHS |= fcNan;
+    }
+    if (WantNegative) {
+      // A negative value is returned when a negative base is raised to an odd
+      // integer power. Only normal values can be odd integers.
+      InterestedLHS |= fcNegative;
+      InterestedRHS |= fcNormal;
+    }
+
+    KnownFPClass KnownLHS;
+    computeKnownFPClass(MI.getOperand(1).getReg(), DemandedElts, InterestedLHS,
+                        KnownLHS, Depth + 1);
+
+    // If the LHS is unknown, then querying the RHS is only useful for rare edge
+    // cases.
+    if (KnownLHS.isUnknown())
+      break;
+
+    KnownFPClass KnownRHS;
+    computeKnownFPClass(MI.getOperand(2).getReg(), DemandedElts, InterestedRHS,
+                        KnownRHS, Depth + 1);
+    Known = KnownFPClass::pow(KnownLHS, KnownRHS);
+    break;
+  }
   case TargetOpcode::G_FPOWI: {
     if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
       break;
@@ -2219,6 +2255,7 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FLOG:
     case TargetOpcode::G_FLOG2:
     case TargetOpcode::G_FLOG10:
+    case TargetOpcode::G_FPOW:
     case TargetOpcode::G_FPOWI:
     case TargetOpcode::G_FLDEXP:
     case TargetOpcode::G_STRICT_FLDEXP:
