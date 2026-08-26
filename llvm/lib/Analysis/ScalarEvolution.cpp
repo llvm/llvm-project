@@ -13396,6 +13396,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   bool PositiveStride = isKnownPositive(Stride);
 
+  // Whether the IV may reach the maximum value before the exit is taken.
+  bool IVMayOverflow = true;
+
   // Avoid negative or zero stride values.
   if (!PositiveStride) {
     // We can compute the correct backedge taken count for loops with unknown
@@ -13465,10 +13468,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
       }
     }
-  } else if (!NoWrap) {
+  } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    if (canIVOverflowOnLT(RHS, Stride, IsSigned))
+    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    if (IVMayOverflow && !NoWrap)
       return getCouldNotCompute();
   }
 
@@ -13649,8 +13653,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //
       // Using this information, try to prove whether the addition in
       // "(Start - End) + (Stride - 1)" has unsigned overflow.
+      //
+      // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
+      // value, so the distance End - Start is at most UMAX - (Stride - 1) and
+      // the (Stride - 1) addition below cannot overflow.
       const SCEV *One = getOne(Stride->getType());
-      bool MayAddOverflow = [&] {
+      bool MayAddOverflow = IVMayOverflow && [&] {
         if (isKnownToBeAPowerOfTwo(Stride)) {
           // Suppose Stride is a power of two, and Start/End are unsigned
           // integers.  Let UMAX be the largest representable unsigned
