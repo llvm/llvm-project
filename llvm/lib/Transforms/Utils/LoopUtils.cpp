@@ -2571,7 +2571,7 @@ bool llvm::collectCompressedPtrs(
   };
 
   SmallPtrSet<Use *, 16> Seen;
-  SmallVector<Use *> Worklist{make_pointer_range(MD.getHeaderPHI()->uses())};
+  SmallVector<Use *> Worklist(make_pointer_range(MD.getHeaderPHI()->uses());
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     if (!Seen.insert(U).second)
@@ -2585,8 +2585,8 @@ bool llvm::collectCompressedPtrs(
     Value *CurrentVal = U->get();
     if (isa<LoadInst, StoreInst>(I)) {
       // Disallow any store that uses the monotonic value as the stored value.
-      if (auto *SI = dyn_cast<StoreInst>(I);
-          SI && SI->getValueOperand() == CurrentVal)
+      auto *SI = dyn_cast<StoreInst>(I);
+      if (SI && SI->getValueOperand() == CurrentVal)
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(I);
