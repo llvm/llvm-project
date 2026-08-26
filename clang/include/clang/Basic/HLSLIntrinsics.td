@@ -694,7 +694,7 @@ prevision partial derivative of the input value.
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
+def hlsl_degrees : HLSLOneArgInlineBuiltin<"degrees"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
@@ -702,6 +702,7 @@ def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
 }];
   let ParamNames = ["x"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let Body = "return x * (__detail::elem_type_t<decltype(x)>)(180.L / __detail::Pi);";
 }
 // Returns the cross product of two floating-point, 3D vectors.
 def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
@@ -1391,13 +1392,14 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
+def hlsl_radians : HLSLOneArgInlineBuiltin<"radians"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
   let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let Body = "return Val * (__detail::elem_type_t<decltype(Val)>)(__detail::Pi / 180.L);";
 }
 
 // Calculates a fast, approximate, per-component reciprocal ie 1 / x.
