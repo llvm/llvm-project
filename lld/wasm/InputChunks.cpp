@@ -204,12 +204,8 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
 }
 
 uint64_t InputChunk::getTombstone() const {
-  if (const auto *s = dyn_cast<InputSection>(this)) {
+  if (const auto *s = dyn_cast<InputSection>(this))
     return s->tombstoneValue;
-  }
-  if (const auto *s = dyn_cast<CodeMetaDataInputSection>(this)) {
-    return s->tombstoneValue;
-  }
   return 0;
 }
 
@@ -598,68 +594,6 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // Returning 0 means there is no tombstone value for this section, and
   // relocation will just use the addend.
   return 0;
-}
-
-void CodeMetaDataInputSection::finalizeContents() {
-  RelocatedData.resize(data().size());
-  memcpy(RelocatedData.data(), data().data(), data().size());
-  relocate(RelocatedData.data());
-
-  const uint8_t *Buf = RelocatedData.data();
-  const uint8_t *End = Buf + RelocatedData.size();
-
-  auto readULEB = [&](StringRef Desc) {
-    const char *Err = nullptr;
-    uint32_t Val = decodeULEB128AndInc(Buf, End, &Err);
-    if (Err)
-      fatal("Failed to decode " + Desc + " in " + name + ": " + Err);
-    return Val;
-  };
-
-  const unsigned NumFunctions = readULEB("number of functions");
-
-  for (unsigned i = 0; i < NumFunctions; ++i) {
-    const uint8_t *FunctionStartOffset = Buf;
-
-    const unsigned FuncIndex = readULEB("function index");
-    const unsigned NumHints = readULEB("hint size");
-
-    for (unsigned j = 0; j < NumHints; ++j) {
-      readULEB("hint opcode");
-      const unsigned HintSize = readULEB("hint operand");
-      Buf += HintSize;
-    }
-    // skip entries for removed functions
-    // this is the whole reason we need to parse the hints here again
-    if (FuncIndex == static_cast<uint32_t>(getTombstone())) {
-      continue;
-    }
-    ArrayRef FunctionData(FunctionStartOffset, Buf - FunctionStartOffset);
-    Hints.emplace_back(FunctionData);
-  }
-  assert(Buf == End && "CodeMetaDataInputSection: not all data was consumed");
-}
-
-void CodeMetaDataInputSection::writeTo(uint8_t *Buf) const {
-  // write sorted hints to output buffer
-  // hints are implicitly sorted, since function indices are assigned by
-  // section order
-  for (const auto &ref : Hints) {
-    memcpy(Buf + outSecOff, ref.data(), ref.size());
-    Buf += ref.size();
-  }
-}
-
-uint32_t CodeMetaDataInputSection::getSize() const {
-  uint32_t size = 0;
-  for (const auto &ref : Hints) {
-    size += ref.size();
-  }
-  return size;
-}
-
-uint32_t CodeMetaDataInputSection::getNumFuncHints() const {
-  return Hints.size();
 }
 } // namespace wasm
 } // namespace lld

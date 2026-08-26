@@ -307,33 +307,67 @@ void CodeMetaDataOutputSection::writeTo(uint8_t *buf) {
   buf += header.size();
   memcpy(buf, nameData.data(), nameData.size());
   buf += nameData.size();
-
-  // all input sections' outSecOff is relative to the buffer AFTER this leading
-  // count
-  buf += encodeULEB128(NumFuncHints, buf);
-  for (InputChunk *Section : inputSections) {
-    assert(!Section->discarded);
-    CodeMetaDataInputSection *CMSec =
-        dyn_cast<CodeMetaDataInputSection>(Section);
-    CMSec->writeTo(buf);
-  }
+  memcpy(buf, payload.data(), payload.size());
 }
 
 void CodeMetaDataOutputSection::finalizeContents() {
-  raw_string_ostream os(nameData);
-  encodeULEB128(name.size(), os);
-  os << name;
+  raw_string_ostream nameOs(nameData);
+  encodeULEB128(name.size(), nameOs);
+  nameOs << name;
 
-  for (InputChunk *Section : inputSections) {
-    assert(!Section->discarded);
-    CodeMetaDataInputSection *CMSec =
-        dyn_cast<CodeMetaDataInputSection>(Section);
-    CMSec->finalizeContents();
-    NumFuncHints += CMSec->getNumFuncHints();
-    CMSec->outSecOff = payloadSize;
-    payloadSize += CMSec->getSize();
+  std::string functionEntries;
+  raw_string_ostream entriesOs(functionEntries);
+  uint32_t numFunctionsTotal = 0;
+
+  for (InputChunk *section : inputSections) {
+    if (section->discarded)
+      continue;
+
+    // Apply relocations to a copy of the input section's raw data.
+    std::vector<uint8_t> relocatedData(section->data().size());
+    memcpy(relocatedData.data(), section->data().data(), section->data().size());
+    section->relocate(relocatedData.data());
+
+    const uint8_t *buf = relocatedData.data();
+    const uint8_t *end = buf + relocatedData.size();
+
+    auto readULEB = [&](StringRef desc) {
+      const char *err = nullptr;
+      uint32_t val = decodeULEB128AndInc(buf, end, &err);
+      if (err)
+        fatal("Failed to decode " + desc + " in " + name + ": " + err);
+      return val;
+    };
+
+    const unsigned numFunctions = readULEB("number of functions");
+
+    for (unsigned i = 0; i < numFunctions; ++i) {
+      const uint8_t *functionStartOffset = buf;
+
+      const unsigned funcIndex = readULEB("function index");
+      const unsigned numHints = readULEB("hint size");
+
+      for (unsigned j = 0; j < numHints; ++j) {
+        readULEB("hint opcode");
+        const unsigned hintSize = readULEB("hint operand");
+        buf += hintSize;
+      }
+      // Skip entries for removed functions.
+      if (funcIndex == static_cast<uint32_t>(section->getTombstone()))
+        continue;
+
+      entriesOs.write(reinterpret_cast<const char *>(functionStartOffset),
+                      buf - functionStartOffset);
+      numFunctionsTotal++;
+    }
+    assert(buf == end && "CodeMetaDataOutputSection: not all data was consumed");
   }
-  payloadSize += getULEB128Size(NumFuncHints);
+
+  raw_string_ostream payloadOs(payload);
+  encodeULEB128(numFunctionsTotal, payloadOs);
+  payloadOs << functionEntries;
+
+  payloadSize = payload.size();
   createHeader(payloadSize + nameData.size());
 }
 } // namespace wasm

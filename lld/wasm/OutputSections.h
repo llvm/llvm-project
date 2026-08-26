@@ -142,7 +142,7 @@ public:
   void finalizeContents() override;
 
 private:
-  uint32_t NumFuncHints = 0;
+  std::string payload;
 };
 } // namespace wasm
 } // namespace lld
