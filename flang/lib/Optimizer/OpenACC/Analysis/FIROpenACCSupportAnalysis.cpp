@@ -63,7 +63,8 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
   if (!dl)
     return std::nullopt;
 
-  if (isa<fir::ReferenceType, fir::HeapType, fir::LLVMPointerType>(ty))
+  if (isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
+          fir::LLVMPointerType>(ty))
     return mlir::acc::getTypeSizeAndAlignment(
         LLVM::LLVMPointerType::get(ty.getContext()), module, *dl, &support);
 

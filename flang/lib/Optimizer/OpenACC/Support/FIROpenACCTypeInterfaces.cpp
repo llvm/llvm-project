@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -99,6 +100,11 @@ std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
   // If the type enclosed is a mappable type, then have it provide the size.
   if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
     return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
+
+  // Procedure pointers map as a single address-sized slot.
+  if (mlir::isa<mlir::FunctionType>(eleTy))
+    return llvm::TypeSize::getFixed(dataLayout.getTypeSize(
+        mlir::LLVM::LLVMPointerType::get(type.getContext())));
 
   // Dynamic extents or unknown ranks generally do not have compile-time
   // computable dimensions.
