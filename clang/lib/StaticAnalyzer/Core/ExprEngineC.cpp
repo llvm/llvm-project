@@ -288,9 +288,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
       if (const MemRegion *MR = State->getSVal(Ex, SF).getAsRegion()) {
         SVal OrigV = State->getSVal(MR);
-        // evalCast converts the value, but we are doing a bitcast here, which
-        // is unmodeled for floats.
-        if (!OrigV.getAs<nonloc::ConcreteFloat>()) {
+        // evalCast converts the value, but we are doing a bitcast here,
+        // which coincide only if no floats are involved.
+        if (!Ex->getType()->isFloatingType() &&
+            !CastE->getType()->isFloatingType()) {
           CastedV = svalBuilder.evalCast(svalBuilder.simplifySVal(State, OrigV),
                                          CastE->getType(), Ex->getType());
         }
