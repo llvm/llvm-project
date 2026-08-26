@@ -12,6 +12,37 @@ define <vscale x 16 x i1> @match_nxv16i8_v1i8(<vscale x 16 x i8> %op1, <1 x i8> 
   ret <vscale x 16 x i1> %r
 }
 
+define <vscale x 1 x i1> @match_nxv1i8_v8i8(<vscale x 1 x i8> %op1, <8 x i8> %op2, <vscale x 1 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv1i8_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p1.d
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    punpklo p0.h, p1.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 1 x i1> @llvm.experimental.vector.match(<vscale x 1 x i8> %op1, <8 x i8> %op2, <vscale x 1 x i1> %mask)
+  ret <vscale x 1 x i1> %r
+}
+
+define <1 x i1> @match_v1i8_v1i8(<1 x i8> %op1, <1 x i8> %op2, <1 x i1> %mask) #0 {
+; CHECK-LABEL: match_v1i8_v1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    and w0, w8, w0
+; CHECK-NEXT:    ret
+  %r = tail call <1 x i1> @llvm.experimental.vector.match(<1 x i8> %op1, <1 x i8> %op2, <1 x i1> %mask)
+  ret <1 x i1> %r
+}
+
 define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v2i8:
 ; CHECK:       // %bb.0:
@@ -193,6 +224,17 @@ define <vscale x 8 x i1> @match_nxv8i16_v8i16(<vscale x 8 x i16> %op1, <8 x i16>
   ret <vscale x 8 x i1> %r
 }
 
+define <vscale x 8 x i1> @match_nxv8i16_v4i16(<vscale x 8 x i16> %op1, <4 x i16> %op2, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv8i16_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    match p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 8 x i1> @llvm.experimental.vector.match(<vscale x 8 x i16> %op1, <4 x i16> %op2, <vscale x 8 x i1> %mask)
+  ret <vscale x 8 x i1> %r
+}
+
 define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v8i16:
 ; CHECK:       // %bb.0:
@@ -207,6 +249,24 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask)
+  ret <8 x i1> %r
+}
+
+define <8 x i1> @match_v8i16_v4i16(<8 x i16> %op1, <4 x i16> %op2, <8 x i1> %mask) #0 {
+; CHECK-LABEL: match_v8i16_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z1.d, d1
+; CHECK-NEXT:    shl v2.8h, v2.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z2.h, #0
+; CHECK-NEXT:    match p0.h, p1/z, z0.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+  %r = tail call <8 x i1> @llvm.experimental.vector.match(<8 x i16> %op1, <4 x i16> %op2, <8 x i1> %mask)
   ret <8 x i1> %r
 }
 
@@ -231,112 +291,13 @@ define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
 define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_nxv16i8_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    mov z3.b, z1.b[1]
-; CHECK-NEXT:    mov z4.b, b1
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z5.b, z1.b[2]
-; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z3.b, z1.b[3]
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z5.b
-; CHECK-NEXT:    mov z4.b, z1.b[4]
-; CHECK-NEXT:    mov p2.b, p3/m, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z1.b[5]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, z1.b[6]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z1.b[7]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, z1.b[8]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z1.b[9]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, z1.b[10]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z1.b[11]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, z1.b[12]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z1.b[13]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    mov z4.b, z1.b[14]
-; CHECK-NEXT:    mov z1.b, z1.b[15]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, b2
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z4.b
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[1]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[2]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[3]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[4]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[5]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[6]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[7]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[8]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[9]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[10]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[11]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[12]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[13]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    mov z3.b, z2.b[14]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    mov z1.b, z2.b[15]
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    cmpeq p4.b, p1/z, z0.b, z3.b
-; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
-; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov z2.q, q2
+; CHECK-NEXT:    mov z1.q, q1
+; CHECK-NEXT:    match p1.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    sel p0.b, p2, p2.b, p1.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <32 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -345,105 +306,55 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 define <16 x i1> @match_v16i8_v32i8(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v16i8_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v4.16b, v1.b[1]
-; CHECK-NEXT:    dup v5.16b, v1.b[0]
-; CHECK-NEXT:    dup v6.16b, v1.b[2]
-; CHECK-NEXT:    dup v7.16b, v1.b[3]
-; CHECK-NEXT:    dup v16.16b, v1.b[4]
-; CHECK-NEXT:    dup v17.16b, v1.b[5]
-; CHECK-NEXT:    dup v18.16b, v1.b[6]
-; CHECK-NEXT:    dup v19.16b, v1.b[7]
-; CHECK-NEXT:    dup v20.16b, v1.b[8]
-; CHECK-NEXT:    cmeq v4.16b, v0.16b, v4.16b
-; CHECK-NEXT:    cmeq v5.16b, v0.16b, v5.16b
-; CHECK-NEXT:    cmeq v6.16b, v0.16b, v6.16b
-; CHECK-NEXT:    cmeq v7.16b, v0.16b, v7.16b
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v16.16b
-; CHECK-NEXT:    cmeq v17.16b, v0.16b, v17.16b
-; CHECK-NEXT:    dup v21.16b, v2.b[7]
-; CHECK-NEXT:    dup v22.16b, v1.b[10]
-; CHECK-NEXT:    orr v4.16b, v5.16b, v4.16b
-; CHECK-NEXT:    orr v5.16b, v6.16b, v7.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v17.16b
-; CHECK-NEXT:    cmeq v7.16b, v0.16b, v18.16b
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v19.16b
-; CHECK-NEXT:    cmeq v17.16b, v0.16b, v20.16b
-; CHECK-NEXT:    dup v18.16b, v1.b[9]
-; CHECK-NEXT:    dup v19.16b, v1.b[11]
-; CHECK-NEXT:    dup v20.16b, v1.b[12]
-; CHECK-NEXT:    cmeq v22.16b, v0.16b, v22.16b
-; CHECK-NEXT:    orr v4.16b, v4.16b, v5.16b
-; CHECK-NEXT:    orr v5.16b, v6.16b, v7.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v17.16b
-; CHECK-NEXT:    cmeq v7.16b, v0.16b, v18.16b
-; CHECK-NEXT:    dup v18.16b, v1.b[13]
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v19.16b
-; CHECK-NEXT:    cmeq v17.16b, v0.16b, v20.16b
-; CHECK-NEXT:    dup v19.16b, v2.b[0]
-; CHECK-NEXT:    dup v20.16b, v2.b[1]
-; CHECK-NEXT:    orr v4.16b, v4.16b, v5.16b
-; CHECK-NEXT:    dup v5.16b, v2.b[6]
-; CHECK-NEXT:    orr v6.16b, v6.16b, v7.16b
-; CHECK-NEXT:    orr v7.16b, v16.16b, v17.16b
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v18.16b
-; CHECK-NEXT:    cmeq v17.16b, v0.16b, v19.16b
-; CHECK-NEXT:    cmeq v18.16b, v0.16b, v20.16b
-; CHECK-NEXT:    dup v19.16b, v2.b[2]
-; CHECK-NEXT:    cmeq v5.16b, v0.16b, v5.16b
-; CHECK-NEXT:    cmeq v20.16b, v0.16b, v21.16b
-; CHECK-NEXT:    dup v21.16b, v2.b[8]
-; CHECK-NEXT:    orr v6.16b, v6.16b, v22.16b
-; CHECK-NEXT:    orr v7.16b, v7.16b, v16.16b
-; CHECK-NEXT:    dup v16.16b, v1.b[14]
-; CHECK-NEXT:    dup v1.16b, v1.b[15]
-; CHECK-NEXT:    orr v17.16b, v17.16b, v18.16b
-; CHECK-NEXT:    cmeq v18.16b, v0.16b, v19.16b
-; CHECK-NEXT:    dup v19.16b, v2.b[3]
-; CHECK-NEXT:    orr v5.16b, v5.16b, v20.16b
-; CHECK-NEXT:    cmeq v20.16b, v0.16b, v21.16b
-; CHECK-NEXT:    dup v21.16b, v2.b[9]
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v16.16b
-; CHECK-NEXT:    cmeq v1.16b, v0.16b, v1.16b
-; CHECK-NEXT:    orr v4.16b, v4.16b, v6.16b
-; CHECK-NEXT:    orr v17.16b, v17.16b, v18.16b
-; CHECK-NEXT:    cmeq v18.16b, v0.16b, v19.16b
-; CHECK-NEXT:    dup v19.16b, v2.b[4]
-; CHECK-NEXT:    orr v5.16b, v5.16b, v20.16b
-; CHECK-NEXT:    cmeq v20.16b, v0.16b, v21.16b
-; CHECK-NEXT:    dup v21.16b, v2.b[10]
-; CHECK-NEXT:    orr v7.16b, v7.16b, v16.16b
-; CHECK-NEXT:    orr v16.16b, v17.16b, v18.16b
-; CHECK-NEXT:    cmeq v17.16b, v0.16b, v19.16b
-; CHECK-NEXT:    dup v18.16b, v2.b[5]
-; CHECK-NEXT:    orr v5.16b, v5.16b, v20.16b
-; CHECK-NEXT:    cmeq v19.16b, v0.16b, v21.16b
-; CHECK-NEXT:    dup v20.16b, v2.b[11]
-; CHECK-NEXT:    orr v1.16b, v7.16b, v1.16b
-; CHECK-NEXT:    orr v6.16b, v16.16b, v17.16b
-; CHECK-NEXT:    cmeq v7.16b, v0.16b, v18.16b
-; CHECK-NEXT:    dup v17.16b, v2.b[12]
-; CHECK-NEXT:    orr v5.16b, v5.16b, v19.16b
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v20.16b
-; CHECK-NEXT:    dup v18.16b, v2.b[13]
-; CHECK-NEXT:    dup v19.16b, v2.b[14]
-; CHECK-NEXT:    orr v1.16b, v4.16b, v1.16b
-; CHECK-NEXT:    dup v2.16b, v2.b[15]
-; CHECK-NEXT:    orr v4.16b, v6.16b, v7.16b
-; CHECK-NEXT:    cmeq v6.16b, v0.16b, v17.16b
-; CHECK-NEXT:    orr v5.16b, v5.16b, v16.16b
-; CHECK-NEXT:    cmeq v7.16b, v0.16b, v18.16b
-; CHECK-NEXT:    cmeq v16.16b, v0.16b, v19.16b
-; CHECK-NEXT:    cmeq v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    orr v1.16b, v1.16b, v4.16b
-; CHECK-NEXT:    orr v4.16b, v5.16b, v6.16b
-; CHECK-NEXT:    orr v5.16b, v7.16b, v16.16b
-; CHECK-NEXT:    orr v1.16b, v1.16b, v4.16b
-; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
+; CHECK-NEXT:    shl v3.16b, v3.16b, #7
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    cmpne p1.b, p0/z, z3.b, #0
+; CHECK-NEXT:    match p0.b, p1/z, z0.b, z2.b
+; CHECK-NEXT:    match p2.b, p1/z, z0.b, z1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.b, p2/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <32 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
+}
+
+define <16 x i1> @match_v16i16_v8i16(<16 x i16> %op1, <8 x i16> %op2, <16 x i1> %mask) #0 {
+; CHECK-LABEL: match_v16i16_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v4.8h, v3.16b, #0
+; CHECK-NEXT:    ushll v3.8h, v3.8b, #0
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    shl v4.8h, v4.8h, #15
+; CHECK-NEXT:    shl v3.8h, v3.8h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z4.h, #0
+; CHECK-NEXT:    cmpne p2.h, p0/z, z3.h, #0
+; CHECK-NEXT:    match p0.h, p1/z, z1.h, z2.h
+; CHECK-NEXT:    match p1.h, p2/z, z0.h, z2.h
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z1.h, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i16> %op1, <8 x i16> %op2, <16 x i1> %mask)
+  ret <16 x i1> %r
+}
+
+define <vscale x 32 x i1> @match_nxv32i8_v16i8(<vscale x 32 x i8> %op1, <16 x i8> %op2, <vscale x 32 x i1> %mask) #0 {
+; CHECK-LABEL: match_nxv32i8_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    mov z2.q, q2
+; CHECK-NEXT:    match p0.b, p0/z, z0.b, z2.b
+; CHECK-NEXT:    match p1.b, p1/z, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %r = tail call <vscale x 32 x i1> @llvm.experimental.vector.match(<vscale x 32 x i8> %op1, <16 x i8> %op2, <vscale x 32 x i1> %mask)
+  ret <vscale x 32 x i1> %r
 }
 
 ; Data types not supported by MATCH.
@@ -502,13 +413,14 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 ; CHECK-NEXT:    dup v1.4s, v1.s[3]
 ; CHECK-NEXT:    cmeq v3.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    cmeq v4.4s, v0.4s, v4.4s
-; CHECK-NEXT:    cmeq v5.4s, v0.4s, v5.4s
+; CHECK-NEXT:    orr v3.16b, v4.16b, v3.16b
+; CHECK-NEXT:    cmeq v4.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
-; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    shl v1.4h, v2.4h, #15
+; CHECK-NEXT:    orr v3.16b, v3.16b, v4.16b
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    addhn v0.4h, v3.4s, v0.4s
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i1> @llvm.experimental.vector.match(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask)
   ret <4 x i1> %r
@@ -521,9 +433,10 @@ define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %ma
 ; CHECK-NEXT:    dup v1.2d, v1.d[0]
 ; CHECK-NEXT:    cmeq v3.2d, v0.2d, v3.2d
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    shl v1.2s, v2.2s, #31
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v3.2d
+; CHECK-NEXT:    cmlt v1.2s, v1.2s, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i1> @llvm.experimental.vector.match(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask)
   ret <2 x i1> %r

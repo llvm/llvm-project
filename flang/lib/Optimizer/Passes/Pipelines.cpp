@@ -29,27 +29,6 @@ static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
 
 namespace fir {
 
-template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
-                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
-                     fir::GlobalOp>(pm, ctor);
-}
-
-template <typename F>
-void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
-  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
-  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
-  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
-}
-
-template <typename F>
-void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
-  if (!disabled)
-    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
-}
-
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
@@ -66,18 +45,19 @@ void addCfgConversionPass(mlir::PassManager &pm,
       pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
-  ArrayValueCopyOptions options;
-  options.optimizeConflicts = optLevel != llvm::OptimizationLevel::O0;
-  addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
-}
-
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
     return fir::createMemoryAllocationOpt(
         {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
+}
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
+  fir::AllocationPlacementOptions options;
+  options.stackArrays = stackArrays;
+  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
+  options.totalStackLimitBytes = allocationPlacementStackLimit;
+  pm.addPass(fir::createAllocationPlacement(options));
 }
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
@@ -99,6 +79,8 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
     return mlir::LLVM::DIEmissionKind::Full;
   case llvm::codegenoptions::DebugInfoKind::DebugLineTablesOnly:
     return mlir::LLVM::DIEmissionKind::LineTablesOnly;
+  case llvm::codegenoptions::DebugInfoKind::DebugDirectivesOnly:
+    return mlir::LLVM::DIEmissionKind::DebugDirectivesOnly;
   default:
     return mlir::LLVM::DIEmissionKind::None;
   }
@@ -191,21 +173,13 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       });
 }
 
-/// Create a pass pipeline for running default optimization passes for
-/// incremental conversion of FIR.
-///
-/// \param pm - MLIR pass manager that will hold the pipeline definition
-void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
-                                           MLIRToLLVMPassPipelineConfig &pc) {
-  // Early Optimizer EP Callback
-  pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
-
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
   // simplify the IR
   mlir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
-  fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -223,7 +197,15 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.StackArrays)
+  // Unconditional and ahead of the array allocation placement below: under
+  // -gpu=mem:unified|managed the unified/managed allocators are required for
+  // correctness, so this must not depend on which placement pass is selected
+  // or on -disable-memory-allocation-opt.
+  pm.addPass(fir::createCudaHeapAllocPromotion());
+
+  if (enableAllocationPlacement)
+    fir::addAllocationPlacement(pm, pc.StackArrays);
+  else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
@@ -240,6 +222,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
+  pm.addPass(fir::createSelectOpsConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
   // Optimize redundant array repacking operations,
@@ -255,8 +238,14 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
-  // convert control flow to CFG form
-  fir::addCfgConversionPass(pm, pc);
+}
+
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
+  mlir::GreedyRewriteConfig config;
+  config.setRegionSimplificationLevel(
+      mlir::GreedySimplifyRegionLevel::Disabled);
+
   pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -267,8 +256,18 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   if (pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createSetRuntimeCallAttributes());
+}
 
-  // Last Optimizer EP Callback
+/// Create a pass pipeline for running default optimization passes for
+/// incremental conversion of FIR.
+///
+/// \param pm - MLIR pass manager that will hold the pipeline definition
+void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
+                                           MLIRToLLVMPassPipelineConfig &pc) {
+  pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
+  createDefaultFIRPreCFGOptimizerPassPipeline(pm, pc);
+  fir::addCfgConversionPass(pm, pc);
+  createDefaultFIRPostCFGOptimizerPassPipeline(pm, pc);
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
 }
 
@@ -281,6 +280,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
+
+  config.invokeHLFIROptEarlyEPCallbacks(pm, optLevel);
+
   if (optLevel != llvm::OptimizationLevel::O0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
@@ -328,6 +330,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
       {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
+
+  config.invokeHLFIROptLastEPCallbacks(pm, optLevel);
+
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
@@ -383,14 +388,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
-  pm.addPass(mlir::omp::createMarkDeclareTargetPass());
 
-  // Delete unreachable target operations before FunctionFilteringPass
-  // extracts them.
-  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
-  if (opts.isTargetDevice)
-    pm.addPass(flangomp::createFunctionFilteringPass());
 }
 
 void createDebugPasses(mlir::PassManager &pm,
@@ -460,18 +459,30 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
         flangomp::createLowerNontemporalPass());
   }
 
+  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
+  if (runOMPNonSimdPasses) {
+    // Propagate implicit declare target information early in order to diagnose
+    // target device not-yet-implemented cases based on FIR.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+    pm.addPass(flangomp::createUnimplementedDeviceCheckPass());
+  }
+
   fir::addFIRToLLVMPass(pm, config);
   pm.addPass(fir::createEmitMIFGlobalCtors());
 
-  if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+  if (runOMPNonSimdPasses) {
     // Since some math operations may be converted to function calls by the
-    // ConvertMathToFuncs pass, we need to mark them with the omp.declare_target
-    // attribute if they're called from a target region.
+    // ConvertMathToFuncs pass, we need to run the implicit declare_target
+    // propagation and dependent passes late in the pipeline.
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
 
-    // Remove all non target-related operations from host functions still
-    // remaining at this point, if compiling for an OpenMP target device. This
-    // is required before translating 'omp' dialect operations to LLVM IR.
+    // First remove host-only functions from target device modules, and then
+    // clean up any remaining host functions holding target regions to only
+    // contain the bare minimum host operations needed for target device
+    // compilation. These passes must always run back to back to ensure no
+    // temporary poison values, introduced by the first pass, cause other passes
+    // to encounter UB before the second pass removes them.
+    pm.addPass(mlir::omp::createFunctionFilteringPass());
     pm.addPass(mlir::omp::createHostOpFilteringPass());
 
     // Convert applicable OpenMP stack allocations to shared memory allocations
@@ -489,6 +500,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
+  if (config.EnableOpenACC)
+    fir::acc::populateHLFIROpenACCPassPipeline(pm);
+
   fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
   if (config.EnableOpenMP)
     enableOpenMP = fir::EnableOpenMP::Full;

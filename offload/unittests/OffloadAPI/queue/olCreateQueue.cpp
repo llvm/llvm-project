@@ -15,15 +15,29 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olCreateQueueTest);
 
 TEST_P(olCreateQueueTest, Success) {
   ol_queue_handle_t Queue = nullptr;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
   ASSERT_NE(Queue, nullptr);
+  ASSERT_SUCCESS(olDestroyQueue(Queue));
+}
+
+TEST_P(olCreateQueueTest, InvalidNullHandleContext) {
+  ol_queue_handle_t Queue = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+               olCreateQueue(nullptr, Device, &Queue));
 }
 
 TEST_P(olCreateQueueTest, InvalidNullHandleDevice) {
   ol_queue_handle_t Queue = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olCreateQueue(nullptr, &Queue));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+               olCreateQueue(Context, nullptr, &Queue));
 }
 
 TEST_P(olCreateQueueTest, InvalidNullPointerQueue) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olCreateQueue(Device, nullptr));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olCreateQueue(Context, Device, nullptr));
+}
+
+TEST_P(olCreateQueueTest, InvalidDeviceNotInContext) {
+  ol_queue_handle_t Queue = nullptr;
+  ASSERT_ERROR(OL_ERRC_INVALID_DEVICE, olCreateQueue(Context, Host, &Queue));
 }

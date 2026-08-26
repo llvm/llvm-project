@@ -206,11 +206,12 @@ void SourceInfoBuilder::computeEntries() {
     SourceInfo::SourceContents::Entry ContentEntry;
     ContentEntry.FileContent = NameContent.second.str();
     ContentEntry.compute();
+    auto ContentSize = ContentEntry.Parameters.ContentSizeInBytes;
     BaseData.Contents.Entries.emplace_back(std::move(ContentEntry));
 
     SourceInfo::SourceNames::Entry NameEntry;
     NameEntry.FileName = NameContent.first;
-    NameEntry.compute(ContentEntry.Parameters.ContentSizeInBytes);
+    NameEntry.compute(ContentSize);
     BaseData.Names.Entries.emplace_back(std::move(NameEntry));
   }
 

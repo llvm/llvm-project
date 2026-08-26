@@ -2810,7 +2810,7 @@ bool AMDGPUAsmParser::AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
 
   if (RegKind != RegKind1) {
     Error(Loc, "registers in a list must be of the same kind");
-    return MCRegister();
+    return false;
   }
 
   switch (RegKind) {
@@ -4919,7 +4919,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
   // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
   // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
   // the first SGPR and use it for both the low and high operations.
-  if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
+  if (isPackedSingleSGPRFP32Inst(Opc)) {
     int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
     int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
@@ -6984,16 +6984,19 @@ void AMDGPUAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void AMDGPUAsmParser::checkKernelPrologues() {
   if (getFeatureBits()[AMDGPU::FeatureRequiresInitialUnclausedVmem]) {
-    static const unsigned Required[] = {GLOBAL_PREFETCH_B8_SADDR_gfx1250,
-                                        V_NOP_e32_gfx12};
+    static const unsigned Required[] = {S_MOV_B64_gfx12, V_NOP_e32_gfx12,
+                                        GLOBAL_PREFETCH_B8_SADDR_gfx1250};
     for (auto [Sym, Loc, Offset] : OpcodeStreamSymbols) {
       if (!AMDHSAKernelSymbols.contains(Sym))
         continue;
       ArrayRef<unsigned> Prologue = ArrayRef(OpcodeStream).drop_front(Offset);
+      if (!Prologue.empty() && Prologue.front() == S_SETREG_IMM32_B32_gfx12)
+        Prologue = Prologue.drop_front();
       if (Prologue.take_front(std::size(Required)) != ArrayRef(Required)) {
         Warning(Loc, "kernel '" + Sym->getName() +
                          "' does not begin with the required prologue "
-                         "sequence: GLOBAL_PREFETCH_B8 followed by V_NOP");
+                         "sequence: s_mov_b64 followed by v_nop and "
+                         "global_prefetch_b8");
       }
     }
   }
@@ -7072,16 +7075,17 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case SRC_SHARED_BASE:
   case SRC_SHARED_LIMIT_LO:
   case SRC_SHARED_LIMIT:
+    return isGFX9Plus();
   case SRC_PRIVATE_BASE_LO:
   case SRC_PRIVATE_BASE:
   case SRC_PRIVATE_LIMIT_LO:
   case SRC_PRIVATE_LIMIT:
-    return isGFX9Plus();
+    return AMDGPU::hasPrivateApertureRegs(getSTI());
   case SRC_FLAT_SCRATCH_BASE_LO:
   case SRC_FLAT_SCRATCH_BASE_HI:
     return hasGloballyAddressableScratch();
   case SRC_POPS_EXITING_WAVE_ID:
-    return isGFX9Plus() && !isGFX11Plus();
+    return hasPopsExitingWaveID(getSTI());
   case TBA:
   case TBA_LO:
   case TBA_HI:
@@ -10839,4 +10843,11 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // Split Barrier
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSplitBarrier() const { return isInlinableImm(MVT::i32); }
+bool AMDGPUOperand::isSplitBarrier() const {
+  if (!isImm())
+    return false;
+
+  int64_t Imm = getImm();
+  return isUInt<5>(Imm) || (AMDGPU::Barrier::CLUSTER_TRAP <= Imm &&
+                            Imm <= AMDGPU::Barrier::WORKGROUP);
+}

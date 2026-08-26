@@ -178,6 +178,7 @@ struct SymbolInfo {
   union {
     uint32_t ElementIndex;
     wasm::WasmDataReference DataRef;
+    wasm::WasmCommonReference CommonRef;
   };
 };
 

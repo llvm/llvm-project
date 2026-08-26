@@ -120,6 +120,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefix=GFX1200 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefix=GFX1201 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefix=GFX1250 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1250-strict %s 2>&1 | FileCheck --check-prefix=GFX1250-STRICT %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1251 %s 2>&1 | FileCheck --check-prefix=GFX1251 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx1310 %s 2>&1 | FileCheck --check-prefix=GFX1310 %s
 
@@ -132,6 +133,12 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx12-generic %s 2>&1 | FileCheck --check-prefix=GFX12_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefix=GFX12_5_GENERIC %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx13-generic %s 2>&1 | FileCheck --check-prefix=GFX13_GENERIC %s
+
+// The pseudo targets "generic"/"generic-hsa" may not be used.
+// RUN: not %clang -target amdgcn -mcpu=generic -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC %s
+// RUN: not %clang -target amdgcn-amd-amdhsa -mcpu=generic -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC %s
+// RUN: not %clang -target amdgcn -mcpu=generic-hsa -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC-HSA %s
+// RUN: not %clang -target amdgcn-amd-amdhsa -mcpu=generic-hsa -nogpulib -c %s 2>&1 | FileCheck --check-prefix=PSEUDO-GENERIC-HSA %s
 
 // GCNDEFAULT-NOT: -target-cpu
 // GFX600:    "-target-cpu" "gfx600"
@@ -184,6 +191,7 @@
 // GFX1200:   "-target-cpu" "gfx1200"
 // GFX1201:   "-target-cpu" "gfx1201"
 // GFX1250:   "-target-cpu" "gfx1250"
+// GFX1250-STRICT: "-target-cpu" "gfx1250-strict"
 // GFX1251:   "-target-cpu" "gfx1251"
 // GFX1310:   "-target-cpu" "gfx1310"
 
@@ -196,3 +204,6 @@
 // GFX12_GENERIC:     "-target-cpu" "gfx12-generic"
 // GFX12_5_GENERIC:   "-target-cpu" "gfx12-5-generic"
 // GFX13_GENERIC:     "-target-cpu" "gfx13-generic"
+
+// PSEUDO-GENERIC:     error: unknown target CPU 'generic'
+// PSEUDO-GENERIC-HSA: error: unknown target CPU 'generic-hsa'

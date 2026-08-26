@@ -268,6 +268,7 @@ public:
     AMDGPUSubArch1201,
 
     AMDGPUSubArch12_5,
+    AMDGPUSubArch1250_STRICT,
     AMDGPUSubArch1250,
     AMDGPUSubArch1251,
 
@@ -1256,6 +1257,10 @@ public:
 
   /// Tests if the target's default floating-point ABI is hard float.
   bool isHardFloatABI() const { return getDefaultFloatABI() == FloatABI::Hard; }
+
+  /// Returns the default floating-point format for the "long double" type. A
+  /// particular module may override this default.
+  LLVM_ABI LongDoubleFormat getDefaultLongDoubleFormat() const;
 
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
