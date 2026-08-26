@@ -945,9 +945,9 @@ bool AArch64ExpandPseudoImpl::tryExpandSVESpillFillToMultiVec(
   return true;
 }
 
-bool AArch64ExpandPseudoImpl::expandSVESpillFill(MachineBasicBlock &MBB,
-                                                 MachineBasicBlock::iterator MBBI,
-                                                 unsigned Opc, unsigned N) {
+bool AArch64ExpandPseudoImpl::expandSVESpillFill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned Opc,
+    unsigned N) {
   assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
           Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
          "Unexpected opcode");
@@ -2129,7 +2129,8 @@ getSVEMultiVecSpillFillInfo(const MachineInstr &MI) {
 /// Try to expand SVE spill/fill pseudos into multi-vector instructions.
 /// Iterates backward through the block with incremental liveness to find
 /// free PNR scratch registers, avoiding O(n^2) liveness recomputation.
-bool AArch64ExpandPseudoImpl::expandSVEMultiVecSpillFills(MachineBasicBlock &MBB) {
+bool AArch64ExpandPseudoImpl::expandSVEMultiVecSpillFills(
+    MachineBasicBlock &MBB) {
   if (MBB.empty())
     return false;
 
