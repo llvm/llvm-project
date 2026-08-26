@@ -64,9 +64,9 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
 Note that linking together code with and without coverage instrumentation is
 supported. Uninstrumented code simply won't be accounted for in reports.
 
-You can also pass the path with ``-fprofile-instr-generate=`` parameter to bake
-the coverage directory at compile-time. Instrumented program will use this path
-for coverage profile, unless ``LLVM_PROFILE_FILE`` environment variable is specified.
+You can also pass the filepath with ``-fprofile-instr-generate=`` parameter to bake
+the coverage directory with the **raw profile** at compile-time. Instrumented program will use this path
+for the coverage **raw profile**, unless ``LLVM_PROFILE_FILE`` environment variable is specified.
 
 .. code-block:: console
 
