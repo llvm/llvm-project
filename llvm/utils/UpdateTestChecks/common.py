@@ -1203,7 +1203,7 @@ class NamelessValue:
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
         var = var.replace("%", "")
-        if (var.startswith(".")):
+        if var.startswith("."):
             var = var.replace(".", "dot", 1)
         if self.replace_number_with_counter:
             assert var
