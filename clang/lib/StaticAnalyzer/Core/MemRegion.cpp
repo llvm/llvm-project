@@ -207,22 +207,23 @@ QualType ParamVarRegion::getValueType() const {
 
 const ParmVarDecl *ParamVarRegion::getDecl() const {
   const Decl *D = getStackFrame()->getDecl();
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     assert(Index < FD->param_size());
     return FD->parameters()[Index];
-  } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+  }
+  if (const auto *BD = dyn_cast<BlockDecl>(D)) {
     assert(Index < BD->param_size());
     return BD->parameters()[Index];
-  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  }
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     assert(Index < MD->param_size());
     return MD->parameters()[Index];
-  } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
+  }
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
     assert(Index < CD->param_size());
     return CD->parameters()[Index];
-  } else {
-    llvm_unreachable("Unexpected Decl kind!");
   }
+  llvm_unreachable("Unexpected Decl kind!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -622,11 +623,10 @@ void ParamVarRegion::dumpToStream(raw_ostream &os) const {
   assert(PVD &&
          "`ParamVarRegion` support functions without `Decl` not implemented"
          " yet.");
-  if (const IdentifierInfo *ID = PVD->getIdentifier()) {
+  if (const IdentifierInfo *ID = PVD->getIdentifier())
     os << ID->getName();
-  } else {
+  else
     os << "ParamVarRegion{P" << PVD->getID() << '}';
-  }
 }
 
 bool MemRegion::canPrintPretty() const {
@@ -808,13 +808,11 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes,
 
 SourceRange MemRegion::sourceRange() const {
   // Check for more specific regions first.
-  if (auto *FR = dyn_cast<FieldRegion>(this)) {
+  if (auto *FR = dyn_cast<FieldRegion>(this))
     return FR->getDecl()->getSourceRange();
-  }
 
-  if (auto *VR = dyn_cast<VarRegion>(this->getBaseRegion())) {
+  if (auto *VR = dyn_cast<VarRegion>(this->getBaseRegion()))
     return VR->getDecl()->getSourceRange();
-  }
 
   // Return invalid source range (can be checked by client).
   return {};
@@ -925,18 +923,16 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
 template <typename REG>
 const REG *MemRegionManager::LazyAllocate(REG*& region) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(*this);
-  }
 
   return region;
 }
 
 template <typename REG, typename ARG>
 const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(this, a);
-  }
 
   return region;
 }
@@ -1065,13 +1061,12 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     if (CallSite) {
       const Decl *CalleeDecl = SF->getDecl();
       bool CurrentParam = true;
-      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+      if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl))
         CurrentParam =
             (Index < FD->param_size() && FD->getParamDecl(Index) == PVD);
-      } else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl)) {
+      else if (const auto *BD = dyn_cast<BlockDecl>(CalleeDecl))
         CurrentParam =
             (Index < BD->param_size() && BD->getParamDecl(Index) == PVD);
-      }
 
       if (CurrentParam) {
         // If this is a parameter of the *current* stack frame, we can
@@ -1111,11 +1106,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
       // so they are placed in the global internal space, which is not
       // invalidated by calls to functions declared in system headers.
       if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
-          !isStdStreamVar(D)) {
+          !isStdStreamVar(D))
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
-      } else {
+      else
         sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
-      }
     }
 
   // Finally handle static locals.
@@ -1230,9 +1224,9 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const StackFrame *SF) {
   const MemSpaceRegion *sReg = nullptr;
 
-  if (CL->isFileScope())
+  if (CL->isFileScope()) {
     sReg = getGlobalsRegion();
-  else {
+  } else {
     assert(SF);
     sReg = getStackLocalsRegion(SF);
   }
