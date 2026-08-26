@@ -34,7 +34,7 @@ entry:
   %s1 = add i32 %a1, %b1
   %s2 = add i32 %a2, %b2
   %s3 = add i32 %a3, %b3
-  %iv0 = insertvalue %quad undef, i32 %s0, 0
+  %iv0 = insertvalue %quad poison, i32 %s0, 0
   %iv1 = insertvalue %quad %iv0, i32 %s1, 1
   %iv2 = insertvalue %quad %iv1, i32 %s2, 2
   %iv3 = insertvalue %quad %iv2, i32 %s3, 3
