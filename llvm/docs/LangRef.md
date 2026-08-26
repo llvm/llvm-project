@@ -16002,11 +16002,12 @@ time independent of secret data values, preventing timing side-channel leaks.
 ##### Syntax:
 
 This is an overloaded intrinsic. You can use `llvm.ct.select` on any integer,
-floating-point, or pointer type, or on any vector of those types, including
-scalable vectors. The declarations below are a representative sample:
+byte, floating-point, or pointer type, or on any vector of those types,
+including scalable vectors. The declarations below are a representative sample:
 
 ```
 declare i8 @llvm.ct.select.i8(i1 <cond>, i8 <val1>, i8 <val2>)
+declare b8 @llvm.ct.select.b8(i1 <cond>, b8 <val1>, b8 <val2>)
 declare i32 @llvm.ct.select.i32(i1 <cond>, i32 <val1>, i32 <val2>)
 declare i64 @llvm.ct.select.i64(i1 <cond>, i64 <val1>, i64 <val2>)
 declare half @llvm.ct.select.f16(i1 <cond>, half <val1>, half <val2>)
@@ -16037,8 +16038,8 @@ The '`llvm.ct.select`' intrinsic requires three arguments:
    {ref}`select <i_select>` which accepts both scalar 'i1' and vector
    '`<N x i1>`' conditions, `llvm.ct.select` only accepts a scalar 'i1'
    condition. Vector conditions are not supported.
-2. The first value argument, which must be an integer, floating-point, or
-   pointer type, or a vector of those types. Other
+2. The first value argument, which must be an integer, byte, floating-point,
+   or pointer type, or a vector of those types. Other
    {ref}`first class <t_firstclass>` types, such as aggregates, are not
    supported.
 3. The second value argument, which must have the same type as the first
@@ -16049,17 +16050,10 @@ The '`llvm.ct.select`' intrinsic requires three arguments:
 If the condition evaluates to true, the intrinsic returns the first value
 argument; otherwise, it returns the second value argument.
 
-If any argument is poison, the result is poison. Unlike `select`, this
-includes the unselected value argument, since the lowering blends both
-arguments with bitwise operations. If any argument is undef, the result is
-undef; an undef condition can blend bits from both arguments, so the result
-is not necessarily one of them. `llvm.ct.select` therefore cannot be used as
-a poison barrier.
-
-The return value carries the `noundef` attribute. A call where the condition
-or either value argument is undef or poison would return undef or poison, and
-is therefore undefined behavior. Frontends that cannot rule this out must
-{ref}`freeze <i_freeze>` the operands first.
+Poison and undef propagate as for {ref}`select <i_select>`: a `poison`
+condition yields `poison`, an `undef` condition yields `undef`. Unlike
+`select`, both value arguments are always evaluated, so a `poison` value in
+either one yields `poison`.
 
 The key semantic difference from {ref}`select <i_select>` is the constant-time
 code generation guarantee: the intrinsic must be lowered to machine code that:
@@ -16100,13 +16094,21 @@ This includes converting to conditional branches, using predicated instructions
 with data-dependent timing, or, except as described below, optimizing away
 either value argument before the selection completes.
 
-The call may be folded to one of its value arguments only when the condition
-is a literal `i1` constant or both value arguments are the same SSA value;
-the unused argument then becomes ordinary dead code. Proving the condition
-constant by other means (known-bits, range, or dominating conditions) does
-not permit the fold. Rewrites that keep the `llvm.ct.select`, such as
-swapping the arguments to remove a negated condition, are allowed. Fast-math
-flags on a call to `llvm.ct.select` are ignored.
+The call folds to one of its value arguments when the condition operand is a
+constant `i1`, or when both value arguments are the same value; the unused
+argument then becomes ordinary dead code. Optimizers must not derive the fold
+by running value analyses (known-bits, range, or dominating conditions) on a
+non-constant condition. A condition that another pass has already proved to be
+a compile-time constant is no longer secret-dependent, so folding it is
+permitted. Rewrites that keep the `llvm.ct.select`, such as swapping the
+arguments to remove a negated condition, are allowed.
+
+Like other floating-point calls, `llvm.ct.select` may carry fast-math flags
+when it returns a supported floating-point type; the poison-generating flags
+(`nnan`, `ninf`) apply to both value arguments (the lowering blends both),
+and the optimizer may use them. No fast-math flag causes
+the intrinsic itself to be algebraically rewritten, so its constant-time
+lowering is unaffected.
 
 ##### Examples:
 

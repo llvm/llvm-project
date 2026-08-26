@@ -44,6 +44,45 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) #0 {
   ret i8 %result
 }
 
+define b8 @test_ctselect_b8(i1 %cond, b8 %a, b8 %b) #0 {
+; X64-LABEL: test_ctselect_b8:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $1, %al
+; X64-NEXT:    xorl %edx, %esi
+; X64-NEXT:    negb %al
+; X64-NEXT:    andb %sil, %al
+; X64-NEXT:    xorb %dl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_ctselect_b8:
+; X32:       # %bb.0:
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    xorb %cl, %dl
+; X32-NEXT:    negb %al
+; X32-NEXT:    andb %dl, %al
+; X32-NEXT:    xorb %cl, %al
+; X32-NEXT:    retl
+;
+; X32-NOCMOV-LABEL: test_ctselect_b8:
+; X32-NOCMOV:       # %bb.0:
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    andb $1, %al
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X32-NOCMOV-NEXT:    xorb %cl, %dl
+; X32-NOCMOV-NEXT:    negb %al
+; X32-NOCMOV-NEXT:    andb %dl, %al
+; X32-NOCMOV-NEXT:    xorb %cl, %al
+; X32-NOCMOV-NEXT:    retl
+  %result = call b8 @llvm.ct.select.b8(i1 %cond, b8 %a, b8 %b)
+  ret b8 %result
+}
+
 define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) #0 {
 ; X64-LABEL: test_ctselect_i32:
 ; X64:       # %bb.0:
@@ -1120,6 +1159,275 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 
 ; Vector CT_SELECT Tests
 ; ============================================================================
+
+; Byte-typed vector: bytes lower like the same-width integer vector.
+define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
+; X64-LABEL: test_ctselect_v16b8:
+; X64:       # %bb.0:
+; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    negb %dil
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movd %eax, %xmm2
+; X64-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X64-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_ctselect_v16b8:
+; X32:       # %bb.0:
+; X32-NEXT:    pushl %ebx
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    negb %al
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %bh
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %bh
+; X32-NEXT:    andb %al, %bh
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %bl
+; X32-NEXT:    andb %al, %bl
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %dh
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %dh
+; X32-NEXT:    andb %al, %dh
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    andb %al, %ch
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    andb %al, %dl
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    xorb %ah, %cl
+; X32-NEXT:    andb %al, %cl
+; X32-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %bh
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %bl
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %dh
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %ch
+; X32-NEXT:    xorb {{[0-9]+}}(%esp), %dl
+; X32-NEXT:    xorb %ah, %cl
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb %cl, 15(%eax)
+; X32-NEXT:    movb %dl, 14(%eax)
+; X32-NEXT:    movb %ch, 13(%eax)
+; X32-NEXT:    movb %dh, 12(%eax)
+; X32-NEXT:    movb %bl, 11(%eax)
+; X32-NEXT:    movb %bh, 10(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 9(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 8(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 7(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 6(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 5(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 4(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 3(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 2(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, 1(%eax)
+; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NEXT:    movb %cl, (%eax)
+; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    popl %ebx
+; X32-NEXT:    retl $4
+;
+; X32-NOCMOV-LABEL: test_ctselect_v16b8:
+; X32-NOCMOV:       # %bb.0:
+; X32-NOCMOV-NEXT:    pushl %ebx
+; X32-NOCMOV-NEXT:    subl $12, %esp
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    andb $1, %al
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    negb %al
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %bh
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %bh
+; X32-NOCMOV-NEXT:    andb %al, %bh
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %bl
+; X32-NOCMOV-NEXT:    andb %al, %bl
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %dh
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %dh
+; X32-NOCMOV-NEXT:    andb %al, %dh
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %ch
+; X32-NOCMOV-NEXT:    andb %al, %ch
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %dl
+; X32-NOCMOV-NEXT:    andb %al, %dl
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NOCMOV-NEXT:    xorb %ah, %cl
+; X32-NOCMOV-NEXT:    andb %al, %cl
+; X32-NOCMOV-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
+; X32-NOCMOV-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %bh
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %bl
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %dh
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %ch
+; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %dl
+; X32-NOCMOV-NEXT:    xorb %ah, %cl
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb %cl, 15(%eax)
+; X32-NOCMOV-NEXT:    movb %dl, 14(%eax)
+; X32-NOCMOV-NEXT:    movb %ch, 13(%eax)
+; X32-NOCMOV-NEXT:    movb %dh, 12(%eax)
+; X32-NOCMOV-NEXT:    movb %bl, 11(%eax)
+; X32-NOCMOV-NEXT:    movb %bh, 10(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 9(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 8(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 7(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 6(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 5(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 4(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 3(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 2(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, 1(%eax)
+; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X32-NOCMOV-NEXT:    movb %cl, (%eax)
+; X32-NOCMOV-NEXT:    addl $12, %esp
+; X32-NOCMOV-NEXT:    popl %ebx
+; X32-NOCMOV-NEXT:    retl $4
+  %result = call <16 x b8> @llvm.ct.select.v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b)
+  ret <16 x b8> %result
+}
 
 ; Test vector CT_SELECT with v4i32 (128-bit vector with single i1 mask)
 ; NOW CONSTANT-TIME: Uses bitwise XOR/AND operations instead of branches!
@@ -2435,6 +2743,7 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) #0 {
 ; Declare the intrinsics
 declare i1 @llvm.ct.select.i1(i1, i1, i1)
 declare i8 @llvm.ct.select.i8(i1, i8, i8)
+declare b8 @llvm.ct.select.b8(i1, b8, b8)
 declare i16 @llvm.ct.select.i16(i1, i16, i16)
 declare i32 @llvm.ct.select.i32(i1, i32, i32)
 declare i64 @llvm.ct.select.i64(i1, i64, i64)
@@ -2451,6 +2760,7 @@ declare <4 x i32> @llvm.ct.select.v4i32(i1, <4 x i32>, <4 x i32>)
 declare <2 x i64> @llvm.ct.select.v2i64(i1, <2 x i64>, <2 x i64>)
 declare <8 x i16> @llvm.ct.select.v8i16(i1, <8 x i16>, <8 x i16>)
 declare <16 x i8> @llvm.ct.select.v16i8(i1, <16 x i8>, <16 x i8>)
+declare <16 x b8> @llvm.ct.select.v16b8(i1, <16 x b8>, <16 x b8>)
 declare <4 x float> @llvm.ct.select.v4f32(i1, <4 x float>, <4 x float>)
 declare <2 x double> @llvm.ct.select.v2f64(i1, <2 x double>, <2 x double>)
 declare <8 x i32> @llvm.ct.select.v8i32(i1, <8 x i32>, <8 x i32>)

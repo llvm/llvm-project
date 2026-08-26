@@ -4483,11 +4483,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT MaskSclVT = MaskEltVT;
     if (!TLI.isTypeLegal(MaskSclVT)) {
       assert(WorkingVT.isVector() && "scalar CT_SELECT type must be legal");
-      for (MVT MV : {MVT::i64, MVT::i32, MVT::i16, MVT::i8})
-        if (TLI.isTypeLegal(MV)) {
-          MaskSclVT = MV;
-          break;
-        }
+      MaskSclVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), MaskSclVT);
       assert(TLI.isTypeLegal(MaskSclVT) && "no legal scalar integer type");
     }
     SDValue ScalarCond = Tmp1;

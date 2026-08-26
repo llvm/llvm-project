@@ -1212,7 +1212,7 @@ private:
   void SplitVecRes_AssertZext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_AssertSext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_FREEZE      (SDNode *N, SDValue &Lo, SDValue &Hi);

@@ -6236,9 +6236,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // llvm_any_ty; SelectionDAG lowering only supports single-value types.
     Type *ValTy = Call.getType();
     Check(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy() ||
-              ValTy->isPtrOrPtrVectorTy(),
-          "llvm.ct.select only supports integer, floating-point, or pointer "
-          "types, or vectors of them",
+              ValTy->isPtrOrPtrVectorTy() || ValTy->isByteOrByteVectorTy(),
+          "llvm.ct.select only supports integer, byte, floating-point, or "
+          "pointer types, or vectors of them",
           Call);
     break;
   }

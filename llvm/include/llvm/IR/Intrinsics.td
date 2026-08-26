@@ -2077,12 +2077,12 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 // rewriting it into an ordinary select, while avoiding claims about writes to
 // accessible program memory. The constant-time lowering contract is described
 // in LangRef. llvm_any_ty alone would also admit aggregates, which codegen
-// does not support; the Verifier restricts the value type to integer,
+// does not support; the Verifier restricts the value type to integer, byte,
 // floating-point, or pointer types, or vectors of them.
 def int_ct_select
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+                            [IntrInaccessibleMemOnly]>;
 
 ///===------------------------- Other Intrinsics --------------------------===//
 // TODO: We should introduce a new memory kind fo traps (and other side effects
