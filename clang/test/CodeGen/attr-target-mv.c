@@ -364,6 +364,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo.arch_rocketlake
 // ITANIUM: ret ptr @foo.arch_cannonlake
 // ITANIUM: ret ptr @foo.arch_knl
+// ITANIUM: ret ptr @foo.arch_knm
 // ITANIUM: ret ptr @foo.arch_skylake-avx512
 // ITANIUM: ret ptr @foo.arch_alderlake
 // ITANIUM: ret ptr @foo.arch_raptorlake
@@ -399,7 +400,6 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret ptr @foo.arch_graniterapids
 // ITANIUM: ret ptr @foo.arch_emeraldrapids
 // ITANIUM: ret ptr @foo.arch_graniterapids-d
-// ITANIUM: ret ptr @foo.arch_knm
 // ITANIUM: ret ptr @foo
 
 // WINDOWS: define weak_odr dso_local i32 @foo.resolver() #[[ATTR_RESOLVER:[0-9]+]] comdat
@@ -413,6 +413,7 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo.arch_rocketlake
 // WINDOWS: call i32 @foo.arch_cannonlake
 // WINDOWS: call i32 @foo.arch_knl
+// WINDOWS: call i32 @foo.arch_knm
 // WINDOWS: call i32 @foo.arch_skylake-avx512
 // WINDOWS: call i32 @foo.arch_alderlake
 // WINDOWS: call i32 @foo.arch_raptorlake
@@ -448,7 +449,6 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo.arch_graniterapids
 // WINDOWS: call i32 @foo.arch_emeraldrapids
 // WINDOWS: call i32 @foo.arch_graniterapids-d
-// WINDOWS: call i32 @foo.arch_knm
 // WINDOWS: call i32 @foo
 
 /// Internal linkage resolvers do not use comdat.
