@@ -1179,8 +1179,17 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
 // Maximum LDS a single work-group can address. This is a fixed HW cap. It does
 // not depend on how many SIMDs a work-group runs on.
 static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
-  return AMDGPU::getMaxHWAddressableLocalMemorySize(
-      parseArchAMDGCN(STI.getCPU()));
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
+    return 32768;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
+    return 65536;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 163840;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 327680;
+  return 32768;
 }
 
 // Total physical size of LDS on the block, in bytes. On targets with
