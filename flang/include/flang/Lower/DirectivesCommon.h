@@ -75,11 +75,11 @@ getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
 
 namespace detail {
 template <typename T> //
-static T &&AsRvalueRef(T &&t) {
+T &&AsRvalueRef(T &&t) {
   return std::move(t);
 }
 template <typename T> //
-static T AsRvalueRef(T &t) {
+T AsRvalueRef(T &t) {
   return t;
 }
 template <typename T> //
