@@ -501,8 +501,7 @@ static bool isInCFGLoop(mlir::Block *block) {
   llvm::SmallVector<mlir::Block *> stack{block};
   while (!stack.empty()) {
     mlir::Block *current = stack.pop_back_val();
-    auto [it, inserted] = visited.insert(current);
-    if (!inserted) {
+    if (!visited.insert(current).second) {
       if (current == block)
         return true;
       continue;
