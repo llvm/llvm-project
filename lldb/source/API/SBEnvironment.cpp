@@ -75,17 +75,19 @@ const char *SBEnvironment::GetValueAtIndex(size_t index) {
 bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
   LLDB_INSTRUMENT_VA(this, name, value, overwrite);
 
+  llvm::StringRef name_ref{name};
+  llvm::StringRef value_ref{value};
   if (overwrite) {
-    m_opaque_up->insert_or_assign(name, std::string(value));
+    m_opaque_up->insert_or_assign(name_ref, value_ref.str());
     return true;
   }
-  return m_opaque_up->try_emplace(name, std::string(value)).second;
+  return m_opaque_up->try_emplace(name_ref, value_ref.str()).second;
 }
 
 bool SBEnvironment::Unset(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  return m_opaque_up->erase(name);
+  return m_opaque_up->erase(llvm::StringRef(name));
 }
 
 SBStringList SBEnvironment::GetEntries() {
