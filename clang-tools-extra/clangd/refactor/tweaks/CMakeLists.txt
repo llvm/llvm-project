@@ -21,6 +21,8 @@ add_clang_library(clangDaemonTweaks OBJECT
   ExpandMacro.cpp
   ExtractFunction.cpp
   ExtractVariable.cpp
+  GenerateGetter.cpp
+  GenerateSetter.cpp
   MemberwiseConstructor.cpp
   ObjCLocalizeStringLiteral.cpp
   ObjCMemberwiseInitializer.cpp

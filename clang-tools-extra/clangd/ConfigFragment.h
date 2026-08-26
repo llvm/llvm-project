@@ -326,6 +326,12 @@ struct Fragment {
     /// Matching is performed against the absolute path of the header
     /// within the project.
     std::vector<Located<std::string>> AngledHeaders;
+    /// Getter generation prefix i.e. "get".
+    std::optional<Located<std::string>> GetterPrefix;
+    /// Setter generation prefix i.e. "set".
+    std::optional<Located<std::string>> SetterPrefix;
+    /// Setter generation parameter prefix i.e. "new".
+    std::optional<Located<std::string>> SetterParameterPrefix;
   };
   StyleBlock Style;
 
