@@ -6732,8 +6732,15 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 
   // Output to a temporary file?
+  // /Fo is normally exempted from this so that its literal path is honored,
+  // but offloading device sub-actions (e.g. each arch of a multi-arch HIP
+  // compile) are not the final output and must still get a unique path here,
+  // the same way they would under -o; otherwise every arch collides on the
+  // single /Fo path.
   if ((!AtTopLevel && !isSaveTempsEnabled() &&
-       !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
+       !(C.getArgs().hasArg(options::OPT__SLASH_Fo) &&
+         (JA.getOffloadingDeviceKind() == Action::OFK_None ||
+          JA.getOffloadingDeviceKind() == Action::OFK_Host))) ||
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
     return CreateTempOutputPath(Name.split('.').first);
