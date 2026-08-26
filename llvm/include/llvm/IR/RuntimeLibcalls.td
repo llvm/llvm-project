@@ -4577,3 +4577,74 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_round : RuntimeLibcallImpl<ROUND_V4F64>;
   def amd_vrd8_round : RuntimeLibcallImpl<ROUND_V8F64>;
 }
+
+//===----------------------------------------------------------------------===//
+// Hygon vector math library (HVML) functions
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> HVML_VECFUNCS = {
+  def hvml_vd2_acos : RuntimeLibcallImpl<ACOS_V2F64>;
+  def hvml_vd4_acos : RuntimeLibcallImpl<ACOS_V4F64>;
+  def hvml_vs4_acos : RuntimeLibcallImpl<ACOS_V4F32>;
+  def hvml_vs8_acos : RuntimeLibcallImpl<ACOS_V8F32>;
+  def hvml_vd2_asin : RuntimeLibcallImpl<ASIN_V2F64>;
+  def hvml_vd4_asin : RuntimeLibcallImpl<ASIN_V4F64>;
+  def hvml_vs4_asin : RuntimeLibcallImpl<ASIN_V4F32>;
+  def hvml_vs8_asin : RuntimeLibcallImpl<ASIN_V8F32>;
+  def hvml_vd2_atan : RuntimeLibcallImpl<ATAN_V2F64>;
+  def hvml_vd4_atan : RuntimeLibcallImpl<ATAN_V4F64>;
+  def hvml_vs4_atan : RuntimeLibcallImpl<ATAN_V4F32>;
+  def hvml_vs8_atan : RuntimeLibcallImpl<ATAN_V8F32>;
+  def hvml_vd2_cos : RuntimeLibcallImpl<COS_V2F64>;
+  def hvml_vd4_cos : RuntimeLibcallImpl<COS_V4F64>;
+  def hvml_vs4_cos : RuntimeLibcallImpl<COS_V4F32>;
+  def hvml_vs8_cos : RuntimeLibcallImpl<COS_V8F32>;
+  def hvml_vd2_exp : RuntimeLibcallImpl<EXP_V2F64>;
+  def hvml_vd4_exp : RuntimeLibcallImpl<EXP_V4F64>;
+  def hvml_vs4_exp : RuntimeLibcallImpl<EXP_V4F32>;
+  def hvml_vs8_exp : RuntimeLibcallImpl<EXP_V8F32>;
+  def hvml_vd2_ln : RuntimeLibcallImpl<LOG_V2F64>;
+  def hvml_vd4_ln : RuntimeLibcallImpl<LOG_V4F64>;
+  def hvml_vs4_ln : RuntimeLibcallImpl<LOG_V4F32>;
+  def hvml_vs8_ln : RuntimeLibcallImpl<LOG_V8F32>;
+  def hvml_vd2_log10 : RuntimeLibcallImpl<LOG10_V2F64>;
+  def hvml_vd4_log10 : RuntimeLibcallImpl<LOG10_V4F64>;
+  def hvml_vs4_log10 : RuntimeLibcallImpl<LOG10_V4F32>;
+  def hvml_vs8_log10 : RuntimeLibcallImpl<LOG10_V8F32>;
+  def hvml_vd2_pow : RuntimeLibcallImpl<POW_V2F64>;
+  def hvml_vd4_pow : RuntimeLibcallImpl<POW_V4F64>;
+  def hvml_vs4_pow : RuntimeLibcallImpl<POW_V4F32>;
+  def hvml_vs8_pow : RuntimeLibcallImpl<POW_V8F32>;
+  def hvml_vd2_sin : RuntimeLibcallImpl<SIN_V2F64>;
+  def hvml_vd4_sin : RuntimeLibcallImpl<SIN_V4F64>;
+  def hvml_vs4_sin : RuntimeLibcallImpl<SIN_V4F32>;
+  def hvml_vs8_sin : RuntimeLibcallImpl<SIN_V8F32>;
+  def hvml_vd2_tan : RuntimeLibcallImpl<TAN_V2F64>;
+  def hvml_vd4_tan : RuntimeLibcallImpl<TAN_V4F64>;
+  def hvml_vs4_tan : RuntimeLibcallImpl<TAN_V4F32>;
+  def hvml_vs8_tan : RuntimeLibcallImpl<TAN_V8F32>;
+  def hvml_vd2_sqrt : RuntimeLibcallImpl<SQRT_V2F64>;
+  def hvml_vd4_sqrt : RuntimeLibcallImpl<SQRT_V4F64>;
+  def hvml_vs4_sqrt : RuntimeLibcallImpl<SQRT_V4F32>;
+  def hvml_vs8_sqrt : RuntimeLibcallImpl<SQRT_V8F32>;
+  def hvml_vd2_exp2 : RuntimeLibcallImpl<EXP2_V2F64>;
+  def hvml_vd4_exp2 : RuntimeLibcallImpl<EXP2_V4F64>;
+  def hvml_vs4_exp2 : RuntimeLibcallImpl<EXP2_V4F32>;
+  def hvml_vs8_exp2 : RuntimeLibcallImpl<EXP2_V8F32>;
+  def hvml_vd2_log2 : RuntimeLibcallImpl<LOG2_V2F64>;
+  def hvml_vd4_log2 : RuntimeLibcallImpl<LOG2_V4F64>;
+  def hvml_vs4_log2 : RuntimeLibcallImpl<LOG2_V4F32>;
+  def hvml_vs8_log2 : RuntimeLibcallImpl<LOG2_V8F32>;
+  def hvml_vd2_sinh : RuntimeLibcallImpl<SINH_V2F64>;
+  def hvml_vd4_sinh : RuntimeLibcallImpl<SINH_V4F64>;
+  def hvml_vs4_sinh : RuntimeLibcallImpl<SINH_V4F32>;
+  def hvml_vs8_sinh : RuntimeLibcallImpl<SINH_V8F32>;
+  def hvml_vd2_cosh : RuntimeLibcallImpl<COSH_V2F64>;
+  def hvml_vd4_cosh : RuntimeLibcallImpl<COSH_V4F64>;
+  def hvml_vs4_cosh : RuntimeLibcallImpl<COSH_V4F32>;
+  def hvml_vs8_cosh : RuntimeLibcallImpl<COSH_V8F32>;
+  def hvml_vd2_tanh : RuntimeLibcallImpl<TANH_V2F64>;
+  def hvml_vd4_tanh : RuntimeLibcallImpl<TANH_V4F64>;
+  def hvml_vs4_tanh : RuntimeLibcallImpl<TANH_V4F32>;
+  def hvml_vs8_tanh : RuntimeLibcallImpl<TANH_V8F32>;
+}

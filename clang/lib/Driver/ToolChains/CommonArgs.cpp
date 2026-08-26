@@ -1137,6 +1137,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
             .Case("SLEEF", "sleefgnuabi")
             .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
             .Case("ArmPL", "ArmPL")
+            .Case("HVML", "HVML")
             .Case("none", "none")
             .Default(std::nullopt);
 

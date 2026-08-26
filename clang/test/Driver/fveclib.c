@@ -3,6 +3,7 @@
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s
 // RUN: %clang -### -c --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-LIBMVEC-AARCH64 %s
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-AMDLIBM %s
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=HVML %s 2>&1 | FileCheck --check-prefix=CHECK-HVML %s
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-MASSV %s
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-SLEEF %s
@@ -15,6 +16,7 @@
 // CHECK-libmvec: "-fveclib=libmvec"
 // CHECK-LIBMVEC-AARCH64: "-fveclib=libmvec"
 // CHECK-AMDLIBM: "-fveclib=AMDLIBM"
+// CHECK-HVML: "-fveclib=HVML"
 // CHECK-MASSV: "-fveclib=MASSV"
 // CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 // CHECK-SLEEF: "-fveclib=SLEEF"
@@ -25,8 +27,11 @@
 
 // RUN: not %clang --target=x86 -c -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=x86 -c -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+// RUN: not %clang --target=x86 -c -fveclib=HVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=SVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 // RUN: not %clang --target=aarch64 -c -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+// RUN: not %clang --target=aarch64 -c -fveclib=HVML %s 2>&1 | FileCheck --check-prefix=CHECK-HVML-ERROR %s
+// CHECK-HVML-ERROR: unsupported option 'HVML' for target 'aarch64'
 // CHECK-ERROR: unsupported option {{.*}} for target
 
 // RUN: %clang -fveclib=Accelerate %s -target arm64-apple-ios8.0.0 -### 2>&1 | FileCheck --check-prefix=CHECK-LINK %s
@@ -49,6 +54,9 @@
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-AMDLIBM %s
 // CHECK-LTO-AMDLIBM: "-plugin-opt=-vector-library=AMDLIBM"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=HVML -flto %s 2>&1 | FileCheck --check-prefix=CHECK-HVML-LTO %s
+// CHECK-HVML-LTO: "-plugin-opt=-vector-library=HVML"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
@@ -79,6 +87,13 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-AMDLIBM %s
 // CHECK-ERRNO-AMDLIBM: "-fveclib=AMDLIBM"
 // CHECK-ERRNO-AMDLIBM-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=HVML %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-HVML %s
+// CHECK-ERRNO-HVML: "-fveclib=HVML"
+// CHECK-ERRNO-HVML-SAME: "-fmath-errno"
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=HVML -fno-math-errno %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO2-HVML %s
+// CHECK-ERRNO2-HVML: "-fveclib=HVML"
+// CHECK-ERRNO2-HVML-NOT: "-fmath-errno"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-MASSV %s
 // CHECK-ERRNO-MASSV: "-fveclib=MASSV"

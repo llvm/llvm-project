@@ -40,6 +40,8 @@ convertDriverVectorLibraryToVectorLibrary(llvm::driver::VectorLibrary VecLib) {
     return llvm::VectorLibrary::ArmPL;
   case llvm::driver::VectorLibrary::AMDLIBM:
     return llvm::VectorLibrary::AMDLIBM;
+  case llvm::driver::VectorLibrary::HVML:
+    return llvm::VectorLibrary::HVML;
   }
   llvm_unreachable("Unexpected driver::VectorLibrary");
 }
