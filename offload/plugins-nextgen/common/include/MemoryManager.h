@@ -106,7 +106,7 @@ class MemoryManagerTy {
 
   /// A structure stores the meta data of a target pointer
   struct NodeTy {
-    /// Final memory size, including the alignment
+    /// Final allocation size, including the alignment padding
     const size_t Size;
     /// Target pointer, returned to the caller after adjustments related to the
     /// memory alignment (moving the pointer)
@@ -115,8 +115,8 @@ class MemoryManagerTy {
     void *BasePtr;
 
     /// Constructor
-    NodeTy(size_t FinalSize, void *Ptr, void *BasePtr)
-        : Size(FinalSize), Ptr(Ptr), BasePtr(BasePtr) {}
+    NodeTy(size_t Size, void *Ptr, void *BasePtr)
+        : Size(Size), Ptr(Ptr), BasePtr(BasePtr) {}
   };
 
   /// To make \p NodePtrTy ordered when they're put into \p std::multiset.
@@ -230,11 +230,6 @@ class MemoryManagerTy {
     PtrToNodeTable.insert(std::move(NodeHandle));
   }
 
-  void *alignPointer(void *PtrToBeAligned, size_t Alignment) {
-    uintptr_t AlignedPointer = (uintptr_t)PtrToBeAligned;
-    return (void *)((AlignedPointer + Alignment - 1) & ~(Alignment - 1));
-  }
-
 public:
   static constexpr size_t DefaultSizeThreshold = 1U << 13;
 
@@ -265,16 +260,19 @@ public:
     if (Size == 0)
       return nullptr;
 
-    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: size " << Size
+    size_t AllocationSize = Alignment > 0 ? (Size + Alignment - 1) : Size;
+
+    ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
+                     << ", allocated:  " << AllocationSize
                      << " with host pointer " << HstPtr << ".";
 
     // If the size is greater than the threshold, allocate it directly from
     // device.
-    if (Size > SizeThreshold) {
-      ODBG(OLDT_Alloc) << Size << " is greater than the threshold "
+    if (AllocationSize > SizeThreshold) {
+      ODBG(OLDT_Alloc) << AllocationSize << " is greater than the threshold "
                        << SizeThreshold << ". Allocate it directly from device";
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -294,17 +292,14 @@ public:
       return *TgtPtrOrErr;
     }
 
-    if (Alignment > 0) {
-      Size += Alignment - 1;
-    }
     NodeTy *NodePtr = nullptr;
 
     // Try to get a node from FreeList
     {
-      const int B = findBucket(Size);
+      const int B = findBucket(AllocationSize);
       FreeListTy &List = FreeLists[B];
 
-      NodeTy TempNode(Size, nullptr, nullptr);
+      NodeTy TempNode(AllocationSize, nullptr, nullptr);
       std::lock_guard<std::mutex> LG(FreeListLocks[B]);
       auto Itr = List.find(TempNode);
 
@@ -318,7 +313,8 @@ public:
       ODBG(OLDT_Alloc) << "Find one node " << NodePtr << " in the bucket.";
 
       if (Alignment > 0) {
-        void *AlignedPointer = alignPointer(NodePtr->BasePtr, Alignment);
+        void *AlignedPointer =
+            (void *)alignAddr(NodePtr->BasePtr, Align(Alignment));
 
         if (AlignedPointer != NodePtr->Ptr) {
           changeKeyPtr(AlignedPointer, NodePtr);
@@ -337,7 +333,7 @@ public:
                        << "Allocate on device.";
       // Allocate one on device
       auto TgtPtrOrErr =
-          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
+          allocateOrFreeAndAllocateOnDevice(AllocationSize, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -347,19 +343,19 @@ public:
 
       void *BasePtr = TgtPtr;
       if (Alignment > 0) {
-        TgtPtr = alignPointer(TgtPtr, Alignment);
+        TgtPtr = (void *)alignAddr(TgtPtr, Align(Alignment));
       }
 
       // Create a new node and add it into the map table
       {
         std::lock_guard<std::mutex> Guard(MapTableLock);
-        auto Itr =
-            PtrToNodeTable.emplace(TgtPtr, NodeTy(Size, TgtPtr, BasePtr));
+        auto Itr = PtrToNodeTable.emplace(
+            TgtPtr, NodeTy(AllocationSize, TgtPtr, BasePtr));
         NodePtr = &Itr.first->second;
       }
 
       ODBG(OLDT_Alloc) << "Node address " << NodePtr << ", target pointer "
-                       << TgtPtr << ", size " << Size;
+                       << TgtPtr << ", size " << AllocationSize;
     }
 
     assert(NodePtr && "NodePtr should not be nullptr at this point");
