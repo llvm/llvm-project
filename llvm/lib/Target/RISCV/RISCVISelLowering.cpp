@@ -12181,8 +12181,8 @@ static void processVCIXOperands(SDValue OrigOp,
 // LMUL * VLEN should be greater than or equal to EGS * SEW
 static inline bool isValidEGW(int EGS, EVT VT,
                               const RISCVSubtarget &Subtarget) {
-  return (Subtarget.getRealMinVLen() * VT.getSizeInBits().getKnownMinValue()) /
-             RISCV::RVVBitsPerBlock >=
+  return (Subtarget.getRealMinVLen() *
+             VT.getSizeInBits().getKnownMinValue()) / RISCV::RVVBitsPerBlock >=
          EGS * VT.getScalarSizeInBits();
 }
 
