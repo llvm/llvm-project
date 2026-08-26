@@ -26,9 +26,11 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenFunctionInfo *CIRGenFunctionInfo::create(
-    FunctionType::ExtInfo info, bool isInstanceMethod, CanQualType resultType,
-    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
+CIRGenFunctionInfo *
+CIRGenFunctionInfo::create(cir::CallingConv cirCC, FunctionType::ExtInfo info,
+                           bool isInstanceMethod, CanQualType resultType,
+                           llvm::ArrayRef<CanQualType> argTypes,
+                           RequiredArgs required) {
   // The first slot allocated for arg type slot is for the return value.
   void *buffer = operator new(
       totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
@@ -37,6 +39,8 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
 
   CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
 
+  fi->callingConvention = llvm::to_underlying(cirCC);
+  fi->astCallingConvention = info.getCC();
   fi->noReturn = info.getNoReturn();
   fi->instanceMethod = isInstanceMethod;
 
@@ -311,7 +315,7 @@ void CIRGenModule::constructAttributeList(
     llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
-  assert(!cir::MissingFeatures::opCallCallConv());
+  callingConv = info.getCallingConvention();
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
@@ -1028,6 +1032,17 @@ CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
                                 FunctionType::ExtInfo(), RequiredArgs::All);
 }
 
+/// Set calling convention for CUDA/HIP kernel.
+static void setCUDAKernelCallingConvention(CanQualType &funcTy,
+                                           CIRGenModule &cgm,
+                                           const FunctionDecl *fd) {
+  if (fd->hasAttr<CUDAGlobalAttr>()) {
+    const FunctionType *ft = funcTy->getAs<FunctionType>();
+    cgm.getTargetCIRGenInfo().setCUDAKernelCallingConvention(ft);
+    funcTy = ft->getCanonicalTypeUnqualified();
+  }
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1036,9 +1051,9 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
   assert(!isa<CXXConstructorDecl>(md) && "wrong method for constructors!");
   assert(!isa<CXXDestructorDecl>(md) && "wrong method for destructors!");
 
-  auto prototype =
-      md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
-  assert(!cir::MissingFeatures::cudaSupport());
+  CanQualType funcTy = md->getType()->getCanonicalTypeUnqualified();
+  setCUDAKernelCallingConvention(funcTy, cgm, md);
+  auto prototype = funcTy.getAs<FunctionProtoType>();
 
   // Mirrors classic CodeGen's check at CGCall.cpp.  C++23 explicit-object
   // member functions (P0847R7, `void f(this Self&&)`) do not receive an
@@ -1088,8 +1103,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   CanQualType funcTy = fd->getType()->getCanonicalTypeUnqualified();
 
   assert(isa<FunctionType>(funcTy));
-  // TODO: setCUDAKernelCallingConvention
-  assert(!cir::MissingFeatures::cudaSupport());
+  setCUDAKernelCallingConvention(funcTy, cgm, fd);
 
   // When declaring a function without a prototype, always use a non-variadic
   // type.

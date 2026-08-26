@@ -750,6 +750,19 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    return cir::CallingConv::C;
+  case CC_SpirFunction:
+    return cir::CallingConv::SpirFunction;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  }
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
@@ -773,11 +786,11 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
-                                  required);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

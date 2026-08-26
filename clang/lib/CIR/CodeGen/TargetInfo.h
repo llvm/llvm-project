@@ -128,6 +128,12 @@ public:
     return false;
   }
 
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
+
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.
   ///

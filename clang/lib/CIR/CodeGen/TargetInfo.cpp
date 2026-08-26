@@ -143,6 +143,14 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   return false;
 }
 
+cir::CallingConv TargetCIRGenInfo::getDeviceKernelCallingConv() const {
+  // Device kernels are entered through a runtime API, not called as normal
+  // sub-functions, so a modified C calling convention is used.
+  assert(getABIInfo().cgt.getASTContext().getLangOpts().OpenCL &&
+         "Kernel calling convention only defined for OpenCL");
+  return cir::CallingConv::C;
+}
+
 clang::LangAS
 TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &cgm,
                                            const clang::VarDecl *d) const {
