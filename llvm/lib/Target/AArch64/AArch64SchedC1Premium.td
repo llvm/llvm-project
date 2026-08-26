@@ -77,6 +77,7 @@ def C1PUnitCMEMC       : ProcResource<1>;  // MC
 def C1PUnitCMEMML0     : ProcResource<1>;  // MML0
 def C1PUnitCMEMML1     : ProcResource<1>;  // MML1
 def C1PUnitCMERNMRET   : ProcResource<3>;  // RNMRET
+def C1PUnit2CMEPF      : ProcResGroup<[C1PUnitCMEPF, C1PUnitCMEPF]>;
 
 def C1PUnitI   : ProcResGroup<[C1PUnitS0, C1PUnitS1, C1PUnitS2, C1PUnitS3,
                                C1PUnitS4, C1PUnitS5, C1PUnitM0, C1PUnitM1]>;
@@ -223,7 +224,7 @@ def C1PWrite_20c_1CMEVXALU_1CMEPERMS_1d2rc
 def C1PWrite_24c_1CMEVXALU_1CMEPERMS_2d5rc
     : C1PCMEWriteRC<24, [C1PUnitCMEVXALU, C1PUnitCMEPERM], [5, 5]>;
 
-def C1PWrite_1c_1CMEPF : C1PCMEWrite<1, [C1PUnitCMEPF]>;
+def C1PWrite_1c_1CMEPF : C1PCMEWrite<1, [C1PUnit2CMEPF]>;
 def C1PWrite_2c_1CMEPF_2rc : C1PCMEWriteRC<2, [C1PUnitCMEPF], [2]>;
 def C1PWrite_4c_1CMEVXALU : C1PCMEWrite<4, [C1PUnitCMEVXALU]>;
 def C1PWrite_4c_1CMEVXALU_2rc : C1PCMEWriteRC<4, [C1PUnitCMEVXALU], [2]>;
@@ -1014,6 +1015,8 @@ def C1PWrite_2c_1V_1CMEPERM_1c
     : C1PSMEStreamingSchedWrite<C1PWrite_1c_1CMEPERM, C1PWrite_2c_1V>;
 def C1PWrite_3c_1V01_1CMEVXALU
     : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_3c_1V01>;
+def C1PWrite_3c_1V1_CME
+    : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEPERMF_1rc, C1PWrite_3c_1V1>;
 def C1PWrite_3c_1V_1CMEVXALU
     : C1PSMEStreamingSchedWrite<C1PWrite_4c_1CMEVXALU, C1PWrite_3c_1V>;
 def C1PWrite_3c_1V_1CMEVXMUL
@@ -2236,19 +2239,23 @@ def : InstRW<[C1PWr_ZCMABHS, C1PRd_ZCMABHS, C1PRd_ZCMABHS], (instregex "^CMLA_ZZ
 def : InstRW<[C1PWrite_8c_1M0_1V1_1V_CMECLAST], (instregex "^CLAST[AB]_RPZ_[BHSD]")>;
 
 // Conditional extract operations, SIMD&FP scalar and vector forms
-def : InstRW<[C1PWrite_3c_1V1], (instregex "^CLAST[AB]_[VZ]PZ_[BHSD]",
-                                          "^COMPACT_ZPZ_[SD]",
-                                          "^SPLICE_ZPZZ?_[BHSD]")>;
+def : InstRW<[C1PWrite_3c_1V1_CME],
+             (instregex "^CLAST[AB]_[VZ]PZ_[BHSD]",
+                        "^COMPACT_ZPZ_[SD]",
+                        "^SPLICE_ZPZZ?_[BHSD]")>;
 
 // Convert to floating point, 64b to float or convert to double
-def : InstRW<[C1PWrite_3c_1V], (instregex "^[SU]CVTF_ZPmZ_Dto[HSD]",
-                                             "^[SU]CVTF_ZPmZ_StoD")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU],
+             (instregex "^[SU]CVTF_ZPmZ_Dto[HSD]",
+                        "^[SU]CVTF_ZPmZ_StoD")>;
 
 // Convert to floating point, 32b to single or half
-def : InstRW<[C1PWrite_3c_1V], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU],
+             (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
 
 // Convert to floating point, 16b to half
-def : InstRW<[C1PWrite_3c_1V], (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
+def : InstRW<[C1PWrite_3c_1V_1CMEVXALU],
+             (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
 
 // Copy, scalar
 def : InstRW<[C1PWrite_5c_1M0_1V_1CMEPERMF_1CMEPERMS], (instregex "^CPY_ZPmR_[BHSD]")>;
@@ -2278,6 +2285,9 @@ def : InstRW<[C1PWr_ZDOTH_CME, C1PRd_ZDOTH, C1PRd_ZDOTH], (instregex "^[SU]DOT_Z
 def : InstRW<[C1PWrite_2c_1V_StreamingCMEPERM],
              (instregex "^DUP_ZI_[BHSD]", "^DUP_ZZI_[BHSDQ]")>;
 
+// TODO: reporting a throughput of 2 despite SWOG reporting 3. This is a
+// compromise based on the limitations of tablegen to express the actual
+// throughput.
 // Duplicate, scalar form
 def : InstRW<[C1PWrite_3c_1M0_1CMEPERMF], (instregex "^DUP_ZR_[BHSD]")>;
 

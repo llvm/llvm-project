@@ -243,7 +243,7 @@
 # CHECK-NEXT:  1      2     2.00           *      U     stnt1w	{ z0.s, z4.s, z8.s, z12.s }, pn8, [x0]
 # CHECK-NEXT:  1      2     1.00           *      U     str	zt0, [x0]
 # CHECK-NEXT:  1      11    1.00           *      U     str	za[w12, 0], [x0]
-# CHECK-NEXT:  1      1     1.00    *      *      U     cpp	rctx, x2
+# CHECK-NEXT:  1      1     0.50    *      *      U     cpp	rctx, x2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - C1PUnit5CMEVXALU
