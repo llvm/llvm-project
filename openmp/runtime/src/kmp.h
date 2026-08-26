@@ -2792,7 +2792,6 @@ typedef struct kmp_taskgraph_record {
   kmp_int32 num_mutexes = 0;
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
-  kmp_lock_t replay_lock;
   void *taskgraph_args = nullptr;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
