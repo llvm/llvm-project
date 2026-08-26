@@ -758,11 +758,6 @@ void CXXRecordDecl::addedMember(Decl *D) {
   if (D->getFriendObjectKind() || D->isInvalidDecl())
     return;
 
-  // Ignore members of a different class, which can appear here during error
-  // recovery for an ill-formed qualified member declaration.
-  if (!D->getDeclContext()->Equals(this))
-    return;
-
   auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(D);
   if (FunTmpl)
     D = FunTmpl->getTemplatedDecl();

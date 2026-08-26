@@ -6585,6 +6585,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
           return nullptr;
 
         D.setInvalidType();
+      } else if (CurContext->isRecord() && !CurContext->Equals(DC)) {
+        // Keep the diagnosed declaration for recovery, but not as a valid one.
+        D.setInvalidType();
       }
     }
 
