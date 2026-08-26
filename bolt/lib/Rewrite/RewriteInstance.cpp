@@ -2043,7 +2043,7 @@ void RewriteInstance::disassemblePLTSectionRISCV(BinarySection &Section) {
 
   // A regular .plt has a first special entry with no relocations pointing to
   // it, while all .iplt sections are headerless.
-  const bool IsHeaderless = Section.getName() == ".iplt"
+  const bool IsHeaderless = Section.getName() == ".iplt";
   uint64_t InstrOffset = IsHeaderless ? 0 : 32;
 
   while (InstrOffset < SectionSize) {
