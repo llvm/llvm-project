@@ -14,7 +14,7 @@ void print_one_byte(char *buf) {
 }
 
 void test_setbuf() {
-  char buf[BUFSIZ];
+  static char buf[BUFSIZ];
 
   setbuf(stdout, NULL);
 
@@ -30,7 +30,7 @@ void test_setbuf() {
 }
 
 void test_setbuffer() {
-  char buf[BUFSIZ];
+  static char buf[BUFSIZ];
 
   setbuffer(stdout, NULL, 0);
 
@@ -54,7 +54,7 @@ void test_setlinebuf() {
 }
 
 void test_setvbuf() {
-  char buf[BUFSIZ];
+  static char buf[BUFSIZ];
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
