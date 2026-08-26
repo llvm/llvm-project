@@ -1232,9 +1232,8 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
   if (!STI.getTargetTriple().isAMDGCN())
     return 8;
   GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  bool FullSIMDMode = isFullSIMDMode(STI);
   unsigned MaxWaves =
-      getMaxWavesPerEU(Kind) * getWorkGroupSIMDs(Kind, FullSIMDMode);
+      getMaxWavesPerEU(Kind) * getNumWorkGroupSIMDs(isFullSIMDMode(STI));
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1) {
     // Single-wave workgroups don't consume barrier resources.
@@ -1250,10 +1249,8 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
 
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize) {
-  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
-  bool FullSIMDMode = isFullSIMDMode(STI);
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
-                    getWorkGroupSIMDs(Kind, FullSIMDMode));
+                    getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }

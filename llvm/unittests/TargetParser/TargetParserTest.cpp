@@ -3036,28 +3036,9 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
-TEST(TargetParserTest, testAMDGPUgetWorkGroupSIMDs) {
-  // Two SIMDs outside full-SIMD mode on hardware that can split the block,
-  // four everywhere else. The second argument is the full-SIMD-mode flag.
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch900, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch900, false), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch908, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch908, false), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch942, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch942, false), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch950, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch950, false), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1030, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1030, false), 2u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1250, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1250, false), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1310, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(Triple::AMDGPUSubArch1310, false), 2u);
-
-  // The GPUKind overload resolves to the same values.
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(AMDGPU::GK_GFX900, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(AMDGPU::GK_GFX1030, true), 4u);
-  EXPECT_EQ(AMDGPU::getWorkGroupSIMDs(AMDGPU::GK_GFX1030, false), 2u);
+TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
+  EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
 }
 
 TEST(TargetParserTest, testAMDGPUgetMaxWavesPerEU) {

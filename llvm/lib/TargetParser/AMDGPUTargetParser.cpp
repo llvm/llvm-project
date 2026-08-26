@@ -430,18 +430,6 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   return 8;
 }
 
-unsigned AMDGPU::getWorkGroupSIMDs(GPUKind AK, bool FullSIMDMode) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  if (FullSIMDMode || !Info || !(Info->ArchFeatures & FEATURE_WGP))
-    return 4;
-  return 2;
-}
-
-unsigned AMDGPU::getWorkGroupSIMDs(Triple::SubArchType SubArch,
-                                   bool FullSIMDMode) {
-  return getWorkGroupSIMDs(getGPUKindFromSubArch(SubArch), FullSIMDMode);
-}
-
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;

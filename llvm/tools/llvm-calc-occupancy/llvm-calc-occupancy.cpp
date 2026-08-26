@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
   // Hardware characteristics.
   unsigned WaveSize = AMDGPU::IsaInfo::getWavefrontSize(STI);
   unsigned MaxWaves = ST.getMaxWavesPerEU();
-  unsigned WorkGroupSIMDs = ST.getWorkGroupSIMDs();
+  unsigned NumWorkGroupSIMDs = ST.getNumWorkGroupSIMDs();
   unsigned LocalMemSize = AMDGPU::IsaInfo::getLocalMemorySize(STI);
   unsigned AddrLocalMem = AMDGPU::IsaInfo::getAddressableLocalMemorySize(STI);
   unsigned AddrVGPRs =
@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
   outs() << format("  %-20s %u\n", "Wavefront size:", WaveSize);
   outs() << format("  %-20s %u (waves per SIMD, hardware limit)\n",
                    "Max waves/EU:", MaxWaves);
-  outs() << format("  %-20s %u\n", "SIMDs per work-group:", WorkGroupSIMDs);
+  outs() << format("  %-20s %u\n", "SIMDs/work-group:", NumWorkGroupSIMDs);
   outs() << format("  %-20s %s\n",
                    "LDS per CU:", formatBytes(LocalMemSize).c_str());
   outs() << format("  %-20s %s\n", "Addressable LDS:",
@@ -326,11 +326,11 @@ int main(int argc, char **argv) {
   outs() << "\nResult\n";
   if (MinOcc == MaxOcc)
     outs() << format("  %-20s %u waves/EU (%u waves/CU)\n",
-                     "Occupancy:", MaxOcc, MaxOcc * WorkGroupSIMDs);
+                     "Occupancy:", MaxOcc, MaxOcc * NumWorkGroupSIMDs);
   else
     outs() << format("  %-20s %u .. %u waves/EU (%u .. %u waves/CU)\n",
-                     "Occupancy:", MinOcc, MaxOcc, MinOcc * WorkGroupSIMDs,
-                     MaxOcc * WorkGroupSIMDs);
+                     "Occupancy:", MinOcc, MaxOcc, MinOcc * NumWorkGroupSIMDs,
+                     MaxOcc * NumWorkGroupSIMDs);
   outs() << format("  %-20s %s\n",
                    "Limited by:", join(LimitedBy, ", ").c_str());
 

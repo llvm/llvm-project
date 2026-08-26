@@ -249,8 +249,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  WorkGroupSIMDs = AMDGPU::getWorkGroupSIMDs(TargetID.getGPUKind(),
-                                             AMDGPU::isFullSIMDMode(*this));
+  NumWorkGroupSIMDs =
+      AMDGPU::getNumWorkGroupSIMDs(AMDGPU::isFullSIMDMode(*this));
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 

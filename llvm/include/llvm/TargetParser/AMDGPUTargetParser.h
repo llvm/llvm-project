@@ -202,11 +202,11 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
-/// \returns Number of SIMDs a work-group's waves run on for the target and
-/// full-SIMD mode setting.
-LLVM_ABI unsigned getWorkGroupSIMDs(GPUKind AK, bool FullSIMDMode);
-LLVM_ABI unsigned getWorkGroupSIMDs(Triple::SubArchType SubArch,
-                                    bool FullSIMDMode);
+/// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
+/// functional block in full-SIMD mode, half of them otherwise.
+constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
+  return FullSIMDMode ? 4 : 2;
+}
 
 /// \returns Minimum number of waves per execution unit.
 constexpr unsigned getMinWavesPerEU() { return 1; }

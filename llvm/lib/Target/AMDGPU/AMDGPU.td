@@ -2332,7 +2332,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
    FeatureFormattedMUBUFInsts,
-   FeatureDataCacheLineSize128,
+   FeatureDataCacheLineSize128
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<

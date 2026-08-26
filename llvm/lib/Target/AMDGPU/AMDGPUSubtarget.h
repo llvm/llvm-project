@@ -54,7 +54,7 @@ protected:
   bool HasSMulHi = false;
   bool HasFminFmaxLegacy = true;
 
-  unsigned WorkGroupSIMDs = 4;
+  unsigned NumWorkGroupSIMDs = 4;
   // Set from TableGen subtarget features; R600Subtarget sets it directly.
   unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
@@ -240,7 +240,7 @@ public:
 
   /// \returns Number of SIMDs a work-group's waves run on: all of the block's
   /// SIMDs in full-SIMD mode, half of them otherwise.
-  unsigned getWorkGroupSIMDs() const { return WorkGroupSIMDs; }
+  unsigned getNumWorkGroupSIMDs() const { return NumWorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);
