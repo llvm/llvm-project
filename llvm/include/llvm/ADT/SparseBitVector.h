@@ -172,10 +172,10 @@ public:
   bool unionWith(const SparseBitVectorElement &RHS) {
     bool changed = false;
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
-      BitWord old = changed ? 0 : Bits[i];
+      BitWord old = Bits[i];
 
       Bits[i] |= RHS.Bits[i];
-      if (!changed && old != Bits[i])
+      if (old != Bits[i])
         changed = true;
     }
     return changed;
@@ -199,13 +199,13 @@ public:
 
     BecameZero = false;
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
-      BitWord old = changed ? 0 : Bits[i];
+      BitWord old = Bits[i];
 
       Bits[i] &= RHS.Bits[i];
       if (Bits[i] != 0)
         allzero = false;
 
-      if (!changed && old != Bits[i])
+      if (old != Bits[i])
         changed = true;
     }
     BecameZero = allzero;
@@ -222,13 +222,13 @@ public:
 
     BecameZero = false;
     for (unsigned i = 0; i < BITWORDS_PER_ELEMENT; ++i) {
-      BitWord old = changed ? 0 : Bits[i];
+      BitWord old = Bits[i];
 
       Bits[i] &= ~RHS.Bits[i];
       if (Bits[i] != 0)
         allzero = false;
 
-      if (!changed && old != Bits[i])
+      if (old != Bits[i])
         changed = true;
     }
     BecameZero = allzero;
