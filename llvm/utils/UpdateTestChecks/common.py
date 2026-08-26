@@ -1145,9 +1145,6 @@ SCRUB_IR_COMMENT_RE = re.compile(r"\s*;.*")
 # Comments to indicate the predecessors of a block in the IR.
 SCRUB_PRED_COMMENT_RE = re.compile(r"\s*; preds = .*")
 SCRUB_IR_FUNC_META_RE = re.compile(r"((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+")
-# A quoted string, or an IR variable whose name starts with a '.'. Matching the
-# strings too keeps the rename below from reaching inside one.
-IR_QUOTED_STRING_OR_DOT_VALUE_RE = re.compile(r"\"[^\"]*\"|%\.")
 
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
 
@@ -1206,6 +1203,8 @@ class NamelessValue:
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
         var = var.replace("%", "")
+        if (var.startswith(".")):
+            var = var.replace(".", "dot", 1)
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1929,14 +1928,6 @@ def generalize_check_lines(
 
     if ginfo.is_ir():
         for i, line in enumerate(lines):
-            # An IR variable named '%.' matches the FileCheck regex string.
-            # Skip quoted strings: a '%.' inside one, as in the description of
-            # an alias scope named after a callee's argument, is text that
-            # nothing later generalizes away, so renaming it would leave a
-            # check line that cannot match the input it came from.
-            line = IR_QUOTED_STRING_OR_DOT_VALUE_RE.sub(
-                lambda m: m.group(0) if m.group(0).startswith('"') else "%dot", line
-            )
             for regex in _global_hex_value_regex:
                 if re.match("^@" + regex + " = ", line):
                     line = re.sub(
