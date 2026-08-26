@@ -2105,6 +2105,15 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
+  // A guarded static-local carries the facts LoweringPrepare needs to outline
+  // its initializer in 'static_local_info'. CIRGen always emits the two
+  // together, and lowering reads the info when it sees the guard, so require
+  // that a guard implies the info attribute. This rejects hand-written or
+  // serialized .cir that would otherwise crash lowering with a missing info.
+  if (getStaticLocalGuard().has_value() && !getStaticLocalInfo().has_value())
+    return emitOpError(
+        "'static_local_guard' requires 'static_local_info' to be present");
+
   if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
       return emitOpError("cannot have both static local and tls references");

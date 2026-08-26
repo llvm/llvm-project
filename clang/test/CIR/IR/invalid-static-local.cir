@@ -23,6 +23,7 @@ module {
 
 // Global is marked static_local_guard, but get_global is not static_local
 cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
 
 cir.func @test_static_local_mismatch_reverse() {
   // expected-error @below {{static_local attribute mismatch}}
@@ -40,6 +41,7 @@ module {
 
 // local_init is both static_local and thread_local
 cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
 
 cir.func @test_static_local_and_tls() {
   %0 = cir.get_global static_local @_ZZ1fvE1y : !cir.ptr<!s32i>
@@ -63,6 +65,7 @@ module {
 
 // local_init not at function scope.
 cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
+  {static_local_info = #cir.static_local_info<local = true, tls = none, is_inline = false, tsk = undeclared>}
 
 cir.global "private" internal @_AnotherGlobal = ctor : !s32i {
   // expected-error @below {{'cir.local_init' op expects ancestor op 'cir.func'}}
