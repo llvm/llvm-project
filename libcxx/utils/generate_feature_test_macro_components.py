@@ -754,7 +754,7 @@ feature_test_macros = [
             "values": {
                 "c++26": 202306,  # P2530R3 Hazard Pointers for C++26
                 # "c++29": 202606,  # P3428R4 Hazard Pointer Batches
-            },  
+            },
             "headers": ["hazard_pointer"],
             "unimplemented": True,
         },
@@ -960,9 +960,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_map_lookup",
-            "values": {
-                "c++29": 202606 # P3091R6 Better Lookups for map , unordered_map , and flat_map
-            },
+            "values": {"c++29": 202606},  # P3091R6 Better Lookups for map , unordered_map , and flat_map
             "headers": ["map"],
             "unimplemented": True,
         },
@@ -992,9 +990,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_mdspan_copy",
-            "values": {
-                "c++29": 202606  # P3242R4 Copy and fill for mdspan
-            },
+            "values": {"c++29": 202606},  # P3242R4 Copy and fill for mdspan
             "headers": ["mdspan"],
             "unimplemented": True,
         },
@@ -1099,9 +1095,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_pointer_tag_pair",
-            "values": {
-                "c++29": 202606  # P3125R6 constexpr pointer tagging
-            },
+            "values": {"c++29": 202606},  # P3125R6 constexpr pointer tagging
             "headers": ["memory"],
             "unimplemented": True,
         },
@@ -1347,42 +1341,32 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_simd",
-            "values": {
-                "c++26": 202606 # P3319R6 Add an iota object for simd (and more)
-            },
+            "values": {"c++26": 202606}, # P3319R6 Add an iota object for simd (and more)
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_simd_bitops",
-            "values": {
-                "c++29": 202607,  # P3772R2 std::simd overloads for bit permutations
-            },
+            "values": {"c++29": 202607},  # P3772R2 std::simd overloads for bit permutations
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_simd_complex",
-            "values": {
-                "c++29": 202502,  # P3793R2 Better shifting
-            },
+            "values": {"c++29": 202502},  # P3793R2 Better shifting
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_simd_permutations",
-            "values": {
-                "c++26": 202606 # P3319R6 Add an iota object for simd (and more)
-            },
+            "values": {"c++26": 202606}, # P3319R6 Add an iota object for simd (and more)
             "headers": ["simd"],
             "unimplemented": True,
         },
         {
             "name": "__cpp_lib_smart_ptr_for_overwrite",
-            "values": {
-                "c++20": 202002  # P1020R1 Smart pointer creation with default initialization
-                                 # P1973R1 Rename “_default_init” Functions
-            },
+            "values": {"c++20": 202002},  # P1020R1 Smart pointer creation with default initialization
+            # P1973R1 Rename “_default_init” Functions
             "headers": ["memory"],
             "unimplemented": True,
         },
@@ -1500,9 +1484,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_thread_attributes",
-            "values": {
-                "c++29": 202606  # P2019R9 Thread attributes
-            },
+            "values": {"c++29": 202606},  # P2019R9 Thread attributes
             "headers": ["compare"],
             "unimplemented": True,
         },
