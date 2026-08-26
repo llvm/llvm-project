@@ -2899,7 +2899,8 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
 }
 
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
-                                      raw_ostream &Out, BugReporterContext &BRC,
+                                      const Expr *OtherEx, raw_ostream &Out,
+                                      BugReporterContext &BRC,
                                       PathSensitiveBugReport &report,
                                       const ExplodedNode *N,
                                       std::optional<bool> &prunable,
@@ -2964,7 +2965,17 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       }
     }
 
-    Out << IL->getValue();
+    // This literal is compared against OtherEx, and the note describes that
+    // operand ("Assuming 'x' is equal to ..."), so print the literal the way
+    // that operand would hold it. Otherwise an unsigned 4294967295 would
+    // render as -1.
+    bool IsSigned = IL->getType()->isSignedIntegerOrEnumerationType();
+    if (OtherEx) {
+      QualType OtherTy = OtherEx->IgnoreParenCasts()->getType();
+      if (OtherTy->isIntegralOrEnumerationType())
+        IsSigned = OtherTy->isSignedIntegerOrEnumerationType();
+    }
+    IL->getValue().print(Out, IsSigned);
     return false;
   }
 
@@ -3003,10 +3014,12 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, OutLHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, OutRHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
+    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, BExpr->getRHS(),
+                                       OutLHS, BRC, R, N, shouldPrune,
+                                       IsSameFieldName);
+    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, BExpr->getLHS(),
+                                       OutRHS, BRC, R, N, shouldPrune,
+                                       IsSameFieldName);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }
