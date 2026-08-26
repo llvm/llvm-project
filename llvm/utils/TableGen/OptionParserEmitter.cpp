@@ -31,12 +31,17 @@ static std::string getOptionName(const Record &R) {
   return R.getValueAsString("EnumName").str();
 }
 
+// Long strings and strings that may contain "*/" need EmitComment=false.
 static raw_ostream &writeStrTableOffset(raw_ostream &OS,
                                         const StringToOffsetTable &Table,
-                                        llvm::StringRef Str) {
-  OS << Table.GetStringOffset(Str) << " /* ";
-  OS.write_escaped(Str);
-  OS << " */";
+                                        llvm::StringRef Str,
+                                        bool EmitComment = true) {
+  OS << Table.GetStringOffset(Str);
+  if (EmitComment) {
+    OS << " /* ";
+    OS.write_escaped(Str);
+    OS << " */";
+  }
   return OS;
 }
 
@@ -45,6 +50,34 @@ static raw_ostream &writeCstring(raw_ostream &OS, llvm::StringRef Str) {
   OS.write_escaped(Str);
   OS << '"';
   return OS;
+}
+
+// An unset field maps to the empty string, which the table keeps at offset 0.
+static StringRef getOptionalString(const Record &R, StringRef Field) {
+  return R.getValueAsOptionalString(Field).value_or("");
+}
+
+static void addOptionalString(StringToOffsetTable &Table, const Record &R,
+                              StringRef Field) {
+  Table.GetOrAddStringOffset(getOptionalString(R, Field));
+}
+
+static void writeOptionalStrOffset(raw_ostream &OS,
+                                   const StringToOffsetTable &Table,
+                                   const Record &R, StringRef Field) {
+  writeStrTableOffset(OS, Table, getOptionalString(R, Field),
+                      /*EmitComment=*/false);
+}
+
+// The alias arguments as a \0 separated list, e.g. ["foo", "bar"] becomes
+// "foo\0bar\0". The string table appends the terminating empty string.
+static std::string getAliasArgsBlob(const Record &R) {
+  std::string Blob;
+  for (StringRef AliasArg : R.getValueAsListOfStrings("AliasArgs")) {
+    Blob += AliasArg;
+    Blob += '\0';
+  }
+  return Blob;
 }
 
 static std::string getOptionPrefixedName(const Record &R) {
@@ -196,8 +229,9 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
 }
 
 static void emitHelpTextsForVariants(
-    raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
-                         HelpTextsForVariants) {
+    raw_ostream &OS, const StringToOffsetTable &Table,
+    std::vector<std::pair<std::vector<std::string>, StringRef>>
+        HelpTextsForVariants) {
   // OptTable must be constexpr so it uses std::arrays with these capacities.
   const unsigned MaxVisibilityPerHelp = 2;
   const unsigned MaxVisibilityHelp = 1;
@@ -216,7 +250,7 @@ static void emitHelpTextsForVariants(
         {std::vector<std::string>(MaxVisibilityPerHelp, "0"), ""});
 
   OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
-     << ">, const char*>, " << MaxVisibilityHelp << ">{{ ";
+     << ">, llvm::StringTable::Offset>, " << MaxVisibilityHelp << ">{{ ";
 
   auto VisibilityHelpEnd = HelpTextsForVariants.cend();
   for (auto VisibilityHelp = HelpTextsForVariants.cbegin();
@@ -229,10 +263,7 @@ static void emitHelpTextsForVariants(
     OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{"
        << llvm::interleaved(Visibilities) << "}}, ";
 
-    if (Help.size())
-      writeCstring(OS, Help);
-    else
-      OS << "nullptr";
+    writeStrTableOffset(OS, Table, Help, /*EmitComment=*/false);
     OS << "}";
 
     if (std::next(VisibilityHelp) != VisibilityHelpEnd)
@@ -307,10 +338,20 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   // We can add all the prefixes via the union.
   for (const auto &Prefix : PrefixesUnion)
     Table.GetOrAddStringOffset(Prefix);
-  for (const Record &R : llvm::make_pointee_range(Groups))
+  for (const Record &R : llvm::make_pointee_range(Groups)) {
     Table.GetOrAddStringOffset(R.getValueAsString("Name"));
-  for (const Record &R : llvm::make_pointee_range(Opts))
+    addOptionalString(Table, R, "HelpText");
+  }
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
     Table.GetOrAddStringOffset(getOptionPrefixedName(R));
+    addOptionalString(Table, R, "HelpText");
+    addOptionalString(Table, R, "MetaVarName");
+    addOptionalString(Table, R, "Values");
+    Table.GetOrAddStringOffset(getAliasArgsBlob(R));
+    for (const Record *VisibilityHelp :
+         R.getValueAsListOfDefs("HelpTextsForVariants"))
+      Table.GetOrAddStringOffset(VisibilityHelp->getValueAsString("Text"));
+  }
 
   // Dump string table.
   OS << "/////////\n";
@@ -401,15 +442,27 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// ValuesCode\n\n";
   OS << "#ifdef OPTTABLE_VALUES_CODE\n";
+  std::vector<const Record *> ValuesCodeOpts;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     // The option values, if any;
     if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
       assert(isa<UnsetInit>(R.getValueInit("Values")) &&
              "Cannot choose between Values and ValuesCode");
+      ValuesCodeOpts.push_back(&R);
       OS << "#define VALUES_CODE " << getOptionName(R) << "_Values\n";
       OS << R.getValueAsString("ValuesCode") << "\n";
       OS << "#undef VALUES_CODE\n";
     }
+  }
+  // Option IDs use the OPT_ prefix; a table with a different prefix cannot use
+  // ValuesCode.
+  if (!ValuesCodeOpts.empty()) {
+    OS << "static constexpr llvm::opt::OptTable::ValuesCodeEntry "
+          "OptionValuesCodeTable[] = {\n";
+    for (const Record *R : ValuesCodeOpts)
+      OS << "  {OPT_" << getOptionName(*R) << ", " << getOptionName(*R)
+         << "_Values},\n";
+    OS << "};\n";
   }
   OS << "#endif\n";
 
@@ -441,25 +494,20 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The other option arguments (unused for groups).
-    OS << ", INVALID, nullptr, 0, 0, 0";
+    OS << ", INVALID, 0, 0, 0, 0";
 
     // The option help text.
-    if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
-      OS << ",\n";
-      OS << "       ";
-      writeCstring(OS, R.getValueAsString("HelpText"));
-    } else {
-      OS << ", nullptr";
-    }
+    OS << ", ";
+    writeOptionalStrOffset(OS, Table, R, "HelpText");
 
     // Not using Visibility specific text for group help.
-    emitHelpTextsForVariants(OS, {});
+    emitHelpTextsForVariants(OS, Table, {});
 
     // The option meta-variable name (unused).
-    OS << ", nullptr";
+    OS << ", 0";
 
     // The option Values (unused for groups).
-    OS << ", nullptr";
+    OS << ", 0";
 
     // The option SubCommandIDsOffset.
     OS << ", ";
@@ -505,19 +553,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The option alias arguments (if any).
-    // Emitted as a \0 separated list in a string, e.g. ["foo", "bar"]
-    // would become "foo\0bar\0". Note that the compiler adds an implicit
-    // terminating \0 at the end.
     OS << ", ";
-    std::vector<StringRef> AliasArgs = R.getValueAsListOfStrings("AliasArgs");
-    if (AliasArgs.size() == 0) {
-      OS << "nullptr";
-    } else {
-      OS << "\"";
-      for (StringRef AliasArg : AliasArgs)
-        OS << AliasArg << "\\0";
-      OS << "\"";
-    }
+    writeStrTableOffset(OS, Table, getAliasArgsBlob(R), /*EmitComment=*/false);
 
     // "Flags" for the option, such as HelpHidden and Render*
     OS << ", ";
@@ -552,13 +589,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", " << R.getValueAsInt("NumArgs");
 
     // The option help text.
-    if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
-      OS << ",\n";
-      OS << "       ";
-      writeCstring(OS, R.getValueAsString("HelpText"));
-    } else {
-      OS << ", nullptr";
-    }
+    OS << ", ";
+    writeOptionalStrOffset(OS, Table, R, "HelpText");
 
     std::vector<std::pair<std::vector<std::string>, StringRef>>
         HelpTextsForVariants;
@@ -574,23 +606,15 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       HelpTextsForVariants.emplace_back(
           VisibilityNames, VisibilityHelp->getValueAsString("Text"));
     }
-    emitHelpTextsForVariants(OS, std::move(HelpTextsForVariants));
+    emitHelpTextsForVariants(OS, Table, std::move(HelpTextsForVariants));
 
     // The option meta-variable name.
     OS << ", ";
-    if (!isa<UnsetInit>(R.getValueInit("MetaVarName")))
-      writeCstring(OS, R.getValueAsString("MetaVarName"));
-    else
-      OS << "nullptr";
+    writeOptionalStrOffset(OS, Table, R, "MetaVarName");
 
     // The option Values. Used for shell autocompletion.
     OS << ", ";
-    if (!isa<UnsetInit>(R.getValueInit("Values")))
-      writeCstring(OS, R.getValueAsString("Values"));
-    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode")))
-      OS << getOptionName(R) << "_Values";
-    else
-      OS << "nullptr";
+    writeOptionalStrOffset(OS, Table, R, "Values");
 
     // The option SubCommandIDsOffset.
     OS << ", ";

@@ -29,7 +29,7 @@ Option::Option(const OptTable::Info *Info, const OptTable *Owner)
   assert((!Info || !getAlias().isValid() || !getAlias().getAlias().isValid()) &&
          "Multi-level aliases are not supported.");
 
-  if (Info && getAliasArgs()) {
+  if (Info && hasAliasArgs()) {
     assert(getAlias().isValid() && "Only alias options can have alias args.");
     assert(getKind() == FlagClass && "Only Flag aliases can have alias args.");
     assert(getAlias().getKind() != FlagClass &&
@@ -281,15 +281,9 @@ std::unique_ptr<Arg> Option::accept(const ArgList &Args, StringRef CurArg,
   }
 
   // FlagClass aliases can have AliasArgs<>; add those to the unaliased arg.
-  if (const char *Val = getAliasArgs()) {
-    while (*Val != '\0') {
-      UnaliasedA->getValues().push_back(Val);
-
-      // Move past the '\0' to the next argument.
-      Val += strlen(Val) + 1;
-    }
-  }
-  if (UnaliasedOption.getKind() == JoinedClass && !getAliasArgs())
+  for (const char *Val = getAliasArgs(); *Val; Val += strlen(Val) + 1)
+    UnaliasedA->getValues().push_back(Val);
+  if (UnaliasedOption.getKind() == JoinedClass && !hasAliasArgs())
     // A Flag alias for a Joined option must provide an argument.
     UnaliasedA->getValues().push_back("");
   return UnaliasedA;

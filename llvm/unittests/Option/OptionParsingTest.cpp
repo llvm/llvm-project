@@ -229,6 +229,17 @@ TYPED_TEST(OptTableTest, AliasArgs) {
   EXPECT_EQ("bar", AL.getAllArgValues(OPT_B)[1]);
 }
 
+TYPED_TEST(OptTableTest, AliasArgsMultiple) {
+  TypeParam T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = {"-Jmulti"};
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_D));
+  EXPECT_EQ((std::vector<std::string>{"foo", "bar"}),
+            AL.getAllArgValues(OPT_D));
+}
+
 TYPED_TEST(OptTableTest, IgnoreCase) {
   TypeParam T(true);
   unsigned MAI, MAC;

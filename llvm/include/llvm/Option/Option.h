@@ -117,14 +117,17 @@ public:
     return Owner->getOption(Info->AliasID);
   }
 
-  /// Get the alias arguments as a \0 separated list.
-  /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
+  /// Get the alias arguments as a \0 separated list terminated by an empty
+  /// string. E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
     assert(Info && "Must have a valid info!");
-    assert((!Info->AliasArgs || Info->AliasArgs[0] != 0) &&
-           "AliasArgs should be either 0 or non-empty.");
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getStrTable().getCString(Info->AliasArgsOffset);
+  }
 
-    return Info->AliasArgs;
+  bool hasAliasArgs() const {
+    assert(Info && "Must have a valid info!");
+    return Info->AliasArgsOffset.value() != 0;
   }
 
   /// Get the default prefix for this option.
@@ -144,13 +147,15 @@ public:
   /// Get the help text for this option.
   StringRef getHelpText() const {
     assert(Info && "Must have a valid info!");
-    return Info->HelpText;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getStrTable()[Info->HelpTextOffset];
   }
 
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const {
     assert(Info && "Must have a valid info!");
-    return Info->MetaVar;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getStrTable()[Info->MetaVarOffset];
   }
 
   unsigned getNumArgs() const { return Info->Param; }
