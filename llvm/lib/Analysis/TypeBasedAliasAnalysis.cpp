@@ -826,12 +826,14 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
     return New;
   MDNode *CommonTag = nullptr;
   uint64_t Offset = 0;
-  for (size_t I = 0, E = M->getNumOperands(); I < E; I += 3) {
-    ConstantInt *FieldOffset = mdconst::extract<ConstantInt>(M->getOperand(I));
+  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E; I += 3) {
+    ConstantInt *FieldOffset =
+        mdconst::dyn_extract_or_null<ConstantInt>(M->getOperand(I));
     ConstantInt *FieldSize =
-        mdconst::extract<ConstantInt>(M->getOperand(I + 1));
+        mdconst::dyn_extract_or_null<ConstantInt>(M->getOperand(I + 1));
     MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
-    if (!FieldTag || FieldOffset->getZExtValue() != Offset ||
+    if (!FieldOffset || !FieldSize || !FieldTag ||
+        FieldOffset->getZExtValue() != Offset ||
         (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
