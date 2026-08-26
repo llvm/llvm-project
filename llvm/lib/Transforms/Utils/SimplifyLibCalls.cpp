@@ -1845,15 +1845,11 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     if (!MinExistingHotColdNewHint)
       return HotColdVal;
     Value *ExistingHint = CI->getArgOperand(CI->arg_size() - 1);
-    // If the existing hint is a compile-time constant, evaluate the minimum
-    // at compile time.
-    if (auto *CIHint = dyn_cast<ConstantInt>(ExistingHint))
-      return B.getInt8(
-          std::min(HotCold, static_cast<uint8_t>(CIHint->getZExtValue())));
-    // If the existing hint is a dynamic/runtime value, emit a umin intrinsic
-    // to compute the minimum at runtime.
     if (ExistingHint->getType() != B.getInt8Ty())
       ExistingHint = B.CreateTruncOrBitCast(ExistingHint, B.getInt8Ty());
+    // Emit a umin intrinsic to take the minimum of the existing hint and the
+    // compiler hint. When the existing hint is a compile-time constant, the
+    // IRBuilder folder will automatically constant-fold this into a constant.
     return B.CreateBinaryIntrinsic(Intrinsic::umin, ExistingHint, HotColdVal);
   };
 
