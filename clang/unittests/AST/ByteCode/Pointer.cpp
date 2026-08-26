@@ -287,6 +287,10 @@ TEST(Pointer, Strings) {
           .getNodeAs<VarDecl>("str1");
   ASSERT_NE(D, nullptr);
 
+  auto getWCharWidth = [&ASTCtx]() -> unsigned {
+    return ASTCtx.getTargetInfo().getWCharWidth() / 8;
+  };
+
   const auto &Ctx = AST->getASTContext().getInterpContext();
   Program &Prog = Ctx.getProgram();
   ASSERT_TRUE(Prog.getGlobal(D));
@@ -315,7 +319,7 @@ TEST(Pointer, Strings) {
   Pointee = GlobalPtr.load<Pointer>();
   ASSERT_TRUE(Pointee.isStringPointer());
   ASSERT_EQ(Pointee.getNumElems(), 7u);
-  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
+  ASSERT_EQ(Pointee.elemSize(), getWCharWidth());
 
   D = match(varDecl(hasGlobalStorage(), hasName("c")).bind("c"), ASTCtx)[0]
           .getNodeAs<VarDecl>("c");
@@ -327,13 +331,12 @@ TEST(Pointer, Strings) {
   Pointee = GlobalPtr.load<Pointer>();
   ASSERT_TRUE(Pointee.isStringPointer());
   ASSERT_EQ(Pointee.getNumElems(), 7u);
-  ASSERT_EQ(Pointee.elemSize(), sizeof(wchar_t));
+  ASSERT_EQ(Pointee.elemSize(), getWCharWidth());
   ASSERT_EQ(Pointee.getIndex(), 5u);
   APValue APV = Pointee.toAPValue(ASTCtx);
   ASSERT_TRUE(APV.isLValue());
   ASSERT_FALSE(APV.isLValueOnePastTheEnd());
-  ASSERT_EQ(static_cast<size_t>(APV.getLValueOffset().getQuantity()),
-            5 * sizeof(wchar_t));
+  ASSERT_EQ(APV.getLValueOffset().getQuantity(), 5u * getWCharWidth());
   ASSERT_TRUE(APV.hasLValuePath());
   const auto &Path = APV.getLValuePath();
   ASSERT_EQ(Path.size(), 1u);
