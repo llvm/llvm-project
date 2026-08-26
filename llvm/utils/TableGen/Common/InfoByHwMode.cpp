@@ -82,8 +82,7 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '{';
   ListSeparator LS(",");
   for (const auto &[Mode, VT] : Map)
-    OS << LS << '(' << getModeName(Mode) << ':' << getMVTName(VT).str()
-       << ')';
+    OS << LS << '(' << getModeName(Mode) << ':' << getMVTName(VT).str() << ')';
   OS << '}';
 }
 
