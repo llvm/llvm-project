@@ -8349,18 +8349,6 @@ class VectorPromoteHelper {
     llvm_unreachable(nullptr);
   }
 
-  static bool
-  canCauseUndefinedBehaviorOnUnobservedLanes(const Instruction *Use) {
-    switch (Use->getOpcode()) {
-    default:
-      return false;
-    case Instruction::SDiv:
-    case Instruction::SRem:
-      return isa<ConstantInt>(Use->getOperand(1)) &&
-             cast<ConstantInt>(Use->getOperand(1))->isMinusOne();
-    }
-  }
-
 public:
   VectorPromoteHelper(const DataLayout &DL, const TargetLowering &TLI,
                       const TargetTransformInfo &TTI, Instruction *Transition,
@@ -8379,7 +8367,7 @@ public:
   /// Check if it is profitable to promote \p ToBePromoted
   /// by moving downward the transition through.
   bool shouldPromote(const Instruction *ToBePromoted) const {
-    if (canCauseUndefinedBehaviorOnUnobservedLanes(ToBePromoted))
+    if (!isSafeToSpeculativelyExecute(ToBePromoted))
       return false;
     // Promote only if all the operands can be statically expanded.
     // Indeed, we do not want to introduce any new kind of transitions.
