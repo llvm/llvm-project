@@ -77,17 +77,30 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setTruncStoreAction(MVT::i32, MVT::i8, Expand);
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i8, Promote);
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
-  if (Subtarget.atLeastM68020())
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, Legal);
-  else
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, LibCall);
+  // M68k can't natively div/rem 8-bit values, but we define our own patterns
+  // that handle the integer promotion, so it's marked as legal here.
+  setOperationAction(ISD::MUL, MVT::i8, Promote);
+  setOperationAction(ISD::MUL, MVT::i16, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i8, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
+
+  if (Subtarget.atLeastM68020()) {
+    setOperationAction(ISD::MUL, MVT::i32, Legal);
+    setOperationAction(ISD::SDIV, MVT::i32, Legal);
+    setOperationAction(ISD::UDIV, MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::MUL, MVT::i32, LibCall);
+    setOperationAction(ISD::SDIV, MVT::i32, LibCall);
+    setOperationAction(ISD::UDIV, MVT::i32, LibCall);
+  }
   setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
-  for (auto OP :
-       {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
-        ISD::MULHS, ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i8, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i16, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i32, LibCall);
+
+  for (auto OP : {ISD::UDIVREM, ISD::SDIVREM, ISD::MULHS, ISD::MULHU,
+                  ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
     setOperationAction(OP, MVT::i8, Promote);
     setOperationAction(OP, MVT::i16, Legal);
     setOperationAction(OP, MVT::i32, LibCall);
@@ -99,7 +112,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   }
 
   for (auto OP : {ISD::SMULO, ISD::UMULO}) {
-    setOperationAction(OP, MVT::i8,  Custom);
+    setOperationAction(OP, MVT::i8, Custom);
     setOperationAction(OP, MVT::i16, Custom);
     setOperationAction(OP, MVT::i32, Custom);
   }
@@ -134,8 +147,11 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction(ISD::SETCCCARRY, VT, Custom);
   }
 
+  setOperationAction(ISD::BSWAP, MVT::i8, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
-    setOperationAction(ISD::BSWAP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
@@ -198,12 +214,14 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 Register
-M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+M68kTargetLowering::getExceptionPointerRegister(ExceptionHandling EH,
+                                                const Constant *) const {
   return M68k::D0;
 }
 
 Register
-M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+M68kTargetLowering::getExceptionSelectorRegister(ExceptionHandling EH,
+                                                 const Constant *) const {
   return M68k::D1;
 }
 
@@ -2082,26 +2100,6 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   return SDValue(New.getNode(), 1);
 }
 
-/// \brief Return true if the condition is an unsigned comparison operation.
-static bool isM68kCCUnsigned(unsigned M68kCC) {
-  switch (M68kCC) {
-  default:
-    llvm_unreachable("Invalid integer condition!");
-  case M68k::COND_EQ:
-  case M68k::COND_NE:
-  case M68k::COND_CS:
-  case M68k::COND_HI:
-  case M68k::COND_LS:
-  case M68k::COND_CC:
-    return true;
-  case M68k::COND_GT:
-  case M68k::COND_GE:
-  case M68k::COND_LT:
-  case M68k::COND_LE:
-    return false;
-  }
-}
-
 SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
                                     const SDLoc &DL, SelectionDAG &DAG) const {
   if (isNullConstant(Op1))
@@ -2110,24 +2108,7 @@ SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
   assert(!(isa<ConstantSDNode>(Op1) && Op0.getValueType() == MVT::i1) &&
          "Unexpected comparison operation for MVT::i1 operands");
 
-  if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
-       Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
-    // Only promote the compare up to I32 if it is a 16 bit operation
-    // with an immediate.  16 bit immediates are to be avoided.
-    if ((Op0.getValueType() == MVT::i16 &&
-         (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
-        !DAG.getMachineFunction().getFunction().hasMinSize()) {
-      unsigned ExtendOp =
-          isM68kCCUnsigned(M68kCC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
-      Op0 = DAG.getNode(ExtendOp, DL, MVT::i32, Op0);
-      Op1 = DAG.getNode(ExtendOp, DL, MVT::i32, Op1);
-    }
-    // Use SUB instead of CMP to enable CSE between SUB and CMP.
-    SDVTList VTs = DAG.getVTList(Op0.getValueType(), MVT::i8);
-    SDValue Sub = DAG.getNode(M68kISD::SUB, DL, VTs, Op0, Op1);
-    return SDValue(Sub.getNode(), 1);
-  }
-  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op0, Op1);
+  return DAG.getNode(M68kISD::CMP, DL, MVT::i8, Op1, Op0);
 }
 
 /// Result of 'and' or 'trunc to i1' is compared against zero.
@@ -2189,7 +2170,7 @@ SDValue M68kTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
   if (Op0.getValueType() == MVT::i1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     if (isOneConstant(Op1)) {
-      ISD::CondCode NewCC = ISD::GlobalISel::getSetCCInverse(CC, true);
+      ISD::CondCode NewCC = ISD::getSetCCInverse(CC, Op0.getValueType());
       return DAG.getSetCC(DL, VT, Op0, DAG.getConstant(0, DL, MVT::i1), NewCC);
     }
     if (!isNullConstant(Op1)) {

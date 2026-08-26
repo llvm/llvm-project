@@ -173,7 +173,8 @@ public:
   /// appropriate method.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseTemplateName(TemplateName Template);
+  virtual bool TraverseTemplateName(TemplateName Template,
+                                    bool TraverseQualifier = true);
 
   /// Recursively visit a type, by dispatching to
   /// Traverse*Type() based on the argument's getTypeClass() property.

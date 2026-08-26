@@ -460,19 +460,63 @@ protected:
   const ArraySpec &arraySpec();
   void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
+  std::vector<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
+  const std::vector<Bound> &attrDroppedBoundsToCheck() const {
+    return attrDroppedBoundsToCheck_;
+  }
+  // Bounds from a DIMENSION attribute's array-spec that an entity-decl's own
+  // array-spec has overridden.  They are no longer part of the entity's shape,
+  // but they remain specification expressions that must be validated.  Copies
+  // are returned because the attribute applies to every entity-decl in the
+  // statement.
+  std::vector<Bound> overriddenAttrArraySpecBounds() const {
+    std::vector<Bound> result;
+    // An entity-decl overrides the DIMENSION attribute when it supplies its own
+    // array-spec, whether that yields an array (arraySpec_) or, for a zero-size
+    // explicit-shape bounds array (F2023), a scalar (droppedBoundsToCheck_).
+    bool entityHasOwnArraySpec{
+        !arraySpec_.empty() || !droppedBoundsToCheck_.empty()};
+    if (entityHasOwnArraySpec && !attrArraySpec_.empty()) {
+      for (const ShapeSpec &spec : attrArraySpec_) {
+        for (const Bound *bound : {&spec.lbound(), &spec.ubound()}) {
+          // A constant bound -- notably the synthesized default lower bound of
+          // 1 when only an upper bound was written -- is trivially a valid
+          // specification expression, so retain only bounds that might
+          // reference something requiring validation.
+          if (const auto &expr{bound->GetExplicit()};
+              expr && !evaluate::IsConstantExpr(*expr)) {
+            result.push_back(*bound);
+          }
+        }
+      }
+    }
+    return result;
+  }
   void BeginArraySpec();
   void EndArraySpec();
-  void ClearArraySpec() { arraySpec_.clear(); }
+  void ClearArraySpec() {
+    arraySpec_.clear();
+    droppedBoundsToCheck_.clear();
+  }
   void ClearCoarraySpec() { coarraySpec_.clear(); }
 
 private:
   // arraySpec_/coarraySpec_ are populated from any ArraySpec/CoarraySpec
   ArraySpec arraySpec_;
   ArraySpec coarraySpec_;
+  // Bounds of a zero-size explicit-shape bounds array (F2023): the entity is
+  // scalar, so these specification expressions are stashed here and validated
+  // later rather than stored in the shape.
+  std::vector<Bound> droppedBoundsToCheck_;
   // When an ArraySpec is under an AttrSpec or ComponentAttrSpec, it is moved
   // into attrArraySpec_
   ArraySpec attrArraySpec_;
   ArraySpec attrCoarraySpec_;
+  // Bounds dropped from a zero-size or overriden DIMENSION attribute (F2023).
+  // Like attrArraySpec_, this is statement-level: it survives per-entity
+  // clearing so the bounds are validated for every entity-decl the attribute
+  // applies to, even when an entity-decl's own array-spec overrides the shape.
+  std::vector<Bound> attrDroppedBoundsToCheck_;
 
   void PostAttrSpec();
 };
@@ -751,6 +795,9 @@ protected:
   bool deferImplicitTyping_{false};
   bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
+  // Whether the DATA statement whose objects are being visited appeared in
+  // a specification part (as opposed to an execution part)
+  bool dataStmtObjectInSpecPart_{false};
 
   // Some information is collected from a specification part for deferred
   // processing in DeclarationPartVisitor functions (e.g., CheckSaveStmts())
@@ -764,6 +811,10 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
+    // data-implied-do index variables whose typing is deferred to the end
+    // of the specification part, since the declaration typing the index's
+    // name may follow the DATA statement (F'2023 19.4 p5)
+    std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -2935,7 +2986,7 @@ void ArraySpecVisitor::Post(const parser::RankClause &x) {
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
-  arraySpec_ = AnalyzeArraySpec(context(), x);
+  arraySpec_ = AnalyzeArraySpec(context(), x, droppedBoundsToCheck_);
 }
 void ArraySpecVisitor::Post(const parser::ComponentArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -2947,7 +2998,18 @@ void ArraySpecVisitor::Post(const parser::CoarraySpec &x) {
 }
 
 const ArraySpec &ArraySpecVisitor::arraySpec() {
-  return !arraySpec_.empty() ? arraySpec_ : attrArraySpec_;
+  if (!arraySpec_.empty()) {
+    return arraySpec_;
+  }
+  // An entity-decl's own array-spec that is a zero-size explicit-shape bounds
+  // array (F2023) declares a scalar: arraySpec_ is empty but its dropped
+  // bounds are recorded.  This still overrides any DIMENSION attribute, so
+  // don't fall back to the attribute's array-spec -- return the empty scalar
+  // shape.
+  if (!droppedBoundsToCheck_.empty()) {
+    return arraySpec_;
+  }
+  return attrArraySpec_;
 }
 const ArraySpec &ArraySpecVisitor::coarraySpec() {
   return !coarraySpec_.empty() ? coarraySpec_ : attrCoarraySpec_;
@@ -2955,27 +3017,40 @@ const ArraySpec &ArraySpecVisitor::coarraySpec() {
 void ArraySpecVisitor::BeginArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   CHECK(attrArraySpec_.empty());
   CHECK(attrCoarraySpec_.empty());
+  CHECK(attrDroppedBoundsToCheck_.empty());
 }
 void ArraySpecVisitor::EndArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   attrArraySpec_.clear();
   attrCoarraySpec_.clear();
+  attrDroppedBoundsToCheck_.clear();
 }
 void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
-  // on the entity-decl
-  if (!arraySpec_.empty()) {
-    if (attrArraySpec_.empty()) {
-      attrArraySpec_ = arraySpec_;
-      arraySpec_.clear();
+  // on the entity-decl.
+  if (!arraySpec_.empty() || !droppedBoundsToCheck_.empty()) {
+    if (attrArraySpec_.empty() && attrDroppedBoundsToCheck_.empty()) {
+      if (!arraySpec_.empty()) {
+        attrArraySpec_ = arraySpec_;
+        arraySpec_.clear();
+      }
     } else {
       Say(currStmtSource().value(),
           "Attribute 'DIMENSION' cannot be used more than once"_err_en_US);
     }
   }
+  // A zero-size DIMENSION attribute leaves arraySpec_ empty but produces bounds
+  // to check; move them to the statement-level list so they apply to every
+  // entity-decl.
+  attrDroppedBoundsToCheck_.insert(attrDroppedBoundsToCheck_.end(),
+      std::make_move_iterator(droppedBoundsToCheck_.begin()),
+      std::make_move_iterator(droppedBoundsToCheck_.end()));
+  droppedBoundsToCheck_.clear();
   if (!coarraySpec_.empty()) {
     if (attrCoarraySpec_.empty()) {
       attrCoarraySpec_ = coarraySpec_;
@@ -4155,6 +4230,102 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+static bool AreSameProcedureForUseAssociation(
+    SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
+  const Symbol &ultimate1{p1.GetUltimate()};
+  const Symbol &ultimate2{p2.GetUltimate()};
+  if (&ultimate1 == &ultimate2) {
+    return true;
+  } else if (ultimate1.name() != ultimate2.name()) {
+    return false;
+  } else if (ultimate1.attrs().test(Attr::INTRINSIC) ||
+      ultimate2.attrs().test(Attr::INTRINSIC)) {
+    return ultimate1.attrs().test(Attr::INTRINSIC) &&
+        ultimate2.attrs().test(Attr::INTRINSIC);
+  }
+  if (!IsProcedure(ultimate1) || IsPointer(ultimate1) ||
+      !IsProcedure(ultimate2) || IsPointer(ultimate2) ||
+      ClassifyProcedure(ultimate1) != ClassifyProcedure(ultimate2)) {
+    return false;
+  }
+  auto classification{ClassifyProcedure(ultimate1)};
+  if (classification == ProcedureDefinitionClass::Module) {
+    return AreSameModuleSymbol(ultimate1, ultimate2);
+  }
+  if (classification != ProcedureDefinitionClass::External) {
+    return false;
+  }
+  const auto *subp1{ultimate1.detailsIf<SubprogramDetails>()};
+  const auto *subp2{ultimate2.detailsIf<SubprogramDetails>()};
+  if (!subp1 || !subp1->isInterface() || !subp2 || !subp2->isInterface()) {
+    return false;
+  }
+  auto chars1{evaluate::characteristics::Procedure::Characterize(
+      ultimate1, context.foldingContext())};
+  auto chars2{evaluate::characteristics::Procedure::Characterize(
+      ultimate2, context.foldingContext())};
+  return chars1 && chars2 && *chars1 == *chars2;
+}
+
+static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
+  if (const auto *subp{
+          procedure.GetUltimate().detailsIf<SubprogramDetails>()}) {
+    for (const Symbol *dummy : subp->dummyArgs()) {
+      if (dummy && GetCUDADataAttr(dummy)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+struct IntrinsicModuleUseAssociationRule {
+  const char *moduleName;
+  const char *genericName;
+  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+};
+
+static bool MatchesCublasGemm(SemanticsContext &context,
+    const GenericDetails &generic, const Symbol &other) {
+  const Symbol *specific{generic.specific()};
+  if (!specific ||
+      !AreSameProcedureForUseAssociation(context, *specific, other)) {
+    return false;
+  }
+  bool containsSpecific{false};
+  bool hasCUDAOverload{false};
+  for (const Symbol &candidate : generic.specificProcs()) {
+    containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
+    hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
+  }
+  return containsSpecific && hasCUDAOverload;
+}
+
+static const IntrinsicModuleUseAssociationRule *
+FindIntrinsicModuleUseAssociationRule(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Add entries here for intrinsic module generics that should take precedence
+  // over an equivalent external interface during USE association.
+  static const IntrinsicModuleUseAssociationRule rules[]{
+      {"cublas", "sgemm", MatchesCublasGemm},
+      {"cublas", "dgemm", MatchesCublasGemm},
+      {"cublas", "zgemm", MatchesCublasGemm},
+  };
+  const Scope &owner{generic.GetUltimate().owner()};
+  if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
+      !owner.GetName()) {
+    return nullptr;
+  }
+  for (const auto &rule : rules) {
+    if (owner.GetName().value() == rule.moduleName &&
+        generic.GetUltimate().name() == rule.genericName &&
+        rule.matches(context, generic.get<GenericDetails>(), other)) {
+      return &rule;
+    }
+  }
+  return nullptr;
+}
+
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
   Symbol *localSymbol{&originalLocal};
@@ -4382,6 +4553,40 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       return false;
     }
   }};
+
+  auto warnIntrinsicModuleUseAssociation{[&](const Symbol &generic) {
+    const Scope &owner{generic.GetUltimate().owner()};
+    if (auto *msg{context().Warn(
+            common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+            location,
+            "USE association selects intrinsic '%s' generic '%s' over an equivalent external interface"_warn_en_US,
+            owner.GetName().value(), generic.GetUltimate().name())}) {
+      msg->Attach(location,
+          "this extension can be disabled (-fno-prefer-intrinsic-module-use-association)"_en_US);
+    }
+  }};
+
+  if (context().IsEnabled(
+          common::LanguageFeature::PreferIntrinsicModuleUseAssociation)) {
+    if (localSymbol->has<UseDetails>() && !localGeneric && useGeneric &&
+        localProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), useUltimate, *localProcedure)) {
+      warnIntrinsicModuleUseAssociation(useUltimate);
+      EraseSymbol(*localSymbol);
+      Symbol &newSymbol{MakeSymbol(localName,
+          useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
+          UseDetails{localName, useUltimate})};
+      newSymbol.flags() = useSymbol.flags();
+      return;
+    } else if (localSymbol->has<UseDetails>() && localGeneric && !useGeneric &&
+        useProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), localUltimate, *useProcedure)) {
+      warnIntrinsicModuleUseAssociation(localUltimate);
+      return;
+    }
+  }
 
   // When two non-generic procedures arrived, try to combine them.
   const Symbol *combinedProcedure{nullptr};
@@ -6493,7 +6698,11 @@ void DeclarationVisitor::Post(const parser::ObjectDecl &x) {
 // Declare an entity not yet known to be an object or proc.
 Symbol &DeclarationVisitor::DeclareUnknownEntity(
     const parser::Name &name, Attrs attrs) {
-  if (!arraySpec().empty() || !coarraySpec().empty()) {
+  if (!arraySpec().empty() || !coarraySpec().empty() ||
+      !droppedBoundsToCheck().empty() || !attrDroppedBoundsToCheck().empty()) {
+    // A zero-size explicit-shape bounds array (F2023) declares a scalar with an
+    // empty arraySpec, but still carries dropped bound checks that must be
+    // stashed on an ObjectEntityDetails, so route it to DeclareObjectEntity.
     return DeclareObjectEntity(name, attrs);
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
@@ -6622,6 +6831,24 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else {
         details->set_coshape(coarraySpec());
       }
+    }
+    // Stash bounds from a zero-size explicit-shape bounds array (F2023).  The
+    // entity is scalar, so these are not part of its shape, but they are still
+    // specification expressions to be validated during declaration checking.
+    // Bounds from the entity-decl's own array-spec are moved; those from a
+    // DIMENSION attribute are copied, since the attribute applies to every
+    // entity-decl in the statement.
+    for (Bound &bound : droppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(std::move(bound));
+    }
+    for (const Bound &bound : attrDroppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(Bound{bound});
+    }
+    // An entity-decl's own array-spec overrides the DIMENSION attribute's
+    // array-spec (a non-zero-size bounds array), but the attribute's bounds
+    // remain specification expressions that must be validated.
+    for (Bound &bound : overriddenAttrArraySpecBounds()) {
+      details->add_droppedBoundToCheck(std::move(bound));
     }
     SetBindNameOn(symbol);
   }
@@ -8213,8 +8440,14 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // an explicit "integer(k)::" in an implied DO.
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
-    // F'2023 19.4 p5 ambiguous rule about outer declarations
-    declTypeSpec = prev->GetType();
+    if (!dataStmtObjectInSpecPart_ || type) {
+      // F'2023 19.4 p5: the index adopts the type of a visible declaration
+      // of its name (see Extensions.md on 19.4 p5).  But for a DATA
+      // statement in a specification part, defer typing to
+      // FinishSpecificationPart(), where a local declaration following the
+      // DATA statement takes precedence over this outer one.
+      declTypeSpec = prev->GetType();
+    }
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
   if (!symbol.has<ObjectEntityDetails>()) {
@@ -8229,6 +8462,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     auto restorer{
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
+  } else if (dataStmtObjectInSpecPart_) {
+    // F'2023 19.4 p5: the index takes the type its name has in the scoping
+    // unit, and that declaration may follow the DATA statement; defer
+    // typing to FinishSpecificationPart().  (8.6.7 p3 restricts only the
+    // data-stmt-objects, not this statement entity.)
+    specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
   }
@@ -8660,6 +8899,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // for purposes of implicit variable declaration vs. host association.
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
+  auto specPartRestorer{
+      common::ScopedSet(dataStmtObjectInSpecPart_, inSpecificationPart_)};
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(
       common::visitors{
@@ -10664,6 +10905,24 @@ void ResolveNamesVisitor::FinishSpecificationPart(
             context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
+  }
+  // Type the deferred data-implied-do index variables now that the whole
+  // specification part has been visited (F'2023 19.4 p5).  Plain
+  // Symbol::SetType suffices: the symbol is untyped, so no conflict
+  // diagnostics can arise.
+  for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
+    Symbol &symbol{*ref};
+    if (!symbol.GetType()) {
+      if (const Symbol *outer{currScope().FindSymbol(symbol.name())};
+          outer && outer->GetType()) {
+        symbol.SetType(*outer->GetType());
+        // Inhibit unused-variable diagnostics: the outer declaration may
+        // exist solely to give the index its type.
+        context().NoteDefinedSymbol(*outer);
+      } else {
+        ApplyImplicitRules(symbol);
       }
     }
   }

@@ -840,6 +840,7 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
         .Case("12.01", Triple::AMDGPUSubArch1201)
         .Case("12.5", Triple::AMDGPUSubArch12_5)
         .Case("12.50", Triple::AMDGPUSubArch1250)
+        .Case("12.50s", Triple::AMDGPUSubArch1250_STRICT)
         .Case("12.51", Triple::AMDGPUSubArch1251)
         .Case("13", Triple::AMDGPUSubArch13)
         .Case("13.10", Triple::AMDGPUSubArch1310)
@@ -2576,8 +2577,8 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case aarch64:
   case aarch64_be:
   case aarch64_32:
-    // AArch64 uses IEEE quad, except on Windows, Darwin, and Android.
-    if (isOSWindows() || isOSDarwin() || isAndroid())
+    // AArch64 uses IEEE quad, except on Windows and Darwin.
+    if (isOSWindows() || isOSDarwin())
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case mips64:

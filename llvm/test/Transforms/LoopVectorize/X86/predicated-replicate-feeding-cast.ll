@@ -12,7 +12,7 @@ define i8 @predicated_replicate_feeding_cast(i16 %n, i1 %c1, i1 %c2, i16 %a, i8 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C1]], true
@@ -117,7 +117,7 @@ define i8 @predicated_replicate_feeding_cast_non_uniform(i64 %n, i1 %c1, i1 %c2,
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1]], true
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C2]], true

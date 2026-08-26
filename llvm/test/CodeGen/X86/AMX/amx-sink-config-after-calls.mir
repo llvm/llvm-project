@@ -61,7 +61,8 @@ body:             |
     ; CHECK-LABEL: name: test_api
     ; CHECK: liveins: $rdi, $rsi
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $zmm0 = AVX512_512_SET0
+    ; CHECK-NEXT: renamable $xmm0 = AVX512_128_SET0
+    ; CHECK-NEXT: renamable $zmm0 = SUBREG_TO_REG killed renamable $xmm0, %subreg.sub_xmm
     ; CHECK-NEXT: VMOVUPSZmr %stack.5, 1, $noreg, 0, $noreg, killed renamable $zmm0 :: (store (s512) into %stack.5, align 4)
     ; CHECK-NEXT: MOV8mi %stack.5, 1, $noreg, 0, $noreg, 1 :: (store (s512) into %stack.5, align 4)
     ; CHECK-NEXT: MOV64mr %stack.8, 1, $noreg, 0, $noreg, $rsi :: (store (s64) into %stack.8)

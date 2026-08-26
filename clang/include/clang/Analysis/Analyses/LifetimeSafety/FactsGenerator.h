@@ -113,9 +113,7 @@ private:
   /// reference parameter, creating an IssueFact if it does.
   /// \param IsGslConstruction True if this is a GSL construction where all
   ///   argument origins should flow to the returned origin.
-  void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
-                          ArrayRef<const Expr *> Args,
-                          bool IsGslConstruction = false);
+  void handleFunctionCall(const Expr *Call, bool IsGslConstruction = false);
 
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.

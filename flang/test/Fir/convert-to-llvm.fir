@@ -1391,6 +1391,22 @@ func.func @dead_shift() {
 // CHECK: %{{.*}} = llvm.mlir.constant(0 : index) : i{{.*}}
 // CHECK-NEXT: llvm.return
 
+// -----
+
+// Test that !fir.shift<N> flowing through the IR as a value (here, a
+// function argument) has a working type conversion to a struct of i64s,
+// matching !fir.shape<N> / !fir.shape_shift<N>.
+
+func.func @shift_value(%s: !fir.shift<1>) -> !fir.shift<1> {
+  return %s : !fir.shift<1>
+}
+
+// CHECK-LABEL: llvm.func @shift_value
+// CHECK-SAME:  (%[[ARG:.*]]: !llvm.struct<(i64)>) -> !llvm.struct<(i64)>
+// CHECK:       llvm.return %[[ARG]] : !llvm.struct<(i64)>
+
+// -----
+
 func.func @dead_shape() {
   %c0 = arith.constant 0 : index
   %0 = fir.shape %c0 : (index) -> !fir.shape<1>
@@ -2237,7 +2253,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 //CHECK:    %[[OTHER_ATTR:.*]] = llvm.mlir.constant(0 : i32) : i32
 //CHECK:    %[[OTHER_ATTR_I8:.*]] = llvm.trunc %[[OTHER_ATTR]] : i32 to i8
 //CHECK:    %[[RBOX_TMP5:.*]] = llvm.insertvalue %[[OTHER_ATTR_I8]], %[[RBOX_TMP4]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-//CHECK:    %[[MASK:.*]] = llvm.mlir.constant(254 : ui8) : i8
+//CHECK:    %[[MASK:.*]] = llvm.mlir.constant(-2 : i8) : i8
 //CHECK:    %[[EXTRA_WITH_ADDENDUM_CORRECTION:.*]] = llvm.and %[[EXTRA]], %[[MASK]]  : i8
 //CHECK:    %[[RBOX_TMP6:.*]] = llvm.insertvalue %[[EXTRA_WITH_ADDENDUM_CORRECTION]], %[[RBOX_TMP5]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:    %[[DIM1_STRIDE_REF:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
@@ -2307,7 +2323,7 @@ func.func @foo(%arg0: !fir.box<!fir.array<?x!fir.type<t{i:i32,c:!fir.char<1,10>}
 //CHECK:   %[[TYPE_CHAR_I8:.*]] = llvm.trunc %[[TYPE_CHAR]] : i32 to i8
 //CHECK:   %[[RBOX_TMP4:.*]] = llvm.insertvalue %[[TYPE_CHAR_I8]], %[[RBOX_TMP3]][4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:   %[[RBOX_TMP5:.*]] = llvm.insertvalue %{{.*}}, %[[RBOX_TMP4]][5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
-//CHECK:   %[[MASK:.*]] = llvm.mlir.constant(254 : ui8) : i8
+//CHECK:   %[[MASK:.*]] = llvm.mlir.constant(-2 : i8) : i8
 //CHECK:   %[[EXTRA_WITH_ADDENDUM_CORRECTION:.*]] = llvm.and %[[EXTRA]], %[[MASK]]  : i8
 //CHECK:   %[[RBOX_TMP6:.*]] = llvm.insertvalue %[[EXTRA_WITH_ADDENDUM_CORRECTION]], %[[RBOX_TMP5]][6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 //CHECK:   %[[SRC_STRIDE_PTR:.*]] = llvm.getelementptr %[[ARG0]][0, 7, 0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>, ptr, array<1 x i64>)>

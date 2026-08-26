@@ -288,6 +288,18 @@ TEST_F(OpBuildGenTest, BuildMethodsVariadicProperties) {
   op = test::TableGenBuildOp6::create(builder, loc,
                                       ValueRange{*cstI32, *cstI32}, attrs);
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
+
+  // Test replacing an inherent attribute backed by a native property.
+  op = test::TableGenBuildOp6::create(builder, loc, f32Ty, ValueRange{*cstI32},
+                                      ValueRange{*cstI32});
+  DenseI32ArrayAttr replacement = builder.getDenseI32ArrayAttr({0, 2});
+  op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+    if (name == "operandSegmentSizes")
+      attr = replacement;
+  });
+  EXPECT_EQ(op.getProperties().operandSegmentSizes[0], 0);
+  EXPECT_EQ(op.getProperties().operandSegmentSizes[1], 2);
+  op.erase();
 }
 
 TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
@@ -296,7 +308,19 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   ArrayRef<NamedAttribute> discardableAttrs = attrs.drop_front();
   auto op7 = test::TableGenBuildOp7::create(
       builder, loc, TypeRange{}, ValueRange{}, props, discardableAttrs);
-  verifyOp(op7, {}, {}, attrs);
+  unsigned numInherentAttrs = 0;
+  BoolAttr replacement = builder.getBoolAttr(false);
+  op7->getName().walkInherentAttrs(op7, [&](StringRef name, Attribute &attr) {
+    EXPECT_EQ(name, attrs[0].getName());
+    EXPECT_EQ(attr, attrs[0].getValue());
+    attr = replacement;
+    ++numInherentAttrs;
+  });
+  EXPECT_EQ(numInherentAttrs, 1u);
+  EXPECT_EQ(op7.getProperties().getAttr0(), replacement);
+  std::vector<NamedAttribute> replacedAttrs(attrs.begin(), attrs.end());
+  replacedAttrs[0].setValue(replacement);
+  verifyOp(op7, {}, {}, replacedAttrs);
 
   // Check that the old-style builder where all the attributes go in the same
   // place works.

@@ -368,6 +368,11 @@ def GFX12_GENERIC : AMDGPUProcessorModel<"gfx12-generic", GFX12SpeedModel,
   let CoveredGPUs = [GFX1200, GFX1201];
 }
 
+def GFX1250_STRICT : AMDGPUProcessorModel<"gfx1250-strict", GFX1250SpeedModel,
+  FeatureISAVersion12_50_STRICT.Features, [12, 5, 0]> {
+  let ArchFeatures = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32, FEATURE_WAVE32, FEATURE_XNACK, FEATURE_SRAMECC];
+}
+
 def GFX1250 : AMDGPUProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_50.Features, [12, 5, 0]> {
   let ArchFeatures = [FEATURE_FAST_FMA_F32, FEATURE_FAST_DENORMAL_F32, FEATURE_WAVE32, FEATURE_XNACK, FEATURE_SRAMECC];
@@ -404,3 +409,4 @@ def GFX13_GENERIC : AMDGPUProcessorModel<"gfx13-generic", GFX12SpeedModel,
 def : AMDGPUFamily<"6", [GFX600, GFX601, GFX602]>;
 def : AMDGPUFamily<"7", [GFX700, GFX701, GFX702, GFX703, GFX704, GFX705]>;
 def : AMDGPUFamily<"8", [GFX801, GFX802, GFX803, GFX805]>;
+def : AMDGPUFamily<"1250_STRICT", [GFX1250_STRICT]>;
