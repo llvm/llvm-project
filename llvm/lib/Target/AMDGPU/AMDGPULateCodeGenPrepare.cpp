@@ -359,7 +359,7 @@ bool LiveRegOptimizer::optimizeLiveType(
           return false;
 
         // Collect all other incoming values for coercion.
-        if (IncInst)
+        if (IncInst && !IncInst->isTerminator())
           Defs.insert(IncInst);
       }
     }
@@ -377,7 +377,7 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!isa<PHINode>(II))
+        if (!isa<PHINode>(II) && !II->isTerminator())
           Defs.insert(II);
       }
     }
@@ -385,9 +385,6 @@ bool LiveRegOptimizer::optimizeLiveType(
 
   // Coerce and track the defs.
   for (Instruction *D : Defs) {
-    // Terminators can't be coerced in-block, so skip them.
-    if (D->isTerminator())
-      continue;
     if (!ValMap.contains(D)) {
       BasicBlock::iterator InsertPt = std::next(D->getIterator());
       Value *ConvertVal = convertToOptType(D, InsertPt);
