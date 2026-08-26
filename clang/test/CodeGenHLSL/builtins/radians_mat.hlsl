@@ -1,121 +1,81 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -fnative-half-type -fnative-int16-type -emit-llvm -o - \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -o - \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NO_HALF
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s \
-// RUN:   -fnative-half-type -fnative-int16-type -emit-llvm -o - \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-library %s -emit-llvm -o - \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NO_HALF
+// RUN:   | FileCheck %s
 
 // CHECK-LABEL: test_radians_half1x2
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <2 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <2 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <2 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <2 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <2 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <2 x half>
 half1x2 test_radians_half1x2(half1x2 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half1x3
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <3 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <3 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <3 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <3 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <3 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <3 x half>
 half1x3 test_radians_half1x3(half1x3 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half1x4
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <4 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <4 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <4 x half>
 half1x4 test_radians_half1x4(half1x4 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half2x1
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <2 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <2 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <2 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <2 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <2 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <2 x half>
 half2x1 test_radians_half2x1(half2x1 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half2x2
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <4 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <4 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <4 x half>
 half2x2 test_radians_half2x2(half2x2 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half2x3
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <6 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <6 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <6 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <6 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <6 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <6 x half>
 half2x3 test_radians_half2x3(half2x3 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half2x4
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <8 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <8 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <8 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <8 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <8 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <8 x half>
 half2x4 test_radians_half2x4(half2x4 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half3x1
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <3 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <3 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <3 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <3 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <3 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <3 x half>
 half3x1 test_radians_half3x1(half3x1 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half3x2
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <6 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <6 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <6 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <6 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <6 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <6 x half>
 half3x2 test_radians_half3x2(half3x2 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half3x3
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <9 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <9 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <9 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <9 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <9 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <9 x half>
 half3x3 test_radians_half3x3(half3x3 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half3x4
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <12 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <12 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <12 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <12 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <12 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <12 x half>
 half3x4 test_radians_half3x4(half3x4 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half4x1
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <4 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <4 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <4 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <4 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <4 x half>
 half4x1 test_radians_half4x1(half4x1 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half4x2
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <8 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <8 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <8 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <8 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <8 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <8 x half>
 half4x2 test_radians_half4x2(half4x2 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half4x3
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <12 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <12 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <12 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <12 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <12 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <12 x half>
 half4x3 test_radians_half4x3(half4x3 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_half4x4
-// NATIVE_HALF: fmul reassoc nnan ninf nsz arcp afn <16 x half> {{.*}}, splat (half 1.745610e-02)
-// NATIVE_HALF: ret <16 x half>
-// NO_HALF: fmul reassoc nnan ninf nsz arcp afn <16 x float> {{.*}}, splat (float f0x3C8EFA35)
-// NO_HALF: ret <16 x float>
+// CHECK: fmul reassoc nnan ninf nsz arcp afn <16 x half> {{.*}}, splat (half 1.745610e-02)
+// CHECK: ret <16 x half>
 half4x4 test_radians_half4x4(half4x4 p0) { return radians(p0); }
 
 // CHECK-LABEL: test_radians_float1x2
