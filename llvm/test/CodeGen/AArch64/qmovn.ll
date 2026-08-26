@@ -516,7 +516,7 @@ define <16 x i8> @unsigned_v16i16_to_v16i8(<16 x i16> %y) {
 ; CHECK-NEXT:    uqxtn2 v0.16b, v1.8h
 ; CHECK-NEXT:    ret
 entry:
-  %min = call <16 x i16> @llvm.umin.v8i16(<16 x i16> %y, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
+  %min = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %y, <16 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>)
   %trunc = trunc <16 x i16> %min to <16 x i8>
   ret <16 x i8> %trunc
 }
@@ -528,7 +528,7 @@ define <8 x i16> @unsigned_v8i32_to_v8i16(<8 x i32> %y) {
 ; CHECK-NEXT:    uqxtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
 entry:
-  %min = call <8 x i32> @llvm.umin.v4i32(<8 x i32> %y, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
+  %min = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %y, <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
   %trunc = trunc <8 x i32> %min to <8 x i16>
   ret <8 x i16> %trunc
 }
@@ -540,7 +540,7 @@ define <4 x i32> @unsigned_v4i64_to_v4i32(<4 x i64> %y) {
 ; CHECK-NEXT:    uqxtn2 v0.4s, v1.2d
 ; CHECK-NEXT:    ret
 entry:
-  %min = call <4 x i64> @llvm.umin.v2i64(<4 x i64> %y, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
+  %min = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %y, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
   %trunc = trunc <4 x i64> %min to <4 x i32>
   ret <4 x i32> %trunc
 }

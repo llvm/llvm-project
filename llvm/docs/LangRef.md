@@ -8466,10 +8466,11 @@ indicates that, each time execution reaches the peeled iterations, execution is
 estimated to exit them without reaching the remaining loop's header.
 
 Even if the probability of reaching a loop's header is low, if it is reached, it
-is the start of an iteration.  Consequently, some passes historically assume
-that `llvm::getLoopEstimatedTripCount` always returns a positive count or
-`std::nullopt`.  Thus, it returns `std::nullopt` when
-`llvm.loop.estimated_trip_count` is 0.
+is the start of an iteration.  Some passes therefore need a positive trip count.
+Even so, `llvm::getLoopEstimatedTripCount` returns 0 when
+`llvm.loop.estimated_trip_count` is 0, so that a zero estimate can be told apart
+from a missing estimate, for which it returns `std::nullopt`.  Passes that need a
+positive trip count must check for zero.
 
 #### '`llvm.licm.disable`' Metadata
 
@@ -20385,6 +20386,54 @@ matches the element-type of the vector input.
 This instruction has the same comparison semantics as the '`llvm.minimum.*`'
 intrinsic. That is, this intrinsic propagates NaNs and -0.0 is considered less
 than +0.0. If any element of the vector is a NaN, the result is NaN.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fmaximumnum)=
+
+#### '`llvm.vector.reduce.fmaximumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
+`MAX` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fminimumnum)=
+
+#### '`llvm.vector.reduce.fminimumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
+`MIN` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimumnum.*`' intrinsic.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
