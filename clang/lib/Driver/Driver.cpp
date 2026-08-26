@@ -421,10 +421,8 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
         continue;
 
       phases::ID LastPL = PL.back();
-      if (LastPL > FinalPhase || !AnyPhase) {
-        PhaseArg = const_cast<Arg *>(InputArg);
+      if (LastPL > FinalPhase)
         FinalPhase = LastPL;
-      }
       AnyPhase = true;
     }
 
