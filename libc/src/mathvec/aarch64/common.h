@@ -44,11 +44,9 @@ using AdvSIMDFP64Vector = LIBC_NAMESPACE::cpp::simd<double, 2>;
 // Use the gcc language extension of defining a vector using an initializer
 // list, which allows the whole vector to be statically defined in const data.
 #define V2_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##x2_t
-#define V2_SPLAT_INITIALIZER(LANE)                                             \
-  { LANE, LANE }
+#define V2_SPLAT_INITIALIZER(LANE) {LANE, LANE}
 #define V4_SPLAT_TYPE(TYPE_PREFIX) TYPE_PREFIX##x4_t
-#define V4_SPLAT_INITIALIZER(LANE)                                             \
-  { LANE, LANE, LANE, LANE }
+#define V4_SPLAT_INITIALIZER(LANE) {LANE, LANE, LANE, LANE}
 #define MAKE_SPLAT_VECTOR(VEC, FN_SUFFIX) VEC
 
 #else
