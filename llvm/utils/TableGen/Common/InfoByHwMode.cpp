@@ -79,16 +79,11 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
     return;
   }
 
-  std::vector<const PairType *> Pairs;
-  for (const auto &P : Map)
-    Pairs.push_back(&P);
-  llvm::sort(Pairs, deref<std::less<PairType>>());
-
   OS << '{';
   ListSeparator LS(",");
-  for (const PairType *P : Pairs)
-    OS << LS << '(' << getModeName(P->first) << ':'
-       << getMVTName(P->second).str() << ')';
+  for (const auto &P : Map)
+    OS << LS << '(' << getModeName(P.first) << ':' << getMVTName(P.second).str()
+       << ')';
   OS << '}';
 }
 
@@ -167,16 +162,10 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(
 }
 
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
-  using PairType = decltype(Map)::value_type;
-  std::vector<const PairType *> Pairs;
-  for (const auto &P : Map)
-    Pairs.push_back(&P);
-  llvm::sort(Pairs, deref<std::less<PairType>>());
-
   OS << '{';
   ListSeparator LS(",");
-  for (const PairType *P : Pairs)
-    OS << LS << '(' << getModeName(P->first) << ':' << P->second << ')';
+  for (const auto &P : Map)
+    OS << LS << '(' << getModeName(P.first) << ':' << P.second << ')';
   OS << '}';
 }
 
