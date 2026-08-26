@@ -897,7 +897,7 @@ void foo8() {
 //
 //
 // CK-64-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined(
-// CK-64-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[X:%.*]]) #[[ATTR1]] {
+// CK-64-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i64 [[DOTPREVIOUS_LB_:%.*]], i64 [[DOTPREVIOUS_UB_:%.*]], i64 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
 // CK-64-NEXT:  [[ENTRY:.*:]]
 // CK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1746,7 +1746,7 @@ void foo8() {
 //
 //
 // CK-32-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo8v_l112.omp_outlined.omp_outlined(
-// CK-32-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[X:%.*]]) #[[ATTR1]] {
+// CK-32-SAME: ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]], i32 [[DOTPREVIOUS_LB_:%.*]], i32 [[DOTPREVIOUS_UB_:%.*]], i32 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
 // CK-32-NEXT:  [[ENTRY:.*:]]
 // CK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4

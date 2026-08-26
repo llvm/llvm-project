@@ -119,7 +119,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -127,7 +127,7 @@ int bar(int n){
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 8, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK1-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
@@ -135,7 +135,7 @@ int bar(int n){
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper
-// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK1-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -239,7 +239,7 @@ int bar(int n){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined
-// CHECK2-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[I:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -247,7 +247,7 @@ int bar(int n){
 // CHECK2-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK2-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 4, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
 // CHECK2-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK2-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
@@ -255,7 +255,7 @@ int bar(int n){
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper
-// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
+// CHECK2-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4

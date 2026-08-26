@@ -246,7 +246,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -327,7 +327,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK1-SAME: () #[[ATTR4:[0-9]+]] comdat {
+// CHECK1-SAME: () #[[ATTR5:[0-9]+]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4
 // CHECK1-NEXT:    [[X_CASTED:%.*]] = alloca i64, align 8
@@ -477,7 +477,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l34.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -558,7 +558,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZTW1x
-// CHECK1-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK1-SAME: () #[[ATTR6:[0-9]+]] comdat {
 // CHECK1-NEXT:    [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK1-NEXT:    ret ptr [[TMP1]]
 //
@@ -715,7 +715,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l64.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -793,7 +793,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z5tmainIiET_v
-// CHECK3-SAME: () #[[ATTR4:[0-9]+]] comdat {
+// CHECK3-SAME: () #[[ATTR5:[0-9]+]] comdat {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[A:%.*]] = alloca [2 x i32], align 4
 // CHECK3-NEXT:    [[X_CASTED:%.*]] = alloca i32, align 4
@@ -941,7 +941,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiET_v_l34.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1019,7 +1019,7 @@ int main() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZTW1x
-// CHECK3-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK3-SAME: () #[[ATTR6:[0-9]+]] comdat {
 // CHECK3-NEXT:    [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK3-NEXT:    ret ptr [[TMP1]]
 //
@@ -1118,7 +1118,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l46.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR2]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1207,7 +1207,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZTW1x
-// CHECK9-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK9-SAME: () #[[ATTR6:[0-9]+]] comdat {
 // CHECK9-NEXT:    [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK9-NEXT:    ret ptr [[TMP1]]
 //
