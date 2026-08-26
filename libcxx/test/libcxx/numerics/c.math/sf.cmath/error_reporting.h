@@ -27,13 +27,20 @@
 #include <cmath>
 #include <limits>
 
-// -ffast-math implies -ffinite-math-only, which lets the compiler fold isnan and a
-// comparison against an infinity to a constant. Only the reporting channels are checked
-// there; the returned values are covered by the test in test/std.
+// -ffast-math implies -ffinite-math-only, which makes any use of an infinity or a NaN
+// undefined behavior and lets the compiler fold isnan and a comparison against an infinity
+// to a constant. Under it this body checks only the reporting channels, and only with finite
+// arguments: the returned values and the -inf argument are dropped. Both stay covered by the
+// other two variants of this test and by the test in test/std.
+//
+// The guard has to be a #if. `if constexpr` would not do: has_infinity is true wherever this
+// matters, so nothing is discarded, and a discarded substatement in a non-templated entity is
+// still fully analyzed ([stmt.if]/2 scopes non-instantiation to templates), so it warns
+// either way. Only the preprocessor removes the tokens from translation.
 #ifdef __FAST_MATH__
-#  define TEST_SF_CHECK_VALUES 0
+#  define TEST_SF_FINITE_MATH_ONLY 1
 #else
-#  define TEST_SF_CHECK_VALUES 1
+#  define TEST_SF_FINITE_MATH_ONLY 0
 #endif
 
 // The FE_* macros are optional (picolibc without hardware floating point does not define
@@ -51,7 +58,7 @@ void test_domain_error(Func assoc_laguerre, Float x) {
 #ifdef FE_INVALID
   assert(std::fetestexcept(FE_INVALID) != 0);
 #endif
-#if TEST_SF_CHECK_VALUES
+#if !TEST_SF_FINITE_MATH_ONLY
   assert(std::isnan(result));
 #endif
 }
@@ -70,7 +77,7 @@ void test_range_error(Func assoc_laguerre, Float x) {
 #ifdef FE_OVERFLOW
   assert(std::fetestexcept(FE_OVERFLOW) != 0);
 #endif
-#if TEST_SF_CHECK_VALUES
+#if !TEST_SF_FINITE_MATH_ONLY
   assert(result == std::numeric_limits<Float>::infinity());
 #endif
 }
@@ -88,9 +95,11 @@ inline void test_error_reporting() {
   test_domain_error(laguerre_l, -1.0L);
   test_domain_error(laguerre_ll, -1.0L);
 
+#if !TEST_SF_FINITE_MATH_ONLY
   // -inf is outside the x >= 0 domain too ([sf.cmath.general]/2)
   if (std::numeric_limits<double>::has_infinity)
     test_domain_error(laguerre, -std::numeric_limits<double>::infinity());
+#endif
 
   test_range_error(laguerre_f, std::numeric_limits<float>::max());
   test_range_error(laguerre_ff, std::numeric_limits<float>::max());
