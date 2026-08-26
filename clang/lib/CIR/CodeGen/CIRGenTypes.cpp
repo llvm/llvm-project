@@ -756,13 +756,16 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
 cir::CallingConv
 CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
   switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
   default:
     // TODO(cir): Support the remaining target-specific calling conventions.
     return cir::CallingConv::C;
-  case CC_SpirFunction:
-    return cir::CallingConv::SpirFunction;
-  case CC_DeviceKernel:
-    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
   }
 }
 

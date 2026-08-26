@@ -42,10 +42,6 @@ public:
       ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
           ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
-
-  cir::CallingConv getDeviceKernelCallingConv() const override {
-    return cir::CallingConv::SpirKernel;
-  }
 };
 
 } // namespace

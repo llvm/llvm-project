@@ -332,6 +332,8 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spir:
+  case llvm::Triple::spir64:
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
