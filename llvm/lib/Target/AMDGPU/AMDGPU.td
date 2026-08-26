@@ -1575,6 +1575,11 @@ defm NeedsTDMDrain : AMDGPUSubtargetFeature<"needs-tdm-drain",
   /*GenPredicate=*/0
 >;
 
+defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
+  "Needs 2addr LDS instructions to be aligned to payload size",
+  /*GenPredicate=*/1
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2427,6 +2432,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureNeedsAligned2addrDS,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -3108,6 +3114,8 @@ def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
 
 def NotNeedsAlignedVGPRs : Predicate<"!Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of (not FeatureRequiresAlignedVGPRs))>;
+
+def NotNeedsAligned2addrDS : Predicate<"!Subtarget->hasNeedsAligned2addrDS()">;
 
 def isWave32 : Predicate<"Subtarget->isWave32()">,
   AssemblerPredicate <(any_of FeatureWavefrontSize32,
