@@ -15,6 +15,8 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
     llvm.call @_QMfuncsPfoo_dispatch() : () -> ()
     // CHECK: br label %omp.dispatch.region
     // CHECK: omp.dispatch.region:
+    // The producer of the region has already materialized the base/variant
+    // selection; MLIR only translates the call inside the region.
     omp.dispatch {
       // CHECK: call void @_QMfuncsPfoo_variant()
       llvm.call @_QMfuncsPfoo_variant() : () -> ()
@@ -24,8 +26,8 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
     // CHECK: omp.region.cont:
     llvm.return
   }
-  // The novariants operand is ignored at translation; the region already holds
-  // the runtime base/variant selection.
+  // The producer of the region materializes the base/variant selection; the
+  // LLVM IR translation deliberately ignores the novariants operand.
   // CHECK-LABEL: define void @test_dispatch_novariants(i1
   llvm.func @test_dispatch_novariants(%cond : i1) {
     // CHECK: br label %omp.dispatch.region
@@ -39,8 +41,8 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
     // CHECK: omp.region.cont:
     llvm.return
   }
-  // The nocontext operand is ignored at translation; the region already holds
-  // the runtime base/variant selection.
+  // The producer of the region materializes the base/variant selection; the
+  // LLVM IR translation deliberately ignores the nocontext operand.
   // CHECK-LABEL: define void @test_dispatch_nocontext(i1
   llvm.func @test_dispatch_nocontext(%cond : i1) {
     // CHECK: br label %omp.dispatch.region

@@ -1,8 +1,8 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
-// Variant selection (e.g. from Fortran `declare variant`) is resolved in the
-// frontend, so at the MLIR level the dispatch region simply wraps a call to the
-// selected variant procedure.
+// Variant selection (e.g. from Fortran `declare variant`) is resolved by the
+// producer of the region, so at the MLIR level the dispatch region simply wraps
+// a call to the selected variant procedure.
 
 // CHECK-LABEL: func.func @omp_dispatch
 // CHECK-SAME: (%[[X:.*]]: memref<i32>)
@@ -51,7 +51,7 @@ func.func @omp_dispatch_nowait(%x : memref<i32>) -> () {
   return
 }
 
-// novariants clause round-trip; the frontend materializes the runtime
+// novariants clause round-trip; the producer of the region materializes the
 // base/variant selection inside the region.
 // CHECK-LABEL: func.func @omp_dispatch_novariants
 // CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)
@@ -82,7 +82,7 @@ func.func @omp_dispatch_novariants_nowait(%cond : i1, %x : memref<i32>) -> () {
   return
 }
 
-// nocontext clause round-trip; the frontend materializes the runtime
+// nocontext clause round-trip; the producer of the region materializes the
 // base/variant selection inside the region.
 // CHECK-LABEL: func.func @omp_dispatch_nocontext
 // CHECK-SAME: (%[[COND:.*]]: i1, %[[X:.*]]: memref<i32>)

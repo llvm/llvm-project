@@ -2326,7 +2326,7 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 }
 
 //===----------------------------------------------------------------------===//
-// [Spec 5.1] 12.3 dispatch Construct
+// [Spec 5.2] 7.6 dispatch Construct
 //===----------------------------------------------------------------------===//
 def DispatchOp : OpenMP_Op<"dispatch", traits = [
     AttrSizedOperandSegments, NoRegionArguments
@@ -2340,6 +2340,11 @@ def DispatchOp : OpenMP_Op<"dispatch", traits = [
     base procedure. The structured block of a dispatch construct is
     a single expression statement that contains a function call or
     a subroutine call.
+
+    The producer of the region is responsible for materializing the base/variant
+    selection inside the region. The `nocontext` and `novariants` operands are
+    retained on the op only so the producer can read them back during call
+    lowering; the LLVM IR translation deliberately ignores these operands.
   }] # clausesDescription;
 
   let builders = [
