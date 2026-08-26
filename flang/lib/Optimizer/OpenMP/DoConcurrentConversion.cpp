@@ -596,34 +596,17 @@ private:
     llvm::SmallVector<mlir::Value> boundsOps;
     genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
-    auto asRecordType = [&](mlir::Type eleType) {
-      return mlir::dyn_cast<fir::RecordType>(
-          fir::getDerivedType(fir::unwrapRefType(eleType)));
-    };
+    fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
+        fir::getDerivedType(fir::unwrapRefType(eleType)));
 
-    fir::RecordType recordType = asRecordType(eleType);
-
-    bool requiresImplcitMapper = [&]() {
-      if (!recordType)
-        return false;
-
-      for (auto [fieldName, fieldType] : recordType.getTypeList()) {
-        if (fir::isAllocatableType(fieldType))
-          return true;
-
-        if (asRecordType(fieldType))
-          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
-      }
-
-      return false;
-    }();
+    bool requiresImplcitMapper =
+        recordType && fir::isRecordWithAllocatableMember(recordType);
 
     mlir::FlatSymbolRefAttr mapperId;
     if (requiresImplcitMapper) {
       std::string mapperIdName =
           Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
               recordType);
-      // TODO Add a mangler callback once nested record types are supported.
       mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
           builder, liveIn.getLoc(), recordType, mapperIdName);
     }
