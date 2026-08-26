@@ -9259,6 +9259,30 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   if (InEC.hasKnownScalarFactor(WidenEC))
     return DAG.getExtractSubvector(dl, NVT, InOp, 0);
 
+  if (NVT.isScalableVector() && InVT.isScalableVector()) {
+    // Split the input into the largest equal-sized scalable subvectors.
+    unsigned InNumElts = InVT.getVectorMinNumElements();
+    unsigned NewNumElts = NVT.getVectorMinNumElements();
+    unsigned CommonFactor = std::gcd(InNumElts, NewNumElts);
+    EVT PartVT = EVT::getVectorVT(*DAG.getContext(), NVT.getVectorElementType(),
+                                  ElementCount::getScalable(CommonFactor));
+
+    SmallVector<SDValue, 16> Ops;
+    unsigned NumCopiedParts = std::min(InNumElts, NewNumElts) / CommonFactor;
+    for (unsigned I = 0; I != NumCopiedParts; ++I)
+      Ops.push_back(
+          DAG.getExtractSubvector(dl, PartVT, InOp, I * CommonFactor));
+
+    unsigned NumResultParts = NewNumElts / CommonFactor;
+    if (NumResultParts > NumCopiedParts) {
+      SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, PartVT)
+                                       : DAG.getPOISON(PartVT);
+      Ops.append(NumResultParts - NumCopiedParts, FillVal);
+    }
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, NVT, Ops);
+  }
+
   assert(!InVT.isScalableVector() && !NVT.isScalableVector() &&
          "Scalable vectors should have been handled already.");
 
