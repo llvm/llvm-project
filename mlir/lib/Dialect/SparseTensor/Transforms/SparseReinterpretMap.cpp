@@ -426,7 +426,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     }
 
     const StringRef sorted = "sorted";
-    if (linalgOp->hasAttr(sorted))
+    if (linalgOp->hasDiscardableAttr(sorted))
       return failure();
 
     // Pass strategy to IterationGraphSorter.
@@ -468,7 +468,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
 
     // Marks the GenericOp to avoid recursive matching.
     rewriter.modifyOpInPlace(linalgOp, [&]() {
-      linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
+      linalgOp->setDiscardableAttr(sorted, rewriter.getBoolAttr(true));
     });
 
     // Already sorted.

@@ -49,7 +49,7 @@ static void attachVarNameAttr(Operation *op, OpBuilder &builder,
                               StringRef varName) {
   if (!varName.empty()) {
     auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
-    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
+    op->setDiscardableAttr(acc::getVarNameAttrName(), varNameAttr);
   }
 }
 
