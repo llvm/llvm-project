@@ -465,7 +465,7 @@ func.func @gpu_shared_memory_static() {
       : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
   return
 }
-// CHECK: acc.gpu_shared_memory(%{{.*}}) <{num_copies = 1 : i64, static_upper_bound_bytes = 4096 : i64}>
+// CHECK: acc.gpu_shared_memory(%{{.*}}) <num_copies = 1, static_upper_bound_bytes = 4096>
 // CHECK-SAME: : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
 
 // -----
@@ -481,7 +481,7 @@ func.func @gpu_shared_memory_runtime_sized() {
       : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
   return
 }
-// CHECK: acc.gpu_shared_memory(%{{.*}}) <{dynamic_shared_memory_fixed_bytes = 24 : i64, dynamic_shared_memory_scaling_bytes = 12 : i64, num_copies = 1 : i64, static_upper_bound_bytes = 1560 : i64}>
+// CHECK: acc.gpu_shared_memory(%{{.*}}) <num_copies = 1, static_upper_bound_bytes = 1560, dynamic_shared_memory_scaling_bytes = 12, dynamic_shared_memory_fixed_bytes = 24>
 
 // -----
 
@@ -492,4 +492,4 @@ func.func @gpu_shared_memory_worker_copies() {
       : () -> memref<8xf32, #gpu.address_space<workgroup>>
   return
 }
-// CHECK: acc.gpu_shared_memory <{num_copies = 4 : i64, static_upper_bound_bytes = 256 : i64}>
+// CHECK: acc.gpu_shared_memory <num_copies = 4, static_upper_bound_bytes = 256>

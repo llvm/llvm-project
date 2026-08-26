@@ -156,11 +156,11 @@ define float @ret_asin_nonan(float nofpclass(nan) %arg) {
   ret float %call
 }
 
-; acos is bounded to [0, pi], never Inf or negative.
+; acos is bounded to [0, pi], never infinite, negative, or subnormal.
 define float @ret_acos(float %arg) {
-; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_acos
+; CHECK-LABEL: define nofpclass(inf nzero sub nnorm) float @ret_acos
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.acos.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
@@ -168,9 +168,30 @@ define float @ret_acos(float %arg) {
 }
 
 define float @ret_acos_nonan(float nofpclass(nan) %arg) {
-; CHECK-LABEL: define nofpclass(snan inf nzero nsub nnorm) float @ret_acos_nonan
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_acos_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero nsub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nan) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.acos.f32(float %arg)
+  ret float %call
+}
+
+; acos(x) == +0.0 iff x == +1.0
+define float @ret_acos_no_pos_normal(float nofpclass(pnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_acos_no_pos_normal
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.acos.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.acos.f32(float %arg)
+  ret float %call
+}
+
+define float @ret_acos_no_neg_normal(float nofpclass(nnorm) %arg) {
+; CHECK-LABEL: define nofpclass(inf nzero sub nnorm) float @ret_acos_no_neg_normal
+; CHECK-SAME: (float nofpclass(nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf nzero sub nnorm) float @llvm.acos.f32(float nofpclass(nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.acos.f32(float %arg)
