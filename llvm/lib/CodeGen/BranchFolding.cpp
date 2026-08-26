@@ -78,6 +78,9 @@ STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 static cl::opt<cl::boolOrDefault>
     FlagEnableTailMerge("enable-tail-merge",
                         cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
+static cl::opt<bool>
+    FlagFallthroughFolding("enable-fallthrough-folding",
+                           cl::init(false), cl::Hidden);
 
 // Override the common-code hoisting sub-phase of BranchFolding. Unset by
 // default, in which case the value configured by the caller is used.
@@ -1653,10 +1656,13 @@ ReoptimizeBlock:
             !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
 
         bool IsEdgeCold = !MBPI.isEdgeHot(Pred, MBB);
+
+        // Disabled by default
         bool CanFoldFallThrough =
-            PredHasHotSuccessor && IsEdgeCold &&
+            FlagFallthroughFolding && PredHasHotSuccessor && IsEdgeCold &&
             (MBB == PredFBB ||
              (PredFBB == nullptr && Pred->getFallThrough() == MBB));
+
         bool CanFoldTakenBlock =
             (MBB == PredTBB && (!PredHasHotSuccessor || IsEdgeCold));
 
@@ -1675,7 +1681,7 @@ ReoptimizeBlock:
             SmallVector<MachineOperand, 4> ReversedCond(PredCond);
             DebugLoc Dl = MBB->findBranchDebugLoc();
 
-            // Returns true on failure.
+            // Returns true on failure. Doesn't mutate the underlying IR.
             if (TII->reverseBranchCondition(ReversedCond))
               continue;
 
