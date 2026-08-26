@@ -2799,6 +2799,14 @@ typedef struct kmp_taskgraph_record {
   // (then we can avoid blocking at the end of the taskgraph region on replay,
   // at least).
   bool nogroup_taskgroup = false;
+  // Set when this record has been reset, but has not yet been removed because
+  // it is still in use for a replay.  Prevents another replay from using this
+  // record.
+  bool expired = false;
+  // Number of replays currently using this taskgraph record.  At present we
+  // don't expect this to be above 1 because we don't yet support concurrent
+  // replay.
+  std::atomic<int> replay_users{0};
   struct kmp_taskgraph_record *next = nullptr;
 } kmp_taskgraph_record_t;
 
