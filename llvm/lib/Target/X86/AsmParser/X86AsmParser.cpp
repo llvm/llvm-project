@@ -3269,7 +3269,11 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
     if (!isAtMemOperand()) {
       if (Parser.parseTokenLoc(Loc) || Parser.parseExpression(Disp, EndLoc))
         return true;
-      assert(!isa<X86MCExpr>(Disp) && "Expected non-register here.");
+      // A register here is a second segment override, or a register standing
+      // where the displacement belongs.
+      if (isa<X86MCExpr>(Disp))
+        return Error(Loc, "unexpected register in memory operand",
+                     SMRange(Loc, EndLoc));
     } else {
       // Disp is implicitly zero if we haven't parsed it yet.
       Disp = MCConstantExpr::create(0, Parser.getContext());
