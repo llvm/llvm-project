@@ -3435,7 +3435,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   Builder.setFastMathFlags(getFastMathFlagsOrNone());
 
   RecurKind Kind = getRecurrenceKind();
-  Value *Prev = State.get(getChainOp(), !isPartialReduction());
+  Value *Prev = State.get(getChainOp(), /*IsScalar*/ !isPartialReduction());
   Value *VecOp = State.get(getVecOp());
   Value *EVL = State.get(getEVL(), VPLane(0));
 
@@ -3456,6 +3456,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
     Identity =
         State.Builder.CreateVectorSplat(VecTy->getElementCount(), Identity);
 
+    // TODO: Calculate the predicate cost for the partial reduction.
     Value *NewVecOp = State.Builder.CreateIntrinsic(
         VecTy, Intrinsic::vp_merge, {Mask, VecOp, Identity, EVL});
     assert((Kind == RecurKind::Add || Kind == RecurKind::FAdd) &&
