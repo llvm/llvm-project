@@ -3080,7 +3080,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     unsigned TC = ExactTC.getFixedValue();
     unsigned MaxVFForTC = 1ULL << Log2_32(TC);
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
-    if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() && !Config.OptForSize) {
+    if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() &&
+        !Config.OptForSize) {
       unsigned VF = MaxVFForTC / EffectiveIC;
       LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
                         << " with 1 scalar iteration remaining.\n");
@@ -5893,8 +5894,12 @@ LoopVectorizationPlanner::computeBestVF() {
     if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
-    // For loops where the Trip Count is below the Tail Folding Threshold, only consider the largest VF to ensure, where TC == VF * IC or TC - 1 == VF * IC, one vector iteration, and one scalar iteration if needed is generated.
-    // FIXME: Encode this directly in LVPlanner rather than as part of the LoopVectorizer.
+    // For loops where the Trip Count is below the Tail Folding Threshold, only
+    // consider the largest VF to ensure, where TC == VF * IC or TC - 1 == VF *
+    // IC, one vector iteration, and one scalar iteration if needed is
+    // generated.
+    // FIXME: Encode this directly in LVPlanner rather than as part of the
+    // LoopVectorizer.
     if (!ForceVectorization && P->hasScalarTail() && ExactTC.isFixed() &&
         ExactTC.getFixedValue() > 0 &&
         ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
