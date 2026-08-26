@@ -211,7 +211,8 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unknown_subop) {
 // Negative control for the test below: a sub-opcode that is not registered at
 // all cannot be named, so its diagnostic carries no sub-operation. The pair
 // pins that DW_OP_LLVM_NVIDIA_mux is registered rather than merely undecodable.
-TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_LLVM_user_unregistered_subop) {
+TEST_F(DWARFExpressionCompactPrinterTest,
+       Test_OP_LLVM_user_unregistered_subop) {
   TestExprPrinterFailure({DW_OP_LLVM_user, 0x0e, 0xa5, 0x01},
                          "<unknown op DW_OP_LLVM_user (233)>");
 }
