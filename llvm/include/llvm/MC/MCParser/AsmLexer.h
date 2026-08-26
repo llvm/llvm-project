@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/Support/Compiler.h"
@@ -201,6 +202,15 @@ public:
                           bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
+
+  /// Returns true if `C` can continue an identifier. '@', '#' and '?' are
+  /// syntax dependent; a scan of a macro argument name disables all three.
+  static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash,
+                               bool AllowQuestion = true) {
+    return isAlnum(C) || C == '_' || C == '$' || C == '.' ||
+           (AllowQuestion && C == '?') || (AllowAt && C == '@') ||
+           (AllowHash && C == '#');
+  }
 
 private:
   bool isAtStartOfComment(const char *Ptr);

@@ -229,11 +229,6 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
 }
 
 /// LexIdentifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
-static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
-  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
-         (AllowAt && C == '@') || (AllowHash && C == '#');
-}
-
 AsmToken AsmLexer::LexIdentifier() {
   // Check for floating point literals.
   if (CurPtr[-1] == '.' && isDigit(*CurPtr)) {
