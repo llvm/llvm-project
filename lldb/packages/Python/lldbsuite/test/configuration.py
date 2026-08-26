@@ -208,7 +208,7 @@ def get_nm_path():
         return nm
 
 
-def get_objcopy_path():
+def get_objcopy_path() -> Optional[str]:
     """
     Get the path to the objcopy tool.
     """
