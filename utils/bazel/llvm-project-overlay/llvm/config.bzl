@@ -172,6 +172,9 @@ llvm_config_defines = os_defines + builtin_thread_pointer + windows_prefer_forwa
     "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
     r'LLVM_VERSION_STRING=\"{}\"'.format(PACKAGE_VERSION),
+    # The Bazel build does not provide liblzma, so xz decompression
+    # (llvm::compression::xz) is unavailable.
+    "LLVM_ENABLE_LZMA=0",
     # Set globally in HandleLLVMOptions.cmake
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
