@@ -285,7 +285,7 @@ bool PEIImpl::run(MachineFunction &MF) {
     scavengeFrameVirtualRegs(MF, *RS);
 
   insertZeroCallUsedRegs(MF);
-    
+
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t StackSize = MFI.getStackSize();
