@@ -19,22 +19,22 @@ define void @pr170051(i32 %cond) {
 ; CHECK-NEXT:     $L__BB0_5,
 ; CHECK-NEXT:     $L__BB0_3;
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.b32 %r2, 0;
+; CHECK-NEXT:    mov.b32 %r3, 0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [pr170051_param_0];
 ; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 6;
 ; CHECK-NEXT:    bra.uni $L__BB0_3;
 ; CHECK-NEXT:  $L__BB0_1: // %BS_LABEL_2
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    or.b32 %r3, %r2, 1;
+; CHECK-NEXT:    or.b32 %r2, %r3, 1;
 ; CHECK-NEXT:  $L__BB0_2: // %for.cond4
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    mov.b32 %r2, %r3;
+; CHECK-NEXT:    mov.b32 %r3, %r2;
 ; CHECK-NEXT:  $L__BB0_3: // %BS_LABEL_1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    @%p1 bra $L__BB0_5;
 ; CHECK-NEXT:  // %bb.4: // %BS_LABEL_1
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    mov.b32 %r3, %r1;
+; CHECK-NEXT:    mov.b32 %r2, %r1;
 ; CHECK-NEXT:    brx.idx %r1, JTI0_0;
 ; CHECK-NEXT:  $L__BB0_5: // %unreachable
 ; CHECK-NEXT:    // begin inline asm

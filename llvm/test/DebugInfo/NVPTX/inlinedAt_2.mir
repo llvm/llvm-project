@@ -1,4 +1,4 @@
-# RUN: llc %s -mattr=+ptx72 -start-after=nvptx-asm-printer -o - | FileCheck %s
+# RUN: llc %s -mattr=+ptx72 -start-before=nvptx-asm-printer -o - | FileCheck %s
 #
 # Test simple two-level inlining at MIR level - verifies that inlined_at information
 # is correctly emitted when foo() calls bar() and kernel() calls foo().
