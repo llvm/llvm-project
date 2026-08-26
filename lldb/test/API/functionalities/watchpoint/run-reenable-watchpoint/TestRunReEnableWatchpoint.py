@@ -23,7 +23,7 @@ class RunReEnableWatchpointTestCase(TestBase):
 
     # We must be able to launch the inferior with ASLR disabled
     # so the static array lands at the same address after relaunch.
-    @skipUnlessPlatform(["macosx"])
+    @requireDisableASLR
     def test_rerun_enable_watchpoint(self):
         """Test set watchpoint, re-run, re-enable wp, hit it."""
         self.build()

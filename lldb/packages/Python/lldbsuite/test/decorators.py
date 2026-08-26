@@ -1289,6 +1289,46 @@ def requireThreadSupport(func):
     )(func)
 
 
+def _can_disable_aslr():
+    original_persona = None
+    GET_CURRENT_PERSONA = 0xFFFFFFFF
+    ADDR_NO_RANDOMIZE = 0x0040000
+    ERR = -1
+
+    libc = ctypes.CDLL(None)
+    personality = libc.personality
+    personality.argtypes = [ctypes.c_ulong]
+    personality.restype = ctypes.c_int
+
+    try:
+        original_persona = personality(GET_CURRENT_PERSONA)
+        if original_persona == ERR:
+            return False
+
+        if personality(original_persona | ADDR_NO_RANDOMIZE) == ERR:
+            return False
+
+        new_persona = personality(GET_CURRENT_PERSONA)
+        if new_persona == ERR:
+            return False
+
+        return new_persona & ADDR_NO_RANDOMIZE
+    finally:
+        if original_persona is not None:
+            personality(original_persona)
+
+
+def requireDisableASLR(func):
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform != "macosx"
+        and not (
+            lldb.remote_platform is None and platform == "linux" and _can_disable_aslr()
+        ),
+        UnsupportedReason(f"Not able to disable ASLR"),
+    )(func)
+
+
 def skipIfTargetDoesNotSupportSharedLibraries():
     """Skip tests that require shared library (dylib/so) support."""
     platform = lldbplatformutil.getPlatform()
