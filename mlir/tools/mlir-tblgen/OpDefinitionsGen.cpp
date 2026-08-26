@@ -234,9 +234,9 @@ static const char *const opCommentHeader = R"(
 static const char *const inlineCreateBody = R"(
   ::mlir::OperationState __state__({0}, getOperationName());
   build(builder, __state__{1});
-  auto __res__ = ::llvm::dyn_cast<{2}>(builder.create(__state__));
-  assert(__res__ && "builder didn't return the right type");
-  return __res__;
+  auto __res__ = builder.create(__state__);
+  assert((::llvm::isa<{2}>(__res__)) && "builder didn't return the right type");
+  return ::llvm::cast<{2}>(__res__);
 )";
 
 static const char *const inlineCreateBodyImplicitLoc = R"(
@@ -1404,12 +1404,15 @@ void OpEmitter::genPropertiesSupport() {
                            MethodParameter("llvm::StringRef", "name"),
                            MethodParameter("mlir::Attribute", "value"))
           ->body();
-  auto &populateInherentAttrsMethod =
+  auto &walkInherentAttrsMethod =
       opClass
-          .addStaticMethod("void", "populateInherentAttrs",
+          .addStaticMethod("void", "walkInherentAttrs",
                            MethodParameter("::mlir::MLIRContext *", "ctx"),
-                           MethodParameter("const Properties &", "prop"),
-                           MethodParameter("::mlir::NamedAttrList &", "attrs"))
+                           MethodParameter("Properties &", "prop"),
+                           MethodParameter("::llvm::function_ref<void("
+                                           "::llvm::StringRef, "
+                                           "::mlir::Attribute &)>",
+                                           "visitor"))
           ->body();
   auto &verifyInherentAttrsMethod =
       opClass
@@ -1630,8 +1633,14 @@ void OpEmitter::genPropertiesSupport() {
        return;
     }
 )decl";
-  const char *populateInherentAttrsMethodFmt = R"decl(
-    if (prop.{0}) attrs.append("{0}", prop.{0});
+  const char *walkInherentAttrsMethodFmt = R"decl(
+    if (prop.{0}) {{
+      ::mlir::Attribute value = prop.{0};
+      ::mlir::Attribute originalValue = value;
+      visitor("{0}", value);
+      if (value != originalValue)
+        setInherentAttr(prop, "{0}", value);
+    }
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
     if (const auto *namedAttr =
@@ -1639,8 +1648,7 @@ void OpEmitter::genPropertiesSupport() {
       StringRef name = namedAttr->attrName;
       getInherentAttrMethod << formatv(getInherentAttrMethodFmt, name);
       setInherentAttrMethod << formatv(setInherentAttrMethodFmt, name);
-      populateInherentAttrsMethod
-          << formatv(populateInherentAttrsMethodFmt, name);
+      walkInherentAttrsMethod << formatv(walkInherentAttrsMethodFmt, name);
       continue;
     }
     // The ODS segment size property is "special": we expose it as an attribute
@@ -1689,17 +1697,16 @@ void OpEmitter::genPropertiesSupport() {
     }
 )decl",
                                      name);
-    if (name == operandSegmentAttrName) {
-      populateInherentAttrsMethod << formatv(
-          "  attrs.append(\"{0}\", [&]() -> ::mlir::Attribute { {1} }());\n",
-          operandSegmentAttrName,
-          tgfmt(prop.getConvertToAttributeCall(), &fctx));
-    } else {
-      populateInherentAttrsMethod << formatv(
-          "  attrs.append(\"{0}\", [&]() -> ::mlir::Attribute { {1} }());\n",
-          resultSegmentAttrName,
-          tgfmt(prop.getConvertToAttributeCall(), &fctx));
-    }
+    walkInherentAttrsMethod
+        << formatv("  {{\n"
+                   "    ::mlir::Attribute value = [&]() -> ::mlir::Attribute "
+                   "{ {1} }();\n"
+                   "    ::mlir::Attribute originalValue = value;\n"
+                   "    visitor(\"{0}\", value);\n"
+                   "    if (value != originalValue)\n"
+                   "      setInherentAttr(prop, \"{0}\", value);\n"
+                   "  }\n",
+                   name, tgfmt(prop.getConvertToAttributeCall(), &fctx));
   }
   getInherentAttrMethod << "  return std::nullopt;\n";
 

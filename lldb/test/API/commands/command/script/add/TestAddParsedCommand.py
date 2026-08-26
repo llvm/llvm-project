@@ -331,3 +331,8 @@ class ParsedCommandTestCase(TestBase):
             results.count("SECOND_ARG"), 2, "Passed second arg to both commands"
         )
         self.assertEqual(results.count("THIRD_ARG"), 1, "Passed third arg in repeat")
+
+        # Verify lldb did not register the 'fail_cmd'.
+        self.expect(
+            "fail_cmd", substrs=["'fail_cmd' is not a valid command"], error=True
+        )

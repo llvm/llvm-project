@@ -1151,8 +1151,9 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
       // Note: if FD is nullptr currently setting DFK to DefaultedFunctionKind()
       // will ensure that DFK.isComparison() is false. This is important because
       // we will uncondtionally dereference FD in the else if.
-      DefaultedFunctionKind DFK =
-          FD ? getDefaultedFunctionKind(FD) : DefaultedFunctionKind();
+      FunctionDecl::DefaultedFunctionKind DFK =
+          FD ? FD->getDefaultedFunctionKind()
+             : FunctionDecl::DefaultedFunctionKind();
       if (DFK.isSpecialMember()) {
         auto *MD = cast<CXXMethodDecl>(FD);
         DiagFunc(Active->PointOfInstantiation,
@@ -3157,7 +3158,7 @@ bool Sema::SubstTypeConstraint(
   }
   return AttachTypeConstraint(
       TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-      TC->getNamedConcept(),
+      TC->getNamedConcept().getAsTemplateDecl(),
       /*FoundDecl=*/TC->getConceptReference()->getFoundDecl(), &InstArgs, Inst,
       Inst->isParameterPack()
           ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
@@ -3912,7 +3913,6 @@ bool Sema::InstantiateInClassInitializer(
         << OutermostClass << Pattern;
     Diag(Pattern->getEndLoc(),
          diag::note_default_member_initializer_not_yet_parsed);
-    Instantiation->setInvalidDecl();
     return true;
   }
 
@@ -4183,6 +4183,13 @@ bool Sema::InstantiateClassTemplateSpecialization(
 
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
+
+  // Deduction has picked the pattern this specialization will be instantiated
+  // from, which may be a declaration an external AST source has yet to define.
+  if (!Pattern.get()->isCompleteDefinition() &&
+      Pattern.get()->hasExternalLexicalStorage())
+    if (ExternalASTSource *Source = Context.getExternalSource())
+      Source->CompleteType(Pattern.get());
 
   bool Err = InstantiateClassImpl(
       PointOfInstantiation, ClassTemplateSpec, Pattern.get(),
@@ -4553,8 +4560,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
 
   MultiLevelTemplateArgumentList MLTALForConstraint =
       getTemplateInstantiationArgs(
-          CSE->getNamedConcept(),
-          CSE->getNamedConcept()->getLexicalDeclContext(),
+          CSE->getConceptDecl(), CSE->getConceptDecl()->getLexicalDeclContext(),
           /*Final=*/false,
           /*Innermost=*/NewArgList,
           /*RelativeToPrimary=*/true,
@@ -4581,6 +4587,7 @@ ExprResult Sema::SubstConceptTemplateArguments(
       case Stmt::ConceptSpecializationExprClass:
       case Stmt::ParenExprClass:
       case Stmt::UnresolvedLookupExprClass:
+      case Stmt::DependentTemplateIdExprClass:
         return Base::TransformExpr(E);
       default:
         break;
@@ -4618,42 +4625,45 @@ ExprResult Sema::SubstConceptTemplateArguments(
       return false;
     }
 
-    ExprResult TransformUnresolvedLookupExpr(UnresolvedLookupExpr *E,
-                                             bool IsAddressOfOperand = false) {
-      if (!E->isConceptReference())
-        return E;
-
-      assert(E->getNumDecls() == 1 &&
-             "ConceptReference must have single declaration");
-      NamedDecl *D = *E->decls_begin();
-      ConceptDecl *ResolvedConcept = nullptr;
-
-      if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(D)) {
-        unsigned Depth = TTP->getDepth();
-        unsigned Pos = TTP->getPosition();
-        if (Depth < MLTAL.getNumLevels() &&
-            MLTAL.hasTemplateArgument(Depth, Pos)) {
-          TemplateArgument Arg = MLTAL(Depth, Pos);
-          assert(Arg.getKind() == TemplateArgument::Template);
-          ResolvedConcept =
-              dyn_cast<ConceptDecl>(Arg.getAsTemplate().getAsTemplateDecl());
-        }
-        if (ResolvedConcept == nullptr)
-          return E;
-      } else
-        ResolvedConcept = cast<ConceptDecl>(D);
-
-      TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
-      if (TransformTemplateArguments(E->getTemplateArgs(),
-                                     E->getNumTemplateArgs(), TransArgs))
+    ExprResult RebuildConceptSpecialization(ConceptDecl *ResolvedConcept,
+                                            SourceLocation NameLoc,
+                                            SourceLocation LAngleLoc,
+                                            SourceLocation RAngleLoc,
+                                            const TemplateArgumentLoc *Args,
+                                            unsigned NumArgs) {
+      TemplateArgumentListInfo TransArgs(LAngleLoc, RAngleLoc);
+      if (TransformTemplateArguments(Args, NumArgs, TransArgs))
         return ExprError();
 
       CXXScopeSpec SS;
-      DeclarationNameInfo NameInfo(ResolvedConcept->getDeclName(),
-                                   E->getNameLoc());
+      DeclarationNameInfo NameInfo(ResolvedConcept->getDeclName(), NameLoc);
       return SemaRef.CheckConceptTemplateId(SS, SourceLocation(), NameInfo,
                                             ResolvedConcept, ResolvedConcept,
                                             &TransArgs, false);
+    }
+
+    ExprResult TransformDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+      if (!E->isConceptReference())
+        return E;
+
+      TemplateTemplateParmDecl *TTP = E->getParameter();
+      unsigned Depth = TTP->getDepth();
+      unsigned Pos = TTP->getPosition();
+      ConceptDecl *ResolvedConcept = nullptr;
+
+      if (MLTAL.hasTemplateArgument(Depth, Pos)) {
+        TemplateArgument Arg = MLTAL(Depth, Pos);
+        assert(Arg.getKind() == TemplateArgument::Template);
+        ResolvedConcept =
+            dyn_cast<ConceptDecl>(Arg.getAsTemplate().getAsTemplateDecl());
+      }
+      if (!ResolvedConcept)
+        return E;
+
+      return RebuildConceptSpecialization(ResolvedConcept, E->getNameLoc(),
+                                          E->getLAngleLoc(), E->getRAngleLoc(),
+                                          E->template_arguments().data(),
+                                          E->getNumTemplateArgs());
     }
   };
 

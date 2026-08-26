@@ -642,6 +642,20 @@ add_libc_test(
 
 
 add_libc_test(
+  confstr_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    confstr_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.src.unistd.confstr
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   sysconf_test
   SUITE
     libc_unistd_unittests
@@ -688,7 +702,6 @@ add_libc_test(
 
 add_libc_test(
   getopt_test
-  HERMETIC_TEST_ONLY # Uses libc's own stderr
   SUITE
     libc_unistd_unittests
   SRCS

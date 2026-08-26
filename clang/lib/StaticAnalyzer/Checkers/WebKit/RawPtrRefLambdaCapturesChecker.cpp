@@ -218,6 +218,8 @@ public:
         for (auto *Decl = FDecl->getParent(); Decl; Decl = Decl->getParent()) {
           if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
             return false;
+          if (auto *NS = dyn_cast<NamespaceDecl>(Decl); NS && NS->isInline())
+            continue;
           auto Name = safeGetName(Decl);
           // WTF::switchOn(T, F... f) is a variadic template function and
           // couldn't be annotated with NOESCAPE. We hard code it here to
@@ -439,8 +441,8 @@ public:
             auto *Ctor = CE->getConstructor();
             if (!Ctor)
               return false;
-            auto clsName = safeGetName(Ctor->getParent());
-            if (Checker->isPtrType(clsName) && CE->getNumArgs()) {
+            auto ArgClsTy = dyn_cast_or_null<CXXRecordDecl>(Ctor->getParent());
+            if (Checker->Model->isSafePtr(ArgClsTy) && CE->getNumArgs()) {
               Arg = CE->getArg(0)->IgnoreParenCasts();
               continue;
             }

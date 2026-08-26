@@ -133,9 +133,7 @@ entry:
 define <4 x i64> @test_mm256_cvtne2ps2bf16_256_concat(<8 x float> %A, <8 x float> %B) {
 ; CHECK-LABEL: test_mm256_cvtne2ps2bf16_256_concat:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vcvtneps2bf16 %ymm0, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0xc0]
-; CHECK-NEXT:    vcvtneps2bf16 %ymm1, %xmm1 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0xc9]
-; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
+; CHECK-NEXT:    vcvtne2ps2bf16 %ymm0, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x77,0x28,0x72,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %0 = tail call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> %A)

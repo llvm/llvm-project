@@ -32,9 +32,3 @@ TEST(LlvmLibcTestFilterTest, CheckCorrectFilter) {
   Options.TestFilter = "LlvmLibcTestFilterTest.CorrectFilter2";
   ASSERT_EQ(LIBC_NAMESPACE::testing::Test::runTests(Options), 0);
 }
-
-int main() {
-  TestOptions Options{"LlvmLibcTestFilterTest.NoFilter", /*PrintColor=*/true};
-  LIBC_NAMESPACE::testing::Test::runTests(Options);
-  return 0;
-}

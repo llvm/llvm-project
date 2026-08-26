@@ -949,6 +949,8 @@ bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
     return false;
 
   Register BaseReg = BaseOp->getReg();
+  if (!BaseReg.isVirtual())
+    return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Check if there is a Phi. If so, get the definition in the loop.
@@ -1722,7 +1724,7 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
         continue;
       if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
         MO.setReg(It->second);
-      else {
+      else if (MO.getReg().isVirtual()) {
         // If we are using a phi from the source block we need to add a new phi
         // pointing to the old one.
         MachineInstr *Use = MRI.getUniqueVRegDef(MO.getReg());
@@ -2747,8 +2749,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
     // most.
     Register InitVal, LoopVal;
     getPhiRegs(MI, MI.getParent(), InitVal, LoopVal);
-    if (!Register(LoopVal).isVirtual() ||
-        MRI.getVRegDef(LoopVal)->getParent() != BB) {
+    if (!Register(LoopVal).isVirtual() || MRI.getDefBlock(LoopVal) != BB) {
       LLVM_DEBUG(
           dbgs() << "Can not apply MVE expander: A phi source value coming "
                     "from the loop is not defined in the loop.\n");

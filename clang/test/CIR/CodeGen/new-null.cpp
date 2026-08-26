@@ -147,8 +147,7 @@ U *test_nothrow_new_temp() {
 // CHECK:     cir.store %[[FALSE]], %[[TMP_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:     cir.if %[[IS_NOT_NULL]] {
 // CHECK:       cir.cleanup.scope {
-// CHECK:         %[[MAKE_T:.*]] = cir.call @_Z5makeTv() : () -> !rec_T
-// CHECK:         cir.store{{.*}} %[[MAKE_T]], %[[TMP]] : !rec_T, !cir.ptr<!rec_T>
+// CHECK:         cir.call @_Z5makeTv(%[[TMP]]) : (!cir.ptr<!rec_T> {{.*}}llvm.sret = !rec_T{{.*}}) -> ()
 // CHECK:         %[[TRUE:.*]] = cir.const #true
 // CHECK:         cir.store %[[TRUE]], %[[TMP_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:         %[[CONV:.*]] = cir.call @_ZN1TcviEv(%[[TMP]])
@@ -174,10 +173,9 @@ U *test_nothrow_new_temp() {
 // LLVM:   store i8 0, ptr %[[TMP_ACTIVE:.*]]
 // LLVM:   br i1 %[[CMP]], label %[[NOT_NULL:.*]], label %[[CONT:.*]]
 // LLVM: [[NOT_NULL]]:
-// LLVM:   %[[MAKE_T:.*]] = invoke %struct.T @_Z5makeTv()
+// LLVM:   invoke void @_Z5makeTv(ptr {{.*}} sret(%struct.T) {{.*}} %[[TMP]])
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
-// LLVM:   store {{.*}} %[[MAKE_T]], ptr %[[TMP]]
 // LLVM:   store i8 1, ptr %[[TMP_ACTIVE]]
 // LLVM:   invoke {{.*}} @_ZN1TcviEv(ptr {{.*}} %[[TMP]])
 // LLVM:   invoke void @_ZN1UC1Ei(ptr {{.*}} %[[ALLOC]], i32 {{.*}})
@@ -261,13 +259,11 @@ U *test_nothrow_new_nested_temps() {
 // CHECK:     cir.store %[[FALSE2]], %[[OUTER_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:     cir.if %[[IS_NOT_NULL]] {
 // CHECK:       cir.cleanup.scope {
-// CHECK:         %[[MAKE_INNER:.*]] = cir.call @_Z10makeInnerTv() : () -> !rec_InnerT
-// CHECK:         cir.store{{.*}} %[[MAKE_INNER]], %[[INNER_TMP]] : !rec_InnerT, !cir.ptr<!rec_InnerT>
+// CHECK:         cir.call @_Z10makeInnerTv(%[[INNER_TMP]]) : (!cir.ptr<!rec_InnerT> {{.*}}llvm.sret = !rec_InnerT{{.*}}) -> ()
 // CHECK:         %[[TRUE:.*]] = cir.const #true
 // CHECK:         cir.store %[[TRUE]], %[[INNER_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:         %[[INNER_CONV:.*]] = cir.call @_ZN6InnerTcviEv(%[[INNER_TMP]])
-// CHECK:         %[[MAKE_OUTER:.*]] = cir.call @_Z10makeOuterTi(%[[INNER_CONV]]) : (!s32i {{.*}}) -> !rec_OuterT
-// CHECK:         cir.store{{.*}} %[[MAKE_OUTER]], %[[OUTER_TMP]] : !rec_OuterT, !cir.ptr<!rec_OuterT>
+// CHECK:         cir.call @_Z10makeOuterTi(%[[OUTER_TMP]], %[[INNER_CONV]]) : (!cir.ptr<!rec_OuterT> {{.*}}llvm.sret = !rec_OuterT{{.*}}, !s32i {{.*}}) -> ()
 // CHECK:         %[[TRUE2:.*]] = cir.const #true
 // CHECK:         cir.store %[[TRUE2]], %[[OUTER_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:         %[[OUTER_CONV:.*]] = cir.call @_ZN6OuterTcviEv(%[[OUTER_TMP]])
@@ -299,18 +295,16 @@ U *test_nothrow_new_nested_temps() {
 // LLVM:   store i8 0, ptr %[[OUTER_ACTIVE:.*]]
 // LLVM:   br i1 %[[CMP]], label %[[NOT_NULL:.*]], label %[[CONT:.*]]
 // LLVM: [[NOT_NULL]]:
-// LLVM:   %[[MAKE_INNER:.*]] = invoke %struct.InnerT @_Z10makeInnerTv()
+// LLVM:   invoke void @_Z10makeInnerTv(ptr {{.*}} sret(%struct.InnerT) {{.*}} %[[INNER_TMP]])
 // LLVM:           to label %[[INNER_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[INNER_CONT]]:
-// LLVM:   store {{.*}} %[[MAKE_INNER]], ptr %[[INNER_TMP]]
 // LLVM:   store i8 1, ptr %[[INNER_ACTIVE]]
 // LLVM:   %[[INNER_CONV:.*]] = invoke {{.*}} @_ZN6InnerTcviEv(ptr {{.*}} %[[INNER_TMP]])
 // LLVM:           to label %[[INNER_CONV_CONT:.*]] unwind label %[[LPAD]]
 // LLVM: [[INNER_CONV_CONT]]:
-// LLVM:   %[[MAKE_OUTER:.*]] = invoke %struct.OuterT @_Z10makeOuterTi(i32 {{.*}} %[[INNER_CONV]])
+// LLVM:   invoke void @_Z10makeOuterTi(ptr {{.*}} sret(%struct.OuterT) {{.*}} %[[OUTER_TMP]], i32 {{.*}} %[[INNER_CONV]])
 // LLVM:           to label %[[OUTER_CONT:.*]] unwind label %[[LPAD]]
 // LLVM: [[OUTER_CONT]]:
-// LLVM:   store {{.*}} %[[MAKE_OUTER]], ptr %[[OUTER_TMP]]
 // LLVM:   store i8 1, ptr %[[OUTER_ACTIVE]]
 // LLVM:   invoke {{.*}} @_ZN6OuterTcviEv(ptr {{.*}} %[[OUTER_TMP]])
 // LLVM:   invoke void @_ZN1UC1Ei(ptr {{.*}} %[[ALLOC]], i32 {{.*}})

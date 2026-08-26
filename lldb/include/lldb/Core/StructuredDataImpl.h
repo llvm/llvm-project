@@ -108,8 +108,8 @@ public:
     m_data_sp = StructuredData::FromBoolean(value);
   }
 
-  void SetStringValue(std::string value) {
-    m_data_sp = StructuredData::FromString(std::move(value));
+  void SetStringValue(llvm::StringRef value) {
+    m_data_sp = StructuredData::FromString(value);
   }
 
   void SetGenericValue(void *value) {
@@ -179,11 +179,15 @@ public:
     if (result.empty())
       return 0;
 
-    if (!dst || !dst_len) {
-      char s[1];
-      return (::snprintf(s, 1, "%s", result.data()));
+    const size_t needed_len = result.size() + 1; // for the NULL byte.
+    if (dst && dst_len != 0) {
+      const size_t min_len = std::min(needed_len, dst_len);
+      const size_t copy_len = min_len - 1; // exclude space for NULL byte.
+      ::memcpy(dst, result.data(), copy_len);
+      dst[copy_len] = '\0';
     }
-    return (::snprintf(dst, dst_len, "%s", result.data()));
+
+    return needed_len;
   }
 
   void *GetGenericValue() const {

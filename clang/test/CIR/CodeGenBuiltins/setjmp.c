@@ -7,23 +7,17 @@
 
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -fclangir -emit-llvm -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t-cir.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -fno-builtin -fclangir -emit-llvm -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t-cir.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -x c++ %s -triple x86_64-linux-gnu -fclangir -emit-llvm -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t-cir.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t-cir.ll %s
 
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t.ll %s
 // RUN: %clang_cc1 -x c %s -triple x86_64-linux-gnu -fno-builtin -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t.ll %s
 // RUN: %clang_cc1 -x c++ %s -triple x86_64-linux-gnu -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM      --input-file=%t.ll %s
-// RUN: FileCheck --check-prefix=LLVM-DECL --input-file=%t.ll %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,15 +39,6 @@ typedef struct __ucontext_t_tag ucontext_t[1];
 #ifdef __cplusplus
 }
 #endif
-
-// The wildcard in the attributes is to allow this to work with and without -fno-builtin.
-
-// CIR: cir.func private @setjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
-// CIR: cir.func private @sigsetjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
-// CIR: cir.func private @_setjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
-// CIR: cir.func private @__sigsetjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
-// CIR: cir.func private @_setjmpex({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
-// CIR: cir.func private @getcontext({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
 
 void f(void) {
   jmp_buf jb;
@@ -78,18 +63,24 @@ void f(void) {
   getcontext(ut);
 }
 
-// These are checked with a separate RUN and check prefix because classic
-// codegen emits them after the definition of @f, while CIR emits them before.
+// The wildcard in the attributes is to allow this to work with and without -fno-builtin.
 
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @setjmp(
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @sigsetjmp(
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @_setjmp(
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @__sigsetjmp(
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @_setjmpex(
-// LLVM-DECL: ; Function Attrs: returns_twice
-// LLVM-DECL-NEXT: declare {{.*}} @getcontext(
+// CIR: cir.func private @setjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+// CIR: cir.func private @sigsetjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+// CIR: cir.func private @_setjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+// CIR: cir.func private @__sigsetjmp({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+// CIR: cir.func private @_setjmpex({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+// CIR: cir.func private @getcontext({{.*}}) -> !s32i attributes {{{.*}}returns_twice}
+
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @setjmp(
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @sigsetjmp(
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @_setjmp(
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @__sigsetjmp(
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @_setjmpex(
+// LLVM: ; Function Attrs: returns_twice
+// LLVM-NEXT: declare {{.*}} @getcontext(
