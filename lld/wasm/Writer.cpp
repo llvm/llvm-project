@@ -180,13 +180,13 @@ void Writer::createCustomSections() {
       continue;
     }
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
-    OutputSection *Sec = make<CustomSection>(std::string(name), pair.second);
+    OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
     if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
-      auto *sym = make<OutputSectionSymbol>(Sec);
+      auto *sym = make<OutputSectionSymbol>(sec);
       out.linkingSec->addToSymtab(sym);
-      Sec->sectionSym = sym;
+      sec->sectionSym = sym;
     }
-    addSection(Sec);
+    addSection(sec);
   }
 }
 
