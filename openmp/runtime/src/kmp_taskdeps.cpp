@@ -2939,7 +2939,6 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_int32 numregions = numnodes + 2;
   kmp_taskgraph_node_t *nodes = taskgraph->record_map;
   kmp_info_t *thread = __kmp_threads[gtid];
-  kmp_dephash_t *hash = __kmp_dephash_create(thread, current_taskdata);
   bool dep_barrier = false;
 
   // An empty taskgraph isn't useful and causes analysis problems below, so
@@ -2950,6 +2949,8 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     KMP_ATOMIC_ST_REL(&taskgraph->status, KMP_TDG_READY);
     return 0;
   }
+
+  kmp_dephash_t *hash = __kmp_dephash_create(thread, current_taskdata);
 
   // We need to take special care to align the all_depnodes array to the cache
   // line size, because kmp_depnode_t is marked as 64-byte aligned and
