@@ -1,4 +1,4 @@
-//===- OpenCLMetadataLowering.h - OpenCL metadata lowering ------*- C++ -*-===//
+//===- LowerToLLVMOpenCLMetadata.h - OpenCL metadata lowering ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_CIR_LOWERING_DIRECTTOLLVM_OPENCLMETADATALOWERING_H
-#define CLANG_CIR_LOWERING_DIRECTTOLLVM_OPENCLMETADATALOWERING_H
+#ifndef CLANG_CIR_LOWERING_DIRECTTOLLVM_LOWERTOLLVMOPENCLMETADATA_H
+#define CLANG_CIR_LOWERING_DIRECTTOLLVM_LOWERTOLLVMOPENCLMETADATA_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -35,4 +35,4 @@ private:
 } // namespace direct
 } // namespace cir
 
-#endif // CLANG_CIR_LOWERING_DIRECTTOLLVM_OPENCLMETADATALOWERING_H
+#endif // CLANG_CIR_LOWERING_DIRECTTOLLVM_LOWERTOLLVMOPENCLMETADATA_H

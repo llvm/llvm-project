@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LowerToLLVM.h"
-#include "OpenCLMetadataLowering.h"
+#include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
 #include <optional>

@@ -1,4 +1,4 @@
-//===- OpenCLMetadataLowering.cpp - OpenCL metadata lowering --------------===//
+//===- LowerToLLVMOpenCLMetadata.cpp - OpenCL metadata lowering -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpenCLMetadataLowering.h"
+#include "LowerToLLVMOpenCLMetadata.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
