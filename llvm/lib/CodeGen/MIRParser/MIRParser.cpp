@@ -781,10 +781,11 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       if (parseRegisterReference(PFS, AntiHintReg, AntiHintValue.Value, Error))
         return error(Error, AntiHintValue.SourceRange);
 
-      if (!AntiHintReg.isVirtual())
+      if (!AntiHintReg.isVirtual()) {
         return error(AntiHintValue.SourceRange.Start,
-                     Twine("anti-hint '") + AntiHintValue.Value +
+                     "anti-hint '" + Twine(AntiHintValue.Value) +
                          "' must be a virtual register");
+      }
 
       Info.AntiHints.push_back(AntiHintReg);
     }
