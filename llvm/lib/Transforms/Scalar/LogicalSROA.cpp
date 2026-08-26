@@ -11,9 +11,6 @@
 /// It tries to identify promotable elements of an aggregate alloca, and
 /// promote them to multiple allocas of scalar type.
 ///
-/// FIXME: nested aggregates are not fully optimized (#192619).
-/// FIXME: array are not optimized (#192620).
-///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LogicalSROA.h"
@@ -113,27 +110,72 @@ static bool isAllocaSplittable(StructuredAllocaInst &SAI) {
   return true;
 }
 
-// Returns a vector with one element for each field of the struct allocated by
-// SAI. Each element is a vector of SGEP instruction referencing this field.
-// This function ignores lifetime intrinsics.
-static SmallVector<SmallVector<StructuredGEPInst *>>
-collectPerFieldSGEP(StructuredAllocaInst &SAI) {
-  StructType *ST = cast<StructType>(SAI.getAllocationType());
-  SmallVector<SmallVector<StructuredGEPInst *>> Output(ST->getNumElements());
+namespace {
+struct FieldSGEPs {
+  /// All GEPs that access this specific field.
+  SmallVector<StructuredGEPInst *, 1> SGEPs;
+  /// Type of the access.
+  Type *Ty;
+  /// The number of index arguments common to the collection of GEPs.
+  unsigned NumIndices;
+};
+} // namespace
 
-  for (User *U : SAI.users()) {
-    if (isa<LifetimeIntrinsic>(U))
+/// Returns a vector with one element for each field that is independently
+/// accessed of an SAI. Each element catalogues the list of GEPs for this field
+/// as well as the information needed to rewrite the GEP to a smaller alloca.
+/// This function ignores lifetime intrinsics.
+static SmallVector<FieldSGEPs> collectPerFieldSGEPs(StructuredAllocaInst &SAI) {
+  SmallVector<FieldSGEPs> PerFieldSGEPs;
+  SmallVector<FieldSGEPs> Worklist;
+
+  if (SAI.user_empty())
+    return PerFieldSGEPs;
+
+  Worklist.push_back({{}, SAI.getAllocationType(), /*NumSharedIndices=*/0});
+  for (User *U : SAI.users())
+    if (auto *SGEP = dyn_cast<StructuredGEPInst>(U))
+      Worklist.back().SGEPs.push_back(SGEP);
+
+  SmallVector<ConstantInt *> IndicesAtLevel;
+  while (!Worklist.empty()) {
+    FieldSGEPs Cur = Worklist.pop_back_val();
+
+    // When we run out of constant indices we're at the maximum depth we can
+    // split accesses at.
+    if (llvm::any_of(Cur.SGEPs, [&Cur](const auto *SGEP) {
+          return SGEP->getNumIndices() == Cur.NumIndices ||
+                 !isa<ConstantInt>(SGEP->getIndexOperand(Cur.NumIndices));
+        })) {
+      PerFieldSGEPs.push_back(std::move(Cur));
       continue;
+    }
 
-    auto *SGEP = cast<StructuredGEPInst>(U);
+    IndicesAtLevel.clear();
+    for (StructuredGEPInst *SGEP : Cur.SGEPs)
+      IndicesAtLevel.push_back(
+          cast<ConstantInt>(SGEP->getIndexOperand(Cur.NumIndices)));
 
-    // IR rule: SGEP on struct can only use constant int as indices.
-    ConstantInt *Index = cast<ConstantInt>(SGEP->getIndexOperand(0));
-    assert(Index->getZExtValue() < Output.size());
-    Output[Index->getZExtValue()].push_back(SGEP);
+    // We need to operate on the unique indices that are accessed at this level
+    // of the GEPs. We sort by integer value rather than pointer identity so
+    // that the order we process these later will be deterministic.
+    llvm::sort(IndicesAtLevel, [](const auto &LHS, const auto &RHS) {
+      return LHS->getZExtValue() < RHS->getZExtValue();
+    });
+    IndicesAtLevel.erase(llvm::unique(IndicesAtLevel), IndicesAtLevel.end());
+
+    // Enqueue the next level of indices in pre-order.
+    for (const ConstantInt *CI : llvm::reverse(IndicesAtLevel)) {
+      Worklist.push_back({{},
+                          StructuredGEPInst::getTypeAtIndex(Cur.Ty, CI),
+                          Cur.NumIndices + 1});
+      for (StructuredGEPInst *SGEP : Cur.SGEPs)
+        if (SGEP->getIndexOperand(Cur.NumIndices) == CI)
+          Worklist.back().SGEPs.push_back(SGEP);
+    }
   }
 
-  return Output;
+  return PerFieldSGEPs;
 }
 
 // For each lifetime intrinsic in LifetimeIntrinsics, creates a new one, but
@@ -150,15 +192,16 @@ static void copyLifetimeIntrinsicFor(IRBuilder<> &B, LifetimeIntrinsic *II,
     llvm_unreachable("invalid argument: expected a lifetime intrinsic");
 }
 
-static void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
-                             StructuredAllocaInst *FieldAlloca) {
-  if (SGEP->getNumIndices() == 1) {
+static void rewriteSGEPChain(IRBuilder<> &B, StructuredAllocaInst *FieldAlloca,
+                             StructuredGEPInst *SGEP, unsigned NumIndices) {
+  if (SGEP->getNumIndices() == NumIndices) {
     SGEP->replaceAllUsesWith(FieldAlloca);
     SGEP->eraseFromParent();
     return;
   }
 
-  SmallVector<Value *, 4> Indices(llvm::drop_begin(SGEP->indices()));
+  SmallVector<Value *, 4> Indices(
+      llvm::drop_begin(SGEP->indices(), NumIndices));
   B.SetInsertPoint(SGEP);
   auto *I = B.CreateStructuredGEP(FieldAlloca->getAllocationType(), FieldAlloca,
                                   Indices, SGEP->getName());
@@ -167,32 +210,29 @@ static void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
 }
 
 static bool runOnStructuredAlloca(StructuredAllocaInst &SAI) {
-  // For now, LogicalSROA only handles SGEP on structs.
-  StructType *ST = dyn_cast<StructType>(SAI.getAllocationType());
-  if (!ST)
+  Type *AllocaTy = SAI.getAllocationType();
+  // We only need to do anything with aggregate types.
+  if (!isa<ArrayType, StructType, VectorType>(AllocaTy))
     return false;
 
   if (!isAllocaSplittable(SAI))
     return false;
 
-  auto PerFieldSGEP = collectPerFieldSGEP(SAI);
-  assert(PerFieldSGEP.size() == ST->getNumElements());
+  SmallVector<FieldSGEPs> PerFieldSGEPs = collectPerFieldSGEPs(SAI);
+  SmallVector<LifetimeIntrinsic *> LifetimeIntrinsics =
+      collectLifetimeIntrinsicsUsing(SAI);
 
-  auto LifetimeIntrinsics = collectLifetimeIntrinsicsUsing(SAI);
   IRBuilder B(&SAI);
-  for (const auto &[FieldIndex, Users] : llvm::enumerate(PerFieldSGEP)) {
-    if (Users.empty())
-      continue;
-
+  for (const FieldSGEPs &Field : PerFieldSGEPs) {
     B.SetInsertPoint(&SAI);
-    auto *FieldAlloca = cast<StructuredAllocaInst>(
-        B.CreateStructuredAlloca(ST->getElementType(FieldIndex)));
+    auto *FieldAlloca =
+        cast<StructuredAllocaInst>(B.CreateStructuredAlloca(Field.Ty));
 
     for (auto II : LifetimeIntrinsics)
       copyLifetimeIntrinsicFor(B, II, FieldAlloca);
 
-    for (StructuredGEPInst *SGEP : Users)
-      rewriteSGEPChain(B, SGEP, FieldAlloca);
+    for (StructuredGEPInst *SGEP : Field.SGEPs)
+      rewriteSGEPChain(B, FieldAlloca, SGEP, Field.NumIndices);
   }
 
   for (auto *II : LifetimeIntrinsics)
