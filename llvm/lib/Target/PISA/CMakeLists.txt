@@ -18,6 +18,7 @@ tablegen(LLVM PISAGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
 add_public_tablegen_target(PISACommonTableGen)
 
 add_llvm_target(PISACodeGen
+  PISAAsmPrinter.cpp
   PISACacheHintSelector.cpp
   PISACallLowering.cpp
   PISAConstProp.cpp
