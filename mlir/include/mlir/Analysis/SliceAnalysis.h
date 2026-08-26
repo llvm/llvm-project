@@ -142,6 +142,9 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 ///
 /// This function returns whether the backwards slice was able to be
 /// successfully computed, and failure if it was unable to determine the slice.
+/// This function will presently return failure if a value to process is a
+/// blockargument whose parent op has more than one region, or a region with
+/// more than one block.
 LogicalResult getBackwardSlice(Operation *op,
                                SetVector<Operation *> *backwardSlice,
                                const BackwardSliceOptions &options = {});
