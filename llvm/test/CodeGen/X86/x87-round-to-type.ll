@@ -356,10 +356,8 @@ define void @sitofp_store_only_f32(i32 %x, ptr %p) nounwind {
 ; X87-NEXT:    subl $8, %esp
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
+; X87-NEXT:    movl %ecx, (%esp)
+; X87-NEXT:    fildl (%esp)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    addl $8, %esp
 ; X87-NEXT:    retl
@@ -375,10 +373,8 @@ define void @sitofp_store_twice_f32(i32 %x, ptr %p, ptr %q) nounwind {
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X87-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildl {{[0-9]+}}(%esp)
-; X87-NEXT:    fstps (%esp)
-; X87-NEXT:    flds (%esp)
+; X87-NEXT:    movl %edx, (%esp)
+; X87-NEXT:    fildl (%esp)
 ; X87-NEXT:    fsts (%ecx)
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    addl $8, %esp

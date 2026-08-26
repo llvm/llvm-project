@@ -9,10 +9,8 @@ define i32 @sitofp_signbit_only(i32 %i_in) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fildl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -38,8 +36,6 @@ define i32 @sitofp_signbit_only_okay_width(i16 %i_in) nounwind {
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    filds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -87,10 +83,8 @@ define <2 x i16> @sitofp_signbit_only_fail_bad_width2(i32 %i_in) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fildl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %edx
@@ -118,10 +112,8 @@ define i32 @sitofp_many_bits_fail(i32 %i_in) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fildl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    fildl (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2147483647, %eax # imm = 0x80000001
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -147,8 +139,6 @@ define i32 @sitofp_multiuse_fail(i32 %i_in) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsts {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll use.i32@PLT
@@ -182,8 +172,6 @@ define i32 @sitofp_multiuse_okay(i32 %i_in) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildl {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsts {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll use.i1@PLT
@@ -265,13 +253,11 @@ define <2 x i16> @uitofp_signbit_only_fail_bad_width2(i32 %i_in) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -299,13 +285,11 @@ define i32 @uitofp_many_bits_fail(i32 %i_in) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $1, %eax
@@ -332,13 +316,11 @@ define i32 @uitofp_multiuse_fail(i32 %i_in) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll use.i32@PLT
 ; X86-NEXT:    xorl %eax, %eax
@@ -369,13 +351,11 @@ define i32 @uitofp_multiuse_okay(i32 %i_in) nounwind {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll use.i1@PLT
 ; X86-NEXT:    xorl %eax, %eax

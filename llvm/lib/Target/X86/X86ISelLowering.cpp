@@ -55390,6 +55390,45 @@ static SDValue combineScalarMinMaxAbsStore(StoreSDNode *St, const SDLoc &DL,
                       St->getMemOperand()->getFlags());
 }
 
+/// Matches the memory round-trip RoundX87ToType builds for \p St's value: an
+/// x87 FST that rounds to \p VT, reloaded straight back. Returns the value that
+/// FST rounded, which \p St can round for itself - two FSTs of one source round
+/// to the same \p VT value, so the reload buys nothing.
+static SDValue getX87RoundTripSource(const X86TargetLowering &XTLI,
+                                     StoreSDNode *St, EVT VT) {
+  auto *Ld = dyn_cast<LoadSDNode>(St->getValue());
+  if (!Ld || !Ld->isSimple() || !Ld->isUnindexed() ||
+      Ld->getExtensionType() != ISD::NON_EXTLOAD || Ld->getMemoryVT() != VT)
+    return SDValue();
+
+  // Taking the chain straight from the FST is what rules out a write to the
+  // slot in between: an aliasing store would sit between the two.
+  auto *Fst = dyn_cast<MemIntrinsicSDNode>(Ld->getChain());
+  if (!Fst || Fst->getOpcode() != X86ISD::FST || Fst->getMemoryVT() != VT ||
+      Fst->getOperand(2) != Ld->getBasePtr())
+    return SDValue();
+
+  SDValue Src = Fst->getOperand(1);
+  if (!XTLI.isScalarFPTypeOnX87Stack(Src.getValueType()))
+    return SDValue();
+
+  // Only pays off once every use of the reload rounds for itself, which leaves
+  // the reload and the FST that fed it dead. Otherwise the source has to stay
+  // on the x87 stack alongside the reload, and the exchanges that costs eat
+  // what the fold saves.
+  for (SDUse &Use : Ld->uses()) {
+    // Result 0 of the node is the loaded value; the chain follows it out.
+    if (Use.getResNo() != 0)
+      continue;
+    auto *User = dyn_cast<StoreSDNode>(Use.getUser());
+    if (!User || !User->isSimple() || !User->isUnindexed() ||
+        User->isTruncatingStore() || User->getMemoryVT() != VT)
+      return SDValue();
+  }
+
+  return Src;
+}
+
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
@@ -55430,6 +55469,24 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                                      {Chain, Src, St->getBasePtr()}, VT,
                                      St->getMemOperand());
     }
+  }
+
+  // store (load (fst X)) -> fst X: rounding X through a stack slot and reading
+  // it back is what BuildFILD and LowerFP_ROUND emit when a round has to
+  // happen; a store of the result rounds X just as well on its own.
+  // The store need not be chained to the round, so this moves the rounding to
+  // wherever the store ends up - only sound while the rounding mode is the
+  // default one throughout.
+  if (DCI.isAfterLegalizeDAG() && St->isUnindexed() && St->isSimple() &&
+      !St->isTruncatingStore() && VT == StVT &&
+      Subtarget.getTargetLowering()->needsX87RoundToType(VT) &&
+      !DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::StrictFP)) {
+    if (SDValue Src =
+            getX87RoundTripSource(*Subtarget.getTargetLowering(), St, VT))
+      return DAG.getMemIntrinsicNode(X86ISD::FST, dl, DAG.getVTList(MVT::Other),
+                                     {St->getChain(), Src, St->getBasePtr()},
+                                     VT, St->getMemOperand());
   }
 
   // Pattern: store(trunc(load vXiY) to vXiZ) optimization
