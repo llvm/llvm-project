@@ -1296,8 +1296,8 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
 static bool canStrengthenFlags(Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Sub:
-    // A - B does not wrap unsigned, if A >=u B. Constant operands are handled
-    // by CorrelatedValuePropagation using ranges.
+    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
+    // canonicalized to Add.
     return I->getType()->isIntegerTy() && !I->hasNoUnsignedWrap() &&
            !isa<Constant>(I->getOperand(1));
   default:

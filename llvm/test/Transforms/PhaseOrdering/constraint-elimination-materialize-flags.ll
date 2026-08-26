@@ -149,8 +149,8 @@ define void @iterator_distance_index(ptr %out, ptr %arr, i1 %skip) {
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    br i1 [[K_LT_J_NOT]], label %[[INNER_EXIT]], label %[[INNER_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[INNER_EXIT]]:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[I2]], [[J1]]
-; CHECK-NEXT:    [[IDX:%.*]] = zext i32 [[SUB]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[I2]], [[J1]]
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDX]]
 ; CHECK-NEXT:    store ptr [[GEP]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
