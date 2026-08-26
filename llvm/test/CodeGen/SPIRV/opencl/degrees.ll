@@ -50,19 +50,19 @@ entry:
 }
 
 ; CHECK-LABEL: Begin function fmul_to_degrees
-define noundef float @fmul_to_degrees(float noundef %x) {
+define noundef float @fmul_to_degrees(float noundef %a) {
 entry:
 ; CHECK: %[[#float_32_arg:]] = OpFunctionParameter %[[#float_32]]
 ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_ocl]] degrees %[[#float_32_arg]]
-  %mul = fmul float %x, f0x42652EE1
+  %mul = fmul float %a, f0x42652EE1
   ret float %mul
 }
 
 ; CHECK-LABEL: Begin function fmul_to_degrees_vector
-define noundef <4 x float> @fmul_to_degrees_vector(<4 x float> %v) {
+define noundef <4 x float> @fmul_to_degrees_vector(<4 x float> %a) {
 entry:
 ; CHECK: %[[#vec4_float_32_arg:]] = OpFunctionParameter %[[#vec4_float_32]]
 ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_ocl]] degrees %[[#vec4_float_32_arg]]
-  %mul.i = fmul <4 x float> %v, splat (float f0x42652EE1)
-  ret <4 x float> %mul.i
+  %mul = fmul <4 x float> %a, splat (float f0x42652EE1)
+  ret <4 x float> %mul
 }
