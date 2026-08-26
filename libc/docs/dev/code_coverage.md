@@ -202,7 +202,7 @@ xdg-open coverage_mcdc_html/index.html
 
 ## Running Coverage for a Single Test
 
-When developing or modifying a specific function, running coverage on a single unit test allows rapid iteration (~2 seconds) without compiling and running the entire library suite.
+When developing or modifying a specific function, coverage can be collected for a single test without building and executing the entire test suite.
 
 The commands below use `libc.test.src.ctype.isalpha_test` (which tests `libc/src/ctype/isalpha.cpp`) as an example. You can test any other entrypoint by substituting the target name and source file path:
 * **Target pattern:** `libc.test.<path_to_test>.<test_name>` (e.g. `libc.test.src.string.strlen_test`)
@@ -210,7 +210,7 @@ The commands below use `libc.test.src.ctype.isalpha_test` (which tests `libc/src
 
 ### 1. Build and Execute the Targeted Test
 
-Compiles and runs only the specified unit test binary, immediately dumping execution profile counters for fast feedback (~2 seconds):
+Compiles and runs only the specified test binary, immediately writing execution profile counters to disk upon completion:
 
 ```bash
 # For a standard coverage build
