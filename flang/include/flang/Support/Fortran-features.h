@@ -81,14 +81,14 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
-    NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
-    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
-    RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
-    UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
-    MisplacedIgnoreTKR, NamelistParameter, ImpureFinalInPure,
-    IgnoredNoReallocateLHS, ExperimentalOption, IoImpliedDoIndexConflict,
-    BOZLiteralTruncation)
+    CompatibleDeclarationsFromDistinctModules, ModuleFileMismatch,
+    ConstantIsContiguous, NullActualForDefaultIntentAllocatable,
+    UseAssociationIntoSameNameSubprogram, HostAssociatedIntentOutInSpecExpr,
+    NonVolatilePointerToVolatile, RealConstantWidening,
+    VolatileOrAsynchronousTemporary, UnusedVariable, UsedUndefinedVariable,
+    BadValueInDeadCode, AssumedTypeSizeDummy, MisplacedIgnoreTKR,
+    NamelistParameter, ImpureFinalInPure, IgnoredNoReallocateLHS,
+    ExperimentalOption, IoImpliedDoIndexConflict, BOZLiteralTruncation)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

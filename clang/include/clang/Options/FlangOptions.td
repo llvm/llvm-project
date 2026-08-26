@@ -137,6 +137,8 @@ def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
   DocBrief<[{This option specifies where to put .mod files for compiled modules.
 It is also added to the list of directories to be searched by an USE statement.
 The default is the current directory.}]>;
+def fmodule_mismatch_check_EQ : Joined<["-"], "fmodule-mismatch-check=">, Group<f_Group>,
+  HelpText<"Check consistency of used modules (option: on, non-intrinsic, warn)">;
 
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;

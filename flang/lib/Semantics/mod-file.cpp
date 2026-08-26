@@ -1744,6 +1744,21 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     return nullptr;
   }
   CHECK(sourceFile);
+
+  bool mismatchIsError, mismatchIsWarning;
+  switch (context_.langOptions().getModuleMismatchCheck()) {
+  case common::LangOptions::MMC_On:
+    mismatchIsError = true;
+    mismatchIsWarning = true;
+    break;
+  case common::LangOptions::MMC_NonIntrinsic:
+    mismatchIsError = mismatchIsWarning = !isIntrinsic.value_or(false);
+    break;
+  case common::LangOptions::MMC_Warn:
+    mismatchIsError = false;
+    mismatchIsWarning = true;
+    break;
+  }
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
@@ -1758,12 +1773,20 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    if (!silent) {
-      Say("use", name, ancestorName,
-          "File is not the right module file for %s"_err_en_US,
-          "'"s + name.ToString() + "': "s + sourceFile->path());
+    if (mismatchIsError) {
+      if (!silent) {
+        Say("use", name, ancestorName,
+            "File is not the right module file for %s"_err_en_US,
+            "'"s + name.ToString() + "': "s + sourceFile->path());
+      }
+      return nullptr;
+    } else {
+      if (!silent && mismatchIsWarning) {
+        Warn(name, common::UsageWarning::ModuleFileMismatch, ancestorName,
+            "File has a different checksum than expected for %s"_warn_en_US,
+            "'"s + name.ToString() + "': "s + sourceFile->path());
+      }
     }
-    return nullptr;
   }
   llvm::raw_null_ostream NullStream;
   parsing.Parse(NullStream, context_.langOptions());
@@ -1885,6 +1908,20 @@ parser::Message &ModFileReader::Say(const char *verb, SourceName name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
   return context_.Say(name, "Cannot %s module file for %s: %s"_err_en_US, verb,
+      parser::MessageFormattedText{ancestor.empty()
+              ? "module '%s'"_en_US
+              : "submodule '%s' of module '%s'"_en_US,
+          name, ancestor}
+          .MoveString(),
+      parser::MessageFormattedText{std::move(msg), arg}.MoveString());
+}
+
+parser::Message *ModFileReader::Warn(SourceName name,
+    common::UsageWarning warning, const std::string &ancestor,
+    parser::MessageFixedText &&msg, const std::string &arg) {
+  return context_.messages().Warn(/*isInModuleFile=*/false,
+      context_.languageFeatures(), warning, name,
+      "Module file for %s: %s"_warn_en_US,
       parser::MessageFormattedText{ancestor.empty()
               ? "module '%s'"_en_US
               : "submodule '%s' of module '%s'"_en_US,

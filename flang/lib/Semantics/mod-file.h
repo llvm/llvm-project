@@ -109,6 +109,8 @@ private:
 
   parser::Message &Say(const char *verb, SourceName, const std::string &,
       parser::MessageFixedText &&, const std::string &);
+  parser::Message *Warn(SourceName, common::UsageWarning, const std::string &,
+      parser::MessageFixedText &&, const std::string &);
 };
 
 } // namespace Fortran::semantics

@@ -43,6 +43,20 @@ public:
     FPM_Fast,
   };
 
+  enum ModuleMismatchCheckTy {
+    // Verify checksums of all modules
+    MMC_On,
+
+    // Reject checksum mismatches only in user modules. Intrinsic modules are
+    // shipped by the compiler, and their contents are defined by the language;
+    // a compiler update should not trigger an error when their APIs remain
+    // compatible.
+    MMC_NonIntrinsic,
+
+    // Do not enforce module use consistency, just warn about them
+    MMC_Warn,
+  };
+
   /// Floating-point exception trap kinds for -ffpe-trap=.
   /// Bit values match the Fortran IEEE_FLAG_TYPE encoding used by
   /// the runtime's MapException().
