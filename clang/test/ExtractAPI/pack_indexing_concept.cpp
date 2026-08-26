@@ -1,7 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -std=c++2d -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
-// RUN:   --product-name=PackIndexing -triple arm64-apple-macosx -x c++-header %s \
-// RUN:   -o %t/pack-indexing.symbols.json -verify
+// RUN:  -triple arm64-apple-macosx -x c++-header %s -o %t/pack-indexing.symbols.json -verify
 
 // RUN: FileCheck %s --input-file %t/pack-indexing.symbols.json --check-prefix FUNCTION
 

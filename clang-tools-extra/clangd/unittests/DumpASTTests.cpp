@@ -10,6 +10,7 @@
 #include "DumpAST.h"
 #include "TestTU.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -230,10 +231,9 @@ TEST(DumpASTTests, UnbalancedBraces) {
 bool hasDetail(const ASTNode &Node, llvm::StringRef Detail) {
   if (Node.detail == Detail)
     return true;
-  for (const ASTNode &Child : Node.children)
-    if (hasDetail(Child, Detail))
-      return true;
-  return false;
+  return llvm::any_of(Node.children, [&Detail](const ASTNode &Child) {
+    return hasDetail(Child, Detail);
+  });
 }
 
 TEST(DumpASTTests, PackIndexedConcept) {

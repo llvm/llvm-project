@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++2d -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -triple x86_64-unknown-linux-gnu -Wno-c++2d-extensions %s
+// RUN: %clang_cc1 -std=c++2d -verify -fsyntax-only -triple x86_64-unknown-linux-gnu %s
 
 template <class T> struct A { using type = T; };
 template <class T> struct B { using type = T *; };
@@ -258,6 +259,22 @@ struct GH218548 {
 static_assert(GH218548<Never, Always>::f<short>());
 static_assert(!GH218548<Never, Always>::f<char>());
 static_assert(!GH218548<Never, Always>::f<char, short>());
+}
+
+template <template <typename> concept... C>
+void multiple_expansions() requires (C...[C<int>]<long long> && ...); // #multiple_expansions1
+
+template <template <typename> concept... C>
+void multiple_expansions_ok() requires (C...[C<long long>]<long long> || ...);
+template<typename T> concept X = sizeof(T) == 4; // #multiple_expansions2
+template<typename T> concept Y = sizeof(T) >= 4;
+void multiple_expansions_test() {
+  multiple_expansions<Y, X>();
+// expected-error@-1 {{no matching function for call to 'multiple_expansions'}}
+// expected-note@#multiple_expansions1 {{candidate template ignored: constraints not satisfied [with C = <Y, X>]}}
+// expected-note@#multiple_expansions1 {{because 'long long' does not satisfy 'X'}}
+// expected-note@#multiple_expansions2 {{because 'sizeof(long long) == 4' (8 == 4) evaluated to false}}
+  multiple_expansions_ok<Y, X>();
 }
 
 namespace kind_errors {

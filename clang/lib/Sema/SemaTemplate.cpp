@@ -9322,7 +9322,7 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
 }
 
 bool Sema::CheckConceptUseInDefinition(NamedDecl *Concept, SourceLocation Loc) {
-  if (auto *CE = llvm::dyn_cast_if_present<ConceptDecl>(Concept);
+  if (auto *CE = llvm::dyn_cast<ConceptDecl>(Concept);
       CE && !CE->isInvalidDecl() && !CE->hasDefinition()) {
     Diag(Loc, diag::err_recursive_concept) << CE;
     Diag(CE->getLocation(), diag::note_declared_at);
