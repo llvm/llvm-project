@@ -43,7 +43,7 @@ using namespace Fortran::runtime::cuda;
 namespace {
 
 template <typename OpTy>
-static bool isPinned(OpTy op) {
+[[maybe_unused]] bool isPinned(OpTy op) {
   if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)
     return true;
   return false;

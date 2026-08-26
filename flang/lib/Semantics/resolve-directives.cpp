@@ -36,7 +36,7 @@
 namespace Fortran::semantics {
 
 template <typename T>
-static Scope *GetScope(SemanticsContext &context, const T &x) {
+Scope *GetScope(SemanticsContext &context, const T &x) {
   if (auto source{GetLastSource(x)}) {
     return &context.FindScope(*source);
   } else {
