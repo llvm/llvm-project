@@ -22,6 +22,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
@@ -259,6 +260,13 @@ public:
   /// \return
   ///     \b true if it is, \b false otherwise.
   virtual bool IsExecutable() const = 0;
+
+  /// Tells whether this object file is a system binary - one provided by the
+  /// OS rather than by the user installed files.
+  ///
+  /// \return
+  ///     \b true if this is a system binary, \b false otherwise.
+  virtual bool IsSystem() const { return false; }
 
   /// Returns the offset into a file at which this object resides.
   ///
@@ -757,6 +765,21 @@ public:
   std::string GetObjectName() const;
 
 protected:
+  /// Returns true if the object file's path is under a known OS system
+  /// directory. For use by IsSystem() implementations on platforms that lack a
+  /// "system binary" flag (ex. ELF, XCOFF).
+  bool IsUnixSystemPath() const {
+    std::string path_str = m_file.GetPath();
+    llvm::StringRef path = path_str;
+    // Linux / glibc multiarch, FreeBSD, AIX
+    if (path.starts_with("/lib") || path.starts_with("/usr/lib"))
+      return true;
+    // Android system partition
+    if (path.starts_with("/system/"))
+      return true;
+    return false;
+  }
+
   typedef NonNullSharedPtr<lldb_private::DataExtractor> DataExtractorNSP;
 
   // Member variables.
