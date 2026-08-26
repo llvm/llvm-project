@@ -2571,7 +2571,7 @@ bool llvm::collectCompressedPtrs(
   };
 
   SmallPtrSet<Use *, 16> Seen;
-  SmallVector<Use *> Worklist(make_pointer_range(MD.getHeaderPHI()->uses());
+  SmallVector<Use *> Worklist(make_pointer_range(MD.getHeaderPHI()->uses()));
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     if (!Seen.insert(U).second)
