@@ -273,10 +273,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   Status IPChange;
   for (MachineInstr &MI : MBB) {
     Status InstrMode = getInstructionMode(MI, TII);
-    if (MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_B32_mode ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
-        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
+    if (SIInstrInfo::isSSetReg(MI.getOpcode())) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).

@@ -3597,15 +3597,14 @@ bool SIInstrInfo::isXcntDrain(const MachineInstr &MI) {
   if (MI.isBranch() || MI.isCall() || MI.isReturn() || MI.isIndirectBranch())
     return true;
 
+  if (isSSetReg(MI.getOpcode()))
+    return true;
+
   switch (MI.getOpcode()) {
   case AMDGPU::S_ENDPGM:
   case AMDGPU::S_ENDPGM_SAVED:
   case AMDGPU::S_TRAP:
   case AMDGPU::S_GETREG_B32:
-  case AMDGPU::S_SETREG_B32:
-  case AMDGPU::S_SETREG_B32_mode:
-  case AMDGPU::S_SETREG_IMM32_B32:
-  case AMDGPU::S_SETREG_IMM32_B32_mode:
   case AMDGPU::S_SENDMSG:
   case AMDGPU::S_SENDMSGHALT:
   case AMDGPU::S_SENDMSG_RTN_B32:
