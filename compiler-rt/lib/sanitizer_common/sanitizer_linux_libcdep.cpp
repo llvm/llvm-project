@@ -69,7 +69,6 @@
 // that, it was never implemented. So just define it to zero.
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
-extern const Elf_Auxinfo *__elf_aux_vector __attribute__((weak));
 extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
                                struct sigaction *oldact);
 #  endif
@@ -959,12 +958,7 @@ void ReExec() {
   const char *pathname = "/proc/self/exe";
 
 #  if SANITIZER_FREEBSD
-  for (const auto *aux = __elf_aux_vector; aux->a_type != AT_NULL; aux++) {
-    if (aux->a_type == AT_EXECPATH) {
-      pathname = static_cast<const char *>(aux->a_un.a_ptr);
-      break;
-    }
-  }
+  pathname = reinterpret_cast<const char*>(getauxval(AT_EXECPATH));
 #  elif SANITIZER_NETBSD
   static const int name[] = {
       CTL_KERN,
@@ -984,7 +978,7 @@ void ReExec() {
 #  elif SANITIZER_USE_GETAUXVAL
   // Calling execve with /proc/self/exe sets that as $EXEC_ORIGIN. Binaries that
   // rely on that will fail to load shared libraries. Query AT_EXECFN instead.
-  pathname = reinterpret_cast<const char *>(getauxval(AT_EXECFN));
+  pathname = reinterpret_cast<const char*>(getauxval(AT_EXECFN));
 #  endif
 
   uptr rv = internal_execve(pathname, GetArgv(), GetEnviron());
