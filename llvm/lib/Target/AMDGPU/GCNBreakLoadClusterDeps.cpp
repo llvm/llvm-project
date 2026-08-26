@@ -329,13 +329,14 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
       if (KillerIns->getOperand(Op).isReg() &&
           KillerIns->getOperand(Op).isUse() &&
-          TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
+          TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg)) {
         if(!DryRun)
           KillerIns->getOperand(Op).setReg(
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              KillerIns->getOperand(Op).getReg()));
         else if (!KillerIns->getOperand(Op).isRenamable())
           return false;
+      }
 
     return true;
   };

@@ -10,10 +10,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNBREAKLOADCLUSTERDEPS_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class GCNBreakLoadClusterDepsPass
-    : public PassInfoMixin<GCNBreakLoadClusterDepsPass> {
+  : public PassInfoMixin<GCNBreakLoadClusterDepsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
