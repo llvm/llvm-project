@@ -1656,7 +1656,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
         llvm::Value *value = valueAsMD->getValue();
         llvm::GlobalValue *gv = dyn_cast<llvm::GlobalValue>(value);
         if (!gv)
-          gv = dyn_cast<llvm::GlobalValue>(value->stripPointerCastsAndAliases());
+          gv =
+              dyn_cast<llvm::GlobalValue>(value->stripPointerCastsAndAliases());
         if (gv) {
           StringRef name = gv->getName();
           FlatSymbolRefAttr symbolRef;
@@ -1677,8 +1678,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
           globalVar->getMetadata(llvm::LLVMContext::MD_absolute_symbol)) {
     SmallVector<Attribute> rangeAttrs;
     rangeAttrs.reserve(absSymMD->getNumOperands());
-    bool valid = absSymMD->getNumOperands() >= 2 &&
-                 absSymMD->getNumOperands() % 2 == 0;
+    bool valid =
+        absSymMD->getNumOperands() >= 2 && absSymMD->getNumOperands() % 2 == 0;
     for (const llvm::MDOperand &op : absSymMD->operands()) {
       auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(op);
       if (!constInt) {

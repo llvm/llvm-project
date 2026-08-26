@@ -1384,37 +1384,6 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     aliasesMapping.try_emplace(op, var);
   }
 
-  // Attach global metadata after all globals, aliases, and function signatures
-  // exist so symbol references can be resolved.
-  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
-    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
-    if (FlatSymbolRefAttr associated = op.getAssociatedAttr()) {
-      auto mdAttr = MDGlobalValueAttr::get(op.getContext(), associated);
-      FailureOr<llvm::Metadata *> md = convertMetadataAttr(mdAttr, [&]() {
-        return op.emitError("failed to convert associated metadata");
-      });
-      if (failed(md))
-        return failure();
-      var->setMetadata(llvm::LLVMContext::MD_associated,
-                       llvm::MDNode::get(var->getContext(), *md));
-    }
-
-    if (ArrayAttr absSym = op.getAbsoluteSymbolAttr()) {
-      SmallVector<llvm::Metadata *> mdOps;
-      llvm::LLVMContext &ctx = var->getContext();
-      mdOps.reserve(absSym.size());
-      for (Attribute attr : absSym) {
-        auto intAttr = llvm::cast<IntegerAttr>(attr);
-        llvm::IntegerType *ty = llvm::IntegerType::get(
-            ctx, intAttr.getType().getIntOrFloatBitWidth());
-        mdOps.push_back(llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::get(ty, intAttr.getValue())));
-      }
-      var->setMetadata(llvm::LLVMContext::MD_absolute_symbol,
-                       llvm::MDNode::get(ctx, mdOps));
-    }
-  }
-
   // Convert global variable bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
@@ -2219,6 +2188,41 @@ LogicalResult ModuleTranslation::convertIFuncs() {
   return success();
 }
 
+// Attach global metadata after all globals, aliases, ifuncs, and function
+// signatures exist so symbol references can be resolved.
+LogicalResult ModuleTranslation::convertGlobalMetadata() {
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
+    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
+    if (FlatSymbolRefAttr associated = op.getAssociatedAttr()) {
+      auto mdAttr = MDGlobalValueAttr::get(op.getContext(), associated);
+      FailureOr<llvm::Metadata *> md = convertMetadataAttr(mdAttr, [&]() {
+        return op.emitError("failed to convert associated metadata");
+      });
+      if (failed(md))
+        return failure();
+      var->setMetadata(llvm::LLVMContext::MD_associated,
+                       llvm::MDNode::get(var->getContext(), *md));
+    }
+
+    if (ArrayAttr absSym = op.getAbsoluteSymbolAttr()) {
+      SmallVector<llvm::Metadata *> mdOps;
+      llvm::LLVMContext &ctx = var->getContext();
+      mdOps.reserve(absSym.size());
+      for (Attribute attr : absSym) {
+        auto intAttr = llvm::cast<IntegerAttr>(attr);
+        llvm::IntegerType *ty = llvm::IntegerType::get(
+            ctx, intAttr.getType().getIntOrFloatBitWidth());
+        mdOps.push_back(llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(ty, intAttr.getValue())));
+      }
+      var->setMetadata(llvm::LLVMContext::MD_absolute_symbol,
+                       llvm::MDNode::get(ctx, mdOps));
+    }
+  }
+
+  return success();
+}
+
 LogicalResult ModuleTranslation::convertComdats() {
   for (auto comdatOp : getModuleBody(mlirModule).getOps<ComdatOp>()) {
     for (auto selectorOp : comdatOp.getOps<ComdatSelectorOp>()) {
@@ -2677,6 +2681,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertGlobalsAndAliases()))
     return nullptr;
   if (failed(translator.convertIFuncs()))
+    return nullptr;
+  if (failed(translator.convertGlobalMetadata()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;

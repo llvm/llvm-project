@@ -300,6 +300,15 @@ llvm.mlir.global external @global_with_expr4() {addr_space = 0 : i32, dbg_expr =
 llvm.mlir.global external @associated_target(0 : i32) : i32
 llvm.mlir.global external @associated_global(0 : i32) {associated = @associated_target} : i32
 
+// CHECK: llvm.mlir.global external @associated_ifunc_global(0 : i32) {addr_space = 0 : i32, associated = @associated_ifunc} : i32
+// CHECK: llvm.mlir.ifunc external @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.mlir.global external @associated_ifunc_global(0 : i32) {associated = @associated_ifunc} : i32
+llvm.mlir.ifunc external @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.func @associated_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
 // CHECK: llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0, 42], addr_space = 0 : i32} : i8
 llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8
 

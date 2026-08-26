@@ -3662,6 +3662,18 @@ llvm.mlir.global @associated_via_alias(2 : i32) {associated = @alias_of_target} 
 
 // -----
 
+// CHECK: @associated_ifunc_global = global i32 0, !associated ![[ASSOC_IFUNC:[0-9]+]]
+// CHECK: @associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+// CHECK: ![[ASSOC_IFUNC]] = !{ptr @associated_ifunc}
+llvm.mlir.global @associated_ifunc_global(0 : i32) {associated = @associated_ifunc} : i32
+llvm.mlir.ifunc @associated_ifunc : !llvm.func<i32 (i32)>, !llvm.ptr @associated_ifunc_resolver
+llvm.func @associated_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.zero : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // CHECK: @absolute_symbol_global = external global i8, !absolute_symbol ![[ABS:[0-9]+]]
 // CHECK: ![[ABS]] = !{i64 0, i64 42}
 llvm.mlir.global external @absolute_symbol_global() {absolute_symbol = [0 : i64, 42 : i64]} : i8

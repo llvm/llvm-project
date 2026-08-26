@@ -403,15 +403,27 @@ declare void @f()
 
 ; // -----
 
+; CHECK: llvm.mlir.global external @associated_ifunc_global
+; CHECK-SAME: associated = @associated_ifunc
+; CHECK: llvm.mlir.ifunc external @associated_ifunc
+@associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+@associated_ifunc_global = global i32 0, !associated !0
+define ptr @associated_ifunc_resolver() {
+  ret ptr null
+}
+!0 = !{ptr @associated_ifunc}
+
+; // -----
+
 ; CHECK: llvm.mlir.global external @a()
-; CHECK-SAME: {absolute_symbol = [0 : i64, 42 : i64], addr_space = 0 : i32} : i8
+; CHECK-SAME: {absolute_symbol = [0, 42], addr_space = 0 : i32} : i8
 @a = external global i8, !absolute_symbol !0
 !0 = !{i64 0, i64 42}
 
 ; // -----
 
 ; CHECK: llvm.mlir.global external @a()
-; CHECK-SAME: {absolute_symbol = [-1 : i64, -1 : i64], addr_space = 0 : i32} : i8
+; CHECK-SAME: {absolute_symbol = [-1, -1], addr_space = 0 : i32} : i8
 @a = external global i8, !absolute_symbol !0
 !0 = !{i64 -1, i64 -1}
 
