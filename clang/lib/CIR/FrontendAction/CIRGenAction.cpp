@@ -17,7 +17,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Pass/PassManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -27,7 +26,6 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
 #include "clang/CIR/Dialect/OpenMP/RegisterOpenMPExtensions.h"
-#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
@@ -192,7 +190,7 @@ public:
         return;
       }
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, C, *lowerModule, &CI.getVirtualFileSystem(),
+              MlirModule, MlirCtx, *lowerModule, &CI.getVirtualFileSystem(),
               !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
               EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
@@ -417,32 +415,33 @@ void CIRGenAction::ExecuteAction() {
     return;
   }
 
-  // Run the post-CIRGen pipeline (target-lowering, cxxabi-lowering,
-  // lowering-prepare). LoweringPrepare reads target/LangOpts facts via the
-  // LowerModule we build from the surrounding cc1 invocation, so it does not
-  // need a live ASTContext. IdiomRecognizer is intentionally skipped on this
-  // path -- it documents an AST dependency and is opt-in even on the source
-  // path.
+  // Run the same CIR-to-CIR pipeline the source path uses. It reads
+  // target/LangOpts facts via the LowerModule we build from the surrounding
+  // cc1 invocation, so it needs no live ASTContext. IdiomRecognizer is
+  // skipped here -- it documents an AST dependency and is opt-in even on the
+  // source path.
   std::unique_ptr<cir::LowerModule> lowerModule =
       makeLowerModuleFromInvocation(CI, Mod);
   if (!lowerModule) {
     CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
     return;
   }
-  {
-    mlir::PassManager pm(MLIRCtx);
-    pm.addPass(mlir::createCIRCanonicalizePass());
-    pm.addPass(mlir::createTargetLoweringPass());
-    pm.addPass(mlir::createCXXABILoweringPass());
-    pm.addPass(mlir::createLoweringPreparePass(lowerModule.get(),
-                                               &CI.getVirtualFileSystem()));
-    if (mlir::failed(pm.run(Mod))) {
-      // Pass-side errors are routed through DiagHandler above; only emit the
-      // generic catch-all if nothing more specific was reported.
-      if (!CI.getDiagnostics().hasErrorOccurred())
-        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
-      return;
-    }
+  const FrontendOptions &FEOptions = CI.getFrontendOpts();
+  const CodeGenOptions &CGO = CI.getCodeGenOpts();
+  const bool EnableLibOpt =
+      FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
+  if (runCIRToCIRPasses(Mod, *MLIRCtx, *lowerModule, &CI.getVirtualFileSystem(),
+                        !FEOptions.ClangIRDisableCIRVerifier,
+                        /*enableIdiomRecognizer=*/false,
+                        CGO.OptimizationLevel > 0, EnableLibOpt,
+                        FEOptions.ClangIRLibOptOptions,
+                        FEOptions.ClangIRCallConvLowering)
+          .failed()) {
+    // Pass-side errors are routed through DiagHandler above; only emit the
+    // generic catch-all if nothing more specific was reported.
+    if (!CI.getDiagnostics().hasErrorOccurred())
+      CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+    return;
   }
 
   llvm::LLVMContext LLVMCtx;
