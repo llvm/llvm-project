@@ -497,7 +497,7 @@ struct SgToLanePrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
 
 /// Distributes a subgroup-level LoadGather (xegpu.load) op to lane-level.
 ///
-/// Example 1 (1D, no chunk size):
+/// Example 1 (1D):
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
 ///   %mask = producer_op : vector<16xi1>
 ///   %offset = producer_op : vector<16xindex>
@@ -509,15 +509,7 @@ struct SgToLanePrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
 ///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
 ///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
 ///
-/// Example 2 (2D with chunk size, same mask & offset):
-///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
-///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
-///     memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-/// Distributed to:
-///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
-///     memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-///
-/// Example 3 (3D with leading unit dims):
+/// Example 2 (3D with leading unit dims):
 ///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
 ///   %mask = producer_op : vector<1x1x16xi1>
 ///   %offset = producer_op : vector<1x1x16xindex>
@@ -543,8 +535,7 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
       return failure();
 
     // Check that leading dimensions are unit.
-    int chunkSize = op.getChunkSize().value_or(1);
-    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    int effectiveVecRank = 1;
     ArrayRef<int64_t> shape = origResultTy.getShape();
     if (llvm::any_of(
             shape.take_front(origResultTy.getRank() - effectiveVecRank),
@@ -579,10 +570,39 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distSource = adaptor.getSource();
+
+    // Coalesced case: the layout assigns a genuine contiguous chunk on the FCD
+    // via `lane_data[FCD] = D > 1`, and that chunk is the lane's *entire*
+    // per-lane fragment (one round: `lane_layout[FCD] * D == FCD extent`, so
+    // the distributed per-lane vector has exactly D elements). Only then does
+    // the lane own a single run of D contiguous elements
+    // `{base, base+1, ..., base+D-1}`, which the XeVM lowering expects as a
+    // chunked access: a scalar base offset + scalar mask + a `vector<D>` value
+    // (the chunk size is implied by the value type). Take the first offset /
+    // mask of the contiguous group; the remaining offset computations become
+    // dead code and are removed during lowering.
+    //
+    // This must NOT fire for the round-robin case (`lane_data[FCD] = 1`,
+    // multiple rounds, e.g. a reduction source where lane l owns
+    // `{l, l+SG, l+2*SG, ...}`): there the per-lane elements are strided, not
+    // contiguous, so a chunked access would read the wrong elements. That case
+    // has `lane_data[FCD] == 1`, so the guard below excludes it.
+    int64_t laneElems = distResultTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    if (innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+    }
+
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
-        distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-        op.getL3HintAttr(), /*layout=*/nullptr, /*contiguity=*/nullptr);
+        distMask, op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
+        /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     Value result = newOp->getResult(0);
     if (distResultTy1D != distResultTy)
@@ -1024,7 +1044,7 @@ struct SgToLaneStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
 /// Distributes a subgroup-level StoreScatter (xegpu.store) op to
 /// lane-level.
 ///
-/// Example 1 (1D, no chunk size):
+/// Example 1 (1D):
 ///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
 ///   %mask = producer_op : vector<16xi1>
 ///   %offset = producer_op : vector<16xindex>
@@ -1036,15 +1056,7 @@ struct SgToLaneStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
 ///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
 ///     memref<256xf16>, vector<1xindex>, vector<1xi1>
 ///
-/// Example 2 (2D with chunk size, same mask & offset):
-///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
-///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
-///     vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-/// Distributed to:
-///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
-///     vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-///
-/// Example 3 (3D with leading unit dims):
+/// Example 2 (3D with leading unit dims):
 ///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
 ///   %mask = producer_op : vector<1x1x16xi1>
 ///   %offset = producer_op : vector<1x1x16xindex>
@@ -1071,8 +1083,7 @@ struct SgToLaneStoreScatter
       return failure();
 
     // Check that all leading dimensions are unit dimensions.
-    int chunkSize = op.getChunkSize().value_or(1);
-    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    int effectiveVecRank = 1;
     ArrayRef<int64_t> shape = origValueTy.getShape();
     if (llvm::any_of(shape.take_front(origValueTy.getRank() - effectiveVecRank),
                      [](int64_t d) { return d != 1; }))
@@ -1111,10 +1122,29 @@ struct SgToLaneStoreScatter
         castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
 
     Value distDest = adaptor.getDest();
+
+    // Coalesced case (mirrors SgToLaneLoadGather): a genuine contiguous chunk
+    // on the FCD, `lane_data[FCD] = D > 1` covering the lane's entire per-lane
+    // fragment (one round), stores as a chunked access: scalar base offset +
+    // scalar mask + a `vector<D>` value. Take the first offset / mask of the
+    // contiguous group; the dropped offset computations are DCE'd in lowering.
+    // Excludes the round-robin case (`lane_data[FCD] == 1`).
+    int64_t laneElems = distValueTy1D.getNumElements();
+    int64_t innerLaneData = 1;
+    if (auto laneDataArr = layout.getEffectiveLaneDataAsInt();
+        !laneDataArr.empty())
+      innerLaneData = laneDataArr.back();
+    if (innerLaneData > 1 && laneElems == innerLaneData) {
+      distOffsets = vector::ExtractOp::create(
+          rewriter, op.getLoc(), distOffsets, ArrayRef<int64_t>{0});
+      distMask = vector::ExtractOp::create(rewriter, op.getLoc(), distMask,
+                                           ArrayRef<int64_t>{0});
+    }
+
     xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
-                                  distOffsets, distMask, op.getChunkSizeAttr(),
-                                  op.getL1HintAttr(), op.getL2HintAttr(),
-                                  op.getL3HintAttr(), /*layout=*/nullptr,
+                                  distOffsets, distMask, op.getL1HintAttr(),
+                                  op.getL2HintAttr(), op.getL3HintAttr(),
+                                  /*layout=*/nullptr,
                                   /*contiguity=*/nullptr);
     rewriter.eraseOp(op);
     return success();
