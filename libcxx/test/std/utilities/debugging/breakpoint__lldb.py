@@ -8,6 +8,7 @@
 
 import os
 import platform
+import sys
 
 import lldb
 
@@ -50,8 +51,20 @@ def run_test(debugger):
     if stopped_thread is None:
         fail("Could not find thread stopped by std::breakpoint")
 
-    found_main = False
+    is_wow64_breakpoint = (  # 32 bit Windows work around
+        platform_name == "Windows"
+        and "0x4000001f" in stopped_thread.GetStopDescription(256)
+    )
 
+    if is_wow64_breakpoint:
+        print("Stepping past WOW64 breakpoint", file=sys.stderr)
+        process.Continue()
+        for t in process.threads:
+            if t.GetStopReason() == stop_reason:
+                stopped_thread = t
+                break
+
+    found_main = False
     for frame in stopped_thread:
         if not frame.IsValid():
             fail(f"Frame is not valid")
@@ -75,7 +88,7 @@ def __lldb_init_module(debugger, internal_dict):
     try:
         run_test(debugger)
     except Exception as e:
-        print(f"Test Failure: {e}")
+        print(f"Test Failure: {e}", file=sys.stderr)
         exit_code = 1
 
     debugger.HandleCommand(f"quit {exit_code}")
