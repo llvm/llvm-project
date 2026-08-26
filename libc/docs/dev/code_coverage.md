@@ -1,22 +1,8 @@
-# Code Coverage in LLVM-libc
-
 (code_coverage)=
 
-This document describes how to configure, generate, and view code coverage and Modified Condition / Decision Coverage (MC/DC) reports for LLVM-libc.
+# Code Coverage
 
----
-
-## Overview
-
-Code coverage measures the proportion of source code executed during testing. In LLVM-libc, coverage metrics identify untested edge cases, prevent regressions across supported architectures, and provide verification evidence for safety-critical systems.
-
-### Coverage Modes
-
-* **Statement and Branch Coverage:**  
-  Measures line execution and verifies whether conditional branches evaluated to both true and false paths.
-
-* **Modified Condition / Decision Coverage (MC/DC):**  
-  Evaluates boolean conditions within compound decisions (such as `if (A && B)`). Verifies that each individual sub-condition is tested with both true and false values and independently affects the outcome of the enclosing decision. Required by safety-critical standards such as DO-178C (aviation) and ISO 26262 (automotive).
+LLVM-libc supports generating statement, branch, and Modified Condition / Decision Coverage (MC/DC) reports locally. Because `llvm-libc` unit tests run in freestanding test harnesses, coverage counters and boolean decision bitmasks are captured directly and written to disk upon test completion using internal Linux kernel system calls.
 
 ---
 
@@ -28,332 +14,294 @@ Generating coverage reports requires Clang, LLVM profile tools, CMake, and Ninja
 * **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
 * **Build System:** CMake 3.28+ and Ninja.
 
-### Toolchain Installation (Debian/Ubuntu)
+### Toolchain Discovery
 
-Install the required compiler, tooling, and build utilities:
-
-```bash
-sudo apt install clang-21 llvm-21-tools lld-21 ninja-build cmake
-```
-
-### Configuring Tool Links
-
-Because Debian and Ubuntu install LLVM tools with version suffixes (such as `llvm-profdata-21`), you can configure unversioned aliases using either of the following methods:
-
-#### Method A: User-Level Setup (Recommended - No `sudo` required)
+If your Linux distribution packages version-suffixed binaries (e.g. `clang-21`, `llvm-profdata-21`), you can resolve them automatically:
 
 ```bash
-mkdir -p ~/.local/bin
-ln -sf $(which llvm-profdata-21 2>/dev/null || which llvm-profdata) ~/.local/bin/llvm-profdata
-ln -sf $(which llvm-cov-21 2>/dev/null || which llvm-cov) ~/.local/bin/llvm-cov
-export PATH="$HOME/.local/bin:$PATH"
+CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
+LLVM_PROFDATA=$(which llvm-profdata-$CLANG_MAJOR 2>/dev/null || which llvm-profdata)
+LLVM_COV=$(which llvm-cov-$CLANG_MAJOR 2>/dev/null || which llvm-cov)
 ```
-
-#### Method B: System-Wide Alternatives (Requires `sudo`)
-
-```bash
-sudo update-alternatives --install /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-21 100
-sudo update-alternatives --install /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-21 100
-```
-
-:::{note}
-Compiling the full suite of unit tests with coverage instrumentation encompasses ~10,000 target nodes. On multi-core workstations, parallel compilation completes in a few minutes. On resource-constrained systems, virtual machines with 2–4 cores, or cold builds without compiler caching, the initial build may take up to 30 minutes.
-:::
 
 ---
 
 ## Cleaning Profile Counters
 
-Before running a new coverage test pass, remove existing `.profraw` and `.profdata` files to avoid merging stale profiling data:
+Removes previously generated raw profile counter files (`.profraw`) and merged profile databases (`.profdata`) so that new coverage runs record clean, non-aggregated execution data:
 
 ```bash
-find build-cov -name "libc_cov_*.profraw" -delete 2>/dev/null || true
-rm -f build-cov/libc_full.profdata libc_full.profdata profraw_list.txt
+find . -name "libc_cov_*.profraw" -delete 2>/dev/null || true
+rm -f libc_full.profdata libc_mcdc.profdata libc_single.profdata profraw_list.txt
 ```
 
 ---
 
-## How to Run Standard Coverage (Statement and Branch)
+## Standard Statement & Branch Coverage
 
-Standard coverage records line execution and branch direction metrics across all LLVM-libc entrypoints and support routines.
+Standard coverage measures physical line execution and conditional branch outcomes across all LLVM-libc entrypoints and internal support utilities.
 
 ### 1. CMake Configuration
 
-Configure LLVM-libc with `-DLLVM_LIBC_ENABLE_COVERAGE=ON`:
+Configures CMake to build LLVM-libc in overlay mode, setting `-DLIBC_ENABLE_COVERAGE=ON` to pass Clang's `-fprofile-instr-generate` and `-fcoverage-mapping` flags to the compiler:
 
 ```bash
 cmake -G Ninja -S runtimes -B build-cov \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DLLVM_ENABLE_RUNTIMES=libc \
-  -DLLVM_LIBC_FULL_BUILD=ON \
-  -DLLVM_LIBC_ENABLE_COVERAGE=ON \
-  -DLIBC_ENABLE_MCDC=OFF \
-  -DLIBC_TEST_UNIT_TEST_ONLY=ON \
-  -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+  -DLLVM_ENABLE_RUNTIMES="libc" \
+  -DLLVM_LIBC_FULL_BUILD=OFF \
+  -DLIBC_ENABLE_COVERAGE=ON
 ```
 
-### 2. Build Unit Tests
+### 2. Build and Execute All Unit Tests
 
-Compile the test suite:
+Compiles all libc unit test executables and executes them in parallel. As each test completes, its test harness writes execution counters to a PID-specific `.profraw` file via direct Linux syscalls:
 
 ```bash
-ninja -k 0 -C build-cov libc-unit-tests || true
+ninja -k 0 -C build-cov libc-unit-tests
 ```
 
-### 3. Run Unit Tests
+:::{note}
+In LLVM-libc, `libc-unit-tests` builds and executes tests in a single invocation. The `-k 0` flag ensures Ninja continues executing all remaining test targets even if an individual edge-case test encounters an error. To only compile test binaries without immediately executing them, use `ninja -C build-cov libc-unit-tests-build`.
+:::
 
-Execute the compiled unit test binaries in parallel across available CPU cores:
+### 3. Merge Profile Counters
+
+Scans the build tree for all generated `.profraw` files and indexes them into a unified, sparse `.profdata` archive using `llvm-profdata`:
 
 ```bash
-# Clean stale counters
-find build-cov -name "libc_cov_*.profraw" -delete 2>/dev/null || true
-rm -f libc_full.profdata profraw_list.txt
-
-# Run all test binaries with isolated PID profile names
-export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
-(cd build-cov && find libc/test -type f -executable -name "*__build__" | xargs -P $(nproc) -I {} sh -c '{} > /dev/null 2>&1 || true')
+find . -name "libc_cov_*.profraw" > profraw_list.txt
+llvm-profdata merge -sparse -f profraw_list.txt -o libc_full.profdata
 ```
 
-### 4. Merge Profile Counters
+### 4. Generate Coverage Reports
 
-Resolve the matching profile merge tool and aggregate the emitted raw counters:
-
-```bash
-# Auto-detect matching llvm-profdata based on active Clang version
-CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
-LLVM_PROFDATA=$(which llvm-profdata-$CLANG_MAJOR 2>/dev/null || which llvm-profdata)
-
-find . build-cov -name "libc_cov_*.profraw" > profraw_list.txt
-$LLVM_PROFDATA merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
-```
-
-### 5. View Coverage Reports
-
-Collect test binary object references and discover the coverage viewer:
+Collects all compiled test binary paths and invokes `llvm-cov` to correlate recorded profile counters against the libc source tree:
 
 ```bash
-CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
-LLVM_COV=$(which llvm-cov-$CLANG_MAJOR 2>/dev/null || which llvm-cov)
-
-EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
-OBJECTS=("${EXECUTABLES[@]:1}")
-OBJECTS=("${OBJECTS[@]/#/-object=}")
+TEST_BINS=($(find build-cov -type f -executable -name "*__build__"))
+OBJECT_FLAGS=()
+for bin in "${TEST_BINS[@]:1}"; do
+  OBJECT_FLAGS+=("-object=$bin")
+done
 ```
 
 #### Terminal Summary Table
-
-Display a directory-by-directory coverage report in the terminal:
+Prints an aggregated terminal summary showing line, region, and branch coverage percentages for each file:
 
 ```bash
-$LLVM_COV report \
+llvm-cov report \
   -instr-profile=libc_full.profdata \
-  "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
+  "${TEST_BINS[0]}" "${OBJECT_FLAGS[@]}" \
   --show-branch-summary \
   -ignore-filename-regex=".*(test|utils).*"
 ```
 
 #### Interactive HTML Dashboard
-
-Generate a browsable HTML site with source file coverage drill-downs:
+Generates an interactive HTML dashboard containing sortable directory metrics and syntax-highlighted source views:
 
 ```bash
-$LLVM_COV show \
+llvm-cov show \
   -format=html \
   -output-dir=coverage_html \
   -instr-profile=libc_full.profdata \
-  "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
+  "${TEST_BINS[0]}" "${OBJECT_FLAGS[@]}" \
   --show-directory-coverage \
   --show-branches=count \
-  --compilation-dir=. \
-  --path-equivalence="$PWD,." \
   -ignore-filename-regex=".*(test|utils).*"
 
-# Open in browser
+# Open dashboard in browser
 xdg-open coverage_html/index.html
 ```
 
 ---
 
-## How to Run Modified Condition / Decision Coverage (MC/DC)
+## Modified Condition / Decision Coverage (MC/DC)
 
-MC/DC instrumentation captures condition-level truth tables for compound logical expressions in addition to statement and branch metrics.
+MC/DC evaluates boolean sub-conditions within compound logical expressions (such as `if (A && B)`). It verifies that each individual sub-condition evaluates to both true and false and independently affects the outcome of the enclosing decision.
 
 ### 1. CMake Configuration
 
-Enable MC/DC instrumentation by adding `-DLIBC_ENABLE_MCDC=ON`:
+Configures CMake with `-fcoverage-mcdc` alongside profiling flags, enabling the compiler frontend to generate boolean condition bitmaps for compound decisions:
 
 ```bash
-cmake -G Ninja -S runtimes -B build-cov \
+cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DLLVM_ENABLE_RUNTIMES=libc \
-  -DLLVM_LIBC_FULL_BUILD=ON \
-  -DLLVM_LIBC_ENABLE_COVERAGE=ON \
-  -DLIBC_ENABLE_MCDC=ON \
-  -DLIBC_TEST_UNIT_TEST_ONLY=ON \
-  -DLIBC_TEST_SKIP_DEATH_TESTS=ON
+  -DLLVM_ENABLE_RUNTIMES="libc" \
+  -DLLVM_LIBC_FULL_BUILD=OFF \
+  -DLIBC_ENABLE_COVERAGE=ON \
+  -DCMAKE_C_FLAGS="-fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc" \
+  -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc"
 ```
 
-### 2. Build Unit Tests
+### 2. Build and Execute Tests
 
-Compile the test binaries:
+Compiles and executes all unit tests with MC/DC instrumentation enabled, saving condition evaluation bitmasks into raw profile files upon completion:
 
 ```bash
-ninja -k 0 -C build-cov libc-unit-tests || true
+ninja -k 0 -C build-cov-mcdc libc-unit-tests
 ```
 
-### 3. Run Unit Tests
+### 3. Merge Profiles
 
-Execute the compiled unit test binaries in parallel:
+Indexes and merges all MC/DC `.profraw` files into a unified `libc_mcdc.profdata` archive for report generation:
 
 ```bash
-# Clean stale counters
-find build-cov -name "libc_cov_*.profraw" -delete 2>/dev/null || true
-rm -f libc_full.profdata profraw_list.txt
-
-# Run all test binaries with isolated PID profile names
-export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
-(cd build-cov && find libc/test -type f -executable -name "*__build__" | xargs -P $(nproc) -I {} sh -c '{} > /dev/null 2>&1 || true')
+find . -name "libc_cov_*.profraw" > profraw_list.txt
+llvm-profdata merge -sparse -f profraw_list.txt -o libc_mcdc.profdata
 ```
 
-### 4. Merge Profile Counters
+### 4. Generate Reports
 
-Merge the raw counters into an indexed profile dataset:
+Maps MC/DC bitmap records to source AST decisions and evaluates condition independence pairs:
 
 ```bash
-# Auto-detect matching llvm-profdata based on active Clang version
-CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
-LLVM_PROFDATA=$(which llvm-profdata-$CLANG_MAJOR 2>/dev/null || which llvm-profdata)
-
-find . build-cov -name "libc_cov_*.profraw" > profraw_list.txt
-$LLVM_PROFDATA merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
+TEST_BINS=($(find build-cov-mcdc -type f -executable -name "*__build__"))
+OBJECT_FLAGS=()
+for bin in "${TEST_BINS[@]:1}"; do
+  OBJECT_FLAGS+=("-object=$bin")
+done
 ```
 
-### 5. View MC/DC Coverage Reports
-
-Collect test binary object references:
-
-```bash
-CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
-LLVM_COV=$(which llvm-cov-$CLANG_MAJOR 2>/dev/null || which llvm-cov)
-
-EXECUTABLES=($(find build-cov -type f -executable -name "*__build__"))
-OBJECTS=("${EXECUTABLES[@]:1}")
-OBJECTS=("${OBJECTS[@]/#/-object=}")
-```
-
-#### Terminal Summary Table with MC/DC Metrics
-
-Display statement, branch, and MC/DC decision coverage percentages in the terminal:
+#### Terminal Summary Table
+Displays the terminal coverage summary including MC/DC Condition and Missed Condition percentages:
 
 ```bash
-$LLVM_COV report \
-  -instr-profile=libc_full.profdata \
-  "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
+llvm-cov report \
+  -instr-profile=libc_mcdc.profdata \
+  "${TEST_BINS[0]}" "${OBJECT_FLAGS[@]}" \
   --show-branch-summary \
   --show-mcdc-summary \
   -ignore-filename-regex=".*(test|utils).*"
 ```
 
-#### Interactive HTML Dashboard with MC/DC Analysis
-
-Generate an interactive HTML dashboard containing MC/DC decision breakdown tables and line-by-line coverage:
+#### Interactive HTML Dashboard
+Produces an HTML report with expandable MC/DC decision truth tables and test vector coverage breakdowns:
 
 ```bash
-$LLVM_COV show \
+llvm-cov show \
   -format=html \
   -output-dir=coverage_mcdc_html \
-  -instr-profile=libc_full.profdata \
-  "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
+  -instr-profile=libc_mcdc.profdata \
+  "${TEST_BINS[0]}" "${OBJECT_FLAGS[@]}" \
   --show-directory-coverage \
   --show-branches=count \
   --show-mcdc \
   --show-mcdc-summary \
-  --compilation-dir=. \
-  --path-equivalence="$PWD,." \
   -ignore-filename-regex=".*(test|utils).*"
 
-# Open in browser
+# Open dashboard in browser
 xdg-open coverage_mcdc_html/index.html
 ```
 
 ---
 
-## Running Coverage for a Single Target
+## Running Coverage for a Single Test
 
-To quickly inspect coverage for an individual entrypoint (e.g. `strlen`) without building the entire library:
+When developing or modifying a specific function, running coverage on a single unit test allows rapid iteration (~2 seconds) without compiling and running the entire library suite.
+
+The commands below use `libc.test.src.ctype.isalpha_test` (which tests `libc/src/ctype/isalpha.cpp`) as an example. You can test any other entrypoint by substituting the target name and source file path:
+* **Target pattern:** `libc.test.<path_to_test>.<test_name>` (e.g. `libc.test.src.string.strlen_test`)
+* **Source path pattern:** `libc/<path_to_source>/<source_file>.cpp` (e.g. `libc/src/string/strlen.cpp`)
+
+### 1. Build and Execute the Targeted Test
+
+Compiles and runs only the specified unit test binary, immediately dumping execution profile counters for fast feedback (~2 seconds):
 
 ```bash
-# 1. Build the specific test binary
-ninja -C build-cov libc.test.src.string.strlen_test.__unit__.__build__
+# For a standard coverage build
+ninja -C build-cov libc.test.src.ctype.isalpha_test
 
-# 2. Run the test binary
-export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
-./build-cov/libc/test/src/string/libc.test.src.string.strlen_test.__unit__.__build__
+# For an MC/DC build
+ninja -C build-cov-mcdc libc.test.src.ctype.isalpha_test
+```
 
-# 3. Merge profiles
-CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
-LLVM_PROFDATA=$(which llvm-profdata-$CLANG_MAJOR 2>/dev/null || which llvm-profdata)
-LLVM_COV=$(which llvm-cov-$CLANG_MAJOR 2>/dev/null || which llvm-cov)
+### 2. Merge the Profile
 
-find . build-cov -name "libc_cov_*.profraw" > profraw_list.txt
-$LLVM_PROFDATA merge -sparse --input-files=profraw_list.txt -o libc_single.profdata
+Merges the single test's raw profile into an indexed database for targeted inspection:
 
-# 4. View MC/DC truth table in terminal
-TEST_BIN="./build-cov/libc/test/src/string/libc.test.src.string.strlen_test.__unit__.__build__"
-$LLVM_COV show \
+```bash
+find . -name "libc_cov_*.profraw" > profraw_list.txt
+llvm-profdata merge -sparse -f profraw_list.txt -o libc_single.profdata
+```
+
+### 3. View the Terminal Report
+
+Renders the coverage metrics or line-by-line truth table for the specific source file being tested:
+
+```bash
+# Standard summary report
+llvm-cov report \
   -instr-profile=libc_single.profdata \
-  "$TEST_BIN" \
+  ./build-cov/libc/test/src/ctype/libc.test.src.ctype.isalpha_test.__build__ \
+  libc/src/ctype/isalpha.cpp
+
+# Line-by-line coverage and truth table inspection
+llvm-cov show \
+  -instr-profile=libc_single.profdata \
+  ./build-cov-mcdc/libc/test/src/ctype/libc.test.src.ctype.isalpha_test.__build__ \
   --show-branches=count \
   --show-mcdc \
-  libc/src/string/strlen.cpp
+  libc/src/ctype/isalpha.cpp
 ```
 
 ---
 
 ## Interpreting Results
 
-Understanding coverage metrics helps developers assess test completeness, identify uncovered edge cases, and author targeted unit tests.
-
-### Terminal Summary Metrics
-
-When executing `llvm-cov report`, the terminal output summarizes coverage across files and directories:
-
-* **Region Coverage:**  
-  Measures execution of discrete Abstract Syntax Tree (AST) expression sub-blocks (such as the body of an `if` statement or ternary expressions). A lower region coverage than line coverage indicates partially executed expressions on lines that were counted as hit.
+### Coverage Metrics Overview
 
 * **Line Coverage:**  
-  Tracks physical source lines executed during the test run. Unexecuted lines represent functions, conditional branches, or error recovery handlers that were never invoked.
-
+  Measures whether each physical line of executable source code was reached at least once during testing.
 * **Branch Coverage:**  
-  Evaluates conditional branch outcomes. If a branch indicates `50%` coverage, the condition was only ever evaluated in one direction (for example, always `True`), leaving the alternative path (`False`) untested.
-
+  Measures whether each conditional branch evaluated to both its `True` and `False` paths. For example, if an `if (x > 0)` branch is taken 10 times but never skipped, branch coverage is 50% because the `False` path was never exercised.
 * **MC/DC Coverage:**  
-  Reports the percentage of compound boolean decisions where every atomic sub-condition was demonstrated to independently determine the final decision outcome.
+  Evaluates compound boolean expressions (such as `if (A && B)` or `if (A || B)`). It verifies that each individual condition was tested as both True and False, and demonstrated that it could independently change the overall outcome of the decision.
 
-### HTML Dashboard and Source Inspection
+### Understanding Summary Reports (`llvm-cov report`)
 
-The interactive HTML dashboard (`coverage_html/index.html`) provides line-by-line visual inspection of source implementations:
+The summary table produced by `llvm-cov report` displays metrics across individual source files and overall totals:
 
-#### Line Execution Highlights
+* **Regions / Missed Regions:** A region is a continuous segment of code (such as a function body or basic block). Missed regions indicate code blocks that were never executed.
+* **Functions / Missed Functions:** The total number of entrypoints or subroutines executed vs unexecuted.
+* **Lines / Missed Lines:** Physical source lines executed vs unexecuted.
+* **Branches / Missed Branches:** The total count of decision directions (both True and False) evaluated.
+* **MC/DC Conditions / Missed Conditions:** The count of individual boolean sub-conditions that demonstrated independent decision control.
 
-* **Green Lines:** Source code executed by tests. The margin integer indicates execution count.
-* **Red Lines:** Unexecuted code that requires additional unit test coverage.
+### Understanding Annotated Source Code (`llvm-cov show`)
 
-#### Branch Markers
+When viewing annotated source listings:
+* **Line Number (Left Column):** The corresponding line in the source file.
+* **Execution Count (Second Column):** The number of times that line was executed (for example, `517` means 517 executions; `0` indicates unexecuted code).
+* **Branch Annotations:** Shows the exact number of times each branch path evaluated True and False:
+  ```text
+  |  Branch (19:7):  [True: 256, False: 261]
+  |  Branch (19:16): [True: 0,   False: 261]
+  ```
+  In this example, the second branch at column 16 was evaluated False 261 times, but was never evaluated True (`True: 0`), indicating an untested branch path.
 
-Conditional statements display branch hit counts inline in the format `[True: N, False: M]`. An entry of `[True: 10, False: 0]` indicates that the conditional expression was never evaluated as False during testing. Adding a unit test where the condition evaluates to False resolves this gap.
+### Understanding the MC/DC Truth Table Output
 
-#### MC/DC Truth Tables and Condition Diagnostics
+When inspecting with `--show-mcdc`, `llvm-cov` prints a truth table underneath each compound decision statement.
 
-When `--show-mcdc` is enabled, `llvm-cov` renders a boolean truth table directly below compound decisions:
+For example, inspecting `libc/src/ctype/isalpha.cpp` produces:
 
-```
-   19|    517|  if (c < 0 || c > 255)
+```text
+   18|    517|LLVM_LIBC_FUNCTION(int, isalpha, (int c)) {
+   19|    517|  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
   ------------------
+  |  Branch (19:7): [True: 256, False: 261]
+  |  Branch (19:16): [True: 0, False: 261]
+  ------------------
+  |---> MC/DC Decision Region (19:7) to (19:61)
+  |  Number of Conditions: 2
+  |     Condition C1 --> (19:7)
+  |     Condition C2 --> (19:16)
+  |
   |  Executed MC/DC Test Vectors:
   |     C1, C2    Result
   |  1 { F,  F  = F      }
@@ -363,20 +311,30 @@ When `--show-mcdc` is enabled, `llvm-cov` renders a boolean truth table directly
   |  C2-Pair: not covered
   |  MC/DC Coverage for Decision: 50.00%
   ------------------
+   20|    256|    return 0;
+   21|    261|  return static_cast<int>(internal::isalpha(static_cast<char>(c)));
+   22|    517|}
 ```
 
-##### Understanding the Truth Table
+#### Step-by-Step Breakdown:
 
-1. **Identify the Conditions:**  
-   In `if (c < 0 || c > 255)`, condition **C1** is `c < 0` and **C2** is `c > 255`.
+1. **Conditions (C1, C2):**  
+   The decision on line 19 contains two sub-conditions: `if (c < 0 || c > 255)`.
+   * **C1** is the first condition: `c < 0`
+   * **C2** is the second condition: `c > 255`
 
-2. **Inspect Executed Vectors:**  
-   * **Vector 1 (`F, F = F`):** Tested with an in-range value (e.g. `c = 100`). Both C1 and C2 evaluated to False, producing a False outcome.
-   * **Vector 2 (`T, - = T`):** Tested with a negative value (e.g. `c = -1`). C1 evaluated to True, which immediately satisfied the `if` statement (C2 was short-circuited `-`).
+2. **Executed Test Vectors:**  
+   Each numbered row records an observed combination of condition inputs and the resulting decision outcome:
+   * **Vector 1 (`F, F = F`):** Tested with a valid character (e.g. `c = 'a'`). Both C1 and C2 evaluated to False, producing an overall result of False.
+   * **Vector 2 (`T, - = T`):** Tested with a negative value (e.g. `c = -1`). C1 evaluated to True, producing an overall result of True. The hyphen (`-`) indicates that C2 was short-circuited by the compiler and not evaluated.
 
-3. **Evaluate Coverage Status:**  
-   * **`C1-Pair: covered (1, 2)`:** Verified. Comparing Vector 1 and Vector 2 proves that toggling C1 alone flips the overall decision outcome.
-   * **`C2-Pair: not covered`:** Missing. C2 was never tested in a state where it independently caused the `if` condition to become True.
+3. **Condition Pairs & Independent Effect:**  
+   To satisfy MC/DC, each condition must show that toggling its value from False to True directly flips the overall decision outcome while holding other conditions constant:
+   * **`C1-Pair: covered (1, 2)`:** Comparing Vector 1 (`F, F = F`) and Vector 2 (`T, - = T`) shows that changing C1 from False to True flipped the result from False to True. C1 is fully covered.
+   * **`C2-Pair: not covered`:** There is no test vector where C2 evaluated to True while C1 remained False. Therefore, C2 has not yet proved independent control over the decision.
 
-4. **How to Fix the Gap:**  
-   Add a unit test case with `c = 256`. This evaluates C1 as False and C2 as True (`3 { F, True = True }`), forming the missing independence pair `(1, 3)` for C2 and achieving 100% MC/DC coverage.
+4. **How to Reach 100% Decision Coverage:**  
+   To complete coverage for C2:
+   * Add a test case with an out-of-range positive value (such as `c = 256`).
+   * This executes Vector 3 (`F, T = T`), where C1 is False and C2 is True, yielding an overall True outcome.
+   * Comparing Vector 1 (`F, F = F`) and Vector 3 (`F, T = T`) forms the independence pair `(1, 3)` for C2, demonstrating that C2 independently controls the decision and achieving 100% MC/DC coverage.
