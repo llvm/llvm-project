@@ -369,6 +369,92 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!A = tensor<1023x255x127xf32>
+
+// CHECK-LABEL: @elementwise_no_mnk(
+func.func @elementwise_no_mnk(%A : !A, %B : !A, %C : !A) -> !A {
+  //      CHECK: linalg.add
+  %0 = linalg.add ins(%A, %B : !A, !A) outs(%C : !A) -> !A
+  return %0 : !A
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %add = transform.structured.match ops{["linalg.add"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.add">
+    transform.structured.pack_greedily %add
+        matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+      : (!transform.op<"linalg.add">) -> !transform.any_op
+      transform.yield
+  }
+}
+
+// -----
+
+!A = tensor<42x1023x255xf32>
+!X = tensor<42x255xf32>
+!Y = tensor<42x1023xf32>
+
+// CHECK-LABEL: @batch_matvec_no_n(
+func.func @batch_matvec_no_n(%A : !A, %x : !X, %y : !Y) -> !Y {
+  //      CHECK: linalg.batch_matvec
+  %0 = linalg.batch_matvec ins(%A, %x : !A, !X) outs(%y : !Y) -> !Y
+  return %0 : !Y
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %batch_matvec = transform.structured.match ops{["linalg.batch_matvec"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.batch_matvec">
+    transform.structured.pack_greedily %batch_matvec
+        matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+      : (!transform.op<"linalg.batch_matvec">) -> !transform.any_op
+      transform.yield
+  }
+}
+
+// -----
+
+!A = tensor<1023x255xf32>
+!B = tensor<127xf32>
+!C = tensor<1023x127xf32>
+
+#mnr_accesses = [
+  affine_map<(m, n, r) -> (m, r)>,
+  affine_map<(m, n, r) -> (n)>,
+  affine_map<(m, n, r) -> (m, n)>
+]
+#mnr_trait = {
+  indexing_maps = #mnr_accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// CHECK-LABEL: @lhs_only_reduction_no_k(
+func.func @lhs_only_reduction_no_k(%A : !A, %B : !B, %C : !C) -> !C {
+  //  CHECK-NOT: linalg.pack
+  //      CHECK: linalg.generic
+  %0 = linalg.generic #mnr_trait ins(%A, %B : !A, !B) outs(%C : !C) {
+    ^bb0(%a: f32, %b: f32, %c: f32):
+      %d = arith.mulf %a, %b : f32
+      %e = arith.addf %c, %d : f32
+      linalg.yield %e : f32
+  } -> !C
+  return %0 : !C
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.generic">
+    transform.structured.pack_greedily %generic
+        matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+      : (!transform.op<"linalg.generic">) -> !transform.any_op
+      transform.yield
+  }
+}
+
+// -----
+
 func.func @no_padding_on_packs(%A: tensor<32x32xf32>, %B: tensor<32x32xf32>, %C: tensor<32x32xf32>)
     -> tensor<32x32xf32> {
   %0 = linalg.matmul  ins(%A, %B: tensor<32x32xf32>, tensor<32x32xf32>)
