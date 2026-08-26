@@ -163,3 +163,148 @@ entry:
   %b = add <32 x i8> %s, %a
   ret <32 x i8> %b
 }
+
+define double @reassociate_three_term_fadd_lhs_lhs(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: reassociate_three_term_fadd_lhs_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd fast double %lane1, %b
+  %result = fadd fast double %inner, %lane0
+  ret double %result
+}
+
+define double @reassociate_three_term_fadd_lhs_rhs(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: reassociate_three_term_fadd_lhs_rhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd fast double %b, %lane1
+  %result = fadd fast double %inner, %lane0
+  ret double %result
+}
+
+define double @reassociate_three_term_fadd_rhs_lhs(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: reassociate_three_term_fadd_rhs_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd fast double %lane1, %b
+  %result = fadd fast double %lane0, %inner
+  ret double %result
+}
+
+define double @reassociate_three_term_fadd_rhs_rhs(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: reassociate_three_term_fadd_rhs_rhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp.2d d0, v0
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd fast double %b, %lane1
+  %result = fadd fast double %lane0, %inner
+  ret double %result
+}
+
+define float @reassociate_three_term_fadd_f32(<2 x float> %a, float %b) nounwind {
+; CHECK-LABEL: reassociate_three_term_fadd_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    faddp.2s s0, v0
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x float> %a, i32 0
+  %lane1 = extractelement <2 x float> %a, i32 1
+  %inner = fadd reassoc float %lane1, %b
+  %result = fadd reassoc float %inner, %lane0
+  ret float %result
+}
+
+define half @reassociate_three_term_fadd_f16(<2 x half> %a, half %b) nounwind "target-features"="+fullfp16" {
+; CHECK-LABEL: reassociate_three_term_fadd_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    faddp.2h h0, v0
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x half> %a, i32 0
+  %lane1 = extractelement <2 x half> %a, i32 1
+  %inner = fadd reassoc half %lane1, %b
+  %result = fadd reassoc half %inner, %lane0
+  ret half %result
+}
+
+define half @do_not_reassociate_f16_without_fullfp16(<2 x half> %a, half %b) nounwind {
+; CHECK-LABEL: do_not_reassociate_f16_without_fullfp16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov h2, v0[1]
+; CHECK-NEXT:    fcvt s2, h2
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fadd s1, s2, s1
+; CHECK-NEXT:    fcvt h1, s1
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    fadd s0, s1, s0
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x half> %a, i32 0
+  %lane1 = extractelement <2 x half> %a, i32 1
+  %inner = fadd reassoc half %lane1, %b
+  %result = fadd reassoc half %inner, %lane0
+  ret half %result
+}
+
+define double @do_not_reassociate_when_inner_lacks_reassoc(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: do_not_reassociate_when_inner_lacks_reassoc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    fadd d1, d2, d1
+; CHECK-NEXT:    fadd d0, d1, d0
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd double %lane1, %b
+  %result = fadd reassoc double %inner, %lane0
+  ret double %result
+}
+
+define double @do_not_reassociate_multiuse_inner(<2 x double> %a, double %b, ptr %p) nounwind {
+; CHECK-LABEL: do_not_reassociate_multiuse_inner:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    fadd d1, d2, d1
+; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    fadd d0, d1, d0
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd reassoc double %lane1, %b
+  store double %inner, ptr %p
+  %result = fadd reassoc double %inner, %lane0
+  ret double %result
+}
+
+define double @do_not_reassociate_strict_three_term_fadd(<2 x double> %a, double %b) nounwind {
+; CHECK-LABEL: do_not_reassociate_strict_three_term_fadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d2, v0[1]
+; CHECK-NEXT:    fadd d1, d2, d1
+; CHECK-NEXT:    fadd d0, d1, d0
+; CHECK-NEXT:    ret
+  %lane0 = extractelement <2 x double> %a, i32 0
+  %lane1 = extractelement <2 x double> %a, i32 1
+  %inner = fadd double %lane1, %b
+  %result = fadd double %inner, %lane0
+  ret double %result
+}

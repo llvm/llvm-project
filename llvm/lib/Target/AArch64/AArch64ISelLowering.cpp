@@ -22384,8 +22384,71 @@ static SDValue performANDCombine(SDNode *N,
   return SDValue();
 }
 
+static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
+  switch (Opcode) {
+  case ISD::STRICT_FADD:
+  case ISD::FADD:
+    return (FullFP16 && VT == MVT::f16) || VT == MVT::f32 || VT == MVT::f64;
+  case ISD::ADD:
+    return VT == MVT::i64;
+  default:
+    return false;
+  }
+}
+
+static SDValue performPairwiseFADDCombine(SDNode *N,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const AArch64Subtarget &Subtarget) {
+  assert(N->getFlags().hasAllowReassociation() &&
+         "Expected AllowReassociation!");
+
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!Subtarget.hasNEON() ||
+      !hasPairwiseAdd(N->getOpcode(), VT, Subtarget.hasFullFP16()))
+    return SDValue();
+
+  using namespace llvm::SDPatternMatch;
+
+  SDValue OuterExtract;
+  SDValue InnerAdd;
+  uint64_t OuterLane;
+  if (!sd_match(
+          N, m_FAdd(m_Value(OuterExtract,
+                            m_ExtractElt(m_Value(), m_ConstInt(OuterLane))),
+                    m_Value(InnerAdd, m_OneUse(m_FAdd(m_Value(), m_Value()))))))
+    return SDValue();
+
+  if (!InnerAdd->getFlags().hasAllowReassociation())
+    return SDValue();
+
+  SDValue OuterVec = OuterExtract.getOperand(0);
+  SDValue InnerExtract;
+  SDValue OtherVal;
+  uint64_t InnerLane;
+  if (!sd_match(InnerAdd, m_FAdd(m_Value(InnerExtract,
+                                         m_ExtractElt(m_Specific(OuterVec),
+                                                      m_ConstInt(InnerLane))),
+                                 m_Value(OtherVal))))
+    return SDValue();
+
+  if (InnerLane > 1 || OuterLane > 1 || InnerLane == OuterLane)
+    return SDValue();
+
+  SDNodeFlags Flags = N->getFlags();
+  Flags &= InnerAdd->getFlags();
+  SDLoc DL(N);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Pair =
+      DAG.getNode(ISD::FADD, DL, VT, InnerExtract, OuterExtract, Flags);
+  return DAG.getNode(ISD::FADD, DL, VT, Pair, OtherVal, Flags);
+}
+
 static SDValue performFADDCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI) {
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const AArch64Subtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -22417,19 +22480,10 @@ static SDValue performFADDCombine(SDNode *N,
   if (SDValue R = ReassocComplex(RHS, LHS))
     return R;
 
-  return SDValue();
-}
+  if (SDValue R = performPairwiseFADDCombine(N, DCI, Subtarget))
+    return R;
 
-static bool hasPairwiseAdd(unsigned Opcode, EVT VT, bool FullFP16) {
-  switch (Opcode) {
-  case ISD::STRICT_FADD:
-  case ISD::FADD:
-    return (FullFP16 && VT == MVT::f16) || VT == MVT::f32 || VT == MVT::f64;
-  case ISD::ADD:
-    return VT == MVT::i64;
-  default:
-    return false;
-  }
+  return SDValue();
 }
 
 static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
@@ -31555,7 +31609,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:
     return performANDCombine(N, DCI);
   case ISD::FADD:
-    return performFADDCombine(N, DCI);
+    return performFADDCombine(N, DCI, *Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicCombine(N, DCI, Subtarget);
   case ISD::ANY_EXTEND:
