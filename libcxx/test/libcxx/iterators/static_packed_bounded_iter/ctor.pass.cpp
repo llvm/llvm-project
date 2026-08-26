@@ -23,7 +23,7 @@ struct Base {
 struct Derived : public Base {
   long y;
 
-  constexpr Derived(long y) : Base(1), y(y) {}
+  constexpr Derived(long yy) : Base(1), y(yy) {}
 };
 
 template <typename T, std::size_t _Capacity>

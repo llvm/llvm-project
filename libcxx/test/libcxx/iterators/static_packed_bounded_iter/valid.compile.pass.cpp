@@ -13,6 +13,7 @@
 
 #include <__iterator/static_packed_bounded_iter.h>
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 #include "test_iterators.h"
