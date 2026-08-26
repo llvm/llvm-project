@@ -283,7 +283,7 @@ bool SIPostRA16BitMovFolding::mergeMovB16Pairs(MachineFunction &MF) const {
     };
     // Search window size
     const unsigned ScanLimit = 16;
-    std::array<Pending, ScanLimit> CirBuf = {{{MCRegister(), nullptr, false}}};
+    std::array<Pending, ScanLimit> CirBuf = {};
     SmallDenseMap<MCRegister, unsigned> PendingWrites;
     unsigned Head = 0;
 
