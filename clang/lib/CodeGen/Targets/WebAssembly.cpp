@@ -78,15 +78,15 @@ public:
             auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation()
                                       : NameAttr->getLocation();
             CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
-                << "import attribute cannot be applied to a non-wasm-variable global";
+                << "import attribute cannot be applied to a non-wasm-variable "
+                   "global";
             return;
           }
           if (ModuleAttr)
             Global->addAttribute("wasm-import-module",
                                  ModuleAttr->getImportModule());
           if (NameAttr)
-            Global->addAttribute("wasm-import-name",
-                                 NameAttr->getImportName());
+            Global->addAttribute("wasm-import-name", NameAttr->getImportName());
         }
         if (const auto *Attr = VD->getAttr<WebAssemblyExportNameAttr>()) {
           StringRef Name = Attr->getExportName();
@@ -106,8 +106,8 @@ public:
           bool IsExplicit = (ModuleAttr && !ModuleAttr->isInherited()) ||
                             (NameAttr && !NameAttr->isInherited());
           if (IsExplicit) {
-            auto AttrLoc =
-                ModuleAttr ? ModuleAttr->getLocation() : NameAttr->getLocation();
+            auto AttrLoc = ModuleAttr ? ModuleAttr->getLocation()
+                                      : NameAttr->getLocation();
             CGM.getDiags().Report(AttrLoc, diag::err_fe_backend_unsupported)
                 << "import attribute cannot be applied to a definition";
             auto *NonConstFD = const_cast<FunctionDecl *>(FD);

@@ -194,9 +194,9 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       return;
     }
     if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
-      OutContext.reportError(
-          SMLoc(), "imported global '" + GV->getName() +
-                       "' must be in a wasm variable address space");
+      OutContext.reportError(SMLoc(),
+                             "imported global '" + GV->getName() +
+                                 "' must be in a wasm variable address space");
       return;
     }
   }
