@@ -408,8 +408,8 @@ static void createNewAliasScopesFromNoAliasParameter(
         return;
       }
 
-      // Add all noalias parameter scopes to the noalias scope list that we are
-      // not based on.
+      // Mark all the noalias arguments as noalias with this operation if its
+      // scope is something unrelated.
       SmallVector<Attribute> noAliasScopes;
       for (LLVM::SSACopyOp noAlias : noAliasParams) {
         if (basedOnPointers.contains(noAlias))
