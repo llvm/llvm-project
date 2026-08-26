@@ -41,7 +41,7 @@ public:
   }
   lldb::ValueObjectSP GetExceptionObject() override { return m_exception; }
 
-  lldb::ThreadPlanSP GetStepThroughPlan() { return m_thread_plan_sp; }
+  lldb::ThreadPlanSP GetStepThroughPlan() override { return m_thread_plan_sp; }
 
 protected:
   bool m_hidden;
