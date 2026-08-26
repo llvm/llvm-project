@@ -443,7 +443,7 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
   const TargetTransformInfo *TTI;
   ScalarEvolution *SE;
 
-  Value *gepToOffset(Value *Ptr, uint64_t Off);
+  Value *applyOffset(Value *Ptr, uint64_t Off);
   // Visits each maximal subtree of `Ty` that is fat-ptr-free or is itself a
   // [vector of] fat pointer(s), at its offset in `Ty`'s original layout.
   void forEachAggLeaf(
@@ -474,7 +474,7 @@ public:
 };
 } // namespace
 
-Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::gepToOffset(Value *Ptr,
+Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::applyOffset(Value *Ptr,
                                                              uint64_t Off) {
   // The InstSimplifyFolder gives back `Ptr` itself when `Off` is 0.
   return IRB.CreatePtrAdd(
@@ -584,7 +584,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitLoadInst(LoadInst &LI) {
         Ty, AggIdxs, 0, LI.getName(),
         [&](Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
             uint64_t Off, const Twine &Name) {
-          Value *Ptr = gepToOffset(LI.getPointerOperand(), Off);
+          Value *Ptr = applyOffset(LI.getPointerOperand(), Off);
           LoadInst *NewLI = IRB.CreateAlignedLoad(
               IntLeafTy, Ptr, commonAlignment(LI.getAlign(), Off), Name);
           NewLI->setVolatile(LI.isVolatile());
@@ -633,7 +633,7 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
           auto *NewSI = cast<StoreInst>(SI.clone());
           NewSI->setAlignment(commonAlignment(SI.getAlign(), Off));
           NewSI->setOperand(0, Leaf);
-          NewSI->setOperand(1, gepToOffset(SI.getPointerOperand(), Off));
+          NewSI->setOperand(1, applyOffset(SI.getPointerOperand(), Off));
           // Each leaf covers only part of the original assignment.
           NewSI->setMetadata(LLVMContext::MD_DIAssignID, nullptr);
           IRB.Insert(NewSI);
