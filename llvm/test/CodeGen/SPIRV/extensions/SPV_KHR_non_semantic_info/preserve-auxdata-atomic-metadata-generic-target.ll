@@ -27,9 +27,10 @@
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
 ; CHECK-DAG: %[[#add_res]] = OpAtomicIAdd
 
-; No spirv-val run with the option on: the AuxData instruction forward-references
-; the atomic's result <id>, which spirv-val rejects. See the CHECK-INVALID pin in
-; preserve-auxdata-amdgpu-atomic-metadata.ll.
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
+; RUN:   -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 define spir_func void @test_iadd(ptr addrspace(1) %ptr) {
   %val = atomicrmw add ptr addrspace(1) %ptr, i32 1 monotonic, !amdgpu.no.fine.grained.memory !0

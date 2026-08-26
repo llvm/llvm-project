@@ -16,22 +16,14 @@
 ; OFF-NOT: amdgpu.no.remote.memory
 ; OFF-NOT: amdgpu.ignore.denormal.mode
 
-; Default output, with the feature off, validates.
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj \
 ; RUN:   | spirv-val %}
 
-; InstructionMetadata forward-references the atomic's result <id>, encoded as
-; OpExtInstWithForwardRefsKHR. Upstream spirv-val only permits forward refs from
-; debug-info sets, so it still rejects this. Drop the "not"/CHECK-INVALID once
-; https://github.com/KhronosGroup/SPIRV-Tools/pull/6847 lands.
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata \
-; RUN:   %s -o - -filetype=obj | not spirv-val 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-INVALID %}
-
-; CHECK-INVALID: has not been defined
+; RUN:   %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"

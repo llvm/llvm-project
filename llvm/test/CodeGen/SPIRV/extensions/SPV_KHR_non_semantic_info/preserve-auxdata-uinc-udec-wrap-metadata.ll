@@ -13,22 +13,14 @@
 ; OFF-NOT: amdgpu.no.fine.grained.memory
 ; OFF-NOT: amdgpu.no.remote.memory
 
-; Default output, with the feature off, validates.
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
 ; RUN:   -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_non_semantic_info \
 ; RUN:   %s -o - -filetype=obj | spirv-val %}
 
-; The AuxData forward-reference is encoded as OpExtInstWithForwardRefsKHR, but
-; upstream spirv-val only permits forward refs from debug-info sets, so it still
-; rejects this. Drop the "not"/CHECK-INVALID once
-; https://github.com/KhronosGroup/SPIRV-Tools/pull/6847 lands.
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
 ; RUN:   -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
-; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | not spirv-val 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-INVALID %}
-
-; CHECK-INVALID: has not been defined
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
@@ -46,7 +38,7 @@
 ; AuxData for the udec_wrap result.
 ; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#udec_res:]] %[[#md_nfg]]
 
-; The function calls themselves.
+; The function calls themselves (forward-referenced by the AuxData above).
 ; CHECK-DAG: %[[#uinc_res]] = OpFunctionCall %[[#]] %[[#UIncFn]]
 ; CHECK-DAG: %[[#udec_res]] = OpFunctionCall %[[#]] %[[#UDecFn]]
 
