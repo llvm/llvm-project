@@ -1131,6 +1131,13 @@ entry:
   ret void
 }
 
+define dso_local ptr @ifunc_resolver() {
+entry:
+  ret ptr null
+}
+
+@blob = external global [16 x i8]
+
 define dso_local void @CallGlobalVariable(ptr noundef %uaddr) local_unnamed_addr {
 ; CHECK-LABEL: @CallGlobalVariable{{$}}
 ; CHECK-NEXT: args uses:
@@ -1154,11 +1161,6 @@ entry:
   %x = alloca i32, align 4
   call i64 @blob(ptr noundef %x)
   ret void
-}
-
-define dso_local ptr @ifunc_resolver() {
-entry:
-  ret ptr null
 }
 
 declare void @llvm.lifetime.start.p0(ptr nocapture)
