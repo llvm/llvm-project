@@ -4,8 +4,7 @@
 ; Positive test: C is smax
 define i32 @test_smax(i32 %x) {
 ; CHECK-LABEL: @test_smax(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 2147483647, [[OR]]
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X:%.*]], -2147483648
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %x, 2147483647
@@ -26,8 +25,7 @@ define i32 @test_allones(i32 %x) {
 ; Positive test: vector splat of smax
 define <2 x i32> @test_smax_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_smax_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 2147483647)
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> splat (i32 2147483647), [[OR]]
+; CHECK-NEXT:    [[SUB:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <2 x i32> [[SUB]]
 ;
   %or = or <2 x i32> %x, <i32 2147483647, i32 2147483647>
@@ -64,7 +62,7 @@ define i32 @test_multi_use(i32 %x) {
 ; CHECK-LABEL: @test_multi_use(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 2147483647
 ; CHECK-NEXT:    call void @use(i32 [[OR]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 2147483647, [[OR]]
+; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X]], -2147483648
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %or = or i32 %x, 2147483647
