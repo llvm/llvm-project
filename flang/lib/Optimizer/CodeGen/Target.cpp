@@ -2008,7 +2008,10 @@ struct TargetSystemZ : public GenericTarget<TargetSystemZ> {
     unsigned short align{
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
     marshal.emplace_back(fir::ReferenceType::get(ty),
-                         AT{/*align=*/align, /*byval=*/false, /*sret=*/false});
+                         AT{/*align=*/align, /*byval=*/false, /*sret=*/false,
+                            /*append=*/false,
+                            /*intExt=*/AT::IntegerExtension::None,
+                            /*indirect=*/true});
     return marshal;
   }
 
