@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -misched=gcn-iterative-ilp < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -misched=gcn-max-ilp < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-sched-strategy=max-ilp < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 -misched=gcn-iterative-ilp < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 -misched=gcn-max-ilp < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 -amdgpu-sched-strategy=max-ilp < %s | FileCheck %s
 
 ; CHECK: NumVgprs: {{[0-9][0-9][0-9]$}}
 

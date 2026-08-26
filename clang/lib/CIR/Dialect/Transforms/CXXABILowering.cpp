@@ -67,7 +67,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
     return true;
 
   // Data Member and method are ALWAYS illegal.
-  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attr))
+  if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
+          attr))
     return false;
 
   return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
@@ -394,6 +395,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
                                          mlir::Type ty,
                                          mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
+    // Members without a CIR field index (e.g. no_unique_address empty fields)
+    // are represented by an explicit byte offset instead of a field path.
+    if (auto offsetVal =
+            mlir::dyn_cast_if_present<cir::DataMemberOffsetAttr>(initVal))
+      return lowerModule->getCXXABI().lowerDataMemberOffsetConstant(offsetVal,
+                                                                    layout, tc);
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
     return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
                                                             layout, tc);
@@ -484,6 +491,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
     if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
+
+    if (auto blockAddr =
+            mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {
+      assert(convertedTy == ptrTy && "BlockAddrInfo type should not change");
+      return blockAddr;
+    }
 
     auto constPtr = mlir::cast_if_present<cir::ConstPtrAttr>(initVal);
     if (!constPtr)
@@ -623,10 +636,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
   bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
-  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
-      deleteParams.getAlignment())
-    return rewriter.notifyMatchFailure(
-        op, "type-aware, destroying, or aligned delete not yet supported");
+  assert(!deleteParams.getDestroyingDelete() &&
+         "destroying delete not legal on arrays");
+  assert(!deleteParams.getTypeAwareDelete() &&
+         "type-aware delete not legal on arrays");
 
   const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
   CIRBaseBuilderTy cirBuilder(rewriter);
@@ -703,6 +716,12 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
               cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
           callArgs.push_back(allocSize);
         }
+        if (deleteParams.getAlignment()) {
+          auto alignVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, *deleteParams.getAlignment()));
+          callArgs.push_back(alignVal);
+        }
+
         auto deleteCall =
             cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
         // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
@@ -840,17 +859,21 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // just do a conversion on it.
     if (!type.getName()) {
       llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      assert(converted.size() == type.getNumElements() &&
+             "member conversion must be one type in, one type out for the "
+             "kinds to carry over by index");
       if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
         mlir::Type loweredPadding;
         if (mlir::Type pad = u.getPadding())
           loweredPadding = convertType(pad);
         return cir::UnionType::get(type.getContext(), converted,
-                                   type.getPacked(), loweredPadding);
+                                   type.getPacked(), loweredPadding,
+                                   u.getMemberKinds());
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,
-                                  type.getPacked(), type.getPadded(),
-                                  s.getIsClass());
+                                  type.getPacked(), s.getIsClass(),
+                                  s.getMemberKinds());
     }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
@@ -889,13 +912,16 @@ class CIRABITypeConverter : public mlir::TypeConverter {
         [&recursiveStack]() { recursiveStack.pop_back(); });
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
+    assert(convertedMembers.size() == type.getNumElements() &&
+           "member conversion must be one type in, one type out for the kinds "
+           "to carry over by index");
 
     mlir::Type loweredPadding;
     if (auto u = mlir::dyn_cast<cir::UnionType>(type))
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
-    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding);
+    convertedType.complete(convertedMembers, type.getPacked(), loweredPadding,
+                           type.getMemberKinds());
     addConvertedRecordType(convertedType);
     return convertedType;
   }

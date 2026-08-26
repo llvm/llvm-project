@@ -22,7 +22,7 @@ features = [
     Feature(
         name="_target-has-llvm-22",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-23",
+            r"_target-has-llvm-23 || target={{.+}}-apple-macosx{{27.[0-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
@@ -135,7 +135,7 @@ features = [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"):
+for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"):
     features.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
@@ -200,6 +200,14 @@ features += [
         name="availability-fp_from_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-20)",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require std::text_encoding::environment() in the built library
+    Feature(
+        name="availability-te-environment-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23)",
             cfg.available_features,
         ),
     ),

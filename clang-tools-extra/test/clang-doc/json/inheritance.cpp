@@ -1,14 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/inheritance.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
-
-class Virtual {};
-class Foo : virtual Virtual {};
-class Bar : Foo {};
-class Fizz : virtual Virtual {};
-class Buzz : Fizz {};
-
-class MyClass : Bar, Buzz {};
 
 // CHECK:       "Bases": [
 // CHECK-NEXT:    {

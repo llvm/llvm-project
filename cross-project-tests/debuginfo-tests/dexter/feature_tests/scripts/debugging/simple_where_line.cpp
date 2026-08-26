@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t -- %s | FileCheck %s
 
 /// Test that we can perform a simple non-nested line-based !where.
 

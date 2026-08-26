@@ -14,7 +14,6 @@
 #define FORTRAN_PARSER_OPENMP_UTILS_H
 
 #include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -38,6 +37,9 @@ template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
 
 const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
 const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
+const parser::OmpLocator *GetLocatorFromObj(const parser::OmpObject &object);
+const parser::Name *GetCommonBlockFromObj(const parser::OmpObject &object);
+
 const parser::ArrayElement *GetArrayElementFromObj(
     const parser::OmpObject &object);
 std::optional<parser::CharBlock> GetObjectSource(

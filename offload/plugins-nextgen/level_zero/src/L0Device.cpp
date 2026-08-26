@@ -21,15 +21,15 @@
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm::omp::target::plugin {
 
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
 static struct {
-  DeviceArchTy arch;
-  PCIIdTy ids[10];
+  DeviceArchTy Arch;
+  PCIIdTy Ids[10];
 } DeviceArchMap[] = {{DeviceArchTy::DeviceArch_Gen,
                       {PCIIdTy::SKL,
                        PCIIdTy::KBL,
@@ -72,13 +72,13 @@ DeviceArchTy L0DeviceTy::computeArch() const {
   }
 
   for (int ArchIndex = 0; ArchIndex < DeviceArchMapSize; ArchIndex++) {
-    for (int i = 0;; i++) {
-      const auto Id = DeviceArchMap[ArchIndex].ids[i];
+    for (int IdIndex = 0;; IdIndex++) {
+      const auto Id = DeviceArchMap[ArchIndex].Ids[IdIndex];
       if (Id == PCIIdTy::None)
         break;
-      auto maskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
-      if (maskedId == Id)
-        return DeviceArchMap[ArchIndex].arch; // Exact match or prefix match.
+      auto MaskedId = static_cast<PCIIdTy>(PCIDeviceId & 0xFF00);
+      if (MaskedId == Id)
+        return DeviceArchMap[ArchIndex].Arch; // Exact match or prefix match.
     }
   }
 
@@ -98,53 +98,43 @@ bool L0DeviceTy::isDeviceIPorNewer(uint32_t Version) const {
   return IPVersion.ipVersion >= Version;
 }
 
-/// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
-std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
-  std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
+/// Scan the device's command queue groups in a single query, selecting the
+/// default compute group and detecting cooperative kernel support. Returns an
+/// Error if the device exposes no compute queue group.
+Expected<DeviceQueueConfigInfoTy> L0DeviceTy::scanQueueGroups() {
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              nullptr);
+  CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+                    nullptr);
   ze_command_queue_group_properties_t Init{
       ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0};
   std::vector<ze_command_queue_group_properties_t> Properties(Count, Init);
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              Properties.data());
+  CALL_ZE_RET_ERROR(zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+                    Properties.data());
+
+  DeviceQueueConfigInfoTy Info;
+  bool FoundComputeGroup = false;
   for (uint32_t I = 0; I < Count; I++) {
-    // TODO: add a separate set of ordinals for compute queue groups which
-    // support cooperative kernels.
-    if (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
-      Ordinal.first = I;
-      Ordinal.second = Properties[I].numQueues;
-      break;
+    if (!FoundComputeGroup &&
+        (Properties[I].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE)) {
+      Info.DefaultCmdQueueGroup =
+          ComputeQueueGroupInfoTy{/*Ordinal=*/I,
+                                  /*NumQueues=*/Properties[I].numQueues,
+                                  Properties[I].maxMemoryFillPatternSize};
+      FoundComputeGroup = true;
     }
-  }
-  if (Ordinal.first == MaxOrdinal)
-    ODBG(OLDT_Device) << "Error: no command queues are found";
-
-  return Ordinal;
-}
-
-/// Check if device supports cooperative kernels by checking if any command
-/// queue group has the cooperative kernels flag set.
-bool L0DeviceTy::checkCooperativeKernelSupport() {
-  uint32_t Count = 0;
-  const auto zeDevice = getZeDevice();
-  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              nullptr);
-
-  std::vector<ze_command_queue_group_properties_t> Properties(
-      Count,
-      {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0});
-  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
-              Properties.data());
-
-  for (auto &Property : Properties)
-    if (Property.flags &
+    // TODO: track exactly which queue groups support cooperative kernels
+    if (Properties[I].flags &
         ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
-      return true;
+      Info.SupportsCooperativeKernels = true;
+  }
 
-  return false;
+  if (!FoundComputeGroup)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "Device %d (%s) has no compute command queue group",
+                         DeviceId, getNameCStr());
+
+  return Info;
 }
 
 void L0DeviceTy::reportDeviceInfo() const {
@@ -197,19 +187,19 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   IndirectAccessFlags = Flags;
 
   // Get the UUID.
-  std::string uid;
-  for (int n = 0; n < ZE_MAX_DEVICE_UUID_SIZE; n++)
-    uid += std::to_string(DeviceProperties.uuid.id[n]);
-  DeviceUuid = std::move(uid);
+  std::string Uid;
+  for (int UidByte = 0; UidByte < ZE_MAX_DEVICE_UUID_SIZE; UidByte++)
+    Uid += std::to_string(DeviceProperties.uuid.id[UidByte]);
+  DeviceUuid = std::move(Uid);
 
-  ComputeOrdinal = findComputeOrdinal();
-  QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
-
-  SupportsCooperativeKernels = checkCooperativeKernelSupport();
+  auto QueueGroupInfoOrErr = scanQueueGroups();
+  if (!QueueGroupInfoOrErr)
+    return QueueGroupInfoOrErr.takeError();
+  QueueConfig = *QueueGroupInfoOrErr;
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
-  l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
+  L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
   return Plugin::success();
 }
@@ -218,8 +208,6 @@ Error L0DeviceTy::deinitImpl() {
   for (auto &PGM : Programs)
     if (auto Err = PGM.deinit())
       return Err;
-  if (auto Err = QueueCache.deinit())
-    return Err;
   return MemAllocator.deinit();
 }
 
@@ -267,11 +255,19 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
+void L0DeviceTy::releaseQueue(L0QueueTy *Queue) {
+  if (!Queue)
+    return;
+  Queue->getUserCtx()->returnCachedQueue(Queue);
+}
+
 Expected<L0QueueTy *>
-L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
+L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                             LevelZeroPluginContextTy *UserCtx) {
   L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto NewQueueOrErr = QueueCache.getQueue();
+    auto &Ctx = UserCtx ? *UserCtx : L0Context.getDefaultUserCtx();
+    auto NewQueueOrErr = Ctx.takeCachedQueue(this);
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
     Queue = *NewQueueOrErr;
@@ -334,8 +330,8 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 }
 
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind) {
-  return dataAlloc(Size, /*Align=*/0, Kind,
+                                      TargetAllocTy Kind, size_t Alignment) {
+  return dataAlloc(Size, Alignment, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
@@ -387,6 +383,11 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   return Plugin::success();
 }
 
+Error L0DeviceTy::dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  return enqueueMemCopy(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+}
+
 Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                                       AsyncInfoWrapperTy &AsyncInfoWrapper) {
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
@@ -404,11 +405,6 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                          static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
-}
-
-Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
-  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }
 
 const char *L0DeviceTy::getArchCStr() const {
@@ -457,7 +453,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Number of total EUs", getNumEUs(), "",
            DeviceInfo::NUM_COMPUTE_UNITS);
   Info.add("Number of threads per EU", getNumThreadsPerEU());
-  Info.add("EU SIMD width", getSIMDWidth());
+  Info.add("EU SIMD width", getSIMDWidth(), "", DeviceInfo::NUM_LANES);
   Info.add("Number of EUs per subslice", getNumEUsPerSubslice());
   Info.add("Number of subslices per slice", getNumSubslicesPerSlice());
   Info.add("Number of slices", getNumSlices());
@@ -558,12 +554,12 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Single FP Capabilities", SingleFPCapabilities, "",
            DeviceInfo::SINGLE_FP_CONFIG);
 
-  Info.add("Cooperative launch support", SupportsCooperativeKernels, "",
-           DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
+  Info.add("Cooperative launch support", QueueConfig.SupportsCooperativeKernels,
+           "", DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
 
-Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
+Expected<GenericKernelTy &> L0DeviceTy::constructKernel(StringRef Name) {
   // Allocate and construct the L0 kernel.
   L0KernelTy *L0Kernel = getPlugin().allocate<L0KernelTy>();
   if (!L0Kernel)
@@ -576,7 +572,7 @@ Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
 }
 
 uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
-  ze_memory_allocation_properties_t properties = {
+  ze_memory_allocation_properties_t Properties = {
       ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES,
       nullptr,                // Extension.
       ZE_MEMORY_TYPE_UNKNOWN, // Type.
@@ -584,14 +580,14 @@ uint32_t L0DeviceTy::getMemAllocType(const void *Ptr) const {
       0,                      // Page size.
   };
 
-  ze_result_t rc;
-  CALL_ZE(rc, zeMemGetAllocProperties, getZeContext(), Ptr, &properties,
+  ze_result_t Res;
+  CALL_ZE(Res, zeMemGetAllocProperties, getZeContext(), Ptr, &Properties,
           nullptr);
 
-  if (rc == ZE_RESULT_ERROR_INVALID_ARGUMENT)
+  if (Res == ZE_RESULT_ERROR_INVALID_ARGUMENT)
     return ZE_MEMORY_TYPE_UNKNOWN;
-  else
-    return properties.type;
+
+  return Properties.type;
 }
 
 interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
@@ -607,7 +603,7 @@ interop_spec_t L0DeviceTy::selectInteropPreference(int32_t InteropType,
 
 Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
                                                  interop_spec_t &InteropSpec) {
-  auto Ret = new omp_interop_val_t(
+  auto *Ret = new omp_interop_val_t(
       DeviceId, static_cast<kmp_interop_type_t>(InteropContext));
   Ret->fr_id = tgt_fr_level_zero;
   Ret->vendor_id = omp_vendor_intel;
@@ -632,11 +628,11 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
       delete Ret;
     });
 
-    auto L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
+    auto *L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    auto CmdListOrErr = createImmCmdList(InOrder);
+    auto CmdListOrErr = createImmCmdList(getZeContext(), InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     Ret->async_info->Queue = *CmdListOrErr;
@@ -656,7 +652,7 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
                          "Invalid/inconsistent OpenMP interop " DPxMOD "\n",
                          DPxPTR(Interop));
   }
-  auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
+  auto *L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
   if (Interop->async_info && Interop->async_info->Queue) {
     auto ImmCmdList = L0->ImmCmdList;
     CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
@@ -683,6 +679,27 @@ Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size,
                         AsyncInfoWrapper);
+}
+
+Error L0DeviceTy::dataPrefetchImpl(size_t Count, const void **Mems,
+                                   const size_t *Sizes, bool ToHost,
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  if (Count == 0)
+    return Plugin::success();
+
+  // Level Zero only supports prefetching memory to the device. A prefetch
+  // request targeting the host is treated as a no-op.
+  if (ToHost)
+    return Plugin::success();
+
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  for (size_t I = 0; I < Count; I++)
+    if (auto Err = (*QueueOrErr)->memoryPrefetch(Mems[I], Sizes[I]))
+      return Err;
+  return Plugin::success();
 }
 
 Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
@@ -721,7 +738,8 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
-L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
+L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                             ze_context_handle_t UserZeCtx, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
     Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
@@ -734,7 +752,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
-  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
+  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, UserZeCtx, getZeDevice(),
                     &Desc, &CmdList);
   ODBG(OLDT_Device) << "Created an immediate command list " << CmdList
                     << " (Ordinal: " << Ordinal << ", Index: " << Index
@@ -888,8 +906,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
-                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
+  auto BufferOrErr =
+      allocate(Funcs.size() * sizeof(void *),
+               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 
@@ -944,11 +963,11 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
 
-  KernelArgsTy KernelArgs{};
+  KernelLaunchArgsTy LaunchArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   auto Err =
       L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
-                          KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
+                          LaunchArgs, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   return CleanupBufferAndErr(std::move(Err));

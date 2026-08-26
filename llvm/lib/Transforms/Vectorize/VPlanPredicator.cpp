@@ -34,6 +34,9 @@ class VPPredicator {
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
+  /// Post-dominator frontier for the VPlan.
+  VPPostDominanceFrontier VPPDF;
+
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
   using EdgeMaskCacheTy =
@@ -78,8 +81,18 @@ class VPPredicator {
     return VPBB->getFirstNonPhi();
   }
 
+  using EdgeTy = std::pair<const VPBasicBlock *, const VPBasicBlock *>;
+
+  /// Compute the set of edges that are "furthest up" in the CFG for each
+  /// incoming value of \p Phi.
+  MapVector<EdgeTy, VPValue *> computeBlendEdges(VPPhi *Phi);
+
+  /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
+  /// edges, or an equivalent block in-mask.
+  VPValue *createBlendMaskForEdges(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
+
 public:
-  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
+  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -233,6 +246,105 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
+// Start by keeping track of what edges lead to which value. Then see if any
+// node has the same value for all outgoing edges. If so then propagate that
+// value up to every node it postdominates. E.g:
+//
+//    Entry      Edges =  {C->ɸ : %x, D->ɸ : %x, F->ɸ : %y}
+//    /   \            [C,D,F all outgoing edges equal: go up postdom frontier]
+//   A     B           ~> {A->C : %x, A->D : %x, Entry->B : %y}
+//  / \    |\          [A all outgoing edges equal: go up postdom frontier]
+// C   D   | E         ~> {Entry->A : %x, Entry->B : %y}
+//  \   \  |/
+//   \  |  F
+//    \ | /
+//      ɸ = phi [%x, C], [%x, D], [%y, F]
+MapVector<VPPredicator::EdgeTy, VPValue *>
+VPPredicator::computeBlendEdges(VPPhi *Phi) {
+  MapVector<EdgeTy, VPValue *> Edges;
+
+  // Mark the given edge as providing the value \p V.
+  auto AddEdge = [&Edges](const VPBlockBase *From, const VPBlockBase *To,
+                          VPValue *V) {
+    EdgeTy Edge = {cast<VPBasicBlock>(From), cast<VPBasicBlock>(To)};
+    assert((!Edges.contains(Edge) || Edges.lookup(Edge) == V) &&
+           "Clobbering an edge?");
+    Edges[Edge] = V;
+  };
+
+  for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
+    AddEdge(InVPBB, Phi->getParent(), InVal);
+
+  SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
+  while (!Worklist.empty()) {
+    auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
+
+    // Check that all outgoing edges from VPBB have the same value.
+    SmallVector<EdgeTy> OutEdges;
+    for (const VPBlockBase *Succ : VPBB->getSuccessors())
+      OutEdges.emplace_back(VPBB, cast<VPBasicBlock>(Succ));
+    auto OutVals =
+        map_range(OutEdges, [&Edges](EdgeTy E) { return Edges.lookup(E); });
+    VPValue *Common = *OutVals.begin();
+    if (!Common || !all_equal(OutVals))
+      continue;
+
+    // They have the same value: we can move the edges up.
+    for (EdgeTy Edge : OutEdges)
+      Edges.erase(Edge);
+
+    // Iterate up through the post dominance frontier.
+    assert(VPPDF.find(VPBB) != VPPDF.end() &&
+           "VPBB must have a post-dominance frontier entry");
+    for (const VPBlockBase *Frontier : VPPDF.find(VPBB)->second) {
+      for (const VPBlockBase *FrontierSucc : Frontier->getSuccessors())
+        if (VPPDT.dominates(VPBB, FrontierSucc))
+          AddEdge(Frontier, FrontierSucc, Common);
+      Worklist.insert(cast<VPBasicBlock>(Frontier));
+    }
+  }
+
+  return Edges;
+}
+
+VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
+                                               VPBasicBlock *VPBB) {
+  // If the nearest common postdominator to all of Edges destinations isn't VPBB
+  // then we can use its block in-mask. E.g:
+  //
+  //  A  ...  B
+  //   \   \ /
+  //    \   C
+  //     \ /
+  // ...  D   ...
+  //    \ |  /
+  //     VPBB
+  //
+  // If the edges are A->D and B->C, PostDom will be D. We can reuse Ds block
+  // in-mask.
+  const VPBasicBlock *PostDom = Edges[0].second;
+  for (auto [_, DstVPBB] : drop_begin(Edges))
+    PostDom =
+        cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, DstVPBB));
+  assert(VPPDT.dominates(VPBB, PostDom) && "VPBB doesn't postdominate edges");
+  if (PostDom != VPBB)
+    return getBlockInMask(PostDom);
+
+  // Otherwise, compute the disjunction of edges.
+  VPValue *Mask = nullptr;
+  for (auto [Src, ConstDst] : Edges) {
+    auto *Dst = const_cast<VPBasicBlock *>(ConstDst);
+    VPValue *EdgeMask;
+    {
+      VPBuilder::InsertPointGuard Guard(Builder);
+      Builder.setInsertPoint(Dst, getMaskInsertPoint(Dst));
+      EdgeMask = createEdgeMask(Src, Dst);
+    }
+    Mask = Mask ? Builder.createOr(Mask, EdgeMask) : EdgeMask;
+  }
+  return Mask;
+}
+
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
 
@@ -256,10 +368,22 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       continue;
     }
 
+    MapVector<VPValue *, SmallVector<EdgeTy>> InValEdgesMap;
+    for (auto [Edge, Val] : computeBlendEdges(PhiR))
+      InValEdgesMap[Val].push_back(Edge);
+    auto InValEdges = InValEdgesMap.takeVector();
+
+    // Sort the incoming value order to match PhiR as much as possible.
+    llvm::stable_sort(InValEdges, [&PhiR](auto &L, auto &R) {
+      auto InVs = PhiR->incoming_values();
+      return std::distance(InVs.begin(), find(InVs, L.first)) <
+             std::distance(InVs.begin(), find(InVs, R.first));
+    });
+
     SmallVector<VPValue *, 2> OperandsWithMask;
-    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+    for (const auto &[InVPV, Edges] : InValEdges) {
       OperandsWithMask.push_back(InVPV);
-      OperandsWithMask.push_back(createEdgeMask(InVPBB, VPBB));
+      OperandsWithMask.push_back(createBlendMaskForEdges(Edges, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =

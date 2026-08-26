@@ -37,6 +37,8 @@ class SampleProfileMatcher {
   // mapping from the source location of current build to the source location
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
+  // Hash mapping cache for matched anchor pairs in stale profile matching
+  DenseMap<FunctionId, const Function *> MatchedAnchorCache;
 
   // Match state for an anchor/callsite.
   enum class MatchState {
@@ -231,7 +233,6 @@ private:
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();
-  void reportOrPersistProfileStats();
 };
 } // end namespace llvm
 #endif // LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H

@@ -43,5 +43,65 @@ std::optional<gpu::GPUModuleOp> getOrCreateGPUModule(ModuleOp mod, bool create,
   return gpuMod;
 }
 
+static Value getGPUSizeFromLaunch(gpu::LaunchOp launch,
+                                  gpu::Processor processor) {
+  gpu::KernelDim3 gridSize = launch.getGridSize();
+  gpu::KernelDim3 blockSize = launch.getBlockSize();
+  switch (processor) {
+  case gpu::Processor::ThreadX:
+    return blockSize.x;
+  case gpu::Processor::ThreadY:
+    return blockSize.y;
+  case gpu::Processor::ThreadZ:
+    return blockSize.z;
+  case gpu::Processor::BlockX:
+    return gridSize.x;
+  case gpu::Processor::BlockY:
+    return gridSize.y;
+  case gpu::Processor::BlockZ:
+    return gridSize.z;
+  default:
+    return {};
+  }
+}
+
+Value getGPUSize(gpu::Processor processor, gpu::LaunchOp launch,
+                 const llvm::DenseMap<gpu::Processor, Value> &dimensionOps) {
+  if (launch)
+    return getGPUSizeFromLaunch(launch, processor);
+  assert(!dimensionOps.empty() && "dimension map is empty");
+  return dimensionOps.lookup(processor);
+}
+
+static Value getGPUThreadIdFromLaunch(gpu::LaunchOp launch,
+                                      gpu::Processor processor) {
+  gpu::KernelDim3 blockIds = launch.getBlockIds();
+  gpu::KernelDim3 threadIds = launch.getThreadIds();
+  switch (processor) {
+  case gpu::Processor::ThreadX:
+    return threadIds.x;
+  case gpu::Processor::ThreadY:
+    return threadIds.y;
+  case gpu::Processor::ThreadZ:
+    return threadIds.z;
+  case gpu::Processor::BlockX:
+    return blockIds.x;
+  case gpu::Processor::BlockY:
+    return blockIds.y;
+  case gpu::Processor::BlockZ:
+    return blockIds.z;
+  default:
+    return {};
+  }
+}
+
+Value getGPUThreadId(gpu::Processor processor, gpu::LaunchOp launch,
+                     const llvm::DenseMap<gpu::Processor, Value> &indexOps) {
+  if (launch)
+    return getGPUThreadIdFromLaunch(launch, processor);
+  assert(!indexOps.empty() && "index map is empty");
+  return indexOps.lookup(processor);
+}
+
 } // namespace acc
 } // namespace mlir

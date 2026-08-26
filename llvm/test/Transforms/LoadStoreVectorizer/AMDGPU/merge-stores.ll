@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa --mcpu=hawaii -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu7.01-amd-amdhsa --passes=load-store-vectorizer -S -o - %s | FileCheck %s
 ; Copy of test/CodeGen/AMDGPU/merge-stores.ll with some additions
 
 ; TODO: Vector element tests
@@ -249,10 +249,10 @@ define amdgpu_kernel void @merge_global_store_4_constants_i64(ptr addrspace(1) %
 define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_2_adjacent_loads_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i32 1
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -272,10 +272,10 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(
 ; CHECK-NEXT:    [[IN_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[IN:%.*]], i32 2
 ; CHECK-NEXT:    [[OUT_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN_GEP_0]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i32 1
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[LO1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[HI2]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT_GEP_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -295,10 +295,10 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_i32_nonzero_base(
 define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_2_adjacent_loads_shuffle_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[HI2]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LO1]], i32 1
+; CHECK-NEXT:    [[LO1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[HI2:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[HI2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LO1]], i64 1
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -316,14 +316,14 @@ define amdgpu_kernel void @merge_global_store_2_adjacent_loads_shuffle_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -349,12 +349,12 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(ptr addrspace
 define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_3_adjacent_loads_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <3 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i32> poison, i32 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP2]], i32 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[Z3]], i32 2
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <3 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <3 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i32> [[TMP2]], i32 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> [[TMP3]], i32 [[Z3]], i64 2
 ; CHECK-NEXT:    store <3 x i32> [[TMP4]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -376,14 +376,14 @@ define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(ptr addrspace
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[W4]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x float> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x float> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -411,14 +411,14 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32_nonzero_base(
 ; CHECK-NEXT:    [[IN_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[IN:%.*]], i32 11
 ; CHECK-NEXT:    [[OUT_GEP_0:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i32 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN_GEP_0]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT_GEP_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -446,15 +446,15 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32_nonzero_base(
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_inverse_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -484,15 +484,15 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_inverse_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_shuffle_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier() #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[W4]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z3]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Y2]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[X1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[W4]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z3]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[Y2]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[X1]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -522,14 +522,14 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_shuffle_i32(ptr a
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -555,14 +555,14 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8(ptr addrspace(
 define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i8_natural_align(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i8_natural_align(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 1
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
-; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
-; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[TMP1]], i64 0
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[TMP1]], i64 1
+; CHECK-NEXT:    [[Z3:%.*]] = extractelement <4 x i8> [[TMP1]], i64 2
+; CHECK-NEXT:    [[W4:%.*]] = extractelement <4 x i8> [[TMP1]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[X1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 [[Y2]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 [[Z3]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i8> [[TMP4]], i8 [[W4]], i64 3
 ; CHECK-NEXT:    store <4 x i8> [[TMP5]], ptr addrspace(1) [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -592,10 +592,10 @@ define amdgpu_kernel void @merge_global_store_4_vector_elts_loads_v4i32(ptr addr
 ; CHECK-NEXT:    [[Y:%.*]] = extractelement <4 x i32> [[VEC]], i32 1
 ; CHECK-NEXT:    [[Z:%.*]] = extractelement <4 x i32> [[VEC]], i32 2
 ; CHECK-NEXT:    [[W:%.*]] = extractelement <4 x i32> [[VEC]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Y]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[W]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Y]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[Z]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[W]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
+#include "Inputs/lifetime-analysis.h"
 
 int *global; // expected-note 10 {{this global dangles}}
 int *global_backup; // expected-note {{this global dangles}}
+
+std::string_view global_view; // expected-note {{this global dangles}}
+void takeString(std::string&& s);
 
 struct ObjWithStaticField {
   static int *static_field; // expected-note {{this static storage dangles}}
@@ -116,4 +120,9 @@ void ok_global_storage() {
   p += 1;
   ++p;
   global = (p -= 1); // no-warning
+}
+// When a local string is stored in a global view and then moved, the analyzer warns it "may" dangle since the storage may have been moved
+void store_local_in_global_but_moved(std::string s){
+  global_view = s; // expected-warning-re {{stack memory associated with parameter 's' may escape to the global variable 'global_view' which will dangle{{.*}} may have been moved}}
+  takeString(std::move(s)); //expected-note {{potentially moved here}}
 }

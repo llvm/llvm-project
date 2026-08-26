@@ -255,6 +255,9 @@ struct Frame {
   bool IsInlineFrame = false;
 
   Frame() = default;
+  Frame(Frame &&) = default;
+  Frame &operator=(Frame &&) = default;
+
   Frame(const Frame &Other) {
     Function = Other.Function;
     SymbolName = Other.SymbolName

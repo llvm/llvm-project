@@ -5,7 +5,7 @@ define void @test(i32 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[ARG]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[ARG]], i64 1
 ; CHECK-NEXT:    br label %[[BB4:.*]]
 ; CHECK:       [[BB1:.*]]:
 ; CHECK-NEXT:    [[SUB2:%.*]] = sub i32 0, 0
@@ -15,7 +15,7 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[OR]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[OR]], i64 3
 ; CHECK-NEXT:    br i1 false, label %[[BB8:.*]], label %[[BB4]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4]], %[[BB1]] ]

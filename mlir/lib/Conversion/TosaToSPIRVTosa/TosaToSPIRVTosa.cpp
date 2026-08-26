@@ -34,7 +34,7 @@ void copyFuncAttrsToGraph(func::FuncOp funcOp, func::FuncOpAdaptor adaptor,
                            attrName))
       continue;
 
-    graphOp->setAttr(attr.getName(), attr.getValue());
+    graphOp->setDiscardableAttr(attr.getName(), attr.getValue());
   }
 }
 
@@ -109,7 +109,7 @@ public:
         rewriter, funcOp.getLoc(), spirv::AddressingModel::Logical,
         spirv::MemoryModel::Vulkan, std::nullopt,
         ("_spirv_tosa_" + name).str());
-    spvModule->setAttr(spirv::getTargetEnvAttrName(), targetAttr);
+    spvModule->setDiscardableAttr(spirv::getTargetEnvAttrName(), targetAttr);
 
     rewriter.setInsertionPoint(spvModule.getBody(), spvModule.begin());
 

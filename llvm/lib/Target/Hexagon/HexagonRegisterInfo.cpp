@@ -206,6 +206,8 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
     Reserved.set(Reg);
 
   static const MCPhysReg RRegs[] = {
+      Hexagon::R6,  Hexagon::R7,  Hexagon::R8,  Hexagon::R9,  Hexagon::R10,
+      Hexagon::R11, Hexagon::R12, Hexagon::R13, Hexagon::R14, Hexagon::R15,
       Hexagon::R16, Hexagon::R17, Hexagon::R18, Hexagon::R19, Hexagon::R20,
       Hexagon::R21, Hexagon::R22, Hexagon::R23, Hexagon::R24, Hexagon::R25,
       Hexagon::R26, Hexagon::R27, Hexagon::R28};

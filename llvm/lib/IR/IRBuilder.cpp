@@ -497,6 +497,14 @@ Value *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
 }
 
+Value *IRBuilderBase::CreateFPMaximumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximumnum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMinimumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimumnum, Src);
+}
+
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
@@ -906,8 +914,7 @@ CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
                                                 const Twine &Name) {
   Type *PtrTy = DerivedPtr->getType();
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_gc_get_pointer_base, {PtrTy, PtrTy}, {DerivedPtr},
-      {}, Name);
+      Intrinsic::experimental_gc_get_pointer_base, PtrTy, DerivedPtr, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
@@ -923,8 +930,9 @@ Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
                                            const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
-  if (Value *V = Folder.FoldUnaryIntrinsic(ID, Op, Fn->getReturnType(),
-                                           FMFSource.get(FMF)))
+  if (Value *V =
+          Folder.FoldIntrinsic(ID, Op, Fn->getReturnType(), FMFSource.get(FMF),
+                               GetInsertBlock()->getParent()))
     return V;
   return createCallHelper(Fn, Op, Name, FMFSource);
 }
@@ -934,8 +942,9 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                             const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
-  if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            FMFSource.get(FMF)))
+  if (Value *V = Folder.FoldIntrinsic(ID, {LHS, RHS}, Fn->getReturnType(),
+                                      FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
@@ -966,7 +975,10 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       FMFSource FMFSource, const Twine &Name,
                                       ArrayRef<OperandBundleDef> OpBundles,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  Type *RetTy = Intrinsic::getType(Context, ID, OverloadTypes)->getReturnType();
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
+    return V;
   CallInst *CI = CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args,
                                                FMFSource, Name, OpBundles);
   SetFn(CI);
@@ -977,7 +989,9 @@ Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                       ArrayRef<Value *> Args,
                                       FMFSource FMFSource, const Twine &Name,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
+    return V;
   CallInst *CI =
       CreateIntrinsicWithoutFolding(RetTy, ID, Args, FMFSource, Name);
   SetFn(CI);

@@ -351,6 +351,7 @@ void LanaiTargetLowering::LowerAsmOperandForConstraint(
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "LanaiGenCallingConv.inc"
 
 static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,

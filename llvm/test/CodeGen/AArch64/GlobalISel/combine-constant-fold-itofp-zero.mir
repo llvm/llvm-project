@@ -12,12 +12,12 @@ body:             |
     ; CHECK-LABEL: name: sitofp
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 0.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_CONSTANT i64 0
-    %res:_(s64) = G_SITOFP %a
-    $d0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 0
+    %res:_(f64) = G_SITOFP %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -32,12 +32,12 @@ body:             |
     ; CHECK-LABEL: name: uitofp
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %res:_(s64) = G_FCONSTANT double 0.000000e+00
-    ; CHECK-NEXT: $d0 = COPY %res(s64)
+    ; CHECK-NEXT: %res:_(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %a:_(s64) = G_CONSTANT i64 0
-    %res:_(s64) = G_UITOFP %a
-    $d0 = COPY %res(s64)
+    %a:_(i64) = G_CONSTANT i64 0
+    %res:_(f64) = G_UITOFP %a
+    $d0 = COPY %res(f64)
     RET_ReallyLR implicit $d0
 
 ...

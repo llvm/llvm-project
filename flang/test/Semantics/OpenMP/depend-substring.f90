@@ -25,15 +25,6 @@ subroutine substring_2(c)
   !$omp end task
 end
 
-! Error
-subroutine substring_3(c)
-  character(:), pointer :: c
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Substrings must be in the form parent-string(lb:ub)
-  !$omp task depend(out:c(2))
-  !$omp end task
-end
-
 ! This is okay: interpreted as indexing into the array not as a substring
 subroutine substring_3b(c)
   character(:), pointer :: c(:)

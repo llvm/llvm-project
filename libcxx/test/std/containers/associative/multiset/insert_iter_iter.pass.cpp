@@ -21,7 +21,7 @@
 #include "test_iterators.h"
 
 template <class Iter, class Alloc>
-void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   {   // Check that an empty range works correctly
     { // Without elements in the container
       using Map = std::multiset<int, std::less<int>, Alloc>;
@@ -184,13 +184,17 @@ void test_alloc() {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<cpp17_input_iterator<int*>, std::allocator<int> >();
   test_alloc<cpp17_input_iterator<int*>, min_allocator<int> >();
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

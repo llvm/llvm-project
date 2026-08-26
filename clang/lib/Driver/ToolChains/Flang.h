@@ -64,8 +64,7 @@ private:
   /// \param [in] BoundArch The bound architecture for offload compilation
   /// \param [in] DeviceOffloadKind The offload kind
   void addTargetOptions(const llvm::opt::ArgList &Args,
-                        llvm::opt::ArgStringList &CmdArgs,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CmdArgs, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add specific options for AArch64 target.
@@ -82,13 +81,11 @@ private:
   /// \param [in] BoundArch The bound architecture for offload compilation
   /// \param [in] DeviceOffloadKind The offload kind
   void AddAMDGPUTargetArgs(const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs,
-                           llvm::StringRef BoundArch,
+                           llvm::opt::ArgStringList &CmdArgs, BoundArch BA,
                            Action::OffloadKind DeviceOffloadKind) const;
 
   void AddNVPTXTargetArgs(const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs,
-                          llvm::StringRef BoundArch,
+                          llvm::opt::ArgStringList &CmdArgs, BoundArch BA,
                           Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add specific options for LoongArch64 target.

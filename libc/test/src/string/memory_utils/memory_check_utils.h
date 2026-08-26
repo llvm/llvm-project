@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 // This is a utility class to be used by Buffer below, do not use directly.
 struct PoisonedBuffer {
   PoisonedBuffer(size_t size) : ptr((char *)malloc(size)) {
-    ASAN_POISON_MEMORY_REGION(ptr, size);
+    LIBC_ASAN_POISON_MEMORY_REGION(ptr, size);
   }
   ~PoisonedBuffer() { free(ptr); }
 
@@ -47,7 +47,7 @@ struct Buffer : private PoisonedBuffer {
     offset_ptr += distance_to_next_aligned<kAlign>(ptr);
     if (aligned == Aligned::NO)
       ++offset_ptr;
-    ASAN_UNPOISON_MEMORY_REGION(offset_ptr, size);
+    LIBC_ASAN_UNPOISON_MEMORY_REGION(offset_ptr, size);
   }
   cpp::span<char> span() { return cpp::span<char>(offset_ptr, size); }
 

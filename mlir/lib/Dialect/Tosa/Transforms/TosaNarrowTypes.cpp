@@ -426,10 +426,10 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
   }
 
   for (Region &region : op->getRegions()) {
+    if (failed(rewriter.convertRegionTypes(&region, *typeConverter)))
+      return failure();
     Region *newRegion = state.addRegion();
     rewriter.inlineRegionBefore(region, *newRegion, newRegion->begin());
-    if (failed(rewriter.convertRegionTypes(newRegion, *typeConverter)))
-      return failure();
   }
 
   Operation *newOp = rewriter.create(state);
@@ -500,7 +500,8 @@ class ConvertCastOpWithBoundsChecking
       return failure();
 
     rewriter.replaceOpWithNewOp<tosa::CastOp>(
-        op, typeConverter->convertType(resultType), adaptor.getInput());
+        op, typeConverter->convertType(resultType), adaptor.getInput(),
+        op->getAttrs());
     return success();
   }
 };
@@ -616,7 +617,10 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
                                   ValueRange inputs, Location loc) -> Value {
     if (inputs.size() != 1)
       return Value();
-    return tosa::CastOp::create(builder, loc, resultType, inputs.front());
+    return tosa::CastOp::create(
+        builder, loc, resultType, inputs.front(),
+        getStorageElementTypeOrSelf(inputs.front().getType())
+            .isUnsignedInteger());
   };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);

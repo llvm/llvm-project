@@ -49,8 +49,7 @@ define void @test_iv_nuw_nsw_1_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ -1, [[LOOP_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[IV]], 1
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
@@ -96,7 +95,8 @@ define void @test_iv_nuw_nsw_2_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IV]], -1
+; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -131,8 +131,7 @@ define void @test_iv_nsw_nuw_1_ult_end(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ -2, [[LOOP_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[IV]], 1
-; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]

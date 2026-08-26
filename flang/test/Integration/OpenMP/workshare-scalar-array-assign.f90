@@ -24,7 +24,7 @@ end subroutine
 ! HLFIR:         omp.terminator
 ! HLFIR:       }
 ! HLFIR:       omp.terminator
-! HLFIR:     }
+! HLFIR:     } {omp.combined}
 
 ! FIR:     omp.parallel {
 ! FIR:       %[[SCALAR_ALLOCA:.*]] = fir.alloca i32
@@ -43,3 +43,4 @@ end subroutine
 ! FIR:       }
 ! FIR:       omp.barrier
 ! FIR:       omp.terminator
+! FIR-NOT:   omp.combined

@@ -146,6 +146,7 @@ function(add_offload_unittest test_dirname)
   target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")
   target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON})
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
+  set_target_properties(${target_name} PROPERTIES BUILD_RPATH "${LIBOMPTARGET_LIBRARY_DIR}")
 endfunction()
 
 function(add_conformance_test test_name)

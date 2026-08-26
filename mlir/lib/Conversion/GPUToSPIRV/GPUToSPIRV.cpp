@@ -294,11 +294,35 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   auto newFuncOp = spirv::FuncOp::create(
       rewriter, funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
-  for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
-        namedAttr.getName() == SymbolTable::getSymbolAttrName())
+  newFuncOp.setArgAttrsAttr(funcOp.getArgAttrsAttr());
+  newFuncOp.setResAttrsAttr(funcOp.getResAttrsAttr());
+  cast<SymbolOpInterface>(newFuncOp.getOperation())
+      .setVisibility(
+          cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
+
+  auto copyGPUProperty = [&](StringAttr name, Attribute value) {
+    if (value)
+      newFuncOp->setDiscardableAttr(name, value);
+  };
+  copyGPUProperty(funcOp.getWorkgroupAttribAttrsAttrName(),
+                  funcOp.getWorkgroupAttribAttrsAttr());
+  copyGPUProperty(funcOp.getPrivateAttribAttrsAttrName(),
+                  funcOp.getPrivateAttribAttrsAttr());
+  copyGPUProperty(funcOp.getKnownBlockSizeAttrName(),
+                  funcOp.getKnownBlockSizeAttr());
+  copyGPUProperty(funcOp.getKnownGridSizeAttrName(),
+                  funcOp.getKnownGridSizeAttr());
+  copyGPUProperty(funcOp.getKnownClusterSizeAttrName(),
+                  funcOp.getKnownClusterSizeAttr());
+  copyGPUProperty(funcOp.getWorkgroupAttributionsAttrName(),
+                  funcOp.getWorkgroupAttributionsAttr());
+  for (const auto &discardableAttr :
+       funcOp->getDiscardableAttrDictionary().getValue()) {
+    if (discardableAttr.getName() == funcOp.getFunctionTypeAttrName() ||
+        discardableAttr.getName() == SymbolTable::getSymbolAttrName())
       continue;
-    newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
+    newFuncOp->setDiscardableAttr(discardableAttr.getName(),
+                                  discardableAttr.getValue());
   }
 
   rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
@@ -313,7 +337,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   for (auto argIndex : llvm::seq<unsigned>(0, argABIInfo.size())) {
     newFuncOp.setArgAttr(argIndex, argABIAttrName, argABIInfo[argIndex]);
   }
-  newFuncOp->setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);
+  newFuncOp->setDiscardableAttr(spirv::getEntryPointABIAttrName(),
+                                entryPointInfo);
 
   return newFuncOp;
 }
@@ -378,7 +403,7 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
       funcOp, *getTypeConverter(), rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return failure();
-  newFuncOp->removeAttr(
+  newFuncOp->removeDiscardableAttr(
       rewriter.getStringAttr(gpu::GPUDialect::getKernelFuncAttrName()));
   return success();
 }
@@ -416,14 +441,15 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   // will fail if called after GPUModuleConversion and we don't preserve
   // `TargetEnv` attribute.
   // Copy TargetEnvAttr only if it is attached directly to the GPUModuleOp.
-  if (auto attr = moduleOp->getAttrOfType<spirv::TargetEnvAttr>(
+  if (auto attr = moduleOp->getDiscardableAttrOfType<spirv::TargetEnvAttr>(
           spirv::getTargetEnvAttrName()))
-    spvModule->setAttr(spirv::getTargetEnvAttrName(), attr);
+    spvModule->setDiscardableAttr(spirv::getTargetEnvAttrName(), attr);
   if (ArrayAttr targets = moduleOp.getTargetsAttr()) {
     for (Attribute targetAttr : targets)
       if (auto spirvTargetEnvAttr =
               dyn_cast<spirv::TargetEnvAttr>(targetAttr)) {
-        spvModule->setAttr(spirv::getTargetEnvAttrName(), spirvTargetEnvAttr);
+        spvModule->setDiscardableAttr(spirv::getTargetEnvAttrName(),
+                                      spirvTargetEnvAttr);
         break;
       }
   }
@@ -694,16 +720,20 @@ template <typename UniformOp, typename NonUniformOp>
 static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
                                      Value arg, bool isGroup, bool isUniform,
                                      std::optional<uint32_t> clusterSize) {
+  spirv::Scope scope =
+      isGroup ? spirv::Scope::Workgroup : spirv::Scope::Subgroup;
+  // GroupNonUniform* ops only support Subgroup scope.
+  if (!isUniform && scope != spirv::Scope::Subgroup)
+    return Value();
+
   Type type = arg.getType();
-  auto scope = mlir::spirv::ScopeAttr::get(builder.getContext(),
-                                           isGroup ? spirv::Scope::Workgroup
-                                                   : spirv::Scope::Subgroup);
+  auto scopeAttr = mlir::spirv::ScopeAttr::get(builder.getContext(), scope);
   auto groupOp = spirv::GroupOperationAttr::get(
       builder.getContext(), clusterSize.has_value()
                                 ? spirv::GroupOperation::ClusteredReduce
                                 : spirv::GroupOperation::Reduce);
   if (isUniform) {
-    return UniformOp::create(builder, loc, type, scope, groupOp, arg)
+    return UniformOp::create(builder, loc, type, scopeAttr, groupOp, arg)
         .getResult();
   }
 
@@ -713,7 +743,34 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
         builder, loc, builder.getI32Type(),
         builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
 
-  return NonUniformOp::create(builder, loc, type, scope, groupOp, arg,
+  return NonUniformOp::create(builder, loc, type, scopeAttr, groupOp, arg,
+                              clusterSizeValue)
+      .getResult();
+}
+
+template <typename NonUniformOp>
+static Value createGroupNonUniformBitwiseReduceOpImpl(
+    OpBuilder &builder, Location loc, Value arg, bool isGroup, bool isUniform,
+    std::optional<uint32_t> clusterSize) {
+  spirv::Scope scope =
+      isGroup ? spirv::Scope::Workgroup : spirv::Scope::Subgroup;
+  if (isUniform || scope != spirv::Scope::Subgroup)
+    return Value();
+
+  Type type = arg.getType();
+  auto scopeAttr = mlir::spirv::ScopeAttr::get(builder.getContext(), scope);
+  auto groupOp = spirv::GroupOperationAttr::get(
+      builder.getContext(), clusterSize.has_value()
+                                ? spirv::GroupOperation::ClusteredReduce
+                                : spirv::GroupOperation::Reduce);
+
+  Value clusterSizeValue;
+  if (clusterSize.has_value())
+    clusterSizeValue = spirv::ConstantOp::create(
+        builder, loc, builder.getI32Type(),
+        builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
+
+  return NonUniformOp::create(builder, loc, type, scopeAttr, groupOp, arg,
                               clusterSizeValue)
       .getResult();
 }
@@ -784,11 +841,22 @@ createGroupReduceOp(OpBuilder &builder, Location loc, Value arg,
                                 spirv::GroupNonUniformFMinOp>},
       {ReduceType::MAXIMUMF, ElemType::Float,
        &createGroupReduceOpImpl<spirv::GroupFMaxOp,
-                                spirv::GroupNonUniformFMaxOp>}};
+                                spirv::GroupNonUniformFMaxOp>},
+      {ReduceType::AND, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseAndOp>},
+      {ReduceType::OR, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseOrOp>},
+      {ReduceType::XOR, ElemType::Integer,
+       &createGroupNonUniformBitwiseReduceOpImpl<
+           spirv::GroupNonUniformBitwiseXorOp>}};
 
   for (const OpHandler &handler : handlers)
     if (handler.kind == opType && elementType == handler.elemType)
-      return handler.func(builder, loc, arg, isGroup, isUniform, clusterSize);
+      if (Value result =
+              handler.func(builder, loc, arg, isGroup, isUniform, clusterSize))
+        return result;
 
   return std::nullopt;
 }
@@ -944,7 +1012,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
         rewriter, loc, ptrType, globalVarName,
         FlatSymbolRefAttr::get(specCstComposite));
 
-    globalVar->setAttr("Constant", rewriter.getUnitAttr());
+    globalVar->setDiscardableAttr("Constant", rewriter.getUnitAttr());
   }
   // Get SSA value of Global variable and create pointer to i8 to point to
   // the format string.

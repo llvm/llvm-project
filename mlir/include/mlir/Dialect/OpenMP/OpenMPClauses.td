@@ -113,7 +113,9 @@ class OpenMP_AllocateClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
-    Variadic<AnyType>:$allocator_vars
+    Variadic<AnyType>:$allocator_vars,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_alignments,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_private_indices
   );
 
   let extraClassDeclaration = [{
@@ -125,12 +127,18 @@ class OpenMP_AllocateClauseSkip<
     `allocate` `(`
       custom<AllocateAndAllocator>($allocate_vars, type($allocate_vars),
                                    $allocator_vars, type($allocator_vars)) `)`
+      (`allocate_alignments` `(` $allocate_alignments^ `)`)?
+      (`allocate_private_indices` `(` $allocate_private_indices^ `)`)?
   }];
 
   let description = [{
-    The `allocator_vars` and `allocate_vars` parameters are a variadic list of
-    values that specify the memory allocator to be used to obtain storage for
-    private values.
+    The `allocate_vars` and `allocator_vars` parameters are parallel lists that
+    pair each allocated private value with the allocator used to obtain its
+    storage. When present, `allocate_alignments` has one entry per allocate
+    variable; zero means omitted alignment, and nonzero entries must be powers
+    of two.
+    `allocate_private_indices` maps each allocate variable to the corresponding
+    position in the operation's private variables.
   }];
 }
 
@@ -161,32 +169,6 @@ class OpenMP_AllocatorClauseSkip<
 }
 
 def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
-// LLVM OpenMP extension `ompx_bare` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_BareClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-    UnitAttr:$bare
-  );
-
-  let optAssemblyFormat = [{
-    `ompx_bare` $bare
-  }];
-
-  let description = [{
-    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
-    explicit number of teams and threads. This clause also allows the teams and
-    threads sizes to have up to 3 dimensions.
-  }];
-}
-
-def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
@@ -416,6 +398,7 @@ class OpenMP_DoacrossClauseSkip<
     ( `depend_type` `` $doacross_depend_type^ )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
+    ( `num_loops` `(` $doacross_num_loops^ `)` )?
   }];
 
   let description = [{
@@ -601,12 +584,11 @@ class OpenMP_HeapAllocClauseSkip<
     Variadic<IntLikeType>:$shape
   );
 
-  // The custom parser doesn't parse `uniq_name` and `bindc_name`. This is
-  // handled by the attr-dict, which must be present in the operation's
-  // `assemblyFormat`.
   let reqAssemblyFormat = [{
     custom<HeapAllocClause>($in_type, $typeparams, type($typeparams), $shape,
                             type($shape))
+    ( `uniq_name` `(` $uniq_name^ `)` )?
+    ( `bindc_name` `(` $bindc_name^ `)` )?
   }];
 
   let extraClassDeclaration = [{
@@ -790,9 +772,17 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
-  // Description varies depending on the operation. Assembly format not defined
-  // because this clause must be processed together with the first region of the
-  // operation, as it defines entry block arguments.
+  // This assembly format should only be used by operations where `in_reduction`
+  // does not define entry block arguments (e.g. `omp.target`). Otherwise, it
+  // must be printed and parsed together with the corresponding region, because
+  // it defines entry block arguments.
+  let optAssemblyFormat = [{
+    `in_reduction` `(`
+      custom<InReductionClause>($in_reduction_vars, type($in_reduction_vars),
+                                $in_reduction_byref, $in_reduction_syms) `)`
+  }];
+
+  // Description varies depending on the operation.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;
@@ -840,6 +830,7 @@ class OpenMP_LinearClauseSkip<
       custom<LinearClause>($linear_vars, type($linear_vars),
                            $linear_step_vars, type($linear_step_vars),
                            $linear_modifiers) `)`
+      ( `linear_var_types` `(` $linear_var_types^ `)` )?
   }];
 
   let description = [{

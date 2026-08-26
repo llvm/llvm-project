@@ -202,11 +202,11 @@ public:
   }
 
   std::function<ProfileSummaryInfo *(Module &)> GetPSI;
-  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+  std::function<const StaticDataProfileInfo *(Module &)> GetSDPI;
 };
 
 class X86AsmPrinterBeginPass
-    : public OptionalPassInfoMixin<X86AsmPrinterBeginPass> {
+    : public RequiredPassInfoMixin<X86AsmPrinterBeginPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
@@ -219,7 +219,7 @@ public:
 };
 
 class X86AsmPrinterEndPass
-    : public OptionalPassInfoMixin<X86AsmPrinterEndPass> {
+    : public RequiredPassInfoMixin<X86AsmPrinterEndPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

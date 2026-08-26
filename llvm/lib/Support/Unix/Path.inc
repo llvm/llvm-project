@@ -1173,17 +1173,24 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enableAutoConversion(ResultFD))
-        return EC;
-      if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
+      if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
+        int ccsid = CCSID_IBM_1047;
+        if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
+          ccsid = Stat.st_tag.ft_ccsid;
+        if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))
           return EC;
-      }
+        if (DoSetTag) {
+          if (auto EC = llvm::setzOSFileTag(ResultFD, ccsid, /*IsText=*/true))
+            return EC;
+        }
+      } else if (auto EC = llvm::enableAutoConversion(ResultFD))
+        return EC;
     } else {
       if (auto EC = llvm::disableAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC =
+                llvm::setzOSFileTag(ResultFD, FT_BINARY, /*IsText=*/false))
           return EC;
       }
     }
@@ -1257,6 +1264,15 @@ Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
     return errorCodeToError(EC);
+// The underlying operation on these platforms allow opening directories
+// for reading in more cases than other platforms.
+#if defined(__MVS__) || defined(_AIX)
+  struct stat Status;
+  if (fstat(ResultFD, &Status) == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  if (S_ISDIR(Status.st_mode))
+    return errorCodeToError(make_error_code(errc::is_a_directory));
+#endif
   return ResultFD;
 }
 
@@ -1275,15 +1291,6 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
-// The underlying operation on these platforms allow opening directories
-// for reading in more cases than other platforms.
-#if defined(__MVS__) || defined(_AIX)
-  struct stat Status;
-  if (fstat(FD, &Status) == -1)
-    return errorCodeToError(errnoAsErrorCode());
-  if (S_ISDIR(Status.st_mode))
-    return errorCodeToError(make_error_code(errc::is_a_directory));
-#endif
   return NumRead;
 }
 

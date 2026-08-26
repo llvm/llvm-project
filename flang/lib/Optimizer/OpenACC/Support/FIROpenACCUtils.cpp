@@ -378,10 +378,14 @@ getRecipeBounds(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(
         dataBound.getLowerbound() && dataBound.getUpperbound() &&
         "expect acc bounds for Fortran to always have lower and upper bounds");
-    std::optional<std::int64_t> lb =
-        fir::getIntIfConstant(dataBound.getLowerbound());
-    std::optional<std::int64_t> ub =
-        fir::getIntIfConstant(dataBound.getUpperbound());
+    std::optional<std::int64_t> lb;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getLowerbound()))
+      lb = constant->trySExtValue();
+    std::optional<std::int64_t> ub;
+    if (std::optional<llvm::APInt> constant =
+            fir::getIntIfConstant(dataBound.getUpperbound()))
+      ub = constant->trySExtValue();
     assert(lb.has_value() && ub.has_value() &&
            "must get constant bounds when there are no bound block arguments");
     bounds.push_back(builder.createIntegerConstant(loc, idxTy, *lb));

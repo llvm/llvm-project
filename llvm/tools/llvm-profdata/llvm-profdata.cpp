@@ -237,6 +237,16 @@ static cl::opt<bool> SplitLayout(
     cl::desc("Split the profile to two sections with one containing sample "
              "profiles with inlined functions and the other without (only "
              "meaningful for -extbinary)"));
+static cl::opt<bool>
+    WriteMD5ProfSymList("md5-prof-sym-list", cl::init(false), cl::Hidden,
+                        cl::sub(MergeSubcommand),
+                        cl::desc("Write ProfileSymbolList (Cold Symbols) as "
+                                 "64-bit MD5 hashes in Eytzinger layout"));
+static cl::opt<bool> WriteMD5IndexedTables(
+    "md5-indexed-tables", cl::init(false), cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Write MD5-based indexed NameTable and parallel "
+             "FuncOffsetTable in Eytzinger layout (only meaningful for "
+             "-extbinary)"));
 static cl::opt<std::string> SupplInstrWithSample(
     "supplement-instr-with-sample", cl::init(""), cl::Hidden,
     cl::sub(MergeSubcommand),
@@ -812,12 +822,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto Reader = std::move(ReaderOrErr.get());
   if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
-    consumeError(std::move(E));
-    WC->Errors.emplace_back(
-        make_error<StringError>(
-            "Merge IR generated profile with Clang generated profile.",
-            std::error_code()),
-        Filename);
+    WC->Errors.emplace_back(std::move(E), Filename);
     return;
   }
 
@@ -826,6 +831,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
+
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
       if (Reported) {
         consumeError(std::move(E));
@@ -1496,6 +1502,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
   Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
+  Result.reserveBodySamples(Samples.getBodySamples().size());
   for (const auto &BodySample : Samples.getBodySamples()) {
     uint32_t MaskedDiscriminator =
         BodySample.first.Discriminator & getDiscriminatorMask();
@@ -1590,6 +1597,18 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
       warn("-gen-partial-profile is ignored. Specify -extbinary to enable it");
     else
       Writer.setPartialProfile();
+  }
+  if (WriteMD5ProfSymList) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-prof-sym-list is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5ProfileSymbolList();
+  }
+  if (WriteMD5IndexedTables) {
+    if (OutputFormat != PF_Ext_Binary)
+      warn("-md5-indexed-tables is ignored. Specify -extbinary to enable it");
+    else
+      Writer.setUseMD5IndexedTables();
   }
 }
 
@@ -2975,6 +2994,16 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
           OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
+
+        // Show uniformity bits if present
+        if (!Func.UniformityBits.empty()) {
+          OS << "    Block uniformity: [";
+          for (size_t I = Start, E = Func.Counts.size(); I < E; ++I) {
+            bool IsUniform = Func.isBlockUniform(I);
+            OS << (I == Start ? "" : ", ") << (IsUniform ? "U" : "D");
+          }
+          OS << "]\n";
+        }
       }
 
       if (ShowIndirectCallTargets) {

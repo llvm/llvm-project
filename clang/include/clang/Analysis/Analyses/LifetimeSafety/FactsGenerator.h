@@ -57,6 +57,7 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitStmtExpr(const StmtExpr *SE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -65,7 +66,8 @@ private:
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginList *Dst, OriginList *Src, bool Kill,
+            const CFGBlock *Block = nullptr);
 
   /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
   ///
@@ -111,9 +113,7 @@ private:
   /// reference parameter, creating an IssueFact if it does.
   /// \param IsGslConstruction True if this is a GSL construction where all
   ///   argument origins should flow to the returned origin.
-  void handleFunctionCall(const Expr *Call, const FunctionDecl *FD,
-                          ArrayRef<const Expr *> Args,
-                          bool IsGslConstruction = false);
+  void handleFunctionCall(const Expr *Call, bool IsGslConstruction = false);
 
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.

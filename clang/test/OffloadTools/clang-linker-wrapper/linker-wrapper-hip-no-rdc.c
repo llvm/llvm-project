@@ -8,32 +8,32 @@
 __attribute__((visibility("protected"), used)) int x;
 
 // Create device binaries and package them
-// RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
+// RUN: %clang -cc1 %s -triple amdgpu-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
 // RUN: llvm-offload-binary -o %t.out \
-// RUN:   --image=file=%t.amdgpu.bc,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx9-4-generic:xnack+ \
-// RUN:   --image=file=%t.amdgpu.bc,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx1200
+// RUN:   --image=file=%t.amdgpu.bc,kind=hip,triple=amdgpu9.4-amd-amdhsa,arch=gfx9-4-generic:xnack+ \
+// RUN:   --image=file=%t.amdgpu.bc,kind=hip,triple=amdgpu12.00-amd-amdhsa,arch=gfx1200
 
 // Test that linker wrapper outputs .hipfb file without -r option for HIP non-RDC
 // The linker wrapper is called directly with the packaged device binary (not embedded in host object)
 // Note: When called directly (not through the driver), the linker wrapper processes architectures
 // from the packaged binary. The test verifies it can process at least one architecture correctly.
 // RUN: %if system-windows %{ \
-// RUN:   clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --device-linker=amdgcn-amd-amdhsa=-v --device-compiler=-v --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.hipfb 2>&1 | FileCheck %s --check-prefix=CMD-WIN \
+// RUN:   clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --device-linker=amdgpu-amd-amdhsa=-v --device-compiler=-v --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.hipfb 2>&1 | FileCheck %s --check-prefix=CMD-WIN \
 // RUN: %} %else %{ \
-// RUN:   clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --device-linker=amdgcn-amd-amdhsa=-v --device-compiler=-v --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.hipfb 2>&1 | FileCheck %s --check-prefix=CMD-LINUX \
+// RUN:   clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --device-linker=amdgpu-amd-amdhsa=-v --device-compiler=-v --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.hipfb 2>&1 | FileCheck %s --check-prefix=CMD-LINUX \
 // RUN: %}
 
 // On Linux, ':' is preserved in file names
-// CMD-LINUX-DAG: clang{{.*}} -o {{.*}}hipfb.amdgcn.gfx9-4-generic:xnack+{{.*}}.img
-// CMD-LINUX-DAG: clang{{.*}} -o {{.*}}hipfb.amdgcn.gfx1200{{.*}}.img
-// CMD-LINUX-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgcn.gfx9-4-generic:xnack+{{.*}}.img
-// CMD-LINUX-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgcn.gfx1200{{.*}}.img
+// CMD-LINUX-DAG: clang{{.*}} -o {{.*}}hipfb.amdgpu9.4.gfx9-4-generic:xnack+{{.*}}.img
+// CMD-LINUX-DAG: clang{{.*}} -o {{.*}}hipfb.amdgpu12.00.gfx1200{{.*}}.img
+// CMD-LINUX-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgpu9.4.gfx9-4-generic:xnack+{{.*}}.img
+// CMD-LINUX-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgpu12.00.gfx1200{{.*}}.img
 
 // On Windows, ':' is replaced with '@' in file names
-// CMD-WIN-DAG: clang{{.*}} -o {{.*}}hipfb.amdgcn.gfx9-4-generic@xnack+{{.*}}.img
-// CMD-WIN-DAG: clang{{.*}} -o {{.*}}hipfb.amdgcn.gfx1200{{.*}}.img
-// CMD-WIN-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgcn.gfx9-4-generic@xnack+{{.*}}.img
-// CMD-WIN-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgcn.gfx1200{{.*}}.img
+// CMD-WIN-DAG: clang{{.*}} -o {{.*}}hipfb.amdgpu9.4.gfx9-4-generic@xnack+{{.*}}.img
+// CMD-WIN-DAG: clang{{.*}} -o {{.*}}hipfb.amdgpu12.00.gfx1200{{.*}}.img
+// CMD-WIN-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgpu9.4.gfx9-4-generic@xnack+{{.*}}.img
+// CMD-WIN-DAG: ld.lld{{.*}} -o {{.*}}hipfb.amdgpu12.00.gfx1200{{.*}}.img
 
 // Verify the fat binary was created
 // RUN: test -f %t.hipfb
@@ -55,15 +55,3 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: test -s %t.gfx9-4-generic-xnack+.co
 // RUN: test -f %t.gfx1200.co
 // RUN: test -s %t.gfx1200.co
-
-// Without --no-lto the AMDGPU device compilation uses the LTO pipeline
-// (-flto).
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.lto.hipfb 2>&1 | FileCheck %s --check-prefix=LTO
-// LTO: clang{{.*}} -mcpu=gfx1200
-
-// With --no-lto the AMDGPU device compilation uses the conventional non-LTO
-// pipeline: -flto must not be passed, and '-x ir' must be passed so Clang
-// compiles the bitcode (stored in an object-extension file) instead of
-// handing it to the LTO link.
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --no-lto --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.nolto.hipfb 2>&1 | FileCheck %s --check-prefix=NO-LTO
-// NO-LTO: clang{{.*}} -mcpu=gfx1200{{.*}} -x ir {{.*}}-flto=none

@@ -260,6 +260,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
       return DW_LANG_C11;
     if (version <= 201710)
       return DW_LANG_C17;
+    if (version <= 202311)
+      return DW_LANG_C23;
     return {};
   case DW_LNAME_C_plus_plus: // YYYYMM
     if (version == 0)
@@ -276,6 +278,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
       return DW_LANG_C_plus_plus_17;
     if (version <= 202002)
       return DW_LANG_C_plus_plus_20;
+    if (version <= 202302)
+      return DW_LANG_C_plus_plus_23;
     return {};
   case DW_LNAME_Cobol: // YYYY
     if (version <= 1974)
@@ -302,6 +306,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
       return DW_LANG_Fortran08;
     if (version <= 2018)
       return DW_LANG_Fortran18;
+    if (version <= 2023)
+      return DW_LANG_Fortran23;
     return {};
   case DW_LNAME_Go:
     return DW_LANG_Go;
@@ -309,6 +315,10 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Haskell;
   case DW_LNAME_HIP:
     return DW_LANG_HIP;
+  case DW_LNAME_Odin:
+    return DW_LANG_Odin;
+  case DW_LNAME_P4:
+    return DW_LANG_P4;
   case DW_LNAME_Java:
     return DW_LANG_Java;
   case DW_LNAME_Julia:
@@ -369,6 +379,18 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Hylo;
   case DW_LNAME_Metal:
     return DW_LANG_Metal;
+  case DW_LNAME_V:
+    return DW_LANG_V;
+  case DW_LNAME_Algol68:
+    return DW_LANG_Algol68;
+  case DW_LNAME_Nim:
+    return DW_LANG_Nim;
+  case DW_LNAME_Erlang:
+    return DW_LANG_Erlang;
+  case DW_LNAME_Elixir:
+    return DW_LANG_Elixir;
+  case DW_LNAME_Gleam:
+    return DW_LANG_Gleam;
   }
   return {};
 }
@@ -397,6 +419,8 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
     return {{DW_LNAME_C, 201710}};
+  case DW_LANG_C23:
+    return {{DW_LNAME_C, 202311}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
@@ -409,6 +433,8 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_C_plus_plus, 201703}};
   case DW_LANG_C_plus_plus_20:
     return {{DW_LNAME_C_plus_plus, 202002}};
+  case DW_LANG_C_plus_plus_23:
+    return {{DW_LNAME_C_plus_plus, 202302}};
   case DW_LANG_Cobol74:
     return {{DW_LNAME_Cobol, 1974}};
   case DW_LANG_Cobol85:
@@ -431,12 +457,18 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Fortran, 2008}};
   case DW_LANG_Fortran18:
     return {{DW_LNAME_Fortran, 2018}};
+  case DW_LANG_Fortran23:
+    return {{DW_LNAME_Fortran, 2023}};
   case DW_LANG_Go:
     return {{DW_LNAME_Go, 0}};
   case DW_LANG_Haskell:
     return {{DW_LNAME_Haskell, 0}};
   case DW_LANG_HIP:
     return {{DW_LNAME_HIP, 0}};
+  case DW_LANG_Odin:
+    return {{DW_LNAME_Odin, 0}};
+  case DW_LANG_P4:
+    return {{DW_LNAME_P4, 0}};
   case DW_LANG_Java:
     return {{DW_LNAME_Java, 0}};
   case DW_LANG_Julia:
@@ -497,6 +529,18 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Hylo, 0}};
   case DW_LANG_Metal:
     return {{DW_LNAME_Metal, 0}};
+  case DW_LANG_V:
+    return {{DW_LNAME_V, 0}};
+  case DW_LANG_Algol68:
+    return {{DW_LNAME_Algol68, 1968}};
+  case DW_LANG_Nim:
+    return {{DW_LNAME_Nim, 0}};
+  case DW_LANG_Erlang:
+    return {{DW_LNAME_Erlang, 0}};
+  case DW_LANG_Elixir:
+    return {{DW_LNAME_Elixir, 0}};
+  case DW_LANG_Gleam:
+    return {{DW_LNAME_Gleam, 0}};
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_lo_user:
@@ -527,6 +571,7 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_14:
   case DW_LANG_C_plus_plus_17:
   case DW_LANG_C_plus_plus_20:
+  case DW_LANG_C_plus_plus_23:
     result = true;
     break;
   case DW_LANG_C89:
@@ -588,6 +633,16 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_Move:
   case DW_LANG_Hylo:
   case DW_LANG_Metal:
+  case DW_LANG_C23:
+  case DW_LANG_Fortran23:
+  case DW_LANG_Odin:
+  case DW_LANG_P4:
+  case DW_LANG_V:
+  case DW_LANG_Algol68:
+  case DW_LANG_Nim:
+  case DW_LANG_Erlang:
+  case DW_LANG_Elixir:
+  case DW_LANG_Gleam:
     result = false;
     break;
   }
@@ -607,6 +662,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Fortran03:
   case DW_LANG_Fortran08:
   case DW_LANG_Fortran18:
+  case DW_LANG_Fortran23:
     result = true;
     break;
   case DW_LANG_C89:
@@ -668,6 +724,16 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Move:
   case DW_LANG_Hylo:
   case DW_LANG_Metal:
+  case DW_LANG_C_plus_plus_23:
+  case DW_LANG_C23:
+  case DW_LANG_Odin:
+  case DW_LANG_P4:
+  case DW_LANG_V:
+  case DW_LANG_Algol68:
+  case DW_LANG_Nim:
+  case DW_LANG_Erlang:
+  case DW_LANG_Elixir:
+  case DW_LANG_Gleam:
     result = false;
     break;
   }
@@ -682,6 +748,7 @@ inline bool isC(SourceLanguage S) {
   switch (S) {
   case DW_LANG_C11:
   case DW_LANG_C17:
+  case DW_LANG_C23:
   case DW_LANG_C89:
   case DW_LANG_C99:
   case DW_LANG_C:
@@ -746,6 +813,16 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Move:
   case DW_LANG_Hylo:
   case DW_LANG_Metal:
+  case DW_LANG_C_plus_plus_23:
+  case DW_LANG_Fortran23:
+  case DW_LANG_Odin:
+  case DW_LANG_P4:
+  case DW_LANG_V:
+  case DW_LANG_Algol68:
+  case DW_LANG_Nim:
+  case DW_LANG_Erlang:
+  case DW_LANG_Elixir:
+  case DW_LANG_Gleam:
     return false;
   }
   llvm_unreachable("Unknown language kind.");

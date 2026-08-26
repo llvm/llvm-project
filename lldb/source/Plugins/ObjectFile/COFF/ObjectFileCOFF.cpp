@@ -87,7 +87,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   }
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file->GetFilename().GetStringRef()};
+                         file->GetFilename()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -131,7 +131,7 @@ ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
     return {};
 
   MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
-                         file.GetFilename().GetStringRef()};
+                         file.GetFilename()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
     Log *log = GetLog(LLDBLog::Object);

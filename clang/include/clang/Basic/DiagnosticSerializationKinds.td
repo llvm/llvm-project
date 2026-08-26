@@ -23,6 +23,10 @@ def err_fe_ast_file_modified : Error<
     DefaultFatal;
 def note_fe_ast_file_modified : Note<
     "%select{size|mtime|content}0 changed%select{| from expected %2 to %3}1">;
+def note_fe_ast_file_modified_finalized : Note<
+    "module '%0' was already finalized in this compilation and so cannot be "
+    "rebuilt; this is usually caused by an input changing due to "
+    "misconfigurations, or a compiler bug">;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_ast_file_required_by : Note<"'%0' required by '%1'">;

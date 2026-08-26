@@ -8,7 +8,7 @@
 define void @splat_i8x16(i8 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i8x16(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> poison, i8 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> poison, i8 [[V:%.*]], i64 0
 ; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[TMP0]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; SIMD128-NEXT:    store <16 x i8> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
@@ -86,7 +86,7 @@ entry:
 define void @splat_i16x8(i16 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i16x8(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[V:%.*]], i64 0
 ; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; SIMD128-NEXT:    store <8 x i16> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
@@ -245,7 +245,7 @@ entry:
 define void @splat_i32x8(i32 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i32x8(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[V:%.*]], i64 0
 ; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; SIMD128-NEXT:    store <8 x i32> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
@@ -349,7 +349,7 @@ entry:
 define void @splat_i8x8(i8 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i8x8(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[V:%.*]], i64 0
 ; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; SIMD128-NEXT:    store <8 x i8> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void

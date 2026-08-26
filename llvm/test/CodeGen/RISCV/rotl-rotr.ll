@@ -2605,3 +2605,273 @@ define i64 @rotr_64_zext(i64 %x, i32 %y) nounwind {
   %d = or i64 %b, %c
   ret i64 %d
 }
+
+define i8 @rotr_i8(i8 %x, i8 %z) {
+; RV32I-LABEL: rotr_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    zext.b a2, a0
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    andi a1, a1, 7
+; RV32I-NEXT:    srl a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: rotr_i8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a2, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    andi a1, a1, 7
+; RV64I-NEXT:    srl a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: rotr_i8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    zext.b a2, a0
+; RV32ZBB-NEXT:    neg a3, a1
+; RV32ZBB-NEXT:    andi a1, a1, 7
+; RV32ZBB-NEXT:    andi a3, a3, 7
+; RV32ZBB-NEXT:    srl a1, a2, a1
+; RV32ZBB-NEXT:    sll a0, a0, a3
+; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: rotr_i8:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.b a2, a0
+; RV64ZBB-NEXT:    neg a3, a1
+; RV64ZBB-NEXT:    andi a1, a1, 7
+; RV64ZBB-NEXT:    andi a3, a3, 7
+; RV64ZBB-NEXT:    srl a1, a2, a1
+; RV64ZBB-NEXT:    sll a0, a0, a3
+; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: rotr_i8:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    zext.b a2, a0
+; RV32XTHEADBB-NEXT:    neg a3, a1
+; RV32XTHEADBB-NEXT:    andi a1, a1, 7
+; RV32XTHEADBB-NEXT:    andi a3, a3, 7
+; RV32XTHEADBB-NEXT:    srl a1, a2, a1
+; RV32XTHEADBB-NEXT:    sll a0, a0, a3
+; RV32XTHEADBB-NEXT:    or a0, a1, a0
+; RV32XTHEADBB-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: rotr_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    zext.b a2, a0
+; RV64XTHEADBB-NEXT:    neg a3, a1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 7
+; RV64XTHEADBB-NEXT:    andi a3, a3, 7
+; RV64XTHEADBB-NEXT:    srl a1, a2, a1
+; RV64XTHEADBB-NEXT:    sll a0, a0, a3
+; RV64XTHEADBB-NEXT:    or a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+  %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %z)
+  ret i8 %f
+}
+
+define i16 @rotr_i16(i16 %x, i16 %z) {
+; RV32I-LABEL: rotr_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a2, a0, 16
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    andi a1, a1, 15
+; RV32I-NEXT:    srl a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: rotr_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a0, 48
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    srli a2, a2, 48
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    andi a1, a1, 15
+; RV64I-NEXT:    srl a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: rotr_i16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    zext.h a2, a0
+; RV32ZBB-NEXT:    neg a3, a1
+; RV32ZBB-NEXT:    andi a1, a1, 15
+; RV32ZBB-NEXT:    andi a3, a3, 15
+; RV32ZBB-NEXT:    srl a1, a2, a1
+; RV32ZBB-NEXT:    sll a0, a0, a3
+; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: rotr_i16:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.h a2, a0
+; RV64ZBB-NEXT:    neg a3, a1
+; RV64ZBB-NEXT:    andi a1, a1, 15
+; RV64ZBB-NEXT:    andi a3, a3, 15
+; RV64ZBB-NEXT:    srl a1, a2, a1
+; RV64ZBB-NEXT:    sll a0, a0, a3
+; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: rotr_i16:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.extu a2, a0, 15, 0
+; RV32XTHEADBB-NEXT:    neg a3, a1
+; RV32XTHEADBB-NEXT:    andi a1, a1, 15
+; RV32XTHEADBB-NEXT:    andi a3, a3, 15
+; RV32XTHEADBB-NEXT:    srl a1, a2, a1
+; RV32XTHEADBB-NEXT:    sll a0, a0, a3
+; RV32XTHEADBB-NEXT:    or a0, a1, a0
+; RV32XTHEADBB-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: rotr_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.extu a2, a0, 15, 0
+; RV64XTHEADBB-NEXT:    neg a3, a1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 15
+; RV64XTHEADBB-NEXT:    andi a3, a3, 15
+; RV64XTHEADBB-NEXT:    srl a1, a2, a1
+; RV64XTHEADBB-NEXT:    sll a0, a0, a3
+; RV64XTHEADBB-NEXT:    or a0, a1, a0
+; RV64XTHEADBB-NEXT:    ret
+  %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
+  ret i16 %f
+}
+
+define i8 @rotl_i8(i8 %x, i8 %z) {
+; RV32I-LABEL: rotl_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    zext.b a2, a0
+; RV32I-NEXT:    slli a0, a0, 8
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    andi a1, a1, 7
+; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    srli a0, a0, 8
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: rotl_i8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a2, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    andi a1, a1, 7
+; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    srli a0, a0, 8
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: rotl_i8:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    zext.b a2, a0
+; RV32ZBB-NEXT:    neg a3, a1
+; RV32ZBB-NEXT:    andi a1, a1, 7
+; RV32ZBB-NEXT:    andi a3, a3, 7
+; RV32ZBB-NEXT:    sll a0, a0, a1
+; RV32ZBB-NEXT:    srl a1, a2, a3
+; RV32ZBB-NEXT:    or a0, a0, a1
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: rotl_i8:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.b a2, a0
+; RV64ZBB-NEXT:    neg a3, a1
+; RV64ZBB-NEXT:    andi a1, a1, 7
+; RV64ZBB-NEXT:    andi a3, a3, 7
+; RV64ZBB-NEXT:    sll a0, a0, a1
+; RV64ZBB-NEXT:    srl a1, a2, a3
+; RV64ZBB-NEXT:    or a0, a0, a1
+; RV64ZBB-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: rotl_i8:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    zext.b a2, a0
+; RV32XTHEADBB-NEXT:    neg a3, a1
+; RV32XTHEADBB-NEXT:    andi a1, a1, 7
+; RV32XTHEADBB-NEXT:    andi a3, a3, 7
+; RV32XTHEADBB-NEXT:    sll a0, a0, a1
+; RV32XTHEADBB-NEXT:    srl a1, a2, a3
+; RV32XTHEADBB-NEXT:    or a0, a0, a1
+; RV32XTHEADBB-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: rotl_i8:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    zext.b a2, a0
+; RV64XTHEADBB-NEXT:    neg a3, a1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 7
+; RV64XTHEADBB-NEXT:    andi a3, a3, 7
+; RV64XTHEADBB-NEXT:    sll a0, a0, a1
+; RV64XTHEADBB-NEXT:    srl a1, a2, a3
+; RV64XTHEADBB-NEXT:    or a0, a0, a1
+; RV64XTHEADBB-NEXT:    ret
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
+  ret i8 %f
+}
+
+define i16 @rotl_i16(i16 %x, i16 %z) {
+; RV32I-LABEL: rotl_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a2, a0, 16
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    andi a1, a1, 15
+; RV32I-NEXT:    sll a0, a0, a1
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: rotl_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a2, a0, 48
+; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    srli a2, a2, 48
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    andi a1, a1, 15
+; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    srli a0, a0, 16
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: rotl_i16:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    zext.h a2, a0
+; RV32ZBB-NEXT:    neg a3, a1
+; RV32ZBB-NEXT:    andi a1, a1, 15
+; RV32ZBB-NEXT:    andi a3, a3, 15
+; RV32ZBB-NEXT:    sll a0, a0, a1
+; RV32ZBB-NEXT:    srl a1, a2, a3
+; RV32ZBB-NEXT:    or a0, a0, a1
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: rotl_i16:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.h a2, a0
+; RV64ZBB-NEXT:    neg a3, a1
+; RV64ZBB-NEXT:    andi a1, a1, 15
+; RV64ZBB-NEXT:    andi a3, a3, 15
+; RV64ZBB-NEXT:    sll a0, a0, a1
+; RV64ZBB-NEXT:    srl a1, a2, a3
+; RV64ZBB-NEXT:    or a0, a0, a1
+; RV64ZBB-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: rotl_i16:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.extu a2, a0, 15, 0
+; RV32XTHEADBB-NEXT:    neg a3, a1
+; RV32XTHEADBB-NEXT:    andi a1, a1, 15
+; RV32XTHEADBB-NEXT:    andi a3, a3, 15
+; RV32XTHEADBB-NEXT:    sll a0, a0, a1
+; RV32XTHEADBB-NEXT:    srl a1, a2, a3
+; RV32XTHEADBB-NEXT:    or a0, a0, a1
+; RV32XTHEADBB-NEXT:    ret
+;
+; RV64XTHEADBB-LABEL: rotl_i16:
+; RV64XTHEADBB:       # %bb.0:
+; RV64XTHEADBB-NEXT:    th.extu a2, a0, 15, 0
+; RV64XTHEADBB-NEXT:    neg a3, a1
+; RV64XTHEADBB-NEXT:    andi a1, a1, 15
+; RV64XTHEADBB-NEXT:    andi a3, a3, 15
+; RV64XTHEADBB-NEXT:    sll a0, a0, a1
+; RV64XTHEADBB-NEXT:    srl a1, a2, a3
+; RV64XTHEADBB-NEXT:    or a0, a0, a1
+; RV64XTHEADBB-NEXT:    ret
+  %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
+  ret i16 %f
+}

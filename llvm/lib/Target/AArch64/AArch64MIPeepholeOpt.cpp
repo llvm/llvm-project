@@ -298,6 +298,9 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   if (MI.getOperand(1).getReg() != AArch64::WZR)
     return false;
 
+  if (MI.getOperand(2).getSubReg())
+    return false;
+
   MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
   if (!SrcMI)
     return false;
@@ -509,8 +512,10 @@ bool AArch64MIPeepholeOptImpl::visitADDSSUBS(OpcodePair PosOpcs,
           return std::nullopt;
         // Check conditional uses last since it is expensive for scanning
         // proceeding instructions
-        MachineInstr &SrcMI = *MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-        std::optional<UsedNZCV> NZCVUsed = examineCFlagsUse(SrcMI, MI, *TRI);
+        MachineInstr *SrcMI = MRI->getVRegDef(MI.getOperand(1).getReg());
+        if (!SrcMI)
+          return std::nullopt;
+        std::optional<UsedNZCV> NZCVUsed = examineCFlagsUse(*SrcMI, MI, *TRI);
         if (!NZCVUsed || NZCVUsed->C || NZCVUsed->V)
           return std::nullopt;
         return OP;
@@ -760,8 +765,8 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //  %6:fpr128 = IMPLICIT_DEF
   //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
   //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
-  MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-  if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
+  MachineInstr *Low64MI = MRI->getVRegDef(MI.getOperand(1).getReg());
+  if (!Low64MI || Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
   Low64MI = MRI->getUniqueVRegDef(Low64MI->getOperand(2).getReg());
   if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
@@ -795,8 +800,10 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   // Let's remove MIs for high 64-bits.
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
+  LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
+  MRI->clearKillFlags(NewDef);
   MI.eraseFromParent();
 
   return true;

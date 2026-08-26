@@ -186,6 +186,14 @@ static void DefineTypeSize(const Twine &MacroName, TargetInfo::IntType Ty,
                  TI.isTypeSigned(Ty), Builder);
 }
 
+static void DefineTypeMin(const Twine &Prefix, TargetInfo::IntType Ty,
+                          const TargetInfo &TI, MacroBuilder &Builder) {
+  Builder.defineMacro(Prefix + "_MIN__",
+                      TI.isTypeSigned(Ty)
+                          ? Twine("(-") + Prefix + "_MAX__ - 1)"
+                          : Twine("0") + TI.getTypeConstantSuffix(Ty));
+}
+
 static void DefineFmt(const LangOptions &LangOpts, const Twine &Prefix,
                       TargetInfo::IntType Ty, const TargetInfo &TI,
                       MacroBuilder &Builder) {
@@ -577,9 +585,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");
+  if ((LangOpts.CUDA || LangOpts.isSYCL()) && LangOpts.GPURelocatableDeviceCode)
+    Builder.defineMacro("__CLANG_RDC__");
   if (LangOpts.CUDA) {
-    if (LangOpts.GPURelocatableDeviceCode)
-      Builder.defineMacro("__CLANG_RDC__");
     if (!LangOpts.HIP)
       Builder.defineMacro("__CUDA__");
     if (LangOpts.GPUDefaultStream ==
@@ -604,6 +612,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
+      if (TI.getTriple().getEnvironment() == llvm::Triple::LLVM)
+        Builder.defineMacro("__HIP_LLVM__");
       if (!TI.hasHIPImageSupport()) {
         Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT__", "1");
         // Deprecated.
@@ -739,7 +749,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
-    Builder.defineMacro("__cpp_auto_cast", "202110L");
     Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
@@ -747,7 +756,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
-  Builder.defineMacro("__cpp_named_character_escapes", "202207L");
+  Builder.defineMacro("__cpp_auto_cast", "202110L");
+  Builder.defineMacro("__cpp_named_character_escapes", "202606L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
 
   // C++26 features supported in earlier language modes.
@@ -884,21 +894,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__ATOMIC_SEQ_CST", "5");
 
   // Define macros for the clang atomic scopes.
-  Builder.defineMacro("__MEMORY_SCOPE_SYSTEM", "0");
-  Builder.defineMacro("__MEMORY_SCOPE_DEVICE", "1");
-  Builder.defineMacro("__MEMORY_SCOPE_WRKGRP", "2");
-  Builder.defineMacro("__MEMORY_SCOPE_WVFRNT", "3");
-  Builder.defineMacro("__MEMORY_SCOPE_SINGLE", "4");
-  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR", "5");
+  Builder.defineMacro("__MEMORY_SCOPE_SYSTEM",
+                      Twine(AtomicScopeGenericModel::System));
+  Builder.defineMacro("__MEMORY_SCOPE_DEVICE",
+                      Twine(AtomicScopeGenericModel::Device));
+  Builder.defineMacro("__MEMORY_SCOPE_WRKGRP",
+                      Twine(AtomicScopeGenericModel::Workgroup));
+  Builder.defineMacro("__MEMORY_SCOPE_WVFRNT",
+                      Twine(AtomicScopeGenericModel::Wavefront));
+  Builder.defineMacro("__MEMORY_SCOPE_SINGLE",
+                      Twine(AtomicScopeGenericModel::Single));
+  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR",
+                      Twine(AtomicScopeGenericModel::Cluster));
 
   // Define macros for the OpenCL memory scope.
-  // The values should match AtomicScopeOpenCLModel::ID enum.
-  static_assert(
-      static_cast<unsigned>(AtomicScopeOpenCLModel::WorkGroup) == 1 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::Device) == 2 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::AllSVMDevices) == 3 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::SubGroup) == 4,
-      "Invalid OpenCL memory scope enum definition");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_ITEM", "0");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_GROUP", "1");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_DEVICE", "2");
@@ -1037,10 +1046,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     }
   }
 
-  // Macros to help identify the narrow and wide character sets
-  // FIXME: clang currently ignores -fexec-charset=. If this changes,
-  // then this may need to be updated.
-  Builder.defineMacro("__clang_literal_encoding__", "\"UTF-8\"");
+  // Macros to help identify the narrow and wide character sets. This is set
+  // to fexec-charset. If fexec-charset is not specified, the default is the
+  // system charset.
+  Builder.defineMacro("__clang_literal_encoding__",
+                      Twine("\"" +
+                            (LangOpts.LiteralEncoding.empty()
+                                 ? TI.getDefaultOrdinaryLiteralEncoding()
+                                 : LangOpts.LiteralEncoding) +
+                            "\""));
+
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change
     // if -fwide-exec-charset= is ever supported.
@@ -1121,7 +1136,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineTypeSize("__LONG_MAX__", TargetInfo::SignedLong, TI, Builder);
   DefineTypeSize("__LONG_LONG_MAX__", TargetInfo::SignedLongLong, TI, Builder);
   DefineTypeSizeAndWidth("__WCHAR", TI.getWCharType(), TI, Builder);
+  DefineTypeMin("__WCHAR", TI.getWCharType(), TI, Builder);
   DefineTypeSizeAndWidth("__WINT", TI.getWIntType(), TI, Builder);
+  DefineTypeMin("__WINT", TI.getWIntType(), TI, Builder);
   DefineTypeSizeAndWidth("__INTMAX", TI.getIntMaxType(), TI, Builder);
   DefineTypeSizeAndWidth("__SIZE", TI.getSizeType(), TI, Builder);
 
@@ -1173,7 +1190,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFmt(LangOpts, "__SIZE", TI.getSizeType(), TI, Builder);
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
+  DefineType("__SIG_ATOMIC_TYPE__", TI.getSigAtomicType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
+  DefineTypeMin("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
   if (LangOpts.C23)
     DefineType("__CHAR8_TYPE__", TI.UnsignedChar, Builder);
   DefineType("__CHAR16_TYPE__", TI.getChar16Type(), Builder);
@@ -1628,20 +1647,31 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
   Builder.append("# 1 \"<built-in>\" 2");
 
-  // If -imacros are specified, include them now.  These are processed before
-  // any -include directives.
-  for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
-    AddImplicitIncludeMacros(Builder, InitOpts.MacroIncludes[i]);
+  auto AddImplicitInputs = [&](MacroBuilder &ImplicitBuilder) {
+    // If -imacros are specified, include them now.  These are processed before
+    // any -include directives.
+    for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
+      AddImplicitIncludeMacros(ImplicitBuilder, InitOpts.MacroIncludes[i]);
 
-  // Process -include-pch/-include-pth directives.
-  if (!InitOpts.ImplicitPCHInclude.empty())
-    AddImplicitIncludePCH(Builder, PP, PCHContainerRdr,
-                          InitOpts.ImplicitPCHInclude);
+    // Process -include-pch/-include-pth directives.
+    if (!InitOpts.ImplicitPCHInclude.empty())
+      AddImplicitIncludePCH(ImplicitBuilder, PP, PCHContainerRdr,
+                            InitOpts.ImplicitPCHInclude);
 
-  // Process -include directives.
-  for (unsigned i = 0, e = InitOpts.Includes.size(); i != e; ++i) {
-    const std::string &Path = InitOpts.Includes[i];
-    AddImplicitInclude(Builder, Path);
+    // Process -include directives.
+    for (unsigned i = 0, e = InitOpts.Includes.size(); i != e; ++i)
+      AddImplicitInclude(ImplicitBuilder, InitOpts.Includes[i]);
+  };
+
+  if (LangOpts.CPlusPlusModules) {
+    std::string ImplicitInputs;
+    llvm::raw_string_ostream ImplicitInputsStream(ImplicitInputs);
+    MacroBuilder ImplicitBuilder(ImplicitInputsStream);
+    AddImplicitInputs(ImplicitBuilder);
+    if (!ImplicitInputs.empty())
+      PP.setDeferredGMFInputs(std::move(ImplicitInputs));
+  } else {
+    AddImplicitInputs(Builder);
   }
 
   // Instruct the preprocessor to skip the preamble.

@@ -884,6 +884,11 @@ def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+def xor_flag_dead_result : PatFrag<(ops node:$lhs, node:$rhs),
+                                   (X86xor_flag node:$lhs, node:$rhs), [{
+  return SDValue(N, 0).use_empty();
+}]>;
+
 def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
                             (X86and_flag node:$lhs, node:$rhs), [{
   return hasNoCarryFlagUses(SDValue(N, 1));
@@ -1052,9 +1057,9 @@ def fpimmneg0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
+  return Imm.isOne();
 }]>;
 
 def fpimmneg1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-1.0);
+  return Imm.isMinusOne();
 }]>;

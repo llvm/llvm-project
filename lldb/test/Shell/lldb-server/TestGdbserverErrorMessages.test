@@ -13,5 +13,15 @@ BOGUS: error: unknown argument '--bogus'
 RUN: not %lldb-server gdbserver 2>&1 | FileCheck --check-prefixes=CONN,ALL %s
 CONN: error: no connection arguments
 
+RUN: not %lldb-server gdbserver --log-channels 2>&1 | FileCheck --check-prefixes=LOGCHANNELS_MISSING,ALL %s
+LOGCHANNELS_MISSING: error: --log-channels: missing argument
+
+RUN: not %lldb-server gdbserver --log-channels not_a_channel 2>&1 | FileCheck --check-prefixes=INVALID_LOG_CHANNEL %s
+INVALID_LOG_CHANNEL: Unable to setup logging for channel "not_a_channel": Invalid log channel 'not_a_channel'.
+
+RUN: not %lldb-server gdbserver --log-channels "lldb not_a_category" 2>&1 | FileCheck --check-prefixes=INVALID_LOG_CATEGORY %s
+INVALID_LOG_CATEGORY: Unable to setup logging for channel "lldb": error: unrecognized log category 'not_a_category'
+INVALID_LOG_CATEGORY-NEXT: Logging categories for 'lldb':
+
 ALL: Use '{{.*}} g[dbserver] --help' for a complete list of options.
 

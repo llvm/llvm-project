@@ -39,8 +39,20 @@ const unsigned HIPCodeObjectAlign = 4096;
 } // namespace
 
 // Constructs a triple string for clang offload bundler.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
+static std::string normalizeForBundler(const llvm::Triple &OrigT,
+                                       StringRef BoundArch) {
+  llvm::Triple T(OrigT);
+  bool HasTargetID = !BoundArch.empty();
+
+  // FIXME: Short-term hack. The HIP runtime hardcodes the legacy
+  // "amdgcn-amd-amdhsa--" prefix when parsing the target IDs embedded in the
+  // fatbin bundle, so force it.
+  if (HasTargetID && T.isAMDGCN()) {
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+  }
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
@@ -308,15 +320,14 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
     const auto *A = II.getAction();
     const llvm::Triple &InputTriple = A->getOffloadingToolChain()->getTriple();
 
-    auto ArchStr = llvm::StringRef(A->getOffloadingArch());
+    BoundArch BA = A->getOffloadingArch();
     BundlerTargetArg += ',' + OffloadKind + '-';
-    if (ArchStr == "amdgcnspirv")
-      BundlerTargetArg +=
-          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+    if (BA.ArchName == "amdgcnspirv")
+      BundlerTargetArg += "spirv64-amd-amdhsa-";
     else
-      BundlerTargetArg += normalizeForBundler(InputTriple, !ArchStr.empty());
-    if (!ArchStr.empty())
-      BundlerTargetArg += '-' + ArchStr.str();
+      BundlerTargetArg += normalizeForBundler(InputTriple, BA.ArchName);
+    if (BA)
+      BundlerTargetArg += '-' + BA.ArchName.str();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
 
