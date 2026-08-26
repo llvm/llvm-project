@@ -1120,14 +1120,16 @@ public:
     // The list of available load sizes (in bytes), sorted in decreasing order.
     SmallVector<unsigned, 8> LoadSizes;
 
-    // For memcmp expansion when the memcmp result is only compared equal or
-    // not-equal to 0, allow up to this number of load pairs per block. As an
-    // example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
+    // For memcmp expansion, allow up to this number of load pairs per block.
+    // As an example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
     //   a0 = load2bytes &a[0]
     //   b0 = load2bytes &b[0]
     //   a2 = load1byte  &a[2]
     //   b2 = load1byte  &b[2]
     //   r  = cmp eq (a0 ^ b0 | a2 ^ b2), 0
+    // Equality comparisons combine the differences with xor/or. Ordering
+    // comparisons pack the loads in memory order into a wider integer before
+    // comparing, without exceeding the target's preferred load width.
     unsigned NumLoadsPerBlock = 1;
 
     // Set to true to allow overlapping loads. For example, 7-byte compares can
@@ -1537,8 +1539,7 @@ public:
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
   LLVM_ABI InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr,
@@ -1551,10 +1552,10 @@ public:
   /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
   /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
   /// \p VecTy is the vector type of the instruction to be generated.
-  LLVM_ABI InstructionCost getAltInstrCost(
-      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-      const SmallBitVector &OpcodeMask,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                           unsigned Opcode1,
+                                           const SmallBitVector &OpcodeMask,
+                                           TTI::TargetCostKind CostKind) const;
 
   /// \return The cost of a shuffle instruction of kind Kind with inputs of type
   /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
@@ -1565,8 +1566,7 @@ public:
   /// estimation in some cases, like in broadcast loads.
   LLVM_ABI InstructionCost getShuffleCost(
       ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-      ArrayRef<int> Mask = {},
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
+      TTI::TargetCostKind CostKind, ArrayRef<int> Mask = {}, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
 
@@ -1611,8 +1611,7 @@ public:
   /// may be passed in the 'I' parameter.
   LLVM_ABI InstructionCost getCastInstrCost(
       unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
-      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-      const Instruction *I = nullptr) const;
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const;
 
   /// \return The expected cost of a sign- or zero-extended vector extract. Use
   /// Index = -1 to indicate that there is no information about the index value.
@@ -1622,9 +1621,9 @@ public:
 
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
-  LLVM_ABI InstructionCost getCFInstrCost(
-      unsigned Opcode, TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
-      const Instruction *I = nullptr) const;
+  LLVM_ABI InstructionCost getCFInstrCost(unsigned Opcode,
+                                          TTI::TargetCostKind CostKind,
+                                          const Instruction *I = nullptr) const;
 
   /// \returns The expected cost of compare and select instructions. If there
   /// is an existing instruction that holds Opcode, it may be passed in the
@@ -1633,12 +1632,12 @@ public:
   /// types are passed, \p VecPred must be used for all lanes.  For a
   /// comparison, the two operands are the natural values.  For a select, the
   /// two operands are the *value* operands, not the condition operand.
-  LLVM_ABI InstructionCost getCmpSelInstrCost(
-      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      OperandValueInfo Op1Info = {OK_AnyValue, OP_None},
-      OperandValueInfo Op2Info = {OK_AnyValue, OP_None},
-      const Instruction *I = nullptr) const;
+  LLVM_ABI InstructionCost
+  getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                     CmpInst::Predicate VecPred, TTI::TargetCostKind CostKind,
+                     OperandValueInfo Op1Info = {OK_AnyValue, OP_None},
+                     OperandValueInfo Op2Info = {OK_AnyValue, OP_None},
+                     const Instruction *I = nullptr) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
@@ -1721,8 +1720,7 @@ public:
   /// \p UseMaskForGaps indicates if gaps should be masked.
   LLVM_ABI InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
 
   /// A helper function to determine the type of reduction algorithm used
@@ -1757,7 +1755,7 @@ public:
   ///
   LLVM_ABI InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      TTI::TargetCostKind CostKind) const;
 
   LLVM_ABI InstructionCost getMinMaxReductionCost(
       Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
@@ -1768,9 +1766,9 @@ public:
   /// optional extensions. This is the cost of as:
   /// * ResTy vecreduce.add/sub(mul (A, B)) or,
   /// * ResTy vecreduce.add/sub(mul(ext(Ty A), ext(Ty B)).
-  LLVM_ABI InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.
@@ -1778,8 +1776,7 @@ public:
   /// ResTy vecreduce.opcode(ext(Ty A)).
   LLVM_ABI InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      std::optional<FastMathFlags> FMF,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+      std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
@@ -1794,9 +1791,9 @@ public:
                            TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
-  LLVM_ABI InstructionCost getCallInstrCost(
-      Function *F, Type *RetTy, ArrayRef<Type *> Tys,
-      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency) const;
+  LLVM_ABI InstructionCost getCallInstrCost(Function *F, Type *RetTy,
+                                            ArrayRef<Type *> Tys,
+                                            TTI::TargetCostKind CostKind) const;
 
   /// \returns The number of pieces into which the provided type must be
   /// split during legalization. Zero is returned when the answer is unknown.

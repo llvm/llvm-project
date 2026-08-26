@@ -14,7 +14,7 @@ test.with_properties a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3
 test.with_nice_properties "foo bar" is -3
 
 // CHECK:   test.with_wrapped_properties
-// CHECK-SAME:    <{prop = "content for properties"}>{{$}}
+// CHECK-SAME:    <prop = "content for properties">{{$}}
 // GENERIC: "test.with_wrapped_properties"()
 // GENERIC-SAME:  <{prop = "content for properties"}> : () -> ()
 test.with_wrapped_properties <{prop = "content for properties"}>
@@ -28,44 +28,50 @@ test.empty_properties
 // GENERIC: "test.empty_properties"()
 test.empty_properties <>
 
-// The key-value spelling uses the custom parsers for both attributes and
-// properties. Until the custom printer is enabled, it round-trips to the
-// generic DictionaryAttr spelling.
-// CHECK: test.with_custom_prop_dict <{attr = 1 : i32, prop = 2 : i64}>
+// The key-value spelling uses the custom parsers and printers for both
+// attributes and properties.
+// CHECK: test.with_custom_prop_dict <prop = 2, attr = 1>
 // GENERIC: "test.with_custom_prop_dict"()
 // GENERIC-SAME: <{attr = 1 : i32, defaulted = 42 : i64, prop = 2 : i64, unit = false}>
 test.with_custom_prop_dict <attr = 1, prop = 2>
 
 // The generic DictionaryAttr spelling remains accepted for compatibility.
-// CHECK: test.with_custom_prop_dict <{attr = 3 : i32, prop = 4 : i64}>
+// CHECK: test.with_custom_prop_dict <prop = 4, attr = 3>
 // GENERIC: "test.with_custom_prop_dict"()
 // GENERIC-SAME: <{attr = 3 : i32, defaulted = 42 : i64, prop = 4 : i64, unit = false}>
 test.with_custom_prop_dict <{attr = 3 : i32, prop = 4 : i64}>
 
 // Entries are order-independent, and optional/default-valued entries use
 // their custom parsers when present.
-// CHECK: test.with_custom_prop_dict <{attr = 5 : i32, defaulted = 43 : i64, optional = "set", prop = 6 : i64}>
+// CHECK: test.with_custom_prop_dict <prop = 6, defaulted = 43, attr = 5, optional = "set">
 // GENERIC: "test.with_custom_prop_dict"()
 // GENERIC-SAME: <{attr = 5 : i32, defaulted = 43 : i64, optional = "set", prop = 6 : i64, unit = false}>
 test.with_custom_prop_dict <optional = "set", defaulted = 43, prop = 6, attr = 5>
 
 // A field name that is also the start of an attribute must not be consumed by
 // the legacy DictionaryAttr compatibility probe.
-// CHECK: test.with_custom_prop_dict <{attr = 7 : i32, prop = 8 : i64, unit}>
+// CHECK: test.with_custom_prop_dict <prop = 8, unit = unit, attr = 7>
 // GENERIC: "test.with_custom_prop_dict"()
 // GENERIC-SAME: <{attr = 7 : i32, defaulted = 42 : i64, prop = 8 : i64, unit}>
 test.with_custom_prop_dict <unit = unit, attr = 7, prop = 8>
 
+// Inherent attributes use their custom assembly printer in the key-value
+// spelling. Optional enum attributes compile and are omitted when absent.
+// CHECK: test.with_custom_attr_prop_dict <prop = 9, attr = first>
+test.with_custom_attr_prop_dict <attr = first, prop = 9>
+// CHECK: test.with_custom_attr_prop_dict <prop = 10, attr = first, optionalAttr = second>
+test.with_custom_attr_prop_dict <optionalAttr = second, prop = 10, attr = first>
+
 // Properties bound elsewhere in the assembly format are excluded from the
 // key-value list.
-// CHECK: test.with_properties_and_attr 7 <{rhs = 8 : i64}>
+// CHECK: test.with_properties_and_attr 7 <rhs = 8>
 // GENERIC: "test.with_properties_and_attr"()
 // GENERIC-SAME: <{lhs = 7 : i32, rhs = 8 : i64}>
 test.with_properties_and_attr 7 <rhs = 8>
 
 // A property without a usable custom parser falls back to its attribute
 // conversion for this compatibility spelling.
-// CHECK: test.with_wrapped_properties <{prop = "custom spelling"}>
+// CHECK: test.with_wrapped_properties <prop = "custom spelling">
 // GENERIC: "test.with_wrapped_properties"()
 // GENERIC-SAME: <{prop = "custom spelling"}>
 test.with_wrapped_properties <prop = "custom spelling">
@@ -89,7 +95,8 @@ test.with_wrapped_array_properties <prop = ["first", "second"]>
 // following scalar key also checks that the container does not consume the
 // outer comma.
 // CHECK: test.with_key_value_parser_boundaries
-// CHECK-SAME: <{maybe = [], maybeEnum = [], next = 9 : i64, specializedMaybe = [7 : i16], specializedValues = array<i32: 3, 4>, values = array<i64: 1, 2>}>
+// CHECK-SAME: <values = array<i64: 1, 2>, maybe = [], maybeEnum = [],
+// CHECK-SAME: specializedValues = [3, 4], specializedMaybe = some<7>, next = 9>
 // GENERIC: "test.with_key_value_parser_boundaries"()
 // GENERIC-SAME: <{maybe = [], maybeEnum = [], next = 9 : i64, specializedMaybe = [7 : i16], specializedValues = array<i32: 3, 4>, values = array<i64: 1, 2>}>
 test.with_key_value_parser_boundaries <specializedValues = [3, 4], specializedMaybe = some<7>, values = array<i64: 1, 2>, maybe = [], maybeEnum = [], next = 9>
@@ -97,7 +104,7 @@ test.with_key_value_parser_boundaries <specializedValues = [3, 4], specializedMa
 // A comma-separated bit-enum FieldParser is not compositional with the outer
 // list, so prop-dict uses its attribute conversion before parsing another key.
 // CHECK: test.op_with_bit_enum_prop_dict
-// CHECK-SAME: <{flags = 3 : i32, next = 9 : i64}>
+// CHECK-SAME: <flags = 3 : i32, next = 9>
 // GENERIC: "test.op_with_bit_enum_prop_dict"()
 // GENERIC-SAME: <{flags = 3 : i32, next = 9 : i64}>
 test.op_with_bit_enum_prop_dict <flags = 3 : i32, next = 9>
@@ -132,7 +139,7 @@ test.variadic_segment_prop %ci64, %ci64 : %ci64 : i64, i64 : i64 end
 // `<{...}>`. Without the parser-side fix, re-parsing the CHECK line below
 // (which is exactly what the printer emits) fails with "duplicate or unknown
 // key 'operandSegmentSizes' in dictionary attribute".
-// CHECK: test.variadic_segment_prop_bulk_type(%[[CI64]], %[[CI64]], %[[CI64]]) : (i64, i64, i64) -> (i64, i64, i64) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}>
+// CHECK: test.variadic_segment_prop_bulk_type(%[[CI64]], %[[CI64]], %[[CI64]]) : (i64, i64, i64) -> (i64, i64, i64) <operandSegmentSizes = [2, 1], resultSegmentSizes = [2, 1]>
 // GENERIC: "test.variadic_segment_prop_bulk_type"(%[[CI64]], %[[CI64]], %[[CI64]]) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}> : (i64, i64, i64) -> (i64, i64, i64)
 test.variadic_segment_prop_bulk_type(%ci64, %ci64, %ci64) : (i64, i64, i64) -> (i64, i64, i64) <operandSegmentSizes = [2, 1], resultSegmentSizes = [2, 1]>
 
@@ -190,7 +197,8 @@ test.with_array_properties ints = [1, 2] strings = ["a", "b"] nested = [[1, 2], 
 
 // Tests that DefaultValuedProp is elided from prop-dict when value equals default.
 // CHECK: test.op_with_property_predicates
-// CHECK-SAME: <{array = [], more_constrained = 1 : i64, non_empty_constrained = [1], non_empty_unconstrained = [1], scalar = 1 : i64, unconstrained = 0 : i64}>
+// CHECK-SAME: <scalar = 1, more_constrained = 1, array = [],
+// CHECK-SAME: non_empty_unconstrained = [1], non_empty_constrained = [1], unconstrained = 0>
 // CHECK-NOT: defaulted
 test.op_with_property_predicates <{
   scalar = 1 : i64,
@@ -203,8 +211,8 @@ test.op_with_property_predicates <{
 // Keyed parsing composes optional and aggregate property parsers with a
 // following outer dictionary entry.
 // CHECK: test.op_with_property_predicates
+// CHECK-SAME: optional = 2
 // CHECK-SAME: array = [3, 4]
-// CHECK-SAME: optional = [2]
 test.op_with_property_predicates <
   scalar = 1,
   optional = 2,

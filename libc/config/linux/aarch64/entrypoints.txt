@@ -300,6 +300,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
     libc.src.sys.resource.setrlimit
 
     # sys/sendfile.h entrypoints
@@ -349,6 +350,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -389,6 +393,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -1322,6 +1327,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1331,6 +1337,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.nanosleep
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall

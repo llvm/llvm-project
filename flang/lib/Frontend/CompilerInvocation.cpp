@@ -934,6 +934,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::options::OPT_fno_openacc_multiple_names_in_routine,
                    true));
 
+  // -f{no-}prefer-intrinsic-module-use-association
+  if (const auto *arg = args.getLastArg(
+          clang::options::OPT_fprefer_intrinsic_module_use_association,
+          clang::options::OPT_fno_prefer_intrinsic_module_use_association)) {
+    opts.features.Enable(
+        Fortran::common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+        arg->getOption().matches(
+            clang::options::OPT_fprefer_intrinsic_module_use_association));
+  }
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,

@@ -331,6 +331,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.getrusage
     libc.src.sys.resource.setrlimit
 
     # sys/sendfile.h entrypoints
@@ -383,6 +384,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
 
+    # sys/sysinfo.h entrypoints
+    # Disabled due to QEMU test failures.
+    # libc.src.sys.sysinfo.sysinfo
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -418,6 +423,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -1513,6 +1519,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime
     libc.src.time.ctime_r
     libc.src.time.clock
+    libc.src.time.clock_getcpuclockid
     libc.src.time.clock_gettime
     libc.src.time.clock_settime
     libc.src.time.difftime
@@ -1526,6 +1533,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.strftime_l
     libc.src.time.time
     libc.src.time.timespec_get
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
 
     # locale.h entrypoints
     libc.src.locale.localeconv
