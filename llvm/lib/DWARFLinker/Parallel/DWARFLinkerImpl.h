@@ -159,18 +159,6 @@ protected:
   struct LinkContext : public OutputSections {
     using UnitListTy = SmallVector<std::unique_ptr<CompileUnit>>;
 
-    /// Keep information for referenced clang module: already loaded DWARF info
-    /// of the clang module and a CompileUnit of the module.
-    struct RefModuleUnit {
-      RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit);
-      RefModuleUnit(RefModuleUnit &&Other);
-      RefModuleUnit(const RefModuleUnit &) = delete;
-
-      DWARFFile &File;
-      std::unique_ptr<CompileUnit> Unit;
-    };
-    using ModuleUnitListTy = SmallVector<RefModuleUnit>;
-
     /// Object file descriptor.
     DWARFFile &InputDWARFFile;
 
@@ -178,7 +166,7 @@ protected:
     UnitListTy CompileUnits;
 
     /// Set of Compile Units for modules.
-    ModuleUnitListTy ModulesCompileUnits;
+    UnitListTy ModulesCompileUnits;
 
     /// Index of this object file in the link order (used for deterministic
     /// type DIE allocation).
@@ -193,6 +181,8 @@ protected:
 
     StringMap<uint64_t> &ClangModules;
 
+    uint64_t &ModuleUnitIdx;
+
     /// Flag indicating that new inter-connected compilation units were
     /// discovered. It is used for restarting units processing
     /// if new inter-connected units were found.
@@ -205,7 +195,7 @@ protected:
 
     LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
                 uint64_t ObjFileIdx, StringMap<uint64_t> &ClangModules,
-                std::atomic<size_t> &UniqueUnitID);
+                uint64_t &ModuleUnitIdx, std::atomic<size_t> &UniqueUnitID);
 
     /// Check whether specified \p CUDie is a Clang module reference.
     /// if \p Quiet is false then display error messages.
@@ -232,9 +222,6 @@ protected:
                           const std::string &PCMFile,
                           CompileUnitHandlerTy OnCUDieLoaded,
                           CASLoaderTy CASLoader, unsigned Indent = 0);
-
-    /// Add Compile Unit corresponding to the module.
-    void addModulesCompileUnit(RefModuleUnit &&Unit);
 
     /// Computes the total size of the debug info.
     uint64_t getInputDebugInfoSize() const {
@@ -400,6 +387,15 @@ protected:
   /// Enumerate common sections and put their data into the output stream.
   void writeCommonSectionsToTheOutput();
 
+  /// The object file index given to every clang module unit. It sorts below
+  /// every object file's, which makes a module unit outrank all of them: the
+  /// definition a module gives of what it defines wins over the copy an
+  /// importer carries.
+  static constexpr uint64_t ModuleUnitObjFileIdx = 0;
+
+  /// Object file indices follow the module units'.
+  static constexpr uint64_t FirstObjFileIdx = ModuleUnitObjFileIdx + 1;
+
   /// \defgroup Data members accessed asinchroniously.
   ///
   /// @{
@@ -407,9 +403,13 @@ protected:
   /// Unique ID for compile unit.
   std::atomic<size_t> UniqueUnitID;
 
-  /// Mapping the PCM filename to the DwoId.
+  /// Mapping the PCM filename to the DwoId. Only ever touched from
+  /// addObjectFile(), which runs serially, so it needs no synchronization.
   StringMap<uint64_t> ClangModules;
-  std::mutex ClangModulesMutex;
+
+  /// Numbers the clang module units of the whole link, so that they form one
+  /// priority sequence regardless of which object file referenced a .pcm first.
+  uint64_t ModuleUnitIdx = 0;
 
   /// Type unit.
   std::unique_ptr<TypeUnit> ArtificialTypeUnit;
