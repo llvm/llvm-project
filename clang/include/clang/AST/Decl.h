@@ -361,7 +361,6 @@ public:
   void printNestedNameSpecifier(raw_ostream &OS,
                                 const PrintingPolicy &Policy) const;
 
-  // FIXME: Remove string version.
   std::string getQualifiedNameAsString() const;
 
   /// Appends a human-readable name for this declaration into the given stream.
