@@ -703,9 +703,16 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 KnownFPClass KnownFPClass::acos(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
-  // acos is bounded to [0, pi], never Inf or negative.
-  Known.knownNot(fcInf);
-  Known.knownNot(fcNegative);
+  // acos(x) is bounded to [0, pi] for -1 <= x <= 1, and is never negative,
+  // infinite, or subnormal. The smallest non-zero value occurs when x is
+  // close to 1.0, where acos(x) can be approximated by sqrt(2 * (1 - x)).
+  // Since sqrt cannot produce a subnormal result, we can conclude that
+  // acos(x) will also never produce a subnormal result.
+  Known.knownNot(fcNegative | fcInf | fcSubnormal);
+
+  // acos(x) == +0.0 iff x == +1.0
+  if (KnownSrc.isKnownNever(fcPosNormal))
+    Known.knownNot(fcZero);
 
   Known.propagateNonSNaN(KnownSrc);
 
@@ -729,14 +736,28 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
-KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownLHS,
-                                 const KnownFPClass &KnownRHS) {
+KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
+                                 const KnownFPClass &KnownX,
+                                 DenormalMode Mode) {
   KnownFPClass Known;
+
+  // Even though these deductions are correct, we are ignoring the following
+  // potentially erroneous cases:
+  //   * atan2(y, inf) is not subnormal
+  //   * atan2(inf, x) is not zero or subnormal
 
   // atan2 result is in (-pi, pi], never Inf.
   Known.knownNot(fcInf);
 
-  Known.propagateNonNaN(KnownLHS, KnownRHS);
+  Known.propagateNonNaN(KnownY, KnownX);
+
+  // Negative subnormals could be treated like positive zero.
+  const bool XCannotHavePositiveValue = KnownX.isKnownNever(fcPositive) &&
+                                        KnownX.isKnownNeverLogicalPosZero(Mode);
+
+  // If x <= -0.0, then |atan2(y, x)| >= pi/2
+  if (XCannotHavePositiveValue)
+    Known.knownNot(fcZero | fcSubnormal);
 
   return Known;
 }
@@ -884,6 +905,48 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                                  const fltSemantics &Flt, DenormalMode Mode) {
   return ldexp(KnownSrc, ExpBits.getSignedMinValue(),
                ExpBits.getSignedMaxValue(), Flt, Mode);
+}
+
+KnownFPClass KnownFPClass::pow(const KnownFPClass &KnownLHS,
+                               const KnownFPClass &KnownRHS) {
+  KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
+  // pow may return NaN if one of the arguments is NaN. NaN may be produced from
+  // a non-zero-finite-negative base and a non-integer exponent.
+  if (KnownLHS.isKnownNever(fcNan | fcNegNormal | fcNegSubnormal) &&
+      KnownRHS.isKnownNeverNaN())
+    Known.knownNot(fcNan);
+
+  // We could rule out negative and subnormal results when exponent is known to
+  // never be a normal value, but having either argument being known to never be
+  // normal is unlikely and not worth considering.
+
+  // Only a negative base raised to an odd power returns a negative value.
+  if (KnownLHS.isKnownNever(fcNegative)) {
+    Known.knownNot(fcNegative);
+  } else if (KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal)) {
+    Known.knownNot(fcNegNormal | fcNegSubnormal);
+    // See if we can also rule out -0.0 or -inf.
+    // Here at least one of -0.0 or -inf is a possible base.
+
+    // pow(-0.0, odd-positive) = -0.0
+    // pow(-inf, odd-negative) = -0.0
+    if ((KnownLHS.isKnownNever(fcNegZero) ||
+         KnownRHS.isKnownNever(fcPosNormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcNegNormal)))
+      Known.knownNot(fcNegZero);
+
+    // pow(-0.0, odd-negative) = -inf
+    // pow(-inf, odd-positive) = -inf
+    if ((KnownLHS.isKnownNever(fcNegZero) ||
+         KnownRHS.isKnownNever(fcNegNormal)) &&
+        (KnownLHS.isKnownNever(fcNegInf) || KnownRHS.isKnownNever(fcPosNormal)))
+      Known.knownNot(fcNegInf);
+  }
+
+  return Known;
 }
 
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,

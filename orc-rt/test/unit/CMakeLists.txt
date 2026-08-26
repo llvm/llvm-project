@@ -1,5 +1,5 @@
 add_custom_target(OrcRTUnitTests)
-set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/Tests")
+set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/bedrock/Tests")
 
 if (NOT TARGET llvm_gtest)
   message(WARNING "orc-rt unittests disabled due to GTest being unavailable; "
@@ -66,8 +66,8 @@ add_orc_rt_unittest(CoreTests
   )
 target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})
 target_link_libraries(CoreTests PRIVATE
-  orc-rt-executor
-  orc-rt-executor-impl-headers
+  orc-rt-bedrock
+  orc-rt-bedrock-impl-headers
   )
 
 # Build a shared library for NativeDylibManager tests.
