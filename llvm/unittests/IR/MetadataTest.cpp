@@ -5084,12 +5084,12 @@ TEST_F(DIPropertyTest, get) {
   EXPECT_EQ(N,
             DIProperty::get(Context, Name, File, Line, Type, BackingStorage));
 
-  EXPECT_NE(N, DIProperty::get(Context, "other", File, Line, Type,
-                               BackingStorage));
-  EXPECT_NE(N, DIProperty::get(Context, Name, getFile(), Line, Type,
-                               BackingStorage));
-  EXPECT_NE(N, DIProperty::get(Context, Name, File, Line + 1, Type,
-                               BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, "other", File, Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, getFile(), Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, File, Line + 1, Type, BackingStorage));
   EXPECT_NE(N, DIProperty::get(Context, Name, File, Line, getBasicType("other"),
                                BackingStorage));
   EXPECT_NE(

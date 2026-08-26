@@ -4612,9 +4612,9 @@ public:
 
 /// A property of a class or structure.
 ///
-/// Represents a DWARF \c DW_TAG_property: an entity that is syntactically
-/// accessed like a data member, but whose access is implemented by invoking a
-/// user-defined or compiler-generated accessor.
+/// An entity that is syntactically accessed like a data member, but whose
+/// access is implemented by invoking a user-defined or compiler-generated
+/// accessor.
 ///
 /// Currently only the backing storage is modelled, and it must be a data
 /// member holding the property's storage.
@@ -4628,8 +4628,8 @@ class DIProperty : public DINode {
              ArrayRef<Metadata *> Ops);
   ~DIProperty() = default;
 
-  static DIProperty *getImpl(LLVMContext &Context, StringRef Name,
-                             DIFile *File, unsigned Line, DIType *Type,
+  static DIProperty *getImpl(LLVMContext &Context, StringRef Name, DIFile *File,
+                             unsigned Line, DIType *Type,
                              DINode *BackingStorage, StorageType Storage,
                              bool ShouldCreate = true) {
     return getImpl(Context, getCanonicalMDString(Context, Name), File, Line,

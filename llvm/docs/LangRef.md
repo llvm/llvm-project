@@ -7266,9 +7266,8 @@ be used for the structure type.
 ##### DIProperty
 
 `DIProperty` nodes represent an entity that is syntactically accessed like a
-data member but whose access is implemented by an accessor. No getter or
-setter is modelled yet; the node only records the data member holding the
-property's backing storage (for example, an Objective-C `@property`'s
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
 backing ivar).
 
 ```text
