@@ -138,9 +138,7 @@ static bool reachesNamedBitFieldUnit(mlir::Type ty) {
 
 /// Whether \p ty, or an aggregate member/element reached by value (never
 /// through a pointer), is an incomplete record.  Such a record has no known
-/// layout, so no eightbyte classification can be built for it.  Classic skips
-/// full ABI lowering for a function type that depends on an incomplete tag type
-/// rather than attempting one.
+/// layout, so no eightbyte classification can be built for it.
 static bool hasIncompleteRecordByValue(mlir::Type ty) {
   if (auto recTy = dyn_cast<cir::RecordType>(ty))
     return !recTy.isComplete() ||
@@ -853,10 +851,10 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
-    // C++ requires a complete type at any call or definition, so only a
-    // declaration can carry an incomplete-by-value parameter or return
-    // type, and no translation unit can ever call or define it with real
-    // argument data.  Leave it unclassified, mirroring classic CodeGen.
+    // A complete type is required at any call or definition, so only a
+    // declaration can carry an incomplete-by-value parameter or return type,
+    // and no translation unit can ever call or define it with real argument
+    // data.  Leave it unclassified.
     cir::FuncType fnTy = f.getFunctionType();
     if (isX86 && f.isDeclaration() &&
         (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
