@@ -2603,38 +2603,38 @@ let Predicates = [hasUE5M3TypeSupport] in {
   def : Pat<(int_nvvm_ue5m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0 i16:$a, i16:$b),
             (CVT_bf16x2_ue5m3x2_scale_n2 $a, $b, CvtRN_SATFINITE)>;
 
-  foreach rnd = ["rn", "rz", "rp"] in {
-    foreach satfinite = ["", "_satfinite"] in {
-      defvar intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # satfinite);
-      defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(satfinite));
-      def : Pat<(intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, mode)>;
-    }
-  }
-  foreach rnd = ["rn", "rz"] in {
-    foreach satfinite = ["", "_satfinite"] in {
-      defvar intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # satfinite # "_scale_n1_ue8m0");
-      defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(satfinite));
-      def : Pat<(intrin f32:$a, f32:$b, i16:$c),
-                (CVT_ue5m3x2_f32_scale_n1 $a, $b, $c, mode)>;
-    }
-  }
-
-  foreach type = ["f16x2", "bf16x2"] in {
-    foreach rnd = ["rn", "rz", "rp"] in {
-      foreach satfinite = ["", "_satfinite"] in {
-        defvar intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # satfinite);
-        defvar cvt_inst = !cast<NVPTXInst>("CVT_ue5m3x2_" # type);
-        defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(satfinite));
-        def : Pat<(intrin B32:$a), (cvt_inst $a, mode)>;
-      }
-    }
+  foreach satfinite = ["", "satfinite"] in {
+    defvar sat = !if(!empty(satfinite), "", "_" # satfinite);
     foreach rnd = ["rn", "rz"] in {
-      foreach satfinite = ["", "_satfinite"] in {
-        defvar intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # satfinite # "_scale_n1_ue8m0");
-        defvar cvt_inst = !cast<NVPTXInst>("CVT_ue5m3x2_" # type # "_scale_n1");
-        defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(satfinite));
-        def : Pat<(intrin B32:$a, i16:$b), (cvt_inst $a, $b, mode)>;
+      defvar mode = !cast<PatLeaf>("Cvt" # !toupper(rnd) # !toupper(sat));
+
+      defvar ff_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat);
+      def : Pat<(ff_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, mode)>;
+
+      defvar ff_scale_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+      def : Pat<(ff_scale_intrin f32:$a, f32:$b, i16:$c),
+                (CVT_ue5m3x2_f32_scale_n1 $a, $b, $c, mode)>;
+
+      foreach type = ["f16x2", "bf16x2"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat);
+        def : Pat<(intrin B32:$a),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, mode)>;
+
+        defvar scale_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_" # rnd # sat # "_scale_n1_ue8m0");
+        def : Pat<(scale_intrin B32:$a, i16:$b),
+                  (!cast<NVPTXInst>("CVT_ue5m3x2_" # type # "_scale_n1") $a, $b, mode)>;
       }
+    }
+
+    defvar rp_mode = !cast<PatLeaf>("CvtRP" # !toupper(sat));
+
+    defvar ff_rp_intrin = !cast<Intrinsic>("int_nvvm_ff_to_ue5m3x2_rp" # sat);
+    def : Pat<(ff_rp_intrin f32:$a, f32:$b), (CVT_ue5m3x2_f32 $a, $b, rp_mode)>;
+
+    foreach type = ["f16x2", "bf16x2"] in {
+      defvar rp_intrin = !cast<Intrinsic>("int_nvvm_" # type # "_to_ue5m3x2_rp" # sat);
+      def : Pat<(rp_intrin B32:$a),
+                (!cast<NVPTXInst>("CVT_ue5m3x2_" # type) $a, rp_mode)>;
     }
   }
 } // let Predicates = [hasUE5M3TypeSupport]
