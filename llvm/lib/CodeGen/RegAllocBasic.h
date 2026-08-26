@@ -97,9 +97,9 @@ public:
 
   /// Shared implementation used by the legacy and new pass managers.
   bool run(MachineFunction &MF, VirtRegMap &VRM, LiveIntervals &LIS,
-           LiveRegMatrix &LRM, LiveStacks &LSS,
-           MachineBlockFrequencyInfo &MBFI, MachineDominatorTree &MDT,
-           MachineLoopInfo &Loops, ProfileSummaryInfo *PSI);
+           LiveRegMatrix &LRM, LiveStacks &LSS, MachineBlockFrequencyInfo &MBFI,
+           MachineDominatorTree &MDT, MachineLoopInfo &Loops,
+           ProfileSummaryInfo *PSI);
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(

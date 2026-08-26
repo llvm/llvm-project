@@ -231,8 +231,8 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
              &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
 }
 
-bool RABasic::run(MachineFunction &mf, VirtRegMap &VRMRef, LiveIntervals &LISRef,
-                  LiveRegMatrix &LRMRef, LiveStacks &LSS,
+bool RABasic::run(MachineFunction &mf, VirtRegMap &VRMRef,
+                  LiveIntervals &LISRef, LiveRegMatrix &LRMRef, LiveStacks &LSS,
                   MachineBlockFrequencyInfo &MBFI, MachineDominatorTree &MDT,
                   MachineLoopInfo &Loops, ProfileSummaryInfo *PSI) {
   LLVM_DEBUG(dbgs() << "********** BASIC REGISTER ALLOCATION **********\n"
@@ -243,7 +243,8 @@ bool RABasic::run(MachineFunction &mf, VirtRegMap &VRMRef, LiveIntervals &LISRef
   VirtRegAuxInfo VRAI(*MF, *LIS, *VRM, Loops, MBFI, PSI);
   VRAI.calculateSpillWeightsAndHints();
 
-  SpillerInstance.reset(createInlineSpiller({*LIS, LSS, MDT, MBFI}, *MF, *VRM, VRAI));
+  SpillerInstance.reset(
+      createInlineSpiller({*LIS, LSS, MDT, MBFI}, *MF, *VRM, VRAI));
 
   allocatePhysRegs();
   postOptimization();
@@ -259,19 +260,19 @@ PreservedAnalyses RABasicPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  auto &MAMProxy = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  auto &MAMProxy =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
   ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(
       *MF.getFunction().getParent());
 
   RABasic Impl(Opts.Filter);
-  bool Changed =
-      Impl.run(MF, MFAM.getResult<VirtRegMapAnalysis>(MF),
-               MFAM.getResult<LiveIntervalsAnalysis>(MF),
-               MFAM.getResult<LiveRegMatrixAnalysis>(MF),
-               MFAM.getResult<LiveStacksAnalysis>(MF),
-               MFAM.getResult<MachineBlockFrequencyAnalysis>(MF),
-               MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
-               MFAM.getResult<MachineLoopAnalysis>(MF), PSI);
+  bool Changed = Impl.run(MF, MFAM.getResult<VirtRegMapAnalysis>(MF),
+                          MFAM.getResult<LiveIntervalsAnalysis>(MF),
+                          MFAM.getResult<LiveRegMatrixAnalysis>(MF),
+                          MFAM.getResult<LiveStacksAnalysis>(MF),
+                          MFAM.getResult<MachineBlockFrequencyAnalysis>(MF),
+                          MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                          MFAM.getResult<MachineLoopAnalysis>(MF), PSI);
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
