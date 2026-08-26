@@ -22,7 +22,7 @@
 // std::atomic<uint64_t> bench in the same run. Absolute ns/op are host-specific;
 // the ratio is the number to report.
 //
-// Driver: libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py
+// Driver: libcxx/test/benchmarks/atomic_shared_ptr_bench.runner.py
 
 #include <atomic>
 #include <cstdint>

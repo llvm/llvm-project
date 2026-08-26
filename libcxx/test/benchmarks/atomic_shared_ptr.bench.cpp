@@ -22,9 +22,8 @@
 //
 // Same-machine A/B (each file separately - names collide if consolidated
 // together). Driver next to these benches:
-//   python3 libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py --build <build>
-//   python3 libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py --build <build> \
-//       --threads 2,4,6,8,10,12,14,16,18,20
+//   python3 libcxx/test/benchmarks/atomic_shared_ptr_bench.runner.py --build <build>
+// Add --threads 2,4,6,8,10,12,14,16,18,20 to override the default 2,4,8.
 // Needs: pip install -r libcxx/utils/requirements.txt
 //
 // Report ratios to std::atomic<uint64_t>::* in the same JSON, not raw ns/op.

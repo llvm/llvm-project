@@ -16,7 +16,7 @@
 // Same benches as atomic_shared_ptr.bench.cpp, but forces libc++'s stolen-bit
 // spinlock path even on DWCAS targets. Same-machine A/B only; names match so
 // compare-benchmarks can pair the two files. Driver:
-//   python3 libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py --build <build>
+//   python3 libcxx/test/benchmarks/atomic_shared_ptr_bench.runner.py --build <build>
 
 #include "atomic_shared_ptr_bench.h"
 
