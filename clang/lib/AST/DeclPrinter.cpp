@@ -123,10 +123,6 @@ namespace {
 
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
-    void printTemplateArguments(ArrayRef<TemplateArgument> Args,
-                                const TemplateParameterList *Params);
-    void printTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
-                                const TemplateParameterList *Params);
     enum class AttrPosAsWritten { Default = 0, Left, Right };
     std::optional<std::string>
     prettyPrintAttributes(const Decl *D,
@@ -729,13 +725,12 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Proto = GuideDecl->getDeducedTemplate()->getDeclName().getAsString();
   if (D->isFunctionTemplateSpecialization()) {
     llvm::raw_string_ostream POut(Proto);
-    DeclPrinter TArgPrinter(POut, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
     if (TArgAsWritten && !Policy.PrintAsCanonical)
-      TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
+      printTemplateArgumentList(POut, TArgAsWritten->arguments(), SubPolicy);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
-      TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
+      printTemplateArgumentList(POut, TArgs->asArray(), SubPolicy);
   }
 
   QualType Ty = D->getType();
@@ -1130,9 +1125,11 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
       const ASTTemplateArgumentListInfo *TArgAsWritten =
           S->getTemplateArgsAsWritten();
       if (TArgAsWritten && !Policy.PrintAsCanonical)
-        printTemplateArguments(TArgAsWritten->arguments(), TParams);
+        printTemplateArgumentList(Out, TArgAsWritten->arguments(), Policy,
+                                  TParams);
       else
-        printTemplateArguments(S->getTemplateArgs().asArray(), TParams);
+        printTemplateArgumentList(Out, S->getTemplateArgs().asArray(), Policy,
+                                  TParams);
     }
   }
 
@@ -1238,39 +1235,6 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
 
   if (!OmitTemplateKW)
     Out << ' ';
-}
-
-void DeclPrinter::printTemplateArguments(ArrayRef<TemplateArgument> Args,
-                                         const TemplateParameterList *Params) {
-  Out << "<";
-  for (size_t I = 0, E = Args.size(); I < E; ++I) {
-    if (I)
-      Out << ", ";
-    if (!Params)
-      Args[I].print(Policy, Out, /*IncludeType*/ true);
-    else
-      Args[I].print(Policy, Out,
-                    TemplateParameterList::shouldIncludeTypeForArgument(
-                        Policy, Params, I));
-  }
-  Out << ">";
-}
-
-void DeclPrinter::printTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
-                                         const TemplateParameterList *Params) {
-  Out << "<";
-  for (size_t I = 0, E = Args.size(); I < E; ++I) {
-    if (I)
-      Out << ", ";
-    if (!Params)
-      Args[I].getArgument().print(Policy, Out, /*IncludeType*/ true);
-    else
-      Args[I].getArgument().print(
-          Policy, Out,
-          TemplateParameterList::shouldIncludeTypeForArgument(Policy, Params,
-                                                              I));
-  }
-  Out << ">";
 }
 
 void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {

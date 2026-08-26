@@ -410,7 +410,7 @@ class Foo final {})cpp";
          HI.NamespaceScope = "";
          HI.Name = "foo";
          HI.Kind = index::SymbolKind::Function;
-         HI.Definition = "template <> void foo<Foo, char, 0, false, <>>()";
+         HI.Definition = "template <> void foo<Foo, char, 0, false>()";
          HI.ReturnType = "void";
          HI.Type = "void ()";
          HI.Parameters.emplace();

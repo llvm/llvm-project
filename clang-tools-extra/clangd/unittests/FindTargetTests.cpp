@@ -799,7 +799,7 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
   EXPECT_DECLS(
       "TemplateSpecializationTypeLoc",
       {"struct integer_sequence", Rel::TemplatePattern | Rel::Underlying},
-      {"template<> struct integer_sequence<int, <0, 1, 2>>",
+      {"template<> struct integer_sequence<int, 0, 1, 2>",
        Rel::TemplateInstantiation | Rel::Underlying});
 
   // Dependent context.

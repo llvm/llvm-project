@@ -2563,14 +2563,24 @@ template <typename TA>
 static void
 printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
         const TemplateParameterList *TPL, bool IsPack, unsigned ParmIndex) {
-  // Drop trailing template arguments that match default arguments.
-  if (TPL && Policy.SuppressDefaultTemplateArgs && !Policy.PrintAsCanonical &&
-      !Args.empty() && !IsPack && Args.size() <= TPL->size()) {
-    llvm::SmallVector<TemplateArgument, 8> OrigArgs;
-    for (const TA &A : Args)
-      OrigArgs.push_back(getArgument(A));
-    while (!Args.empty() && getArgument(Args.back()).getIsDefaulted())
-      Args = Args.drop_back();
+  if (Policy.SuppressDefaultTemplateArgs && !Policy.PrintAsCanonical) {
+    // Drop trailing template arguments that match default arguments.
+    if (TPL && !Args.empty() && !IsPack && Args.size() <= TPL->size()) {
+      while (!Args.empty()) {
+        const TemplateArgument &Argument = getArgument(Args.back());
+        if (!Argument.getIsDefaulted())
+          break;
+        Args = Args.drop_back();
+      }
+    }
+    // Drop trailing template arguments after any unexpanded pack.
+    for (size_t i = 0; i < Args.size(); ++i) {
+      const TemplateArgument &Argument = getArgument(Args[i]);
+      if (Argument.getKind() == TemplateArgument::Pack) {
+        Args = Args.take_front(i + 1);
+        break;
+      }
+    }
   }
 
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
