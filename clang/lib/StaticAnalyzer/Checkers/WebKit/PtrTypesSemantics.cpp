@@ -445,7 +445,26 @@ enum class WebKitAnnotation : uint8_t {
   NoDelete,
 };
 
-static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
+static WebKitAnnotation annotationType(const StringRef &Annotation) {
+  if (Annotation == "webkit.pointerconversion")
+    return WebKitAnnotation::PointerConversion;
+  if (Annotation == "webkit.nodelete")
+    return WebKitAnnotation::NoDelete;
+  return WebKitAnnotation::None;
+}
+
+static WebKitAnnotation annotationForFunction(const FunctionDecl *FD) {
+  if (isa<CXXRecordDecl>(FD->getParent())) { // FIXME: Add support for annotate
+                                             // on non-C++ functions.
+    for (auto *Attr : FD->attrs()) {
+      auto *AnnoAttr = dyn_cast_or_null<AnnotateAttr>(Attr);
+      if (!AnnoAttr)
+        continue;
+      auto Annotation = annotationType(AnnoAttr->getAnnotation());
+      if (Annotation != WebKitAnnotation::None)
+        return Annotation;
+    }
+  }
   auto RetType = FD->getReturnType();
   auto *Type = RetType.getTypePtrOrNull();
   if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(Type))
@@ -456,12 +475,7 @@ static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
   auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
   if (!AnnotateType)
     return WebKitAnnotation::None;
-  auto Annotation = AnnotateType->getAnnotation();
-  if (Annotation == "webkit.pointerconversion")
-    return WebKitAnnotation::PointerConversion;
-  if (Annotation == "webkit.nodelete")
-    return WebKitAnnotation::NoDelete;
-  return WebKitAnnotation::None;
+  return annotationType(AnnotateType->getAnnotation());
 }
 
 bool isPtrConversion(const FunctionDecl *F) {
@@ -481,14 +495,14 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
-  if (typeAnnotationForReturnType(F) == WebKitAnnotation::PointerConversion)
+  if (annotationForFunction(F) == WebKitAnnotation::PointerConversion)
     return true;
 
   return false;
 }
 
 static bool isNoDeleteFunctionDecl(const FunctionDecl *F) {
-  return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
+  return annotationForFunction(F) == WebKitAnnotation::NoDelete;
 }
 
 bool isNoDeleteFunction(const FunctionDecl *F) {
@@ -574,13 +588,21 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
+  static bool isTrivialType(QualType Ty) {
+    // T*, T&, or T&& does not delete.
+    if (Ty->isPointerOrReferenceType())
+      return true;
+
+    // Fundamental types (integral, nullptr, etc...) does not delete.
+    if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
+      return true;
+
+    return false;
+  }
+
   bool CanTriviallyDestruct(QualType Ty) {
     if (Ty.isNull())
       return false;
-
-    // T*, T& or T&& does not run its destructor.
-    if (Ty->isPointerOrReferenceType())
-      return true;
 
     // FIXME: Handle a case when there is a local autorelease pool.
     if (Ty->isObjCObjectPointerType()) {
@@ -590,8 +612,7 @@ class TrivialFunctionAnalysisVisitor
       // strong lifetime in ARC could dealloc an object.
     }
 
-    // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
-    if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
+    if (isTrivialType(Ty))
       return true;
 
     if (const auto *R = Ty->getAsCXXRecordDecl()) {
@@ -599,7 +620,12 @@ class TrivialFunctionAnalysisVisitor
       if (R->hasDefinition() && R->hasTrivialDestructor())
         return true;
 
-      if (HasFieldWithNonTrivialDtor(R))
+      if (auto *Dtor = R->getDestructor()) {
+        if (isNoDeleteFunction(Dtor))
+          return true;
+      }
+
+      if (FieldWithNonTrivialDtor(R))
         return false;
 
       // For Webkit, side-effects are fine as long as we don't delete objects,
@@ -620,16 +646,42 @@ class TrivialFunctionAnalysisVisitor
     return false; // Otherwise it's likely not trivial.
   }
 
-  bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
-    auto CacheIt = FieldDtorCache.find(Cls);
-    if (CacheIt != FieldDtorCache.end())
+  bool CanTriviallyConstruct(QualType Ty) {
+    if (Ty.isNull())
+      return false;
+
+    if (isTrivialType(Ty))
+      return true;
+
+    if (const auto *R = Ty->getAsCXXRecordDecl()) {
+      // C++ trivially destructible classes are fine.
+      if (R->hasDefinition() && R->hasTrivialDefaultConstructor())
+        return true;
+      for (auto *Ctor : R->ctors()) {
+        if (Ctor->isDefaultConstructor() && IsFunctionTrivial(Ctor))
+          return true;
+      }
+    }
+
+    return false;
+  }
+
+  template <typename CacheTy, typename IsTrivialTypeFn>
+  bool hasNonTrivialField(const CXXRecordDecl *Cls,
+                          const FieldDecl **OffendingField, CacheTy &Cache,
+                          IsTrivialTypeFn IsTrivialType) {
+    auto CacheIt = Cache.find(Cls);
+    if (CacheIt != Cache.end() && !OffendingField)
       return CacheIt->second;
 
     bool Result = ([&] {
       auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
         for (const FieldDecl *F : R->fields()) {
-          if (!CanTriviallyDestruct(F->getType()))
+          if (!IsTrivialType(F->getType())) {
+            if (OffendingField)
+              *OffendingField = F;
             return true;
+          }
         }
         return false;
       };
@@ -653,7 +705,7 @@ class TrivialFunctionAnalysisVisitor
           Paths, /*LookupInDependent =*/true);
     })();
 
-    FieldDtorCache[Cls] = Result;
+    Cache[Cls] = Result;
 
     return Result;
   }
@@ -720,6 +772,22 @@ public:
   bool HasTrivialDestructor(const VarDecl *VD) {
     return WithCachedResult(
         VD, [&] { return CanTriviallyDestruct(VD->getType()); });
+  }
+
+  const FieldDecl *FieldWithNonTrivialCtor(const CXXRecordDecl *Cls) {
+    const FieldDecl *OffendingField = nullptr;
+    hasNonTrivialField(
+        Cls, &OffendingField, FieldCtorCache,
+        [&](const QualType Ty) { return CanTriviallyConstruct(Ty); });
+    return OffendingField;
+  }
+
+  const FieldDecl *FieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
+    const FieldDecl *OffendingField = nullptr;
+    hasNonTrivialField(
+        Cls, &OffendingField, FieldDtorCache,
+        [&](const QualType Ty) { return CanTriviallyDestruct(Ty); });
+    return OffendingField;
   }
 
   bool IsStatementTrivial(const Stmt *S) {
@@ -1084,6 +1152,7 @@ public:
 
 private:
   CacheTy &Cache;
+  CacheTy FieldCtorCache;
   CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
@@ -1107,6 +1176,20 @@ bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,
                                                  CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
   return V.HasTrivialDestructor(VD);
+}
+
+const FieldDecl *
+TrivialFunctionAnalysis::fieldWithNonTrivialCtorImpl(const CXXRecordDecl *RD,
+                                                     CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.FieldWithNonTrivialCtor(RD);
+}
+
+const FieldDecl *
+TrivialFunctionAnalysis::fieldWithNonTrivialDtorImpl(const CXXRecordDecl *RD,
+                                                     CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.FieldWithNonTrivialDtor(RD);
 }
 
 } // namespace clang
