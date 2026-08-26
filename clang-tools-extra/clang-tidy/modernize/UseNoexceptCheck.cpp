@@ -76,7 +76,8 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   assert(FnTy && "FunctionProtoType is null.");
-  if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
+  if (FnTy->getExceptionSpecType() == EST_Unparsed ||
+      isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
     return;
 
   assert(Range.isValid() && "Exception Source Range is invalid.");

@@ -143,3 +143,37 @@ TEST(LookupAndApplyTest, Async) {
 
   cantFail(ES.endSession());
 }
+
+// A lookup failure is delivered through the callback rather than returned.
+TEST(LookupAndApplyTest, AsyncFailure) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto &JD = ES.getBootstrapJITDylib();
+
+  ExecutorAddr A(AddrAValue);
+  std::promise<MSVCPError> P;
+  auto F = P.get_future();
+  lookupAndApply([&](Error Err) { P.set_value(std::move(Err)); }, JD,
+                 {recordAddr("absent", &A)});
+  EXPECT_THAT_ERROR(F.get(), Failed());
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+
+  cantFail(ES.endSession());
+}
+
+// Weak references are resolved per symbol: within one lookup a symbol that is
+// found is recorded, and one that is not is left null.
+TEST(LookupAndApplyTest, WeaklyReferencedMixed) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto &JD = ES.getBootstrapJITDylib();
+  defineAddr(JD, "addr_a", ExecutorAddr(AddrAValue));
+
+  ExecutorAddr A, B(AddrBValue);
+  cantFail(lookupAndApply(
+      JD,
+      {recordAddr("addr_a", &A, SymbolLookupFlags::WeaklyReferencedSymbol),
+       recordAddr("absent", &B, SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+  EXPECT_EQ(B, ExecutorAddr());
+
+  cantFail(ES.endSession());
+}

@@ -561,13 +561,13 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
                                    ProgramStateRef State, ExplodedNode *Pred,
                                    bool MarkAsSink) const {
-  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+  bool IsPO = State->isPosteriorlyOverconstrained();
 
   bool IsNew;
-  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink || IsPO, &IsNew);
   N->addPredecessor(Pred, G);
 
-  return IsNew ? N : nullptr;
+  return (IsNew && !IsPO) ? N : nullptr;
 }
 
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,
@@ -669,15 +669,4 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
       NumPathsExplored++;
     }
   }
-}
-
-ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
-                                        ProgramStateRef State,
-                                        ExplodedNode *FromN, bool MarkAsSink) {
-  Frontier.erase(FromN);
-  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
-
-  Frontier.insert(N);
-
-  return N;
 }
