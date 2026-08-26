@@ -3339,7 +3339,8 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
   for (unsigned I = 1, E = getNumIncomingValues(); I != E; ++I) {
     CmpPredicate Pred;
     if (!match(getMask(I), m_Cmp(Pred, m_VPValue(), m_VPValue())))
-      Pred = CmpInst::BAD_ICMP_PREDICATE;
+      Pred = getScalarType()->isFloatingPointTy() ? CmpInst::BAD_FCMP_PREDICATE
+                                                  : CmpInst::BAD_ICMP_PREDICATE;
     Cost += Ctx.TTI.getCmpSelInstrCost(Instruction::Select, ResultTy, CmpTy,
                                        Pred, Ctx.CostKind);
   }
