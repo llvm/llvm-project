@@ -46,9 +46,12 @@ struct atomic;
 // __ctrl_ word layout (8 bytes):
 //   bits 0..1    always zero (CBs are at least 4-byte aligned)
 //   bits 2..47   control-block pointer
-//   bits 48..63  16-bit local refcount (Williams split-refcount aspiration)
+//   bits 48..63  16-bit local refcount (Williams split-refcount)
 // Bits 48..63 are available on both DWCAS-capable ISAs (x86-64 without LAMA,
 // AArch64 without LVA): user-space pointers stay within 48 bits.
+// The local count pins the CB in the atomic word so load() can __add_shared
+// without a use-after-free if a concurrent store retires the pair. Dropping
+// the pin (plain load-and-validate) is not safe: the snapshot is not a ref.
 struct __atomic_smart_ptr_storage {
   static constexpr uintptr_t __lock_bit_        = uintptr_t{1};
   static constexpr uintptr_t __notify_bit_      = uintptr_t{2};
@@ -123,12 +126,9 @@ struct alignas(16) __atomic_smart_ptr_fields {
 
   __extension__ using __sp_u128 = unsigned __int128;
 
-  // Storage layout: low 64 bits = __ptr_, high 64 bits = __ctrl_. Going
-  // through `this` instead of __builtin_addressof(__ptr_) keeps the 16-byte alignment explicit
-  // and avoids implementation-defined aliasing between the sub-atomics and
-  // the wide view (sub-atomics are never accessed when DWCAS is enabled).
-  // TODO(review): this cast bypasses strict aliasing - valid only because
-  // __ptr_ and __ctrl_ are never touched via __cxx_atomic_* on this path.
+  // Storage layout: low 64 bits = __ptr_, high 64 bits = __ctrl_. The wide
+  // view is the only access path while DWCAS is enabled; the sub-atomics are
+  // not read or written through __cxx_atomic_*.
   __sp_u128* __dwcas_address() const noexcept {
     return const_cast<__sp_u128*>(reinterpret_cast<const __sp_u128*>(this));
   }
@@ -182,6 +182,13 @@ inline bool __atomic_smart_ptr_equivalent(
   if (__ctrl == nullptr && __expected_ctrl == nullptr)
     return true;
   return __ptr == __expected_ptr && __ctrl == __expected_ctrl;
+}
+
+// Split-refcount identity: the control-block pointer after DWCAS masking.
+// Aliasing constructors can change the stored T* while ownership stays the
+// same; store/exchange must not zero local_count in that case.
+inline bool __atomic_smart_ptr_same_control_block(__shared_weak_count* __a, __shared_weak_count* __b) noexcept {
+  return __atomic_smart_ptr_storage::__encode_dwcas(__a, 0) == __atomic_smart_ptr_storage::__encode_dwcas(__b, 0);
 }
 
 // Pre-pay the per-in-flight-load fetch_add(1) tick that each aspirational
@@ -317,9 +324,9 @@ private:
         continue;
       }
 
-      // TODO(question): ABA: the 16-bit local count is not a version tag across CB
-      // lifecycles. A freed CB reallocated at the same address with the same count
-      // lets this CAS succeed spuriously. Is this risk acceptable?
+      // Increment CAS is on the 16-byte word (pointer + CB + local_count), not
+      // a standalone version tag. Heap reuse of a retired CB at the same
+      // address while a loader is still in this loop is a client lifetime bug.
       auto __desired =
           __fields_type::__pair_make(__claimed_ptr, __ctrl_word + __atomic_smart_ptr_storage::__local_count_unit);
       if (__fields_.__dwcas_compare_exchange_weak(__expected, __desired, memory_order_acq_rel, memory_order_acquire))
@@ -333,15 +340,21 @@ private:
       uintptr_t __cur_ctrl          = __fields_type::__pair_ctrl(__cur);
       __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-      // TODO(review): the store that replaced this CB pre-paid our tick via
-      // drain_shared, so __release_shared below cannot be the last ref - verify
-      // no concurrent release can create a zero-count window between drain and here.
       if (__cur_cb != __claimed_cb) {
-        // A racing store already drained our local tick via __drain_shared,
-        // so __add_shared above became a double-count. Cancel it.
-        __claimed_cb->__release_shared();
+        // Store already swapped this CB out and __drain_shared prepaid one
+        // heap ref per tick that was in the word. Extra-release here was
+        // meant to cancel a duplicate __add_shared, but it also fires when
+        // the tick was not in the drained word (A->B with a lost update, or
+        // A->B->A). That steals a live owner (readers-heavy: keep_a) and
+        // the returned shared_ptr plus keep_a both call __release_shared on
+        // a freed block. Keep the __add_shared; the drain ref may leak.
         break;
       }
+      // Same ownership and no ticks in the word. Extra-release here steals a
+      // live ref whenever we were not drained (readers-heavy double-free).
+      // Keep the add_shared; same-CB store/exchange must not zero local_count.
+      if (__atomic_smart_ptr_storage::__decode_local(__cur_ctrl) == 0)
+        break;
 
       auto __dec = __fields_type::__pair_make(
           __fields_type::__pair_ptr(__cur), __cur_ctrl - __atomic_smart_ptr_storage::__local_count_unit);
@@ -359,14 +372,34 @@ private:
     __desired.__ptr_                 = nullptr;
     __desired.__cntrl_               = nullptr;
 
-    auto __new_pair =
-        __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
-    auto __old_pair = __fields_.__dwcas_exchange(__new_pair, memory_order_acq_rel);
+    auto __cur = __fields_.__dwcas_load(memory_order_acquire);
+    while (true) {
+      uintptr_t __cur_ctrl          = __fields_type::__pair_ctrl(__cur);
+      __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-    __retire_old_pair(__old_pair);
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __desired_c)) {
+        // Same ownership, possibly a different T* (aliasing). Publishing
+        // local_count=0 retires in-flight load ticks while load() still
+        // treats this CB as live. Keep local_count; drop the extra ref
+        // taken from __desired.
+        auto __keep_local = __fields_type::__pair_make(__desired_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __m, memory_order_acquire)) {
+          if (__desired_c)
+            __desired_c->__release_shared();
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return;
+        }
+        continue;
+      }
 
-    (void)__m;
-    std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+      auto __new_pair =
+          __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
+      if (__fields_.__dwcas_compare_exchange_weak(__cur, __new_pair, __m, memory_order_acquire)) {
+        __retire_old_pair(__cur);
+        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+        return;
+      }
+    }
   }
 
   shared_ptr<_Tp> __exchange_dwcas(shared_ptr<_Tp> __desired, memory_order __m) noexcept {
@@ -375,32 +408,42 @@ private:
     __desired.__ptr_                 = nullptr;
     __desired.__cntrl_               = nullptr;
 
-    auto __new_pair =
-        __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
-    auto __old_pair = __fields_.__dwcas_exchange(__new_pair, memory_order_acq_rel);
+    auto __cur = __fields_.__dwcas_load(memory_order_acquire);
+    while (true) {
+      uintptr_t __cur_ctrl          = __fields_type::__pair_ctrl(__cur);
+      _Tp* __cur_ptr                = __fields_type::__pair_ptr(__cur);
+      __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-    uintptr_t __old_ctrl          = __fields_type::__pair_ctrl(__old_pair);
-    _Tp* __old_ptr                = __fields_type::__pair_ptr(__old_pair);
-    __shared_weak_count* __old_cb = __atomic_smart_ptr_storage::__decode_dwcas(__old_ctrl);
-    uint16_t __old_local          = __atomic_smart_ptr_storage::__decode_local(__old_ctrl);
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __desired_c)) {
+        auto __keep_local = __fields_type::__pair_make(__desired_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __m, memory_order_acquire)) {
+          if (__desired_c)
+            __desired_c->__release_shared();
+          if (__cur_cb)
+            __cur_cb->__add_shared();
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return shared_ptr<_Tp>::__create_with_control_block(__desired_ptr, __cur_cb);
+        }
+        continue;
+      }
 
-    if (__old_cb) {
-      // Drain in-flight loaders' aspirational ticks. After this, __old_cb's
-      // global count includes one ref per in-flight load that paired up with
-      // this CB. We then transfer ownership of the atomic's own ref to the
-      // returned shared_ptr (no add/release).
-      std::__atomic_smart_ptr_drain_shared(__old_cb, __old_local);
+      auto __new_pair =
+          __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
+      if (__fields_.__dwcas_compare_exchange_weak(__cur, __new_pair, __m, memory_order_acquire)) {
+        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
+        if (__cur_cb)
+          std::__atomic_smart_ptr_drain_shared(__cur_cb, __cur_local);
+        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+        return shared_ptr<_Tp>::__create_with_control_block(__cur_ptr, __cur_cb);
+      }
     }
-
-    (void)__m;
-    std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
-
-    return shared_ptr<_Tp>::__create_with_control_block(__old_ptr, __old_cb);
   }
 
-  // __is_strong: when true, retry on benign DWCAS failures (e.g., local-count
-  //           changes by concurrent loads); only return false on a real
-  //           ownership-equivalence mismatch.
+  // __is_strong: retry on a failed DWCAS while equivalence still holds
+  // (concurrent local_count updates, spurious weak failure). Do not wait
+  // for local_count==0: that starves against load() on the same word
+  // (contended CAS bench: load then CAS). Swap the current word, including
+  // a non-zero local_count, and drain like store().
   bool __cas_dwcas(shared_ptr<_Tp>& __expected,
                    shared_ptr<_Tp> __desired,
                    memory_order __success,
@@ -428,30 +471,36 @@ private:
         return false;
       }
 
-      // Equivalence holds. Try to publish __desired with local_count=0.
-      auto __desired_pair =
-          __fields_type::__pair_make(__des_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__des_c, 0));
-
-      if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
-        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
-        if (__cur_cb) {
-          std::__atomic_smart_ptr_drain_shared(__cur_cb, __cur_local);
-          __cur_cb->__release_shared();
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __des_c)) {
+        auto __keep_local = __fields_type::__pair_make(__des_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __success, __failure)) {
+          if (__des_c)
+            __des_c->__release_shared();
+          __desired.__ptr_   = nullptr;
+          __desired.__cntrl_ = nullptr;
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return true;
         }
-        __desired.__ptr_   = nullptr;
-        __desired.__cntrl_ = nullptr;
-        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
-        return true;
+      } else {
+        auto __desired_pair =
+            __fields_type::__pair_make(__des_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__des_c, 0));
+        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
+          if (__cur_cb) {
+            std::__atomic_smart_ptr_drain_shared(__cur_cb, __cur_local);
+            __cur_cb->__release_shared();
+          }
+          __desired.__ptr_   = nullptr;
+          __desired.__cntrl_ = nullptr;
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return true;
+        }
       }
 
       if (!__is_strong) {
-        // weak: a single underlying CAS attempt - if it failed for any
-        // reason (real ownership change or concurrent local-count update),
-        // report failure with the current pair as the new __expected.
         __expected = __load_dwcas(__failure);
         return false;
       }
-      // Strong CAS: loop and re-check equivalence.
     }
   }
 
@@ -592,9 +641,11 @@ private:
       __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
       if (__cur_cb != __claimed_cb) {
-        __claimed_cb->__release_weak();
+        // Same as atomic<shared_ptr>: do not extra-release on CB change.
         break;
       }
+      if (__atomic_smart_ptr_storage::__decode_local(__cur_ctrl) == 0)
+        break;
 
       auto __dec = __fields_type::__pair_make(
           __fields_type::__pair_ptr(__cur), __cur_ctrl - __atomic_smart_ptr_storage::__local_count_unit);
@@ -612,14 +663,30 @@ private:
     __desired.__ptr_                 = nullptr;
     __desired.__cntrl_               = nullptr;
 
-    auto __new_pair =
-        __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
-    auto __old_pair = __fields_.__dwcas_exchange(__new_pair, memory_order_acq_rel);
+    auto __cur = __fields_.__dwcas_load(memory_order_acquire);
+    while (true) {
+      uintptr_t __cur_ctrl          = __fields_type::__pair_ctrl(__cur);
+      __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-    __retire_old_pair_weak(__old_pair);
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __desired_c)) {
+        auto __keep_local = __fields_type::__pair_make(__desired_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __m, memory_order_acquire)) {
+          if (__desired_c)
+            __desired_c->__release_weak();
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return;
+        }
+        continue;
+      }
 
-    (void)__m;
-    std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+      auto __new_pair =
+          __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
+      if (__fields_.__dwcas_compare_exchange_weak(__cur, __new_pair, __m, memory_order_acquire)) {
+        __retire_old_pair_weak(__cur);
+        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+        return;
+      }
+    }
   }
 
   weak_ptr<_Tp> __exchange_dwcas(weak_ptr<_Tp> __desired, memory_order __m) noexcept {
@@ -628,22 +695,35 @@ private:
     __desired.__ptr_                 = nullptr;
     __desired.__cntrl_               = nullptr;
 
-    auto __new_pair =
-        __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
-    auto __old_pair = __fields_.__dwcas_exchange(__new_pair, memory_order_acq_rel);
+    auto __cur = __fields_.__dwcas_load(memory_order_acquire);
+    while (true) {
+      uintptr_t __cur_ctrl          = __fields_type::__pair_ctrl(__cur);
+      _Tp* __cur_ptr                = __fields_type::__pair_ptr(__cur);
+      __shared_weak_count* __cur_cb = __atomic_smart_ptr_storage::__decode_dwcas(__cur_ctrl);
 
-    uintptr_t __old_ctrl          = __fields_type::__pair_ctrl(__old_pair);
-    _Tp* __old_ptr                = __fields_type::__pair_ptr(__old_pair);
-    __shared_weak_count* __old_cb = __atomic_smart_ptr_storage::__decode_dwcas(__old_ctrl);
-    uint16_t __old_local          = __atomic_smart_ptr_storage::__decode_local(__old_ctrl);
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __desired_c)) {
+        auto __keep_local = __fields_type::__pair_make(__desired_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __m, memory_order_acquire)) {
+          if (__desired_c)
+            __desired_c->__release_weak();
+          if (__cur_cb)
+            __cur_cb->__add_weak();
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return weak_ptr<_Tp>::__create_with_control_block(__desired_ptr, __cur_cb);
+        }
+        continue;
+      }
 
-    if (__old_cb)
-      std::__atomic_smart_ptr_drain_weak(__old_cb, __old_local);
-
-    (void)__m;
-    std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
-
-    return weak_ptr<_Tp>::__create_with_control_block(__old_ptr, __old_cb);
+      auto __new_pair =
+          __fields_type::__pair_make(__desired_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__desired_c, 0));
+      if (__fields_.__dwcas_compare_exchange_weak(__cur, __new_pair, __m, memory_order_acquire)) {
+        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
+        if (__cur_cb)
+          std::__atomic_smart_ptr_drain_weak(__cur_cb, __cur_local);
+        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+        return weak_ptr<_Tp>::__create_with_control_block(__cur_ptr, __cur_cb);
+      }
+    }
   }
 
   bool __cas_dwcas(weak_ptr<_Tp>& __expected,
@@ -670,19 +750,30 @@ private:
         return false;
       }
 
-      auto __desired_pair =
-          __fields_type::__pair_make(__des_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__des_c, 0));
-
-      if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
-        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
-        if (__cur_cb) {
-          std::__atomic_smart_ptr_drain_weak(__cur_cb, __cur_local);
-          __cur_cb->__release_weak();
+      if (std::__atomic_smart_ptr_same_control_block(__cur_cb, __des_c)) {
+        auto __keep_local = __fields_type::__pair_make(__des_ptr, __cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __keep_local, __success, __failure)) {
+          if (__des_c)
+            __des_c->__release_weak();
+          __desired.__ptr_   = nullptr;
+          __desired.__cntrl_ = nullptr;
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return true;
         }
-        __desired.__ptr_   = nullptr;
-        __desired.__cntrl_ = nullptr;
-        std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
-        return true;
+      } else {
+        auto __desired_pair =
+            __fields_type::__pair_make(__des_ptr, __atomic_smart_ptr_storage::__encode_dwcas(__des_c, 0));
+        uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
+        if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
+          if (__cur_cb) {
+            std::__atomic_smart_ptr_drain_weak(__cur_cb, __cur_local);
+            __cur_cb->__release_weak();
+          }
+          __desired.__ptr_   = nullptr;
+          __desired.__cntrl_ = nullptr;
+          std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
+          return true;
+        }
       }
 
       if (!__is_strong) {

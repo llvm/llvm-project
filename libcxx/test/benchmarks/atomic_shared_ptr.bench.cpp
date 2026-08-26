@@ -7,28 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++20
+// REQUIRES: stdlib=libc++
+// UNSUPPORTED: no-threads
+// Clang's x86-64 baseline does not define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16;
+// without this, the "lock-free" file compiles the stolen-bit path. Same flag
+// as atomic_shared_ptr_dwcas.pass.cpp. Keep in sync with the lock-based file
+// so the A/B differs only by _LIBCPP_FORCE_LOCK_BASED_ATOMIC_SHARED_PTR.
+// ADDITIONAL_COMPILE_FLAGS(target=x86_64-unknown-linux-gnu): -march=x86-64-v2
 
-#include <atomic>
-#include <memory>
+// libc++ default path: lock-free on x86_64/cx16 and AArch64/LSE, otherwise
+// lock-based. Pair with atomic_shared_ptr_lock_based.bench.cpp on the same
+// machine. Contended thread counts default to 2,4,8; override at process
+// start with ATOMIC_SP_BENCH_THREADS=2,4,6,8.
+//
+// Same-machine A/B (each file separately - names collide if consolidated
+// together). Driver next to these benches:
+//   python3 libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py --build <build>
+//   python3 libcxx/test/benchmarks/run_atomic_shared_ptr_bench.py --build <build> \
+//       --threads 2,4,6,8,10,12,14,16,18,20
+// Needs: pip install -r libcxx/utils/requirements.txt
+//
+// Report ratios to std::atomic<uint64_t>::* in the same JSON, not raw ns/op.
 
-#include "benchmark/benchmark.h"
-
-static void BM_AtomicSharedPtrLoadUncontended(benchmark::State& st) {
-  std::atomic<std::shared_ptr<int>> atom(std::make_shared<int>(42));
-  while (st.KeepRunning()) {
-    auto snap = atom.load();
-    benchmark::DoNotOptimize(snap);
-  }
-}
-BENCHMARK(BM_AtomicSharedPtrLoadUncontended);
-
-static void BM_AtomicSharedPtrStoreUncontended(benchmark::State& st) {
-  std::atomic<std::shared_ptr<int>> atom;
-  auto keep = std::make_shared<int>(7);
-  while (st.KeepRunning()) {
-    atom.store(keep);
-  }
-}
-BENCHMARK(BM_AtomicSharedPtrStoreUncontended);
+#include "atomic_shared_ptr_bench.h"
 
 BENCHMARK_MAIN();

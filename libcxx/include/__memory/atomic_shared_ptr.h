@@ -16,7 +16,13 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_HAS_THREADS &&                                                                                             \
+// _LIBCPP_FORCE_LOCK_BASED_ATOMIC_SHARED_PTR selects the stolen-bit spinlock
+// even on DWCAS targets. Local A/B-benchmark hook for
+// libcxx/test/benchmarks/atomic_shared_ptr_lock_based.bench.cpp; not a
+// supported public configuration. Must be consistent across the whole program.
+#if defined(_LIBCPP_FORCE_LOCK_BASED_ATOMIC_SHARED_PTR)
+#  define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 0
+#elif _LIBCPP_HAS_THREADS &&                                                                                           \
     (((defined(__x86_64__) || defined(_M_X64)) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16)) ||                     \
      ((defined(__aarch64__) || defined(_M_ARM64)) && defined(__ARM_FEATURE_ATOMICS)))
 #  define _LIBCPP_HAS_LOCKFREE_ATOMIC_SHARED_PTR 1

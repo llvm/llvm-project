@@ -12,7 +12,7 @@
 #include <atomic>
 #include <cassert>
 #include <memory>
-#include <utility>
+#include <utility> // Armv7, Armv8 require for std::move
 
 namespace {
 struct Tracker {

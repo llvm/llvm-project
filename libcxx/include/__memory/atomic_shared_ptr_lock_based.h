@@ -129,8 +129,13 @@ struct __atomic_smart_ptr_fields {
 
   const void* __ctrl_address() const noexcept { return static_cast<const void*>(__builtin_addressof(__ctrl_)); }
 
-  // Notify bit is set before sleeping so __unlock wakes waiters; without it
-  // sleeping threads would remain blocked after the lock is released.
+  // Stolen-bit lock. Park via the global wait table (futex on Linux), not a
+  // pure CAS spin. The notify bit must be set on the *current* locked word
+  // before every park: __unlock publishes bits=0, so a waiter that loops
+  // inside wait_on_address after an unlock+reacquire can sleep on a word
+  // whose notify bit was already cleared. The next unlock then skips
+  // notify_all. On Linux that is a 2s FUTEX_WAIT timeout; on AIX the
+  // fallback wait polls platform_state forever (no native wake).
   void __lock() const noexcept {
     _LIBCPP_ATOMIC_SP_TSAN_PRE_LOCK(__builtin_addressof(__ctrl_));
     uintptr_t __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
@@ -161,20 +166,36 @@ struct __atomic_smart_ptr_fields {
         __expected = __with_notify;
       }
 
-      std::__atomic_smart_ptr_wait_on_address(__ctrl_address(), [&] {
-        __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
-        return !__atomic_smart_ptr_storage::__has_lock(__expected);
-      });
+      // Snapshot the wait generation, then refuse to park unless this word
+      // still has both the lock and the notify bit. Otherwise go back and
+      // re-arm: parking after unlock cleared the bit is a missed wakeup.
+      const void* __address = __ctrl_address();
+#  if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
+      auto __monitor_value = std::__atomic_monitor_global(__address);
+      __expected           = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
+      if (!__atomic_smart_ptr_storage::__has_lock(__expected) || !__atomic_smart_ptr_storage::__has_notify(__expected))
+        continue;
+      std::__atomic_wait_global_table(__address, __monitor_value);
+#  else
+      void const volatile* __volatile_address = reinterpret_cast<void const volatile*>(__address);
+      auto __monitor_value                    = std::__libcpp_atomic_monitor(__volatile_address);
+      __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
+      if (!__atomic_smart_ptr_storage::__has_lock(__expected) || !__atomic_smart_ptr_storage::__has_notify(__expected))
+        continue;
+      std::__libcpp_atomic_wait(__volatile_address, __monitor_value);
+#  endif
+      __expected = std::__cxx_atomic_load(__builtin_addressof(__ctrl_), memory_order_relaxed);
     }
   }
 
-  // Notify bit means at least one waiter is sleeping on __ctrl_; wake them
-  // after publishing the new CB so they don't miss the change.
-  void __unlock(__shared_weak_count* __ctrl_to_publish) const noexcept {
+  // Publish the new CB with both stolen bits clear. Wake if a locker armed
+  // the notify bit, or if the ownership word changed (atomic wait() watchers
+  // never set the lock notify bit).
+  void __unlock(__shared_weak_count* __ctrl_to_publish, bool __wake_value_waiters = false) const noexcept {
     _LIBCPP_ATOMIC_SP_TSAN_PRE_UNLOCK(__builtin_addressof(__ctrl_));
     uintptr_t __new_word = __atomic_smart_ptr_storage::__encode(__ctrl_to_publish, 0);
     uintptr_t __previous = std::__cxx_atomic_exchange(__builtin_addressof(__ctrl_), __new_word, memory_order_release);
-    if (__atomic_smart_ptr_storage::__has_notify(__previous))
+    if (__wake_value_waiters || __atomic_smart_ptr_storage::__has_notify(__previous))
       std::__atomic_smart_ptr_notify_all(__ctrl_address());
     _LIBCPP_ATOMIC_SP_TSAN_POST_UNLOCK(__builtin_addressof(__ctrl_));
   }
@@ -232,7 +253,7 @@ struct atomic<shared_ptr<_Tp>> {
     __shared_weak_count* __old_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
     std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-    __fields_.__unlock(__desired_c);
+    __fields_.__unlock(__desired_c, true);
 
     if (__old_c)
       __old_c->__release_shared();
@@ -263,7 +284,7 @@ struct atomic<shared_ptr<_Tp>> {
     __shared_weak_count* __old_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
     std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-    __fields_.__unlock(__desired_c);
+    __fields_.__unlock(__desired_c, true);
 
     return shared_ptr<_Tp>::__create_with_control_block(__old_ptr, __old_c);
   }
@@ -285,7 +306,7 @@ struct atomic<shared_ptr<_Tp>> {
       __desired.__cntrl_               = nullptr;
 
       std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-      __fields_.__unlock(__desired_c);
+      __fields_.__unlock(__desired_c, true);
       if (__cur_c)
         __cur_c->__release_shared();
       return true;
@@ -376,7 +397,7 @@ struct atomic<weak_ptr<_Tp>> {
     __shared_weak_count* __old_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
     std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-    __fields_.__unlock(__desired_c);
+    __fields_.__unlock(__desired_c, true);
 
     if (__old_c)
       __old_c->__release_weak();
@@ -407,7 +428,7 @@ struct atomic<weak_ptr<_Tp>> {
     __shared_weak_count* __old_c = __atomic_smart_ptr_storage::__decode(
         std::__cxx_atomic_load(__builtin_addressof(__fields_.__ctrl_), memory_order_relaxed));
     std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-    __fields_.__unlock(__desired_c);
+    __fields_.__unlock(__desired_c, true);
 
     return weak_ptr<_Tp>::__create_with_control_block(__old_ptr, __old_c);
   }
@@ -429,7 +450,7 @@ struct atomic<weak_ptr<_Tp>> {
       __desired.__cntrl_               = nullptr;
 
       std::__cxx_atomic_store(__builtin_addressof(__fields_.__ptr_), __desired_ptr, memory_order_relaxed);
-      __fields_.__unlock(__desired_c);
+      __fields_.__unlock(__desired_c, true);
       if (__cur_c)
         __cur_c->__release_weak();
       return true;
