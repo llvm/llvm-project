@@ -2981,10 +2981,15 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type.
+    // Iteratively extract the array dimensions from the type. Only the
+    // dimensions represented by InsertOnRangeOp are used to expand a fallback
+    // insert chain. The remaining dimensions, if any, belong to an aggregate
+    // element type (e.g. CHARACTER lowers to an LLVM array).
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
+    auto rank = range.getType().getShape().size();
+    for (std::size_t i = 0; i < rank; ++i) {
+      auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
     }
@@ -3698,6 +3703,38 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
+    bool hasFlatCharacterInit = false;
+    if (!global.getRegion().empty()) {
+      auto hasValue =
+          mlir::dyn_cast<fir::HasValueOp>(global.getRegion().front().back());
+      auto sequenceType = mlir::dyn_cast<fir::SequenceType>(global.getType());
+      auto charType =
+          sequenceType
+              ? mlir::dyn_cast<fir::CharacterType>(sequenceType.getEleTy())
+              : fir::CharacterType{};
+      auto insert =
+          hasValue ? hasValue.getResval().getDefiningOp<fir::InsertOnRangeOp>()
+                   : fir::InsertOnRangeOp{};
+      auto stringLit = insert
+                           ? insert.getVal().getDefiningOp<fir::StringLitOp>()
+                           : fir::StringLitOp{};
+      auto stringAttr =
+          stringLit ? mlir::dyn_cast<mlir::StringAttr>(stringLit.getValue())
+                    : mlir::StringAttr{};
+      if (sequenceType && charType && charType.getFKind() == 1 && insert &&
+          insert.isFullRange() && stringAttr) {
+        std::string element{stringAttr.getValue()};
+        element.resize(charType.getLen(), ' ');
+        std::string data;
+        data.reserve(sequenceType.getConstantArraySize() * element.size());
+        for (std::size_t i = 0; i < sequenceType.getConstantArraySize(); ++i)
+          data.append(element);
+        tyAttr =
+            mlir::LLVM::LLVMArrayType::get(rewriter.getI8Type(), data.size());
+        initAttr = rewriter.getStringAttr(data);
+        hasFlatCharacterInit = true;
+      }
+    }
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
@@ -3749,7 +3786,8 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         g->setAttr(attr.getName(), attr.getValue());
 
     auto &gr = g.getInitializerRegion();
-    rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
+    if (!hasFlatCharacterInit)
+      rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
     if (!gr.empty()) {
       // Replace insert_on_range with a constant dense attribute if the
       // initialization is on the full range.
