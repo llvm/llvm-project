@@ -353,6 +353,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_sysmacros_macros
+  HDR
+    sys-sysmacros-macros.h
+)
+
+add_macro_header(
   termios_macros
   HDR
     termios-macros.h
@@ -492,4 +498,10 @@ add_macro_header(
   alloca_macros
   HDR
     alloca-macros.h
+)
+
+add_macro_header(
+  syslog_macros
+  HDR
+    syslog-macros.h
 )

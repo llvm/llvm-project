@@ -17,7 +17,7 @@ end
 ! CHECK: ^bb0(%[[XVAL:.*]]: i32):
 ! CHECK:   arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:   omp.yield
-! CHECK: } {fail_memory_order = #omp<memoryorderkind acquire>}
+! CHECK: } fail_memory_order(acquire)
 
 ! CHECK-LABEL: func.func @_QPfail_relaxed
 subroutine fail_relaxed(x, e, d)
@@ -25,7 +25,7 @@ subroutine fail_relaxed(x, e, d)
   !$omp atomic compare fail(relaxed)
   if (x == e) x = d
 end
-! CHECK: } {fail_memory_order = #omp<memoryorderkind relaxed>}
+! CHECK: } fail_memory_order(relaxed)
 
 ! CHECK-LABEL: func.func @_QPfail_seqcst
 subroutine fail_seqcst(x, e, d)
@@ -33,7 +33,7 @@ subroutine fail_seqcst(x, e, d)
   !$omp atomic compare fail(seq_cst)
   if (x == e) x = d
 end
-! CHECK: } {fail_memory_order = #omp<memoryorderkind seq_cst>}
+! CHECK: } fail_memory_order(seq_cst)
 
 ! CHECK-LABEL: func.func @_QPseqcst_fail_relaxed
 subroutine seqcst_fail_relaxed(x, e, d)
@@ -42,4 +42,4 @@ subroutine seqcst_fail_relaxed(x, e, d)
   if (x == e) x = d
 end
 ! CHECK: omp.atomic.compare memory_order(seq_cst) %{{.*}} : !fir.ref<i32> {
-! CHECK: } {fail_memory_order = #omp<memoryorderkind relaxed>}
+! CHECK: } fail_memory_order(relaxed)

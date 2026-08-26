@@ -6491,10 +6491,11 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{10}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{10}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   RuntimeAttrs.TargetThreadLimit[0] = Builder.getInt32(20);
   RuntimeAttrs.TeamsThreadLimit[0] = Builder.getInt32(30);
-  RuntimeAttrs.MaxThreads = Builder.getInt32(40);
+  RuntimeAttrs.MaxThreads[0] = Builder.getInt32(40);
   RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
 
   ASSERT_EXPECTED_INIT(
@@ -6668,7 +6669,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -6837,7 +6839,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   RuntimeAttrs.LoopTripCount = Builder.getInt64(1000);
   RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
@@ -6949,7 +6952,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -7075,7 +7079,8 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -7293,7 +7298,8 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);

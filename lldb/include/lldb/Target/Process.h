@@ -1604,8 +1604,8 @@ public:
   /// and remove any traps that may have been inserted into the memory.
   ///
   /// This function is not meant to be overridden by Process subclasses, the
-  /// subclasses should implement Process::DoReadMemory (lldb::addr_t, size_t,
-  /// void *).
+  /// subclasses should implement Process::DoReadMemory(const ProcessAddress &,
+  /// void *, size_t, Status &).
   ///
   /// \param[in] vm_addr
   ///     A virtual load address that indicates where to start reading

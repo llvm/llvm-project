@@ -3852,7 +3852,7 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
     auto [ScaledInput, IsScaled] = getScaledLogInput(B, Src, Flags);
     if (ScaledInput) {
       auto LogSrc = B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty})
-                        .addUse(Src)
+                        .addUse(ScaledInput)
                         .setMIFlags(Flags);
       auto ScaledResultOffset = B.buildFConstant(Ty, -32.0 * Log2BaseInverted);
       auto Zero = B.buildFConstant(Ty, 0.0);
@@ -6398,7 +6398,7 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
 
   auto ExtStride = B.buildAnyExt(I32, Stride);
 
-  if (ST.has45BitNumRecordsBufferResource()) {
+  if (ST.getBufferResourceNumRecordsWidth() == 45) {
     NumRecords = B.buildZExtOrTrunc(I64, NumRecords).getReg(0);
     NumRecords =
         B.buildAnd(I64, NumRecords, B.buildConstant(I64, (1ULL << 45) - 1))

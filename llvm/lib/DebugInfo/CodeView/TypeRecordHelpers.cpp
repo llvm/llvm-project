@@ -177,6 +177,7 @@ uint64_t llvm::codeview::getSizeInBytesForTypeRecord(CVType CVT) {
   case LF_UNION:
     return getUdtSize<UnionRecord>(std::move(CVT));
   default:
-    return CVT.length();
+    assert(false && "not an aggregate");
+    return 0;
   }
 }

@@ -304,34 +304,15 @@ void SymbolTable::setSymbolName(Operation *symbol, StringAttr name) {
 
 /// Returns the visibility of the given symbol operation.
 SymbolTable::Visibility SymbolTable::getSymbolVisibility(Operation *symbol) {
-  // If the attribute doesn't exist, assume public.
-  StringAttr vis = symbol->getAttrOfType<StringAttr>(getVisibilityAttrName());
-  if (!vis)
-    return Visibility::Public;
-
-  // Otherwise, switch on the string value.
-  return StringSwitch<Visibility>(vis.getValue())
-      .Case("private", Visibility::Private)
-      .Case("nested", Visibility::Nested)
-      .Case("public", Visibility::Public);
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  return symbolOp.getVisibility();
 }
 /// Sets the visibility of the given symbol operation.
 void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
-  MLIRContext *ctx = symbol->getContext();
-
-  // If the visibility is public, just drop the attribute as this is the
-  // default.
-  if (vis == Visibility::Public) {
-    symbol->removeAttr(StringAttr::get(ctx, getVisibilityAttrName()));
-    return;
-  }
-
-  // Otherwise, update the attribute.
-  assert((vis == Visibility::Private || vis == Visibility::Nested) &&
-         "unknown symbol visibility kind");
-
-  StringRef visName = vis == Visibility::Private ? "private" : "nested";
-  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(ctx, visName));
+  auto symbolOp = dyn_cast<SymbolOpInterface>(symbol);
+  assert(symbolOp && "expected valid symbol operation");
+  symbolOp.setVisibility(vis);
 }
 
 /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -427,9 +408,11 @@ static LogicalResult lookupSymbolInImpl(
     if (!symbolOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     symbolOp = lookupSymbolFn(symbolOp, ref.getAttr());
+    if (!symbolOp)
+      return failure();
     // If the nested symbol is private, lookup failed.
-    if (!symbolOp || SymbolTable::getSymbolVisibility(symbolOp) ==
-                         SymbolTable::Visibility::Private)
+    auto nestedSymbol = dyn_cast<SymbolOpInterface>(symbolOp);
+    if (nestedSymbol && nestedSymbol.isPrivate())
       return failure();
     symbols.push_back(symbolOp);
   }
@@ -476,51 +459,6 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-/// Verify the symbol uses held by the types owned by `op`: its operand,
-/// result, and block-argument types, and any types nested within its
-/// attributes. `op` is the anchor used for symbol lookups. `verifiedTypes`
-/// records the types already verified within the current symbol table so that
-/// each type, which may be uniqued and shared across many positions or
-/// operations, is verified at most once. Verification fails fast on the first
-/// invalid symbol use.
-static LogicalResult verifyOpTypeSymbolUses(Operation *op,
-                                            SymbolTableCollection &symbolTable,
-                                            SetVector<Type> &verifiedTypes) {
-  // Walk `type` and any nested type parameters reachable from it, verifying
-  // each not-yet-seen type and interrupting on the first failure.
-  auto verify = [&](Type type) {
-    return type.walk<WalkOrder::PreOrder>([&](Type nestedType) {
-      if (!verifiedTypes.insert(nestedType))
-        return WalkResult::advance();
-      if (auto user = dyn_cast<SymbolUserTypeInterface>(nestedType))
-        if (failed(user.verifySymbolUses(op, symbolTable)))
-          return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-  };
-
-  for (Type type : op->getOperandTypes())
-    if (verify(type).wasInterrupted())
-      return failure();
-  for (Type type : op->getResultTypes())
-    if (verify(type).wasInterrupted())
-      return failure();
-  for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (BlockArgument argument : block.getArguments())
-        if (verify(argument.getType()).wasInterrupted())
-          return failure();
-
-  // Verify types nested within the operation's attributes.
-  WalkResult attrResult =
-      op->getAttrDictionary().walk<WalkOrder::PreOrder>([&](Type type) {
-        if (verify(type).wasInterrupted())
-          return WalkResult::interrupt();
-        return WalkResult::advance();
-      });
-  return failure(attrResult.wasInterrupted());
-}
-
 LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
@@ -551,27 +489,16 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
 
   // Verify any nested symbol user operations.
   SymbolTableCollection symbolTable;
-  // walkSymbolTable does not descend into nested symbol tables, so every
-  // operation visited here shares the same nearest symbol table. A uniqued
-  // attribute or type therefore resolves its symbol uses identically
-  // regardless of which operation anchors the lookup, so each is verified at
-  // most once across the whole scope.
-  SetVector<Attribute> verifiedAttrs;
-  SetVector<Type> verifiedTypes;
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       if (failed(user.verifySymbolUses(symbolTable)))
         return WalkResult::interrupt();
     for (auto &attr : op->getDiscardableAttrs()) {
       if (auto user = dyn_cast<SymbolUserAttrInterface>(attr.getValue())) {
-        if (!verifiedAttrs.insert(attr.getValue()))
-          continue;
         if (failed(user.verifySymbolUses(op, symbolTable)))
           return WalkResult::interrupt();
       }
     }
-    if (failed(verifyOpTypeSymbolUses(op, symbolTable, verifiedTypes)))
-      return WalkResult::interrupt();
     return WalkResult::advance();
   };
 
@@ -587,12 +514,14 @@ LogicalResult detail::verifySymbol(Operation *op) {
                              << mlir::SymbolTable::getSymbolAttrName() << "'";
 
   // Verify the visibility attribute.
-  if (Attribute vis = op->getAttr(mlir::SymbolTable::getVisibilityAttrName())) {
+  StringRef visAttrName =
+      mlir::SymbolOpInterface::getDefaultVisibilityAttrName();
+  if (Attribute vis = op->getAttr(visAttrName)) {
     StringAttr visStrAttr = llvm::dyn_cast<StringAttr>(vis);
     if (!visStrAttr)
-      return op->emitOpError() << "requires visibility attribute '"
-                               << mlir::SymbolTable::getVisibilityAttrName()
-                               << "' to be a string attribute, but got " << vis;
+      return op->emitOpError()
+             << "requires visibility attribute '" << visAttrName
+             << "' to be a string attribute, but got " << vis;
 
     if (!llvm::is_contained(ArrayRef<StringRef>{"public", "private", "nested"},
                             visStrAttr.getValue()))
@@ -602,6 +531,41 @@ LogicalResult detail::verifySymbol(Operation *op) {
              << visStrAttr;
   }
   return success();
+}
+
+SymbolTable::Visibility detail::defaultGetSymbolVisibility(Operation *symbol) {
+  StringAttr vis = symbol->getAttrOfType<StringAttr>(
+      SymbolOpInterface::getDefaultVisibilityAttrName());
+  // If the attribute doesn't exist, assume public.
+  if (!vis)
+    return SymbolTable::Visibility::Public;
+
+  // Otherwise, switch on the string value.
+  return StringSwitch<SymbolTable::Visibility>(vis.getValue())
+      .Case("private", SymbolTable::Visibility::Private)
+      .Case("nested", SymbolTable::Visibility::Nested)
+      .Case("public", SymbolTable::Visibility::Public);
+}
+
+void detail::defaultSetSymbolVisibility(Operation *symbol,
+                                        SymbolTable::Visibility vis) {
+  StringRef attrName = SymbolOpInterface::getDefaultVisibilityAttrName();
+
+  // If the visibility is public, just drop the attribute as this is the
+  // default.
+  if (vis == SymbolTable::Visibility::Public) {
+    symbol->removeAttr(attrName);
+    return;
+  }
+
+  // Otherwise, update the attribute.
+  assert((vis == SymbolTable::Visibility::Private ||
+          vis == SymbolTable::Visibility::Nested) &&
+         "unknown symbol visibility kind");
+
+  StringRef visName =
+      vis == SymbolTable::Visibility::Private ? "private" : "nested";
+  symbol->setAttr(attrName, StringAttr::get(symbol->getContext(), visName));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1182,7 +1146,7 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 
   StringAttr visibilityAttr = parser.getBuilder().getStringAttr(visibility);
   attrs.push_back(parser.getBuilder().getNamedAttr(
-      SymbolTable::getVisibilityAttrName(), visibilityAttr));
+      SymbolOpInterface::getDefaultVisibilityAttrName(), visibilityAttr));
   return success();
 }
 
@@ -1193,4 +1157,3 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.cpp.inc"
 #include "mlir/IR/SymbolInterfacesAttrInterface.cpp.inc"
-#include "mlir/IR/SymbolInterfacesTypeInterface.cpp.inc"

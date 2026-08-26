@@ -1149,11 +1149,11 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; SSE-32-NEXT:    subl $32, %esp
 ; SSE-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE-32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; SSE-32-NEXT:    movq %xmm0, (%esp)
 ; SSE-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE-32-NEXT:    fstpl {{[0-9]+}}(%esp)
-; SSE-32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE-32-NEXT:    fstpl (%esp)
+; SSE-32-NEXT:    fildll (%esp)
+; SSE-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; SSE-32-NEXT:    wait
 ; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-32-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
@@ -1185,11 +1185,11 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; SSE41-32-NEXT:    subl $32, %esp
 ; SSE41-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
 ; SSE41-32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE41-32-NEXT:    movq %xmm0, {{[0-9]+}}(%esp)
+; SSE41-32-NEXT:    movq %xmm0, (%esp)
 ; SSE41-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE41-32-NEXT:    fstpl {{[0-9]+}}(%esp)
-; SSE41-32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE41-32-NEXT:    fstpl (%esp)
+; SSE41-32-NEXT:    fildll (%esp)
+; SSE41-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; SSE41-32-NEXT:    wait
 ; SSE41-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE41-32-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
@@ -1221,11 +1221,11 @@ define <2 x double> @sitofp_v2i64_v2f64(<2 x i64> %x) #0 {
 ; AVX-32-NEXT:    subl $32, %esp
 ; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX-32-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
+; AVX-32-NEXT:    vmovlps %xmm0, (%esp)
 ; AVX-32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    fstpl {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    fildll {{[0-9]+}}(%esp)
-; AVX-32-NEXT:    fstpl (%esp)
+; AVX-32-NEXT:    fildll (%esp)
+; AVX-32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; AVX-32-NEXT:    wait
 ; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-32-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]

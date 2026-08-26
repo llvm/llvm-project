@@ -840,7 +840,7 @@ struct FormatStyle {
   ///
   /// * `InlineOnly`
   ///   Only merge functions defined inside a class. Same as `inline`,
-  ///   except it does not implies `empty`: i.e. top level empty functions
+  ///   except it does not imply `empty`: i.e. top level empty functions
   ///   are not merged either. See `Inline` of `ShortFunctionStyle`.
   ///   \code
   ///     class Foo {
@@ -1535,6 +1535,15 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// Wrap export blocks.
+    /// \code
+    ///   true:                            false:
+    ///   export             vs.           export {
+    ///   {                                  int foo();
+    ///     int foo();                     }
+    ///   }
+    /// \endcode
+    bool AfterExportBlock;
     /// Wrap extern blocks.
     /// \code
     ///   true:
