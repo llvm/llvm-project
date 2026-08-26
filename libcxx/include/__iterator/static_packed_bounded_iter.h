@@ -95,17 +95,21 @@ private:
     }
   }
 
+  template <class _Ptr2, class, size_t _RangeCapacity2>
+    requires(is_pointer_v<_Ptr2> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr2>), _RangeCapacity2))
+  friend class __static_packed_bounded_iterator;
+
 public:
   template <class _Ptr2, class _Tag2, size_t _RangeCapacity2>
   friend constexpr auto __make_static_packed_bounded_iter(_Ptr2) noexcept;
 
   constexpr __static_packed_bounded_iterator()
     requires is_default_constructible_v<_Ptr>
-  = default;
+  = delete;
 
-  template <class _Ptr2>
+  template <class _Ptr2, class _Tag2>
     requires is_convertible_v<_Ptr2, _Ptr>
-  constexpr __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag, _RangeCapacity>& __y)
+  constexpr __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _Tag2, _RangeCapacity>& __y)
       : __ptr_(__y.__ptr_) {}
 
   [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
