@@ -136,7 +136,7 @@ enum ErrorDetailLevel {
   Unspecified
 };
 
-enum class OutputStyleKind { LLVM, JSON, Unknown };
+enum OutputStyleTy { LLVM, JSON, UNKNOWN };
 
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
@@ -341,7 +341,7 @@ static opt<std::string>
     OutputStyleOpt("output-style", init("LLVM"),
                    desc("Specify the format of the output (LLVM or JSON)"),
                    cat(DwarfDumpCategory));
-static OutputStyleKind Style = OutputStyleKind::LLVM;
+static OutputStyleTy OutputStyle = LLVM;
 static opt<bool>
     ShowVariableCoverage("show-variable-coverage",
                          desc("Show per-variable coverage metrics."),
@@ -783,14 +783,14 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // Dump the complete DWARF structure.
   auto DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  switch (Style) {
-  case OutputStyleKind::LLVM:
+  switch (OutputStyle) {
+  case LLVM:
     DICtx.dump(OS, DumpOpts, DumpOffsets);
     break;
-  case OutputStyleKind::JSON:
+  case JSON:
     WithColor::warning() << "JSON output style is not yet implemented\n";
     break;
-  case OutputStyleKind::Unknown:
+  case UNKNOWN:
     WithColor::error() << "--output-style value should be either 'LLVM' or "
                           "'JSON', but was '"
                        << OutputStyleOpt << "'\n";
@@ -909,11 +909,11 @@ int main(int argc, char **argv) {
       "pretty-print DWARF debug information in object files"
       " and debug info archives.\n");
 
-  Style = StringSwitch<OutputStyleKind>(OutputStyleOpt)
-              .Case("LLVM", OutputStyleKind::LLVM)
-              .Case("JSON", OutputStyleKind::JSON)
-              .Default(OutputStyleKind::Unknown);
-  if (Style == OutputStyleKind::Unknown) {
+  OutputStyle = StringSwitch<OutputStyleTy>(OutputStyleOpt)
+                    .Case("LLVM", LLVM)
+                    .Case("JSON", JSON)
+                    .Default(UNKNOWN);
+  if (OutputStyle == UNKNOWN) {
     WithColor::error(errs(), sys::path::filename(argv[0]))
         << "--output-style value should be either 'LLVM' or 'JSON', but was '"
         << OutputStyleOpt << "'\n";
