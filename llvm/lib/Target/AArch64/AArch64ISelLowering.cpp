@@ -7034,13 +7034,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_dupq_lane:
     return LowerDUPQLane(Op, DAG);
   case Intrinsic::aarch64_sve_convert_from_svbool:
-    if (Op.getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
     return getSVEPredicateBitCast(Op.getValueType(), Op.getOperand(1), DAG);
   case Intrinsic::aarch64_sve_convert_to_svbool:
-    if (Op.getOperand(1).getValueType() == MVT::aarch64svcount)
-      return DAG.getNode(ISD::BITCAST, DL, MVT::nxv16i1, Op.getOperand(1));
     return getSVEPredicateBitCast(MVT::nxv16i1, Op.getOperand(1), DAG);
+  case Intrinsic::aarch64_sve_convert_from_svcount:
+  case Intrinsic::aarch64_sve_convert_to_svcount:
+    return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Op.getOperand(1));
   case Intrinsic::aarch64_sve_fneg:
     return DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, DL, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
@@ -27391,9 +27390,9 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
 // iN, we can use a trick that extracts the i^th bit from the i^th element and
 // then performs a vector add to get a scalar bitmask. This requires that each
 // element's bits are either all 1 or all 0.
-static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  SDValue ComparisonResult(N, 0);
+static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(ComparisonResult);
   EVT VecVT = ComparisonResult.getValueType();
   assert(VecVT.isVector() && "Must be a vector type");
 
@@ -27618,7 +27617,7 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
     return SDValue();
 
   VecOp = DAG.getNode(ISD::TRUNCATE, DL, MemVT, VecOp);
-  SDValue VectorBits = vectorToScalarBitmask(VecOp.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(VecOp, DAG);
   if (!VectorBits)
     return SDValue();
 
@@ -32027,7 +32026,7 @@ static void replaceBoolVectorBitcast(SDNode *N,
       Op = Op.getOperand(0);
   }
 
-  SDValue VectorBits = vectorToScalarBitmask(Op.getNode(), DAG);
+  SDValue VectorBits = vectorToScalarBitmask(Op, DAG);
   if (VectorBits)
     Results.push_back(DAG.getZExtOrTrunc(VectorBits, DL, VT));
 }

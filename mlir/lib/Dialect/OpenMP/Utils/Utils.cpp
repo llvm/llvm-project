@@ -42,20 +42,20 @@ void mlir::omp::setOffloadModuleInterfaceAttributes(
 }
 
 void mlir::omp::setOpenMPVersionAttribute(ModuleOp module, int64_t version) {
-  module->setAttr(
+  module->setDiscardableAttr(
       StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       VersionAttr::get(module.getContext(), version));
 }
 
 int64_t mlir::omp::getOpenMPVersionAttribute(ModuleOp module,
                                              int64_t fallback) {
-  if (Attribute verAttr = module->getAttr("omp.version"))
+  if (Attribute verAttr = module->getDiscardableAttr("omp.version"))
     return llvm::cast<VersionAttr>(verAttr).getVersion();
   return fallback;
 }
 
 bool mlir::omp::isOpenMPModule(ModuleOp module) {
-  return module->hasAttr("omp.version");
+  return module->hasDiscardableAttr("omp.version");
 }
 
 static bool allocaUseRequiresSharedMem(const OpOperand &use) {
@@ -75,7 +75,7 @@ static bool allocaUseRequiresSharedMem(const OpOperand &use) {
       OperandRange privateVars = argIface.getPrivateVars();
       auto it = llvm::find(privateVars, use.get());
       if (it != privateVars.end()) {
-        auto privateSyms = owner->getAttrOfType<ArrayAttr>("private_syms");
+        ArrayAttr privateSyms = *argIface.getPrivateSyms();
         size_t idx = std::distance(privateVars.begin(), it);
         auto privateOp =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
