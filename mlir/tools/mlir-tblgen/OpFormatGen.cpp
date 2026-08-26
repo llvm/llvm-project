@@ -224,15 +224,19 @@ private:
 };
 
 /// This class represents a group of order-independent optional clauses. Each
-/// clause starts with a literal element and has a coressponding parsing
-/// element. A parsing element is a continous sequence of format elements.
-/// Each clause can appear 0 or 1 time.
+/// clause starts with a literal element and has a corresponding parsing
+/// element. A parsing element is a continuous sequence of format elements.
+/// Each clause can appear 0 or 1 time. An optional literal separates clauses.
 class OIListElement : public DirectiveElementBase<DirectiveElement::OIList> {
 public:
-  OIListElement(std::vector<FormatElement *> &&literalElements,
+  OIListElement(LiteralElement *separator,
+                std::vector<FormatElement *> &&literalElements,
                 std::vector<std::vector<FormatElement *>> &&parsingElements)
-      : literalElements(std::move(literalElements)),
+      : separator(separator), literalElements(std::move(literalElements)),
         parsingElements(std::move(parsingElements)) {}
+
+  /// Returns the optional separator between clauses.
+  LiteralElement *getSeparator() const { return separator; }
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
@@ -265,6 +269,9 @@ public:
   }
 
 private:
+  /// An optional literal printed and parsed between clauses.
+  LiteralElement *separator;
+
   /// A vector of `LiteralElement` objects. Each element stores the keyword
   /// for one case of oilist element. For example, an oilist element along with
   /// the `literalElements` vector:
@@ -1494,6 +1501,223 @@ return ::mlir::success();
 )decl";
 }
 
+/// Generate the parser for the key-value spelling of `prop-dict`. The generic
+/// DictionaryAttr spelling remains supported as a compatibility path.
+static void genKeyValuePropDictParser(OperationFormat &fmt, Operator &op,
+                                      OpClass &opClass) {
+  if (!fmt.hasPropDict || !fmt.useProperties)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::OpAsmParser &", "parser");
+  paramList.emplace_back("::mlir::OperationState &", "result");
+
+  Method *method = opClass.addStaticMethod("::mlir::ParseResult",
+                                           "parsePropertiesFromKeyValueList",
+                                           std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+auto &prop = result.getOrAddProperties<Properties>();
+(void)prop;
+)decl";
+
+  bool parseOperandSegmentSizes =
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands;
+  bool parseResultSegmentSizes =
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes;
+
+  if (parseOperandSegmentSizes)
+    body << "bool seen_operandSegmentSizes = false;\n";
+  if (parseResultSegmentSizes)
+    body << "bool seen_resultSegmentSizes = false;\n";
+
+  auto shouldParseProperty = [&](const NamedProperty &property) {
+    return !fmt.usedProperties.contains(&property) &&
+           !fmt.inferredAttributes.contains(property.name);
+  };
+  auto shouldParseAttribute = [&](const NamedAttribute &attribute) {
+    return !attribute.attr.isDerivedAttr() &&
+           !fmt.usedAttributes.contains(&attribute) &&
+           !fmt.inferredAttributes.contains(attribute.name);
+  };
+
+  for (const NamedProperty &property : op.getProperties())
+    if (shouldParseProperty(property))
+      body << "bool seen_" << property.name << " = false;\n";
+  for (const NamedAttribute &attribute : op.getAttributes())
+    if (shouldParseAttribute(attribute))
+      body << "bool seen_" << attribute.name << " = false;\n";
+
+  body << R"decl(
+if (succeeded(parser.parseOptionalLess())) {
+  ::llvm::SMLoc dictionaryLoc = parser.getCurrentLocation();
+  ::mlir::NamedAttrList propertyAttributes;
+  if (parser.parseOptionalAttrDict(propertyAttributes))
+    return ::mlir::failure();
+  if (dictionaryLoc != parser.getCurrentLocation()) {
+    if (parser.parseGreater())
+      return ::mlir::failure();
+    auto propertyDictionary =
+        ::mlir::DictionaryAttr::get(parser.getContext(), propertyAttributes);
+    return setPropertiesFromParsedAttr(prop, propertyDictionary, [&]() {
+      return parser.emitError(dictionaryLoc)
+             << "invalid properties " << propertyDictionary << ": ";
+    });
+  }
+
+  bool reachedEnd = succeeded(parser.parseOptionalGreater());
+  while (!reachedEnd) {
+    ::llvm::SMLoc keyLoc = parser.getCurrentLocation();
+    ::llvm::StringRef key;
+    if (parser.parseKeyword(&key) || parser.parseEqual())
+      return ::mlir::failure();
+)decl";
+
+  bool isFirst = true;
+  FmtContext attrTypeCtx;
+  attrTypeCtx.withBuilder("parser.getBuilder()");
+
+  auto genSegmentSizesParser = [&](StringRef name) {
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << name
+         << " && key == \"" << name << "\") {\n"
+         << "      seen_" << name << " = true;\n"
+         << R"decl(
+      ::llvm::SmallVector<int32_t> parsedSegmentSizes;
+      if (parser.parseCommaSeparatedList(
+              ::mlir::AsmParser::Delimiter::Square, [&]() {
+                int32_t size;
+                if (parser.parseInteger(size))
+                  return ::mlir::failure();
+                parsedSegmentSizes.push_back(size);
+                return ::mlir::success();
+              }))
+        return ::mlir::failure();
+)decl"
+         << "      if (parsedSegmentSizes.size() != prop." << name
+         << ".size())\n"
+         << "        return parser.emitError(keyLoc, \"expected "
+         << (name == "operandSegmentSizes" ? op.getNumOperands()
+                                           : op.getNumResults())
+         << " entries for " << name << "\");\n"
+         << "      ::llvm::copy(parsedSegmentSizes, prop." << name
+         << ".begin());\n"
+         << "    }\n";
+    isFirst = false;
+  };
+
+  if (parseOperandSegmentSizes)
+    genSegmentSizesParser("operandSegmentSizes");
+  if (parseResultSegmentSizes)
+    genSegmentSizesParser("resultSegmentSizes");
+
+  for (const NamedProperty &property : op.getProperties()) {
+    if (!shouldParseProperty(property))
+      continue;
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << property.name
+         << " && key == \"" << property.name << "\") {\n"
+         << "      seen_" << property.name << " = true;\n";
+    if (!property.prop.usesDefaultParser()) {
+      PropertyVariable propertyVariable(&property);
+      genPropertyParser(&propertyVariable, body.indent(), fmt.opCppClassName);
+    } else {
+      FmtContext fctx;
+      fctx.addSubst("_attr", "propertyAttr");
+      fctx.addSubst("_storage", "propStorage");
+      fctx.addSubst("_diag", "emitError");
+      body.indent() << R"decl(
+auto parseResult = ::mlir::detail::parsePropertyWithFallback(
+    parser, prop.)decl"
+                    << property.name << R"decl(,
+    [&](auto &propStorage,
+        ::mlir::Attribute propertyAttr) -> ::mlir::LogicalResult {
+  auto emitError = [&]() {
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid value for property " << key << ": ";
+  };
+)decl";
+      body << tgfmt(property.prop.getConvertFromAttributeCall(), &fctx)
+           << ";\n";
+      body << "});\n"
+           << "if (failed(parseResult))\n"
+           << "  return ::mlir::failure();\n";
+      body.unindent();
+    }
+    body.unindent() << "    }\n";
+    isFirst = false;
+  }
+  for (const NamedAttribute &attribute : op.getAttributes()) {
+    if (!shouldParseAttribute(attribute))
+      continue;
+    body << (isFirst ? "    if" : "    else if") << " (!seen_" << attribute.name
+         << " && key == \"" << attribute.name << "\") {\n"
+         << "      seen_" << attribute.name << " = true;\n"
+         << "      " << attribute.attr.getStorageType() << " " << attribute.name
+         << "Attr;\n";
+    AttributeVariable attributeVariable(&attribute);
+    genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
+                  /*parseAsOptional=*/false, /*useProperties=*/true,
+                  fmt.opCppClassName);
+    body.unindent() << "    }\n";
+    isFirst = false;
+  }
+
+  if (isFirst) {
+    body << R"decl(
+    return parser.emitError(keyLoc,
+                            "unknown property in properties dictionary: ")
+           << key;
+)decl";
+  } else {
+    body << R"decl(
+    else {
+      return parser.emitError(
+                 keyLoc,
+                 "duplicate or unknown property in properties dictionary: ")
+             << key;
+    }
+)decl";
+  }
+
+  body << R"decl(
+    reachedEnd = succeeded(parser.parseOptionalGreater());
+    if (!reachedEnd && parser.parseComma())
+      return ::mlir::failure();
+  }
+}
+)decl";
+
+  if (parseOperandSegmentSizes)
+    body << "if (!seen_operandSegmentSizes)\n"
+            "  return ::mlir::emitError(result.location, \"properties "
+            "dictionary is missing required property: "
+            "operandSegmentSizes\");\n";
+  if (parseResultSegmentSizes)
+    body << "if (!seen_resultSegmentSizes)\n"
+            "  return ::mlir::emitError(result.location, \"properties "
+            "dictionary is missing required property: "
+            "resultSegmentSizes\");\n";
+
+  for (const NamedProperty &property : op.getProperties()) {
+    if (shouldParseProperty(property) && !property.prop.hasDefaultValue())
+      body << "if (!seen_" << property.name
+           << ")\n  return ::mlir::emitError(result.location, "
+              "\"properties dictionary is missing required property: "
+           << property.name << "\");\n";
+  }
+  for (const NamedAttribute &attribute : op.getAttributes()) {
+    if (shouldParseAttribute(attribute) && !attribute.attr.isOptional() &&
+        !attribute.attr.hasDefaultValue())
+      body << "if (!seen_" << attribute.name
+           << ")\n  return ::mlir::emitError(result.location, "
+              "\"properties dictionary is missing required attribute: "
+           << attribute.name << "\");\n";
+  }
+  body << "return ::mlir::success();\n";
+}
+
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
@@ -1527,6 +1751,7 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   body << "  return ::mlir::success();\n";
 
   genParsedAttrPropertiesSetter(*this, op, opClass);
+  genKeyValuePropDictParser(*this, op, opClass);
 }
 
 void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
@@ -1633,11 +1858,41 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
     /// OIList Directive
   } else if (OIListElement *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+    }
+
     for (LiteralElement *le : oilist->getLiteralElements())
       body << "  bool " << le->getSpelling() << "Clause = false;\n";
+    if (oilist->getSeparator())
+      body << "  bool oilistClauseParsed = false;\n";
 
     // Generate the parsing loop
     body << "  while(true) {\n";
+    if (LiteralElement *separator = oilist->getSeparator()) {
+      body << "    auto oilistSeparatorLoc = parser.getCurrentLocation();\n";
+      body << "    if (oilistClauseParsed) {\n";
+      body << "      if (failed(parser.parseOptional";
+      genLiteralParser(separator->getSpelling(), body);
+      body << ")) {\n";
+      body << "        if (";
+      llvm::interleave(
+          oilist->getLiteralElements(),
+          [&](LiteralElement *literal) {
+            body << "succeeded(parser.parseOptional";
+            genLiteralParser(literal->getSpelling(), body);
+            body << ")";
+          },
+          [&] { body << " || "; });
+      body << ")\n";
+      body << "          return parser.emitError(oilistSeparatorLoc,\n"
+              "              \"expected '"
+           << separator->getSpelling() << "' between oilist clauses\");\n";
+      body << "        break;\n";
+      body << "      }\n";
+      body << "    }\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -1646,6 +1901,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << ")) {\n";
       StringRef lelementName = lelement->getSpelling();
       body << formatv(oilistParserCode, lelementName);
+      if (oilist->getSeparator())
+        body << "    oilistClauseParsed = true;\n";
       if (AttributeLikeVariable *unitVarElem =
               oilist->getUnitVariableParsingElement(pelement)) {
         if (isa<PropertyVariable>(unitVarElem)) {
@@ -1665,9 +1922,16 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << "    } else ";
     }
     body << " {\n";
+    if (oilist->getSeparator()) {
+      body << "    if (oilistClauseParsed)\n";
+      body << "      return parser.emitError(oilistSeparatorLoc,\n"
+              "          \"expected oilist clause after separator\");\n";
+    }
     body << "    break;\n";
     body << "  }\n";
     body << "}\n";
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -2079,7 +2343,7 @@ static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 /// {1}: The name of the enum attributes symbolToString function.
 static const char *enumAttrBeginPrinterCode = R"(
   {
-    auto caseValue = {0}();
+    auto caseValue = {0};
     auto caseValueStr = {1}(caseValue);
 )";
 
@@ -2130,6 +2394,129 @@ static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
     body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
 }
 
+static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
+                               MethodBody &body, StringRef valueExpression);
+
+/// Generate the key-value printer used by the default `prop-dict` printer.
+static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
+                                       OpClass &opClass) {
+  if (!fmt.hasPropDict || !fmt.useProperties || op.hasCustomPropertiesPrinter())
+    return;
+
+  bool hasPrintableField =
+      !op.getProperties().empty() ||
+      llvm::any_of(
+          op.getAttributes(),
+          [](const auto &attr) { return !attr.attr.isDerivedAttr(); }) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+       fmt.allOperands) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+       fmt.allResultTypes);
+  if (!hasPrintableField)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::MLIRContext *", "_odsContext");
+  paramList.emplace_back("::mlir::OpAsmPrinter &", "_odsPrinter");
+  paramList.emplace_back("const Properties &", "prop");
+  paramList.emplace_back("::mlir::ArrayRef<::llvm::StringRef>", "elidedProps");
+  Method *method = opClass.addStaticMethod(
+      "void", "_odsPrintPropertiesAsKeyValueList", std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+bool first = true;
+auto printKey = [&](::llvm::StringRef name) {
+  _odsPrinter << (first ? " <" : ", ") << name << " = ";
+  first = false;
+};
+auto shouldPrint = [&](::llvm::StringRef name) {
+  return !::llvm::is_contained(elidedProps, name);
+};
+)decl";
+
+  auto genSegmentSizesPrinter = [&](StringRef name) {
+    body << "if (shouldPrint(\"" << name << "\")) {\n"
+         << "  printKey(\"" << name << "\");\n"
+         << "  _odsPrinter << \"[\";\n"
+         << "  ::llvm::interleaveComma(prop." << name << ", _odsPrinter);\n"
+         << "  _odsPrinter << \"]\";\n"
+         << "}\n";
+  };
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands)
+    genSegmentSizesPrinter("operandSegmentSizes");
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes)
+    genSegmentSizesPrinter("resultSegmentSizes");
+
+  for (const NamedProperty &namedProperty : op.getProperties()) {
+    const Property &property = namedProperty.prop;
+    body << "if (shouldPrint(\"" << namedProperty.name << "\")) {\n"
+         << "  printKey(\"" << namedProperty.name << "\");\n";
+    FmtContext printerContext;
+    printerContext.addSubst("_printer", "_odsPrinter");
+    printerContext.addSubst("_ctxt", "_odsContext");
+    printerContext.addSubst("_storage", "prop." + namedProperty.name);
+    if (property.usesDefaultParser()) {
+      body << "  if constexpr (::mlir::detail::HasKeyValueFieldParser<"
+              "std::remove_cv_t<std::remove_reference_t<decltype(prop."
+           << namedProperty.name << ")>>>::value) {\n"
+           << "    " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n"
+           << "  } else {\n"
+           << "    auto propertyAttr = [&]() -> ::mlir::Attribute {\n";
+      FmtContext conversionContext;
+      conversionContext.addSubst("_ctxt", "_odsContext");
+      conversionContext.addSubst("_storage", "prop." + namedProperty.name);
+      body << tgfmt(property.getConvertToAttributeCall(), &conversionContext)
+           << "\n"
+           << "    }();\n"
+           << "    _odsPrinter.printAttribute(propertyAttr);\n"
+           << "  }\n";
+    } else {
+      body << "  " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n";
+    }
+    body << "}\n";
+  }
+
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+    StringRef name = namedAttr.name;
+    body << "if (shouldPrint(\"" << name << "\")";
+    if (namedAttr.attr.isOptional() || namedAttr.attr.hasDefaultValue())
+      body << " && prop." << name;
+    body << ") {\n"
+         << "  printKey(\"" << name << "\");\n";
+
+    if (canFormatEnumAttr(&namedAttr)) {
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression);
+    } else if (shouldFormatSymbolNameAttr(&namedAttr)) {
+      body << "  _odsPrinter.printSymbolName(prop." << name
+           << ".getValue());\n";
+    } else {
+      AttributeVariable attrVariable(&namedAttr);
+      if (attrVariable.getTypeBuilder())
+        body << "  _odsPrinter.printAttributeWithoutType(prop." << name
+             << ");\n";
+      else if (attrVariable.shouldBeQualified() ||
+               namedAttr.attr.getStorageType() == "::mlir::Attribute")
+        body << "  _odsPrinter.printAttribute(prop." << name << ");\n";
+      else
+        body << "  _odsPrinter.printStrippedAttrOrType(prop." << name << ");\n";
+    }
+    body << "}\n";
+  }
+  body << "if (!first)\n"
+          "  _odsPrinter << \">\";\n";
+}
+
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
@@ -2177,9 +2564,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
     }
   }
 
+  // The `printProperties` method is responsible for printing out a leading
+  // space so that empty `prop-dict`s don't produce stray whitespace.
   if (fmt.useProperties) {
-    body << "  _odsPrinter << \" \";\n"
-         << "  printProperties(this->getContext(), _odsPrinter, "
+    body << "  printProperties(this->getContext(), _odsPrinter, "
             "getProperties(), elidedProps);\n";
   }
 }
@@ -2368,15 +2756,20 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body) {
+                               MethodBody &body,
+                               StringRef valueExpression = {}) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
   bool dereferenceGetter =
       var->attr.isOptional() && !var->attr.hasDefaultValue();
 
-  body << formatv(enumAttrBeginPrinterCode,
-                  (dereferenceGetter ? "*" : "") + op.getGetterName(var->name),
+  std::string caseValue = valueExpression.empty()
+                              ? op.getGetterName(var->name) + "()"
+                              : valueExpression.str();
+  if (dereferenceGetter)
+    caseValue = "*(" + caseValue + ")";
+  body << formatv(enumAttrBeginPrinterCode, caseValue,
                   enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
@@ -2564,6 +2957,11 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+      body << "  bool oilistClausePrinted = false;\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2606,6 +3004,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
 
       body << ") {\n";
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        body << "    if (oilistClausePrinted) {\n";
+        genLiteralPrinter(separator->getSpelling(), body, shouldEmitSpace,
+                          lastWasPunctuation);
+        body << "    }\n";
+        body << "    oilistClausePrinted = true;\n";
+      }
       genLiteralPrinter(lelement->getSpelling(), body, shouldEmitSpace,
                         lastWasPunctuation);
       if (oilist->getUnitVariableParsingElement(pelement) == nullptr) {
@@ -2615,6 +3020,8 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
       body << "  }\n";
     }
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
     return;
   }
 
@@ -2772,6 +3179,8 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   bool shouldEmitSpace = true, lastWasPunctuation = false;
   for (FormatElement *element : elements)
     genElementPrinter(element, body, op, shouldEmitSpace, lastWasPunctuation);
+
+  genKeyValuePropDictPrinter(*this, op, opClass);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3343,10 +3752,20 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 LogicalResult
 OpFormatParser::verifyOIListElements(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {
-  // Check that all of the successors are within the format.
+  // Check for ambiguous literals in and around oilist elements.
   SmallVector<StringRef> prohibitedLiterals;
   for (FormatElement *it : elements) {
     if (auto *oilist = dyn_cast<OIListElement>(it)) {
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        for (LiteralElement *literal : oilist->getLiteralElements()) {
+          if (literal->getSpelling() == separator->getSpelling()) {
+            return emitError(
+                loc, "format ambiguity because " + separator->getSpelling() +
+                         " is used as both an oilist separator and clause "
+                         "keyword.");
+          }
+        }
+      }
       if (!prohibitedLiterals.empty()) {
         // We just saw an oilist element in last iteration. Literals should not
         // match.
@@ -3361,6 +3780,8 @@ OpFormatParser::verifyOIListElements(SMLoc loc,
       }
       for (LiteralElement *literal : oilist->getLiteralElements())
         prohibitedLiterals.push_back(literal->getSpelling());
+      if (LiteralElement *separator = oilist->getSeparator())
+        prohibitedLiterals.push_back(separator->getSpelling());
     } else if (auto *literal = dyn_cast<LiteralElement>(it)) {
       if (find(prohibitedLiterals, literal->getSpelling()) !=
           prohibitedLiterals.end()) {
@@ -3717,6 +4138,21 @@ OpFormatParser::parseSuccessorsDirective(SMLoc loc, Context context) {
 
 FailureOr<FormatElement *>
 OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
+  LiteralElement *separator = nullptr;
+  if (peekToken().is(FormatToken::less)) {
+    consumeToken();
+    SMLoc separatorLoc = peekToken().getLoc();
+    FailureOr<FormatElement *> separatorElement = parseLiteral(context);
+    if (failed(separatorElement))
+      return failure();
+    separator = dyn_cast<LiteralElement>(*separatorElement);
+    if (!separator)
+      return emitError(separatorLoc,
+                       "oilist separator must be a non-whitespace literal");
+    if (failed(parseToken(FormatToken::greater,
+                          "expected '>' after oilist separator")))
+      return failure();
+  }
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before oilist argument list")))
     return failure();
@@ -3747,7 +4183,7 @@ OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
     }
   } while (true);
 
-  return create<OIListElement>(std::move(literalElements),
+  return create<OIListElement>(separator, std::move(literalElements),
                                std::move(parsingElements));
 }
 

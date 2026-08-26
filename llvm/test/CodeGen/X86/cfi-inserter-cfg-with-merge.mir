@@ -1,4 +1,5 @@
 # RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs -run-pass=cfi-instr-inserter
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs -passes=cfi-instr-inserter
 
 --- |
   define void @foo() { ret void }

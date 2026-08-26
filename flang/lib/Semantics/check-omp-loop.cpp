@@ -776,7 +776,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
       auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
       context_.Say(source,
           "The list item '%s' specified without the REF '%s' must be of INTEGER type"_err_en_US,
-          symbol->name(), desc.name.str());
+          symbol->name(), desc.getName().str());
     }
   }};
 
@@ -802,7 +802,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           if (dir != llvm::omp::Directive::OMPD_declare_simd) {
             context_.Say(modSource,
                 "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-                desc.name.str(), parser::omp::GetUpperName(dir, version));
+                desc.getName().str(), parser::omp::GetUpperName(dir, version));
             valid = false;
           }
         }
@@ -822,7 +822,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
                 !IsPolymorphic(*symbol)) {
               context_.Say(source,
                   "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                  symbol->name(), desc.name.str());
+                  symbol->name(), desc.getName().str());
             }
           }
           if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
@@ -830,7 +830,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
             if (!IsDummy(*symbol) || IsValue(*symbol)) {
               context_.Say(source,
                   "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                  desc.name.str(), symbol->name());
+                  desc.getName().str(), symbol->name());
             }
           }
         } // for (symbol, source)

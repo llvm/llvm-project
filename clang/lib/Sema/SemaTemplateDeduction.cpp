@@ -931,6 +931,11 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
+
+        // Function parameter packs cannot be deduced.
+        if (isa_and_present<ParmVarDecl>(
+                dyn_cast<NamedDecl *>(Unexpanded[I].first)))
+          continue;
         if (auto DI = getDepthAndIndex(Unexpanded[I]))
           std::tie(Depth, Index) = *DI;
         else
@@ -3982,9 +3987,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(),
             FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
-            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
-      return TemplateDeductionResult::MiscellaneousDeductionFailure;
-    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction) ||
+        !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
       Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
                                          Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
@@ -4030,10 +4034,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (IsLambda && !IsIncomplete) {
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CTAI.CanonicalConverted,
-            Info.AssociatedConstraintsSatisfaction))
-      return TemplateDeductionResult::MiscellaneousDeductionFailure;
-
-    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+            Info.AssociatedConstraintsSatisfaction) ||
+        !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
       Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
                                          Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
@@ -5350,7 +5352,8 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
                                                AutoTypeLoc TypeLoc,
                                                QualType Deduced) {
   ConstraintSatisfaction Satisfaction;
-  ConceptDecl *Concept = cast<ConceptDecl>(Type.getTypeConstraintConcept());
+  ConceptDecl *Concept =
+      cast<ConceptDecl>(Type.getTypeConstraintConcept().getAsTemplateDecl());
   TemplateArgumentListInfo TemplateArgs(TypeLoc.getLAngleLoc(),
                                         TypeLoc.getRAngleLoc());
   TemplateArgs.addArgument(
@@ -5376,9 +5379,11 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     llvm::raw_string_ostream OS(Buf);
     OS << "'" << Concept->getName();
     if (TypeLoc.hasExplicitTemplateArgs()) {
-      printTemplateArgumentList(
-          OS, Type.getTypeConstraintArguments(), S.getPrintingPolicy(),
-          Type.getTypeConstraintConcept()->getTemplateParameters());
+      printTemplateArgumentList(OS, Type.getTypeConstraintArguments(),
+                                S.getPrintingPolicy(),
+                                Type.getTypeConstraintConcept()
+                                    .getAsTemplateDecl()
+                                    ->getTemplateParameters());
     }
     OS << "'";
     S.Diag(TypeLoc.getConceptNameLoc(),
@@ -6850,12 +6855,14 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     return true;
   }
 
-  bool TraverseTemplateName(TemplateName Template) override {
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier) override {
     if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
-    DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
+    DynamicRecursiveASTVisitor::TraverseTemplateName(Template,
+                                                     TraverseQualifier);
     return true;
   }
 

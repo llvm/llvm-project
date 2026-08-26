@@ -802,12 +802,12 @@ void AArch64PassConfig::addPreRegBankSelect() {
 }
 
 bool AArch64PassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
@@ -930,7 +930,7 @@ void AArch64PassConfig::addPreEmitPass() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&

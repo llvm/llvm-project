@@ -9,7 +9,7 @@
 ; CHECK-NEXT: testb $1, %dil
 ; CHECK-NEXT: jne
 ; CHECK-NEXT: divsd
-; CHECK-NEXT: movapd
+; CHECK-NEXT: movaps
 ; CHECK-NEXT: ret
 ; CHECK:      divsd
 
@@ -28,7 +28,7 @@ define double @foo(double %x, double %y, i1 %c) nounwind {
 ; CHECK-NEXT: testb $1, %dil
 ; CHECK-NEXT: je
 ; CHECK:      divsd
-; CHECK:      movapd
+; CHECK:      movaps
 ; CHECK:      ret
 define double @split(double %x, double %y, i1 %c) nounwind {
   %a = fdiv double %x, 3.2

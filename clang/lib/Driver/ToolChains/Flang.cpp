@@ -130,35 +130,38 @@ static void renderDependencyGenerationOptions(Compilation &C,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
-                            options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenacc,
-                            options::OPT_finput_charset_EQ,
-                            options::OPT_fimplicit_none,
-                            options::OPT_fimplicit_none_ext,
-                            options::OPT_fno_implicit_none,
-                            options::OPT_fbackslash,
-                            options::OPT_fno_backslash,
-                            options::OPT_flogical_abbreviations,
-                            options::OPT_fno_logical_abbreviations,
-                            options::OPT_fxor_operator,
-                            options::OPT_fno_xor_operator,
-                            options::OPT_falternative_parameter_statement,
-                            options::OPT_fdefault_integer_4,
-                            options::OPT_fdefault_real_4,
-                            options::OPT_fdefault_real_8,
-                            options::OPT_fdefault_integer_8,
-                            options::OPT_fdefault_double_8,
-                            options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files,
-                            options::OPT_frealloc_lhs,
-                            options::OPT_fno_realloc_lhs,
-                            options::OPT_fsave_main_program,
-                            options::OPT_fd_lines_as_code,
-                            options::OPT_fd_lines_as_comments,
-                            options::OPT_fno_save_main_program});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_ffixed_form,
+                   options::OPT_ffree_form,
+                   options::OPT_ffixed_line_length_EQ,
+                   options::OPT_fopenacc,
+                   options::OPT_finput_charset_EQ,
+                   options::OPT_fimplicit_none,
+                   options::OPT_fimplicit_none_ext,
+                   options::OPT_fno_implicit_none,
+                   options::OPT_fbackslash,
+                   options::OPT_fno_backslash,
+                   options::OPT_flogical_abbreviations,
+                   options::OPT_fno_logical_abbreviations,
+                   options::OPT_fxor_operator,
+                   options::OPT_fno_xor_operator,
+                   options::OPT_falternative_parameter_statement,
+                   options::OPT_fdefault_integer_4,
+                   options::OPT_fdefault_real_4,
+                   options::OPT_fdefault_real_8,
+                   options::OPT_fdefault_integer_8,
+                   options::OPT_fdefault_double_8,
+                   options::OPT_flarge_sizes,
+                   options::OPT_fno_automatic,
+                   options::OPT_fhermetic_module_files,
+                   options::OPT_frealloc_lhs,
+                   options::OPT_fno_realloc_lhs,
+                   options::OPT_fsave_main_program,
+                   options::OPT_fd_lines_as_code,
+                   options::OPT_fd_lines_as_comments,
+                   options::OPT_fno_save_main_program,
+                   options::OPT_fprefer_intrinsic_module_use_association,
+                   options::OPT_fno_prefer_intrinsic_module_use_association});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -248,7 +251,14 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  if (hasDwarfNArg) {
+  // Pass on the DWARF version when debug information is being generated, or
+  // when -gdwarf-N names a version. Leaving it out means the version stays
+  // unset and the backend falls back to dwarf::DWARF_VERSION (4) instead of
+  // honouring toolchain default like clang does.
+  //
+  // Note that both conditions are needed to match clang for cases like
+  // "-gdwarf-5 -g0".
+  if (hasDwarfNArg || DebugInfoKind != llvm::codegenoptions::NoDebugInfo) {
     const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
@@ -1233,6 +1243,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
+
+  addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

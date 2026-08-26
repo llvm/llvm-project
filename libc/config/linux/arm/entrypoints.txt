@@ -206,6 +206,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
+    # sys/sysinfo.h entrypoints
+    # Disabled due to QEMU test failures.
+    # libc.src.sys.sysinfo.sysinfo
+
     # sys/personality.h entrypoints
     libc.src.sys.personality.personality
 
@@ -224,6 +228,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
+    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -459,6 +464,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -467,6 +475,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llogbl
     libc.src.math.llrint
     libc.src.math.llrintf
+    libc.src.math.llrintf128
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
@@ -485,6 +494,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logf
     libc.src.math.lrint
     libc.src.math.lrintf
+    libc.src.math.lrintf128
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
@@ -522,6 +532,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquol
     libc.src.math.rint
     libc.src.math.rintf
+    libc.src.math.rintf128
     libc.src.math.rintl
     libc.src.math.round
     libc.src.math.roundevenf128
@@ -561,6 +572,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.totalordermagl
     libc.src.math.trunc
     libc.src.math.truncf
+    libc.src.math.truncf128
     libc.src.math.truncl
     libc.src.math.ufromfp
     libc.src.math.ufromfpf
