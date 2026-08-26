@@ -32,7 +32,7 @@ class LLVM_LIBRARY_VISIBILITY AllocationOrder {
   const SmallVector<MCPhysReg, 16> Hints;
   // Used as storage if the Order received in the constructor needs to be
   // altered.
-  SmallVector<MCPhysReg, 16> FilteredOrderStorage;
+  SmallVector<MCPhysReg, 16> ShuffledOrderStorage;
   ArrayRef<MCPhysReg> Order;
   // How far into the Order we can iterate. This is 0 if the AllocationOrder is
   // constructed with HardHints = true, Order.size() otherwise. While
@@ -96,11 +96,11 @@ public:
       : Hints(std::move(Hints)), Order(Order),
         IterationLimit(HardHints ? 0 : static_cast<int>(Order.size())) {}
 
-  /// Create an AllocationOrder with pre-computed FilteredOrderStorage.
+  /// Create an AllocationOrder with pre-computed ShuffledOrderStorage.
   AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
                   bool HardHints, SmallVector<MCPhysReg, 16> &&Storage)
-      : Hints(std::move(Hints)), FilteredOrderStorage(std::move(Storage)),
-        Order(FilteredOrderStorage.empty() ? Order : FilteredOrderStorage),
+      : Hints(std::move(Hints)), ShuffledOrderStorage(std::move(Storage)),
+        Order(ShuffledOrderStorage.empty() ? Order : ShuffledOrderStorage),
         IterationLimit(HardHints ? 0 : static_cast<int>(this->Order.size())) {}
 
   Iterator begin() const {
