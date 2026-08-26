@@ -221,6 +221,34 @@ def have_host_clang_repl_cuda():
 
     return False
 
+def have_host_clang_repl_hip():
+    clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b'\n'.join([
+        b"#include <hip/hip_runtime.h>",
+        b"__global__ void test_func() {}",
+        b"test_func<<<1,1>>>();",
+        b"extern \"C\" int puts(const char *s);",
+        b"puts(hipGetLastError() ? \"failure\" : \"success\");",
+        b"%quit"
+    ])
+    try:
+        clang_repl_cmd = subprocess.run([clang_repl_exe, '--hip'],
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        input=testcode)
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        if clang_repl_cmd.stdout.find(b"success") != -1:
+            return True
+
+    return False
+
 
 skip_clang_repl_checks = lit.util.pythonize_bool(
     lit_config.params.get(
@@ -234,6 +262,9 @@ if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+
+    if have_host_clang_repl_hip():
+        config.available_features.add('host-supports-hip')
     hosttriple = run_clang_repl("--host-jit-triple")
     config.substitutions.append(("%host-jit-triple", hosttriple.strip()))
 

@@ -406,6 +406,8 @@ Interpreter::~Interpreter() {
   Act->FinalizeAction();
   if (CUDADeviceParser)
     CUDADeviceParser.reset();
+  if (HIPDeviceParser)
+    HIPDeviceParser.reset();
   if (DeviceAct)
     DeviceAct->FinalizeAction();
   if (IncrExecutor) {
@@ -510,8 +512,14 @@ Interpreter::createWithDevice(bool HipEnabled,
   Interp->DeviceCI = std::move(DCI);
 
   if (HipEnabled) {
-    // FIXME: HIP device parsing is not supported yet; it should use an
-    // IncrementalHIPDeviceParser once one exists.
+    auto HIPDeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+
+    if (Err)
+      return std::move(Err);
+
+    Interp->HIPDeviceParser = std::move(HIPDeviceParser);
   } else {
     auto CUDADeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
         *Interp->DeviceCI, *Interp->getCompilerInstance(),
@@ -576,6 +584,33 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     llvm::Error Err = CUDADeviceParser->GenerateFatbinary();
     if (Err)
+      return std::move(Err);
+  }
+
+  // HIP device code is compiled into its own code object per chunk. Each PTU is
+  // linked against the device libraries, optimized, and lowered to a
+  // relocatable code object (.hsaco) that is wrapped in a fat binary and
+  // embedded into the host module.
+  if (HIPDeviceParser) {
+    llvm::Expected<TranslationUnitDecl *> DeviceTU =
+        HIPDeviceParser->Parse(Code);
+    if (auto E = DeviceTU.takeError())
+      return std::move(E);
+
+    HIPDeviceParser->RegisterPTU(*DeviceTU);
+
+    if (llvm::Error Err = HIPDeviceParser->LinkDeviceLibs())
+      return std::move(Err);
+
+    if (llvm::Error Err = HIPDeviceParser->optimize())
+      return std::move(Err);
+
+    if (llvm::Expected<llvm::StringRef> HSACO =
+            HIPDeviceParser->GenerateHSACO();
+        !HSACO)
+      return HSACO.takeError();
+
+    if (llvm::Error Err = HIPDeviceParser->GenerateOffloadBundle())
       return std::move(Err);
   }
 
