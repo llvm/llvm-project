@@ -1656,6 +1656,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       for (MVT VT : {MVT::v16i1, MVT::v8i1, MVT::v16i8, MVT::v8i8})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);
+
+      setTargetDAGCombine(ISD::VECTOR_MATCH);
     }
 
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
@@ -30855,7 +30857,11 @@ static SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
 static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
-  SDValue Insert = N->getOperand(0);
+  SDValue Op = N->getOperand(0);
+  if (Op.getOpcode() == ISD::SPLAT_VECTOR && Op.getValueType() == VT)
+    return Op;
+
+  SDValue Insert = Op;
   if (Insert.getOpcode() != ISD::INSERT_SUBVECTOR)
     return SDValue();
 
@@ -31451,6 +31457,40 @@ static SDValue performPredicateLoadCombine(SDNode *N,
   return LoadPred;
 }
 
+static SDValue performVectorMatchCombine(SDNode *N,
+                                         TargetLowering::DAGCombinerInfo &DCI,
+                                         SelectionDAG &DAG) {
+  // Widen v3i8/v4i8 match needles to v8i8. For needles >= 2 elements it's
+  // generally better to widen the needle and lower to a `match` (rather than
+  // expanding). This is handled by type legalization for all other types (> 2
+  // elements) but v4i8 is promoted rather than widened, hence this combine.
+  SDValue Needle = N->getOperand(1);
+  EVT NeedleVT = Needle.getValueType();
+
+  if (!DCI.isBeforeLegalize() ||
+      (NeedleVT != MVT::v3i8 && NeedleVT != MVT::v4i8))
+    return SDValue();
+
+  SDLoc DL(N);
+  if (NeedleVT == MVT::v3i8) {
+    // Pad a v3i8 needle to v4i8.
+    SDValue Pad = DAG.getExtractVectorElt(DL, MVT::i8, Needle, 0);
+    Needle = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::v4i8), Needle, 0);
+    Needle = DAG.getInsertVectorElt(DL, Needle, Pad, 3);
+  }
+
+  // Splat the needle to a full scalable vector (in such a way that the bitcasts
+  // and extracts should fold away).
+  Needle = DAG.getBitcast(MVT::v1i32, Needle);
+  Needle = DAG.getExtractVectorElt(DL, MVT::i32, Needle, 0);
+  Needle = DAG.getSplatVector(MVT::nxv4i32, DL, Needle);
+  Needle = DAG.getBitcast(MVT::nxv16i8, Needle);
+  Needle = DAG.getExtractSubvector(DL, MVT::v16i8, Needle, 0);
+
+  return DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0),
+                     N->getOperand(0), Needle, N->getOperand(2));
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -31814,6 +31854,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTPOPCombine(N, DCI, DAG);
   case ISD::BITCAST:
     return performPredicateLoadCombine(N, DCI, DAG);
+  case ISD::VECTOR_MATCH:
+    return performVectorMatchCombine(N, DCI, DAG);
   }
   return SDValue();
 }
