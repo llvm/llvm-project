@@ -124,13 +124,10 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
-static cl::opt<int> SLSRBasisDistanceThreshold(
-    "slsr-basis-distance-threshold", cl::init(96), cl::Hidden,
-    cl::desc("SLSR: skip rewrite if in-block distance from Basis's last "
-             "same-block use to the candidate Inst exceeds this"));
-
-static cl::opt<bool> UseTTIForRP("slsr-tti-rp", cl::init(false),
-                                 cl::desc("Use TTI to compute RP for SLSR-RP"));
+static cl::opt<int> EnableRPFilterThreshold(
+    "slsr-enable-rpfilter-thres", cl::init(16), cl::Hidden,
+    cl::desc("SLSR: RPFilter is enabled if a BB has more than this number of "
+             "basises. Set to -1 to disable RPFilter."));
 
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
@@ -597,15 +594,6 @@ private:
     if (auto *StrideInst = dyn_cast<Instruction>(C.Stride))
       PropagateDependency(StrideInst);
   };
-
-  bool hasOperandsUsedInNonRewritableUsersInAnotherBlock(
-      llvm::Instruction *Inst) const;
-  bool hasRewritableCandidates(const Instruction *Inst) const;
-  bool basisTooFarInSameBlock(
-      const Candidate &C,
-      DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
-          &IndexCache,
-      const Instruction *Inst) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
@@ -1388,119 +1376,6 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
 }
 
-// Go through all operands of instruction, and check if any operand is used in
-// another block different from the instruction's block and the other use is
-// not rewritable. return true if such operand is found, otherwise return false.
-bool StraightLineStrengthReduce::
-    hasOperandsUsedInNonRewritableUsersInAnotherBlock(
-        llvm::Instruction *Inst) const {
-  llvm::BasicBlock *InstBB = Inst->getParent();
-
-  for (Value *OpVal : Inst->operand_values()) {
-    auto *OpInst = dyn_cast<Instruction>(OpVal);
-    if (!OpInst)
-      continue;
-
-    for (const User *U : OpInst->users())
-      if (auto *UI = dyn_cast<Instruction>(U)) {
-        if (UI->isDebugOrPseudoInst())
-          continue;
-        if (UI->getParent() != InstBB && !hasRewritableCandidates(UI)) {
-          LLVM_DEBUG(dbgs()
-                     << "Inst's operand is used in another block "
-                     << "("
-                     << (InstBB->hasName() ? InstBB->getName() : "unnamed")
-                     << " -> "
-                     << (UI->getParent() && UI->getParent()->hasName()
-                             ? UI->getParent()->getName()
-                             : "unnamed")
-                     << ") " << *UI << "\n");
-          return true;
-        }
-      }
-  }
-  return false;
-}
-
-bool StraightLineStrengthReduce::hasRewritableCandidates(
-    const Instruction *Inst) const {
-  if (!RewriteCandidates.count(Inst))
-    return false;
-
-  for (const Candidate *C : RewriteCandidates.at(Inst))
-    if (C->Basis)
-      return true;
-
-  return false;
-}
-
-// Assign a monotonically increasing index to each (non-debug/pseudo)
-// instruction in BB so in-block distances can be queried in O(1) once built.
-static DenseMap<const Instruction *, int>
-buildBlockIndexMap(const BasicBlock &BB) {
-  DenseMap<const Instruction *, int> IndexMap;
-  int Index = 0;
-  for (const Instruction &I : BB) {
-    // Skip debug/pseudo instructions so the distance math is identical
-    // between debug and release builds.
-    if (I.isDebugOrPseudoInst())
-      continue;
-    IndexMap[&I] = Index++;
-  }
-  return IndexMap;
-}
-
-// Return true
-// 1. if C.Basis used only in C.Ins's block before C.Ins
-// AND
-// 2. if any use of C.Basis before C.Ins and C.Ins exceeds
-// SLSRBasisDistanceThreshold.
-bool StraightLineStrengthReduce::basisTooFarInSameBlock(
-    const Candidate &C,
-    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
-        &IndexCache,
-    const Instruction *I) const {
-  Instruction *Inst = C.Ins;
-  assert(Inst == I);
-  Instruction *BasisInst = C.Basis ? C.Basis->Ins : nullptr;
-  if (!BasisInst)
-    return false;
-
-  const BasicBlock *BB = Inst->getParent();
-  auto [It, Inserted] = IndexCache.try_emplace(BB);
-  if (Inserted)
-    It->second = buildBlockIndexMap(*BB);
-  const DenseMap<const Instruction *, int> &IndexMap = It->second;
-
-  auto InstIt = IndexMap.find(Inst);
-  if (InstIt == IndexMap.end())
-    return false;
-  int InstIdx = InstIt->second;
-
-  int LastUseIdx = 0;
-
-  bool FoundSameBlockUse = false;
-  for (const User *U : BasisInst->users()) {
-    const auto *UI = dyn_cast<Instruction>(U);
-    if (!UI)
-      continue;
-    // If one of the uses is not in the same block, return false.
-    if (UI->getParent() != BB)
-      return false;
-    auto UseIt = IndexMap.find(UI);
-    // If any same block use is later than Inst, return false.
-    if (UseIt == IndexMap.end() || UseIt->second >= InstIdx)
-      return false;
-    FoundSameBlockUse = true;
-    LastUseIdx = std::max(LastUseIdx, UseIt->second);
-  }
-
-  if (!FoundSameBlockUse)
-    return false;
-
-  return (InstIdx - LastUseIdx) > SLSRBasisDistanceThreshold;
-}
-
 namespace {
 
 // TODO: Currently, I am considering (Basis, Cand) pair that are both in the
@@ -1514,18 +1389,32 @@ public:
            DenseMap<const Instruction *, Candidate *> &PickedCandidateMap)
       : F(F), PickedCandidateMap(PickedCandidateMap) {}
 
-  void run() {
-    buildBBToNumCandsAndBasises(PickedCandidateMap);
+  DenseSet<const Instruction *> run() {
+    if (PickedCandidateMap.empty())
+      return {};
 
-    if (MaxNumBasisesInBB <= 16)
-      return;
+    //  Disables RPFilter.
+    if (EnableRPFilterThreshold < 0)
+      return {};
+
+    buildBBToNumCandsAndBasises(PickedCandidateMap);
+    unsigned MinNumBasisesInBBToFilterSLSR = EnableRPFilterThreshold;
+    if (MaxNumBasisesInBB <= MinNumBasisesInBBToFilterSLSR)
+      return {};
 
     // Compute live-in and live-out of each BB in CFG
     buildBBToLiveness(*F);
 
     DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
-    DenseSet<const Instruction *> InstsToSkip;
+    SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
+
+      // Check only the BB with more than MinNumBasisesInBBToFilterSLSR Basises.
+      // Notice than the number of distinct Basises matters. One basis can
+      // correspond to multiple candidates.
+      if (BBToNumCandsAndBasises[&BB].second <= MinNumBasisesInBBToFilterSLSR)
+        continue;
+
       auto [MaxRP, MaxRPWithSLSR] = maxPressureInBlockBackward(
           BB, BBToLiveness[&BB].LiveIn, BBToLiveness[&BB].LiveOut);
       DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
@@ -1537,18 +1426,17 @@ public:
           DEBUG_SLSR_RP(dbgs() << "Skipping BB from SLSR: " << BB.getName()
                                << " IncRatio: " << IncRatio << "\n");
 
-          // Skip this BB from SLSR.
-          for (auto It : PickedCandidateMap) {
-            if (It.first->getParent() == &BB)
-              InstsToSkip.insert(It.first);
-          }
+          BBsToSkip.insert(&BB);
         }
       }
     } // Done with BBs
 
-    // Remove insts to skip from PickedCandidateMap
-    for (auto *Inst : InstsToSkip)
-      PickedCandidateMap.erase(Inst);
+    DenseSet<const Instruction *> InstsToSkip;
+    for (auto It : PickedCandidateMap)
+      if (BBsToSkip.contains(It.first->getParent()))
+        InstsToSkip.insert(It.first);
+
+    return InstsToSkip;
   }
 
 private:
@@ -1714,15 +1602,15 @@ private:
 
     // I is a Candidate
     const Instruction *Basis = It->second->Basis->Ins;
-    if (Basis->getParent() == I->getParent()) {
-      LiveSetWithSLSR.insert(Basis);
-      // I and its Basis are in the same bb.
+    // if (Basis->getParent() == I->getParent()) {
+    LiveSetWithSLSR.insert(Basis);
+    // I and its Basis are in the same bb.
 
-      SeenLastUse.insert(Basis);
-      return true;
-    }
+    SeenLastUse.insert(Basis);
+    return true;
+    //}
 
-    return false;
+    // return false;
   }
 
   std::pair<unsigned, unsigned>
@@ -1836,13 +1724,15 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
       PickedCandidateMap[I] = C;
 
   RPFilter RPFilter(&F, PickedCandidateMap);
-  RPFilter.run();
+  DenseSet<const Instruction *> InstsToSkip = RPFilter.run();
 
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
   for (Instruction *I : reverse(SortedCandidateInsts)) {
-    if (Candidate *C = PickedCandidateMap[I])
-      rewriteCandidate(*C);
+    auto It = PickedCandidateMap.find(I);
+    if (It != PickedCandidateMap.end())
+      if (!InstsToSkip.contains(It->first))
+        rewriteCandidate(*It->second);
   }
 
   for (auto *DeadIns : DeadInstructions)
