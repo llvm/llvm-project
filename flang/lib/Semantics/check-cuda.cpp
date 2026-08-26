@@ -208,7 +208,7 @@ struct FindHostArray
 };
 
 template <typename A>
-static MaybeMsg CheckUnwrappedExpr(
+MaybeMsg CheckUnwrappedExpr(
     SemanticsContext &context, const A &x, bool allowHostCallees = false) {
   if (const auto *expr{parser::Unwrap<parser::Expr>(x)}) {
     return DeviceExprChecker{context, allowHostCallees}(expr->typedExpr);
