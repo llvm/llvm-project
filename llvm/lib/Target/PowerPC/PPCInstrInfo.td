@@ -2073,14 +2073,30 @@ foreach op = ["load_add", "load_sub", "load_and", "load_or", "load_xor",
   foreach bitsz = [8, 16] in {
     defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i"#bitsz);
     def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-            (!cast<Instruction>(atomic_load) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>,
+            (!cast<Instruction>(atomic_load) memrr:$ptr, !logtwo(!div(bitsz, 8)), gprc:$incr)>,
             Requires<[HasPartwordAtomics]>;
     def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-            (!cast<Instruction>(atomic_load_nowp) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+            (!cast<Instruction>(atomic_load_nowp) memrr:$ptr, !logtwo(!div(bitsz, 8)), gprc:$incr)>;
   }
   defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i32");
   def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-          (!cast<Instruction>(atomic_load) memrr:$ptr, 4, gprc:$incr)>;
+          (!cast<Instruction>(atomic_load) memrr:$ptr, 2, gprc:$incr)>;
+}
+
+// Match (some) atomic load operations with immediates.
+foreach op = ["load_and", "load_or", "load_xor"] in {
+  defvar atomic_load = "ATOMIC_"#!toupper(op)#"_IMM";
+  def atomic_load : PPCCustomInserterPseudo<
+      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, u16imm:$incr), "",[]>;
+  foreach bitsz = [8, 16] in {
+    defvar pat = !cast<PatFrag>("atomic_"#op#"_i"#bitsz);
+    def : Pat<(i32 (pat ForceXForm:$ptr, u16imm_pat:$incr)),
+            (!cast<Instruction>(atomic_load) memrr:$ptr, !logtwo(!div(bitsz, 8)), immZExt16:$incr)>,
+            Requires<[HasPartwordAtomics]>;
+  }
+  defvar pat = !cast<PatFrag>("atomic_"#op#"_i32");
+  def : Pat<(i32 (pat ForceXForm:$ptr, u16imm_pat:$incr)),
+            (!cast<Instruction>(atomic_load) memrr:$ptr, 2, immZExt16:$incr)>;
 }
 
 foreach bitsz = [8, 16, 32] in {
