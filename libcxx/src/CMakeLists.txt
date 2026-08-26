@@ -135,12 +135,6 @@ if (LIBCXX_ENABLE_FILESYSTEM)
   endif()
 endif()
 
-if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-  list(APPEND LIBCXX_SOURCES
-    new.cpp
-    )
-endif()
-
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
       ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
@@ -276,22 +270,6 @@ set_target_properties(cxx_static
     OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
 )
 cxx_add_common_build_flags(cxx_static)
-
-if (LIBCXX_HERMETIC_STATIC_LIBRARY)
-  # If the hermetic library doesn't define the operator new/delete functions
-  # then its code shouldn't declare them with hidden visibility.  They might
-  # actually be provided by a shared library at link time.
-  if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete=force-hidden)
-    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
-      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
-    endif()
-  endif()
-  target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
-  # too. Define it in the same way here, to avoid redefinition conflicts.
-  target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
-endif()
 
 # Attempt to merge the libc++.a archive and the ABI library archive into one.
 if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)

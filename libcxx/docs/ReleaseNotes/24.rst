@@ -91,3 +91,6 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+
+- The ``LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS`` option has been removed. The various ``operator new`` functions are
+  now either defined in libc++abi or not at all (which still allows for them being provided by an external library).

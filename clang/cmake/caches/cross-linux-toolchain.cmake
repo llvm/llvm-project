@@ -273,7 +273,6 @@ foreach(target ${LLVM_RUNTIME_TARGETS})
 
   set(RUNTIMES_${target}_LIBCXX_USE_COMPILER_RT                    ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
-  set(RUNTIMES_${target}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
 
 
   if (DEFINED TOOLCHAIN_SHARED_LIBS)

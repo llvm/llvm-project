@@ -296,11 +296,12 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
 
-option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
-  "Build libc++ with definitions for operator new/delete. These are normally
-   defined in libc++abi, but this option can be used to define them in libc++
-   instead. If you define them in libc++, make sure they are NOT defined in
-   libc++abi. Doing otherwise is an ODR violation." OFF)
+# TODO: Remove in LLVM 25
+if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+  message(FATAL_ERROR "LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS is not supported anymore, operator new is now either
+                       provided by an ABI library like libc++abi.dylib, or not at all")
+endif()
+
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." ON)
