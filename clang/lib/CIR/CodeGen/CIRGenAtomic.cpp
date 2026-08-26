@@ -1198,6 +1198,19 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
                                               e->getPtr()->getType())),
            cgf.getContext().VoidPtrTy);
 
+  // Emit the scope expression in advance to make sure we don't miss any side
+  // effects in it. The library functions don't care about the scope so the
+  // evaluated scope value is not saved.
+  if (e->getScopeModel()) {
+    if (const Expr *scopeExpr = e->getScope()) {
+      Expr::EvalResult scopeConst;
+      // We only need to emit the scope expression when its constant evaluation
+      // fails (i.e. it may contain side effects).
+      if (!scopeExpr->EvaluateAsInt(scopeConst, cgf.getContext()))
+        cgf.emitScalarExpr(scopeExpr);
+    }
+  }
+
   // The next 1-3 parameters are op-dependent.
   llvm::StringRef calleeName;
   QualType retTy;
