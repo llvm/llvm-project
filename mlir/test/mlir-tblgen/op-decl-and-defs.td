@@ -236,9 +236,9 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 // DEFS: FOp FOp::create(::mlir::OpBuilder &builder, ::mlir::Location location, ::mlir::Value a) {
 // DEFS:   ::mlir::OperationState __state__(location, getOperationName());
 // DEFS:   build(builder, __state__, std::forward<decltype(a)>(a));
-// DEFS:   auto __res__ = ::llvm::dyn_cast<FOp>(builder.create(__state__));
-// DEFS:   assert(__res__ && "builder didn't return the right type");
-// DEFS:   return __res__;
+// DEFS:   auto __res__ = builder.create(__state__);
+// DEFS:   assert((::llvm::isa<FOp>(__res__)) && "builder didn't return the right type");
+// DEFS:   return ::llvm::cast<FOp>(__res__);
 // DEFS: }
 
 // DEFS: FOp FOp::create(::mlir::ImplicitLocOpBuilder &builder, ::mlir::Value a) {

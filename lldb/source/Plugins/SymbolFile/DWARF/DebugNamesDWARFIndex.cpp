@@ -311,7 +311,7 @@ getParentChain(Entry entry,
       // Bad data.
       LLDB_LOG_ERROR(
           GetLog(DWARFLog::Lookups), parent.takeError(),
-          "Failed to extract parent entry from a non-empty IDX_parent");
+          "Failed to extract parent entry from a non-empty IDX_parent: {0}");
       return std::nullopt;
     }
 

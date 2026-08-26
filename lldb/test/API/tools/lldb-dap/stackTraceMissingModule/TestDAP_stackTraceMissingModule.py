@@ -4,7 +4,7 @@ Test lldb-dap stack trace when module is missing
 
 import re
 
-from lldbsuite.test.decorators import skipUnlessPlatform
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedReason
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase

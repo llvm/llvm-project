@@ -130,6 +130,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       v8s16, v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
 
   auto allBoolScalarsAndVectors = {s1, v2s1, v3s1, v4s1, v8s1, v16s1};
+  auto allBoolVectors = {v2s1, v3s1, v4s1, v8s1, v16s1};
 
   auto allIntScalars = {s8, s16, s32, s64, s128};
 
@@ -165,10 +166,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       HasArbitraryPrecisionInts ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
-  auto ExtendedScalarsAndVectors =
+  auto ExtendedIntScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
-        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+        return IsExtendedInts && Ty.isValid() &&
+               !Ty.isPointerOrPointerVector() && Ty.getScalarSizeInBits() > 1;
       };
   auto ExtendedScalarsAndVectorsProduct = [IsExtendedInts](
                                               const LegalityQuery &Query) {
@@ -331,7 +333,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
-      .legalIf(ExtendedScalarsAndVectors);
+      .legalIf(ExtendedIntScalarsAndVectors)
+      // LLVM i1 maps to OpTypeBool, not OpTypeInt.
+      .scalarizeIf(typeInSet(0, allBoolVectors), 0)
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
@@ -440,6 +445,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           1, ElementCount::getFixed(MaxVectorSize)))
       .legalIf([IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[1];
         return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
@@ -447,9 +455,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
                     typeInSet(1, allPtrsScalarsAndVectors)));
 
-  getActionDefinitionsBuilder(G_FCMP).legalIf(
-      all(typeInSet(0, allBoolScalarsAndVectors),
-          typeInSet(1, allFloatScalarsAndVectors)));
+  getActionDefinitionsBuilder(G_FCMP)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           1, ElementCount::getFixed(MaxVectorSize)))
+      .legalIf(all(typeInSet(0, allBoolScalarsAndVectors),
+                   typeInSet(1, allFloatScalarsAndVectors)));
 
   getActionDefinitionsBuilder({G_ATOMICRMW_OR, G_ATOMICRMW_ADD, G_ATOMICRMW_AND,
                                G_ATOMICRMW_MAX, G_ATOMICRMW_MIN,
@@ -468,6 +479,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG).alwaysLegal();
+  getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
 
   getActionDefinitionsBuilder({G_UADDO, G_USUBO, G_UMULO, G_SMULO})
       .alwaysLegal();

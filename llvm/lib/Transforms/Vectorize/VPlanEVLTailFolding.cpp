@@ -185,6 +185,16 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                      SpliceR, EVL, Mask);
   }
 
+  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_store>(
+                            m_VPValue(), m_VPValue(), m_VPValue(),
+                            m_RemoveMask(HeaderMask, Mask),
+                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
+    auto *NewStore = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
+    NewStore->setOperand(3, Mask ? Mask : Plan->getTrue());
+    NewStore->setOperand(4, &EVL);
+    return NewStore;
+  }
+
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
     if (Rdx->isConditional() &&
         match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask)))

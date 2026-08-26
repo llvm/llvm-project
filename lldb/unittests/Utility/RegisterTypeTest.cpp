@@ -499,9 +499,6 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
   // then the flags set itself. There should only be one definition of each
   // enum, even if it is used by multiple fields.
 
-  // In the server we assume that each type has a unqiue address and use
-  // that to deduplicate them. So here we heap allocate them to simulate that.
-
   StreamString strm;
   auto enum_a = std::make_shared<RegisterTypeEnum>(
       "enum_a",
@@ -513,9 +510,9 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
       "enum_c",
       RegisterTypeEnum::Enumerators{RegisterTypeEnum::Enumerator(2, "two")});
 
-  std::unordered_set<const RegisterType *> previously_emitted;
+  std::unordered_set<std::string> previously_emitted;
   // Pretend that enum_c was already emitted for a different flag set.
-  previously_emitted.insert(enum_c.get());
+  previously_emitted.insert(enum_c->GetID());
 
   std::vector<RegisterTypeFlags::Field> fields{
       RegisterTypeFlags::Field("f1", 31, 31, enum_a.get()),
@@ -546,7 +543,7 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
       "enum_d",
       RegisterTypeEnum::Enumerators{RegisterTypeEnum::Enumerator(3, "three")});
   fields.push_back(RegisterTypeFlags::Field("f5", 25, 26, enum_d.get()));
-  auto TestFlags2 = std::make_shared<RegisterTypeFlags>("Test", 4, fields);
+  auto TestFlags2 = std::make_shared<RegisterTypeFlags>("Test2", 4, fields);
 
   strm.Clear();
   TestFlags2->ToXML(strm, previously_emitted);
@@ -554,7 +551,7 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
             "<enum id=\"enum_d\" size=\"4\">\n"
             "  <evalue name=\"three\" value=\"3\"/>\n"
             "</enum>\n"
-            "<flags id=\"Test\" size=\"4\">\n"
+            "<flags id=\"Test2\" size=\"4\">\n"
             "  <field name=\"f1\" start=\"31\" end=\"31\" type=\"enum_a\"/>\n"
             "  <field name=\"f2\" start=\"30\" end=\"30\" type=\"enum_a\"/>\n"
             "  <field name=\"f3\" start=\"29\" end=\"29\" type=\"enum_b\"/>\n"
@@ -566,4 +563,37 @@ TEST(RegisterTypeTest, RegisterTypeFlagsToXML) {
   strm.Clear();
   TestFlags2->ToXML(strm, previously_emitted);
   ASSERT_EQ(strm.GetString(), "");
+}
+
+TEST(RegisterTypeTest, XMLAttributeEscaping) {
+  RegisterTypeEnum enum_type("enum<>&\"'",
+                             {RegisterTypeEnum::Enumerator(0, "zero")});
+  RegisterTypeFlags flags_type(
+      "flags<>&\"'", 1, {RegisterTypeFlags::Field("field", 0, 0, &enum_type)});
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  flags_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<enum id=\"enum&lt;&gt;&amp;&quot;&apos;\" size=\"1\">\n"
+            "  <evalue name=\"zero\" value=\"0\"/>\n"
+            "</enum>\n"
+            "<flags id=\"flags&lt;&gt;&amp;&quot;&apos;\" size=\"1\">\n"
+            "  <field name=\"field\" start=\"0\" end=\"0\" "
+            "type=\"enum&lt;&gt;&amp;&quot;&apos;\"/>\n"
+            "</flags>\n");
+}
+
+TEST(RegisterTypeTest, XMLDefinitionsAreDeduplicatedByID) {
+  RegisterTypeEnum first("same_id", {RegisterTypeEnum::Enumerator(0, "first")});
+  RegisterTypeEnum second("same_id",
+                          {RegisterTypeEnum::Enumerator(1, "second")});
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  first.ToXML(strm, previously_emitted);
+  second.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(), "<enum id=\"same_id\">\n"
+                              "  <evalue name=\"first\" value=\"0\"/>\n"
+                              "</enum>\n");
 }

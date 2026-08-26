@@ -59,8 +59,14 @@ export class LLDBDapServer implements vscode.Disposable {
       return this.serverInfo;
     }
 
+    // Merge the parent env with the user defined env (user defined takes priority).
+    const dapSpawnOptions: child_process.SpawnOptionsWithoutStdio = {
+      ...options,
+      env: { ...process.env, ...options?.env },
+    };
+
     this.serverInfo = new Promise((resolve, reject) => {
-      const process = child_process.spawn(dapPath, dapArgs, options);
+      const process = child_process.spawn(dapPath, dapArgs, dapSpawnOptions);
       process.on("error", (error) => {
         reject(error);
         this.cleanUp(process);

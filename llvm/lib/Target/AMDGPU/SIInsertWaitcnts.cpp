@@ -3705,18 +3705,39 @@ bool SIInsertWaitcnts::run() {
     }
   }
 
-  if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
-    // Hardware entrypoints must begin with a specific sequence:
-    //   GLOBAL_PREFETCH_B8 V0, NULL SCOPE:SCOPE_SE
-    //   V_NOP
-    MachineBasicBlock::iterator I = EntryBB.begin();
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
-        .addReg(AMDGPU::SGPR_NULL64)
-        .addReg(AMDGPU::VGPR0, RegState::Undef)
-        .addImm(0)
-        .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
-    Modified = true;
+  if (MFI->isEntryFunction()) {
+    MachineBasicBlock::iterator InsertPt = EntryBB.begin();
+
+    if (ST.hasWaitXcnt()) {
+      // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+      // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+      // insertion logic, which assumes multi-group mode by default.
+      unsigned RegEncoding =
+          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+      BuildMI(EntryBB, InsertPt, DebugLoc(),
+              TII.get(AMDGPU::S_SETREG_IMM32_B32))
+          .addImm(1)
+          .addImm(RegEncoding);
+      Modified = true;
+    }
+
+    if (ST.hasRequiresInitialUnclausedVmem()) {
+      // Hardware entrypoints must begin with a specific sequence:
+      //   S_MOV_B64 S[64:65], 0
+      //   V_NOP
+      //   GLOBAL_PREFETCH_B8 V0, S[64:65] SCOPE:SCOPE_SE TH:TH_LOAD_RT
+      BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::S_MOV_B64),
+              AMDGPU::SGPR64_SGPR65)
+          .addImm(0);
+      BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+      BuildMI(EntryBB, InsertPt, DebugLoc(),
+              TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
+          .addReg(AMDGPU::SGPR64_SGPR65)
+          .addReg(AMDGPU::VGPR0, RegState::Undef)
+          .addImm(0)
+          .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
+      Modified = true;
+    }
   }
 
   return Modified;

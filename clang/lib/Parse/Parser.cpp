@@ -83,8 +83,6 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
         return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
       };
-
-  Initialize();
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -580,6 +578,9 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
+
+  // Prime the lexer look-ahead.
+  ConsumeToken();
 }
 
 void Parser::DestroyTemplateIds() {
@@ -2381,9 +2382,11 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
-  // This should already diagnosed in phase 4, just skip unil semicolon.
-  if (!Tok.isOneOf(tok::semi, tok::l_square))
+  if (Tok.isNoneOf(tok::semi, tok::l_square, tok::eof)) {
+    Diag(Tok, diag::err_unexpected_tok_after_module_name)
+        << PP.getSpelling(Tok);
     SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+  }
 
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);

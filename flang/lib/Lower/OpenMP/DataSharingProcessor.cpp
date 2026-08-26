@@ -66,30 +66,27 @@ DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap &symTable, bool isTargetPrivatization,
-    llvm::ArrayRef<const semantics::Symbol *> symbolsCoveredByReductionElements)
+    lower::SymMap &symTable, bool isTargetPrivatization)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
       isTargetPrivatization(isTargetPrivatization), visitor(semaCtx) {
-  this->symbolsCoveredByReductionElements.insert(
-      symbolsCoveredByReductionElements.begin(),
-      symbolsCoveredByReductionElements.end());
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
 }
 
-DataSharingProcessor::DataSharingProcessor(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::pft::Evaluation &eval, bool useDelayedPrivatization,
-    lower::SymMap &symTable, bool isTargetPrivatization,
-    llvm::ArrayRef<const semantics::Symbol *> symbolsCoveredByReductionElements)
-    : DataSharingProcessor(
-          converter, semaCtx, {}, eval,
-          /*shouldCollectPreDeterminedSymols=*/false, useDelayedPrivatization,
-          symTable, isTargetPrivatization, symbolsCoveredByReductionElements) {}
+DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
+                                           semantics::SemanticsContext &semaCtx,
+                                           lower::pft::Evaluation &eval,
+                                           bool useDelayedPrivatization,
+                                           lower::SymMap &symTable,
+                                           bool isTargetPrivatization)
+    : DataSharingProcessor(converter, semaCtx, {}, eval,
+                           /*shouldCollectPreDeterminedSymols=*/false,
+                           useDelayedPrivatization, symTable,
+                           isTargetPrivatization) {}
 
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps,
@@ -221,7 +218,10 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *lastPrivIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+  // Conditional-lastprivate symbols use their own guarded copy-back (from the
+  // reduction accumulator), not the standard "last iteration wins" copy-back.
+  if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+      !conditionalLastPrivatizedSymbols.contains(sym))
     converter.copyHostAssociateVar(*sym, lastPrivIP, /*hostIsSource=*/false);
 }
 
@@ -274,33 +274,51 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                                  explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      lastprivateModifierNotSupported(*lastPrivateClause,
-                                      converter.getCurrentLocation());
+      auto &modifier = std::get<
+          std::optional<omp::clause::Lastprivate::LastprivateModifier>>(
+          lastPrivateClause->t);
+
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
-      collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+      if (modifier) {
+        assert(*modifier ==
+                   omp::clause::Lastprivate::LastprivateModifier::Conditional &&
+               "unsupported lastprivate modifier");
+        // The conditional modifier was added in OpenMP 5.0.  In earlier
+        // versions semantics only warns and ignores it, so fall back to a
+        // regular lastprivate here to keep lowering consistent and avoid the
+        // conditional path for entities it cannot handle (e.g. characters).
+        if (semaCtx.langOptions().OpenMPVersion >= 50) {
+          collectOmpObjectListSymbol(objects, conditionalLastPrivatizedSymbols);
+        } else {
+          collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+        }
+      } else {
+        collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
+      }
     }
   }
 
   // TODO For common blocks, add the underlying objects within the block. Doing
   // so, we won't need to explicitly handle block objects (or forget to do
   // so).
+  // A conditional-lastprivate symbol is bound directly to the reduction struct
+  // (not privatized) UNLESS the construct opts into the private-copy lowering
+  // (conditionalLpUsesPrivateCopy, set by worksharing loops).  In that mode it
+  // gets an ordinary private copy -- the "working" value that in-loop reads see
+  // and that carries the execution-order value across iterations -- with the
+  // reduction struct acting as the conditional-last accumulator, and the
+  // standard lastprivate copy-back suppressed (see copyLastPrivateSymbol /
+  // insertLastPrivateCompare) in favor of the conditional copy-back.
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!isException(sym))
+    if (!isException(sym) && (conditionalLpUsesPrivateCopy ||
+                              !conditionalLastPrivatizedSymbols.contains(sym)))
       allPrivatizedSymbols.insert(sym);
-}
-
-bool DataSharingProcessor::isCoveredByReductionElement(
-    const semantics::Symbol *sym) const {
-  if (symbolsCoveredByReductionElements.contains(sym) ||
-      symbolsCoveredByReductionElements.contains(&sym->GetUltimate()))
-    return true;
-
-  if (const auto *hostAssoc = sym->detailsIf<semantics::HostAssocDetails>())
-    return symbolsCoveredByReductionElements.contains(&hostAssoc->symbol()) ||
-           symbolsCoveredByReductionElements.contains(
-               &hostAssoc->symbol().GetUltimate());
-
-  return false;
+  if (conditionalLpUsesPrivateCopy)
+    for (auto *sym : conditionalLastPrivatizedSymbols)
+      if (!isException(sym))
+        allPrivatizedSymbols.insert(sym);
+  // (A firstprivate + conditional-lastprivate symbol appears in both lists;
+  // allPrivatizedSymbols is a SetVector, so it is inserted only once.)
 }
 
 bool DataSharingProcessor::needBarrier() {
@@ -344,7 +362,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
         for (const auto &mem : commonDet->objects())
           if (mem->test(semantics::Symbol::Flag::OmpLastPrivate))
             return true;
-      } else if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+      } else if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+                 !conditionalLastPrivatizedSymbols.contains(sym))
         return true;
     }
 
@@ -519,11 +538,6 @@ void DataSharingProcessor::collectPrivatizedSymbols(
       return false;
 
     if (collectImplicit) {
-      // If all uses of a privatisaed variable are covered by an expr in a
-      // reduction clause, these should be ignored.
-      if (isCoveredByReductionElement(sym))
-        return false;
-
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
       // and not be added/captured by later directives. Parallel regions
