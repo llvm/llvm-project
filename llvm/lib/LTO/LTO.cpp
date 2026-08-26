@@ -1345,8 +1345,8 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::run(AddStreamFn AddStream, FileCache ThinLTOCache,
-               FileCache RegularLTOCache) {
+Error LTO::run(AddStreamFn AddStream, FileCache Cache,
+               bool CacheLTOPartitions) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
@@ -1398,11 +1398,12 @@ Error LTO::run(AddStreamFn AddStream, FileCache ThinLTOCache,
   if (SupportsHotColdNew)
     ThinLTO.CombinedIndex.setWithSupportsHotColdNew();
 
-  Error Result = runRegularLTO(AddStream, RegularLTOCache);
+  Error Result =
+      runRegularLTO(AddStream, CacheLTOPartitions ? Cache : FileCache());
   if (!Result)
     // This will reset the GlobalResolutions optional once done with it to
     // reduce peak memory before importing.
-    Result = runThinLTO(AddStream, ThinLTOCache, GUIDPreservedSymbols);
+    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
@@ -1410,7 +1411,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache ThinLTOCache,
   return Result;
 }
 
-Error LTO::runRegularLTO(AddStreamFn AddStream, FileCache &LTOPartitionsCache) {
+Error LTO::runRegularLTO(AddStreamFn AddStream, FileCache LTOPartitionsCache) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
 

@@ -489,8 +489,7 @@ struct Config {
   int32_t splitStackAdjustSize;
   SmallVector<uint8_t, 0> packageMetadata;
 
-  llvm::StringRef ltoPartitionsCacheDir;
-  llvm::CachePruningPolicy ltoPartitionsCachePolicy;
+  bool ltoPartitionsUsesThinLTOCache;
 
   // The following config options do not directly correspond to any
   // particular command line options.
