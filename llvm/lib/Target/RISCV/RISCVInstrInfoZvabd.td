@@ -109,8 +109,8 @@ multiclass VPatTernaryW_VX_VS2First<string intrinsic, string instruction,
   foreach vtiTowti = vtilist in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
-    let Predicates = GetVTypePredicates<vti>.Predicates in
-    let append Predicates = GetVTypePredicates<wti>.Predicates in
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in
     defm : VPatTernaryWithPolicy<intrinsic, instruction,
                                  "V"#vti.ScalarSuffix,
                                  wti.Vector, vti.Vector, vti.Scalar,
@@ -125,8 +125,8 @@ multiclass VPatWidenABDVL_VV_VX<SDNode op, string instruction> {
   foreach vtiTowti = ABDAIntVectors in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
-    let Predicates = GetVTypePredicates<vti>.Predicates in
-    let append Predicates = GetVTypePredicates<wti>.Predicates in
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in
     def : Pat<(op (SplatPat XLenVT:$rs1),
                   (vti.Vector vti.RegClass:$rs2),
                   (wti.Vector wti.RegClass:$rd),
