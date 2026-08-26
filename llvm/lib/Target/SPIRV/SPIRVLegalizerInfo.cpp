@@ -360,12 +360,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(ExtendedScalarsAndVectorsProduct);
 
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct(allScalarsAndVectors)
-      .legalIf(ExtendedScalarsAndVectorsProduct)
       .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
-                           0, ElementCount::getFixed(MaxVectorSize)));
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .legalForCartesianProduct(allScalarsAndVectors)
+      .legalIf(ExtendedScalarsAndVectorsProduct);
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .moreElementsToNextPow2(0)
