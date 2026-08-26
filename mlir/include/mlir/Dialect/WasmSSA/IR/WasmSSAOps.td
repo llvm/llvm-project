@@ -283,7 +283,9 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
                    "StringRef":$importName,
                    "FunctionType": $type)>
   ];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name `:` $type "
+                       "(`arg_attrs` `=` $arg_attrs^)? "
+                       "(`res_attrs` `=` $res_attrs^)? attr-dict";
 }
 
 def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
@@ -577,7 +579,7 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> 
        return ::mlir::SymbolTable::Visibility::Nested;
       };
    }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $limits attr-dict";
 }
 
 def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
@@ -617,7 +619,7 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterfac
        return ::mlir::SymbolTable::Visibility::Nested;
     };
   }];
-  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
+  let assemblyFormat = "$importName `from` $moduleName `as` $sym_name $type attr-dict";
 }
 
 def WasmSSA_ReturnOp : WasmSSA_Op<"return", [Terminator]> {

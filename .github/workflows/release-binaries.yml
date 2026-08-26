@@ -22,6 +22,8 @@ on:
           - ubuntu-22.04
           - ubuntu-22.04-arm
           - macos-14
+          - windows-2022
+          - windows-11-arm
 
   workflow_call:
     inputs:
@@ -292,7 +294,7 @@ jobs:
       run: |
         choco install wixtoolset --version 3.14.1.20250415
         # Add wix install directory to PATH.
-        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName >> $env:GITHUB_PATH
 
     - name: Build Windows
       id: build-windows
@@ -316,7 +318,7 @@ jobs:
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
-      if: runner.os == 'Windows' && always()
+      if: runner.os == 'Windows' && failure()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
