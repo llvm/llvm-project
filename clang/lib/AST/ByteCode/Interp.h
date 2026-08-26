@@ -34,7 +34,6 @@
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Compiler.h"
 #include <type_traits>
 
@@ -1359,18 +1358,6 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
-  // FIXME: The source check here isn't entirely correct.
-  if (LHS.pointsToStringLiteral() && RHS.pointsToStringLiteral() &&
-      LHS.getFieldDesc()->asExpr() != RHS.getFieldDesc()->asExpr()) {
-    if (arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_literal_comparison)
-          << LHS.toDiagnosticString(S.getASTContext())
-          << RHS.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-  }
-
   if (Pointer::hasSameBase(LHS, RHS)) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
@@ -1380,17 +1367,24 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
   }
-
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
-  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && RHS.isBlockPointer() &&
-      RHS.getOffset() == 0) {
+
+  if (LHS.isStringPointer() && RHS.isStringPointer() &&
+      arePotentiallyOverlappingStringLiterals(LHS, RHS)) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_literal_comparison)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (LHS.isOnePastEnd() && !RHS.isOnePastEnd()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
   }
-  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && LHS.isBlockPointer() &&
-      LHS.getOffset() == 0) {
+  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
@@ -2210,11 +2204,11 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  S.Stk.push<T>(Ptr.deref<T>());
+  S.Stk.push<T>(Ptr.load<T>());
   return true;
 }
 
@@ -2223,11 +2217,11 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  S.Stk.push<T>(Ptr.deref<T>());
+  S.Stk.push<T>(Ptr.load<T>());
   return true;
 }
 
@@ -2551,6 +2545,20 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
     return Pointer(Ptr.asFunctionPointer().Func, N);
+  } else if (Ptr.isStringPointer()) {
+    int64_t NewOffset;
+    if constexpr (Op == ArithOp::Add)
+      NewOffset = Ptr.getRawOffset() + static_cast<int64_t>(Offset);
+    else
+      NewOffset = Ptr.getRawOffset() - static_cast<int64_t>(Offset);
+    if (NewOffset < 0 ||
+        NewOffset > (Ptr.asStringPointer().getLiteral()->getLength() + 1)) {
+      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << NewOffset << /*non-array*/ false
+          << (Ptr.asStringPointer().getLiteral()->getLength() + 1);
+      return std::nullopt;
+    }
+    return Pointer(Ptr.asStringPointer(), NewOffset);
   } else if (!Ptr.isBlockPointer()) {
     return std::nullopt;
   }
@@ -2987,6 +2995,9 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
     } else if (Ptr.isFunctionPointer()) {
       const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
       S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);
+    } else if (Ptr.isStringPointer()) {
+      S.Stk.push<T>(IntegralKind::ExprAddress,
+                    (const void *)Ptr.asStringPointer().getLiteral(), 0);
     } else {
       S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
     }
@@ -3538,6 +3549,10 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   }
 
   if (Ptr.isRoot() || !Ptr.isUnknownSizeArray()) {
+    if (Ptr.isStringPointer()) {
+      S.Stk.push<Pointer>(Ptr.asStringPointer().decay());
+      return true;
+    }
     S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
     return true;
   }
@@ -3586,6 +3601,11 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Type *Ty) {
     S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Ty);
   }
 
+  return true;
+}
+
+inline bool GetStringPtr(InterpState &S, const Expr *Base) {
+  S.Stk.push<Pointer>(Base, S.newStringID());
   return true;
 }
 

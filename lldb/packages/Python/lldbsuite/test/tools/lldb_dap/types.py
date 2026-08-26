@@ -1080,7 +1080,7 @@ class InitializeArgs:
     supportsStartDebuggingRequest: Optional[bool] = None
     supportsANSIStyling: Optional[bool] = None
     sourceInitFile: bool = field(
-        metadata={"alias": "$__lldbSourceInitFile"}, default=False
+        metadata={"alias": "$__lldb_sourceInitFile"}, default=False
     )
 
     command_ = "initialize"
@@ -1118,9 +1118,9 @@ class LaunchArgs:
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
     disableASLR: bool = False
-    disableSTDIO: bool = False
+    disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
-    console: Console = Console.INTERNAL
+    console: Optional[Console] = None
     stdio: Optional[List[Optional[str]]] = None
 
     # Configurations.
@@ -1128,7 +1128,7 @@ class LaunchArgs:
     enableAutoVariableSummaries: bool = False
     enableSyntheticChildDebugging: bool = False
     displayExtendedBacktrace: bool = False
-    stopOnEntry: bool = False
+    stopOnEntry: Optional[bool] = None
     timeout: Optional[float] = None
     commandEscapePrefix: Optional[str] = None
     customFrameFormat: Optional[str] = None

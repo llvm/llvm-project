@@ -2314,6 +2314,10 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           !Var->isStaticLocal())
         return false;
 
+      // Address of a managed variable is never a constant expression.
+      if (Info.getLangOpts().CUDA && Var->hasAttr<HIPManagedAttr>())
+        return false;
+
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
       if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
@@ -2321,8 +2325,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
-             !Var->getType()->isCUDADeviceBuiltinTextureType()) ||
-            Var->hasAttr<HIPManagedAttr>())
+             !Var->getType()->isCUDADeviceBuiltinTextureType()))
           return false;
       }
     }
@@ -23119,31 +23122,25 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
   if (!EvaluatePointer(E, String, Info))
     return std::nullopt;
 
-  QualType CharTy = E->getType()->getPointeeType();
-
   // Fast path: if it's a string literal, search the string value.
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();
-    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() &&
-        S->getCharByteWidth() == 1 &&
-        // FIXME: Add fast-path for wchar_t too.
-        Info.Ctx.hasSameUnqualifiedType(CharTy, Info.Ctx.CharTy)) {
-      Str = Str.substr(Off);
-
-      StringRef::size_type Pos = Str.find(0);
-      if (Pos != StringRef::npos)
-        Str = Str.substr(0, Pos);
-
-      if (StringResult)
+    if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size()) {
+      UnsignedOrNone ZeroIndex = S->findZeroCodeUnit(Off);
+      if (StringResult) {
+        if (ZeroIndex)
+          Str = Str.substr(Off, *ZeroIndex);
         *StringResult = Str;
-      return Str.size();
-    }
+      }
 
-    // Fall through to slow path.
+      return ZeroIndex.value_or(Str.size());
+    }
+    // For an invalid index, fall through to the offset handling below.
   }
 
+  QualType CharTy = E->getType()->getPointeeType();
   // Slow path: scan the bytes of the string looking for the terminating 0.
   for (uint64_t Strlen = 0; /**/; ++Strlen) {
     APValue Char;
