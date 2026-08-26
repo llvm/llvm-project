@@ -58,7 +58,7 @@
 
 # DISASM:      Disassembly of section .text:
 # DISASM:      00401200 <func1>:
-# DISASM-NEXT: 401200:       calll   0x401230 <func2+0x401230>
+# DISASM-NEXT: 401200:       calll   0x401230 <func1+0x30>
 # DISASM-NEXT: 401205:       calll   0x401240 <ifunc>
 # DISASM-NEXT:               retl
 
