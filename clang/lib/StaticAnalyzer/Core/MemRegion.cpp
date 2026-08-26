@@ -1109,10 +1109,11 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
       // so they are placed in the global internal space, which is not
       // invalidated by calls to functions declared in system headers.
       if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
-          !isStdStreamVar(D))
+          !isStdStreamVar(D)) {
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
-      else
+      } else {
         sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
