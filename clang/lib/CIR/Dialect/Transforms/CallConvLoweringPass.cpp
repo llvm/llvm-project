@@ -234,12 +234,9 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         };
         if (!llvm::any_of(members, spansRecord))
           return false;
-        // A bit-field access unit's declared width is a compiler choice and
-        // can be narrower than the bit-fields it stores, so reaching the
-        // union's full size does not by itself confirm a member's content
-        // is real.  When the union contains such a unit, require some
-        // member (the unit itself or another one) that both reaches
-        // the full size and holds data.
+        // A bit-field access unit's width may not match the bits it actually
+        // stores, so some member (the unit itself or another one) must both
+        // match the union's size and hold data.
         llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
         if (llvm::any_of(kinds, cir::isBitFieldAccessUnit) &&
             !llvm::any_of(llvm::zip_equal(members, kinds),
