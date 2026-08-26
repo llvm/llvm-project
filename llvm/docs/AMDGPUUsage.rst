@@ -1954,6 +1954,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
+  llvm.amdgcn.s.setprio                            Provide access to the ``s_setprio`` instruction for setting the wave priority to the given value.
+                                                   The intrinsic ensures that the instruction acts as a full barrier for instruction scheduling, i.e.
+                                                   no instruction may be scheduled across it.
+
+  llvm.amdgcn.s.setprio.relaxed                    Like ``llvm.amdgcn.s.setprio``, but does not act as a scheduling barrier.
+
   llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
                                                    sign-extended from the width of the underlying PC hardware register even on
                                                    processors where the s_getpc_b64 instruction returns a zero-extended value.

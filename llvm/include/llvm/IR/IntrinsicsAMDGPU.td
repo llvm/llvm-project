@@ -2229,6 +2229,12 @@ def int_amdgcn_s_setprio :
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects]>;
 
+// Like int_amdgcn_s_setprio but without scheduling boundary behavior.
+def int_amdgcn_s_setprio_relaxed :
+  ClangBuiltin<"__builtin_amdgcn_s_setprio_relaxed">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects]>;
+
 def int_amdgcn_s_setprio_inc_wg :
   ClangBuiltin<"__builtin_amdgcn_s_setprio_inc_wg">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,

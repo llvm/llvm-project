@@ -7361,6 +7361,14 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MRI.setSimpleHint(MI.getOperand(0).getReg(), MI.getOperand(6).getReg());
     return BB;
   }
+  case AMDGPU::S_SETPRIO_BARRIER: {
+    int64_t Priority = MI.getOperand(0).getImm();
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::SCHED_BARRIER)).addImm(0);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_SETPRIO)).addImm(Priority);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::SCHED_BARRIER)).addImm(0);
+    MI.eraseFromParent();
+    return BB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())

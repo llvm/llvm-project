@@ -553,6 +553,16 @@ def SCHED_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let isMeta = 1;
 }
 
+// Expands to SCHED_BARRIER 0 + S_SETPRIO + SCHED_BARRIER 0 to provide
+// backwards compatible behavior for setprio intrinsic since S_SETPRIO
+// used to be a scheduling boundary. It no longer is to allow for more
+// control over the scheduling behavior.
+def S_SETPRIO_BARRIER : SPseudoInstSI<(outs), (ins i16imm:$priority),
+  [(int_amdgcn_s_setprio timm:$priority)]> {
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+}
+
 def SCHED_GROUP_BARRIER : SPseudoInstSI<
   (outs),
   (ins i32imm:$mask, i32imm:$size, i32imm:$syncid),
