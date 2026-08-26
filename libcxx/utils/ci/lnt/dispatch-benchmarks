@@ -291,9 +291,9 @@ def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) 
                             tablefmt='plain', disable_numparse=True,
                             colalign=('left', 'left', 'left', 'right', 'left'))
           if rows else '  nothing to do', file=out)
-    print('', file=out)
 
     if args.dry_run:
+        print('', file=out)
         print('DRY RUN: nothing was requested.', file=out)
 
 
