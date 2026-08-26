@@ -170,21 +170,17 @@ static uint64_t addMachOSymbolStubs(const object::MachOObjectFile &MachO,
   return Gsym.getNumFunctionInfos() - NumBefore;
 }
 
-llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
-                                           OutputAggregator &Out,
-                                           GsymCreator &Gsym) {
+template <typename SymbolRange>
+static Expected<size_t> loadSymbols(const object::ObjectFile &Obj,
+                                    SymbolRange Symbols, OutputAggregator &Out,
+                                    GsymCreator &Gsym, bool CopyStrings) {
   using namespace llvm::object;
 
-  const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
-  const bool IsMachO = MachO != nullptr;
+  const bool IsMachO = isa<MachOObjectFile>(&Obj);
   const bool IsELF = isa<ELFObjectFileBase>(&Obj);
+  const size_t NumBefore = Gsym.getNumFunctionInfos();
 
-  // Read build ID.
-  Gsym.setUUID(getUUID(Obj));
-
-  // Parse the symbol table.
-  size_t NumBefore = Gsym.getNumFunctionInfos();
-  for (const object::SymbolRef &Sym : Obj.symbols()) {
+  for (const object::SymbolRef &Sym : Symbols) {
     Expected<SymbolRef::Type> SymType = Sym.getType();
     if (!SymType) {
       consumeError(SymType.takeError());
@@ -199,7 +195,6 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         !Gsym.IsValidTextAddress(*AddrOrErr))
       continue;
     // Function size for MachO files will be 0
-    constexpr bool NoCopy = false;
     const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
@@ -215,20 +210,82 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
     if (IsMachO)
       Name->consume_front("_");
     Gsym.addFunctionInfo(
-        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
+        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, CopyStrings)));
   }
-  size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
+  return Gsym.getNumFunctionInfos() - NumBefore;
+}
+
+// MiniDebugInfo omits exported functions, so also read the outer .dynsym. It is
+// supplementary, so bad data is only a warning.
+static llvm::Error loadGnuDebugDataSymbols(const object::ELFObjectFileBase &Obj,
+                                           OutputAggregator &Out,
+                                           GsymCreator &Gsym) {
+  using namespace llvm::object;
+
+  if (!Obj.hasGnuDebugDataSection())
+    return Error::success();
+
+  Expected<size_t> FunctionsAddedCount = loadSymbols(
+      Obj, Obj.getDynamicSymbolIterators(), Out, Gsym, /*CopyStrings=*/false);
+  if (!FunctionsAddedCount)
+    return FunctionsAddedCount.takeError();
   if (Out.GetOS())
-    *Out.GetOS() << "Loaded " << FunctionsAddedCount
+    *Out.GetOS() << "Loaded " << *FunctionsAddedCount
+                 << " functions from dynamic symbol table.\n";
+
+  Expected<OwningBinary<ObjectFile>> DebugDataObj =
+      Obj.getGnuDebugDataObjectFile();
+  if (!DebugDataObj) {
+    // Consume the error even when Report() has no output stream.
+    std::string ErrMsg = toString(DebugDataObj.takeError());
+    Out.Report(
+        "Failed to load the .gnu_debugdata section", [&](raw_ostream &OS) {
+          OS << "warning: unable to read the .gnu_debugdata section: " << ErrMsg
+             << "\n";
+        });
+    return Error::success();
+  }
+
+  // Copy names because the decompressed buffer dies with DebugDataObj.
+  ObjectFile &DebugObj = *DebugDataObj->getBinary();
+  Expected<size_t> DebugFunctionsAdded = loadSymbols(
+      DebugObj, DebugObj.symbols(), Out, Gsym, /*CopyStrings=*/true);
+  if (!DebugFunctionsAdded)
+    return DebugFunctionsAdded.takeError();
+  if (Out.GetOS())
+    *Out.GetOS() << "Loaded " << *DebugFunctionsAdded
+                 << " functions from .gnu_debugdata symbol table.\n";
+  return Error::success();
+}
+
+llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
+                                           OutputAggregator &Out,
+                                           GsymCreator &Gsym) {
+  using namespace llvm::object;
+
+  // Read build ID.
+  Gsym.setUUID(getUUID(Obj));
+
+  // Parse the symbol table.
+  // The main object's buffer outlives the conversion; reference names in place.
+  Expected<size_t> FunctionsAddedCount =
+      loadSymbols(Obj, Obj.symbols(), Out, Gsym, /*CopyStrings=*/false);
+  if (!FunctionsAddedCount)
+    return FunctionsAddedCount.takeError();
+  if (Out.GetOS())
+    *Out.GetOS() << "Loaded " << *FunctionsAddedCount
                  << " functions from symbol table.\n";
 
   // Mach-O symbol stubs have no symbol table entries of their own, so
   // synthesize function infos for them using the indirect symbol table.
-  if (IsMachO) {
+  if (const auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
     const uint64_t StubsAddedCount = addMachOSymbolStubs(*MachO, Out, Gsym);
     if (Out.GetOS())
       *Out.GetOS() << "Loaded " << StubsAddedCount
                    << " functions from symbol stubs.\n";
   }
+
+  if (const auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj))
+    return loadGnuDebugDataSymbols(*ELFObj, Out, Gsym);
   return Error::success();
 }

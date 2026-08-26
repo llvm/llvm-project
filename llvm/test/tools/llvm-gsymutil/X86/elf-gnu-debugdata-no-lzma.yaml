@@ -1,0 +1,35 @@
+## Without LZMA support, warn for .gnu_debugdata but keep the main .symtab.
+
+# REQUIRES: !lzma
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s
+
+# CHECK: Loaded 1 functions from symbol table.
+# CHECK: warning: unable to read the .gnu_debugdata section: missing LZMA support (LLVM_ENABLE_LZMA){{$}}
+# CHECK: ended with 1 total
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x10
+    Size:         0x100
+  - Name:         .gnu_debugdata
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      FD377A585A0000016922DE36020021011C00000010CF58CCE0020F008C5D003F914584683D89A6DA8ACC93E24EF1EE3B78669FB5B98EBEAC1DC974D88DE7124A21E9F0D754ED55DCEFDB3E3C730E745C4E5C27E3056A372EB6ACFC8FB5654B4E6104F1883013142F15DB09F0654B2C9AFD33E66D5546A422F8F6E98B95220575393CFBF2854A89BEB2BFE11749A0D163B224EDED9CF3BB4D3767F6D413D98522B1AF4618F87EDB990745A300129E923E0001A40190040000EDE7F1C63E300D8B020000000001595A
+Symbols:
+  - Name:    real_func
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1000
+    Size:    0x10
+    Binding: STB_GLOBAL

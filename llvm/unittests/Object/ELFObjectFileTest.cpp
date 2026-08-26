@@ -11,6 +11,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
@@ -1717,4 +1718,79 @@ FileHeader:
   EXPECT_FALSE(ELFSymHighLow < ELFSymLowHigh);
   EXPECT_FALSE(ELFSymHighHigh < ELFSymLowLow);
   EXPECT_FALSE(ELFSymHighLow < ELFSymLowLow);
+}
+
+// LLVM cannot compress xz, so this .gnu_debugdata content is precomputed. It is
+// the blob from llvm/test/tools/llvm-gsymutil/X86/elf-gnu-debugdata.yaml, which
+// says how to regenerate it.
+static constexpr StringLiteral GnuDebugDataBlob =
+    "FD377A585A0000016922DE36020021011C00000010CF58CCE0020F008C5D003F91458468"
+    "3D89A6DA8ACC93E24EF1EE3B78669FB5B98EBEAC1DC974D88DE7124A21E9F0D754ED55DC"
+    "EFDB3E3C730E745C4E5C27E3056A372EB6ACFC8FB5654B4E6104F1883013142F15DB09F0"
+    "654B2C9AFD33E66D5546A422F8F6E98B95220575393CFBF2854A89BEB2BFE11749A0D163"
+    "B224EDED9CF3BB4D3767F6D413D98522B1AF4618F87EDB990745A300129E923E0001A401"
+    "90040000EDE7F1C63E300D8B020000000001595A";
+
+TEST(ELFObjectFileTest, GnuDebugDataSectionAbsent) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+)");
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  const ELFObjectFileBase &Obj = *ElfOrErr;
+
+  EXPECT_FALSE(Obj.hasGnuDebugDataSection());
+  EXPECT_THAT_EXPECTED(Obj.getGnuDebugDataObjectFile(),
+                       FailedWithMessage("no .gnu_debugdata section"));
+}
+
+TEST(ELFObjectFileTest, GnuDebugDataSectionPresent) {
+  if (!compression::xz::isAvailable())
+    GTEST_SKIP() << "requires LZMA support";
+
+  std::string Yaml = (R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu_debugdata
+    Type:    SHT_PROGBITS
+    Content: )" + GnuDebugDataBlob +
+                      "\n")
+                         .str();
+
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, Yaml);
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  const ELFObjectFileBase &Obj = *ElfOrErr;
+
+  EXPECT_TRUE(Obj.hasGnuDebugDataSection());
+
+  Expected<OwningBinary<ObjectFile>> DebugObjOrErr =
+      Obj.getGnuDebugDataObjectFile();
+  ASSERT_THAT_EXPECTED(DebugObjOrErr, Succeeded());
+  ObjectFile &DebugObj = *DebugObjOrErr->getBinary();
+
+  std::vector<std::pair<StringRef, uint64_t>> Funcs;
+  for (const SymbolRef &Sym : DebugObj.symbols()) {
+    Expected<StringRef> Name = Sym.getName();
+    ASSERT_THAT_EXPECTED(Name, Succeeded());
+    Expected<uint64_t> Addr = Sym.getValue();
+    ASSERT_THAT_EXPECTED(Addr, Succeeded());
+    Funcs.emplace_back(*Name, *Addr);
+  }
+
+  EXPECT_THAT(
+      Funcs,
+      testing::ElementsAre(
+          std::make_pair(StringRef("stripped_func_one"), uint64_t(0x1000)),
+          std::make_pair(StringRef("stripped_func_two"), uint64_t(0x1010))));
 }

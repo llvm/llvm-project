@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -19,8 +20,10 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributeParser.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -892,4 +895,57 @@ StringRef ELFObjectFileBase::getCrelDecodeProblem(SectionRef Sec) const {
   if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
     return Obj->getCrelDecodeProblem(Data);
   return cast<ELF64BEObjectFile>(this)->getCrelDecodeProblem(Data);
+}
+
+static constexpr StringLiteral GnuDebugDataSectionName = ".gnu_debugdata";
+
+static std::optional<SectionRef>
+findGnuDebugDataSection(const ELFObjectFileBase &Obj) {
+  for (SectionRef Sec : Obj.sections()) {
+    Expected<StringRef> NameOrErr = Sec.getName();
+    // Ignore malformed names so they do not prevent finding a valid section.
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      continue;
+    }
+    if (*NameOrErr == GnuDebugDataSectionName)
+      return Sec;
+  }
+  return std::nullopt;
+}
+
+bool ELFObjectFileBase::hasGnuDebugDataSection() const {
+  return findGnuDebugDataSection(*this).has_value();
+}
+
+Expected<OwningBinary<ObjectFile>>
+ELFObjectFileBase::getGnuDebugDataObjectFile() const {
+  std::optional<SectionRef> Sec = findGnuDebugDataSection(*this);
+  if (!Sec)
+    return createError("no " + GnuDebugDataSectionName + " section");
+
+  if (!compression::xz::isAvailable())
+    return createError("missing LZMA support (LLVM_ENABLE_LZMA)");
+
+  Expected<StringRef> Contents = Sec->getContents();
+  if (!Contents)
+    return Contents.takeError();
+
+  SmallVector<uint8_t, 0> Decompressed;
+  if (Error E = compression::xz::decompress(arrayRefFromStringRef(*Contents),
+                                            Decompressed))
+    return createError("failed to decompress: " + toString(std::move(E)));
+
+  // createELFObjectFile() borrows its buffer; OwningBinary keeps it alive.
+  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBufferCopy(
+      toStringRef(Decompressed),
+      getFileName() + " (" + GnuDebugDataSectionName + ")");
+
+  Expected<std::unique_ptr<ObjectFile>> ElfObj =
+      ObjectFile::createELFObjectFile(Buf->getMemBufferRef());
+  if (!ElfObj)
+    return createError("failed to parse the embedded ELF object: " +
+                       toString(ElfObj.takeError()));
+
+  return OwningBinary<ObjectFile>(std::move(*ElfObj), std::move(Buf));
 }

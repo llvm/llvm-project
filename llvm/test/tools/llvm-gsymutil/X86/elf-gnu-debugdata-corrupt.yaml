@@ -1,0 +1,40 @@
+## A corrupt .gnu_debugdata warns without discarding the main .symtab.
+##
+## The content is a valid xz stream header followed by garbage.
+
+# REQUIRES: lzma
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
+
+# CONVERT: Loaded 1 functions from symbol table.
+# CONVERT: warning: unable to read the .gnu_debugdata section: failed to decompress: {{.+}}
+# CONVERT: ended with 1 total
+
+# DUMP: FunctionInfo{{.*}}[0x0000000000001000 - 0x0000000000001010) "real_func"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x10
+    Size:         0x100
+  - Name:         .gnu_debugdata
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      FD377A585A000004E6D6B446DEADBEEFDEADBEEFDEADBEEF
+Symbols:
+  - Name:    real_func
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1000
+    Size:    0x10
+    Binding: STB_GLOBAL
