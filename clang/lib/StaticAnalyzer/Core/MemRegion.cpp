@@ -1102,7 +1102,9 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
     QualType Ty = D->getType();
     assert(!Ty.isNull());
-    if (Ty.isConstQualified()) {
+    // A function reference's binding cannot be changed after initialization,
+    // even though reference types themselves are never const-qualified.
+    if (Ty.isConstQualified() || Ty->isFunctionReferenceType()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
     } else {
       // Pointer value of C standard streams is usually not modified by calls
