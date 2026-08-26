@@ -2981,17 +2981,23 @@ struct InsertOnRangeOpConversion
 
     auto arrayType = adaptor.getSeq().getType();
 
-    // Iteratively extract the array dimensions from the type. Only the
-    // dimensions represented by InsertOnRangeOp are used to expand a fallback
-    // insert chain. The remaining dimensions, if any, belong to an aggregate
-    // element type (e.g. CHARACTER lowers to an LLVM array).
+    // Extract the dimensions of the array being initialized. Only those are
+    // used to expand a fallback insert chain. Any remaining LLVM array
+    // dimension belongs to an aggregate element type: a CHARACTER element is
+    // itself an array of characters.
     llvm::SmallVector<std::int64_t> dims;
     mlir::Type type = arrayType;
-    auto rank = range.getType().getShape().size();
-    for (std::size_t i = 0; i < rank; ++i) {
+    for (std::size_t i = 0, rank = range.getType().getShape().size(); i < rank;
+         ++i) {
       auto t = mlir::cast<mlir::LLVM::LLVMArrayType>(type);
       dims.push_back(t.getNumElements());
       type = t.getElementType();
+    }
+    llvm::SmallVector<std::int64_t> elementDims;
+    mlir::Type scalarType = type;
+    while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(scalarType)) {
+      elementDims.push_back(t.getNumElements());
+      scalarType = t.getElementType();
     }
 
     // Avoid generating long insert chain that are very slow to fold back
@@ -3002,16 +3008,45 @@ struct InsertOnRangeOpConversion
       llvm::FailureOr<mlir::Attribute> cst =
           fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
       if (llvm::succeeded(cst)) {
-        mlir::Attribute dimVal = *cst;
-        for (auto dim : llvm::reverse(dims)) {
-          // Use std::vector in case the number of elements is big.
-          std::vector<mlir::Attribute> elements(dim, dimVal);
-          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        if (elementDims.empty()) {
+          mlir::Attribute dimVal = *cst;
+          for (auto dim : llvm::reverse(dims)) {
+            // Use std::vector in case the number of elements is big.
+            std::vector<mlir::Attribute> elements(dim, dimVal);
+            dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+          }
+          // Replace insert chain with constant.
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                              dimVal);
+          return mlir::success();
         }
-        // Replace insert chain with constant.
-        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
-                                                            dimVal);
-        return mlir::success();
+        // An array with an aggregate element type cannot be described by a
+        // nested ArrayAttr. A CHARACTER array is a dense array of characters,
+        // so replicate the element data into a dense attribute.
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(*cst)) {
+          llvm::StringRef element = strAttr.getValue();
+          std::int64_t elementSize = 1;
+          for (std::int64_t dim : elementDims)
+            elementSize *= dim;
+          if (scalarType.isInteger(8) &&
+              element.size() == static_cast<std::size_t>(elementSize)) {
+            std::int64_t count = 1;
+            for (std::int64_t dim : dims)
+              count *= dim;
+            std::string data;
+            data.reserve(count * element.size());
+            for (std::int64_t i = 0; i < count; ++i)
+              data.append(element.data(), element.size());
+            llvm::SmallVector<std::int64_t> shape(dims);
+            shape.append(elementDims);
+            auto denseAttr = mlir::DenseElementsAttr::getFromRawBuffer(
+                mlir::RankedTensorType::get(shape, scalarType),
+                llvm::ArrayRef(data.data(), data.size()));
+            rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+                range, arrayType, denseAttr);
+            return mlir::success();
+          }
+        }
       }
     }
 
@@ -3703,38 +3738,6 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       tyAttr = this->lowerTy().convertBoxTypeAsStruct(boxType);
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
-    bool hasFlatCharacterInit = false;
-    if (!global.getRegion().empty()) {
-      auto hasValue =
-          mlir::dyn_cast<fir::HasValueOp>(global.getRegion().front().back());
-      auto sequenceType = mlir::dyn_cast<fir::SequenceType>(global.getType());
-      auto charType =
-          sequenceType
-              ? mlir::dyn_cast<fir::CharacterType>(sequenceType.getEleTy())
-              : fir::CharacterType{};
-      auto insert =
-          hasValue ? hasValue.getResval().getDefiningOp<fir::InsertOnRangeOp>()
-                   : fir::InsertOnRangeOp{};
-      auto stringLit = insert
-                           ? insert.getVal().getDefiningOp<fir::StringLitOp>()
-                           : fir::StringLitOp{};
-      auto stringAttr =
-          stringLit ? mlir::dyn_cast<mlir::StringAttr>(stringLit.getValue())
-                    : mlir::StringAttr{};
-      if (sequenceType && charType && charType.getFKind() == 1 && insert &&
-          insert.isFullRange() && stringAttr) {
-        std::string element{stringAttr.getValue()};
-        element.resize(charType.getLen(), ' ');
-        std::string data;
-        data.reserve(sequenceType.getConstantArraySize() * element.size());
-        for (std::size_t i = 0; i < sequenceType.getConstantArraySize(); ++i)
-          data.append(element);
-        tyAttr =
-            mlir::LLVM::LLVMArrayType::get(rewriter.getI8Type(), data.size());
-        initAttr = rewriter.getStringAttr(data);
-        hasFlatCharacterInit = true;
-      }
-    }
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkName());
     auto isConst = global.getConstant().has_value();
@@ -3786,8 +3789,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         g->setAttr(attr.getName(), attr.getValue());
 
     auto &gr = g.getInitializerRegion();
-    if (!hasFlatCharacterInit)
-      rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
+    rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
     if (!gr.empty()) {
       // Replace insert_on_range with a constant dense attribute if the
       // initialization is on the full range.
