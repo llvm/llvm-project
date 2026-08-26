@@ -83,7 +83,6 @@ public:
 
   /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
-  bool isDifferent() { return Changed; }
   bool isDifferent() const { return Changed; }
 
   /// Returns the number of times the current block has been visited
