@@ -506,6 +506,6 @@ namespace ConstexprForRangeVar {
   void f() {
     int arr[] = {1, 2, 3};
     for (constexpr int a : arr) {} // both-error {{constexpr variable 'a' must be initialized by a constant expression}} \
-                                   // both-note {{range-based for loop variable is initialized on each iteration from the loop's iterator, whose value is not known at compile time}}
+                                   // both-note {{iterator of the range-based for loop over 'arr' is not a constant expression}}
   }
 }

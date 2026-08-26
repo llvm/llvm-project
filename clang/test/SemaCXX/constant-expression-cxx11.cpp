@@ -1945,7 +1945,7 @@ namespace InitializerList {
   }
 
   void constexpr_loop_var() {
-    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{range-based for loop variable is initialized on each iteration from the loop's iterator, whose value is not known at compile time}}
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{iterator of the range-based for loop is not a constant expression}}
   }
 }
 

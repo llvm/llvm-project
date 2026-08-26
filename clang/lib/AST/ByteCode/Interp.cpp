@@ -163,7 +163,14 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->isCXXForRangeImplicitVar()) {
-    S.FFDiag(Loc, diag::note_constexpr_ltor_for_range_var);
+    auto [Range, RangeDecl] = GetCXXForRangeRange(VarD);
+    OptionalDiagnostic Diag =
+        Range ? S.FFDiag(Range, diag::note_constexpr_ltor_for_range_var)
+              : S.FFDiag(Loc, diag::note_constexpr_ltor_for_range_var);
+    if (RangeDecl)
+      Diag << 1 << RangeDecl;
+    else
+      Diag << 0;
     return;
   }
 

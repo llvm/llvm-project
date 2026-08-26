@@ -4776,7 +4776,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else if (VD->isCXXForRangeImplicitVar()) {
         if (!IsAccess)
           return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
-        Info.FFDiag(E, diag::note_constexpr_ltor_for_range_var);
+        auto [Range, RangeDecl] = GetCXXForRangeRange(VD);
+        OptionalDiagnostic Diag = Info.FFDiag(
+            Range ? Range : E, diag::note_constexpr_ltor_for_range_var);
+        if (RangeDecl)
+          Diag << 1 << RangeDecl;
+        else
+          Diag << 0;
         return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
         if (!IsConstant) {
@@ -10562,6 +10568,36 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                             /*RefAsPointee*/ true);
 
   return GetAlignOfType(Ctx, E->getType(), ExprKind);
+}
+
+std::pair<const Expr *, const NamedDecl *>
+GetCXXForRangeRange(const VarDecl *ImplicitVar) {
+  const Expr *Range = ImplicitVar->getInit();
+  if (!Range)
+    return {nullptr, nullptr};
+
+  // '__begin' and '__end' are initialized from '__range', whose initializer
+  // is the range expression.
+  SmallVector<const Stmt *, 8> Worklist = {Range};
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+          VD && VD->isCXXForRangeImplicitVar()) {
+        Range = VD->getInit();
+        break;
+      }
+    }
+    Worklist.append(S->child_begin(), S->child_end());
+  }
+
+  const NamedDecl *RangeDecl = nullptr;
+  if (Range)
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Range->IgnoreParenImpCasts()))
+      RangeDecl = DRE->getDecl();
+  return {Range, RangeDecl};
 }
 
 static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
