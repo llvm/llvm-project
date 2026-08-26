@@ -77,9 +77,9 @@ declare void @callee()
 define void @sifive_stack_swap() "interrupt"="SiFive-CLIC-stack-swap" {
 ; CHECK-LABEL: sifive_stack_swap:
 ; CHECK:       # %bb.0:
-; CHECK:       beqz tp,
-; CHECK:       csrrw sp, sf.mscratchcsw, sp
+; CHECK-NEXT:  csrrw sp, sf.mscratchcsw, sp
 ; CHECK-NEXT:  addi sp, sp,
+; CHECK:       bnez tp,
 entry:
   %tp = call ptr @llvm.thread.pointer()
   %isnull = icmp eq ptr %tp, null
@@ -96,8 +96,8 @@ cold:
 define void @sifive_preemptible() "interrupt"="SiFive-CLIC-preemptible" {
 ; CHECK-LABEL: sifive_preemptible:
 ; CHECK:       # %bb.0:
-; CHECK:       beqz tp,
 ; CHECK:       csrsi mstatus, 8
+; CHECK:       bnez tp,
 entry:
   %tp = call ptr @llvm.thread.pointer()
   %isnull = icmp eq ptr %tp, null
@@ -114,9 +114,9 @@ cold:
 define void @sifive_preemptible_stack_swap() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; CHECK-LABEL: sifive_preemptible_stack_swap:
 ; CHECK:       # %bb.0:
-; CHECK:       beqz tp,
-; CHECK:       csrrw sp, sf.mscratchcsw, sp
+; CHECK-NEXT:  csrrw sp, sf.mscratchcsw, sp
 ; CHECK:       csrsi mstatus, 8
+; CHECK:       bnez tp,
 entry:
   %tp = call ptr @llvm.thread.pointer()
   %isnull = icmp eq ptr %tp, null
@@ -139,8 +139,8 @@ declare void @llvm.trap() cold noreturn nounwind
 define void @qci_nest() noreturn "interrupt"="qci-nest" {
 ; CHECK-LABEL: qci_nest:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:  qc.c.mienter.nest
 ; CHECK:       bnez tp,
-; CHECK:       qc.c.mienter.nest
 entry:
   %tp = call ptr @llvm.thread.pointer()
   %isnull = icmp eq ptr %tp, null
@@ -158,8 +158,8 @@ panic:
 define void @qci_nonest() noreturn "interrupt"="qci-nonest" {
 ; CHECK-LABEL: qci_nonest:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:  qc.c.mienter
 ; CHECK:       bnez tp,
-; CHECK:       qc.c.mienter
 entry:
   %tp = call ptr @llvm.thread.pointer()
   %isnull = icmp eq ptr %tp, null
