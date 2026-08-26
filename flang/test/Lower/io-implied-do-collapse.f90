@@ -12,6 +12,33 @@ contains
   end function
 end module
 
+module pure_mod
+  integer :: mi
+contains
+  ! A PURE function reading module state: conforming, but its body is invisible
+  ! to CollectSymbols/FindImpureCall.
+  pure integer function pure_read()
+    pure_read = mi
+  end function
+end module
+
+module dtio_mod
+  type t
+    integer :: v
+  contains
+    procedure :: wuf
+    generic :: write(unformatted) => wuf
+  end type
+contains
+  subroutine wuf(dtv, unit, iostat, iomsg)
+    class(t), intent(in) :: dtv
+    integer, intent(in) :: unit
+    integer, intent(out) :: iostat
+    character(*), intent(inout) :: iomsg
+    write(unit, iostat=iostat, iomsg=iomsg) dtv%v
+  end subroutine
+end module
+
 ! CHECK-LABEL: func @_QPwrite_whole(
 subroutine write_whole(a, n)
   integer :: n
@@ -49,6 +76,24 @@ subroutine write_finalval(a, n, k)
   ! CHECK: fir.store %[[FVC]] to %{{.*}} : !fir.ref<i32>
   write(10) (a(i), i=1,n)
   k = i
+end subroutine
+
+! A collapsed transfer is guarded by a runtime trip-count check: a zero-trip
+! implied-do (whose section may designate an unallocated array with a null base)
+! must transfer nothing, matching the per-element loop. The loop variable's
+! final value is still stored unconditionally.
+! CHECK-LABEL: func @_QPwrite_zerotrip_guard(
+subroutine write_zerotrip_guard(a, n)
+  integer :: n
+  real :: a(n)
+  ! CHECK: %[[SEC:.*]] = hlfir.designate
+  ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[SEC]], %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+  ! CHECK: %[[NE:.*]] = arith.cmpi sgt, %[[DIMS]]#1, %{{.*}} : index
+  ! CHECK: fir.if %[[NE]] {
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK: }
+  ! CHECK-NOT: fir.do_loop
+  write(10) (a(i), i=1,n)
 end subroutine
 
 ! CHECK-LABEL: func @_QPwrite_fixed(
@@ -287,3 +332,55 @@ subroutine read_dummy_subscript(a, k, n)
   ! CHECK: fir.call @_FortranAioInputDescriptor
   read(10) (a(k, i), i=1,n)
 end subroutine
+
+! A PURE function in a retained subscript may read the loop variable (or, on
+! input, the array) through its body, which the symbol/impurity checks cannot
+! see. Bail on any call in a retained subscript.
+! CHECK-LABEL: func @_QPwrite_pure_subscript(
+subroutine write_pure_subscript(a, n)
+  use pure_mod
+  integer :: n
+  real :: a(10, n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(pure_read(), i), i=1,n)
+end subroutine
+
+! Derived-type items may use defined (unformatted) I/O, which runs user code
+! per element that can observe the loop variable. Do not collapse.
+! CHECK-LABEL: func @_QPwrite_derived_dtio(
+subroutine write_derived_dtio(x, n)
+  use dtio_mod
+  integer :: n
+  type(t) :: x(n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDerivedType
+  write(10) (x(i), i=1,n)
+end subroutine
+
+! Loop variable is a Cray pointee storage-associated with an element of the
+! array (CrayPointee is a Symbol::Flag, not an Attr).
+! CHECK-LABEL: func @_QPwrite_cray_loopvar(
+subroutine write_cray_loopvar(a)
+  integer :: a(8)
+  pointer (pa, i)
+  integer :: i
+  pa = loc(a(4))
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,8)
+end subroutine
+
+! A VOLATILE loop variable is stored once per iteration by the per-element loop
+! but only once by the collapsed form; that observable difference forbids the
+! transform.
+! CHECK-LABEL: func @_QPwrite_volatile_loopvar(
+subroutine write_volatile_loopvar(a, n)
+  integer :: n
+  integer, volatile :: i
+  real :: a(n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,n)
+end subroutine
+
