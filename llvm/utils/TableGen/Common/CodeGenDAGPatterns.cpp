@@ -78,7 +78,7 @@ void MachineValueTypeSet::writeToStream(raw_ostream &OS) const {
 TypeSetByHwMode::TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList) {
   // Take the address space from the first type in the list.
   if (!VTList.empty())
-    AddrSpace = VTList[0].PtrAddrSpace;
+    PtrAddrSpace = VTList[0].PtrAddrSpace;
 
   for (const ValueTypeByHwMode &VVT : VTList)
     insert(VVT);
@@ -98,7 +98,7 @@ ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
-  VVT.PtrAddrSpace = AddrSpace;
+  VVT.PtrAddrSpace = PtrAddrSpace;
 
   for (const auto &I : *this) {
     if (SkipEmpty && I.second.empty())

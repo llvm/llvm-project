@@ -500,6 +500,8 @@ public:
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                  const SchedRegion &Region) const override;
 
+  void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const override;
+
   void mirFileLoaded(MachineFunction &MF) const override;
 
   unsigned getMaxNumUserSGPRs() const {
@@ -1050,6 +1052,10 @@ public:
   bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
     return getGeneration() >= GFX10 || TgSplit;
   }
+
+  bool useDFAforSMS() const override { return false; }
+
+  bool enableWindowScheduler() const override { return false; }
 };
 
 class GCNUserSGPRUsageInfo {

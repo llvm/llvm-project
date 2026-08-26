@@ -22,6 +22,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -83,6 +84,7 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
     return AMDGPUSubtarget::GFX11;
   case Triple::AMDGPUSubArch12:
   case Triple::AMDGPUSubArch12_5:
+  case Triple::AMDGPUSubArch1250_STRICT:
     return AMDGPUSubtarget::GFX12;
   case Triple::AMDGPUSubArch13:
     return AMDGPUSubtarget::GFX13;
@@ -447,6 +449,11 @@ void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
     dbgs() << "Post-MI-sched direction (" << F.getName() << "): " << DirStr
            << '\n';
   });
+}
+
+void GCNSubtarget::overridePipelinerPolicy(
+    MachinePipelinerPolicy &Policy) const {
+  Policy.ShouldLimitRegPressure = true;
 }
 
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {

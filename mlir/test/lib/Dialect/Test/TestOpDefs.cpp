@@ -82,7 +82,7 @@ SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
 
 LogicalResult TestCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   if (!symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(*this, fnAttr))
@@ -459,7 +459,8 @@ struct TestResource : public SideEffects::Resource::Base<TestResource> {
 void SideEffectOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -520,7 +521,8 @@ void ConditionalSideEffectOp::getEffects(
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -629,10 +631,15 @@ void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
     }
   }
 
-  if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
-  else
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), {"names"});
+  if (namesDisagree) {
+    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+    attrs.emplace_back(getNamesAttrName(), getNamesAttr());
+    llvm::sort(attrs);
+    p.printOptionalAttrDictWithKeyword(attrs);
+  } else {
+    p.printOptionalAttrDictWithKeyword(
+        (*this)->getDiscardableAttrDictionary().getValue(), {"names"});
+  }
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
@@ -953,7 +960,13 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 }
 
 void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUminAttrName(), getUminAttr());
+  attrs.emplace_back(getUmaxAttrName(), getUmaxAttr());
+  attrs.emplace_back(getSminAttrName(), getSminAttr());
+  attrs.emplace_back(getSmaxAttrName(), getSmaxAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
                         /*omitType=*/false);
