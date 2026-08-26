@@ -270,9 +270,10 @@ exit:
 define i64 @test_fneg() {
 ; CHECK-LABEL: 'test_fneg'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_fneg
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: Trip multiple is 8
 ;
 entry:
   br label %loop
@@ -294,9 +295,10 @@ exit:
 define i64 @test_freeze() {
 ; CHECK-LABEL: 'test_freeze'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_freeze
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 6
 ;
 entry:
   br label %loop
@@ -316,9 +318,10 @@ exit:
 define i64 @test_extract_insert_element() {
 ; CHECK-LABEL: 'test_extract_insert_element'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_extract_insert_element
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -341,9 +344,10 @@ exit:
 define i64 @test_extract_insert_value() {
 ; CHECK-LABEL: 'test_extract_insert_value'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_extract_insert_value
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
