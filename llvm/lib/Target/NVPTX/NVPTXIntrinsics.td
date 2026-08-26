@@ -2474,7 +2474,7 @@ def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic
-class CvtIntrinsics<string suffix> {
+class ToCvtIntrinsics<string suffix> {
   Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
   Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
 }
@@ -2492,10 +2492,10 @@ foreach rnd = ["rn", "rz"] in {
       defvar SFPreds = !if(pzo, [hasConvertWithPZOSupport]<Predicate>,
                                 [PTX81, SM80]<Predicate>);
 
-      defvar FF2BF16X2 = CvtIntrinsics<"ff2bf16x2_" # rnd # relu>;
-      defvar FF2F16X2 = CvtIntrinsics<"ff2f16x2_" # rnd # relu>;
-      defvar F2BF16 = CvtIntrinsics<"f2bf16_" # rnd # relu>;
-      defvar F2F16 = CvtIntrinsics<"f2f16_" # rnd # relu>;
+      defvar FF2BF16X2 = ToCvtIntrinsics<"ff2bf16x2_" # rnd # relu>;
+      defvar FF2F16X2 = ToCvtIntrinsics<"ff2f16x2_" # rnd # relu>;
+      defvar F2BF16 = ToCvtIntrinsics<"f2bf16_" # rnd # relu>;
+      defvar F2F16 = ToCvtIntrinsics<"f2f16_" # rnd # relu>;
 
       def : Pat<(FF2BF16X2.base f32:$a, f32:$b, PZO),
                 (CVT_bf16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
@@ -2529,8 +2529,8 @@ foreach relu = ["", "_relu"] in {
         [hasConvertWithStochasticRounding]<Predicate>, 
         !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
 
-    defvar BF16X2 = CvtIntrinsics<"ff2bf16x2_rs" # relu>;
-    defvar F16X2 = CvtIntrinsics<"ff2f16x2_rs" # relu>;
+    defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
+    defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
 
     def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
               (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
