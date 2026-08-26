@@ -2969,6 +2969,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
     NewAttr = S.Swift().mergeNameAttr(D, *SNA, SNA->getName());
+  else if (const auto *SAA = dyn_cast<SwiftAttrAttr>(Attr))
+    NewAttr = S.Swift().mergeAttrAttr(D, *SAA);
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
@@ -3389,11 +3391,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
 
-    if (isa<InferredNoReturnAttr>(I)) {
+    // Don't propagate inferred noreturn or conflicting inline attributes to
+    // explicit specializations.
+    if (isa<InferredNoReturnAttr>(I) || isa<AlwaysInlineAttr>(I) ||
+        isa<NoInlineAttr>(I)) {
       if (auto *FD = dyn_cast<FunctionDecl>(New);
           FD &&
           FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-        continue; // Don't propagate inferred noreturn attributes to explicit
+        continue;
     }
 
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
@@ -10137,6 +10142,54 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
+void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
+  const auto *FT = FD->getType()->getAs<FunctionType>();
+  if (!FT)
+    return;
+
+  StringRef Tag;
+  switch (FT->getCallConv()) {
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    Tag = "riscv_vls_cc_" #ABI_VLEN;                                           \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+  default:
+    return;
+  }
+
+  SmallVector<AbiTagAttr *, 2> Existing(FD->specific_attrs<AbiTagAttr>());
+  AbiTagAttr *Old = Existing.empty() ? nullptr : Existing.front();
+
+  SmallVector<StringRef, 4> Tags;
+  if (Old)
+    llvm::append_range(Tags, Old->tags());
+  if (llvm::is_contained(Tags, Tag))
+    return;
+  Tags.push_back(Tag);
+
+  AbiTagAttr *Merged =
+      Old ? AbiTagAttr::Create(Context, Tags.data(), Tags.size(), *Old)
+          : AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size(),
+                                       FD->getLocation());
+  FD->dropAttr<AbiTagAttr>();
+  FD->addAttr(Merged);
+  for (size_t I = 1, E = Existing.size(); I < E; ++I)
+    FD->addAttr(Existing[I]);
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -10768,6 +10821,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
+  addImplicitCallingConvAbiTag(NewFD);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
       !NewTVA->isDefaultVersion() &&
@@ -10916,9 +10970,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isFriend) {
         // For friend function specializations, this is a dependent
         // specialization if its semantic context is dependent, its
-        // type is dependent, or if its template-id is dependent.
+        // qualifier is dependent, its type is dependent, or its template-id is
+        // dependent.
         isDependentSpecialization =
-            DC->isDependentContext() || NewFD->getType()->isDependentType() ||
+            DC->isDependentContext() || NewFD->getQualifier().isDependent() ||
+            NewFD->getType()->isDependentType() ||
             (HasExplicitTemplateArgs &&
              TemplateSpecializationType::
                  anyInstantiationDependentTemplateArguments(
@@ -12583,7 +12639,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // struct B { struct Y { ~Y(); }; using X = Y; };
       // template struct A<B>;
       if (NewFD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None ||
-          !Destructor->getFunctionObjectParameterType()->isDependentType()) {
+          (!Destructor->getFunctionObjectParameterType()->isDependentType() &&
+           !Destructor->getDeclName().isDependentName())) {
         CanQualType ClassType =
             Context.getCanonicalTagType(Destructor->getParent());
 
@@ -15321,12 +15378,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       FinalizeVarWithDestructor(var, RD);
 
   // If this variable must be emitted, add it as an initializer for the current
-  // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
-      (ModuleScopes.back().Module->isHeaderLikeModule() ||
-       // For named modules, we may only emit non discardable variables.
-       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
-    Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  // module. For named modules, discardable inline variables may be deferred
+  // until they are odr-used. Non-inline variables that must be emitted,
+  // including those with side-effecting initialization, must still be emitted
+  // even if they have internal linkage.
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty()) {
+    GVALinkage Linkage = Context.GetGVALinkageForVariable(var);
+    if (ModuleScopes.back().Module->isHeaderLikeModule() ||
+        !isDiscardableGVALinkage(Linkage) ||
+        (Linkage == GVA_Internal && !var->isInline()))
+      Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  }
 
   // Build the bindings if this is a structured binding declaration.
   if (auto *DD = dyn_cast<DecompositionDecl>(var))

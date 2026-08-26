@@ -13,7 +13,8 @@
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
 ; M0: @g.581d7631532fa146ba4061179da39272 = external hidden global i8
-; M1: @g.581d7631532fa146ba4061179da39272 = hidden global i8 42, !type !0
+; M1: @g = internal global i8 42, !type !0
+; M1: @g.581d7631532fa146ba4061179da39272 = hidden alias ptr, ptr @g
 @g = internal global i8 42, !type !0
 
 ; M0: define ptr @f()

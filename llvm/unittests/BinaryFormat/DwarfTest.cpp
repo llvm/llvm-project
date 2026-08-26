@@ -64,6 +64,14 @@ TEST(DwarfTest, getOperationEncoding) {
   EXPECT_EQ(0u, getOperationEncoding("DW_OP_hi_user"));
 }
 
+TEST(DwarfTest, SubOperationEncoding) {
+  // Test that the enum-to-string user encodings roundtrip.
+  EXPECT_EQ("DW_OP_LLVM_nop",
+            SubOperationEncodingString(DW_OP_LLVM_user, DW_OP_LLVM_nop));
+  EXPECT_EQ(DW_OP_LLVM_nop,
+            getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_LLVM_nop"));
+}
+
 TEST(DwarfTest, LanguageStringOnInvalid) {
   // This is invalid, so it shouldn't be stringified.
   EXPECT_EQ(StringRef(), LanguageString(0));

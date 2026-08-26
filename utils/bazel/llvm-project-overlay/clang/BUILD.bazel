@@ -1310,10 +1310,14 @@ cc_library(
         "include/clang/Testing/TestLanguage.def",
     ],
     deps = [
+        ":ast",
         ":basic",
         ":frontend",
+        ":lex",
+        ":serialization",
         "//llvm:MC",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//third-party/unittest:gtest",
     ],
 )
@@ -1511,6 +1515,7 @@ cc_library(
         ":driver",
         ":frontend",
         ":index",
+        ":static_analyzer_core_options",
         ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
@@ -1957,6 +1962,7 @@ cc_library(
         ":parse",
         ":sema",
         ":serialization",
+        "//compiler-rt:emutls",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
@@ -2136,6 +2142,7 @@ cc_library(
         ":ast",
         ":basic",
         ":frontend",
+        ":lex",
         ":support",
         "//llvm:Core",
         "//llvm:Demangle",
@@ -2198,6 +2205,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
         ":scalable_static_analysis_source_transformation",
+        ":static_analyzer_core_options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2756,6 +2764,7 @@ cc_library(
         ":basic",
         ":scalable_static_analysis_core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2768,6 +2777,8 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":lex",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":support",
         ":tooling_core",

@@ -3309,6 +3309,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1250_STRICT``   0x0eb      ``gfx1250-strict``
      ========================================== ========== =============================
 
 Sections
@@ -6714,6 +6715,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (320 * 4))
                                                      GFX125*
                                                        roundup(lds-size / (512 * 4))
+                                                     GFX13
+                                                       roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
                      _INVALID_OPERATION              with specified exceptions

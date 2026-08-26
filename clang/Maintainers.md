@@ -303,6 +303,12 @@ serebrennikov.vladislav@gmail.com (email), [Endilll](https://github.com/Endilll)
 Akira Hatanaka \
 ahatanak@gmail.com, [ahatanak](https://github.com/ahatanak) (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
 
+### Swift conformance
+
+John McCall \
+rjmccall@apple.com (email), [rjmccall](https://github.com/rjmccall) (GitHub)
+
+
 ### OpenMP conformance
 
 Alexey Bataev \

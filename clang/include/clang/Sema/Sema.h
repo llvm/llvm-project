@@ -66,7 +66,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
-#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -4061,6 +4060,10 @@ public:
                                      MultiTemplateParamsArg TemplateParamLists,
                                      bool &AddToScope);
 
+  /// Attach the ABI tag a standard calling convention variant requires, as an
+  /// implicit abi_tag attribute.  Call this once the function type is final.
+  void addImplicitCallingConvAbiTag(FunctionDecl *FD);
+
   /// AddOverriddenMethods - See if a method overrides any in the base classes,
   /// and if so, check that it's a valid override and remember it.
   bool AddOverriddenMethods(CXXRecordDecl *DC, CXXMethodDecl *MD);
@@ -5335,6 +5338,8 @@ public:
     /// typically only applies to 'std::strong_ordering', due to the implicit
     /// fallback return value.
     DefaultedOperator,
+    /// A builtin needed 'std::strong_ordering' (eg. '__builtin_type_order').
+    Builtin,
   };
 
   /// Lookup the specified comparison category types in the standard
@@ -6402,7 +6407,15 @@ public:
                                      SourceLocation NameLoc,
                                      SourceLocation EllipsisLoc,
                                      const ParsedAttributesView &Attr,
-                                     MultiTemplateParamsArg TempParamLists);
+                                     MultiTemplateParamsArg TempParamLists,
+                                     TemplateIdAnnotation *TemplateId);
+
+  bool CheckDependentFriend(SourceLocation Loc, NestedNameSpecifierLoc NNSLoc,
+                            ArrayRef<TemplateParameterList *> TPLs,
+                            bool IsInstantiation);
+
+  bool DiagnosePackIndexingInFriendNNS(SourceLocation Loc,
+                                       NestedNameSpecifierLoc NNSLoc);
 
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
@@ -7886,6 +7899,9 @@ public:
   QualType CheckSizelessVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
+  QualType CheckMatrixCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
@@ -11811,8 +11827,7 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult CheckVarOrConceptTemplateTemplateId(
-      const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-      TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
+      const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
       const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
@@ -12735,6 +12750,18 @@ public:
             return false;
           });
 
+  /// Perform [temp.friend] p5 template argument deduction for a dependent
+  /// friend declaration and a candidate class template specialization.
+  bool DeduceTemplateArguments(FriendTemplateDecl *FTD,
+                               ClassTemplateDecl *PatternCTD,
+                               ClassTemplateDecl *CandidateCTD,
+                               ArrayRef<TemplateParameterList *> TPLs,
+                               ArrayRef<TemplateArgument> PatternArgs,
+                               ArrayRef<TemplateArgument> CandidateArgs,
+                               SourceLocation Loc,
+                               TemplateSpecCandidateSet *FailedTSC,
+                               MultiLevelTemplateArgumentList &DeducedArgs);
+
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
   ///
@@ -12961,7 +12988,8 @@ public:
                                   llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                  unsigned Depth, llvm::SmallBitVector &Used);
+                                  bool OnlyDeduced, unsigned Depth,
+                                  llvm::SmallBitVector &Used);
 
   void MarkUsedTemplateParameters(ArrayRef<TemplateArgumentLoc> TemplateArgs,
                                   unsigned Depth, llvm::SmallBitVector &Used);
@@ -13815,6 +13843,11 @@ public:
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             SourceLocation Loc, DeclarationName Entity);
+
+  TypeSourceInfo *
+  SubstFriendType(TypeSourceInfo *TSI,
+                  const MultiLevelTemplateArgumentList &TemplateArgs,
+                  SourceLocation Loc, DeclarationName Entity);
 
   /// A form of SubstType intended specifically for instantiating the
   /// type of a FunctionDecl.  Its purpose is solely to force the
@@ -15041,6 +15074,9 @@ public:
   void
   DiagnoseUnsatisfiedConstraint(const ConceptSpecializationExpr *ConstraintExpr,
                                 bool First = true);
+
+  void DiagnoseUnsatisfiedRequiresExpr(const RequiresExpr *RequiresExpr,
+                                       bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
       ConstrainedDeclOrNestedRequirement Entity,

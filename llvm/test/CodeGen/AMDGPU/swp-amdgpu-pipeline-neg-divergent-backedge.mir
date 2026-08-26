@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=pipeliner -debug-only=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+# Reject a loop with a divergent (VCC/EXEC) back-edge (non-scalar predicate).
+# analyzeLoopForPipelining returns nullptr.
+# CHECK: Unable to analyzeLoop, can NOT pipeline Loop
+
+---
+name:            swp_amdgpu_pipeline_neg_divergent_backedge
+tracksRegLiveness: true
+isSSA:           true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    %0:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
+
+  bb.1:
+    successors: %bb.2, %bb.1
+
+    $vcc = COPY %0
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...

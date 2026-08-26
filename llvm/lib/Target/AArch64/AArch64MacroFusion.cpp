@@ -226,33 +226,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// Literal generation.
-static bool isLiteralsPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  // 32 bit immediate.
-  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
-      (SecondMI.getOpcode() == AArch64::MOVKWi &&
-       SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
-      (SecondMI.getOpcode() == AArch64::MOVKXi &&
-       SecondMI.getOperand(3).getImm() == 48))
-    return true;
-
-  return false;
-}
-
 /// Fuse address generation and loads or stores.
 static bool isAddressLdStPair(const MachineInstr *FirstMI,
                               const MachineInstr &SecondMI) {
@@ -718,7 +691,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
     return true;
   }
