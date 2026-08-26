@@ -186,13 +186,6 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->hasCommonLinkage()) {
-    OutContext.reportError(SMLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               getSymbol(GV)->getName());
-    return;
-  }
-
   if (GV->hasAttribute("wasm-import-module") ||
       GV->hasAttribute("wasm-import-name")) {
     if (!GV->isDeclaration()) {
@@ -207,7 +200,6 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       return;
     }
   }
-
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     if (GV->hasAttribute("wasm-export-name")) {
       auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));

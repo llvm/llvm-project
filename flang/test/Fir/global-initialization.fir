@@ -41,8 +41,23 @@ fir.global internal @_QEmasklogical : !fir.array<32768x!fir.logical<4>> {
 // CHECK:   [[VAL0:%.*]] = llvm.mlir.constant(true) : i1
 // CHECK:   [[VAL1:%.*]] = llvm.mlir.undef : !llvm.array<32768 x i32>
 // CHECK:   [[VAL2:%.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK:   [[VAL3:%.*]] = llvm.mlir.constant(dense<true> : vector<32768xi1>) : !llvm.array<32768 x i32>
+// CHECK:   [[VAL3:%.*]] = llvm.mlir.constant(dense<1> : vector<32768xi32>) : !llvm.array<32768 x i32>
 // CHECK:   llvm.return [[VAL3]] : !llvm.array<32768 x i32>
+// CHECK: }
+
+// A logical conversion normalizes any integer operand to a canonical 0/1, not
+// just an `i1` one, so the full-range fold must apply here as well.
+fir.global internal @_QEmasklogicalkind : !fir.array<8x!fir.logical<8>> {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.undefined !fir.array<8x!fir.logical<8>>
+  %1 = fir.convert %c1_i32 : (i32) -> !fir.logical<8>
+  %2 = fir.insert_on_range %0, %1 from (0) to (7) : (!fir.array<8x!fir.logical<8>>, !fir.logical<8>) -> !fir.array<8x!fir.logical<8>>
+  fir.has_value %2 : !fir.array<8x!fir.logical<8>>
+}
+
+// CHECK: llvm.mlir.global internal @_QEmasklogicalkind() {addr_space = 0 : i32} : !llvm.array<8 x i64> {
+// CHECK:   [[VAL2:%.*]] = llvm.mlir.constant(dense<1> : vector<8xi64>) : !llvm.array<8 x i64>
+// CHECK:   llvm.return [[VAL2]] : !llvm.array<8 x i64>
 // CHECK: }
 
 fir.global internal @_QElookforme : !fir.type<_QTt{i:!fir.array<500xi32>,j:!fir.array<500xi32>}> {

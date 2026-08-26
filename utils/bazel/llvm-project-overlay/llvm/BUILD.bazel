@@ -86,10 +86,19 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_armv7",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:armv7",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
     name = "linux_ppc64le",
     constraint_values = [
         "@platforms//os:linux",
-        "@platforms//cpu:ppc",
+        "@platforms//cpu:ppc64le",
     ],
     visibility = ["//visibility:public"],
 )
@@ -468,7 +477,6 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
-            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -476,7 +484,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -484,7 +491,6 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
-            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -1481,6 +1487,8 @@ cc_library(
         ],
     ) + ["include/llvm-c/Analysis.h"],
     copts = llvm_copts + select({
+        ":is_windows_clang_cl": ["/fp:except"],
+        ":is_windows_msvc": ["/fp:except"],
         "@platforms//os:emscripten": [],
         "//conditions:default": ["-ftrapping-math"],
     }),
@@ -2049,6 +2057,7 @@ cc_library(
     name = "FrontendOpenMP",
     srcs = glob([
         "lib/Frontend/OpenMP/*.cpp",
+        "lib/Frontend/OpenMP/*.inc",
     ]),
     hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.h",
@@ -2059,6 +2068,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/Frontend/OpenMP/*.def",
+        "include/llvm/Frontend/OpenMP/*.h.inc",
     ]),
     deps = [
         ":Analysis",

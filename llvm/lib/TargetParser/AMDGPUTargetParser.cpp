@@ -41,6 +41,8 @@ struct GPUInfo {
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
+  StringTable::Offset BaseName; // The canonical device name for a variant.
+  uint8_t MaxWavesPerEU;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -166,6 +168,11 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
 Triple::SubArchType llvm::AMDGPU::getSubArch(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->SubArch : Triple::SubArchType::NoSubArch;
+}
+
+StringRef llvm::AMDGPU::getBaseArchNameAMDGCN(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? AMDGPUNameStrTab[Info->BaseName] : "";
 }
 
 AMDGPU::GPUKind
@@ -310,7 +317,8 @@ unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
 }
 
 unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  return getArchAttrAMDGCN(getGPUKindFromSubArch(SubArch));
+  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
+  return Info ? Info->ArchFeatures : FEATURE_NONE;
 }
 
 R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
@@ -420,6 +428,15 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   if (Version.Major >= 8)
     return 16;
   return 8;
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxWavesPerEU : 10;
+}
+
+unsigned AMDGPU::getMaxWavesPerEU(Triple::SubArchType SubArch) {
+  return getMaxWavesPerEU(getGPUKindFromSubArch(SubArch));
 }
 
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {

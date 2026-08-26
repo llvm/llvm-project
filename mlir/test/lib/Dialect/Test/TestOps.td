@@ -720,11 +720,11 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
   }];
   let extraClassDefinition = [{
     ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
-      return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<SymbolRefAttr>(callee));
     }
   }];
 }
@@ -2850,6 +2850,33 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
   }];
 }
 
+// An op that has a result and a block argument that are NOT successor inputs,
+// used to test the fix for issue #175168 in getControlFlowPredecessors.
+// - result #0 (extraResult): NOT a successor input to parent
+// - result #1 (iterResult): IS a successor input to parent
+// - body block arg #0: NOT a successor input to the body region
+// - body block arg #1: IS a successor input to the body region
+// This mirrors the scf.for induction variable / iter_arg structure.
+def LoopWithExtraResultYieldOp : TEST_Op<"loop_with_extra_result_yield",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
+  let arguments = (ins I32:$iterArg);
+  let assemblyFormat = "$iterArg `:` type($iterArg) attr-dict";
+}
+
+def LoopWithExtraResultOp : TEST_Op<"loop_with_extra_result",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
+  let results = (outs I32:$extraResult, I32:$iterResult);
+  let arguments = (ins I32:$init);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $init `:` type($init) `->` `(` type($extraResult) `,` type($iterResult) `)` $body attr-dict
+  }];
+}
+
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
     DeclareOpInterfaceMethods<RegionBranchOpInterface>
@@ -3122,13 +3149,15 @@ def TestLinalgConvOp :
     }
 
     llvm::SmallVector<mlir::utils::IteratorType> getIteratorTypesArray() {
-      auto attrs = getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+      auto attrs = getOperation()->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          "iterator_types");
       auto range = attrs.getAsValueRange<IteratorTypeAttr, mlir::utils::IteratorType>();
       return {range.begin(), range.end()};
     }
 
     mlir::ArrayAttr getIndexingMaps() {
-      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+      return getOperation()->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          "indexing_maps");
     }
 
     std::string getLibraryCallName() {
@@ -3185,13 +3214,15 @@ def TestLinalgFillOp :
     }
 
     llvm::SmallVector<mlir::utils::IteratorType> getIteratorTypesArray() {
-      auto attrs = getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
+      auto attrs = getOperation()->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          "iterator_types");
       auto range = attrs.getAsValueRange<IteratorTypeAttr, mlir::utils::IteratorType>();
       return {range.begin(), range.end()};
     }
 
     mlir::ArrayAttr getIndexingMaps() {
-      return getOperation()->getAttrOfType<mlir::ArrayAttr>("indexing_maps");
+      return getOperation()->getDiscardableAttrOfType<mlir::ArrayAttr>(
+          "indexing_maps");
     }
 
     std::string getLibraryCallName() {
@@ -3645,6 +3676,16 @@ def TestOpWithCustomPropDict : TEST_Op<"with_custom_prop_dict"> {
   );
 }
 
+def TestOpWithCustomAttrPropDict
+    : TEST_Op<"with_custom_attr_prop_dict"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    TestEnumAttr:$attr,
+    OptionalAttr<TestEnumAttr>:$optionalAttr,
+    I64Prop:$prop
+  );
+}
+
 def TestOpWithPropertiesAndInferredType
   : TEST_Op<"with_properties_and_inferred_type", [
     DeclareOpInterfaceMethods<InferTypeOpInterface>
@@ -3841,7 +3882,14 @@ def KeyValueOptionalEnumProperty
 }
 
 def KeyValueSpecializedListProperty
-    : Property<"::llvm::SmallVector<int32_t>"> {
+    : Property<"test::KeyValueSpecializedList"> {
+  let printer = [{
+    [&]() {
+      $_printer << "[";
+      ::llvm::interleaveComma($_storage, $_printer);
+      $_printer << "]";
+    }()
+  }];
   let convertToAttribute =
       "return ::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage);";
   let convertFromAttribute = [{
@@ -3860,6 +3908,15 @@ def KeyValueSpecializedListProperty
 
 def KeyValueSpecializedOptionalProperty
     : Property<"std::optional<int16_t>"> {
+  let printer = [{
+    [&]() {
+      if (!$_storage) {
+        $_printer << "none";
+        return;
+      }
+      $_printer << "some<" << *$_storage << ">";
+    }()
+  }];
   let convertToAttribute = [{
     if (!$_storage)
       return ::mlir::ArrayAttr::get($_ctxt, {});
@@ -4005,6 +4062,7 @@ def PropertiesWithCustomPrint : Property<"PropertiesWithCustomPrint"> {
 }
 
 def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
+  let hasCustomPropertiesPrinter = 1;
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
      PropertiesWithCustomPrint:$prop
@@ -4069,6 +4127,7 @@ def VersionedProperties : Property<"VersionedProperties"> {
 }
 
 def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
+  let hasCustomPropertiesPrinter = 1;
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins
      VersionedProperties:$prop
@@ -4687,15 +4746,16 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
 
   let extraClassDefinition = [{
     ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
-      if (auto sym = (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee"))
+      if (auto sym = (*this)->getDiscardableAttrOfType<::mlir::SymbolRefAttr>(
+              "callee"))
         return ::mlir::CallInterfaceCallable(sym);
       return ::mlir::CallInterfaceCallable();
     }
     void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
       if (auto sym = callee.dyn_cast<::mlir::SymbolRefAttr>())
-        (*this)->setAttr("callee", sym);
+        (*this)->setDiscardableAttr("callee", sym);
       else
-        (*this)->removeAttr("callee");
+        (*this)->removeDiscardableAttr("callee");
     }
   }];
 }

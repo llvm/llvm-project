@@ -514,7 +514,7 @@ bool ARMPassConfig::addRegBankSelect() {
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
@@ -618,7 +618,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

@@ -633,11 +633,6 @@ public:
     return getFunctionalIntrinsicIDForVP(getIntrinsicID());
   }
 
-  // Equivalent non-predicated constrained ID
-  std::optional<unsigned> getConstrainedIntrinsicID() const {
-    return getConstrainedIntrinsicIDForVP(getIntrinsicID());
-  }
-
   // Equivalent non-predicated opcode
   LLVM_ABI static std::optional<unsigned>
   getFunctionalOpcodeForVP(Intrinsic::ID ID);
@@ -645,10 +640,6 @@ public:
   // Equivalent non-predicated intrinsic ID
   LLVM_ABI static std::optional<Intrinsic::ID>
   getFunctionalIntrinsicIDForVP(Intrinsic::ID ID);
-
-  // Equivalent non-predicated constrained ID
-  LLVM_ABI static std::optional<Intrinsic::ID>
-  getConstrainedIntrinsicIDForVP(Intrinsic::ID ID);
 };
 
 /// This represents vector predication reduction intrinsics.
@@ -672,54 +663,6 @@ public:
   }
   /// @}
 };
-
-class VPCastIntrinsic : public VPIntrinsic {
-public:
-  LLVM_ABI static bool isVPCast(Intrinsic::ID ID);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  /// @{
-  static bool classof(const IntrinsicInst *I) {
-    return VPCastIntrinsic::isVPCast(I->getIntrinsicID());
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-  /// @}
-};
-
-class VPCmpIntrinsic : public VPIntrinsic {
-public:
-  LLVM_ABI static bool isVPCmp(Intrinsic::ID ID);
-
-  LLVM_ABI CmpInst::Predicate getPredicate() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  /// @{
-  static bool classof(const IntrinsicInst *I) {
-    return VPCmpIntrinsic::isVPCmp(I->getIntrinsicID());
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-  /// @}
-};
-
-class VPBinOpIntrinsic : public VPIntrinsic {
-public:
-  LLVM_ABI static bool isVPBinOp(Intrinsic::ID ID);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  /// @{
-  static bool classof(const IntrinsicInst *I) {
-    return VPBinOpIntrinsic::isVPBinOp(I->getIntrinsicID());
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-  /// @}
-};
-
 
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
