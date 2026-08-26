@@ -25,9 +25,7 @@
 
 #include <debugging>
 
-#include "test_macros.h"
-
 int main(int, char**) {
-  ASSERT_NOEXCEPT(std::is_debugger_present());
+  static_assert(noexcept(std::is_debugger_present()));
   return std::is_debugger_present() ? 0 : 1;
 }

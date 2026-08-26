@@ -18,9 +18,14 @@
 // RUN: %if darwin %{ codesign --entitlements %S/entitlements-macos.plist -f -s - %t.exe %}
 // RUN: %{exec} "%{lldb}" %t.exe -o "command script import %S/breakpoint__lldb.py"
 
+// <debugging>
+
+// void breakpoint() noexcept;
+
 #include <debugging>
 
 int main(int, char**) {
+  static_assert(noexcept(std::breakpoint()));
   std::breakpoint();
   return 0;
 }

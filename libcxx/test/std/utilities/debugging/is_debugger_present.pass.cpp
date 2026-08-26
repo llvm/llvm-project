@@ -12,15 +12,14 @@
 // <debugging>
 
 // bool is_debugger_present() noexcept;
+
 // Test without debugger attached
 
 #include <cassert>
 #include <debugging>
 
-#include "test_macros.h"
-
 int main(int, char**) {
   assert(!std::is_debugger_present());
-  ASSERT_NOEXCEPT(std::is_debugger_present());
+  static_assert(noexcept(std::is_debugger_present()));
   return 0;
 }

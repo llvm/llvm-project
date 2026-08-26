@@ -19,9 +19,14 @@
 // RUN: %{exec} "%{lldb}" %t.exe -o "command script import %S/breakpoint__lldb.py"
 // RUN: %{exec} %t.exe
 
+// <debugging>
+
+// void breakpoint_if_debugging() noexcept;
+
 #include <debugging>
 
 int main(int, char**) {
+  static_assert(noexcept(std::breakpoint_if_debugging()));
   std::breakpoint_if_debugging();
 
   return 0;

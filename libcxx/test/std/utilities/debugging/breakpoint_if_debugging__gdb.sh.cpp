@@ -18,10 +18,14 @@
 // RUN: %{exec} "%{gdb}" %t.exe -ex "source %S/breakpoint__gdb.py"
 // RUN: %{exec} %t.exe
 
-// breakpoint_if_debugging() noexcept
+// <debugging>
+
+// void breakpoint_if_debugging() noexcept
+
 #include <debugging>
 
 int main(int, char**) {
+  static_assert(noexcept(std::breakpoint_if_debugging()));
   std::breakpoint_if_debugging();
 
   return 0;
