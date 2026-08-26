@@ -245,11 +245,9 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 
         Register MemBase = MRI.createVirtualRegister(
             PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
-        MRI.setType(MemBase, PtrTy);
 
         Register Offset = MRI.createVirtualRegister(
             PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
-        MRI.setType(Offset, PtrTy);
 
         B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
                               : WebAssembly::GLOBAL_GET_I32)
