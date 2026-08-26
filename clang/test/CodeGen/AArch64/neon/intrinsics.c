@@ -5623,7 +5623,7 @@ float16x4_t test_vcvt_f16_f32(float32x4_t a) {
 }
 
 // LLVM-LABEL: @test_vcvt_high_f16_f32(
-// CIR-LABEL: @vcvt_f16_f32(
+// CIR-LABEL: @vcvt_high_f16_f32(
 float16x8_t test_vcvt_high_f16_f32(float16x4_t a, float32x4_t b) {
 // CIR:  cir.call @vcvt_f16_f32
 // CIR: cir.call @vcombine_f16
