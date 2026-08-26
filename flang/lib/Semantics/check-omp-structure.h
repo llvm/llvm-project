@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h"
 
 #include <cstddef>
@@ -178,9 +179,11 @@ public:
 
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
+  void Enter(const parser::OmpDelimitedMetadirectiveDirective &);
+  void Leave(const parser::OmpDelimitedMetadirectiveDirective &);
 
   void Enter(const parser::ExecutionPartConstruct &);
-  void Leave(const parser::OmpClause::When &);
+  void Leave(const parser::ExecutionPartConstruct &);
 
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
@@ -257,7 +260,6 @@ public:
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
   void Enter(const parser::OmpClause::UsesAllocators &x);
-  void Enter(const parser::OmpClause::When &x);
 
 private:
   using LoopOrConstruct = std::variant<const parser::DoConstruct *,
@@ -321,11 +323,12 @@ private:
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
 
-  void BeginMetadirectiveVariantScope();
-  void EndMetadirectiveVariantScope();
+  void BeginPendingLoopDirectiveScope();
+  void EndPendingLoopDirectiveScope();
 
   // check-omp-variant.cpp
-  void CheckMetadirectiveVariantsWithoutLoop(std::size_t firstVariant = 0);
+  void CheckPendingLoopDirectivesWithoutLoop(
+      std::size_t firstDirectiveGroup = 0);
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
@@ -405,6 +408,25 @@ private:
   bool HasInvalidWorksharingNesting(
       const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
 
+  using EffectiveDirectivePath = llvm::SmallVector<llvm::omp::Directive, 8>;
+  using ConstructTraitSequence = llvm::SmallVector<llvm::omp::TraitProperty, 8>;
+
+  struct MetadirectiveReplacementBranch {
+    EffectiveDirectivePath enclosingPath;
+    const parser::OmpDirectiveSpecification *spec{nullptr};
+  };
+  struct MetadirectiveReplacementContext {
+    std::size_t directiveContextDepth;
+    llvm::SmallVector<EffectiveDirectivePath, 4> paths;
+  };
+
+  llvm::SmallVector<EffectiveDirectivePath, 4>
+  GetEnclosingDirectivePaths() const;
+  llvm::SmallVector<EffectiveDirectivePath, 4> GetUniqueEffectiveDirectivePaths(
+      llvm::SmallVector<EffectiveDirectivePath, 4>) const;
+  void CollectMetadirectiveConstructSelectors(const parser::ProgramUnit &);
+  llvm::SmallVector<MetadirectiveReplacementBranch, 4>
+  GetReachableMetadirectiveReplacements(const parser::OmpClauseList &);
   bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
@@ -571,15 +593,17 @@ private:
   };
   std::vector<PartKind> partStack_;
 
-  struct MetadirectiveLoopVariant {
-    const parser::traits::OmpContextSelectorSpecification *selector;
-    const parser::OmpDirectiveSpecification *spec;
-    bool checkDefaultNoneInAssociatedLoop;
+  struct PendingLoopDirectiveGroup {
+    llvm::SmallVector<MetadirectiveReplacementBranch, 4> branches;
+    bool activatesReplacementContext{false};
+    bool checkDefaultNoneInAssociatedLoop{false};
   };
-  std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
-  std::vector<std::size_t> metadirectiveVariantScopeStarts_;
-  const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
-      nullptr};
+  std::vector<PendingLoopDirectiveGroup> pendingLoopDirectiveGroups_;
+  std::vector<std::size_t> pendingLoopDirectiveScopeStarts_;
+  std::vector<ConstructTraitSequence> metadirectiveConstructSelectors_;
+  std::vector<bool> directiveSpecificationReachability_;
+  std::vector<MetadirectiveReplacementContext> activeMetadirectiveReplacements_;
+  std::vector<std::size_t> executionPartReplacementCounts_;
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>
