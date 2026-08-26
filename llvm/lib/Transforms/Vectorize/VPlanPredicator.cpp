@@ -56,6 +56,12 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst);
 
+  /// Create a logical-and, keeping the header mask as the outermost operand.
+  VPValue *createMaskAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL);
+
+  /// Create a logical-or, factoring out a common header mask if present.
+  VPValue *createMaskOr(VPValue *LHS, VPValue *RHS, DebugLoc DL);
+
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(const VPBasicBlock *VPBB, VPValue *Mask) {
@@ -118,6 +124,32 @@ public:
 };
 } // namespace
 
+VPValue *VPPredicator::createMaskAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
+  VPValue *Remainder = nullptr;
+  if (!HeaderMask || !match(LHS, m_RemoveMask(HeaderMask, Remainder)))
+    return Builder.createLogicalAnd(LHS, RHS, DL);
+
+  if (!Remainder)
+    return Builder.createLogicalAnd(HeaderMask, RHS, DL);
+  return Builder.createLogicalAnd(
+      HeaderMask, Builder.createLogicalAnd(Remainder, RHS, DL), DL);
+}
+
+VPValue *VPPredicator::createMaskOr(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
+  VPValue *LHSRemainder = nullptr;
+  VPValue *RHSRemainder = nullptr;
+  if (!HeaderMask || !match(LHS, m_RemoveMask(HeaderMask, LHSRemainder)) ||
+      !match(RHS, m_RemoveMask(HeaderMask, RHSRemainder)))
+    return Builder.createOr(LHS, RHS, DL);
+
+  if (!LHSRemainder || !RHSRemainder)
+    return HeaderMask;
+  return Builder.createLogicalAnd(
+      HeaderMask, Builder.createOr(LHSRemainder, RHSRemainder, DL), DL);
+}
+
 VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
                                       const VPBasicBlock *Dst) {
   assert(is_contained(Dst->getPredecessors(), Src) && "Invalid edge");
@@ -154,7 +186,7 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
     // The bitwise 'And' of SrcMask and EdgeMask introduces new UB if SrcMask
     // is false and EdgeMask is poison. Avoid that by using 'LogicalAnd'
     // instead which generates 'select i1 SrcMask, i1 EdgeMask, i1 false'.
-    EdgeMask = Builder.createLogicalAnd(SrcMask, EdgeMask, Term->getDebugLoc());
+    EdgeMask = createMaskAnd(SrcMask, EdgeMask, Term->getDebugLoc());
   }
 
   return setEdgeMask(Src, Dst, EdgeMask);
@@ -191,7 +223,7 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
       continue;
     }
 
-    BlockMask = Builder.createOr(BlockMask, EdgeMask, {});
+    BlockMask = createMaskOr(BlockMask, EdgeMask, {});
   }
 
   setBlockInMask(VPBB, BlockMask);
@@ -230,11 +262,11 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
     for (VPValue *V : drop_begin(Conds))
       Mask = Builder.createOr(Mask, V);
     if (SrcMask)
-      Mask = Builder.createLogicalAnd(SrcMask, Mask);
+      Mask = createMaskAnd(SrcMask, Mask, {});
     setEdgeMask(Src, Dst, Mask);
 
     // 2. Create the mask for the default destination, which is reached if
-    // none of the cases with destination != default destination are taken.
+    // none of the cases with destination != Dst are taken.
     // Join the conditions for each case where the destination is != Dst using
     // an OR and negate it.
     DefaultMask = DefaultMask ? Builder.createOr(DefaultMask, Mask) : Mask;
@@ -243,7 +275,7 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
   if (DefaultMask) {
     DefaultMask = Builder.createNot(DefaultMask);
     if (SrcMask)
-      DefaultMask = Builder.createLogicalAnd(SrcMask, DefaultMask);
+      DefaultMask = createMaskAnd(SrcMask, DefaultMask, {});
   } else {
     // There are no destinations other than the default destination, so this is
     // an unconditional branch.
@@ -346,7 +378,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
       Builder.setInsertPoint(Dst, getMaskInsertPoint(Dst));
       EdgeMask = createEdgeMask(Src, Dst);
     }
-    Mask = Mask ? Builder.createOr(Mask, EdgeMask) : EdgeMask;
+    Mask = Mask ? createMaskOr(Mask, EdgeMask, {}) : EdgeMask;
   }
   return Mask;
 }
