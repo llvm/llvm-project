@@ -224,15 +224,19 @@ private:
 };
 
 /// This class represents a group of order-independent optional clauses. Each
-/// clause starts with a literal element and has a coressponding parsing
-/// element. A parsing element is a continous sequence of format elements.
-/// Each clause can appear 0 or 1 time.
+/// clause starts with a literal element and has a corresponding parsing
+/// element. A parsing element is a continuous sequence of format elements.
+/// Each clause can appear 0 or 1 time. An optional literal separates clauses.
 class OIListElement : public DirectiveElementBase<DirectiveElement::OIList> {
 public:
-  OIListElement(std::vector<FormatElement *> &&literalElements,
+  OIListElement(LiteralElement *separator,
+                std::vector<FormatElement *> &&literalElements,
                 std::vector<std::vector<FormatElement *>> &&parsingElements)
-      : literalElements(std::move(literalElements)),
+      : separator(separator), literalElements(std::move(literalElements)),
         parsingElements(std::move(parsingElements)) {}
+
+  /// Returns the optional separator between clauses.
+  LiteralElement *getSeparator() const { return separator; }
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
@@ -265,6 +269,9 @@ public:
   }
 
 private:
+  /// An optional literal printed and parsed between clauses.
+  LiteralElement *separator;
+
   /// A vector of `LiteralElement` objects. Each element stores the keyword
   /// for one case of oilist element. For example, an oilist element along with
   /// the `literalElements` vector:
@@ -1851,11 +1858,41 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
 
     /// OIList Directive
   } else if (OIListElement *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+    }
+
     for (LiteralElement *le : oilist->getLiteralElements())
       body << "  bool " << le->getSpelling() << "Clause = false;\n";
+    if (oilist->getSeparator())
+      body << "  bool oilistClauseParsed = false;\n";
 
     // Generate the parsing loop
     body << "  while(true) {\n";
+    if (LiteralElement *separator = oilist->getSeparator()) {
+      body << "    auto oilistSeparatorLoc = parser.getCurrentLocation();\n";
+      body << "    if (oilistClauseParsed) {\n";
+      body << "      if (failed(parser.parseOptional";
+      genLiteralParser(separator->getSpelling(), body);
+      body << ")) {\n";
+      body << "        if (";
+      llvm::interleave(
+          oilist->getLiteralElements(),
+          [&](LiteralElement *literal) {
+            body << "succeeded(parser.parseOptional";
+            genLiteralParser(literal->getSpelling(), body);
+            body << ")";
+          },
+          [&] { body << " || "; });
+      body << ")\n";
+      body << "          return parser.emitError(oilistSeparatorLoc,\n"
+              "              \"expected '"
+           << separator->getSpelling() << "' between oilist clauses\");\n";
+      body << "        break;\n";
+      body << "      }\n";
+      body << "    }\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -1864,6 +1901,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << ")) {\n";
       StringRef lelementName = lelement->getSpelling();
       body << formatv(oilistParserCode, lelementName);
+      if (oilist->getSeparator())
+        body << "    oilistClauseParsed = true;\n";
       if (AttributeLikeVariable *unitVarElem =
               oilist->getUnitVariableParsingElement(pelement)) {
         if (isa<PropertyVariable>(unitVarElem)) {
@@ -1883,9 +1922,16 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << "    } else ";
     }
     body << " {\n";
+    if (oilist->getSeparator()) {
+      body << "    if (oilistClauseParsed)\n";
+      body << "      return parser.emitError(oilistSeparatorLoc,\n"
+              "          \"expected oilist clause after separator\");\n";
+    }
     body << "    break;\n";
     body << "  }\n";
     body << "}\n";
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -2297,7 +2343,7 @@ static const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
 /// {1}: The name of the enum attributes symbolToString function.
 static const char *enumAttrBeginPrinterCode = R"(
   {
-    auto caseValue = {0}();
+    auto caseValue = {0};
     auto caseValueStr = {1}(caseValue);
 )";
 
@@ -2348,6 +2394,129 @@ static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
     body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
 }
 
+static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
+                               MethodBody &body, StringRef valueExpression);
+
+/// Generate the key-value printer used by the default `prop-dict` printer.
+static void genKeyValuePropDictPrinter(OperationFormat &fmt, Operator &op,
+                                       OpClass &opClass) {
+  if (!fmt.hasPropDict || !fmt.useProperties || op.hasCustomPropertiesPrinter())
+    return;
+
+  bool hasPrintableField =
+      !op.getProperties().empty() ||
+      llvm::any_of(
+          op.getAttributes(),
+          [](const auto &attr) { return !attr.attr.isDerivedAttr(); }) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+       fmt.allOperands) ||
+      (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+       fmt.allResultTypes);
+  if (!hasPrintableField)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("::mlir::MLIRContext *", "_odsContext");
+  paramList.emplace_back("::mlir::OpAsmPrinter &", "_odsPrinter");
+  paramList.emplace_back("const Properties &", "prop");
+  paramList.emplace_back("::mlir::ArrayRef<::llvm::StringRef>", "elidedProps");
+  Method *method = opClass.addStaticMethod(
+      "void", "_odsPrintPropertiesAsKeyValueList", std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+bool first = true;
+auto printKey = [&](::llvm::StringRef name) {
+  _odsPrinter << (first ? " <" : ", ") << name << " = ";
+  first = false;
+};
+auto shouldPrint = [&](::llvm::StringRef name) {
+  return !::llvm::is_contained(elidedProps, name);
+};
+)decl";
+
+  auto genSegmentSizesPrinter = [&](StringRef name) {
+    body << "if (shouldPrint(\"" << name << "\")) {\n"
+         << "  printKey(\"" << name << "\");\n"
+         << "  _odsPrinter << \"[\";\n"
+         << "  ::llvm::interleaveComma(prop." << name << ", _odsPrinter);\n"
+         << "  _odsPrinter << \"]\";\n"
+         << "}\n";
+  };
+  if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
+      fmt.allOperands)
+    genSegmentSizesPrinter("operandSegmentSizes");
+  if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments") &&
+      fmt.allResultTypes)
+    genSegmentSizesPrinter("resultSegmentSizes");
+
+  for (const NamedProperty &namedProperty : op.getProperties()) {
+    const Property &property = namedProperty.prop;
+    body << "if (shouldPrint(\"" << namedProperty.name << "\")) {\n"
+         << "  printKey(\"" << namedProperty.name << "\");\n";
+    FmtContext printerContext;
+    printerContext.addSubst("_printer", "_odsPrinter");
+    printerContext.addSubst("_ctxt", "_odsContext");
+    printerContext.addSubst("_storage", "prop." + namedProperty.name);
+    if (property.usesDefaultParser()) {
+      body << "  if constexpr (::mlir::detail::HasKeyValueFieldParser<"
+              "std::remove_cv_t<std::remove_reference_t<decltype(prop."
+           << namedProperty.name << ")>>>::value) {\n"
+           << "    " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n"
+           << "  } else {\n"
+           << "    auto propertyAttr = [&]() -> ::mlir::Attribute {\n";
+      FmtContext conversionContext;
+      conversionContext.addSubst("_ctxt", "_odsContext");
+      conversionContext.addSubst("_storage", "prop." + namedProperty.name);
+      body << tgfmt(property.getConvertToAttributeCall(), &conversionContext)
+           << "\n"
+           << "    }();\n"
+           << "    _odsPrinter.printAttribute(propertyAttr);\n"
+           << "  }\n";
+    } else {
+      body << "  " << tgfmt(property.getPrinterCall(), &printerContext)
+           << ";\n";
+    }
+    body << "}\n";
+  }
+
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (namedAttr.attr.isDerivedAttr())
+      continue;
+    StringRef name = namedAttr.name;
+    body << "if (shouldPrint(\"" << name << "\")";
+    if (namedAttr.attr.isOptional() || namedAttr.attr.hasDefaultValue())
+      body << " && prop." << name;
+    body << ") {\n"
+         << "  printKey(\"" << name << "\");\n";
+
+    if (canFormatEnumAttr(&namedAttr)) {
+      FmtContext conversionContext;
+      conversionContext.withSelf("prop." + name);
+      std::string valueExpression = std::string(tgfmt(
+          namedAttr.attr.getConvertFromStorageCall(), &conversionContext));
+      genEnumAttrPrinter(&namedAttr, op, body, valueExpression);
+    } else if (shouldFormatSymbolNameAttr(&namedAttr)) {
+      body << "  _odsPrinter.printSymbolName(prop." << name
+           << ".getValue());\n";
+    } else {
+      AttributeVariable attrVariable(&namedAttr);
+      if (attrVariable.getTypeBuilder())
+        body << "  _odsPrinter.printAttributeWithoutType(prop." << name
+             << ");\n";
+      else if (attrVariable.shouldBeQualified() ||
+               namedAttr.attr.getStorageType() == "::mlir::Attribute")
+        body << "  _odsPrinter.printAttribute(prop." << name << ");\n";
+      else
+        body << "  _odsPrinter.printStrippedAttrOrType(prop." << name << ");\n";
+    }
+    body << "}\n";
+  }
+  body << "if (!first)\n"
+          "  _odsPrinter << \">\";\n";
+}
+
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
@@ -2395,9 +2564,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
     }
   }
 
+  // The `printProperties` method is responsible for printing out a leading
+  // space so that empty `prop-dict`s don't produce stray whitespace.
   if (fmt.useProperties) {
-    body << "  _odsPrinter << \" \";\n"
-         << "  printProperties(this->getContext(), _odsPrinter, "
+    body << "  printProperties(this->getContext(), _odsPrinter, "
             "getProperties(), elidedProps);\n";
   }
 }
@@ -2586,15 +2756,20 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 
 /// Generate the printer for an enum attribute.
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
-                               MethodBody &body) {
+                               MethodBody &body,
+                               StringRef valueExpression = {}) {
   Attribute baseAttr = var->attr.getBaseAttr();
   const EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
   std::vector<EnumCase> cases = enumInfo.getAllCases();
   bool dereferenceGetter =
       var->attr.isOptional() && !var->attr.hasDefaultValue();
 
-  body << formatv(enumAttrBeginPrinterCode,
-                  (dereferenceGetter ? "*" : "") + op.getGetterName(var->name),
+  std::string caseValue = valueExpression.empty()
+                              ? op.getGetterName(var->name) + "()"
+                              : valueExpression.str();
+  if (dereferenceGetter)
+    caseValue = "*(" + caseValue + ")";
+  body << formatv(enumAttrBeginPrinterCode, caseValue,
                   enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
@@ -2782,6 +2957,11 @@ void OperationFormat::genElementPrinter(FormatElement *element,
 
   // Emit the OIList
   if (auto *oilist = dyn_cast<OIListElement>(element)) {
+    if (oilist->getSeparator()) {
+      body << "  {\n";
+      body.indent();
+      body << "  bool oilistClausePrinted = false;\n";
+    }
     for (auto clause : oilist->getClauses()) {
       LiteralElement *lelement = std::get<0>(clause);
       ArrayRef<FormatElement *> pelement = std::get<1>(clause);
@@ -2824,6 +3004,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
 
       body << ") {\n";
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        body << "    if (oilistClausePrinted) {\n";
+        genLiteralPrinter(separator->getSpelling(), body, shouldEmitSpace,
+                          lastWasPunctuation);
+        body << "    }\n";
+        body << "    oilistClausePrinted = true;\n";
+      }
       genLiteralPrinter(lelement->getSpelling(), body, shouldEmitSpace,
                         lastWasPunctuation);
       if (oilist->getUnitVariableParsingElement(pelement) == nullptr) {
@@ -2833,6 +3020,8 @@ void OperationFormat::genElementPrinter(FormatElement *element,
       }
       body << "  }\n";
     }
+    if (oilist->getSeparator())
+      body.unindent() << "  }\n";
     return;
   }
 
@@ -2990,6 +3179,8 @@ void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
   bool shouldEmitSpace = true, lastWasPunctuation = false;
   for (FormatElement *element : elements)
     genElementPrinter(element, body, op, shouldEmitSpace, lastWasPunctuation);
+
+  genKeyValuePropDictPrinter(*this, op, opClass);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3561,10 +3752,20 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 LogicalResult
 OpFormatParser::verifyOIListElements(SMLoc loc,
                                      ArrayRef<FormatElement *> elements) {
-  // Check that all of the successors are within the format.
+  // Check for ambiguous literals in and around oilist elements.
   SmallVector<StringRef> prohibitedLiterals;
   for (FormatElement *it : elements) {
     if (auto *oilist = dyn_cast<OIListElement>(it)) {
+      if (LiteralElement *separator = oilist->getSeparator()) {
+        for (LiteralElement *literal : oilist->getLiteralElements()) {
+          if (literal->getSpelling() == separator->getSpelling()) {
+            return emitError(
+                loc, "format ambiguity because " + separator->getSpelling() +
+                         " is used as both an oilist separator and clause "
+                         "keyword.");
+          }
+        }
+      }
       if (!prohibitedLiterals.empty()) {
         // We just saw an oilist element in last iteration. Literals should not
         // match.
@@ -3579,6 +3780,8 @@ OpFormatParser::verifyOIListElements(SMLoc loc,
       }
       for (LiteralElement *literal : oilist->getLiteralElements())
         prohibitedLiterals.push_back(literal->getSpelling());
+      if (LiteralElement *separator = oilist->getSeparator())
+        prohibitedLiterals.push_back(separator->getSpelling());
     } else if (auto *literal = dyn_cast<LiteralElement>(it)) {
       if (find(prohibitedLiterals, literal->getSpelling()) !=
           prohibitedLiterals.end()) {
@@ -3935,6 +4138,21 @@ OpFormatParser::parseSuccessorsDirective(SMLoc loc, Context context) {
 
 FailureOr<FormatElement *>
 OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
+  LiteralElement *separator = nullptr;
+  if (peekToken().is(FormatToken::less)) {
+    consumeToken();
+    SMLoc separatorLoc = peekToken().getLoc();
+    FailureOr<FormatElement *> separatorElement = parseLiteral(context);
+    if (failed(separatorElement))
+      return failure();
+    separator = dyn_cast<LiteralElement>(*separatorElement);
+    if (!separator)
+      return emitError(separatorLoc,
+                       "oilist separator must be a non-whitespace literal");
+    if (failed(parseToken(FormatToken::greater,
+                          "expected '>' after oilist separator")))
+      return failure();
+  }
   if (failed(parseToken(FormatToken::l_paren,
                         "expected '(' before oilist argument list")))
     return failure();
@@ -3965,7 +4183,7 @@ OpFormatParser::parseOIListDirective(SMLoc loc, Context context) {
     }
   } while (true);
 
-  return create<OIListElement>(std::move(literalElements),
+  return create<OIListElement>(separator, std::move(literalElements),
                                std::move(parsingElements));
 }
 

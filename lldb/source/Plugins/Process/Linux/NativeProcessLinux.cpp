@@ -8,22 +8,10 @@
 
 #include "NativeProcessLinux.h"
 
-#include <cerrno>
-#include <cstdint>
-#include <cstring>
-#include <unistd.h>
-
-#include <fstream>
-#include <mutex>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-
-#include "NativeThreadLinux.h"
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
-#include "Procfs.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
@@ -49,12 +37,17 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 #include <linux/unistd.h>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #ifdef __aarch64__
 #include <asm/hwcap.h>
@@ -68,6 +61,22 @@
 
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
 #endif
 
 using namespace lldb;
@@ -138,7 +147,8 @@ static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
 
 static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
-  const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+  constexpr uint32_t kDebugPTraceMaxBytes = 20;
+  const uint32_t loop_count = std::min<uint32_t>(kDebugPTraceMaxBytes, count);
   for (uint32_t i = 0; i < loop_count; i++) {
     s.Printf("[%x]", *ptr);
     ptr++;

@@ -86,9 +86,23 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
+//
+// Note that DriverKit versions were bumped forward and aligned with the other Apple OSes in that release.
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 270000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 270000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 270000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 27.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 27.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 27.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 27.0)))                                             \
+    __attribute__((availability(driverkit, strict, introduced = 27.0)))
 
 // LLVM 21
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 260400) ||       \

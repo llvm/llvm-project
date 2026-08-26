@@ -4931,6 +4931,26 @@ TEST_F(FormatTest, IndentExternBlockStyle) {
                Style);
 }
 
+TEST_F(FormatTest, BraceWrappingAfterExportBlock) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterExportBlock = true;
+  verifyFormat("export\n"
+               "{\n"
+               "  int foo();\n"
+               "}",
+               "export {\n"
+               "  int foo();\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterExportBlock = false;
+  verifyFormat("export {\n"
+               "  int foo();\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsInlineASM) {
   verifyFormat("asm(\"xyz\" : \"=a\"(a), \"=d\"(b) : \"a\"(data));");
   verifyFormat("asm(\"nop\" ::: \"memory\");");
@@ -22419,6 +22439,14 @@ TEST_F(FormatTest, DisableRegions) {
                  "        #if SHOULD_STAY_INDENTED\n"
                  " #endif\n"
                  "#endif\n"
+                 "// clang-format on");
+
+  verifyNoChange("// clang-format off\n"
+                 "\n"
+                 "\n"
+                 " int  i ;\n"
+                 "\n"
+                 "\n"
                  "// clang-format on");
 }
 

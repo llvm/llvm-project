@@ -79,6 +79,8 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
     return mlir::LLVM::DIEmissionKind::Full;
   case llvm::codegenoptions::DebugInfoKind::DebugLineTablesOnly:
     return mlir::LLVM::DIEmissionKind::LineTablesOnly;
+  case llvm::codegenoptions::DebugInfoKind::DebugDirectivesOnly:
+    return mlir::LLVM::DIEmissionKind::DebugDirectivesOnly;
   default:
     return mlir::LLVM::DIEmissionKind::None;
   }
@@ -171,15 +173,8 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       });
 }
 
-/// Create a pass pipeline for running default optimization passes for
-/// incremental conversion of FIR.
-///
-/// \param pm - MLIR pass manager that will hold the pipeline definition
-void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
-                                           MLIRToLLVMPassPipelineConfig &pc) {
-  // Early Optimizer EP Callback
-  pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
-
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
   // simplify the IR
   mlir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
@@ -243,8 +238,14 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
-  // convert control flow to CFG form
-  fir::addCfgConversionPass(pm, pc);
+}
+
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
+  mlir::GreedyRewriteConfig config;
+  config.setRegionSimplificationLevel(
+      mlir::GreedySimplifyRegionLevel::Disabled);
+
   pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
@@ -255,8 +256,18 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   if (pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createSetRuntimeCallAttributes());
+}
 
-  // Last Optimizer EP Callback
+/// Create a pass pipeline for running default optimization passes for
+/// incremental conversion of FIR.
+///
+/// \param pm - MLIR pass manager that will hold the pipeline definition
+void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
+                                           MLIRToLLVMPassPipelineConfig &pc) {
+  pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
+  createDefaultFIRPreCFGOptimizerPassPipeline(pm, pc);
+  fir::addCfgConversionPass(pm, pc);
+  createDefaultFIRPostCFGOptimizerPassPipeline(pm, pc);
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
 }
 
