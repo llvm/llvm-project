@@ -6,6 +6,14 @@
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa \
 // RUN: | FileCheck --check-prefix=CONSTRAINED %s
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
+// RUN: -disable-O0-optnone -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa \
+// RUN: | FileCheck --check-prefix=LLVM --implicit-check-not=' @llvm.fma.' %s %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=strict \
+// RUN: -disable-O0-optnone -fclangir -emit-cir -o - %s \
+// RUN: | FileCheck --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %s %}
 
 // REQUIRES: aarch64-registered-target
 
@@ -27,6 +35,10 @@
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[B]], float [[EXTRACT]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CONSTRAINED-NEXT:    ret float [[TMP0]]
 //
+// CIR-LABEL: cir.func {{.*}}@test_vfmas_lane_f32(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfmas_lane_f32(
+// LLVM: call float @llvm.experimental.constrained.fma.f32({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
   return vfmas_lane_f32(a, b, c, 1);
 }
