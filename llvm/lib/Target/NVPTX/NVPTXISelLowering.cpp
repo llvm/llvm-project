@@ -7241,6 +7241,9 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
+// TODO: Remove the type-legality checks here once
+// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
+// explicit type constraints for overloaded intrinsics in tablegen.
 static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
                             Intrinsic::ID IID,
                             APFloat::roundingMode RoundingMode) {
@@ -7266,13 +7269,10 @@ static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
   }
 }
 
-static SDValue diagnoseInvalidFAdd(SDNode *N, SelectionDAG &DAG,
-                                   const NVPTXSubtarget &STI, Intrinsic::ID IID,
-                                   APFloat::roundingMode RoundingMode) {
+static SDValue diagnoseUnsupportedFAdd(SDNode *N, SelectionDAG &DAG,
+                                       Intrinsic::ID IID,
+                                       APFloat::roundingMode RoundingMode) {
   const EVT VT = N->getValueType(0);
-  if (isSupportedFAdd(VT, STI, IID, RoundingMode))
-    return SDValue();
-
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
       Twine(Intrinsic::getBaseName(IID)) + " with rounding mode " +
@@ -7297,8 +7297,8 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (SDValue V = diagnoseInvalidFAdd(N, DCI.DAG, STI, IID, RoundingMode))
-      return V;
+    if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
+      return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   }
