@@ -15,8 +15,7 @@ namespace Fortran::evaluate {
 
 // DOT_PRODUCT
 template <typename T>
-Expr<T> FoldDotProduct(
-    FoldingContext &context, FunctionRef<T> &&funcRef) {
+Expr<T> FoldDotProduct(FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
@@ -132,9 +131,9 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-std::optional<ArrayAndMask<T>> ProcessReductionArgs(
-    FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
-    int arrayIndex, std::optional<int> dimIndex = std::nullopt,
+std::optional<ArrayAndMask<T>> ProcessReductionArgs(FoldingContext &context,
+    ActualArguments &arg, std::optional<int> &dim, int arrayIndex,
+    std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
