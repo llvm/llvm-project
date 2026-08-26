@@ -1682,7 +1682,8 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
                                       Region &initRegion, Value hostVar,
                                       StringRef varName, ValueRange bounds,
                                       bool &needsFree,
-                                      acc::VariableInfoAttr &varInfo) {
+                                      acc::VariableInfoAttr &varInfo,
+                                      SmallVectorImpl<Value> &destroyValues) {
   Type varType = hostVar.getType();
 
   // Create init block with arguments: original value + bounds
@@ -1708,8 +1709,9 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
     auto typedVar = cast<TypedValue<MappableType>>(blockArgVar);
     auto typedHostVar = cast<TypedValue<MappableType>>(hostVar);
     varInfo = mappableTy.genPrivateVariableInfo(typedHostVar);
-    privatizedValue = mappableTy.generatePrivateInit(
-        builder, loc, typedVar, varName, bounds, {}, varInfo, needsFree);
+    privatizedValue =
+        mappableTy.generatePrivateInit(builder, loc, typedVar, varName, bounds,
+                                       {}, varInfo, needsFree, destroyValues);
     if (!privatizedValue)
       return failure();
   } else {
@@ -1723,7 +1725,9 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
   }
 
   // Add yield operation to init block
-  acc::YieldOp::create(builder, loc, privatizedValue);
+  SmallVector<Value> initResults{privatizedValue};
+  initResults.append(destroyValues);
+  acc::YieldOp::create(builder, loc, initResults);
 
   return success();
 }
@@ -1779,14 +1783,18 @@ static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
 /// Returns success if the region is populated, failure otherwise.
 /// The `varInfo` carries language-specific metadata produced by
 /// `createInitRegion`.
-static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
-                                         Region &destroyRegion, Type varType,
-                                         Value allocRes, ValueRange bounds,
-                                         acc::VariableInfoAttr varInfo) {
+static LogicalResult
+createDestroyRegion(OpBuilder &builder, Location loc, Region &destroyRegion,
+                    Type varType, Value allocRes, ValueRange destroyValues,
+                    ValueRange bounds, acc::VariableInfoAttr varInfo) {
   // Create destroy block with arguments: original value + privatized value +
-  // bounds
+  // values preserved for destruction + bounds.
   SmallVector<Type> destroyArgTypes{varType, varType};
   SmallVector<Location> destroyArgLocs{loc, loc};
+  for (Value destroyValue : destroyValues) {
+    destroyArgTypes.push_back(destroyValue.getType());
+    destroyArgLocs.push_back(loc);
+  }
   for (Value bound : bounds) {
     destroyArgTypes.push_back(bound.getType());
     destroyArgLocs.push_back(loc);
@@ -1800,8 +1808,12 @@ static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
       cast<TypedValue<PointerLikeType>>(destroyBlock->getArgument(1));
   if (isa<MappableType>(varType)) {
     auto mappableTy = cast<MappableType>(varType);
-    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, bounds,
-                                           varInfo))
+    ValueRange destroyArgs =
+        destroyBlock->getArguments().slice(2, destroyValues.size());
+    ValueRange destroyBounds =
+        destroyBlock->getArguments().drop_front(2 + destroyValues.size());
+    if (!mappableTy.generatePrivateDestroy(builder, loc, varToFree, destroyArgs,
+                                           destroyBounds, varInfo))
       return failure();
   } else {
     assert(isa<PointerLikeType>(varType) && "Expected PointerLikeType");
@@ -1883,8 +1895,10 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // Populate the init region
   bool needsFree = false;
   acc::VariableInfoAttr varInfo;
+  SmallVector<Value> destroyValues;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
-                              varName, bounds, needsFree, varInfo))) {
+                              varName, bounds, needsFree, varInfo,
+                              destroyValues))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -1897,7 +1911,8 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                   varType, allocRes, bounds, varInfo))) {
+                                   varType, allocRes, destroyValues, bounds,
+                                   varInfo))) {
       recipe.erase();
       return std::nullopt;
     }
@@ -1983,8 +1998,10 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
   // then passed through to copy/destroy so generateCopy /
   // generatePrivateDestroy receive the same metadata as generatePrivateInit.
   acc::VariableInfoAttr varInfo;
+  SmallVector<Value> destroyValues;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
-                              varName, bounds, needsFree, varInfo))) {
+                              varName, bounds, needsFree, varInfo,
+                              destroyValues))) {
     recipe.erase();
     return std::nullopt;
   }
@@ -2004,7 +2021,8 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
     Value allocRes = yieldOp.getOperand(0);
 
     if (failed(createDestroyRegion(builder, loc, recipe.getDestroyRegion(),
-                                   varType, allocRes, bounds, varInfo))) {
+                                   varType, allocRes, destroyValues, bounds,
+                                   varInfo))) {
       recipe.erase();
       return std::nullopt;
     }
