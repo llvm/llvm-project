@@ -207,22 +207,23 @@ QualType ParamVarRegion::getValueType() const {
 
 const ParmVarDecl *ParamVarRegion::getDecl() const {
   const Decl *D = getStackFrame()->getDecl();
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     assert(Index < FD->param_size());
     return FD->parameters()[Index];
-  } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+  }
+  if (const auto *BD = dyn_cast<BlockDecl>(D)) {
     assert(Index < BD->param_size());
     return BD->parameters()[Index];
-  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  }
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     assert(Index < MD->param_size());
     return MD->parameters()[Index];
-  } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
+  }
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
     assert(Index < CD->param_size());
     return CD->parameters()[Index];
-  } else {
-    llvm_unreachable("Unexpected Decl kind!");
   }
+  llvm_unreachable("Unexpected Decl kind!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -925,18 +926,16 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
 template <typename REG>
 const REG *MemRegionManager::LazyAllocate(REG*& region) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(*this);
-  }
 
   return region;
 }
 
 template <typename REG, typename ARG>
 const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(this, a);
-  }
 
   return region;
 }
@@ -1232,9 +1231,9 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const StackFrame *SF) {
   const MemSpaceRegion *sReg = nullptr;
 
-  if (CL->isFileScope())
+  if (CL->isFileScope()) {
     sReg = getGlobalsRegion();
-  else {
+  } else {
     assert(SF);
     sReg = getStackLocalsRegion(SF);
   }
