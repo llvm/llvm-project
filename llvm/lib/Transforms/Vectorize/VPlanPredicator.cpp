@@ -66,6 +66,7 @@ public:
 
   auto begin() const { return Blocks.begin(); }
   auto end() const { return Blocks.end(); }
+  unsigned size() const { return Blocks.size(); }
   unsigned getIndex(const VPBlockBase *BB) const { return BlockIndex.at(BB); }
 };
 
@@ -140,6 +141,10 @@ class VPPredicator {
 
   using BlendTermTy = std::pair<VPValue *, VPBasicBlock *>;
 
+  /// Pre-linearization blend terms, indexed by block's index in
+  /// BlocksInCompactRPOTOrder and phi.
+  SmallVector<DenseMap<VPPhi *, SmallVector<BlendTermTy>>> BlendTerms;
+
   /// Return true if every path starting at \p Root reaches one of \p Blocks.
   /// All blocks in \p Blocks are expected to be dominated by \p Root.
   bool
@@ -155,7 +160,8 @@ public:
   VPPredicator(VPlan &Plan)
       : Plan(Plan), VPDT(Plan), VPPDT(Plan),
         BlocksInCompactRPOTOrder(
-            Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT) {}
+            Plan.getVectorLoopRegion()->getEntryBasicBlock(), VPDT),
+        BlendTerms(BlocksInCompactRPOTOrder.size()) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -432,10 +438,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       continue;
     }
 
-    auto Terms = computeBlendTerms(PhiR);
+    unsigned BlockIdx = BlocksInCompactRPOTOrder.getIndex(VPBB);
+    const auto &Terms = BlendTerms[BlockIdx].at(PhiR);
 
     // The in-mask of the common dominator is true on all paths from an
-    // incoming block to the phi. Remove it from the blend masks.
+    // incoming block to the phi. The dominator tree still represents the
+    // pre-linearization CFG.
     VPBasicBlock *CommonIncomingDom = cast<VPBasicBlock>(
         VPDT.findNearestCommonDominator(make_second_range(Terms)));
     VPValue *CommonIncomingMask = getBlockInMask(CommonIncomingDom);
@@ -469,9 +477,8 @@ void VPPredicator::run() {
       Frequencies = vputils::computeExecutionFrequencies(Blocks);
 
   for (VPBasicBlock *VPBB : Blocks) {
-    // Introduce the mask for VPBB, which may introduce needed edge masks, and
-    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
-    // header.
+    // Introduce the mask for VPBB, which may introduce needed edge masks.
+
     if (VPBB != Header)
       createBlockInMask(VPBB);
 
@@ -492,9 +499,16 @@ void VPPredicator::run() {
     }
   }
 
-  for (VPBasicBlock *VPBB : reverse(Blocks))
-    if (VPBB != Header)
-      convertPhisToBlends(VPBB);
+  // Cache blend terms before linearization. Computing them requires the
+  // original phi predecessor mappings and CFG successor relation, both of
+  // which are rewritten below. Skip the header which is the first block.
+  for (VPBasicBlock *VPBB : drop_begin(Blocks)) {
+    for (VPRecipeBase &R : VPBB->phis()) {
+      auto *PhiR = cast<VPPhi>(&R);
+      unsigned BlockIdx = BlocksInCompactRPOTOrder.getIndex(VPBB);
+      BlendTerms[BlockIdx][PhiR] = computeBlendTerms(PhiR);
+    }
+  }
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
@@ -512,6 +526,10 @@ void VPPredicator::run() {
 
     PrevVPBB = VPBB;
   }
+
+  for (VPBlockBase *VPBB : reverse(BlocksInCompactRPOTOrder))
+    if (VPBB != Header)
+      convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 }
 
 void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
