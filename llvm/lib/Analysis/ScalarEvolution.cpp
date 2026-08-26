@@ -2288,28 +2288,22 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
 }
 
 /// Checks that the application of binary function \p OperationFn to \p LHS and
-/// \p RHS does not wrap in the unsigned or signed (if \p Signed) manner.
+/// \p RHS does not wrap in the unsigned or signed (depending on ExtendOpTy)
+/// manner.
+template <typename ExtendOpTy>
 static bool
 willNotWrapByExtend(function_ref<const SCEV *(SCEVUse, SCEVUse)> OperationFn,
-                    const SCEV *LHS, const SCEV *RHS, bool Signed,
-                    ScalarEvolution *SE) {
+                    const SCEV *LHS, const SCEV *RHS, ScalarEvolution *SE) {
   auto *NarrowTy = LHS->getType();
   auto *WideTy = IntegerType::get(NarrowTy->getContext(),
                                   SE->getTypeSizeInBits(NarrowTy) * 2);
 
-  using ExtFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, Type *, unsigned);
-  std::function<const SCEV *(SCEVUse, Type *)> ExtensionFn =
-      Signed
-          ? bind_front(
-                bind_back<ExtFnTy>(&ScalarEvolution::getSignExtendExpr, 0), SE)
-          : bind_front(
-                bind_back<ExtFnTy>(&ScalarEvolution::getZeroExtendExpr, 0), SE);
-
   // Check ExtensionFn(OperationFn(LHS, RHS)) == OperationFn(ExtensionFn(LHS),
   // ExtensionFn(RHS))
-  const SCEV *A = ExtensionFn(OperationFn(LHS, RHS), WideTy);
-  const SCEV *LHSB = ExtensionFn(LHS, WideTy);
-  const SCEV *RHSB = ExtensionFn(RHS, WideTy);
+  auto ExtensionFn = ExtendOpTraits<ExtendOpTy>::GetExtendExpr;
+  const SCEV *A = (SE->*ExtensionFn)(OperationFn(LHS, RHS), WideTy, 0);
+  const SCEV *LHSB = (SE->*ExtensionFn)(LHS, WideTy, 0);
+  const SCEV *RHSB = (SE->*ExtensionFn)(RHS, WideTy, 0);
   const SCEV *B = OperationFn(LHSB, RHSB);
   return A == B;
 }
@@ -2340,7 +2334,10 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     break;
   }
 
-  if (willNotWrapByExtend(OperationFn, LHS, RHS, Signed, this))
+  if (Signed
+          ? willNotWrapByExtend<SCEVSignExtendExpr>(OperationFn, LHS, RHS, this)
+          : willNotWrapByExtend<SCEVZeroExtendExpr>(OperationFn, LHS, RHS,
+                                                    this))
     return true;
   // Can we use context to prove the fact we need?
   if (!CtxI)
@@ -3497,12 +3494,12 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
           bool NoWrap = !StepInt.urem(DivInt) &&
-                        willNotWrapByExtend(
+                        willNotWrapByExtend<SCEVZeroExtendExpr>(
                             [&](SCEVUse Start, SCEVUse Step) {
                               return getAddRecExpr(Start, Step, AR->getLoop(),
                                                    SCEV::FlagAnyWrap);
                             },
-                            AR->getStart(), Step, /*Signed=*/false, this);
+                            AR->getStart(), Step, this);
           if (!StepInt.urem(DivInt) && NoWrap) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
