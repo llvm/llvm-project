@@ -736,6 +736,10 @@ function(cxx_link_system_libraries target)
     target_link_libraries(${target} PRIVATE atomic)
   endif()
 
+  if (LIBCXX_HAS_M_LIB)
+    target_link_libraries(${target} PRIVATE m)
+  endif()
+
   if (MINGW)
     target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
   endif()
