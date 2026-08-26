@@ -1409,12 +1409,21 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FATAN2: {
+    FPClassTest InterestedY = InterestedClasses;
+    FPClassTest InterestedX = InterestedClasses;
+
+    // We can rule out zero and subnormal if x cannot have a positive value.
+    if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)
+      InterestedX |= fcPositive | fcNegSubnormal;
+
     Register Y = MI.getOperand(1).getReg();
     Register X = MI.getOperand(2).getReg();
     KnownFPClass KnownY, KnownX;
-    computeKnownFPClass(Y, DemandedElts, InterestedClasses, KnownY, Depth + 1);
-    computeKnownFPClass(X, DemandedElts, InterestedClasses, KnownX, Depth + 1);
-    Known = KnownFPClass::atan2(KnownY, KnownX);
+    computeKnownFPClass(Y, DemandedElts, InterestedY, KnownY, Depth + 1);
+    computeKnownFPClass(X, DemandedElts, InterestedX, KnownX, Depth + 1);
+    DenormalMode Mode =
+        MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    Known = KnownFPClass::atan2(KnownY, KnownX, Mode);
     break;
   }
   case TargetOpcode::G_FSINH: {
