@@ -37,6 +37,7 @@ add_flangrt_unittest(RuntimeTests
   Random.cpp
   Reduction.cpp
   RuntimeCrashTest.cpp
+  ScratchTempDir.cpp
   Stop.cpp
   Support.cpp
   Time.cpp

@@ -84,3 +84,17 @@ the pool can hold, the runtime terminates with a diagnostic message that
 includes the current pool capacity.
 
 Example: `export FLANG_TRAMPOLINE_POOL_SIZE=4096`
+
+## `TMPDIR` (POSIX), `TMP` and `TEMP` (Windows)
+
+On POSIX targets, the runtime consults `TMPDIR` to select the directory
+in which scratch files for `OPEN(STATUS='SCRATCH')` are created. If
+`TMPDIR` is unset or empty, the runtime falls back to `P_tmpdir`
+(typically `/tmp` on glibc) and finally to `/tmp`. The non-standard
+conventions `TMP` and `TEMP` are not consulted on POSIX.
+
+On Windows, scratch files are placed in the directory returned by
+`GetTempPathA`, which consults `TMP`, `TEMP`, and `USERPROFILE` in that
+order before falling back to the Windows system default.
+
+Example: `export TMPDIR=/var/local/scratch`
