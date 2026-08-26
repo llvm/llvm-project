@@ -1298,7 +1298,7 @@ const ExtendOpTraitsBase::GetExtendExprTy ExtendOpTraits<
 // expression "Step + sext/zext(PreIncAR)" is congruent with
 // "sext/zext(PostIncAR)"
 template <typename ExtendOpTy>
-static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR, Type *Ty,
+static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR,
                                         ScalarEvolution *SE, unsigned Depth) {
   auto WrapType = ExtendOpTraits<ExtendOpTy>::WrapType;
   auto GetExtendExpr = ExtendOpTraits<ExtendOpTy>::GetExtendExpr;
@@ -1380,7 +1380,7 @@ static const SCEV *getExtendAddRecStart(const SCEVAddRecExpr *AR, Type *Ty,
                                         unsigned Depth) {
   auto GetExtendExpr = ExtendOpTraits<ExtendOpTy>::GetExtendExpr;
 
-  const SCEV *PreStart = getPreStartForExtend<ExtendOpTy>(AR, Ty, SE, Depth);
+  const SCEV *PreStart = getPreStartForExtend<ExtendOpTy>(AR, SE, Depth);
   if (!PreStart)
     return (SE->*GetExtendExpr)(AR->getStart(), Ty, Depth);
 
