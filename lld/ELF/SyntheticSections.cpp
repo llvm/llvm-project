@@ -39,6 +39,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <array>
 #include <cinttypes>
 #include <cstdlib>
 
@@ -3769,18 +3770,71 @@ void MergeNoTailSection::finalizeContents() {
   const size_t concurrency =
       llvm::bit_floor(std::min<size_t>(ctx.arg.threadCount, numShards));
 
-  // Add section pieces to the builders.
-  parallelFor(0, concurrency, [&](size_t threadId) {
-    for (MergeInputSection *sec : sections) {
-      for (size_t i = 0, e = sec->pieces.size(); i != e; ++i) {
-        if (!sec->pieces[i].live)
-          continue;
-        size_t shardId = getShardId(sec->pieces[i].hash);
-        if ((shardId & (concurrency - 1)) == threadId)
+  if (concurrency == 1) {
+    for (MergeInputSection *sec : sections)
+      for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
+        if (sec->pieces[i].live) {
+          size_t shardId = getShardId(sec->pieces[i].hash);
           sec->pieces[i].outputOff = shards[shardId].add(sec->getData(i));
+        }
+  } else {
+    // Build per-worker shard lists first so that every piece is visited only
+    // once by the insertion pass. This uses at most 2 * numShards * numShards
+    // uint64_t values (16 KiB), regardless of the number of input sections.
+    // We leverage outputOff as the next link as it is unused until later.
+    struct ShardLists {
+      std::array<uint64_t, numShards> heads{};
+      std::array<uint64_t, numShards> tails{};
+    };
+    auto encode = [](size_t sectionId, size_t pieceId) {
+      assert(sectionId < UINT32_MAX);
+      assert(pieceId <= UINT32_MAX);
+      return uint64_t(sectionId + 1) << 32 | pieceId;
+    };
+    auto getSectionId = [](uint64_t index) { return (index >> 32) - 1; };
+    auto getPieceId = [](uint64_t index) { return uint32_t(index); };
+
+    std::vector<ShardLists> lists(concurrency);
+    parallelFor(0, concurrency, [&](size_t workerId) {
+      size_t begin = sections.size() * workerId / concurrency;
+      size_t end = sections.size() * (workerId + 1) / concurrency;
+      ShardLists &workerLists = lists[workerId];
+      for (size_t sectionId = begin; sectionId != end; ++sectionId) {
+        MergeInputSection *sec = sections[sectionId];
+        for (size_t i = 0, e = sec->pieces.size(); i != e; ++i) {
+          SectionPiece &piece = sec->pieces[i];
+          if (!piece.live)
+            continue;
+          size_t shardId = getShardId(piece.hash);
+          uint64_t index = encode(sectionId, i);
+          if (uint64_t tail = workerLists.tails[shardId]) {
+            MergeInputSection *tailSec = sections[getSectionId(tail)];
+            tailSec->pieces[getPieceId(tail)].outputOff = index;
+          } else {
+            workerLists.heads[shardId] = index;
+          }
+          workerLists.tails[shardId] = index;
+          piece.outputOff = 0;
+        }
       }
-    }
-  });
+    });
+
+    parallelFor(0, concurrency, [&](size_t threadId) {
+      for (size_t shardId = threadId; shardId < numShards;
+           shardId += concurrency) {
+        for (const ShardLists &workerLists : lists) {
+          for (uint64_t index = workerLists.heads[shardId]; index;) {
+            MergeInputSection *sec = sections[getSectionId(index)];
+            size_t pieceId = getPieceId(index);
+            SectionPiece &piece = sec->pieces[pieceId];
+            uint64_t next = piece.outputOff;
+            piece.outputOff = shards[shardId].add(sec->getData(pieceId));
+            index = next;
+          }
+        }
+      }
+    });
+  }
 
   // Compute an in-section offset for each shard.
   size_t off = 0;
