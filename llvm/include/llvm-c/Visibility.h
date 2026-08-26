@@ -16,7 +16,11 @@
 #ifndef LLVM_C_VISIBILITY_H
 #define LLVM_C_VISIBILITY_H
 
+#if defined __has_include
+#if __has_include("llvm/Config/llvm-config.h")
 #include "llvm/Config/llvm-config.h"
+#endif
+#endif
 
 /// LLVM_C_ABI is the export/visibility macro used to mark symbols declared in
 /// llvm-c as exported when built as a shared library.
