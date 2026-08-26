@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/Support/Compiler.h"
@@ -128,6 +129,17 @@ public:
     (void)ReadCount;
 
     return Tok;
+  }
+
+  /// LexIdentifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
+  static LLVM_ATTRIBUTE_ALWAYS_INLINE bool
+  isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
+    return llvm::isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
+           (AllowAt && C == '@') || (AllowHash && C == '#');
+  }
+
+  static LLVM_ATTRIBUTE_ALWAYS_INLINE bool isStrictIdentifierChar(char C) {
+    return llvm::isAlnum(C) || C == '_' || C == '$' || C == '.';
   }
 
   /// Look ahead an arbitrary number of tokens.
