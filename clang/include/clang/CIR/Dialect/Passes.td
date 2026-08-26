@@ -195,6 +195,21 @@ def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def LoopInterchange : Pass<"cir-loop-interchange", "mlir::ModuleOp"> {
+  let summary = "Interchange a strided loop nest to make its inner access "
+                "contiguous";
+  let description = [{
+    Interchange a counted loop nest whose inner loop reads a matrix down a
+    column, so the strided access becomes contiguous while the loop body order
+    is preserved. This first patch recognizes and reports candidates and does
+    not yet modify the IR.
+  }];
+  let constructor = "mlir::createLoopInterchangePass()";
+  let dependentDialects = ["cir::CIRDialect"];
+  let statistics = [Statistic<"numCandidates", "num-candidates",
+                              "Number of loop interchange candidates">];
+}
+
 def LibOpt : Pass<"cir-lib-opt"> {
   let summary = "Optimize C/C++ library calls";
   let description = [{
