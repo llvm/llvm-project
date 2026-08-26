@@ -1399,9 +1399,8 @@ define i1 @shl_nuw_signed_bounded(i64 %c) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BND]])
 ; CHECK-NEXT:    [[NN:%.*]] = icmp sge i64 [[C]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
-; CHECK-NEXT:    [[M:%.*]] = shl nuw i64 [[C]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i64 [[M]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i64 [[C]], 2
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %bnd = icmp slt i64 %c, 2305843009213693952
@@ -1419,9 +1418,8 @@ define i1 @shl_nuw_signed_tight_bound(i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
 ; CHECK-NEXT:    [[NN:%.*]] = icmp sge i8 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NN]])
-; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 [[X]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp slt i8 [[M]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[M:%.*]] = shl nuw nsw i8 [[X]], 2
+; CHECK-NEXT:    ret i1 false
 ;
   %b = icmp slt i8 %x, 32
   call void @llvm.assume(i1 %b)
