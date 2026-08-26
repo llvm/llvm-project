@@ -2545,7 +2545,15 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 bool llvm::collectCompressedPtrs(
     DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
     const MonotonicDescriptor &MD, ScalarEvolution &SE) {
-  ValueToSCEVMapTy PhiMap{{MD.getHeaderPHI(), MD.getPhiSCEV()}};
+  // Over-approximates the monotonic PHI as a SCEVAddRec assuming the condition
+  // is always true.
+  const SCEV *ApproximatePhiSCEV = SE.getAddRecExpr(
+      MD.getStartSCEV(), MD.getStepSCEV(), &L, SCEV::FlagAnyWrap);
+
+  // TODO: Take into account the non-wrap flags of the MD when rewriting the
+  // SCEV expressions for pointers. This should allow folding away zext/sext
+  // operations.
+  ValueToSCEVMapTy PhiMap{{MD.getHeaderPHI(), ApproximatePhiSCEV}};
 
   auto GetCompressedPtrSCEV = [&](Value *Ptr, Type *AccessTy) -> const SCEV * {
     const SCEV *PtrSCEV =

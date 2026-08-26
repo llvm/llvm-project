@@ -945,9 +945,9 @@ bool VPlanTransforms::createHeaderPhiRecipes(
 
     auto MonotonicIt = MonotonicPHIs.find(Phi);
     if (MonotonicIt != MonotonicPHIs.end()) {
-      VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(
-          Plan,
-          MonotonicIt->second.getPhiSCEV()->getStepRecurrence(*PSE.getSE()));
+      const MonotonicDescriptor &MD = MonotonicIt->second;
+      VPValue *Step =
+          vputils::getOrCreateVPValueForSCEVExpr(Plan, MD.getStepSCEV());
       return new VPMonotonicPHIRecipe(*Phi, *Start, *BackedgeValue, *Step);
     }
 
