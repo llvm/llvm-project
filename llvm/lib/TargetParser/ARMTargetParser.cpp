@@ -21,6 +21,25 @@
 
 using namespace llvm;
 
+bool ARM::isARMEABIBareMetal(const Triple &TT) {
+  auto Arch = TT.getArch();
+  if (Arch != Triple::arm && Arch != Triple::thumb && Arch != Triple::armeb &&
+      Arch != Triple::thumbeb)
+    return false;
+
+  if (TT.getVendor() != Triple::UnknownVendor)
+    return false;
+
+  if (TT.getOS() != Triple::UnknownOS)
+    return false;
+
+  if (TT.getEnvironment() != Triple::EABI &&
+      TT.getEnvironment() != Triple::EABIHF)
+    return false;
+
+  return true;
+}
+
 static StringRef getHWDivSynonym(StringRef HWDiv) {
   return StringSwitch<StringRef>(HWDiv)
       .Case("thumb,arm", "arm,thumb")

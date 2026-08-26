@@ -10,7 +10,6 @@
 #include "Arch/RISCV.h"
 #include "Cuda.h"
 
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Options/OptionUtils.h"
@@ -1452,24 +1451,23 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
 
-  CodeGenOptions::FramePointerKind FPKeepKind =
-      getFramePointerKind(Args, Triple);
+  llvm::FramePointerKind FPKeepKind = getFramePointerKind(Args, Triple);
 
   const char *FPKeepKindStr = nullptr;
   switch (FPKeepKind) {
-  case CodeGenOptions::FramePointerKind::None:
+  case llvm::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
     break;
-  case CodeGenOptions::FramePointerKind::Reserved:
+  case llvm::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
     break;
-  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+  case llvm::FramePointerKind::NonLeafNoReserve:
     FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
     break;
-  case CodeGenOptions::FramePointerKind::NonLeaf:
+  case llvm::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
     break;
-  case CodeGenOptions::FramePointerKind::All:
+  case llvm::FramePointerKind::All:
     FPKeepKindStr = "-mframe-pointer=all";
     break;
   }

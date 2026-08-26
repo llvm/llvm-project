@@ -279,7 +279,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return arm::isARMEABIBareMetal(Triple) ||
+  return llvm::ARM::isARMEABIBareMetal(Triple) ||
          aarch64::isAArch64BareMetal(Triple) || isRISCVBareMetal(Triple) ||
          isPPCBareMetal(Triple) || isX86BareMetal(Triple);
 }
@@ -634,7 +634,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
-  if (arm::isARMEABIBareMetal(TC.getTriple()))
+  if (llvm::ARM::isARMEABIBareMetal(TC.getTriple()))
     CmdArgs.push_back("--target2=rel");
 
   CmdArgs.push_back("-o");

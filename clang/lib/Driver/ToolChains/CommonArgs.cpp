@@ -24,7 +24,6 @@
 #include "MSP430.h"
 #include "Solaris.h"
 #include "ToolChains/Cuda.h"
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
@@ -45,6 +44,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -84,229 +84,33 @@ OffloadJobsOpt tools::parseOffloadJobs(const ArgList &Args) {
   return {OffloadJobsOpt::Kind::Fixed, A, Val, unsigned(NumThreads)};
 }
 
-static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
-                                              const llvm::Triple &Triple) {
-  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
-    return true;
+llvm::FramePointerKind getFramePointerKind(const llvm::opt::ArgList &Args,
+                                           const llvm::Triple &Triple) {
+  llvm::driver::FramePointerOptions Opts;
+  Opts.Optimized = tools::areOptimizationsEnabled(Args);
+  Opts.InstrumentationRequiresFramePointer =
+      Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry);
 
-  if (Triple.isAndroid())
-    return true;
+  if (Arg *A = Args.getLastArg(options::OPT_fno_omit_frame_pointer,
+                               options::OPT_fomit_frame_pointer))
+    Opts.EnableFramePointer =
+        A->getOption().matches(options::OPT_fno_omit_frame_pointer);
+  if (Arg *A = Args.getLastArg(options::OPT_mno_omit_leaf_frame_pointer,
+                               options::OPT_momit_leaf_frame_pointer))
+    Opts.EnableLeafFramePointer =
+        A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer);
+  if (Arg *A = Args.getLastArg(options::OPT_mreserve_frame_pointer_reg,
+                               options::OPT_mno_reserve_frame_pointer_reg))
+    Opts.ReserveFramePointerRegister =
+        A->getOption().matches(options::OPT_mreserve_frame_pointer_reg);
 
-  switch (Triple.getArch()) {
-  case llvm::Triple::xcore:
-  case llvm::Triple::wasm32:
-  case llvm::Triple::wasm64:
-  case llvm::Triple::msp430:
-    // XCore never wants frame pointers, regardless of OS.
-    // WebAssembly never wants frame pointers.
-    return false;
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppcle:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-  case llvm::Triple::riscv32be:
-  case llvm::Triple::riscv64be:
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
-  case llvm::Triple::amdgpu:
-  case llvm::Triple::r600:
-  case llvm::Triple::csky:
-  case llvm::Triple::loongarch32:
-  case llvm::Triple::loongarch64:
-  case llvm::Triple::m68k:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-    return !clang::driver::tools::areOptimizationsEnabled(Args);
-  default:
-    break;
+  if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+    StringRef V = A->getValue();
+    Opts.MaintainValidFrameChain = V != "none";
+    Opts.FramePointerImpliesLeaf = V == "aapcs+leaf";
   }
 
-  if (Triple.isOSFuchsia() || Triple.isOSNetBSD()) {
-    return !clang::driver::tools::areOptimizationsEnabled(Args);
-  }
-
-  if (Triple.isOSLinux() || Triple.isOSHurd()) {
-    switch (Triple.getArch()) {
-    // Don't use a frame pointer on linux if optimizing for certain targets.
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::systemz:
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      return !clang::driver::tools::areOptimizationsEnabled(Args);
-    default:
-      return true;
-    }
-  }
-
-  if (Triple.isOSWindows()) {
-    switch (Triple.getArch()) {
-    case llvm::Triple::x86:
-      return !clang::driver::tools::areOptimizationsEnabled(Args);
-    case llvm::Triple::x86_64:
-      return Triple.isOSBinFormatMachO();
-    case llvm::Triple::arm:
-    case llvm::Triple::thumb:
-      // Windows on ARM builds with FPO disabled to aid fast stack walking
-      return true;
-    default:
-      // All other supported Windows ISAs use xdata unwind information, so frame
-      // pointers are not generally useful.
-      return false;
-    }
-  }
-
-  if (arm::isARMEABIBareMetal(Triple))
-    return false;
-
-  return true;
-}
-
-static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
-  if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-      (Triple.isAndroid() && !Triple.isARM()))
-    return false;
-
-  if ((Triple.isARM() || Triple.isThumb()) && Triple.isOSBinFormatMachO())
-    return false;
-
-  return true;
-}
-
-static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
-  switch (Triple.getArch()) {
-  default:
-    return false;
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-    // ARM Darwin targets require a frame pointer to be always present to aid
-    // offline debugging via backtraces.
-    return Triple.isOSDarwin();
-  }
-}
-
-// True if a target-specific option requires the frame chain to be preserved,
-// even if new frame records are not created.
-static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
-                                        const llvm::Triple &Triple) {
-  switch (Triple.getArch()) {
-  default:
-    return false;
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-    // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
-    // options require the frame pointer register to be reserved (or point to a
-    // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
-    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
-      StringRef V = A->getValue();
-      return V != "none";
-    }
-    return false;
-
-  case llvm::Triple::aarch64:
-    // Arm64 Windows requires that the frame chain is valid, as there is no
-    // way to indicate during a stack walk that a frame has used the frame
-    // pointer as a general purpose register.
-    return Triple.isOSWindows();
-  }
-}
-
-// True if a target-specific option causes -fno-omit-frame-pointer to also
-// cause frame records to be created in leaf functions.
-static bool framePointerImpliesLeafFramePointer(const llvm::opt::ArgList &Args,
-                                                const llvm::Triple &Triple) {
-  if (Triple.isARM() || Triple.isThumb()) {
-    // For 32-bit Arm, the -mframe-chain=aapcs+leaf option causes the
-    // -fno-omit-frame-pointer optiion to imply -mno-omit-leaf-frame-pointer,
-    // but does not by itself imply either option.
-    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
-      StringRef V = A->getValue();
-      return V == "aapcs+leaf";
-    }
-    return false;
-  }
-  return false;
-}
-
-clang::CodeGenOptions::FramePointerKind
-getFramePointerKind(const llvm::opt::ArgList &Args,
-                    const llvm::Triple &Triple) {
-  // There are four things to consider here:
-  // * Should a frame record be created for non-leaf functions?
-  // * Should a frame record be created for leaf functions?
-  // * Is the frame pointer register reserved in non-leaf functions?
-  //   i.e. must it always point to either a new, valid frame record or be
-  //   un-modified?
-  // * Is the frame pointer register reserved in leaf functions?
-  //
-  //  Not all combinations of these are valid:
-  //  * It's not useful to have leaf frame records without non-leaf ones.
-  //  * It's not useful to have frame records without reserving the frame
-  //    pointer.
-  //
-  // | Frame Setup     | Reg Reserved    |
-  // |-----------------|-----------------|
-  // | Non-leaf | Leaf | Non-Leaf | Leaf |
-  // |----------|------|----------|------|
-  // | N        | N    | N        | N    | FramePointerKind::None
-  // | N        | N    | N        | Y    | Invalid
-  // | N        | N    | Y        | N    | Invalid
-  // | N        | N    | Y        | Y    | FramePointerKind::Reserved
-  // | N        | Y    | N        | N    | Invalid
-  // | N        | Y    | N        | Y    | Invalid
-  // | N        | Y    | Y        | N    | Invalid
-  // | N        | Y    | Y        | Y    | Invalid
-  // | Y        | N    | N        | N    | Invalid
-  // | Y        | N    | N        | Y    | Invalid
-  // | Y        | N    | Y        | N    | FramePointerKind::NonLeafNoReserve
-  // | Y        | N    | Y        | Y    | FramePointerKind::NonLeaf
-  // | Y        | Y    | N        | N    | Invalid
-  // | Y        | Y    | N        | Y    | Invalid
-  // | Y        | Y    | Y        | N    | Invalid
-  // | Y        | Y    | Y        | Y    | FramePointerKind::All
-  //
-  // The FramePointerKind::Reserved case is currently only reachable for Arm,
-  // which has the -mframe-chain= option which can (in combination with
-  // -fno-omit-frame-pointer) specify that the frame chain must be valid,
-  // without requiring new frame records to be created.
-
-  bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
-  bool EnableFP = mustUseNonLeafFramePointerForTarget(Triple) ||
-                  Args.hasFlag(options::OPT_fno_omit_frame_pointer,
-                               options::OPT_fomit_frame_pointer, DefaultFP);
-
-  bool DefaultLeafFP =
-      useLeafFramePointerForTargetByDefault(Triple) ||
-      (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
-  bool EnableLeafFP =
-      Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
-                   options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
-
-  bool FPRegReserved = Args.hasFlag(options::OPT_mreserve_frame_pointer_reg,
-                                    options::OPT_mno_reserve_frame_pointer_reg,
-                                    mustMaintainValidFrameChain(Args, Triple));
-
-  if (EnableFP) {
-    if (EnableLeafFP)
-      return clang::CodeGenOptions::FramePointerKind::All;
-
-    if (FPRegReserved)
-      return clang::CodeGenOptions::FramePointerKind::NonLeaf;
-
-    return clang::CodeGenOptions::FramePointerKind::NonLeafNoReserve;
-  }
-  if (FPRegReserved)
-    return clang::CodeGenOptions::FramePointerKind::Reserved;
-  return clang::CodeGenOptions::FramePointerKind::None;
+  return llvm::driver::getFramePointerKind(Triple, Opts);
 }
 
 static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -602,7 +406,7 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb: {
     bool IsBigEndian = tools::arm::isARMBigEndian(T, Args);
-    if (arm::isARMEABIBareMetal(T))
+    if (llvm::ARM::isARMEABIBareMetal(T))
       return IsBigEndian ? "armelfb" : "armelf";
     return IsBigEndian ? "armelfb_linux_eabi" : "armelf_linux_eabi";
   }

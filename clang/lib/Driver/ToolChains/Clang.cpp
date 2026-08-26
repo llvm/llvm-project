@@ -6144,23 +6144,22 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  CodeGenOptions::FramePointerKind FPKeepKind =
-                  getFramePointerKind(Args, RawTriple);
+  llvm::FramePointerKind FPKeepKind = getFramePointerKind(Args, RawTriple);
   const char *FPKeepKindStr = nullptr;
   switch (FPKeepKind) {
-  case CodeGenOptions::FramePointerKind::None:
+  case llvm::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
     break;
-  case CodeGenOptions::FramePointerKind::Reserved:
+  case llvm::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
     break;
-  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+  case llvm::FramePointerKind::NonLeafNoReserve:
     FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
     break;
-  case CodeGenOptions::FramePointerKind::NonLeaf:
+  case llvm::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";
     break;
-  case CodeGenOptions::FramePointerKind::All:
+  case llvm::FramePointerKind::All:
     FPKeepKindStr = "-mframe-pointer=all";
     break;
   }
@@ -8635,10 +8634,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (FPKeepKind == CodeGenOptions::FramePointerKind::None &&
+    if (FPKeepKind == llvm::FramePointerKind::None &&
         !Args.hasArg(options::OPT_mfentry))
-      D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
-                                                      << A->getAsString(Args);
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "-fomit-frame-pointer" << A->getAsString(Args);
 
   // Claim some arguments which clang supports automatically.
 
