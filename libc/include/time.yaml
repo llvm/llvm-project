@@ -19,6 +19,7 @@ types:
   - type_name: size_t
   - type_name: locale_t
   - type_name: tm_gmtoff_t
+  - type_name: pid_t
 enums: []
 objects:
   - object_name: tzname
@@ -180,4 +181,10 @@ functions:
     return_type: void
     arguments:
       - type: void
-
+  - name: clock_getcpuclockid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: clockid_t *

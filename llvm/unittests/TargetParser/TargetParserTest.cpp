@@ -2515,6 +2515,8 @@ TEST(TargetParserTest, testAMDGPUArch) {
     EXPECT_EQ(Triple("amdgpu12.00--").getSubArch(), Triple::AMDGPUSubArch1200);
     EXPECT_EQ(Triple("amdgpu12.01--").getSubArch(), Triple::AMDGPUSubArch1201);
     EXPECT_EQ(Triple("amdgpu12.5--").getSubArch(), Triple::AMDGPUSubArch12_5);
+    EXPECT_EQ(Triple("amdgpu12.50s--").getSubArch(),
+              Triple::AMDGPUSubArch1250S);
     EXPECT_EQ(Triple("amdgpu12.50--").getSubArch(), Triple::AMDGPUSubArch1250);
     EXPECT_EQ(Triple("amdgpu12.51--").getSubArch(), Triple::AMDGPUSubArch1251);
     EXPECT_EQ(Triple("amdgpu122--").getSubArch(), Triple::NoSubArch); // Unknown
@@ -2636,6 +2638,40 @@ TEST(TargetParserTest, testAMDGPUisSubArchCompatible) {
   // An unrecognized subarch is incompatible with any recognized subarch.
   EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.99-amd-amdhsa"),
                                            Triple("amdgpu9.00-amd-amdhsa")));
+
+  // subarch 12.50s is its own major, so it is compatible only with itself; the
+  // 12.5 family, gfx1250, and sibling gfx1251 all reject it, both directions.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                          Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch12_5,
+                                           Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch12_5));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch1250));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250,
+                                           Triple::AMDGPUSubArch1250S));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250S,
+                                           Triple::AMDGPUSubArch1251));
+
+  // gfx1250 remains a normal member of the gfx12.5 family.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch12_5,
+                                          Triple::AMDGPUSubArch1250));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1250,
+                                          Triple::AMDGPUSubArch12_5));
+
+  // Same, via triple spellings: only amdgpu12.50s accepts it; amdgpu12.5 and
+  // amdgpu12.50 both reject it.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                          Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.5-amd-amdhsa"),
+                                           Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                           Triple("amdgpu12.5-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50-amd-amdhsa"),
+                                           Triple("amdgpu12.50s-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu12.50s-amd-amdhsa"),
+                                           Triple("amdgpu12.50-amd-amdhsa")));
 }
 
 TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
@@ -2946,6 +2982,7 @@ TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
       {Triple::AMDGPUSubArch1200, AMDGPU::GK_GFX1200},
       {Triple::AMDGPUSubArch1201, AMDGPU::GK_GFX1201},
       {Triple::AMDGPUSubArch12_5, AMDGPU::GK_GFX12_5_GENERIC},
+      {Triple::AMDGPUSubArch1250S, AMDGPU::GK_GFX1250_STRICT},
       {Triple::AMDGPUSubArch1250, AMDGPU::GK_GFX1250},
       {Triple::AMDGPUSubArch1251, AMDGPU::GK_GFX1251},
 
@@ -2965,6 +3002,8 @@ TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch900),
             (AMDGPU::IsaVersion{9, 0, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250S),
             (AMDGPU::IsaVersion{12, 5, 0}));
   EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1251),
             (AMDGPU::IsaVersion{12, 5, 1}));

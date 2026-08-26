@@ -108,6 +108,10 @@ enum FeatureError : uint32_t {
 };
 
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+
+/// The canonical GPU name for a variant name.
+LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
+
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 

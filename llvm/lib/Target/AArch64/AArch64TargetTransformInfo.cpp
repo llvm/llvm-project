@@ -5410,7 +5410,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   }
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   // TODO: Though vector loads usually perform well on AArch64, in some targets
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
@@ -7225,8 +7225,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
+        // Analyze assuming predicates will be added, but discard them; this
+        // query only guides tail-folding and must not add runtime checks to the
+        // loop.
+        SmallVector<const SCEVPredicate *> Predicates;
         if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, DT, Strides,
-                         /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                         /*ShouldCheckWrap=*/false, &Predicates)
                 .value_or(0) < 0)
           return true;
       }

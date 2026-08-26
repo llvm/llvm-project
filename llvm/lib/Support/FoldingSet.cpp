@@ -184,23 +184,22 @@ FoldingSetBase::FoldingSetBase(unsigned Log2InitSize) {
 }
 
 FoldingSetBase::FoldingSetBase(FoldingSetBase &&Arg)
-    : Buckets(Arg.Buckets), NumBuckets(Arg.NumBuckets), NumNodes(Arg.NumNodes) {
+    : Buckets(std::exchange(Arg.Buckets, nullptr)),
+      NumBuckets(std::exchange(Arg.NumBuckets, 0)),
+      NumNodes(std::exchange(Arg.NumNodes, 0)) {
   Arg.incrementEpoch();
-  Arg.Buckets = nullptr;
-  Arg.NumBuckets = 0;
-  Arg.NumNodes = 0;
 }
 
 FoldingSetBase &FoldingSetBase::operator=(FoldingSetBase &&RHS) {
+  if (this == &RHS)
+    return *this;
+
   incrementEpoch();
   RHS.incrementEpoch();
   free(Buckets); // This may be null if the set is in a moved-from state.
-  Buckets = RHS.Buckets;
-  NumBuckets = RHS.NumBuckets;
-  NumNodes = RHS.NumNodes;
-  RHS.Buckets = nullptr;
-  RHS.NumBuckets = 0;
-  RHS.NumNodes = 0;
+  Buckets = std::exchange(RHS.Buckets, nullptr);
+  NumBuckets = std::exchange(RHS.NumBuckets, 0);
+  NumNodes = std::exchange(RHS.NumNodes, 0);
   return *this;
 }
 
