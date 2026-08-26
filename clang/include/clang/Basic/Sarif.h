@@ -50,6 +50,13 @@ namespace clang {
 class SarifDocumentWriter;
 class SourceManager;
 
+struct SarifVersion {
+  StringRef SchemaVersion;
+  StringRef CommandLineVersion;
+  StringRef SchemaURI;
+  bool IsDefault;
+};
+
 namespace detail {
 
 /// \internal
@@ -413,10 +420,7 @@ public:
 ///    aggregation methods such as SarifDocumentWriter::appendResult etc.
 class SarifDocumentWriter {
 private:
-  const llvm::StringRef SchemaURI{
-      "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/"
-      "sarif-schema-2.1.0.json"};
-  const llvm::StringRef SchemaVersion{"2.1.0"};
+  const SarifVersion Version;
 
   /// \internal
   /// Return a pointer to the current tool. Asserts that a run exists.
@@ -460,16 +464,17 @@ public:
   SarifDocumentWriter() = delete;
 
   /// Create a new empty SARIF document with the given source manager.
-  SarifDocumentWriter(const SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
+  SarifDocumentWriter(const SourceManager &SourceMgr,
+                      const SarifVersion &Version = getDefaultVersion())
+      : Version(Version), SourceMgr(SourceMgr) {}
 
   /// Release resources held by this SARIF document.
   ~SarifDocumentWriter() = default;
 
   /// Create a new run with which any upcoming analysis will be associated.
   /// Each run requires specifying the tool that is generating reporting items.
-  void createRun(const llvm::StringRef ShortToolName,
-                 const llvm::StringRef LongToolName,
-                 const llvm::StringRef ToolVersion = CLANG_VERSION_STRING);
+  void createRun(std::string ShortToolName, std::string LongToolName,
+                 std::string ToolVersion = CLANG_VERSION_STRING);
 
   /// If there is a current run, end it.
   ///
@@ -510,6 +515,10 @@ public:
   llvm::json::Object createDocument();
 
   static std::string fileNameToURI(llvm::StringRef Filename);
+
+  static ArrayRef<SarifVersion> getSupportedVersions();
+
+  static const SarifVersion &getDefaultVersion();
 
 private:
   /// Source Manager to use for the current SARIF document.

@@ -29,7 +29,7 @@ class SarifDocumentWriter;
 
 class SARIFDiagnosticPrinter : public DiagnosticConsumer {
 public:
-  SARIFDiagnosticPrinter(raw_ostream &OS, DiagnosticOptions &DiagOpts);
+  SARIFDiagnosticPrinter(llvm::StringRef FilePath, DiagnosticOptions &DiagOpts);
   ~SARIFDiagnosticPrinter() = default;
 
   SARIFDiagnosticPrinter &operator=(const SARIFDiagnosticPrinter &&) = delete;
@@ -58,8 +58,13 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override;
 
+  static std::unique_ptr<SARIFDiagnosticPrinter>
+  create(ArrayRef<std::pair<StringRef, StringRef>> Config,
+         DiagnosticOptions &DiagOpts, DiagnosticsEngine &Diags);
+
 private:
-  raw_ostream &OS;
+  std::string FilePath;
+
   DiagnosticOptions &DiagOpts;
 
   /// Handle to the currently active SARIF diagnostic emitter.
