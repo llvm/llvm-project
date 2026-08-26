@@ -23,6 +23,7 @@
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -526,6 +527,13 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
   // Notify all ValueHandles (if present) that this value is going away.
   if (HasValueHandle)
     ValueHandleBase::ValueIsRAUWd(this, New);
+
+  if (Instruction *I = dyn_cast<Instruction>(this))
+    if (BasicBlock *BB = I->getParent())
+      if (Function *F = BB->getParent())
+        for (InstructionListener *L : F->InstructionListeners)
+          L->instructionRAUW(I, New);
+
   if (ReplaceMetaUses == ReplaceMetadataUses::Yes && isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, New);
 
