@@ -36,15 +36,26 @@ define i128 @signed_multiply_extend(i64 %0, i64 %1) nounwind {
 define i128 @unsigned_multiply_extend(i64 %0, i64 %1) nounwind {
 ; V9-LABEL: unsigned_multiply_extend:
 ; V9:       ! %bb.0:
-; V9-NEXT:    save %sp, -176, %sp
-; V9-NEXT:    mov %i1, %o1
-; V9-NEXT:    mov %i0, %o3
-; V9-NEXT:    mov %g0, %o0
-; V9-NEXT:    call __multi3
-; V9-NEXT:    mov %g0, %o2
-; V9-NEXT:    mov %o0, %i0
-; V9-NEXT:    ret
-; V9-NEXT:    restore %g0, %o1, %o1
+; V9-NEXT:    srl %o0, 0, %o2
+; V9-NEXT:    srlx %o1, 32, %o3
+; V9-NEXT:    mulx %o3, %o2, %o4
+; V9-NEXT:    srl %o1, 0, %o1
+; V9-NEXT:    mulx %o1, %o2, %o2
+; V9-NEXT:    srlx %o2, 32, %o5
+; V9-NEXT:    add %o4, %o5, %o4
+; V9-NEXT:    srlx %o4, 32, %o5
+; V9-NEXT:    srl %o4, 0, %o4
+; V9-NEXT:    srlx %o0, 32, %o0
+; V9-NEXT:    mulx %o1, %o0, %o1
+; V9-NEXT:    add %o1, %o4, %o1
+; V9-NEXT:    srlx %o1, 32, %o4
+; V9-NEXT:    add %o5, %o4, %o4
+; V9-NEXT:    mulx %o3, %o0, %o0
+; V9-NEXT:    add %o0, %o4, %o0
+; V9-NEXT:    sllx %o1, 32, %o1
+; V9-NEXT:    srl %o2, 0, %o2
+; V9-NEXT:    retl
+; V9-NEXT:    or %o2, %o1, %o1
 ;
 ; VIS3-LABEL: unsigned_multiply_extend:
 ; VIS3:       ! %bb.0:

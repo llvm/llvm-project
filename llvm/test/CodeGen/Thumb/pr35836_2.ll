@@ -10,102 +10,162 @@ define i128 @a(ptr nocapture readonly %z) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .pad #28
-; CHECK-NEXT:    sub sp, #28
+; CHECK-NEXT:    .pad #60
+; CHECK-NEXT:    sub sp, #60
 ; CHECK-NEXT:    ldr r1, [r0, #32]
-; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #52] @ 4-byte Spill
 ; CHECK-NEXT:    ldr r1, [r0, #36]
-; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    ldr r1, [r0, #40]
-; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    ldr r3, [r0, #44]
-; CHECK-NEXT:    ldr r6, [r0]
-; CHECK-NEXT:    str r6, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    adds r5, r0, #4
-; CHECK-NEXT:    ldm r5, {r1, r2, r4, r5}
-; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    ldr r5, [r0, #20]
-; CHECK-NEXT:    str r5, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    ldr r7, [r0, #24]
-; CHECK-NEXT:    ldr r5, [r0, #28]
-; CHECK-NEXT:    adds r0, r2, r6
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    adcs r0, r1
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldr r6, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    adcs r6, r0
-; CHECK-NEXT:    str r6, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    adcs r3, r0
-; CHECK-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    adds r6, r2, r0
-; CHECK-NEXT:    adcs r4, r1
-; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    adcs r7, r0
-; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    adcs r5, r0
+; CHECK-NEXT:    str r1, [sp, #48] @ 4-byte Spill
+; CHECK-NEXT:    ldr r2, [r0, #40]
+; CHECK-NEXT:    ldr r4, [r0, #44]
+; CHECK-NEXT:    ldr r7, [r0]
+; CHECK-NEXT:    str r7, [sp, #36] @ 4-byte Spill
+; CHECK-NEXT:    ldr r1, [r0, #4]
+; CHECK-NEXT:    str r1, [sp, #56] @ 4-byte Spill
+; CHECK-NEXT:    ldr r5, [r0, #8]
+; CHECK-NEXT:    ldr r6, [r0, #12]
+; CHECK-NEXT:    ldr r1, [r0, #16]
+; CHECK-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; CHECK-NEXT:    ldr r1, [r0, #20]
+; CHECK-NEXT:    str r1, [sp, #44] @ 4-byte Spill
+; CHECK-NEXT:    ldr r1, [r0, #24]
+; CHECK-NEXT:    ldr r3, [r0, #28]
+; CHECK-NEXT:    adds r0, r5, r7
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    bl __aeabi_lmul
+; CHECK-NEXT:    mov r7, r6
+; CHECK-NEXT:    ldr r6, [sp, #56] @ 4-byte Reload
+; CHECK-NEXT:    adcs r0, r6
+; CHECK-NEXT:    ldr r0, [sp, #52] @ 4-byte Reload
+; CHECK-NEXT:    adcs r2, r0
+; CHECK-NEXT:    str r2, [sp, #52] @ 4-byte Spill
+; CHECK-NEXT:    ldr r0, [sp, #48] @ 4-byte Reload
+; CHECK-NEXT:    adcs r4, r0
+; CHECK-NEXT:    str r4, [sp, #48] @ 4-byte Spill
+; CHECK-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    adds r6, r5, r0
+; CHECK-NEXT:    mov r4, r7
+; CHECK-NEXT:    ldr r2, [sp, #56] @ 4-byte Reload
+; CHECK-NEXT:    adcs r4, r2
+; CHECK-NEXT:    str r4, [sp, #36] @ 4-byte Spill
+; CHECK-NEXT:    ldr r2, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    adcs r1, r2
+; CHECK-NEXT:    str r1, [sp, #56] @ 4-byte Spill
+; CHECK-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; CHECK-NEXT:    adcs r3, r1
+; CHECK-NEXT:    str r3, [sp, #44] @ 4-byte Spill
+; CHECK-NEXT:    uxth r7, r6
+; CHECK-NEXT:    str r6, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r0, r4, #16
 ; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    mov r3, r7
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    uxth r1, r4
 ; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    bl __aeabi_lmul
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    lsrs r2, r0, #16
+; CHECK-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    adds r3, r3, r2
+; CHECK-NEXT:    uxth r4, r3
+; CHECK-NEXT:    uxth r2, r0
+; CHECK-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r0, r3, #16
+; CHECK-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r6, r6, #16
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    adds r4, r0, r4
+; CHECK-NEXT:    lsrs r3, r4, #16
+; CHECK-NEXT:    ldr r5, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    adds r3, r5, r3
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    lsls r4, r4, #16
+; CHECK-NEXT:    adds r2, r2, r4
+; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    mov r4, r7
+; CHECK-NEXT:    muls r4, r6, r4
+; CHECK-NEXT:    muls r7, r7, r7
+; CHECK-NEXT:    str r7, [sp, #40] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r7, r7, #16
+; CHECK-NEXT:    adds r7, r4, r7
+; CHECK-NEXT:    uxth r3, r7
+; CHECK-NEXT:    adds r2, r4, r3
+; CHECK-NEXT:    str r2, [sp, #32] @ 4-byte Spill
+; CHECK-NEXT:    lsrs r3, r2, #16
+; CHECK-NEXT:    lsrs r4, r7, #16
+; CHECK-NEXT:    adds r3, r4, r3
+; CHECK-NEXT:    mov r4, r6
+; CHECK-NEXT:    muls r4, r6, r4
+; CHECK-NEXT:    adds r3, r4, r3
 ; CHECK-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    adcs r0, r1
+; CHECK-NEXT:    muls r6, r2, r6
+; CHECK-NEXT:    ldr r4, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    adds r3, r4, r3
+; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    adcs r7, r6
+; CHECK-NEXT:    ldr r4, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    adds r0, r0, r4
+; CHECK-NEXT:    uxth r4, r0
+; CHECK-NEXT:    lsrs r0, r0, #16
+; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    adds r4, r5, r4
+; CHECK-NEXT:    lsrs r5, r4, #16
+; CHECK-NEXT:    adds r5, r0, r5
+; CHECK-NEXT:    lsls r0, r4, #16
+; CHECK-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    adds r0, r4, r0
+; CHECK-NEXT:    adds r0, r0, r3
 ; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    adcs r5, r6
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    adds r3, r7, r5
+; CHECK-NEXT:    adcs r0, r0
+; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    muls r4, r2, r4
+; CHECK-NEXT:    muls r1, r1, r1
+; CHECK-NEXT:    lsrs r5, r1, #16
+; CHECK-NEXT:    adds r5, r4, r5
+; CHECK-NEXT:    uxth r6, r5
+; CHECK-NEXT:    adds r4, r4, r6
+; CHECK-NEXT:    lsrs r6, r4, #16
+; CHECK-NEXT:    lsrs r5, r5, #16
+; CHECK-NEXT:    adds r5, r5, r6
+; CHECK-NEXT:    muls r2, r2, r2
+; CHECK-NEXT:    adds r6, r2, r5
+; CHECK-NEXT:    lsls r2, r4, #16
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    adds r1, r1, r2
+; CHECK-NEXT:    adds r1, r1, r3
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    adcs r6, r0
+; CHECK-NEXT:    ldr r4, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    ldr r7, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r3, r7
+; CHECK-NEXT:    ldr r2, [sp, #52] @ 4-byte Reload
+; CHECK-NEXT:    ldr r3, [sp, #48] @ 4-byte Reload
 ; CHECK-NEXT:    bl __aeabi_lmul
-; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    str r0, [sp, #52] @ 4-byte Spill
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    mov r2, r6
-; CHECK-NEXT:    mov r3, r7
-; CHECK-NEXT:    bl __aeabi_lmul
-; CHECK-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; CHECK-NEXT:    adds r0, r0, r1
-; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    adcs r5, r7
-; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    ldr r0, [sp, #56] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    bl __aeabi_lmul
-; CHECK-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r2, [sp, #52] @ 4-byte Reload
 ; CHECK-NEXT:    adds r0, r0, r2
-; CHECK-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    adcs r1, r7
-; CHECK-NEXT:    adds r6, r5, r1
-; CHECK-NEXT:    mov r5, r7
-; CHECK-NEXT:    adcs r5, r7
-; CHECK-NEXT:    mov r0, r4
-; CHECK-NEXT:    mov r1, r7
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r3, r7
-; CHECK-NEXT:    bl __aeabi_lmul
-; CHECK-NEXT:    adds r0, r0, r6
 ; CHECK-NEXT:    adcs r5, r1
 ; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    adds r2, r0, r1
-; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
-; CHECK-NEXT:    adcs r5, r0
-; CHECK-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    adds r2, r1, r0
+; CHECK-NEXT:    adcs r5, r6
+; CHECK-NEXT:    ldr r0, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    lsls r0, r0, #16
+; CHECK-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    uxth r1, r1
+; CHECK-NEXT:    adds r0, r1, r0
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    mov r3, r5
-; CHECK-NEXT:    add sp, #28
+; CHECK-NEXT:    add sp, #60
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %0 = load i64, ptr %z, align 4
