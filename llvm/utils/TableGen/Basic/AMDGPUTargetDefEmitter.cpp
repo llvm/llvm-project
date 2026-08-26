@@ -112,12 +112,13 @@ static void emitArchFamily(raw_ostream &OS, const Record *Rec) {
   OS << "gfx" << Rec->getValueAsListOfInts("IsaVersion")[0];
 }
 
-// Emit the canonical GPU name for a variant (empty for a non-variant GPU).
+// Emit the canonical GPU name for a variant (empty for a non-variant GPU). Only
+// the stepping's low nibble is named, so a wider stepping does not assert.
 static void emitBaseName(raw_ostream &OS, const Record *Rec) {
   if (!getSubArchSpelling(Rec))
     return;
   std::vector<int64_t> V = Rec->getValueAsListOfInts("IsaVersion");
-  OS << "gfx" << V[0] << V[1] << hexdigit(V[2], /*LowerCase=*/true);
+  OS << "gfx" << V[0] << V[1] << hexdigit(V[2] & 0xF, /*LowerCase=*/true);
 }
 
 // Emit the ISA version tuple as "major, minor, stepping" wrapped in \p Open and

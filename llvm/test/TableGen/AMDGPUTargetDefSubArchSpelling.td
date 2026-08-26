@@ -22,6 +22,13 @@ def GFX888_AMAZING : ProcessorModel<"gfx888-amazing", NoSchedModel, []>,
   let SubArchSpelling = "8.88a";
 }
 
+// A variant whose stepping is wider than a hex digit: only the low nibble is
+// named.
+def GFX888_WIDE : ProcessorModel<"gfx888-wide", NoSchedModel, []>,
+    AMDGPUGPUInfo<[8, 8, 0xfff8]> {
+  let SubArchSpelling = "8.88w";
+}
+
 // The variant contributes a distinct GPUKind.
 // CHECK: GK_GFX888
 // CHECK: GK_GFX888_AMAZING
@@ -33,12 +40,15 @@ def GFX888_AMAZING : ProcessorModel<"gfx888-amazing", NoSchedModel, []>,
 // CHECK: "gfx888\0"
 // CHECK: "gfx8\0"
 // CHECK: "gfx888-amazing\0"
+// CHECK: "gfx888-wide\0"
 // CHECK: "amdgpu8.88a\0"
+// CHECK: "amdgpu8.88w\0"
 
 // The GPU table: the base GPU has no base name (offset 0); the variant uses
 // AMDGPUSubArch888A and records "gfx888" as its base name.
 // CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], 0},
 // CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888W, {{.*}}, {8, 8, 65528}, [[FAM]], [[#]]},
 
 // The subarch-name table maps the variant's own subarch to its triple name.
 // CHECK: {Triple::AMDGPUSubArch888A, [[#]], [[#]]},
