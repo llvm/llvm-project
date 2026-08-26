@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ExecutorAddress.h"
+#include "orc-rt/bedrock/ExecutorAddress.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

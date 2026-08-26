@@ -5715,8 +5715,7 @@ static void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
   isIgnoreDenormalMode = false;
   isFineGrainedMemory = false;
   isRemoteMemory = false;
-  if (atomicUpdateOp &&
-      atomicUpdateOp->hasAttr(atomicUpdateOp.getAtomicControlAttrName())) {
+  if (atomicUpdateOp && atomicUpdateOp.getAtomicControlAttr()) {
     mlir::omp::AtomicControlAttr atomicControlAttr =
         atomicUpdateOp.getAtomicControlAttr();
     isIgnoreDenormalMode = atomicControlAttr.getIgnoreDenormalMode();
@@ -9827,7 +9826,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 
       std::vector<llvm::Triple> targetTriple;
       auto targetTripleAttr = dyn_cast_or_null<mlir::StringAttr>(
-          op->getParentOfType<mlir::ModuleOp>()->getAttr(
+          op->getParentOfType<mlir::ModuleOp>()->getDiscardableAttr(
               LLVM::LLVMDialect::getTargetTripleAttrName()));
       if (targetTripleAttr)
         targetTriple.emplace_back(targetTripleAttr.data());

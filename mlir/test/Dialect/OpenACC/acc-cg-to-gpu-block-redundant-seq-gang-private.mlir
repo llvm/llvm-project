@@ -51,7 +51,7 @@ func.func @block_redundant_seq_gang_private(%arg0: memref<32xi32>) {
       } {acc.par_dims = #acc<par_dims[sequential]>,
          acc.gpu_block_redundant = #acc.gpu_block_redundant}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

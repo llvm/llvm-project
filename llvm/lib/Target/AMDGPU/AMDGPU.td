@@ -414,6 +414,18 @@ class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
 def FeatureLDSBankCount16 : SubtargetFeatureLDSBankCount<16>;
 def FeatureLDSBankCount32 : SubtargetFeatureLDSBankCount<32>;
 
+class SubtargetFeatureMaxWavesPerEU <int Value> : SubtargetFeature <
+  "max-waves-per-eu-"#Value,
+  "MaxWavesPerEU",
+  !cast<string>(Value),
+  "Maximum number of waves an execution unit can hold."
+>;
+
+def FeatureMaxWavesPerEU8  : SubtargetFeatureMaxWavesPerEU<8>;
+def FeatureMaxWavesPerEU10 : SubtargetFeatureMaxWavesPerEU<10>;
+def FeatureMaxWavesPerEU16 : SubtargetFeatureMaxWavesPerEU<16>;
+def FeatureMaxWavesPerEU20 : SubtargetFeatureMaxWavesPerEU<20>;
+
 class SubtargetFeatureInstCacheLineSize <int Value> : SubtargetFeature <
   "instcachelinesize"#Value,
   "InstCacheLineSize",
@@ -1561,6 +1573,11 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "Use s_add_pc_i64 instruction."
 >;
 
+defm GFX1250_STRICT : AMDGPUSubtargetFeature<"gfx1250-strict",
+  "gfx1250 strict mode",
+  /*GenPredicate=*/0
+>;
+
 defm VOP3PX2IncrementsVaVdstTwice : AMDGPUSubtargetFeature<"vop3px2-increments-va-vdst-twice",
   "VOP3PX2 encoded instructions increment the VaVdst counter twice", GenPredicate=false
 >;
@@ -1590,7 +1607,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
   FeatureSadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
   FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode, FeatureMTBUFInsts,
-  FeatureFormattedMUBUFInsts, Feature32BitNumRecordsBufferResource
+  FeatureFormattedMUBUFInsts, Feature32BitNumRecordsBufferResource,
+  FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1609,7 +1627,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureMqsadInsts, FeatureCvtPkNormVOP2Insts,
   FeatureDX10ClampAndIEEEMode, FeatureInstCacheLineSize64,
   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-  Feature32BitNumRecordsBufferResource
+  Feature32BitNumRecordsBufferResource,
+  FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1631,7 +1650,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU10
   ]
 >;
 
@@ -1721,7 +1741,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU16
   ]
 >;
 
@@ -1750,7 +1771,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU16
   ]
 >;
 
@@ -1781,7 +1803,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature45BitNumRecordsBufferResource
+   Feature45BitNumRecordsBufferResource,
+   FeatureMaxWavesPerEU16
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -1874,7 +1897,8 @@ def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
      FeatureExtendedImageInsts,
      FeatureGDS,
      FeatureCubeInsts,
-     FeaturePopsExitingWaveID])>;
+     FeaturePopsExitingWaveID,
+     FeatureMaxWavesPerEU10])>;
 
 def FeatureISAVersion9_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1929,7 +1953,8 @@ def FeatureISAVersion9_0_8 : FeatureSet<
      FeatureExtendedImageInsts,
      FeatureAtomicBufferGlobalPkAddF16NoRtnInsts,
      FeatureMFMAInlineLiteralBug,
-     FeatureImageGather4D16Bug])>;
+     FeatureImageGather4D16Bug,
+     FeatureMaxWavesPerEU10])>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1952,7 +1977,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureAtomicFMinFMaxF64GlobalInsts,
      FeatureAtomicFMinFMaxF64FlatInsts,
      FeatureFlatBufferGlobalAtomicFaddF64Inst,
-     FeatureLdsAtomicAddF64
+     FeatureLdsAtomicAddF64,
+     FeatureMaxWavesPerEU8
      ])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
@@ -2002,6 +2028,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureLdsAtomicAddF64,
    FeatureLshlAddU64Inst,
    FeatureVMovB64Inst,
+   FeatureMaxWavesPerEU8
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -2074,7 +2101,8 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureNSAClauseBug,
      FeatureOffset3fBug,
      FeatureFlatSegmentOffsetBug,
-     FeatureNegativeUnalignedScratchOffsetBug])>;
+     FeatureNegativeUnalignedScratchOffsetBug,
+     FeatureMaxWavesPerEU20])>;
 
 def FeatureISAVersion10_1_Generic : FeatureSet<
   !listconcat(FeatureISAVersion10_1_Common.Features,
@@ -2119,7 +2147,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureDot6Insts,
      FeatureDot7Insts,
      FeatureDot10Insts,
-     FeatureShaderCyclesRegister])>;
+     FeatureShaderCyclesRegister,
+     FeatureMaxWavesPerEU16])>;
 
 def FeatureISAVersion10_3_Generic: FeatureSet<
   !listconcat(FeatureISAVersion10_3_0.Features,
@@ -2398,6 +2427,31 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
 ]>;
+
+def FeatureISAVersion12_50_STRICT : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureGFX1250_STRICT,
+   FeatureAddressableLocalMemorySize327680,
+   FeatureVOP3PX2IncrementsVaVdstTwice,
+   FeatureSetregVGPRMSBFixup,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard,
+   FeatureWMMACoexecutionHazards,
+   FeatureDataCacheLineSize128,
+   FeatureRequiresInitialUnclausedVmem,
+   FeatureNeedsTDMDrain,
+   ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
