@@ -1,0 +1,33 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-n16:32-G1"
+  target triple = "pisa"
+
+  define pisa_kernel void @test(<4 x bfloat> %arg) {
+  entry:
+    br label %for.body
+
+  for.body:                                    ; preds = %for.body, %entry
+    %y.05 = phi <4 x bfloat> [ %arg, %entry ], [ %y.05, %for.body ]
+    br label %for.body
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    ; CHECK: [[VEC:%[0-9]+]]:_(<4 x i16>) = COPY 
+    ; CHECK: {{%[0-9]+}}:_(i16), {{%[0-9]+}}:_(i16), {{%[0-9]+}}:_(i16), {{%[0-9]+}}:_(i16) = G_UNMERGE_VALUES [[VEC]]
+
+    %0:regv4_16b = functionParameter_v4i16 0
+    %56:_(<4 x i16>) = COPY %0:regv4_16b
+
+  bb.2.for.body:
+    ; CHECK-COUNT-4: {{%[0-9]+}}:_(i16) = G_PHI 
+    %26:_(<4 x i16>) = G_PHI %26:_(<4 x i16>), %bb.2, %56:_(<4 x i16>), %bb.1
+    G_BR %bb.2
+
+...

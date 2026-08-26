@@ -1,0 +1,38 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# Check that i40 operands in select inst are extended to i64.
+
+--- |
+  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-n16:32-G1"
+  target triple = "pisa"
+
+  define pisa_kernel void @_ZTS22broadcast_group_kernelILi1EN4util11custom_typeEE(i1 %ov) {
+  entry:
+    %local_var.sroa.insert.shift = select i1 %ov, i40 0, i40 4294967296
+    %agg.tmp1.sroa.insert.insert = zext i40 %local_var.sroa.insert.shift to i64
+    %call = call i64 @_Z22__spirv_GroupBroadcastjmm(i64 %agg.tmp1.sroa.insert.insert)
+    ret void
+  }
+
+  declare i64 @_Z22__spirv_GroupBroadcastjmm(i64)
+
+...
+---
+name:            _ZTS22broadcast_group_kernelILi1EN4util11custom_typeEE
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    %1:reg8b(i8) = loadParam_i8 0, 0
+    %0:reg8b(i1) = G_TRUNC %1(i8)
+
+    ; CHECK: [[Op0:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK: [[Op1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4294967296
+    ; CHECK: :_(i64) = G_SELECT %{{[0-9]+}}(i1), [[Op0]], [[Op1]]
+
+    %3:_(i40) = G_CONSTANT i40 0
+    %4:_(i40) = G_CONSTANT i40 4294967296
+    %2:_(i40) = G_SELECT %0(i1), %3, %4
+    %5:_(i64) = G_ZEXT %2(i40)
+    %6:reg64b(i64) = functionCall_i64_r @_Z22__spirv_GroupBroadcastjmm, %5(i64)
+    ret
+
+...

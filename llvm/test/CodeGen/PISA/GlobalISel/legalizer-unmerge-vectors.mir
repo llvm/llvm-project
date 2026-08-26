@@ -1,0 +1,53 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+
+# Verify UNMERGE lowering case where both SrcTy and DstTy are vectors with over 4 elements.
+
+---
+name:            test_unmerge_vector
+legalized:       false
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: {{^}}name: test_unmerge_vector
+    ; CHECK: [[REG0:%[0-9]+]]:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 0
+    ; CHECK: [[REG1:%[0-9]+]]:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 8
+    ; CHECK: [[REG2:%[0-9]+]]:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 16
+    %2:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 0
+    %3:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 8
+    %4:regv2_32b(<2 x s32>) = loadParam_v2i32 0, 16
+
+    ; CHECK: [[LO0:%[0-9]+]]:_(s32), [[HI0:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[REG0]]
+    ; CHECK: [[LO1:%[0-9]+]]:_(s32), [[HI1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[REG1]]
+    ; CHECK: [[LO2:%[0-9]+]]:_(s32), [[HI2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[REG2]]
+    %1:_(<6 x s32>) = G_CONCAT_VECTORS %2(<2 x s32>), %3(<2 x s32>), %4(<2 x s32>)
+
+    ; CHECK: [[BC0:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[LO0]]
+    ; CHECK: [[BC1:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[HI0]]
+    ; CHECK: [[BC2:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[LO1]]
+    ; CHECK: [[BC3:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[HI1]]
+    ; CHECK: [[BC4:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[LO2]]
+    ; CHECK: [[BC5:%[0-9]+]]:_(<4 x i8>) = G_BITCAST [[HI2]]
+    %0:_(<24 x i8>) = G_BITCAST %1(<6 x s32>)
+
+    ; CHECK: [[B0_0:%[0-9]+]]:_(i8), [[B0_1:%[0-9]+]]:_(i8), [[B0_2:%[0-9]+]]:_(i8), [[B0_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC0]]
+    ; CHECK: [[B1_0:%[0-9]+]]:_(i8), [[B1_1:%[0-9]+]]:_(i8), [[B1_2:%[0-9]+]]:_(i8), [[B1_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC1]]
+    ; CHECK: [[B2_0:%[0-9]+]]:_(i8), [[B2_1:%[0-9]+]]:_(i8), [[B2_2:%[0-9]+]]:_(i8), [[B2_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC2]]
+    ; CHECK: [[B3_0:%[0-9]+]]:_(i8), [[B3_1:%[0-9]+]]:_(i8), [[B3_2:%[0-9]+]]:_(i8), [[B3_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC3]]
+    ; CHECK: [[B4_0:%[0-9]+]]:_(i8), [[B4_1:%[0-9]+]]:_(i8), [[B4_2:%[0-9]+]]:_(i8), [[B4_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC4]]
+    ; CHECK: [[B5_0:%[0-9]+]]:_(i8), [[B5_1:%[0-9]+]]:_(i8), [[B5_2:%[0-9]+]]:_(i8), [[B5_3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BC5]]
+    %5:_(<6 x i8>), %6:_(<6 x i8>), %7:_(<6 x i8>), %8:_(<6 x i8>) = G_UNMERGE_VALUES %0(<24 x i8>)
+    %9:_(i48) = G_BITCAST %5(<6 x i8>)
+    %10:_(i48) = G_BITCAST %6(<6 x i8>)
+    %11:_(i48) = G_BITCAST %7(<6 x i8>)
+    %12:_(i48) = G_BITCAST %8(<6 x i8>)
+    %13:_(<4 x i48>) = G_BUILD_VECTOR %9(i48), %10(i48), %11(i48), %12(i48)
+    %14:_(<3 x i64>) = G_BITCAST %13(<4 x i48>)
+    
+    ; CHECK-NOT: {{.*}} <24 x i8>
+    ; CHECK-NOT: {{.*}} <6 x i8>
+
+    %15:_(p1) = G_CONSTANT i64 0
+    G_STORE %14(<3 x i64>), %15(p1) :: (store (<3 x i64>) into `ptr addrspace(1) null`, addrspace 1)
+    ret
+...

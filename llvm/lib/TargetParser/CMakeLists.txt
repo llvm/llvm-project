@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMTargetParser
   Host.cpp
   LoongArchTargetParser.cpp
   NVPTXTargetParser.cpp
+  PISATargetParser.cpp
   PPCTargetParser.cpp
   RISCVISAInfo.cpp
   RISCVTargetParser.cpp

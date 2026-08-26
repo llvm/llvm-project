@@ -1,0 +1,88 @@
+# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+
+# Verify G_UMULH lowering on non-power-of-2 type.
+
+--- |
+  ; ModuleID = 'reduced.ll'
+  source_filename = "reduced.ll"
+  target datalayout = "e-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:256:256-v256:256:256-G1-A4"
+  
+  define pisa_kernel void @test_umulh_s24(<3 x i8> %call19) local_unnamed_addr {
+    %1 = bitcast <3 x i8> %call19 to i24
+    %2 = udiv i24 %1, 42
+    %B13 = zext nneg i24 %2 to i32
+    store i32 %B13, ptr addrspace(1) null, align 4294967296
+    ret void
+  }
+  define pisa_kernel void @test_umulh_i64(i64 %a, i64 %b) {
+    ret void
+  }
+  define pisa_kernel void @test_smulh_i64(i64 %a, i64 %b) {
+    ret void
+  }
+...
+---
+name:            test_umulh_s24
+legalized:       false
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1 (%ir-block.0):
+    %1:reg8b(i8) = loadParam_i8 0, 0
+    %2:reg8b(i8) = loadParam_i8 0, 1
+    %3:reg8b(i8) = loadParam_i8 0, 2
+    %0:_(<3 x i8>) = G_BUILD_VECTOR %1(i8), %2(i8), %3(i8)
+    %8:_(p1) = G_CONSTANT i64 0
+    %4:_(i24) = G_BITCAST %0(<3 x i8>)
+    %10:_(i24) = G_CONSTANT i24 -3994575
+    %12:_(i24) = G_CONSTANT i24 5
+    %14:_(i24) = G_UMULH %4, %10
+    %15:_(i24) = G_LSHR %14, %12(i24)
+    %7:_(i32) = nneg G_ZEXT %15(i24)
+
+    ; CHECK-LABEL: {{^}}name: test_umulh_s24
+    ; CHECK-NOT: G_UMULH
+
+    G_STORE %7(i32), %8(p1) :: (store (i32) into `ptr addrspace(1) null`, align 4294967296, addrspace 1)
+    ret
+...
+---
+# G_UMULH i64: verifies that the legalizer expands G_UMULH on i64 via custom
+# legalization, replacing it with an arithmetic multiplication sequence.
+name:            test_umulh_i64
+legalized:       false
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    %0:reg64b(i64) = loadParam_i64 0, 0
+    %1:reg64b(i64) = loadParam_i64 1, 0
+    %ptr:_(p1) = G_CONSTANT i64 0
+    ; CHECK-LABEL: {{^}}name: test_umulh_i64
+    ; CHECK-NOT: G_UMULH
+    ; CHECK: G_MUL
+    %2:_(i64) = G_UMULH %0(i64), %1(i64)
+    G_STORE %2(i64), %ptr(p1) :: (store (i64) into `ptr addrspace(1) null`, addrspace 1)
+    ret
+
+...
+---
+# G_SMULH i64: verifies that the legalizer expands G_SMULH on i64 via custom
+# legalization. The signed path also emits G_NEG and XOR adjustments not
+# present in the unsigned path.
+name:            test_smulh_i64
+legalized:       false
+tracksRegLiveness: true
+isSSA:           true
+body:             |
+  bb.1:
+    %0:reg64b(i64) = loadParam_i64 0, 0
+    %1:reg64b(i64) = loadParam_i64 1, 0
+    %ptr:_(p1) = G_CONSTANT i64 0
+    ; CHECK-LABEL: {{^}}name: test_smulh_i64
+    ; CHECK-NOT: G_SMULH
+    ; CHECK: G_MUL
+    %2:_(i64) = G_SMULH %0(i64), %1(i64)
+    G_STORE %2(i64), %ptr(p1) :: (store (i64) into `ptr addrspace(1) null`, addrspace 1)
+    ret
+...

@@ -1,0 +1,18 @@
+//===- PISATargetParser.def - PISA target parsing defines -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides defines to build up the PISA target parser's logic.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+#ifndef PISA_TARGET
+#define PISA_TARGET(NAME, GEN, VARIANT, FWDCOMPAT)
+#endif
+
+PISA_TARGET("100", 100, VariantNone, true)

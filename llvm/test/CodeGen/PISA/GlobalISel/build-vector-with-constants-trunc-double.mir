@@ -1,0 +1,45 @@
+# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# Regression test to make sure truncating double into i8 doesn't try to produce an 8 bit float.
+--- |
+  target triple = "pisa"
+
+  define pisa_kernel void @test(i8 %id) {
+    %b = bitcast <1 x double> zeroinitializer to <8 x i8>
+    %elem = extractelement <8 x i8> %b, i8 %id
+    store i8 %elem, ptr addrspace(1) null, align 1
+    ret void
+  }
+...
+---
+name:            test
+legalized:       true
+tracksRegLiveness: true
+isSSA: true
+body:             |
+  bb.1 (%ir-block.0):
+    ; CHECK-LABEL: {{^}}name: test
+    ; CHECK: [[CONST:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[CONST]](i64)
+    ; CHECK: G_EXTRACT_VECTOR_ELT [[BITCAST]](<2 x i32>)
+    %0:reg8b(i8) = loadParam_i8 0, 0
+    %2:_(i64) = G_FCONSTANT double 0.000000e+00
+    %6:_(p1) = G_CONSTANT i64 0
+    %20:_(i8) = G_TRUNC %2:_(i64)
+    %21:_(i8) = G_CONSTANT i8 0
+    %28:_(<4 x i8>) = G_BUILD_VECTOR %20:_(i8), %21:_(i8), %21:_(i8), %21:_(i8)
+    %29:_(<4 x i8>) = G_BUILD_VECTOR %21:_(i8), %21:_(i8), %21:_(i8), %21:_(i8)
+    %5:_(i32) = G_ZEXT %0:reg8b(i8)
+    %18:_(i32) = G_BITCAST %28:_(<4 x i8>)
+    %19:_(i32) = G_BITCAST %29:_(<4 x i8>)
+    %7:_(<2 x i32>) = G_BUILD_VECTOR %18:_(i32), %19:_(i32)
+    %8:_(i32) = G_CONSTANT i32 2
+    %9:_(i32) = G_LSHR %5:_, %8:_(i32)
+    %10:_(i32) = G_EXTRACT_VECTOR_ELT %7:_(<2 x i32>), %9:_(i32)
+    %11:_(i32) = G_CONSTANT i32 3
+    %12:_(i32) = G_AND %5:_, %11:_
+    %14:_(i32) = G_SHL %12:_, %11:_(i32)
+    %15:_(i32) = G_LSHR %10:_, %14:_(i32)
+    %4:_(i8) = G_TRUNC %15:_(i32)
+    G_STORE %4:_(i8), %6:_(p1) :: (store (i8) into `ptr addrspace(1) null`, addrspace 1)
+    ret
+...
