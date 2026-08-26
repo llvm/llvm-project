@@ -58479,22 +58479,21 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
           CmpKnown.Zero.isSignBitSet() || CmpKnown.One.isSignBitSet();
     }
     if (CanMakeSigned || ISD::isSignedIntSetCC(CC)) {
-      // AVX512 can encode LE/GE against zero; do not turn that into LT/GT
-      // vs ±1.
-      const bool KeepZeroCmp = Subtarget.hasAVX512() && VT.isVectorOf(MVT::i1);
+      // AVX512 encodes LE/GE vs 0; do not turn that into LT/GT vs ±1.
+      bool KeepZeroCmp = Subtarget.hasAVX512() && VT.isVectorOf(MVT::i1);
       SDValue LHSOut = LHS;
       SDValue RHSOut = RHS;
       ISD::CondCode NewCC = CC;
       switch (CC) {
       case ISD::SETGE:
       case ISD::SETUGE:
+        if (KeepZeroCmp && ISD::isConstantSplatVectorAllZeros(LHS.getNode()))
+          break;
         if (SDValue NewLHS = incDecVectorConstant(LHS, DAG, /*IsInc*/ true,
-                                                  /*NSW*/ true)) {
-          if (KeepZeroCmp && ISD::isConstantSplatVectorAllZeros(LHS.getNode()))
-            break;
+                                                  /*NSW*/ true))
           LHSOut = NewLHS;
-        } else if (SDValue NewRHS = incDecVectorConstant(
-                       RHS, DAG, /*IsInc*/ false, /*NSW*/ true))
+        else if (SDValue NewRHS = incDecVectorConstant(
+                     RHS, DAG, /*IsInc*/ false, /*NSW*/ true))
           RHSOut = NewRHS;
         else
           break;
@@ -58509,12 +58508,13 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         if (SDValue NewLHS = incDecVectorConstant(LHS, DAG, /*IsInc*/ false,
                                                   /*NSW*/ true))
           LHSOut = NewLHS;
+        else if (KeepZeroCmp &&
+                 ISD::isConstantSplatVectorAllZeros(RHS.getNode()))
+          break;
         else if (SDValue NewRHS = incDecVectorConstant(RHS, DAG, /*IsInc*/ true,
-                                                       /*NSW*/ true)) {
-          if (KeepZeroCmp && ISD::isConstantSplatVectorAllZeros(RHS.getNode()))
-            break;
+                                                       /*NSW*/ true))
           RHSOut = NewRHS;
-        } else
+        else
           break;
 
         [[fallthrough]];
