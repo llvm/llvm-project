@@ -385,6 +385,9 @@ bool LiveRegOptimizer::optimizeLiveType(
 
   // Coerce and track the defs.
   for (Instruction *D : Defs) {
+    // Terminators can't be coerced in-block, so skip them.
+    if (D->isTerminator())
+      continue;
     if (!ValMap.contains(D)) {
       BasicBlock::iterator InsertPt = std::next(D->getIterator());
       Value *ConvertVal = convertToOptType(D, InsertPt);
@@ -434,12 +437,14 @@ bool LiveRegOptimizer::optimizeLiveType(
         if (OriginalPhi != PhiNodes.end())
           ValMap.erase(*OriginalPhi);
 
-        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
-
         for (User *U : NextDeadValue->users()) {
           if (!VisitedPhis.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
+        NextDeadValue->replaceAllUsesWith(
+            PoisonValue::get(NextDeadValue->getType()));
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
       }
     } else {
       DeadInsts.emplace_back(cast<Instruction>(Phi));
@@ -455,7 +460,8 @@ bool LiveRegOptimizer::optimizeLiveType(
             BBUseValMap[U->getParent()].contains(Val))
           NewVal = BBUseValMap[U->getParent()][Val];
         else {
-          BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
+          // Not getFirstNonPHIIt, which would insert in front of a landingpad.
+          BasicBlock::iterator InsertPt = U->getParent()->getFirstInsertionPt();
           // We may pick up ops that were previously converted for users in
           // other blocks. If there is an originally typed definition of the Op
           // already in this block, simply reuse it.
