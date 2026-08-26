@@ -417,9 +417,6 @@ bool Sema::BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E) {
 
 static QualType buildCountAttributedType(Sema &S, QualType T,
                                          const ParsedAttr &AL) {
-  if (!AL.diagnoseLangOpts(S))
-    return QualType();
-
   auto *CountExpr = AL.getArgAsExpr(0);
   assert(CountExpr);
 
@@ -493,11 +490,7 @@ struct RebuildTypeWithLateParsedAttr
     }
 
     QualType T = buildCountAttributedType(SemaRef, InnerType, AL);
-    if (T.isNull()) {
-      AL.setInvalid();
-      FD->setInvalidDecl();
-      return QualType();
-    }
+    assert(!T.isNull());
 
     // Reject nested counted_by, e.g. `int *__counted_by(n) *p` or
     // `int *__counted_by(n) arr[10]` — the resolved CountAttributedType
