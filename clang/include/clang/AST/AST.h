@@ -14,14 +14,14 @@
 #define LLVM_CLANG_AST_AST_H
 
 // This header exports all AST interfaces.
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprObjC.h"
-#include "clang/AST/StmtVisitor.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/ASTContext.h"   // IWYU pragma: export
+#include "clang/AST/Decl.h"         // IWYU pragma: export
+#include "clang/AST/DeclCXX.h"      // IWYU pragma: export
+#include "clang/AST/DeclObjC.h"     // IWYU pragma: export
+#include "clang/AST/DeclTemplate.h" // IWYU pragma: export
+#include "clang/AST/Expr.h"         // IWYU pragma: export
+#include "clang/AST/ExprObjC.h"     // IWYU pragma: export
+#include "clang/AST/StmtVisitor.h"  // IWYU pragma: export
+#include "clang/AST/Type.h"         // IWYU pragma: export
 
 #endif
