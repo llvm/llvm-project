@@ -49,7 +49,7 @@ static void attachVarNameAttr(Operation *op, OpBuilder &builder,
                               StringRef varName) {
   if (!varName.empty()) {
     auto varNameAttr = acc::VarNameAttr::get(builder.getContext(), varName);
-    op->setAttr(acc::getVarNameAttrName(), varNameAttr);
+    op->setDiscardableAttr(acc::getVarNameAttrName(), varNameAttr);
   }
 }
 
@@ -938,6 +938,26 @@ static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
 static void printRecipeSym(mlir::OpAsmPrinter &p, mlir::Operation *op,
                            mlir::SymbolRefAttr recipeAttr) {
   p << recipeAttr;
+}
+
+static ParseResult parseDenseBoolArrayAttr(mlir::OpAsmParser &parser,
+                                           mlir::DenseBoolArrayAttr &attr) {
+  return parser.parseAttribute(attr);
+}
+
+static void printDenseBoolArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                                    mlir::DenseBoolArrayAttr attr) {
+  p << attr;
+}
+
+static ParseResult parseArrayAttr(mlir::OpAsmParser &parser,
+                                  mlir::ArrayAttr &attr) {
+  return parser.parseAttribute(attr);
+}
+
+static void printArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                           mlir::ArrayAttr attr) {
+  p << attr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2715,11 +2735,17 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
       return failure();
     if (parser.parseRSquare())
       return failure();
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
     needCommaBeforeOperands = true;
   }
 
-  if (needCommaBeforeOperands && failed(parser.parseComma()))
-    return failure();
+  if (needCommaBeforeOperands) {
+    if (succeeded(parser.parseOptionalRParen()))
+      return success();
+    if (failed(parser.parseComma()))
+      return failure();
+  }
 
   llvm::SmallVector<DeviceTypeAttr> attributes;
   if (failed(parser.parseCommaSeparatedList([&]() {

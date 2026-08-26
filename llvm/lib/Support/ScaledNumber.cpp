@@ -21,6 +21,13 @@ using namespace llvm::ScaledNumbers;
 
 std::pair<uint64_t, int16_t> ScaledNumbers::multiply64(uint64_t LHS,
                                                        uint64_t RHS) {
+  uint64_t Upper, Lower;
+#if defined(__SIZEOF_INT128__) ||                                              \
+    (defined(_INTEGRAL_MAX_BITS) && _INTEGRAL_MAX_BITS >= 128)
+  auto Product = __uint128_t(LHS) * RHS;
+  Upper = uint64_t(Product >> 64);
+  Lower = uint64_t(Product);
+#else
   // Separate into two 32-bit digits (U.L).
   auto getU = [](uint64_t N) { return N >> 32; };
   auto getL = [](uint64_t N) { return N & UINT32_MAX; };
@@ -30,7 +37,8 @@ std::pair<uint64_t, int16_t> ScaledNumbers::multiply64(uint64_t LHS,
   uint64_t P1 = UL * UR, P2 = UL * LR, P3 = LL * UR, P4 = LL * LR;
 
   // Sum into two 64-bit digits.
-  uint64_t Upper = P1, Lower = P4;
+  Upper = P1;
+  Lower = P4;
   auto addWithCarry = [&](uint64_t N) {
     uint64_t NewLower = Lower + (getL(N) << 32);
     Upper += getU(N) + (NewLower < Lower);
@@ -38,6 +46,7 @@ std::pair<uint64_t, int16_t> ScaledNumbers::multiply64(uint64_t LHS,
   };
   addWithCarry(P2);
   addWithCarry(P3);
+#endif
 
   // Check whether the upper digit is empty.
   if (!Upper)

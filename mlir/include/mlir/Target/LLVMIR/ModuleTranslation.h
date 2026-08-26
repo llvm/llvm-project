@@ -416,6 +416,7 @@ private:
                                      llvm::IRBuilderBase &builder,
                                      bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
+  LogicalResult convertFunctionMetadata();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
   LogicalResult convertComdats();

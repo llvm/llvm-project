@@ -20,6 +20,7 @@
 
 #include "benchmark/benchmark.h"
 #include "make_string.h"
+#include "test_macros.h"
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
@@ -257,27 +258,27 @@ void BM_escaped(benchmark::State& state, std::basic_string_view<CharT> input) {
 }
 
 template <class CharT>
-void BM_ascii_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_ascii_escaped(benchmark::State& state) {
   BM_escaped(state, ascii_text<CharT>());
 }
 
 template <class CharT>
-void BM_unicode_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_unicode_escaped(benchmark::State& state) {
   BM_escaped(state, unicode_text<CharT>());
 }
 
 template <class CharT>
-void BM_cyrillic_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_cyrillic_escaped(benchmark::State& state) {
   BM_escaped(state, cyrillic_text<CharT>());
 }
 
 template <class CharT>
-void BM_japanese_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_japanese_escaped(benchmark::State& state) {
   BM_escaped(state, japanese_text<CharT>());
 }
 
 template <class CharT>
-void BM_emoji_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_emoji_escaped(benchmark::State& state) {
   BM_escaped(state, emoji_text<CharT>());
 }
 

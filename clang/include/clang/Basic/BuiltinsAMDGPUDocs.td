@@ -457,6 +457,8 @@ matrix ``B`` and adds the 16x16 f32 accumulator ``C``.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -473,6 +475,8 @@ result to bf16.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -488,6 +492,8 @@ matrix ``A`` by a 32x16 matrix ``B`` and adds the 16x16 accumulator ``C``.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -504,6 +510,8 @@ A and B contain packed 8-bit floats passed as integer vectors.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -520,6 +528,8 @@ A and B contain packed 8-bit floats passed as integer vectors.
   3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -538,6 +548,8 @@ matrix ``B`` and adds the i32 accumulator ``C``.
   a compile-time constant integer expression convertible to bool. If true,
   the result saturates instead of wrapping on overflow. If omitted, defaults
   to false.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -553,6 +565,8 @@ independently per operand.
   (FP8, BF8, FP6, BF6, or FP4). Must be compile-time constants.
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -565,6 +579,8 @@ and adds the 32x16 f32 accumulator ``C``.
 
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -584,6 +600,8 @@ WMMA with per-operand scale factors applied during the computation.
 - ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 32-bit scale exponents.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 
@@ -656,6 +674,8 @@ scale variant.
 - ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-n16-insts`` and wave32.
 }];
 }
 

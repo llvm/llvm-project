@@ -3,9 +3,9 @@
 
 !s64i = !cir.int<s, 64>
 !s32i = !cir.int<s, 32>
-!rec_TwoLong = !cir.struct<"TwoLong" {!s64i, !s64i}>
-!rec_ThreeInt = !cir.struct<"ThreeInt" {!s32i, !s32i, !s32i}>
-!rec_OneInt = !cir.struct<"OneInt" {!s32i}>
+!rec_TwoLong = !cir.struct<"TwoLong" {data !s64i, data !s64i}>
+!rec_ThreeInt = !cir.struct<"ThreeInt" {data !s32i, data !s32i, data !s32i}>
+!rec_OneInt = !cir.struct<"OneInt" {data !s32i}>
 
 #expand_two = {
   return = { kind = "direct" },
