@@ -83,6 +83,22 @@ lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                      SymbolTableCollection *symbolTables = nullptr,
                      Type resultType = {});
 
+/// Extract a slice of operations into a new function.
+///
+/// The operations are cloned into a new function body. All operands that are
+/// defined outside the slice become function arguments, and all results from
+/// the operations become function return values. Unused function arguments
+/// are automatically removed.
+///
+/// Note: When cloning operations with regions, values captured from outside
+/// the slice and used within region bodies are not remapped to the
+/// corresponding function arguments. This function works correctly only when
+/// operations with regions don't capture external values, or when the entire
+/// defining operation is also included in the slice.
+FuncOp extractOperationsIntoFunction(ArrayRef<Operation *> ops,
+                                     MLIRContext *context,
+                                     StringRef functionName);
+
 } // namespace func
 } // namespace mlir
 
