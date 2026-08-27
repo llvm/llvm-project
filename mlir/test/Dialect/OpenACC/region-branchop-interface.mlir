@@ -119,10 +119,9 @@ func.func @last_mod_openacc_host_data(%arg0: memref<f32>, %mapped: memref<f32>) 
 // CHECK-NEXT:   - loop_region
 // CHECK-LABEL: test_tag: acc_loop_after:
 // CHECK:  operand #0
-// CHECK-DAG:   - pre
-// CHECK-DAG:   - loop_region
-// the last writer is either the pre-loop store or
-// the store in the loop depending on the iteration count
+// CHECK-NEXT:   - loop_region
+// these bounds run the body at least once, so the store in the loop is the
+// only possible last writer
 // CHECK-LABEL: test_tag: acc_loop_post:
 // CHECK:  operand #0
 // CHECK-NEXT:   - post_loop
@@ -146,6 +145,52 @@ func.func @last_mod_openacc_loop(%arg0: memref<f32>) -> memref<f32> {
   memref.store %zero, %arg0[] {tag_name = "post_loop"} : memref<f32>
   memref.load %arg0[] {tag = "acc_loop_post"} : memref<f32>
   return {tag = "acc_loop_return"} %arg0 : memref<f32>
+}
+
+// -----
+
+// structured acc.loop with an unknown upper bound: the body may or may not
+// run, so the edge that branches past it is kept.
+//
+// CHECK-LABEL: test_tag: acc_loop_dynamic_after:
+// CHECK:  operand #0
+// CHECK-DAG:   - pre
+// CHECK-DAG:   - loop_region
+func.func @last_mod_openacc_loop_dynamic(%arg0: memref<f32>, %n: i32) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+  %one = arith.constant 1.0 : f32
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  %c1_i32 = arith.constant 1 : i32
+  acc.loop control(%iv : i32) = (%c1_i32 : i32) to (%n : i32)
+      step (%c1_i32 : i32) {
+    memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
+    acc.yield
+  } auto_
+  memref.load %arg0[] {tag = "acc_loop_dynamic_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+// -----
+
+// structured acc.loop over a provably empty iteration space: the body is
+// never entered, so the store before the loop is the last writer.
+//
+// CHECK-LABEL: test_tag: acc_loop_empty_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+func.func @last_mod_openacc_loop_empty(%arg0: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+  %one = arith.constant 1.0 : f32
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  acc.loop control(%iv : i32) = (%c10_i32 : i32) to (%c10_i32 : i32)
+      step (%c1_i32 : i32) {
+    memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
+    acc.yield
+  } auto_
+  memref.load %arg0[] {tag = "acc_loop_empty_after"} : memref<f32>
+  return %arg0 : memref<f32>
 }
 
 // -----

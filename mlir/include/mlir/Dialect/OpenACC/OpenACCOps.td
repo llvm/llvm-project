@@ -2635,7 +2635,8 @@ def OpenACC_LoopOp
           "loop", [AttrSizedOperandSegments, AutomaticAllocationScope,
                    RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                   DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                   DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                                             ["getStaticTripCount"]>,
                    DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                              ["getSuccessorInputs"]>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {

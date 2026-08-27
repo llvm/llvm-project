@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -23,6 +24,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
@@ -607,7 +609,26 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  // Structured loops: model a loop-shaped region graph similar to scf.for.
+  // Structured loops: model a loop-shaped region graph similar to scf.for,
+  // including the trip-count refinements that drop edges the loop can never
+  // take.
+  if (std::optional<APInt> tripCount = getStaticTripCount()) {
+    if (point.isParent()) {
+      // A known-empty loop branches straight back to the parent. Otherwise
+      // the body is guaranteed to run, so nothing can branch past it.
+      if (tripCount->isZero())
+        regions.push_back(RegionSuccessor(getOperation()));
+      else
+        regions.push_back(RegionSuccessor(&getRegion()));
+      return;
+    }
+    if (tripCount->isOne()) {
+      // A single iteration has no backedge.
+      regions.push_back(RegionSuccessor(getOperation()));
+      return;
+    }
+  }
+
   regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor(getOperation()));
 }
@@ -3902,6 +3923,85 @@ bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
 
 llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
   return {&getRegion()};
+}
+
+/// Trip count of a single `acc.loop` control dimension.
+///
+/// `constantTripCount` models the exclusive `iv < ub` form used by `scf.for`.
+/// An `acc.loop` dimension is exclusive as well, unless `inclusiveUpperbound`
+/// is set for it, in which case the equivalent exclusive bound is `ub + 1`.
+static std::optional<APInt> getStaticDimTripCount(Value lb, Value ub,
+                                                  Value step, bool inclusive) {
+  // `acc.loop` bounds are plain values, so there is no static `ub - lb` to
+  // recover once the bounds themselves are not constants.
+  auto noUbMinusLb = [](Value, Value, bool) -> std::optional<llvm::APSInt> {
+    return std::nullopt;
+  };
+
+  if (!inclusive)
+    return constantTripCount(lb, ub, step, /*isSigned=*/true, noUbMinusLb);
+
+  // `iv <= ub` with matching bounds is a single iteration. This has to be
+  // answered before the conversion below, which would otherwise report the
+  // empty range that `constantTripCount` derives from matching bounds.
+  if (lb == ub) {
+    std::optional<std::pair<APInt, bool>> stepCst = getConstantAPIntValue(step);
+    if (!stepCst || stepCst->first.isZero())
+      return std::nullopt;
+    return APInt(stepCst->first.getBitWidth(), 1);
+  }
+
+  // `ub + 1` is only representable for a known upper bound that does not
+  // overflow.
+  std::optional<std::pair<APInt, bool>> ubCst = getConstantAPIntValue(ub);
+  if (!ubCst || ubCst->first.isMaxSignedValue())
+    return std::nullopt;
+  OpFoldResult exclusiveUb = IntegerAttr::get(ub.getType(), ubCst->first + 1);
+  return constantTripCount(lb, exclusiveUb, step, /*isSigned=*/true,
+                           noUbMinusLb);
+}
+
+std::optional<APInt> LoopOp::getStaticTripCount() {
+  // An unstructured or container-like loop has no counted control of its own:
+  // the iteration space is described inside the region.
+  if (getUnstructured() || isContainerLike())
+    return std::nullopt;
+
+  ValueRange lbs = getLowerbound();
+  ValueRange ubs = getUpperbound();
+  ValueRange steps = getStep();
+  if (lbs.size() != ubs.size() || lbs.size() != steps.size())
+    return std::nullopt;
+
+  std::optional<ArrayRef<bool>> inclusive = getInclusiveUpperbound();
+
+  // Collapsed dimensions are iterated as a product, so a single empty
+  // dimension makes the whole loop empty even when the others are unknown.
+  APInt tripCount(64, 1);
+  bool anyUnknown = false;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    bool dimInclusive = inclusive && i < inclusive->size() && (*inclusive)[i];
+    std::optional<APInt> dim =
+        getStaticDimTripCount(lbs[i], ubs[i], steps[i], dimInclusive);
+    if (!dim) {
+      anyUnknown = true;
+      continue;
+    }
+    if (dim->isZero())
+      return APInt(64, 0);
+    if (dim->getActiveBits() > 64) {
+      anyUnknown = true;
+      continue;
+    }
+    bool overflow = false;
+    tripCount = tripCount.umul_ov(dim->zextOrTrunc(64), overflow);
+    if (overflow)
+      anyUnknown = true;
+  }
+
+  if (anyUnknown)
+    return std::nullopt;
+  return tripCount;
 }
 
 /// loop-control ::= `control` `(` ssa-id-and-type-list `)` `=`
