@@ -34,7 +34,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:      @[[DYNA_ENV:.*]] = weak_odr protected global %struct.DynamicEnvironmentTy zeroinitializer
 // The kernel is generic, so its block is the default 256 threads plus the warp
 // reserved for the main thread.
-// CHECK:      @[[KERNEL_ENV:.*]] = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 288, i32 -1, i32 -1, i32 0 }, ptr @[[IDENT]], ptr @[[DYNA_ENV]] }
+// CHECK:      @[[KERNEL_ENV:.*]] = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1, i32 1, i32 320, i32 -1, i32 -1, i32 0 }, ptr @[[IDENT]], ptr @[[DYNA_ENV]] }
 // CHECK:      define weak_odr protected amdgpu_kernel void @__omp_offloading_{{[^_]+}}_{{[^_]+}}_omp_target_region__l{{[0-9]+}}(ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]], ptr %[[DYN_PTR:.*]])
 // CHECK:        %[[TMP_A:.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK:        %[[ASCAST_A:.*]] = addrspacecast ptr addrspace(5) %[[TMP_A]] to ptr

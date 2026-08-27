@@ -8599,10 +8599,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   }
 
   // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  bool NeedsMainThreadWarp =
-      Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD &&
-      Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  if (MaxThreadsVal > 0 && NeedsMainThreadWarp && hasGridValue(T)) {
+  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
+      hasGridValue(T)) {
     // An out-of-range bound is dropped rather than clamped, so clamp it here.
     const omp::GV &GridValue = getGridValue(T, Kernel);
     MaxThreadsVal = std::min(MaxThreadsVal + int32_t(GridValue.GV_Warp_Size),

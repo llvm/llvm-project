@@ -4,14 +4,14 @@
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE1]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL1_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
 // Both kernels below are generic, so their blocks carry one warp for the main
-// thread on top of the thread_limit they ask for: 10 + 32 and 30 + 32.
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE1:1]], i32 [[MIN_THREADS1:1]], i32 [[MAX_THREADS1:42]], i32 [[MIN_TEAMS1:1]], i32 [[MAX_TEAMS1:-1]], i32 0 },
+// thread on top of the thread_limit they ask for: 10 + 64 and 30 + 64.
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE1:1]], i32 [[MIN_THREADS1:1]], i32 [[MAX_THREADS1:74]], i32 [[MIN_TEAMS1:1]], i32 [[MAX_TEAMS1:-1]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 // CHECK:      @[[EXEC_MODE2:.*]] = weak protected constant i8 1
 // CHECK:      @llvm.compiler.used{{.*}} = appending global [1 x ptr] [ptr @[[EXEC_MODE2]]], section "llvm.metadata"
 // CHECK:      @[[KERNEL2_ENV:.*_kernel_environment]] = weak_odr protected constant %struct.KernelEnvironmentTy {
-// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:62]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0 },
+// CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:94]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
