@@ -12,7 +12,7 @@
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -1244,7 +1244,7 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+    if (const DecompositionDecl *Decomp = BD->getDecomposedDecl();
         Decomp && !BD->getType().isNull())
       return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;

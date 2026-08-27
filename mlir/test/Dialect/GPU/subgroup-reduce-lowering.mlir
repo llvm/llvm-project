@@ -191,11 +191,11 @@ gpu.module @kernels {
     // CHECK-SHFL: %[[A2:.+]] = arith.addi %[[A1]], %[[S2]] : i32
     // CHECK-SHFL: "test.consume"(%[[A2]]) : (i32) -> ()
 
-    // CHECK-GFX: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]]  quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) {bound_ctrl = true} : i32
+    // CHECK-GFX: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]] quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) bound_ctrl(true) : i32
     // CHECK-GFX: %[[A0:.+]] = arith.addi %[[ARG0]], %[[D0]] : i32
-    // CHECK-GFX: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]]  quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) {bound_ctrl = true} : i32
+    // CHECK-GFX: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]] quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) bound_ctrl(true) : i32
     // CHECK-GFX: %[[A1:.+]] = arith.addi %[[A0]], %[[D1]] : i32
-    // CHECK-GFX: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]]  row_half_mirror(unit) {bound_ctrl = true} : i32
+    // CHECK-GFX: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]] row_half_mirror(unit) bound_ctrl(true) : i32
     // CHECK-GFX: %[[A2:.+]] = arith.addi %[[A1]], %[[D2]] : i32
 
     // CHECK-GFX10: "test.consume"(%[[A2]]) : (i32) -> ()
@@ -307,13 +307,13 @@ gpu.module @kernels {
 
     // CHECK-GFX9-COUNT-6: amdgpu.dpp
 
-    // CHECK-GFX10: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]]  quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) {bound_ctrl = true} : i16
+    // CHECK-GFX10: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]] quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) bound_ctrl(true) : i16
     // CHECK-GFX10: %[[A0:.+]] = arith.addi %[[ARG0]], %[[D0]] : i16
-    // CHECK-GFX10: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]]  quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) {bound_ctrl = true} : i16
+    // CHECK-GFX10: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]] quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) bound_ctrl(true) : i16
     // CHECK-GFX10: %[[A1:.+]] = arith.addi %[[A0]], %[[D1]] : i16
-    // CHECK-GFX10: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]]  row_half_mirror(unit) {bound_ctrl = true} : i16
+    // CHECK-GFX10: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]] row_half_mirror(unit) bound_ctrl(true) : i16
     // CHECK-GFX10: %[[A2:.+]] = arith.addi %[[A1]], %[[D2]] : i16
-    // CHECK-GFX10: %[[D3:.+]] = amdgpu.dpp %[[A2]] %[[A2]]  row_mirror(unit) {bound_ctrl = true} : i16
+    // CHECK-GFX10: %[[D3:.+]] = amdgpu.dpp %[[A2]] %[[A2]] row_mirror(unit) bound_ctrl(true) : i16
     // CHECK-GFX10: %[[A3:.+]] = arith.addi %[[A2]], %[[D3]] : i16
     // CHECK-GFX10: %[[P0:.+]] = rocdl.permlanex16 %[[A3]], %[[A3]], %c-1_i32, %c-1_i32, true, false : i16, i32
     // CHECK-GFX10: %[[A4:.+]] = arith.addi %[[A3]], %[[P0]] : i16
@@ -345,13 +345,13 @@ gpu.module @kernels {
     // CHECK-SHFL: %[[AL:.+]] = arith.addi {{.+}} : i16
     // CHECK-SHFL: "test.consume"(%[[AL]]) : (i16) -> ()
 
-    // CHECK-GFX: %[[VAR0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]]  quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) {bound_ctrl = true} : i16
+    // CHECK-GFX: %[[VAR0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]] quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) bound_ctrl(true) : i16
     // CHECK-GFX: %[[VAR1:.+]] = arith.addi %[[ARG0]], %[[VAR0]] : i16
-    // CHECK-GFX: %[[VAR2:.+]] = amdgpu.dpp %[[VAR1]] %[[VAR1]]  quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) {bound_ctrl = true} : i16
+    // CHECK-GFX: %[[VAR2:.+]] = amdgpu.dpp %[[VAR1]] %[[VAR1]] quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) bound_ctrl(true) : i16
     // CHECK-GFX: %[[VAR3:.+]] = arith.addi %[[VAR1]], %[[VAR2]] : i16
-    // CHECK-GFX: %[[VAR4:.+]] = amdgpu.dpp %[[VAR3]] %[[VAR3]]  row_half_mirror(unit) {bound_ctrl = true} : i16
+    // CHECK-GFX: %[[VAR4:.+]] = amdgpu.dpp %[[VAR3]] %[[VAR3]] row_half_mirror(unit) bound_ctrl(true) : i16
     // CHECK-GFX: %[[VAR5:.+]] = arith.addi %[[VAR3]], %[[VAR4]] : i16
-    // CHECK-GFX: %[[VAR6:.+]] = amdgpu.dpp %[[VAR5]] %[[VAR5]]  row_mirror(unit) {bound_ctrl = true} : i16
+    // CHECK-GFX: %[[VAR6:.+]] = amdgpu.dpp %[[VAR5]] %[[VAR5]] row_mirror(unit) bound_ctrl(true) : i16
     // CHECK-GFX: %[[VAR7:.+]] = arith.addi %[[VAR5]], %[[VAR6]] : i16
     // CHECK-GFX: "test.consume"(%[[VAR7]]) : (i16) -> ()
     %sum0 = gpu.subgroup_reduce add %arg0 cluster(size = 16) : (i16) -> i16
@@ -395,13 +395,13 @@ gpu.module @kernels {
   //     (2) quad_perm, followed by reduction resulting in reduction over 4 consecutive lanes,
   //     (3) row_half_mirror, followed by reduction resulting in reduction over 8 consecutive lanes, and
   //     (4) row_mirror, followed by reduction resulting in reduction over 16 consecutive lanes.
-  // CHECK-GFX: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]]  quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) {bound_ctrl = true} : f32
+  // CHECK-GFX: %[[D0:.+]] = amdgpu.dpp %[[ARG0]] %[[ARG0]] quad_perm([1 : i32, 0 : i32, 3 : i32, 2 : i32]) bound_ctrl(true) : f32
   // CHECK-GFX: %[[A0:.+]] = arith.addf %[[ARG0]], %[[D0]] : f32
-  // CHECK-GFX: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]]  quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) {bound_ctrl = true} : f32
+  // CHECK-GFX: %[[D1:.+]] = amdgpu.dpp %[[A0]] %[[A0]] quad_perm([2 : i32, 3 : i32, 0 : i32, 1 : i32]) bound_ctrl(true) : f32
   // CHECK-GFX: %[[A1:.+]] = arith.addf %[[A0]], %[[D1]] : f32
-  // CHECK-GFX: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]]  row_half_mirror(unit) {bound_ctrl = true} : f32
+  // CHECK-GFX: %[[D2:.+]] = amdgpu.dpp %[[A1]] %[[A1]] row_half_mirror(unit) bound_ctrl(true) : f32
   // CHECK-GFX: %[[A2:.+]] = arith.addf %[[A1]], %[[D2]] : f32
-  // CHECK-GFX: %[[D3:.+]] = amdgpu.dpp %[[A2]] %[[A2]]  row_mirror(unit) {bound_ctrl = true} : f32
+  // CHECK-GFX: %[[D3:.+]] = amdgpu.dpp %[[A2]] %[[A2]] row_mirror(unit) bound_ctrl(true) : f32
   // CHECK-GFX: %[[A3:.+]] = arith.addf %[[A2]], %[[D3]] : f32
   //
   //   Now, on gfx942:
@@ -410,7 +410,7 @@ gpu.module @kernels {
   //         [48, 64) is over the full cluster of the last 32 lanes.
   //     (2) Update the reduction value in lanes [0, 16) and [32, 48) with the final reduction result from
   //         lanes [16, 32) and [48, 64), respectively.
-  // CHECK-GFX9: %[[BCAST15:.+]] = amdgpu.dpp %[[A3]] %[[A3]]  row_bcast_15(unit) {row_mask = 10 : i32} : f32
+  // CHECK-GFX9: %[[BCAST15:.+]] = amdgpu.dpp %[[A3]] %[[A3]] row_bcast_15(unit) row_mask(10) : f32
   // CHECK-GFX9: %[[SUM:.+]] = arith.addf %[[A3]], %[[BCAST15]] : f32
   // CHECK-GFX9: %[[SWIZ:.+]] = amdgpu.swizzle_bitmode %[[SUM]] 0 31 0 : f32
   // CHECK-GFX9: "test.consume"(%[[SWIZ]]) : (f32) -> ()

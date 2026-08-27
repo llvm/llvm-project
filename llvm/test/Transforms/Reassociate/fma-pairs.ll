@@ -405,3 +405,52 @@ define double @const_addend(ptr %x, ptr %y) {
   %r = fadd reassoc nsz contract double %a0, 2.0
   ret double %r
 }
+
+define double @hidden_fadd_tree(double %acc, double %a, double %b, double %c, double %d, double %e, double %f) {
+; CHECK-LABEL: define double @hidden_fadd_tree(
+; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
+; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[F]], [[E]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[B]], [[A]]
+; CHECK-NEXT:    [[REASS_ADD4:%.*]] = fadd fast double [[REASS_ADD]], [[C]]
+; CHECK-NEXT:    [[REASS_ADD5:%.*]] = fadd fast double [[REASS_ADD4]], [[D]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast double [[REASS_ADD5]], 2.000000e+00
+; CHECK-NEXT:    [[ACC7:%.*]] = fadd fast double [[M0]], [[ACC]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[ACC7]], [[REASS_MUL]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %acc0 = fadd fast double %a, %b
+  %acc1 = fadd fast double %c, %d
+  %acc2 = fadd fast double %b, %c
+  %acc3 = fadd fast double %d, %a
+  %acc4 = fadd fast double %acc0, %acc1
+  %acc5 = fadd fast double %acc2, %acc3
+  %acc6 = fadd fast double %acc4, %acc5
+
+  %m0 = fmul fast double %e, %f
+  %acc7 = fadd fast double %m0, %acc6
+
+  %result = fadd fast double %acc, %acc7
+  ret double %result
+}
+
+define double @nested_fma_subtraction(double %acc, double %a, double %b, double %c, double %d, double %e, double %f) {
+; CHECK-LABEL: define double @nested_fma_subtraction(
+; CHECK-SAME: double [[ACC:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], double [[E:%.*]], double [[F:%.*]]) {
+; CHECK-NEXT:    [[M0:%.*]] = fmul fast double [[B]], [[A]]
+; CHECK-NEXT:    [[M1_NEG_NEG:%.*]] = fmul fast double [[D]], [[C]]
+; CHECK-NEXT:    [[M2_NEG1:%.*]] = fmul fast double [[F]], [[E]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[M2_NEG1]], [[M0]]
+; CHECK-NEXT:    [[M2_NEG:%.*]] = fmul fast double -1.000000e+00, [[REASS_ADD]]
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = fadd fast double [[ACC]], [[M1_NEG_NEG]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd fast double [[M2_NEG]], [[ADD_NEG]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %m0 = fmul fast double %a, %b
+  %m1 = fmul fast double %c, %d
+  %sub = fsub fast double %m0, %m1
+  %m2 = fmul fast double %e, %f
+  %add = fadd fast double %m2, %sub
+  %result = fsub fast double %acc, %add
+  ret double %result
+}
+

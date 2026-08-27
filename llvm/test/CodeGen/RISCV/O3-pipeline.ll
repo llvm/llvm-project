@@ -142,7 +142,7 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; RV64-NEXT:        RISC-V Optimize W Instructions
-; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Pre-RA
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       RISC-V pre-allocation Zilsd load/store optimization
@@ -201,7 +201,7 @@
 ; CHECK-NEXT:       Tail Duplication
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
-; CHECK-NEXT:       RISC-V post-regalloc pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Post-RA
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       RISC-V Load / Store Optimizer
 ; CHECK-NEXT:       MachineDominator Tree Construction
@@ -233,9 +233,9 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass
-; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Pre-Emit
 ; RV32-NEXT:        RISC-V QC Relaxation Marking
-; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Atomics
 ; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
