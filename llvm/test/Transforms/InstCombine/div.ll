@@ -2033,6 +2033,74 @@ define <2 x i32> @sdiv_select_one_false_poison_vec(<2 x i32> %a, i1 %b) {
   ret <2 x i32> %div
 }
 
+define i32 @sdiv_add_nonneg_guard(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_add_nonneg_guard(
+; CHECK-NEXT:    entry:
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[OR]], -1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[UNREACHABLE:.*]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD]], 2
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %c0 = icmp slt i32 %x, 0
+  %c1 = icmp slt i32 %y, 0
+  %or = or i1 %c0, %c1
+  br i1 %or, label %unreachable, label %cont
+
+unreachable:
+  unreachable
+
+cont:
+  %add = add nsw i32 %x, %y
+  %div = sdiv i32 %add, 2
+  ret i32 %div
+}
+
+define i32 @sdiv_add3_nonneg_guard(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @sdiv_add3_nonneg_guard(
+; CHECK:         [[ADD0:%.*]] = add nsw i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD0]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD1]], 2
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %or0 = or i32 %x, %y
+  %or1 = or i32 %or0, %z
+  %cmp = icmp sge i32 %or1, 0
+  br i1 %cmp, label %cont, label %unreachable
+
+unreachable:
+  unreachable
+
+cont:
+  %add0 = add nsw i32 %x, %y
+  %add1 = add nsw i32 %add0, %z
+  %div = sdiv i32 %add1, 2
+  ret i32 %div
+}
+
+define i32 @sdiv_add_or_may_be_negative(i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_add_or_may_be_negative(
+; CHECK:         [[DIV:%.*]] = sdiv i32 {{%.*}}, 2
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %or = or i32 %x, %y
+  %cmp = icmp sgt i32 %or, -2
+  br i1 %cmp, label %cont, label %unreachable
+
+unreachable:
+  unreachable
+
+cont:
+  %add = add nsw i32 %x, %y
+  %div = sdiv i32 %add, 2
+  ret i32 %div
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
