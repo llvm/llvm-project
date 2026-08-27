@@ -39,7 +39,7 @@ end module
 !--- herm.use.f90
 ! The reduction lives in the embedded herm_base; materialization must reach it
 ! through the hermetic herm_wrap.mod and name it from its source module.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*base[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*base[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: not yet implemented

@@ -3,7 +3,7 @@
 // CHECK-LABEL: func.func @extract_strided_slice_1D
 //  CHECK-SAME: (%[[INPUT:.+]]: vector<8xf16>)
 func.func @extract_strided_slice_1D(%input: vector<8xf16>) -> vector<4xf16> {
-  %0 = vector.extract_strided_slice %input {offsets = [1], sizes = [4], strides = [1]} : vector<8xf16> to vector<4xf16>
+  %0 = vector.extract_strided_slice %input offsets = [1], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
   return %0: vector<4xf16>
 }
 
@@ -24,6 +24,6 @@ func.func @extract_strided_slice_1D(%input: vector<8xf16>) -> vector<4xf16> {
 // CHECK-LABEL: func.func @extract_strided_slice_2D
 func.func @extract_strided_slice_2D(%input: vector<1x8xf16>) -> vector<1x4xf16> {
   // CHECK: vector.extract_strided_slice
-  %0 = vector.extract_strided_slice %input {offsets = [0, 1], sizes = [1, 4], strides = [1, 1]} : vector<1x8xf16> to vector<1x4xf16>
+  %0 = vector.extract_strided_slice %input offsets = [0, 1], sizes = [1, 4], strides = [1, 1] : vector<1x8xf16> to vector<1x4xf16>
   return %0: vector<1x4xf16>
 }

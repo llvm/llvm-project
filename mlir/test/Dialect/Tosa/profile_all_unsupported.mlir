@@ -194,7 +194,7 @@ func.func @test_concat(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x21x3xi1>) -> 
 
 // -----
 func.func @test_pad(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
   // expected-error@+1 {{'tosa.const' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %pad_const = "tosa.const"() {values = dense<1> : tensor<1xi1>} : () -> tensor<1xi1>
@@ -205,7 +205,7 @@ func.func @test_pad(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 
 // -----
 func.func @test_reshape(%arg0: tensor<13x21x3xi1>) -> tensor<1x819xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xi1>, !tosa.shape<2>) -> tensor<1x819xi1>
@@ -221,9 +221,9 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
@@ -232,7 +232,7 @@ func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
 
 // -----
 func.func @test_tile(%arg0: tensor<13x21x3xi1>) -> tensor<39x21x6xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %cst = tosa.const_shape { values = dense<[3, 1, 2]> : tensor<3xindex> } : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.tile' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xi1>, !tosa.shape<3>) -> tensor<39x21x6xi1>
@@ -262,7 +262,7 @@ func.func @test_concat(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x21x3xi1>) -> 
 
 // -----
 func.func @test_pad(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
   // expected-error@+1 {{'tosa.const' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %pad_const = "tosa.const"() {values = dense<1> : tensor<1xi1>} : () -> tensor<1xi1>
@@ -273,7 +273,7 @@ func.func @test_pad(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 
 // -----
 func.func @test_reshape(%arg0: tensor<13x21x3xi1>) -> tensor<1x819xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xi1>, !tosa.shape<2>) -> tensor<1x819xi1>
@@ -289,9 +289,9 @@ func.func @test_reverse(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
 
 // -----
 func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xi1>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xi1>
@@ -300,7 +300,7 @@ func.func @test_slice(%arg0: tensor<13x21x3xi1>) -> tensor<4x11x1xi1> {
 
 // -----
 func.func @test_tile(%arg0: tensor<13x21x3xi1>) -> tensor<39x21x6xi1> {
-  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const_shape' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %cst = tosa.const_shape { values = dense<[3, 1, 2]> : tensor<3xindex> } : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.tile' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xi1>, !tosa.shape<3>) -> tensor<39x21x6xi1>
@@ -316,13 +316,13 @@ func.func @test_transpose(%arg0: tensor<13x21x3xi1>) -> tensor<3x13x21xi1> {
 // -----
 func.func @test_cast_i32_f32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_fp] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
   return %0 : tensor<13x21x3xf32>
 }
 
 // -----
 func.func @test_custom(%arg0: tensor<10xi32>) -> tensor<10xi32> {
-  // expected-error@+1 {{'tosa.custom' op illegal: requires any of [pro_int, pro_fp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.custom' op illegal: requires any of [pro_int, pro_fp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.custom %arg0 {operator_name="custom_test", domain_name="tosa.mlir_test", implementation_attrs="" } : (tensor<10xi32>) -> (tensor<10xi32>)
   return %0 : tensor<10xi32>
 }

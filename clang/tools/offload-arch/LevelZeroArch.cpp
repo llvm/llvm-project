@@ -96,7 +96,11 @@ DEFINE_WRAPPER(zeDeviceGet)
 DEFINE_WRAPPER(zeDeviceGetProperties)
 
 static bool loadLevelZero() {
+#ifdef _WIN32
+  constexpr const char *L0Library = "ze_loader.dll";
+#else
   constexpr const char *L0Library = "libze_loader.so";
+#endif
   std::string ErrMsg;
 
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(

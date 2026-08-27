@@ -355,6 +355,11 @@ public:
   // the argument translation business.
   mutable bool TargetInitialized;
 
+  /// Whether the target was lazily initialized from the triple by
+  /// ensureTargetInitialized() rather than by AddDeploymentTarget(). Such a
+  /// target is a best-effort guess that setTarget() may overwrite.
+  mutable bool TargetInitializedLazily = false;
+
   // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
     MacOS,
@@ -447,10 +452,17 @@ protected:
     if (TargetInitialized && TargetPlatform == Platform &&
         TargetEnvironment == Environment &&
         (Environment == MacCatalyst ? OSTargetVersion : TargetVersion) ==
-            VersionTuple(Major, Minor, Micro))
+            VersionTuple(Major, Minor, Micro)) {
+      TargetInitializedLazily = false;
       return;
+    }
 
-    assert(!TargetInitialized && "Target already initialized!");
+    // A lazily-initialized target (see ensureTargetInitialized()) is a
+    // best-effort guess from the triple alone; the authoritative
+    // initialization from AddDeploymentTarget() may overwrite it.
+    assert((!TargetInitialized || TargetInitializedLazily) &&
+           "Target already initialized!");
+    TargetInitializedLazily = false;
     TargetInitialized = true;
     TargetPlatform = Platform;
     TargetEnvironment = Environment;

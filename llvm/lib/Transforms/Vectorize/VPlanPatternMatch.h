@@ -20,9 +20,9 @@
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <utility>
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm::VPlanPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -198,6 +198,11 @@ inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Match a VPValue, capturing it if we match.
 inline match_bind<VPValue> m_VPValue(VPValue *&V) { return V; }
+
+/// Match against the nested pattern, and capture the value if we match.
+template <typename Op_t> inline auto m_VPValue(VPValue *&V, const Op_t &Op) {
+  return m_CombineAnd(Op, m_VPValue(V));
+}
 
 /// Match a VPIRValue.
 inline match_bind<VPIRValue> m_VPIRValue(VPIRValue *&V) { return V; }
@@ -442,6 +447,12 @@ m_ExtractLastLaneOfLastPart(const Op0_t &Op0) {
   return m_ExtractLastLane(m_ExtractLastPart(Op0));
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::ExtractVectorForPart, Op0_t, Op1_t>
+m_ExtractVectorForPart(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExtractVectorForPart>(Op0, Op1);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractPenultimateElement, Op0_t>
 m_ExtractPenultimateElement(const Op0_t &Op0) {
@@ -449,9 +460,10 @@ m_ExtractPenultimateElement(const Op0_t &Op0) {
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
-m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
+inline VPInstruction_match<VPInstruction::WideActiveLaneMask, Op0_t, Op1_t,
+                           Op2_t>
+m_WideActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::WideActiveLaneMask>(Op0, Op1, Op2);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {

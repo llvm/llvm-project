@@ -2,7 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: spirv-registered-target
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - \
-// RUN:   -triple=amdgcn-amd-amdhsa | FileCheck --check-prefix=GCN %s
+// RUN:   -triple=amdgpu-amd-amdhsa | FileCheck --check-prefix=GCN %s
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - \
 // RUN:   -triple=spirv64-amd-amdhsa | FileCheck --check-prefix=AMDGCNSPIRV %s
 
@@ -152,6 +152,22 @@ void test_image() {
 void test_mixed() {
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "global");
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "local", "global", "local", "local");
+}
+
+// GCN-LABEL: define dso_local void @_Z12test_clusterv(
+// GCN-SAME: ) #[[ATTR0]] {
+// GCN-NEXT:  entry:
+// GCN-NEXT:    fence syncscope("cluster") seq_cst
+// GCN-NEXT:    ret void
+//
+// AMDGCNSPIRV-LABEL: define spir_func void @_Z12test_clusterv(
+// AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0]] {
+// AMDGCNSPIRV-NEXT:  entry:
+// AMDGCNSPIRV-NEXT:    fence syncscope("workgroup") seq_cst
+// AMDGCNSPIRV-NEXT:    ret void
+//
+void test_cluster() {
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "cluster");
 }
 //.
 // GCN: [[META2]] = !{!"amdgpu-synchronize-as", !"local"}

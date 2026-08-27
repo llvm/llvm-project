@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/iterator_range.h"
+#include "orc-rt/bedrock/iterator_range.h"
 #include "gtest/gtest.h"
 
 #include <type_traits>

@@ -263,9 +263,9 @@ static bool DumpEncodedBufferToStream(
   assert(dump_options.GetStream() && "need a Stream to print the string to");
   Stream &stream(*dump_options.GetStream());
   if (dump_options.GetPrefixToken() != nullptr)
-    stream.Printf("%s", dump_options.GetPrefixToken());
+    stream.PutCString(dump_options.GetPrefixToken());
   if (dump_options.GetQuote() != 0)
-    stream.Printf("%c", dump_options.GetQuote());
+    stream.PutChar(dump_options.GetQuote());
   auto data(dump_options.GetData());
   auto source_size(dump_options.GetSourceSize());
   if (data.GetByteSize() && data.GetDataStart() && data.GetDataEnd()) {
@@ -358,20 +358,20 @@ static bool DumpEncodedBufferToStream(
           return false;
 
         for (unsigned c = 0; c < printable_size; c++)
-          stream.Printf("%c", *(printable_bytes + c));
+          stream.PutChar(*(printable_bytes + c));
         utf8_data_ptr = (uint8_t *)next_data;
       } else {
-        stream.Printf("%c", *utf8_data_ptr);
+        stream.PutChar(*utf8_data_ptr);
         utf8_data_ptr++;
       }
     }
   }
   if (dump_options.GetQuote() != 0)
-    stream.Printf("%c", dump_options.GetQuote());
+    stream.PutChar(dump_options.GetQuote());
   if (dump_options.GetSuffixToken() != nullptr)
-    stream.Printf("%s", dump_options.GetSuffixToken());
+    stream.PutCString(dump_options.GetSuffixToken());
   if (dump_options.GetIsTruncated())
-    stream.Printf("...");
+    stream.PutCString("...");
   return true;
 }
 

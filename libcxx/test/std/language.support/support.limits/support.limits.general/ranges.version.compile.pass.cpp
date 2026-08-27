@@ -84,6 +84,10 @@
 #    error "__cpp_lib_view_interface should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
@@ -150,6 +154,10 @@
 #    error "__cpp_lib_view_interface should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 17
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
@@ -214,6 +222,10 @@
 
 #  ifdef __cpp_lib_view_interface
 #    error "__cpp_lib_view_interface should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 20
@@ -286,6 +298,10 @@
 #  endif
 #  if __cpp_lib_view_interface != 202606L
 #    error "__cpp_lib_view_interface should have the value 202606L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 23

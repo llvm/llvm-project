@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-gnu-linux -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s 2>&1 | FileCheck %s
 

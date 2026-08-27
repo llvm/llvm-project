@@ -31,6 +31,27 @@ public:
   /// Controlled by: --ssaf-compilation-unit-id
   std::string CompilationUnitId;
 
+  /// Name of the SSAF source transformation to run. Exactly one transformation
+  /// per invocation; non-empty implies the source-transformation pipeline is
+  /// active.
+  /// Controlled by: --ssaf-source-transformation
+  std::string SourceTransformation;
+
+  /// Path of the WPASuite input consumed by the source transformation. The
+  /// extension selects which serialization format reads it.
+  /// Controlled by: --ssaf-global-scope-analysis-result
+  std::string GlobalScopeAnalysisResult;
+
+  /// Path of the source-edit output file produced by the source
+  /// transformation.
+  /// Controlled by: --ssaf-src-edit-file
+  std::string SrcEditFile;
+
+  /// Path of the transformation-report output file produced by the source
+  /// transformation.
+  /// Controlled by: --ssaf-transformation-report-file
+  std::string TransformationReportFile;
+
   /// Show the list of available SSAF summary extractors and exit.
   /// Controlled by: --ssaf-list-extractors
   LLVM_PREFERRED_TYPE(bool)

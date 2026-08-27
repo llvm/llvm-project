@@ -628,8 +628,7 @@ struct A {
 void test1() {
   A a;
   clang_analyzer_eval(a.m_buf[0] == 0); // expected-warning{{TRUE}}
-  // FIXME The next eval should result in TRUE.
-  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(*a.m_ptr == 0); // expected-warning{{TRUE}}
 }
 
 void test2() {
@@ -646,9 +645,8 @@ void test3() {
 
 void test3Bis(char arg) {
   A a(arg);
-  // FIXME This test should behave like test3.
-  clang_analyzer_eval(a.m_buf[0] == arg); // expected-warning{{FALSE}} // expected-warning{{TRUE}}
-  clang_analyzer_eval(*a.m_ptr == arg); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(a.m_buf[0] == arg); // expected-warning{{TRUE}}
+  clang_analyzer_eval(*a.m_ptr == arg); // expected-warning{{TRUE}}
 }
 
 void test4(char arg) {

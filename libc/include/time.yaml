@@ -13,11 +13,13 @@ types:
   - type_name: struct_timespec
   - type_name: struct_tm
   - type_name: time_t
+  - type_name: timer_t
   - type_name: clock_t
   - type_name: rsize_t
   - type_name: size_t
   - type_name: locale_t
   - type_name: tm_gmtoff_t
+  - type_name: pid_t
 enums: []
 objects: []
 functions:
@@ -132,6 +134,14 @@ functions:
       - type: const char *__restrict
       - type: const struct tm *__restrict
       - type: locale_t
+  - name: strptime
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: struct tm *__restrict
   - name: time
     standards:
       - stdc
@@ -145,3 +155,24 @@ functions:
     arguments:
       - type: struct timespec *
       - type: int
+  - name: timer_create
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: clockid_t
+      - type: struct sigevent *__restrict
+      - type: timer_t *__restrict
+  - name: timer_delete
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: timer_t
+  - name: clock_getcpuclockid
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: clockid_t *

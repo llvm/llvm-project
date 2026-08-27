@@ -15,6 +15,7 @@
 // This file should only be included by files that implement a
 // specialization of the relvant templates. Currently these are:
 // - UniformityAnalysis.cpp
+// - MachineUniformityAnalysis.cpp
 //
 // Note: The DEBUG_TYPE macro should be defined before using this
 // file so that any use of LLVM_DEBUG is associated with the
@@ -104,21 +105,26 @@ public:
   void clear() { Order.clear(); }
   void compute(const CycleInfoT &CI);
 
-  unsigned count(BlockT *BB) const { return POIndex.count(BB); }
+  unsigned count(BlockT *BB) const {
+    unsigned Num = GraphTraits<BlockT *>::getNumber(BB);
+    return Num < POIndex.size() && POIndex[Num] != InvalidIndex;
+  }
   const BlockT *operator[](size_t Idx) const { return Order[Idx]; }
 
   void appendBlock(const BlockT &BB, bool IsReducibleCycleHeader = false) {
-    POIndex[&BB] = Order.size();
+    unsigned Num = GraphTraits<const BlockT *>::getNumber(&BB);
+    POIndex[Num] = Order.size();
     Order.push_back(&BB);
-    LLVM_DEBUG(dbgs() << "ModifiedPO(" << POIndex[&BB]
+    LLVM_DEBUG(dbgs() << "ModifiedPO(" << POIndex[Num]
                       << "): " << Context.print(&BB) << "\n");
     if (IsReducibleCycleHeader)
       ReducibleCycleHeaders.insert(&BB);
   }
 
   unsigned getIndex(const BlockT *BB) const {
-    assert(POIndex.count(BB));
-    return POIndex.lookup(BB);
+    unsigned Num = GraphTraits<const BlockT *>::getNumber(BB);
+    assert(Num < POIndex.size() && POIndex[Num] != InvalidIndex);
+    return POIndex[Num];
   }
 
   bool isReducibleCycleHeader(const BlockT *BB) const {
@@ -126,8 +132,10 @@ public:
   }
 
 private:
+  static constexpr unsigned InvalidIndex = -1u;
+
   SmallVector<const BlockT *> Order;
-  DenseMap<const BlockT *, unsigned> POIndex;
+  SmallVector<unsigned> POIndex;
   SmallPtrSet<const BlockT *, 32> ReducibleCycleHeaders;
   const ContextT &Context;
 
@@ -235,7 +243,7 @@ template <typename> class DivergencePropagator;
 //         x3 = phi
 //
 // The blocks D and F contain phi nodes and are thus each reachable
-// by two disjoins paths from A.
+// by two disjoint paths from A.
 //
 // -- Remarks --
 // * In case of cycle exits we need to check for temporal divergence.
@@ -249,7 +257,7 @@ template <typename> class DivergencePropagator;
 //   may have been produced by a nested irreducible cycle.
 //
 // * Note that SyncDependenceAnalysis is not concerned with the points
-//   of convergence in an irreducible cycle. It's only purpose is to
+//   of convergence in an irreducible cycle. Its only purpose is to
 //   identify join blocks. The "diverged entry" criterion is
 //   separately applied on join blocks to determine if an entire
 //   irreducible cycle is assumed to be divergent.
@@ -272,15 +280,6 @@ public:
   using ConstBlockSet = SmallPtrSet<const BlockT *, 4>;
   using ModifiedPO = ModifiedPostOrder<ContextT>;
 
-  // * if BlockLabels[B] == C then C is the dominating definition at
-  //   block B
-  // * if BlockLabels[B] == nullptr then we haven't seen B yet
-  // * if BlockLabels[B] == B then:
-  //   - B is a join point of disjoint paths from X, or,
-  //   - B is an immediate successor of X (initial value), or,
-  //   - B is X
-  using BlockLabelMap = DenseMap<const BlockT *, const BlockT *>;
-
   /// Information discovered by the sync dependence analysis for each
   /// divergent branch.
   struct DivergenceDescriptor {
@@ -288,8 +287,6 @@ public:
     ConstBlockSet JoinDivBlocks;
     // Divergent cycle exits
     ConstBlockSet CycleDivBlocks;
-    // Labels assigned to blocks on diverged paths.
-    BlockLabelMap BlockLabels;
   };
 
   using DivergencePropagatorT = DivergencePropagator<ContextT>;
@@ -341,7 +338,6 @@ public:
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;
   using DivergenceDescriptorT =
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
-  using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
   using TemporalDivergenceTuple =
       std::tuple<ConstValueRefT, InstructionT *, CycleRef>;
@@ -408,6 +404,10 @@ public:
   bool hasDivergentTerminator(const BlockT &B) const {
     return DivergentTermBlocks.contains(&B);
   }
+
+  /// Call before erasing \p V, or a later instruction reusing its address
+  /// may be misclassified as uniform.
+  void forgetValue(ConstValueRefT V) { UniformValues.erase(V); }
 
   void print(raw_ostream &Out) const;
 
@@ -522,7 +522,6 @@ public:
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;
   using DivergenceDescriptorT =
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
-  using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
   const ModifiedPO &CyclePOT;
   const DominatorTreeT &DT;
@@ -531,26 +530,40 @@ public:
   const ContextT &Context;
 
   // Track blocks that receive a new label. Every time we relabel a
-  // cycle header, we another pass over the modified post-order in
+  // cycle header, we make another pass over the modified post-order in
   // order to propagate the header label. The bit vector also allows
   // us to skip labels that have not changed.
   SparseBitVector<> FreshLabels;
 
   // divergent join and cycle exit descriptor.
   std::unique_ptr<DivergenceDescriptorT> DivDesc;
-  BlockLabelMapT &BlockLabels;
+
+  // Dominating definition at each block on diverged paths, indexed by block
+  // number. Transient to this propagation; not stored in the descriptor.
+  // * label(B) == C       : C is the dominating definition at B
+  // * label(B) == nullptr  : we haven't seen B yet
+  // * label(B) == B        : B is a join of disjoint paths, an immediate
+  //                          successor of the divergent term, or the term
+  //                          itself
+  SmallVector<const BlockT *> BlockLabels;
+
+  const BlockT *&label(const BlockT *BB) {
+    return BlockLabels[GraphTraits<const BlockT *>::getNumber(BB)];
+  }
 
   DivergencePropagator(const ModifiedPO &CyclePOT, const DominatorTreeT &DT,
                        const CycleInfoT &CI, const BlockT &DivTermBlock)
       : CyclePOT(CyclePOT), DT(DT), CI(CI), DivTermBlock(DivTermBlock),
         Context(CI.getSSAContext()), DivDesc(new DivergenceDescriptorT),
-        BlockLabels(DivDesc->BlockLabels) {}
+        BlockLabels(
+            GraphTraits<const FunctionT *>::getMaxNumber(CI.getFunction()),
+            nullptr) {}
 
   void printDefs(raw_ostream &Out) {
     Out << "Propagator::BlockLabels {\n";
     for (int BlockIdx = (int)CyclePOT.size() - 1; BlockIdx >= 0; --BlockIdx) {
       const auto *Block = CyclePOT[BlockIdx];
-      const auto *Label = BlockLabels[Block];
+      const auto *Label = label(Block);
       Out << Context.print(Block) << "(" << BlockIdx << ") : ";
       if (!Label) {
         Out << "<null>\n";
@@ -564,7 +577,7 @@ public:
   // Push a definition (\p PushedLabel) to \p SuccBlock and return whether this
   // causes a divergent join.
   bool computeJoin(const BlockT &SuccBlock, const BlockT &PushedLabel) {
-    const auto *OldLabel = BlockLabels[&SuccBlock];
+    const auto *OldLabel = label(&SuccBlock);
 
     LLVM_DEBUG(dbgs() << "labeling " << Context.print(&SuccBlock) << ":\n"
                       << "\tpushed label: " << Context.print(&PushedLabel)
@@ -586,14 +599,14 @@ public:
     if (!OldLabel) {
       LLVM_DEBUG(dbgs() << "\tnew label: " << Context.print(&PushedLabel)
                         << "\n");
-      BlockLabels[&SuccBlock] = &PushedLabel;
+      label(&SuccBlock) = &PushedLabel;
       return false;
     }
 
     // This is a new join. Label the join block as itself, and not as
     // the pushed label.
     LLVM_DEBUG(dbgs() << "\tnew label: " << Context.print(&SuccBlock) << "\n");
-    BlockLabels[&SuccBlock] = &SuccBlock;
+    label(&SuccBlock) = &SuccBlock;
 
     return true;
   }
@@ -674,7 +687,7 @@ public:
         break;
 
       const auto *Block = CyclePOT[BlockIdx];
-      // If no irreducible cycle, stop if freshLable.count() = 1 and Block
+      // If no irreducible cycle, stop if freshLabels.count() == 1 and Block
       // is the IPD. If it is in any irreducible cycle, continue propagation.
       if (FreshLabels.count() == 1 &&
           (!IrreducibleAncestor || !CI.contains(IrreducibleAncestor, Block)))
@@ -691,7 +704,7 @@ public:
       LLVM_DEBUG(dbgs() << "visiting " << Context.print(Block) << " at index "
                         << BlockIdx << "\n");
 
-      const auto *Label = BlockLabels[Block];
+      const auto *Label = label(Block);
       assert(Label);
 
       // If the current block is the header of a reducible cycle, then the label
@@ -719,8 +732,8 @@ public:
         for (auto *BlockCycleExit : BlockCycleExits) {
           if (BranchIsInside)
             visitCycleExitEdge(*BlockCycleExit, *Label);
-          else
-            visitEdge(*BlockCycleExit, *Label);
+          // Propagate the label to the exit block.
+          visitEdge(*BlockCycleExit, *Label);
         }
       } else {
         for (const auto *SuccBlock : successors(Block))
@@ -742,9 +755,9 @@ public:
       SmallVector<BlockT *> Exits;
       CI.getExitBlocks(C, Exits);
       auto *Header = CI.getHeader(C);
-      auto *HeaderLabel = BlockLabels[Header];
+      auto *HeaderLabel = label(Header);
       for (const auto *Exit : Exits) {
-        if (BlockLabels[Exit] != HeaderLabel) {
+        if (label(Exit) != HeaderLabel) {
           // Identified a divergent cycle exit
           DivDesc->CycleDivBlocks.insert(Exit);
           LLVM_DEBUG(dbgs() << "\tDivergent cycle exit: " << Context.print(Exit)
@@ -1309,6 +1322,12 @@ bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
   return DA && DA->hasDivergentTerminator(B);
 }
 
+template <typename ContextT>
+void GenericUniformityInfo<ContextT>::forgetValue(ConstValueRefT V) {
+  if (DA)
+    DA->forgetValue(V);
+}
+
 /// \brief T helper function for printing.
 template <typename ContextT>
 void GenericUniformityInfo<ContextT>::print(raw_ostream &Out) const {
@@ -1434,6 +1453,7 @@ void llvm::ModifiedPostOrder<ContextT>::compute(const CycleInfoT &CI) {
   SmallPtrSet<const BlockT *, 32> Finalized;
   SmallVector<const BlockT *> Stack;
   auto *F = CI.getFunction();
+  POIndex.assign(GraphTraits<const FunctionT *>::getMaxNumber(F), InvalidIndex);
   Stack.reserve(24); // FIXME made-up number
   Stack.push_back(&F->front());
   computeStackPO(Stack, CI, CycleRef(), Finalized);

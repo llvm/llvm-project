@@ -3,7 +3,7 @@
 //   1. is mirrored into the GPU module by CUFDeviceGlobal as a no-body
 //      external declaration (so PTX gets `.extern .global ...`); and
 //   2. is registered with the CUDA driver via
-//      _FortranACUFRegisterExternalVariable (= __cudaRegisterHostVar) from
+//      cuf.register_variable_static from
 //      __cudaFortranConstructor, so the device-side symbol is mapped to
 //      the host-resident storage at module-load time and HMM/ATS handles
 //      migration.
@@ -44,6 +44,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // Constructor registers the host pointer.
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK: cuf.register_module @cuda_device_mod -> !llvm.ptr
-// CHECK: fir.address_of(@_QMmtestsEm) : !fir.ref<!fir.array<5xi32>>
-// CHECK: fir.call @_FortranACUFRegisterExternalVariable
+// CHECK: cuf.register_variable_static @_QMmtestsEm
 // CHECK-NOT: fir.call @_FortranACUFInitModule

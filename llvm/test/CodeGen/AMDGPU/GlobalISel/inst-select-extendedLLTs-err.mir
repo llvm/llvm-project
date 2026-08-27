@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
 
 # ERR: remark: <unknown>:0:0: cannot select: %2:vcc(s1) = G_FCMP floatpred(oeq), %1:vgpr(s32), %0:vgpr (in function: g_fcmp_op2_fconstant_s32)
 

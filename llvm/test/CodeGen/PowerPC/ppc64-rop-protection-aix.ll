@@ -399,9 +399,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P10-NEXT:    lwz r12, 8(r1)
 ; BE-P10-NEXT:    mtlr r0
 ; BE-P10-NEXT:    hashchk r0, -488(r1)
-; BE-P10-NEXT:    mtocrf 32, r12
-; BE-P10-NEXT:    mtocrf 16, r12
-; BE-P10-NEXT:    mtocrf 8, r12
+; BE-P10-NEXT:    mtcrf 56, r12
 ; BE-P10-NEXT:    blr
 ;
 ; BE-P9-LABEL: spill:
@@ -526,9 +524,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P9-NEXT:    lwz r12, 8(r1)
 ; BE-P9-NEXT:    mtlr r0
 ; BE-P9-NEXT:    hashchk r0, -488(r1)
-; BE-P9-NEXT:    mtocrf 32, r12
-; BE-P9-NEXT:    mtocrf 16, r12
-; BE-P9-NEXT:    mtocrf 8, r12
+; BE-P9-NEXT:    mtcrf 56, r12
 ; BE-P9-NEXT:    blr
 ;
 ; BE-P8-LABEL: spill:
@@ -677,9 +673,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P8-NEXT:    lwz r12, 8(r1)
 ; BE-P8-NEXT:    hashchk r0, -488(r1)
 ; BE-P8-NEXT:    mtlr r0
-; BE-P8-NEXT:    mtocrf 32, r12
-; BE-P8-NEXT:    mtocrf 16, r12
-; BE-P8-NEXT:    mtocrf 8, r12
+; BE-P8-NEXT:    mtcrf 56, r12
 ; BE-P8-NEXT:    blr
 ;
 ; BE-32BIT-P10-LABEL: spill:
@@ -805,9 +799,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P10-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P10-NEXT:    mtlr r0
 ; BE-32BIT-P10-NEXT:    hashchk r0, -424(r1)
-; BE-32BIT-P10-NEXT:    mtocrf 32, r12
-; BE-32BIT-P10-NEXT:    mtocrf 16, r12
-; BE-32BIT-P10-NEXT:    mtocrf 8, r12
+; BE-32BIT-P10-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P10-NEXT:    blr
 ;
 ; BE-32BIT-P9-LABEL: spill:
@@ -933,9 +925,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P9-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P9-NEXT:    mtlr r0
 ; BE-32BIT-P9-NEXT:    hashchk r0, -424(r1)
-; BE-32BIT-P9-NEXT:    mtocrf 32, r12
-; BE-32BIT-P9-NEXT:    mtocrf 16, r12
-; BE-32BIT-P9-NEXT:    mtocrf 8, r12
+; BE-32BIT-P9-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P9-NEXT:    blr
 ;
 ; BE-32BIT-P8-LABEL: spill:
@@ -1085,9 +1075,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P8-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P8-NEXT:    hashchk r0, -424(r1)
 ; BE-32BIT-P8-NEXT:    mtlr r0
-; BE-32BIT-P8-NEXT:    mtocrf 32, r12
-; BE-32BIT-P8-NEXT:    mtocrf 16, r12
-; BE-32BIT-P8-NEXT:    mtocrf 8, r12
+; BE-32BIT-P8-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P8-NEXT:    blr
 ;
 ; BE-P10-PRIV-LABEL: spill:
@@ -1212,9 +1200,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P10-PRIV-NEXT:    lwz r12, 8(r1)
 ; BE-P10-PRIV-NEXT:    mtlr r0
 ; BE-P10-PRIV-NEXT:    hashchkp r0, -488(r1)
-; BE-P10-PRIV-NEXT:    mtocrf 32, r12
-; BE-P10-PRIV-NEXT:    mtocrf 16, r12
-; BE-P10-PRIV-NEXT:    mtocrf 8, r12
+; BE-P10-PRIV-NEXT:    mtcrf 56, r12
 ; BE-P10-PRIV-NEXT:    blr
 ;
 ; BE-P9-PRIV-LABEL: spill:
@@ -1339,9 +1325,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P9-PRIV-NEXT:    lwz r12, 8(r1)
 ; BE-P9-PRIV-NEXT:    mtlr r0
 ; BE-P9-PRIV-NEXT:    hashchkp r0, -488(r1)
-; BE-P9-PRIV-NEXT:    mtocrf 32, r12
-; BE-P9-PRIV-NEXT:    mtocrf 16, r12
-; BE-P9-PRIV-NEXT:    mtocrf 8, r12
+; BE-P9-PRIV-NEXT:    mtcrf 56, r12
 ; BE-P9-PRIV-NEXT:    blr
 ;
 ; BE-P8-PRIV-LABEL: spill:
@@ -1490,9 +1474,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-P8-PRIV-NEXT:    lwz r12, 8(r1)
 ; BE-P8-PRIV-NEXT:    hashchkp r0, -488(r1)
 ; BE-P8-PRIV-NEXT:    mtlr r0
-; BE-P8-PRIV-NEXT:    mtocrf 32, r12
-; BE-P8-PRIV-NEXT:    mtocrf 16, r12
-; BE-P8-PRIV-NEXT:    mtocrf 8, r12
+; BE-P8-PRIV-NEXT:    mtcrf 56, r12
 ; BE-P8-PRIV-NEXT:    blr
 ;
 ; BE-32BIT-P10-PRIV-LABEL: spill:
@@ -1618,9 +1600,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P10-PRIV-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P10-PRIV-NEXT:    mtlr r0
 ; BE-32BIT-P10-PRIV-NEXT:    hashchkp r0, -424(r1)
-; BE-32BIT-P10-PRIV-NEXT:    mtocrf 32, r12
-; BE-32BIT-P10-PRIV-NEXT:    mtocrf 16, r12
-; BE-32BIT-P10-PRIV-NEXT:    mtocrf 8, r12
+; BE-32BIT-P10-PRIV-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P10-PRIV-NEXT:    blr
 ;
 ; BE-32BIT-P9-PRIV-LABEL: spill:
@@ -1746,9 +1726,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P9-PRIV-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P9-PRIV-NEXT:    mtlr r0
 ; BE-32BIT-P9-PRIV-NEXT:    hashchkp r0, -424(r1)
-; BE-32BIT-P9-PRIV-NEXT:    mtocrf 32, r12
-; BE-32BIT-P9-PRIV-NEXT:    mtocrf 16, r12
-; BE-32BIT-P9-PRIV-NEXT:    mtocrf 8, r12
+; BE-32BIT-P9-PRIV-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P9-PRIV-NEXT:    blr
 ;
 ; BE-32BIT-P8-PRIV-LABEL: spill:
@@ -1898,9 +1876,7 @@ define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; BE-32BIT-P8-PRIV-NEXT:    lwz r12, 4(r1)
 ; BE-32BIT-P8-PRIV-NEXT:    hashchkp r0, -424(r1)
 ; BE-32BIT-P8-PRIV-NEXT:    mtlr r0
-; BE-32BIT-P8-PRIV-NEXT:    mtocrf 32, r12
-; BE-32BIT-P8-PRIV-NEXT:    mtocrf 16, r12
-; BE-32BIT-P8-PRIV-NEXT:    mtocrf 8, r12
+; BE-32BIT-P8-PRIV-NEXT:    mtcrf 56, r12
 ; BE-32BIT-P8-PRIV-NEXT:    blr
 entry:
   %local = alloca i32, align 4

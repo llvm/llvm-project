@@ -512,6 +512,8 @@ public:
 
   CompilerType GetPointerDiffType(bool is_signed) override;
 
+  CompilerType GetSizeType() override;
+
   // Floating point functions
 
   static CompilerType GetFloatTypeFromBitSize(clang::ASTContext *ast,
