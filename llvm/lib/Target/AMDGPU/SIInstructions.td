@@ -599,7 +599,6 @@ def SI_IF: CFPseudoInstSI <
   [(set i1:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -607,7 +606,6 @@ def SI_ELSE : CFPseudoInstSI <
   (outs SReg_1:$dst),
   (ins SReg_1:$src, brtarget:$target), [], 1, 1> {
   let Size = 12;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
@@ -624,11 +622,10 @@ def SI_LOOP : CFPseudoInstSI <
   [(AMDGPUloop i1:$saved, bb:$target)], 1, 1> {
   let Size = 8;
   let isBranch = 1;
-  let hasSideEffects = 1;
   let IsNeverUniform = 1;
 }
 
-} // End isTerminator = 1
+} // End isTerminator = 1, isNotDuplicable = 1
 
 def SI_END_CF : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
