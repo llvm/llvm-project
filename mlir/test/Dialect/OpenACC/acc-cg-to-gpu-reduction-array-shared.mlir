@@ -56,7 +56,7 @@ func.func @array_reduction_shared(%arg0: memref<8192xi32>) {
         }
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%0 : memref<8192xi32>) to varPtr(%arg0 : memref<8192xi32>) dataClause(acc_reduction) implicit(true) name("r")
   return
@@ -112,7 +112,7 @@ func.func @array_reduction_shared_partitioned(%arg0: memref<8192xi32>) {
         }
       }
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%0 : memref<8192xi32>) to varPtr(%arg0 : memref<8192xi32>) dataClause(acc_reduction) implicit(true) name("r")
   return
@@ -161,7 +161,7 @@ func.func @array_reduction_gang_storage_thread_accum(%arg0: memref<4xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%0 : memref<4xi32>) to varPtr(%arg0 : memref<4xi32>) dataClause(acc_reduction) implicit(true) name("r")
   return

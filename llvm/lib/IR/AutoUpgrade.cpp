@@ -1047,6 +1047,28 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      if (Name.consume_front("convert.from.svbool")) {
+        // 'aarch64.sve.convert.from.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->getReturnType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_to_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
+      if (Name.consume_front("convert.to.svbool")) {
+        // 'aarch64.sve.convert.to.svbool'
+        auto *TTy = dyn_cast<TargetExtType>(F->arg_begin()->getType());
+        if (!TTy || TTy->getName() != "aarch64.svcount")
+          return false;
+
+        Intrinsic::ID ID = Intrinsic::aarch64_sve_convert_from_svcount;
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -5089,7 +5111,6 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     return NewCall;
   };
@@ -5146,7 +5167,6 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
     NewCall->setCallingConv(CI->getCallingConv());
     NewCall->setAttributes(CI->getAttributes());
-    NewCall->setDebugLoc(CI->getDebugLoc());
     NewCall->copyMetadata(*CI);
     NewCall->takeName(CI);
     return NewCall;

@@ -164,6 +164,11 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
+  if (match(V, m_BinaryOr(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    if (cast<VPRecipeWithIRFlags>(V->getDefiningRecipe())->isDisjoint())
+      return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+        return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+      });
   if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
