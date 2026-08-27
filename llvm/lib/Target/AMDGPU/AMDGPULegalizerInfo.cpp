@@ -7781,7 +7781,9 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
   // An instruction's parent block is part of its CSE profile, so notify
   // observers about the instructions moved by the split.
   SmallVector<MachineInstr *, 8> MovedInstrs;
-  for (auto I = std::next(MI.getIterator()), E = BB.end(); I != E; ++I) {
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+  for (auto I = SplitPoint, E = BB.end(); I != E; ++I) {
     Observer.changingInstr(*I);
     MovedInstrs.push_back(&*I);
   }
