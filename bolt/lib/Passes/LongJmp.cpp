@@ -1375,22 +1375,15 @@ void LongJmpPass::relaxUnconditionalBranches(
     BinaryFunction *FirstThunk = nullptr;
     const MCSymbol *NextTarget = Branch.TargetSymbol;
 
-    if (SourceCluster < TargetCluster) {
-      for (unsigned Cluster = TargetCluster; Cluster > SourceCluster;) {
-        --Cluster;
-        FirstThunk =
-            getOrCreateBranchThunk(Clusters[Cluster], Branch.TargetSymbol,
-                                   NextTarget, /*IsForward=*/true);
-        NextTarget = FirstThunk->getSymbol();
-      }
-    } else {
-      for (unsigned Cluster = TargetCluster + 1; Cluster <= SourceCluster;
-           ++Cluster) {
-        FirstThunk =
-            getOrCreateBranchThunk(Clusters[Cluster], Branch.TargetSymbol,
-                                   NextTarget, /*IsForward=*/false);
-        NextTarget = FirstThunk->getSymbol();
-      }
+    const bool IsForward = SourceCluster < TargetCluster;
+    const unsigned NumHops = IsForward ? TargetCluster - SourceCluster
+                                       : SourceCluster - TargetCluster;
+    for (unsigned I = 0; I < NumHops; ++I) {
+      const unsigned Cluster =
+          IsForward ? TargetCluster - I - 1 : TargetCluster + I + 1;
+      FirstThunk = getOrCreateBranchThunk(
+          Clusters[Cluster], Branch.TargetSymbol, NextTarget, IsForward);
+      NextTarget = FirstThunk->getSymbol();
     }
 
     assert(FirstThunk && "expected branch thunk chain");
