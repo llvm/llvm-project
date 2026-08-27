@@ -594,13 +594,15 @@ ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
-/// Whether the body of a structured `acc.loop` is proven to run.
+/// Whether the body of a structured `acc.loop` is proven to run. This decides
+/// which edges out of the parent are feasible; the edges out of the region are
+/// unaffected.
 enum class BodyExecution {
-  /// The body runs at least once, so control cannot branch past it.
+  /// The body runs at least once, so the parent cannot bypass the region.
   Always,
-  /// The body never runs, so control cannot enter it.
+  /// The body never runs, so the parent cannot enter the region.
   Never,
-  /// Neither could be proven, so both edges are possible.
+  /// Neither could be proven, so the parent may do either.
   Maybe
 };
 
@@ -613,30 +615,34 @@ static BodyExecution getBodyExecution(LoopOp loopOp) {
   if (loopOp.isContainerLike())
     return BodyExecution::Maybe;
 
+  // The verifier guarantees one lower bound, upper bound and step per
+  // dimension.
   ValueRange lbs = loopOp.getLowerbound();
   ValueRange ubs = loopOp.getUpperbound();
   ValueRange steps = loopOp.getStep();
-  if (lbs.size() != ubs.size() || lbs.size() != steps.size())
-    return BodyExecution::Maybe;
-
-  std::optional<ArrayRef<bool>> inclusive = loopOp.getInclusiveUpperbound();
 
   BodyExecution result = BodyExecution::Always;
   for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
     std::optional<int64_t> lb = getConstantIntValue(lbs[i]);
     std::optional<int64_t> ub = getConstantIntValue(ubs[i]);
     std::optional<int64_t> step = getConstantIntValue(steps[i]);
-    // A zero step either never advances or never runs; the two are
-    // indistinguishable here.
+    // An unknown bound cannot be tested, and a zero step either spins forever
+    // or never starts. Neither proves `Always`, but a later dimension may
+    // still prove the nest empty: `(0 to %n)` collapsed with `(0 to 0)`.
     if (!lb || !ub || !step || *step == 0) {
       result = BodyExecution::Maybe;
       continue;
     }
 
-    // A descending dimension compares against its bound the other way round.
-    bool closed = inclusive && i < inclusive->size() && (*inclusive)[i];
-    bool runsOnce = *step > 0 ? (closed ? *lb <= *ub : *lb < *ub)
-                              : (closed ? *lb >= *ub : *lb > *ub);
+    // The entry test at the lower bound. A descending dimension compares
+    // against its bound the other way round. The attribute is absent when
+    // every dimension is exclusive as in `scf.for`, and the verifier otherwise
+    // guarantees one entry per dimension.
+    std::optional<ArrayRef<bool>> inclusiveUbs =
+        loopOp.getInclusiveUpperbound();
+    bool inclusiveUb = inclusiveUbs && (*inclusiveUbs)[i];
+    bool runsOnce = *step > 0 ? (inclusiveUb ? *lb <= *ub : *lb < *ub)
+                              : (inclusiveUb ? *lb >= *ub : *lb > *ub);
     // The dimensions are iterated as a nest, so one empty dimension empties
     // the whole nest whatever the others do, while the body runs only if every
     // dimension runs.
@@ -644,6 +650,8 @@ static BodyExecution getBodyExecution(LoopOp loopOp) {
       return BodyExecution::Never;
   }
 
+  // No dimension was empty, so the body runs unless some dimension was
+  // unknown.
   return result;
 }
 
