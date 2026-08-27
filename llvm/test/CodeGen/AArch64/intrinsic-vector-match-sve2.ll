@@ -450,4 +450,69 @@ define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %ma
   ret <2 x i1> %r
 }
 
+; Ensure we don't try to custom lower nodes with v3i8 source operands.
+; TODO: It may be worth extending the source operand so this case can use match.
+define <3 x i1> @match_v3i8_v3i1(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask) #0 {
+; CHECK-LABEL: match_v3i8_v3i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    umov w11, v0.b[3]
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    mov v1.h[1], w1
+; CHECK-NEXT:    dup v2.4h, w8
+; CHECK-NEXT:    umov w8, v0.b[6]
+; CHECK-NEXT:    dup v3.4h, w9
+; CHECK-NEXT:    dup v4.4h, w10
+; CHECK-NEXT:    dup v5.4h, w11
+; CHECK-NEXT:    dup v6.4h, w12
+; CHECK-NEXT:    dup v7.4h, w13
+; CHECK-NEXT:    mov v1.h[2], w2
+; CHECK-NEXT:    dup v16.4h, w8
+; CHECK-NEXT:    bic v2.4h, #255, lsl #8
+; CHECK-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-NEXT:    bic v4.4h, #255, lsl #8
+; CHECK-NEXT:    bic v5.4h, #255, lsl #8
+; CHECK-NEXT:    bic v6.4h, #255, lsl #8
+; CHECK-NEXT:    bic v7.4h, #255, lsl #8
+; CHECK-NEXT:    umov w8, v0.b[7]
+; CHECK-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-NEXT:    bic v16.4h, #255, lsl #8
+; CHECK-NEXT:    cmeq v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    cmeq v2.4h, v1.4h, v3.4h
+; CHECK-NEXT:    cmeq v3.4h, v1.4h, v4.4h
+; CHECK-NEXT:    cmeq v4.4h, v1.4h, v5.4h
+; CHECK-NEXT:    cmeq v5.4h, v1.4h, v6.4h
+; CHECK-NEXT:    cmeq v6.4h, v1.4h, v7.4h
+; CHECK-NEXT:    orr v0.8b, v2.8b, v0.8b
+; CHECK-NEXT:    orr v2.8b, v3.8b, v4.8b
+; CHECK-NEXT:    orr v4.8b, v5.8b, v6.8b
+; CHECK-NEXT:    cmeq v5.4h, v1.4h, v16.4h
+; CHECK-NEXT:    dup v3.4h, w8
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    orr v2.8b, v4.8b, v5.8b
+; CHECK-NEXT:    fmov s4, w3
+; CHECK-NEXT:    bic v3.4h, #255, lsl #8
+; CHECK-NEXT:    mov v4.h[1], w4
+; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    cmeq v1.4h, v1.4h, v3.4h
+; CHECK-NEXT:    mov v4.h[2], w5
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-NEXT:    shl v1.4h, v4.4h, #15
+; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    umov w1, v0.h[1]
+; CHECK-NEXT:    umov w2, v0.h[2]
+; CHECK-NEXT:    ret
+  %r = tail call <3 x i1> @llvm.experimental.vector.match(<3 x i8> %op1, <8 x i8> %op2, <3 x i1> %mask)
+  ret <3 x i1> %r
+}
+
 attributes #0 = { "target-features"="+sve2" }
