@@ -638,8 +638,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// FoldingSetIterator - Forward iterator for FoldingSet and
-/// ContextualFoldingSet.
+/// Forward iterator for FoldingSet and ContextualFoldingSet.
 template <class T> class FoldingSetIterator : DebugEpochBase::HandleBase {
   void **Bucket = nullptr;
   void **End = nullptr;
