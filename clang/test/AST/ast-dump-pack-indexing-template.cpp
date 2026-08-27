@@ -66,7 +66,5 @@ struct DumpDependentIndex {
 // CHECK-NEXT:   |-name: 'TT...[N + 1]':'template-parameter-0-1...[N + 1]' pack_indexing
 // CHECK-NEXT:   | |-pattern: 'TT':'template-parameter-0-1'
 // CHECK-NEXT:   | | `-TemplateTemplateParmDecl {{.*}} depth 0 index 1 ... TT
-// CHECK-NEXT:   | `-index: BinaryOperator {{.*}} '+'
-// CHECK-NEXT:   |   |-DeclRefExpr {{.*}} 'N' 'int'
-// CHECK-NEXT:   |   `-IntegerLiteral {{.*}} 1
+// CHECK-NEXT:   | `-index: BinaryOperator {{.*}} 'int' '+'
 // CHECK-NEXT:   `-TemplateArgument type 'int'
