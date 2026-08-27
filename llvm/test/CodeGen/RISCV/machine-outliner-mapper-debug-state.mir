@@ -1,9 +1,9 @@
 # RUN: llc -mtriple=riscv32-unknown-elf -stats -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# A debug instruction at the start of separator_with_debug resets the mapper's
-# separator state, causing an additional unoutlinable instruction to be mapped.
-# CHECK: 3 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+# Debug instructions must not reset the mapper's separator state. The two
+# blocks therefore contribute one sentinel each and no extra separator.
+# CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
 
 --- |
   define void @separator_source() { unreachable }

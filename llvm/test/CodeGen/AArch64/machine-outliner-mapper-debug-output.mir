@@ -7,12 +7,7 @@
 # CHECK-NEXT:     SKIP: MBB size less than minimum size of 2
 # CHECK-NEXT: MAPPING FUNCTION: block_too_small_with_debug
 # CHECK-NEXT:   MAPPING MBB: ''
-# CHECK-NEXT: *** Converting MBB '' to unsigned vector ***
-# CHECK-NEXT: : 1 outlinable range(s)
-# CHECK-NEXT: *** Mapping outlinable ranges ***
-# CHECK-NEXT: Mapping 2 instruction range
-# CHECK-NEXT: Skipped 0 instructions outside outlinable range
-# CHECK-NEXT: HaveLegalRange = 0
+# CHECK-NEXT:     SKIP: MBB size less than minimum size of 2
 # CHECK-NEXT: MAPPING FUNCTION: no_outline
 # CHECK-NEXT: SKIP: Function has nooutline attribute
 # CHECK-NEXT: MAPPING FUNCTION: redzone
