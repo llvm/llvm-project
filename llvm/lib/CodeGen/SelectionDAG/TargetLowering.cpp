@@ -13987,9 +13987,14 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   // A wide partial reduction is built from a ladder of narrower ones, a rung
   // at a time, each halving the element count and doubling the width.
   unsigned Opc = N->getOpcode();
-  if (Opc != ISD::PARTIAL_REDUCE_FMLA &&
-      MulOpVT.getVectorMinNumElements() > 2 * AccVT.getVectorMinNumElements() &&
-      getPartialReduceMLAAction(Opc, AccVT, MulOpVT) == Custom) {
+  ElementCount MulEC = MulOpVT.getVectorElementCount();
+  ElementCount AccEC = AccVT.getVectorElementCount();
+  unsigned CountRatio =
+      MulEC.hasKnownScalarFactor(AccEC) ? MulEC.getKnownScalarFactor(AccEC) : 0;
+  unsigned WidthRatio =
+      AccVT.getScalarSizeInBits() / MulOpVT.getScalarSizeInBits();
+  if (Opc != ISD::PARTIAL_REDUCE_FMLA && CountRatio > 2 &&
+      2 * WidthRatio >= CountRatio) {
     LLVMContext &Ctx = *DAG.getContext();
     EVT ProdVT = MulOpVT.widenIntegerVectorElementType(Ctx);
 
@@ -14015,7 +14020,7 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
     EVT MidVT = Lo.getValueType()
                     .widenIntegerVectorElementType(Ctx)
                     .getHalfNumVectorElementsVT(Ctx);
-    if (MidVT.getVectorMinNumElements() <= AccVT.getVectorMinNumElements())
+    if (ElementCount::isKnownLE(MidVT.getVectorElementCount(), AccEC))
       return DAG.getNode(Opc, DL, AccVT,
                          DAG.getNode(Opc, DL, AccVT, Acc, Lo, One), Hi, One);
     SDValue Mid =
