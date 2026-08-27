@@ -428,12 +428,12 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             if (tmpC)
               operands.push_back(tmpC);
 
-            OperationState state(
-                loc, op->getName(), operands, TypeRange{vecTy},
+            auto newDpasOp = xegpu::DpasOp::create(
+                rewriter, loc, TypeRange{vecTy}, operands, op.getProperties(),
                 xegpu::dropInstDataOnAttrs(
                     op->getDiscardableAttrDictionary().getValue()));
-            state.propertiesAttr = op->getPropertiesAsAttribute();
-            tmpC = rewriter.create(state)->getResult(0);
+            xegpu::dropInstDataOnInherentAttrs(newDpasOp);
+            tmpC = newDpasOp.getResult();
           }
           newOps.push_back(tmpC);
         }
@@ -533,12 +533,11 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
               operands.push_back(
                   bScaleVals[batch * (kIters * nIters) + k * nIters + j]);
 
-            OperationState state(
-                loc, op->getName(), operands, TypeRange{vecTy},
+            newDpasMxOp = xegpu::DpasMxOp::create(
+                rewriter, loc, TypeRange{vecTy}, operands, op.getProperties(),
                 xegpu::dropInstDataOnAttrs(
                     op->getDiscardableAttrDictionary().getValue()));
-            state.propertiesAttr = op->getPropertiesAsAttribute();
-            newDpasMxOp = cast<xegpu::DpasMxOp>(rewriter.create(state));
+            xegpu::dropInstDataOnInherentAttrs(newDpasMxOp);
             tmpC = newDpasMxOp.getResult();
           }
           newOps.push_back(newDpasMxOp);

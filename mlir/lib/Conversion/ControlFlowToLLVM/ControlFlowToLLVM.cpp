@@ -135,12 +135,14 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
 
 /// Set attributes on an operation using its inherent/discardable split.
 static void setConvertedAttrs(Operation *op, DictionaryAttr attrs) {
+  SmallVector<NamedAttribute> discardableAttrs;
   for (NamedAttribute attr : attrs) {
     if (op->getInherentAttr(attr.getName()).has_value())
       op->setInherentAttr(attr.getName(), attr.getValue());
     else
-      op->setDiscardableAttr(attr.getName(), attr.getValue());
+      discardableAttrs.push_back(attr);
   }
+  op->setDiscardableAttrs(discardableAttrs);
 }
 
 /// Convert the destination block signature (if necessary) and lower the branch

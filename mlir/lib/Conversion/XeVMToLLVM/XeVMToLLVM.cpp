@@ -551,11 +551,12 @@ static LLVM::CallOp createDeviceFunctionCall(
     funcOp.setArgAttr(idx, attrName, rewriter.getUnitAttr());
 
   auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, args);
+  SmallVector<NamedAttribute> discardableAttrs;
   auto copyAttr = [&](StringAttr name, Attribute attr) {
     if (callOp->getInherentAttr(name).has_value())
       callOp->setInherentAttr(name, attr);
     else
-      callOp->setDiscardableAttr(name, attr);
+      discardableAttrs.emplace_back(name, attr);
   };
   for (NamedAttribute attr : funcOp->getDiscardableAttrDictionary())
     copyAttr(attr.getName(), attr.getValue());
@@ -563,6 +564,7 @@ static LLVM::CallOp createDeviceFunctionCall(
       funcOp, [&](StringRef name, Attribute &attr) {
         copyAttr(rewriter.getStringAttr(name), attr);
       });
+  callOp->setDiscardableAttrs(discardableAttrs);
 
   return callOp;
 }

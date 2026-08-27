@@ -28,5 +28,13 @@ func.func @attribute_storage(%f0: f32, %f1: f32, %i0: i32, %i1: i32) {
   // CHECK-SAME: {test.discardable = 3 : i64}
   %3 = arith.addf %f0, %f1 to_nearest_even fastmath<fast>
       {"test.discardable" = 3 : i64} : f32
+
+  // CHECK: "llvm.fpext"
+  // CHECK-SAME: <{fastmathFlags = #llvm.fastmath<nnan>}>
+  %4 = arith.extf %f0 fastmath<nnan> : f32 to f64
+
+  // CHECK: "llvm.fptrunc"
+  // CHECK-SAME: <{fastmathFlags = #llvm.fastmath<nnan>}>
+  %5 = arith.truncf %f0 fastmath<nnan> : f32 to f16
   return
 }

@@ -121,9 +121,6 @@ public:
   /// Compatibility alias for generated interface code that still refers to the
   /// symbol name attribute by convention.
   static StringRef getSymbolAttrName() { return "sym_name"; }
-  static StringAttr getSymbolAttrName(Operation *symbol) {
-    return getSymbolName(symbol);
-  }
 
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringAttr name);

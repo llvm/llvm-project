@@ -70,6 +70,13 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
+void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
+  op->getName().walkInherentAttrs(op, [](StringRef, Attribute &attr) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr))
+      attr = dist.dropInstData();
+  });
+}
+
 // Sets the layout on a TensorDesc value by updating its type to include
 // the given layout, if the type does not already have a layout attached.
 static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {

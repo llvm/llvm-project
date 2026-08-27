@@ -54,7 +54,7 @@ static NamedAttrList getAttrsForPrinting(Operation *op) {
   NamedAttrList attrs(op->getRawDictionaryAttrs());
   op->getName().walkInherentAttrs(
       op, [&](StringRef name, Attribute &attr) { attrs.set(name, attr); });
-  return NamedAttrList(attrs.getDictionary(op->getContext()));
+  return attrs;
 }
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
