@@ -58,6 +58,7 @@ private:
   bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
   bool foldVMV_V_V(MachineInstr &MI);
   bool foldVMergeToMask(MachineInstr &MI) const;
+  bool foldVMANDToMaskedCompare(MachineInstr &MI) const;
 
   bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
@@ -664,7 +665,10 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
                                     /*OneUseOnly=*/true, &TrueCopies);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
     return false;
-  MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
+  MachineInstr *TrueDef = MRI->getVRegDef(TrueReg);
+  if (!TrueDef)
+    return false;
+  MachineInstr &True = *TrueDef;
   if (True.getParent() != MI.getParent())
     return false;
   const MachineOperand &MaskOp = MI.getOperand(4);
@@ -796,6 +800,155 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   return true;
 }
 
+/// Fold a mask-register AND of a mask comparison into a mask-undisturbed
+/// masked comparison, saving an instruction:
+///
+///   %cmp1 = PseudoVMSLT_VV_M1 %a, %b, %vl, %sew
+///   %cmp2 = PseudoVMSLT_VV_M1 %c, %d, %vl, %sew
+///   %and  = PseudoVMAND_MM %cmp1, %cmp2, %vl, 0
+/// ->
+///   %cmp1 = PseudoVMSLT_VV_M1 %a, %b, %vl, %sew
+///   %and  = PseudoVMSLT_VV_M1_MASK %cmp1, %c, %d, %cmp1, %vl, %sew, mu
+///
+/// This works because for a mask-undisturbed masked compare whose passthru is
+/// the same register as its mask %m, the result is %m[i] ? (c cmp d)[i] :
+/// %m[i], which is exactly %m[i] & (c cmp d)[i], i.e. vmand(%m, vmscmp(c, d)).
+///
+/// Since vmand is commutative it's enough for either operand to be a foldable
+/// comparison; the other operand becomes both the mask and the passthru.
+bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMAND_MM)
+    return false;
+
+  // The masked comparison we create needs its mask (and passthru) in v0, which
+  // the original vmand did not require. If the vmand's result has more than one
+  // use then it is an interior mask value rather than a final result feeding
+  // v0, and introducing the v0 requirement tends to add vmv1r.v moves. Only
+  // fold single-use results, where the value coalesces onto v0 for free.
+  if (!MRI->hasOneUse(MI.getOperand(0).getReg()))
+    return false;
+
+  // Try each operand as the comparison to be masked; the other becomes the
+  // mask/passthru.
+  for (unsigned CmpIdx : {1, 2}) {
+    unsigned MaskIdx = CmpIdx == 1 ? 2 : 1;
+
+    // The comparison must be single use so that folding it into MI doesn't
+    // leave an extra unmasked comparison behind.
+    SmallVector<MachineInstr *, 4> CmpCopies;
+    Register CmpReg = lookThruCopies(MI.getOperand(CmpIdx).getReg(),
+                                     /*OneUseOnly=*/true, &CmpCopies);
+    if (!CmpReg.isVirtual() || !MRI->hasOneUse(CmpReg))
+      continue;
+    MachineInstr &Cmp = *MRI->getUniqueVRegDef(CmpReg);
+    if (Cmp.getParent() != MI.getParent())
+      continue;
+    if (!RISCVInstrInfo::isRVVCompare(Cmp))
+      continue;
+
+    // Find the masked pseudo corresponding to the unmasked comparison.
+    const RISCV::RISCVMaskedPseudoInfo *Info =
+        RISCV::lookupMaskedIntrinsicByUnmasked(Cmp.getOpcode());
+    if (!Info)
+      continue;
+
+    // The EEW of the comparison's dest must match vmand's SEW.
+    if (!hasSameEEW(MI, Cmp))
+      continue;
+
+    // Masking restricts the comparison to the mask's active elements, so any FP
+    // exceptions raised on inactive elements would be lost.
+    if (Cmp.hasUnmodeledSideEffects() || Cmp.mayRaiseFPException())
+      continue;
+
+    // All active elements of vmand must also be active in the comparison. If
+    // the comparison's VL were smaller, elements in between the two VLs would
+    // become tail elements of the masked comparison and could not be preserved
+    // from the mask because mask results are always tail agnostic.
+    const MachineOperand &CmpVL =
+        Cmp.getOperand(RISCVII::getVLOpNum(Cmp.getDesc()));
+    const MachineOperand &MIVL =
+        MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+    if (!RISCV::isVLKnownLE(MIVL, CmpVL))
+      continue;
+
+    const MachineOperand &MaskOp = MI.getOperand(MaskIdx);
+    Register MaskReg = MaskOp.getReg();
+
+    unsigned MaskedOpc = Info->MaskedPseudo;
+    const MCInstrDesc &MaskedDesc = TII->get(MaskedOpc);
+    unsigned SEW = Cmp.getOperand(RISCVII::getSEWOpNum(Cmp.getDesc())).getImm();
+
+    // Only fold if the masked comparison's dest can live in v0. Its mask
+    // operand must be v0, and we reuse the mask as the passthru, so if the dest
+    // can also be v0 the whole thing coalesces onto v0 and we save the vmand
+    // for free. For LMUL >= 2 the dest is earlyclobbered into vrnov0, which
+    // would force extra vmv1r.v moves for the mask and result and make this a
+    // regression, so bail out in that case. This check must happen before we
+    // mutate any instructions below.
+    if (!TII->getRegClass(MaskedDesc, 0)->contains(RISCV::V0))
+      continue;
+
+    // Make sure the mask and VL dominate the comparison, sinking it if needed.
+    if (!ensureDominates({&MaskOp, &MIVL}, Cmp))
+      continue;
+
+    // The masked comparison's mask operand lives in the VMV0 (v0) class, and
+    // its passthru operand shares the dest's class. Copy the vmand mask into
+    // both; the coalescer collapses these back onto v0, matching the
+    // two-instruction ideal.
+    Register MaskV0Reg = MRI->createVirtualRegister(&RISCV::VMV0RegClass);
+    BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(),
+            TII->get(TargetOpcode::COPY), MaskV0Reg)
+        .addReg(MaskReg);
+    // The passthru shares the dest's class, which the V0 check above restricts
+    // to LMUL <= 1, so it is always a single vector register.
+    Register PassthruReg = MRI->createVirtualRegister(&RISCV::VRRegClass);
+    BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(),
+            TII->get(TargetOpcode::COPY), PassthruReg)
+        .addReg(MaskReg);
+
+    // Build the masked comparison. Its dest reuses vmand's dest; the passthru
+    // (tied to the dest) and mask are both the other vmand operand. Preserve
+    // the source comparison's MI flags (e.g. nofpexcept), which still hold
+    // since the masked comparison operates on a subset of the original active
+    // elements.
+    Register DestReg = MI.getOperand(0).getReg();
+    MachineInstr *Masked =
+        BuildMI(*MI.getParent(), Cmp, MIMetadata(Cmp), MaskedDesc, DestReg)
+            .addReg(PassthruReg)
+            .add(Cmp.getOperand(1))
+            .add(Cmp.getOperand(2))
+            .addReg(MaskV0Reg)
+            .add(MIVL)
+            .addImm(SEW)
+            // The result is a mask register, whose tail is always agnostic, so
+            // we only need mask-undisturbed (MASK_AGNOSTIC clear) to preserve
+            // the inactive elements from the mask/passthru.
+            .addImm(RISCVVType::TAIL_AGNOSTIC)
+            .setMIFlags(Cmp.getFlags());
+
+    // Now that the comparison is masked, constrain its operands to the masked
+    // pseudo's register classes (e.g. vr -> vrnov0 for LMUL >= 2).
+    for (MachineOperand &MO : Masked->explicit_operands()) {
+      if (!MO.isReg() || !MO.getReg().isVirtual())
+        continue;
+      if (const TargetRegisterClass *RC =
+              Masked->getRegClassConstraint(MO.getOperandNo(), TII, TRI))
+        MRI->constrainRegClass(MO.getReg(), RC);
+    }
+    MRI->clearKillFlags(MaskReg);
+    MI.eraseFromParent();
+    Cmp.eraseFromParent();
+    for (MachineInstr *CmpCopy : CmpCopies)
+      CmpCopy->eraseFromParent();
+
+    return true;
+  }
+
+  return false;
+}
+
 bool RISCVVectorPeepholeImpl::run(MachineFunction &MF) {
   // Skip if the vector extension is not enabled.
   ST = &MF.getSubtarget<RISCVSubtarget>();
@@ -811,6 +964,9 @@ bool RISCVVectorPeepholeImpl::run(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB))
       Changed |= foldVMergeToMask(MI);
+
+    for (MachineInstr &MI : make_early_inc_range(MBB))
+      Changed |= foldVMANDToMaskedCompare(MI);
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       Changed |= convertToVLMAX(MI);
@@ -838,6 +994,7 @@ bool RISCVVectorPeepholeLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 RISCVVectorPeepholePass::run(MachineFunction &MF,
                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   bool Changed = RISCVVectorPeepholeImpl().run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
