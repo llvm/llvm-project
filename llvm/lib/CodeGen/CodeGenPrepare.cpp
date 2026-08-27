@@ -1506,8 +1506,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   EVT DestVT = TLI.getValueType(DL, DestTy);
 
   // Bail out on scalable vectors and illegal destination types
-  if (SrcVT.isScalableVector() || DestVT.isScalableVector() ||
-      !TLI.isTypeLegal(DestVT))
+  if (SrcVT.isScalableVector() || DestVT.isScalableVector())
     return false;
 
   // Only hoist if it reduces physical register count
