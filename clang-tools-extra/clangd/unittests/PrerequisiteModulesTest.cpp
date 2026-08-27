@@ -19,6 +19,7 @@
 #include "ProjectModules.h"
 #include "SemanticHighlighting.h"
 #include "TestTU.h"
+#include "XRefs.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Tooling.h"
@@ -627,6 +628,61 @@ import A;
 
   const NamedDecl &D = findDecl(*AST, "printA");
   EXPECT_TRUE(D.isFromASTFile());
+}
+
+TEST_F(PrerequisiteModulesTests, LocateImportedModule) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  Annotations Dep(R"cpp(
+export $decl[[module]] dep.one.two;
+)cpp");
+  CDB.addFile("Dep.cppm", Dep.code());
+
+  Annotations Part(R"cpp(
+export $decl[[module]] M:part.one;
+)cpp");
+  CDB.addFile("M-part.cppm", Part.code());
+
+  Annotations Use(R"cpp(
+export module M;
+import $dep0^dep.$dep1^one.$dep2^two;
+import :$part0^part.$part1^one;
+)cpp");
+  CDB.addFile("M.cppm", Use.code());
+
+  ModulesBuilder Builder(CDB);
+  auto Inputs = getInputs("M.cppm", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+  auto Preamble =
+      buildPreamble(getFullPath("M.cppm"), *CI, Inputs, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+
+  auto AST = ParsedAST::build(getFullPath("M.cppm"), Inputs, std::move(CI), {},
+                              Preamble);
+  ASSERT_TRUE(AST);
+  ASSERT_TRUE(AST->getDiagnostics().empty());
+
+  auto Check = [&](llvm::StringRef Point, llvm::StringRef Name,
+                   llvm::StringRef File, Range TargetRange) {
+    auto Results = locateSymbolAt(*AST, Use.point(Point));
+    ASSERT_THAT(Results, testing::SizeIs(1));
+    EXPECT_EQ(Results.front().Name, Name);
+    Location Target{
+        URIForFile::canonicalize(getFullPath(File), getFullPath("M.cppm")),
+        TargetRange};
+    EXPECT_EQ(Results.front().PreferredDeclaration, Target);
+    EXPECT_EQ(Results.front().Definition, Target);
+  };
+
+  for (llvm::StringRef Point : {"dep0", "dep1", "dep2"})
+    Check(Point, "dep.one.two", "Dep.cppm", Dep.range("decl"));
+  for (llvm::StringRef Point : {"part0", "part1"})
+    Check(Point, "M:part.one", "M-part.cppm", Part.range("decl"));
 }
 
 // An end to end test for code complete in modules

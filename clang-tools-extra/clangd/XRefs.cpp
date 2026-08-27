@@ -42,6 +42,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -233,6 +234,54 @@ std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
   L.range = halfOpenToRange(
       SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
   return L;
+}
+
+std::optional<LocatedSymbol>
+locateModuleReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
+                     llvm::StringRef MainFilePath) {
+  const SourceManager &SM = AST.getSourceManager();
+  const ASTContext &Context = AST.getASTContext();
+
+  const Module *ResultModule = nullptr;
+
+  for (const ImportDecl *Import : Context.local_imports()) {
+    const Module *Imported = Import->getImportedModule();
+    ArrayRef<SourceLocation> IdentifierLocs = Import->getIdentifierLocs();
+    if (!Imported || !Imported->isNamedModule() || IdentifierLocs.empty())
+      continue;
+
+    std::string Name = Imported->getFullModuleName();
+    if (auto Colon = Name.find(':'); Colon != std::string::npos)
+      Name.erase(0, Colon + 1);
+    if (Name.empty())
+      continue;
+
+    const size_t NameSize = static_cast<int>(Name.size() - 1);
+
+    const SourceLocation NameBegin = SM.getSpellingLoc(IdentifierLocs.front());
+    const SourceLocation NameEnd = NameBegin.getLocWithOffset(NameSize);
+
+    if (SM.isPointWithin(TouchedIdentifier.location(), NameBegin, NameEnd)) {
+      ResultModule = Imported;
+      break;
+    }
+  }
+
+  if (!ResultModule)
+    return std::nullopt;
+
+  const SourceLocation DefinitionLoc =
+      SM.getSpellingLoc(ResultModule->DefinitionLoc);
+  auto Definition = makeLocation(Context, DefinitionLoc, MainFilePath);
+
+  if (!Definition)
+    return std::nullopt;
+
+  LocatedSymbol Result;
+  Result.Name = ResultModule->getFullModuleName();
+  Result.PreferredDeclaration = *Definition;
+  Result.Definition = *Definition;
+  return Result;
 }
 
 // Treat #included files as symbols, to enable go-to-definition on them.
@@ -864,6 +913,11 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       }
     }
   }
+
+  if (TouchedIdentifier)
+    if (auto Module =
+            locateModuleReferent(*TouchedIdentifier, AST, MainFilePath))
+      return {*std::move(Module)};
 
   ASTNodeKind NodeKind;
   auto ASTResults = locateASTReferent(*CurLoc, TouchedIdentifier, AST,
