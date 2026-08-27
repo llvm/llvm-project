@@ -427,3 +427,31 @@ define i32 @n3_constmask_samemask(i32 %x, i32 %y) {
   %ret = xor i32 %and, %and1
   ret i32 %ret
 }
+
+define i4 @masked_merge_inverted_mask_maybe_undef_x(i4 %x, i4 %y, i4 %m) {
+; CHECK-LABEL: @masked_merge_inverted_mask_maybe_undef_x(
+; CHECK-NEXT:    [[N0:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[N0]], [[M:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %im = xor i4 %m, -1
+  %n0 = xor i4 %x, %y
+  %n1 = and i4 %n0, %im
+  %r = xor i4 %n1, %y
+  ret i4 %r
+}
+
+define i4 @masked_merge_inverted_mask_noundef_x(i4 noundef %x, i4 %y, i4 %m) {
+; CHECK-LABEL: @masked_merge_inverted_mask_noundef_x(
+; CHECK-NEXT:    [[N0:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[N0]], [[M:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %im = xor i4 %m, -1
+  %n0 = xor i4 %x, %y
+  %n1 = and i4 %n0, %im
+  %r = xor i4 %n1, %y
+  ret i4 %r
+}
