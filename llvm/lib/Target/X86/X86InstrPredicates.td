@@ -193,6 +193,7 @@ def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
+def HasADX       : Predicate<"Subtarget->hasADX()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
@@ -269,4 +270,3 @@ def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
 defvar X86_32 = DefaultMode;
 def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
 def X86_64_X32 : HwMode<[IsX32Mode]>;
-def HasADX : Predicate<"Subtarget->hasADX()">;
