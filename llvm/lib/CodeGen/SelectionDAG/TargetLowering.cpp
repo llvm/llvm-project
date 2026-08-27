@@ -10458,12 +10458,6 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
                           *IsCmp0 ? OrderedCmpOpcode : UnorderedCmpOpcode);
     }
 
-    if (FPTestMask == fcNan &&
-        isCondCodeLegalOrCustom(IsInvertedFP ? ISD::SETO : ISD::SETUO,
-                                OperandVT.getScalarType().getSimpleVT()))
-      return DAG.getSetCC(DL, ResultVT, Op, Op,
-                          IsInvertedFP ? ISD::SETO : ISD::SETUO);
-
     bool IsOrderedInf = FPTestMask == fcInf;
     if ((FPTestMask == fcInf || FPTestMask == (fcInf | fcNan)) &&
         isCondCodeLegalOrCustom(IsOrderedInf ? OrderedCmpOpcode
