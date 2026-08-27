@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -Wdeprecated-declarations -verify %s
 
+namespace GH147293 {
 struct A {
   [[deprecated("use something else")]] int x = 42; // expected-note {{marked deprecated here}}
 };
@@ -22,3 +23,16 @@ struct B {
   [[deprecated]] int y;
   B() = default;                   // no warning under new policy
 };
+
+}
+
+namespace GH160543 {
+
+template<class F>
+struct [[deprecated]] X { X(F);}; // expected-warning {{is deprecated}} expected-note {{deprecated here}}
+
+void f() {
+  X x{0}; // expected-note {{while substituting}}
+}
+
+}
