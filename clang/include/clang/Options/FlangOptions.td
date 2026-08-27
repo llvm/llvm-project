@@ -196,6 +196,9 @@ defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;
+defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
+  "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
+  "Diagnose a USE association conflict with an intrinsic module generic">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
@@ -309,22 +312,27 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 
-defm real_sum_reassociation
+defm fp_sum_reassociation
     : BoolOptionWithoutMarshalling<
-          "f", "real-sum-reassociation",
+          "f", "fp-sum-reassociation",
           PosFlag<SetTrue, [], [],
                   "Enable Fortran-standard compliant reassociation within "
-                  "individual REAL sum expressions. This may change exact "
-                  "floating-point results">,
+                  "individual REAL and COMPLEX sum expressions. This may "
+                  "change exact floating-point results">,
           NegFlag<SetFalse, [], [],
-                  "Disable reassociation within individual REAL sum "
-                  "expressions">>,
+                  "Disable reassociation within individual REAL and COMPLEX "
+                  "sum expressions">>,
       DocBrief<[{
         Enable Fortran-standard compliant reassociation within individual
-        ``REAL`` sum expressions. This can improve optimization opportunities
-        and may change exact floating-point results while preserving
-        standard-conforming Fortran semantics.
+        ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
+        opportunities and may change exact floating-point results while
+        preserving standard-conforming Fortran semantics.
       }]>;
+
+def freal_sum_reassociation : Flag<["-"], "freal-sum-reassociation">,
+  Flags<[HelpHidden]>, Alias<ffp_sum_reassociation>;
+def fno_real_sum_reassociation : Flag<["-"], "fno-real-sum-reassociation">,
+  Flags<[HelpHidden]>, Alias<fno_fp_sum_reassociation>;
 
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
   HelpText<"Set the initial floating-point exception halting mode for the main program">,

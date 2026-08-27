@@ -23,6 +23,7 @@
 #include "Thumb1FrameLowering.h"
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -88,12 +89,13 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           FloatABI::ABIType FloatABI, bool MinSize,
-                           DenormalMode DM)
+                           FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
+                           bool MinSize, DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
+      FloatABIType(FloatABI), ABI(ABI),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
@@ -332,9 +334,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (TM.isAAPCS_ABI())
+  if (isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (TM.isAAPCS16_ABI())
+  if (isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -569,7 +571,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
     return 2;
 
   // Allocate low registers first, so we can select more 16-bit instructions.
-  // We also (in ignoreCSRForAllocationOrder) override  the default behaviour
+  // We also (in getCSRAllocationOrderMask) override  the default behaviour
   // with regards to callee-saved registers, because pushing extra registers is
   // much cheaper (in terms of code size) than using high registers. After
   // that, we allocate r12 (doesn't need to be saved), lr (saving it means we
@@ -583,15 +585,19 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
   return 1;
 }
 
-bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               MCRegister PhysReg) const {
+void ARMSubtarget::getCSRAllocationOrderMask(const MachineFunction &MF,
+                                             BitVector &Mask) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
   // their cost per use. When optForMinSize, we prefer the low regs even if
   // they are CSR because usually push/pop can be folded into existing ones.
-  return isThumb2() && MF.getFunction().hasMinSize() &&
-         ARM::GPRRegClass.contains(PhysReg);
+  if (!isThumb2() || !MF.getFunction().hasMinSize())
+    return;
+
+  Mask.resize(getRegisterInfo()->getNumRegs());
+  for (MCPhysReg Reg : ARM::GPRRegClass)
+    Mask.set(Reg);
 }
 
 ARMSubtarget::PushPopSplitVariation

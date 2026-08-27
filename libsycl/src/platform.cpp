@@ -9,6 +9,7 @@
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/platform.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/platform_impl.hpp>
 
@@ -42,6 +43,10 @@ bool platform::has(aspect Aspect) const { return impl->has(Aspect); }
 template <typename Param>
 detail::is_platform_info_desc_t<Param> platform::get_info() const {
   return impl->getInfo<Param>();
+}
+
+context platform::khr_get_default_context() const {
+  return detail::createSyclObjFromImpl<context>(impl->getDefaultContext());
 }
 
 #define _LIBSYCL_EXPORT_GET_INFO(Desc)                                         \

@@ -27,6 +27,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <set>
+
 using namespace clang;
 
 int Global = 42;
@@ -144,6 +146,52 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
 
   auto R2 = Interp->Parse("var1++; printf(\"var1 value %d\\n\", var1);");
   EXPECT_TRUE(!!R2);
+}
+
+TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // One partial translation unit per input, as an interop layer doing a
+  // type-probe per lookup would produce.
+  for (unsigned I = 0; I != 200; ++I)
+    cantFail(Interp->Parse("using probe_" + std::to_string(I) + " = int;"));
+
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+
+  unsigned Nodes = 0, Decls = 0;
+  for (auto *R : TU->redecls()) {
+    ++Nodes;
+    for (auto *D : cast<DeclContext>(R)->decls()) {
+      ++Decls;
+      // Walking up from the decl is what faults in a long-lived session.
+      EXPECT_EQ(&D->getASTContext(), &Interp->getASTContext());
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        (void)ND->getQualifiedNameAsString();
+    }
+  }
+  EXPECT_GT(Nodes, 1u);
+  EXPECT_GT(Decls, 200u);
+}
+
+TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  cantFail(Interp->Parse("struct Kept {};"));
+  cantFail(Interp->Parse("struct Withdrawn {};"));
+  cantFail(Interp->Undo());
+
+  // A partial translation unit gets its own TranslationUnitDecl, so collect
+  // names across the whole redeclaration chain.
+  std::set<std::string> Names;
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+  for (auto *R : TU->redecls())
+    for (auto *D : cast<DeclContext>(R)->decls())
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        Names.insert(ND->getNameAsString());
+
+  EXPECT_TRUE(Names.count("Kept"));
+  // Undo withdrew this input, so its declaration should not still be reachable.
+  EXPECT_FALSE(Names.count("Withdrawn"));
 }
 
 TEST_F(InterpreterTest, UndoCommand) {

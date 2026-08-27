@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -612,7 +613,7 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   // Check for one alternate opcode from another BinaryOperator.
   // TODO - generalize to support all operators (types, calls etc.).
   Intrinsic::ID BaseID = 0;
-  SmallVector<VFInfo> BaseMappings;
+  SmallVector<VFInfo, 4> BaseMappings;
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
@@ -723,7 +724,8 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
           return InstructionsState::invalid();
         if (!ID) {
-          SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
+          SmallVector<VFInfo, 4> Mappings =
+              VFDatabase(*Call).getMappings(*Call);
           if (Mappings.size() != BaseMappings.size() ||
               Mappings.front().ISA != BaseMappings.front().ISA ||
               Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
@@ -806,5 +808,70 @@ bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
     return MainP != P && MainP != SwappedP;
   }
   return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == AltOp;
+}
+
+SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
+    const InstructionsState &S, const TargetLibraryInfo &TLI,
+    ArrayRef<Value *> VL, ArrayRef<Value *> Op0, ArrayRef<Value *> Op1,
+    SmallVectorImpl<Value *> &ReassocScalars, SmallBitVector &SubLanes) {
+  assert(S.isAltShuffle() && "Expected an alternate node.");
+  const unsigned NumLanes = VL.size();
+  SmallVector<unsigned> LaneOpcodes =
+      map_to_vector(seq<unsigned>(NumLanes), [&](unsigned Lane) {
+        return isAlternateInstruction(cast<Instruction>(VL[Lane]),
+                                      S.getMainOp(), S.getAltOp(), TLI)
+                   ? S.getAltOpcode()
+                   : S.getOpcode();
+      });
+  // A lane value peels only as a single-use chain link with the lane's own
+  // opcode, keeping every combine level on the same main/alt pattern.
+  auto GetChainLink = [&](unsigned Lane, Value *V) -> Instruction * {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !I->hasOneUse() || I->getOpcode() != LaneOpcodes[Lane] ||
+        !isReassocChainLink(I))
+      return nullptr;
+    return I;
+  };
+  SmallVector<SmallVector<Value *>> Columns;
+  Columns.emplace_back(Op0.begin(), Op0.end());
+  Columns.emplace_back(Op1.begin(), Op1.end());
+  // The chain link of a commutative lane may sit in the second column;
+  // normalize so every lane's link leads.
+  for (unsigned Lane : seq<unsigned>(NumLanes)) {
+    if (GetChainLink(Lane, Columns[0][Lane]))
+      continue;
+    Instruction *Link = GetChainLink(Lane, Columns[1][Lane]);
+    if (!Link || !Link->isCommutative())
+      return {};
+    std::swap(Columns[0][Lane], Columns[1][Lane]);
+  }
+  // Peel the leading column while every lane stays a matching chain link.
+  while (all_of(seq<unsigned>(NumLanes), [&](unsigned Lane) {
+    return GetChainLink(Lane, Columns[0][Lane]) != nullptr;
+  })) {
+    SmallVector<Value *> NewColumn(NumLanes);
+    for (unsigned Lane : seq<unsigned>(NumLanes)) {
+      Instruction *Link = GetChainLink(Lane, Columns[0][Lane]);
+      ReassocScalars.push_back(Link);
+      // The chain of a commutative lane may continue in the second operand;
+      // keep the chain link as the running value.
+      unsigned RunningOp = Link->isCommutative() &&
+                                   !GetChainLink(Lane, Link->getOperand(0)) &&
+                                   GetChainLink(Lane, Link->getOperand(1))
+                               ? 1
+                               : 0;
+      NewColumn[Lane] = Link->getOperand(1 - RunningOp);
+      Columns[0][Lane] = Link->getOperand(RunningOp);
+    }
+    Columns.insert(std::next(Columns.begin()), std::move(NewColumn));
+  }
+  assert(!ReassocScalars.empty() &&
+         "Normalization guarantees at least one peeled level.");
+  SubLanes.resize(NumLanes);
+  for (unsigned Lane : seq<unsigned>(NumLanes))
+    if (LaneOpcodes[Lane] == Instruction::Sub ||
+        LaneOpcodes[Lane] == Instruction::FSub)
+      SubLanes.set(Lane);
+  return Columns;
 }
 } // namespace llvm::slpvectorizer
