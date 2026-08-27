@@ -8,4 +8,3 @@
 # RUN: %update_test_checks %t.ll --check-globals all
 # Verify script is idempotent
 # RUN: diff -u %t.ll %S/Inputs/dot_value_in_metadata_string.ll.expected
-
