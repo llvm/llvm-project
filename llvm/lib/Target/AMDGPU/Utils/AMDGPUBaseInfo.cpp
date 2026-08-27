@@ -2599,7 +2599,9 @@ bool isGFX1250(const MCSubtargetInfo &STI) {
 }
 
 bool isFullSIMDMode(const MCSubtargetInfo &STI) {
-  return isGFX1250(STI) || !STI.getFeatureBits().test(FeatureCuMode);
+  // CU mode is only meaningful on targets that have WGP mode. Elsewhere the
+  // feature may still be requested (e.g. -mcumode), but it has no effect.
+  return !supportsWGP(STI) || !STI.getFeatureBits().test(FeatureCuMode);
 }
 
 bool isGFX1250Plus(const MCSubtargetInfo &STI) {
