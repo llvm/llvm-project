@@ -2861,11 +2861,14 @@ TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
 // "!$ompx" line, otherwise a valid extension directive such as "!$ompx barrier"
 // would be misreported as an invalid "!$omp" directive instead of being handled
 // as a real construct.
-TYPE_PARSER(skipStuffBeforeStatement >>
-    ((ompxSentinel >>
-         sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
-             !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(true)))) ||
-        ("!$OMP"_id >>
-            sourced(construct<OpenMPInvalidDirective>(maybe("BEGIN"_sptok) >>
-                !OmpDirectiveNameParser{} >> SkipTo<'\n'>{} >> pure(false))))))
+static constexpr auto skipUnrecognized{
+    maybe("BEGIN"_sptok) >> !OmpDirectiveNameParser{} >> SkipTo<'\n'>{}};
+
+static constexpr auto unrecognizedExtension{ompxSentinel >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(true))};
+static constexpr auto invalidDirective{"!$OMP"_id >>
+    construct<OpenMPInvalidDirective>(skipUnrecognized >> pure(false))};
+
+TYPE_PARSER(sourced(
+    skipStuffBeforeStatement >> (unrecognizedExtension || invalidDirective)))
 } // namespace Fortran::parser
