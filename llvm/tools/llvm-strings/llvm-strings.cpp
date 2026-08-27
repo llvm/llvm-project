@@ -150,7 +150,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
     const char *Cur = Begin;
 
     // Handle the remaining part from the previous chunk.
-    // The previous chunk can be either no longer than MinSize or part of the
+    // The previous chunk can be either shorter than MinSize or part of the
     // string.
     // Keep the buffer size bounded. With a small Min, a long string spanning
     // multiple chunks will have at most DefaultReadChunkSize bytes, since the
@@ -158,58 +158,81 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // With a large Min, the buffer must hold at least Min bytes, since we need
     // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
+      // Find the end of the current buffer
       while (Cur != End && isStringChar(*Cur))
         ++Cur;
       size_t Len = Cur - Begin;
       if (InString) {
+        // Print the remaining part if the previous chunk has already printed
+        // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
+        // boundary.                        ^
         OS << StringRef(Begin, Len);
       } else if (Candidate.size() + Len >= Min) {
+        // If the header hasn't been printed yet (e.g. the previous candidate
+        // was smaller than Min), but we can print it now, print the header
+        // first, followed by the candidate from the previous chunk and the
+        // current string. E.g. '\0' | bbbbbb
+        //                             ^
         printHeader(ChunkOffset - Candidate.size());
         OS << Candidate << StringRef(Begin, Len);
         Candidate.clear();
         InString = true;
       } else if (Cur == End) {
+        // If the current chunk + previous candidate is still smaller than Min ,
+        // append it to Candidate
         Candidate.append(Begin, End);
       } else {
+        // If the string has terminated but is still smaller than Min, clear the
+        // buffer since it is too short to print.
         Candidate.clear();
       }
 
       if (Cur == End) {
+        // Finish handling the current chunk and update ChunkOffset.
         ChunkOffset += ChunkSize;
         continue;
       }
       if (InString) {
+        // We haven't reached the end of the chunk, which means the string is
+        // terminated. Add a '\n' to start printing a new string.
         OS << '\n';
         InString = false;
       }
     }
 
-    const char *S = nullptr;
+    // At this point, we are always at the start of a new string because the
+    // remaining part of the previous string has already been handled.
+    const char *StrHead = nullptr;
     for (; Cur != End; ++Cur) {
       if (isStringChar(*Cur)) {
-        if (!S)
-          S = Cur;
-      } else if (S) {
-        if (static_cast<size_t>(Cur - S) >= Min) {
-          printHeader(ChunkOffset + (S - Begin));
-          OS << StringRef(S, Cur - S) << '\n';
+        // Find the start of the next string
+        if (!StrHead)
+          StrHead = Cur;
+      } else if (StrHead) {
+        // If it is not a StringChar, we have reached the end of the current
+        // string. Try to print it.
+        if (static_cast<size_t>(Cur - StrHead) >= Min) {
+          printHeader(ChunkOffset + (StrHead - Begin));
+          OS << StringRef(StrHead, Cur - StrHead) << '\n';
         }
-        S = nullptr;
+        StrHead = nullptr;
       }
     }
 
-    // Concatenate the last part.
-    // If the current buffer is no longer than Min, we can't print it, so just
-    // add it to the candidate buffer. If it is used, mark it as InString to
-    // prevent printing the header twice.
-    if (S) {
-      size_t Len = End - S;
+    // The last string spans multiple chunks. If it is larger than Min, print
+    // the header immediately and set the InString flag to avoid printing it
+    // again.
+    // e.g. aaaaa | bbbbb
+    //          ^
+    if (StrHead) {
+      size_t Len = End - StrHead;
+      // Print it, or append it to Candidate if it is too short.
       if (Len >= Min) {
-        printHeader(ChunkOffset + (S - Begin));
-        OS << StringRef(S, Len);
+        printHeader(ChunkOffset + (StrHead - Begin));
+        OS << StringRef(StrHead, Len);
         InString = true;
       } else {
-        Candidate.append(S, End);
+        Candidate.append(StrHead, End);
       }
     }
     ChunkOffset += ChunkSize;

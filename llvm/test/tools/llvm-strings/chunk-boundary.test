@@ -44,9 +44,9 @@ CASE5:{{^}}   4000 FRESH{{$}}
 ## intact, once. The expected output is generated rather than written as a
 ## CHECK line because it is a chunk long.
 RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16383 + b'S' + b'M' * 16384 + b'E' + b'\0' * 4)" > %t.6
-RUN: %python -c "import sys; sys.stdout.write('S' + 'M' * 16384 + 'E\n')" > %t.6.expected
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'S' + b'M' * 16384 + b'E\n')" > %t.6.expected
 RUN: llvm-strings %t.6 > %t.6.out
-RUN: diff --strip-trailing-cr %t.6.expected %t.6.out
+RUN: diff %t.6.expected %t.6.out
 
 ## A string terminated by the end of the file (no trailing unprintable byte)
 ## must still be printed.
