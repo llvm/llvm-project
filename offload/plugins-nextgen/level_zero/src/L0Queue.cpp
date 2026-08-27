@@ -61,19 +61,29 @@ Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   if (AppendLaunchKernelWithArgsAvailable &&
       Device.getL0Context().AppendLaunchKernelSupported.load(
           std::memory_order_acquire)) {
-    auto Result = CmdList->appendLaunchKernelWithArgs(
+    auto Err = CmdList->appendLaunchKernelWithArgs(
         Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
         NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
-    // Can a context have multiple users?
-    if (!Device.getL0Context().AppendLaunchKernelSupported.load(
-            std::memory_order_acquire)) {
-      // Commandlist failed to launch kernel with arguments, fallback to older
-      // API.
-      consumeError(std::move(Result));
-    } else {
-      return Result;
+    if (!Err)
+      return Plugin::success();
+
+    // Check if Err is ErrorCode::UNSUPPORTED, if so consume it
+    Err = llvm::handleErrors(
+        std::move(Err),
+        [&](std::unique_ptr<error::OffloadError> E) -> llvm::Error {
+          if (E->convertToErrorCode() ==
+              error::make_error_code(error::ErrorCode::UNSUPPORTED))
+            return llvm::Error::success(); // Swallow error
+          return llvm::Error(std::move(E));
+        });
+
+    if (Err) {
+      // Err is still here, so it was not ErrorCode::UNSUPPORTED
+      return Err;
     }
+
+    // No Err - it was ErrorCode::UNSUPPORTED, continue into fallback
   }
 
   // Submit kernel using older set of APIs - zeKernelSetArgumentValue
