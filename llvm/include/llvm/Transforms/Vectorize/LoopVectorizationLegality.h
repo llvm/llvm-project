@@ -183,9 +183,7 @@ public:
   LLVM_ABI bool allowReordering() const;
 
   /// \return the per-loop FP reordering hint as a ForceKind:
-  enum ForceKind getFPReordering() const {
-    return (ForceKind)FPReordering;
-  }
+  enum ForceKind getFPReordering() const { return (ForceKind)FPReordering; }
 
   bool isPotentiallyUnsafe() const {
     // Avoid FP vectorization if the target is unsure about proper support.
