@@ -2485,7 +2485,10 @@ private:
   DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
 
   // Add DAG edges that enforce SCHED_BARRIER ordering.
-  void addSchedBarrierEdges(SUnit &SU);
+  // AllowedMask specifies which instruction types are allowed to
+  // cross the barrier and is inverted internally to get a blocked
+  // mask.
+  void addSchedBarrierEdges(SUnit &Barrier, SchedGroupMask AllowedMask);
 
   // Use a SCHED_BARRIER's mask to identify instruction SchedGroups that should
   // not be reordered accross the SCHED_BARRIER. This is used for the base
@@ -2747,10 +2750,19 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     unsigned Opc = R->getInstr()->getOpcode();
     // SCHED_[GROUP_]BARRIER and IGLP are mutually exclusive.
     if (Opc == AMDGPU::SCHED_BARRIER) {
-      addSchedBarrierEdges(*R);
+      auto AllowedMask = (SchedGroupMask)R->getInstr()->getOperand(0).getImm();
+      addSchedBarrierEdges(*R, AllowedMask);
       FoundSB = true;
     } else if (Opc == AMDGPU::SCHED_GROUP_BARRIER) {
       initSchedGroupBarrierPipelineStage(R);
+      FoundSB = true;
+    } else if (Opc == AMDGPU::S_SETPRIO) {
+      // Moving VALU, MFMA, TRANS instructions across
+      // S_SETPRIO would contradict the intention of
+      // the instruction.
+      // FIXME Memory instructions could be allowed here,
+      // but are blocked by the side effects of S_SETPRIO.
+      addSchedBarrierEdges(*R, SchedGroupMask::SALU);
       FoundSB = true;
     } else if (Opc == AMDGPU::IGLP_OPT) {
       if (!FoundSB && !FoundIGLP) {
@@ -2769,24 +2781,28 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   }
 }
 
-void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
-  MachineInstr &MI = *SchedBarrier.getInstr();
-  assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
-  LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
-                    << MI.getOperand(0).getImm() << "\n");
-  auto InvertedMask =
-      invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
-  SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
+void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &Barrier,
+                                               SchedGroupMask AllowedMask) {
+  MachineInstr &MI = *Barrier.getInstr();
+
+  auto BlockedMask = invertSchedBarrierMask(AllowedMask);
+  LLVM_DEBUG(dbgs() << "Building SchedGroup for "
+                    << TII->getName(MI.getOpcode()) << " with blocked mask: "
+                    << format_hex((int)BlockedMask, 10, true) << "\n");
+
+  SchedGroup SG(BlockedMask, std::nullopt, DAG, TII);
 
   for (SUnit &SU : DAG->SUnits)
     if (SG.canAddSU(SU))
       SG.add(SU);
 
-  // Preserve original instruction ordering relative to the SCHED_BARRIER.
+  // Preserve original instruction ordering relative to the barrier.
   SG.link(
-      SchedBarrier,
-      (function_ref<bool(const SUnit *A, const SUnit *B)>)[](
-          const SUnit *A, const SUnit *B) { return A->NodeNum > B->NodeNum; });
+      Barrier,
+      (function_ref<bool(const SUnit *A, const SUnit *B)>)[](const SUnit *A,
+                                                             const SUnit *B) {
+        return A->NodeNum > B->NodeNum;
+      });
 }
 
 SchedGroupMask
