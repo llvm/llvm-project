@@ -145,22 +145,22 @@ int main() {
 // CHECK-NEXT: [range] begin()
 // CHECK-NEXT: [range] end()
 // CHECK-NEXT: [range] iterator 0 != 3
+// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] iterator deref: 0
 // CHECK-NEXT: v=0
 // CHECK-NEXT: [range] iterator prefix ++
-// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] end()
 // CHECK-NEXT: [range] iterator 1 != 3
+// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] iterator deref: 1
 // CHECK-NEXT: v=1
 // CHECK-NEXT: [range] iterator prefix ++
-// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] end()
 // CHECK-NEXT: [range] iterator 2 != 3
+// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] iterator deref: 2
 // CHECK-NEXT: v=2
 // CHECK-NEXT: [range] iterator prefix ++
-// CHECK-NEXT: [range] iterator dtor
 // CHECK-NEXT: [range] end()
 // CHECK-NEXT: [range] iterator 3 != 3
 // CHECK-NEXT: [range] iterator dtor

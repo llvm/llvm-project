@@ -109,6 +109,7 @@ int main(void) {
 // IR-NEXT:    store i32 [[INC18]], ptr [[DOTSPLIT_IV_2_I]], align 4
 // IR-NEXT:    br label %[[FOR_COND11]], !llvm.loop [[LOOP5:![0-9]+]]
 // IR:       [[FOR_END19]]:
+// IR-NEXT:    store i32 10, ptr [[I]], align 4
 // IR-NEXT:    [[TMP18:%.*]] = load i32, ptr [[SUM]], align 4
 // IR-NEXT:    [[CMP20:%.*]] = icmp eq i32 [[TMP18]], 45
 // IR-NEXT:    [[TMP19:%.*]] = zext i1 [[CMP20]] to i64
