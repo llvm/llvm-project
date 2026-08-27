@@ -459,7 +459,7 @@ public:
   }
   // Return the preferred base used to canonicalize sampled addresses.
   uint64_t getPreferredBaseAddress() const {
-    if (IsCOFF || IsKernel)
+    if (IsCOFF)
       return PreferredTextSegmentAddresses[0];
     return PreferredTextSegmentAddresses[0] - TextSegmentOffsets[0];
   }

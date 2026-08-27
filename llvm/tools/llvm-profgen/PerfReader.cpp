@@ -602,12 +602,14 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
             FileOffset - Event.Offset < Event.Size);
   };
 
-  // For user-space ELF, subtract the mmap file offset to get the runtime
-  // address corresponding to file offset zero. Kernel and COFF retain their
-  // existing mmap address semantics.
-  const uint64_t RuntimeBaseAddress = IsKernel || Binary->isCOFF()
-                                          ? Event.Address
-                                          : Event.Address - Event.Offset;
+  // For ELF, subtract the file offset to get the runtime address corresponding
+  // to file offset zero. Kernel mmap events report the text address as
+  // Event.Offset, so use the text segment offset from the ELF instead.
+  const uint64_t RuntimeBaseAddress =
+      Binary->isCOFF()
+          ? Event.Address
+          : Event.Address -
+                (IsKernel ? Binary->getTextSegmentOffset() : Event.Offset);
 
   if (IsKernel || MMapContainsFileOffset(Binary->getTextSegmentOffset())) {
     // A binary image could be unloaded and then reloaded at different
