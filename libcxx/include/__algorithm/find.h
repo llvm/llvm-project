@@ -122,7 +122,10 @@ template <class _Tp,
           __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   if constexpr (sizeof(_Tp) == 1) {
-    if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
+    auto __ret = std::__constexpr_memchr(__first, __value, __last - __first);
+    // Clang doesn't know that memchr can't return __last, which is important to optimize char_traits::find properly.
+    _LIBCPP_ASSUME(__ret != __last);
+    if (__ret)
       return __ret;
     return __last;
   }
@@ -130,7 +133,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
   // TODO: Remove this special-case once Apple's wmemchr is fixed.
 #  if _LIBCPP_HAS_WIDE_CHARACTERS && !defined(__APPLE__)
   else if constexpr (sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t)) {
-    if (auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first))
+    // Clang doesn't know that wmemchr can't return __last, which is important to optimize char_traits::find properly.
+    auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first);
+    _LIBCPP_ASSUME(__ret != __last);
+    if (__ret)
       return __ret;
     return __last;
   }
