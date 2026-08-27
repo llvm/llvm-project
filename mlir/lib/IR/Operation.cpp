@@ -276,9 +276,7 @@ InFlightDiagnostic Operation::emitError(const Twine &message) {
 InFlightDiagnostic Operation::emitWarning(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitWarning(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic())
-    diag.attachNote(getLoc())
-        << "see current operation: "
-        << OpWithFlags(this, OpPrintingFlags().skipRegions());
+    diag.attachNote(getLoc()) << "see current operation: " << *this;
   return diag;
 }
 
@@ -287,10 +285,22 @@ InFlightDiagnostic Operation::emitWarning(const Twine &message) {
 InFlightDiagnostic Operation::emitRemark(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitRemark(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic())
-    diag.attachNote(getLoc())
-        << "see current operation: "
-        << OpWithFlags(this, OpPrintingFlags().skipRegions());
+    diag.attachNote(getLoc()) << "see current operation: " << *this;
   return diag;
+}
+
+/// Emit a remark about this operation for each message, reporting up to
+/// any diagnostic handlers that may be listening.
+InFlightDiagnostic Operation::emitRemark(const ArrayRef<Twine> messages) {
+  assert(!messages.empty() && "emitRemark messages is empty");
+  for (size_t i = 0, e = messages.size(); i < e; ++i) {
+    InFlightDiagnostic diag = mlir::emitRemark(getLoc(), messages[i]);
+    if (i == e - 1 && getContext()->shouldPrintOpOnDiagnostic()) {
+      diag.attachNote(getLoc()) << "see current operation: " << *this;
+      return diag;
+    }
+  }
+  return {};
 }
 
 DictionaryAttr Operation::getAttrDictionary() {
@@ -857,6 +867,12 @@ InFlightDiagnostic OpState::emitWarning(const Twine &message) {
 /// handlers that may be listening.
 InFlightDiagnostic OpState::emitRemark(const Twine &message) {
   return getOperation()->emitRemark(message);
+}
+
+/// Emit a remark about this operation for each message, reporting up to
+/// any diagnostic handlers that may be listening.
+InFlightDiagnostic OpState::emitRemark(const ArrayRef<Twine> messages) {
+  return getOperation()->emitRemark(messages);
 }
 
 //===----------------------------------------------------------------------===//
