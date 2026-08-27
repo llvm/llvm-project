@@ -13,6 +13,8 @@
 #include <ranges>
 #include <utility>
 
+#include "test_macros.h"
+
 struct View : std::ranges::view_interface<View> {
   int* begin();
   int* end();
