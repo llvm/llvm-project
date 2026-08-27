@@ -36,7 +36,7 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied without forced main/epilogue loop VF
 ;
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
-; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when mainVF <= epilogueVF
+; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 ;
 
 entry:
@@ -84,7 +84,7 @@ exit.2:
 
 define i32 @opt_for_size(ptr %p, i32 %n, i8 %val) optsize {
 ; CHECK-LABEL: Checking a loop in 'opt_for_size'
-; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue allowed.
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue is allowed
 ;
 entry:
   br label %for.body
@@ -103,7 +103,7 @@ for.end:
 
 define i32 @low_tc(ptr %p, i8 %val)  {
 ; CHECK-LABEL: Checking a loop in 'low_tc'
-; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue allowed.
+; CHECK: remark: <unknown>:0:0: Not applying tail-folding to the epilogue, since no epilogue is allowed.
 ;
 entry:
   br label %for.body

@@ -7163,8 +7163,8 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
   }
 
   if (ElementCount::isKnownLE(Hints.getWidth(), EpilogueVectorizationForceVF)) {
-    reportVectorizationInfo("For now, epilogue tail-folding can't be "
-                            "applied when mainVF <= epilogueVF",
+    reportVectorizationInfo("For now, epilogue tail-folding can't be applied "
+                            "when VF of the main loop <= VF of the epilogue",
                             "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
     return CM_EpilogueAllowed;
   }
@@ -7188,7 +7188,7 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
     reportVectorizationInfo("Not applying tail-folding to the epilogue, since "
-                            "no epilogue allowed.",
+                            "no epilogue is allowed.",
                             "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
