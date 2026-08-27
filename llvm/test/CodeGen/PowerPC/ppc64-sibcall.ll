@@ -63,7 +63,7 @@ define dso_local void @caller_64_64_undef_copy([8 x i64] %a, [8 x i64] %b) #1 {
   ret void
 
 ; CHECK-SCO-LABEL: caller_64_64_undef_copy:
-; CHECK-SCO: b callee_64_64_copy
+; CHECK-SCO: bl callee_64_64_copy
 }
 
 define dso_local void @arg8_callee(
