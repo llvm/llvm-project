@@ -951,11 +951,25 @@ float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
                                     const MachineBlockFrequencyInfo *MBFI,
                                     const MachineBasicBlock *MBB,
                                     ProfileSummaryInfo *PSI) {
-  float Weight = isDef + isUse;
   const auto *MF = MBB->getParent();
+  return getSpillWeight(isDef, isUse, MBFI, MBB,
+                        PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI));
+}
+
+float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
+                                    const MachineBlockFrequencyInfo *MBFI,
+                                    const MachineInstr &MI, bool OptForSize) {
+  return getSpillWeight(isDef, isUse, MBFI, MI.getParent(), OptForSize);
+}
+
+float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
+                                    const MachineBlockFrequencyInfo *MBFI,
+                                    const MachineBasicBlock *MBB,
+                                    bool OptForSize) {
+  float Weight = isDef + isUse;
   // When optimizing for size we only consider the codesize impact of spilling
   // the register, not the runtime impact.
-  if (PSI && llvm::shouldOptimizeForSize(MF, PSI, MBFI))
+  if (OptForSize)
     return Weight;
   return Weight * MBFI->getBlockFreqRelativeToEntryBlock(MBB);
 }

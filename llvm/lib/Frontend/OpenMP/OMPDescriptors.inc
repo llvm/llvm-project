@@ -2024,7 +2024,7 @@
     descriptor::Modifier(
       "map-type-modifier",
       {
-        {45, {{{Property::MapTypeModifying, Property::Unique}}, {Clause::OMPC_map}}},
+        {45, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
         {50, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
         {51, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
         {52, {{{Property::MapTypeModifying, Property::Repeatable}}, {Clause::OMPC_map}}},
