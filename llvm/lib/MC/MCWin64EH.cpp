@@ -8,13 +8,18 @@
 
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Win64EH.h"
 
@@ -287,6 +292,107 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
                                              context), 4);
 }
 
+// Unwind info is emitted at .seh_endproc time, before section layout has run.
+// MCExpr::evaluateAsAbsolute can normally fold a difference of two labels in
+// the same function even without layout because instruction fragments have
+// known sizes, but it gives up if the labels are separated by a fragment
+// whose pre-layout size is indeterminate -- most notably alignment padding
+// emitted by an .align/.p2align directive inside an inline asm blob.
+//
+// However, alignment padding is deterministic before layout once the
+// fragment's offset from the start of the section is known: layout computes
+// fragment offsets starting at zero and the section's own alignment has
+// already been raised to cover the directive (see
+// MCObjectStreamer::emitValueToAlignment), so the linker cannot perturb it.
+// Walk the section's fragments from the beginning, tracking exact offsets and
+// resolving alignment padding the same way MCAssembler::relaxAlign will at
+// layout time. Bail out (returning std::nullopt) on any fragment whose size
+// cannot be known exactly yet, e.g. relaxable instructions on x86.
+//
+// This runs only when evaluateAsAbsolute has already failed, so the extra
+// walk does not cost anything for ordinary functions.
+static std::optional<int64_t> GetPreLayoutAbsDifference(const MCAssembler &Asm,
+                                                        const MCSymbol *LHS,
+                                                        const MCSymbol *RHS) {
+  if (Asm.hasLayout())
+    return std::nullopt;
+  if (LHS->isUndefined() || RHS->isUndefined() || LHS->isVariable() ||
+      RHS->isVariable())
+    return std::nullopt;
+  const MCFragment *FA = LHS->getFragment();
+  const MCFragment *FB = RHS->getFragment();
+  if (!FA || !FB)
+    return std::nullopt;
+  const MCSection *Sec = FA->getParent();
+  // Note: on COFF, sections never use subsections and there is no linker
+  // relaxation, so fragment offsets computed from the head of the fragment
+  // list are final. Check isLinkerRelaxable() anyway, out of paranoia.
+  if (!Sec || Sec != FB->getParent() || Sec->isLinkerRelaxable())
+    return std::nullopt;
+  if (!Asm.getWriter().isSymbolRefDifferenceFullyResolved(*LHS, *RHS,
+                                                          /*InSet=*/false))
+    return std::nullopt;
+
+  const MCAsmBackend &Backend = Asm.getBackend();
+  uint64_t Offset = 0;
+  std::optional<uint64_t> OffA, OffB;
+  for (const MCFragment &F : *Sec) {
+    // Symbol offsets are relative to the start of their fragment's fixed
+    // contents, which is where the fragment itself starts.
+    if (&F == FA)
+      OffA = Offset + LHS->getOffset();
+    if (&F == FB)
+      OffB = Offset + RHS->getOffset();
+    if (OffA && OffB)
+      return (int64_t)*OffA - (int64_t)*OffB;
+
+    switch (F.getKind()) {
+    case MCFragment::FT_Data:
+      Offset += F.getSize();
+      break;
+    case MCFragment::FT_Align: {
+      Offset += F.getFixedSize();
+      // Mirror MCAssembler::relaxAlign. COFF targets never implement
+      // MCAsmBackend::relaxAlign (that is a linker-relaxation feature), so
+      // that step is skipped here.
+      uint64_t Padding = offsetToAlignment(Offset, F.getAlignment());
+      if (F.hasAlignEmitNops()) {
+        unsigned MinNop = Backend.getMinimumNopSize();
+        // Padding mod MinNop cycles with a period of at most MinNop
+        // iterations; if no multiple is reachable, layout itself would not
+        // terminate, but don't rely on that here.
+        for (unsigned I = 0; Padding % MinNop; ++I) {
+          if (I >= MinNop)
+            return std::nullopt;
+          Padding += F.getAlignment().value();
+        }
+      }
+      if (Padding > F.getAlignMaxBytesToEmit())
+        Padding = 0;
+      Offset += Padding;
+      break;
+    }
+    case MCFragment::FT_Fill: {
+      auto &FF = cast<MCFillFragment>(F);
+      int64_t NumValues;
+      if (!FF.getNumValues().evaluateAsAbsolute(NumValues, Asm) ||
+          NumValues < 0)
+        return std::nullopt;
+      Offset += NumValues * FF.getValueSize();
+      break;
+    }
+    case MCFragment::FT_Nops:
+      Offset += cast<MCNopsFragment>(F).getNumBytes();
+      break;
+    default:
+      // Anything else (relaxable instructions, LEB, org, ...) has an
+      // indeterminate size before layout.
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
+}
+
 static std::optional<int64_t>
 GetOptionalAbsDifference(const MCAssembler &Assembler, const MCSymbol *LHS,
                          const MCSymbol *RHS) {
@@ -296,10 +402,11 @@ GetOptionalAbsDifference(const MCAssembler &Assembler, const MCSymbol *LHS,
                               MCSymbolRefExpr::create(RHS, Context), Context);
   // It should normally be possible to calculate the length of a function
   // at this point, but it might not be possible in the presence of certain
-  // unusual constructs, like an inline asm with an alignment directive.
+  // unusual constructs, like an inline asm with an alignment directive; fall
+  // back to an exact pre-layout fragment walk that can resolve those.
   int64_t value;
   if (!Diff->evaluateAsAbsolute(value, Assembler))
-    return std::nullopt;
+    return GetPreLayoutAbsDifference(Assembler, LHS, RHS);
   return value;
 }
 
@@ -719,8 +826,15 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
       if (MaybePrologSize) {
         Streamer.emitInt8(*MaybePrologSize & 0xFF);
       } else {
-        // Emit as 1-byte fixup for the low byte.
-        EmitAbsDifference(Streamer, Info->PrologEnd, Info->Begin);
+        // Can't evaluate at this point — emit a fixup that masks the
+        // difference down to the low byte so it can't overflow the 1-byte
+        // field once the value is known.
+        const MCExpr *Diff = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(Info->PrologEnd, Context),
+            MCSymbolRefExpr::create(Info->Begin, Context), Context);
+        const MCExpr *LowByte = MCBinaryExpr::createAnd(
+            Diff, MCConstantExpr::create(0xFF, Context), Context);
+        Streamer.emitValue(LowByte, 1);
       }
     } else {
       EmitAbsDifference(Streamer, Info->PrologEnd, Info->Begin);
@@ -2353,13 +2467,11 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
     report_fatal_error("FuncletOrFuncEnd not set");
   } else {
     // FIXME: GetAbsDifference tries to compute the length of the function
-    // immediately, before the whole file is emitted, but in general
-    // that's impossible: the size in bytes of certain assembler directives
-    // like .align and .fill is not known until the whole file is parsed and
-    // relaxations are applied. Currently, GetAbsDifference fails with a fatal
-    // error in that case. (We mostly don't hit this because inline assembly
-    // specifying those directives is rare, and we don't normally try to
-    // align loops on AArch64.)
+    // immediately, before the whole file is emitted. Fixed-size fragments,
+    // alignment padding and constant .fill directives can be resolved at
+    // this point (see GetPreLayoutAbsDifference), but anything with a truly
+    // layout-dependent size (which cannot occur in AArch64 code) cannot, and
+    // GetAbsDifference fails with a fatal error in that case.
     //
     // There are two potential approaches to delaying the computation. One,
     // we could emit something like ".word (endfunc-beginfunc)/4+0x10800000",
