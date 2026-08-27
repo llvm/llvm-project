@@ -20543,26 +20543,22 @@ will be an integer pointer type).
 This is an overloaded intrinsic.
 
 ```
-declare <8 x i32> @llvm.vector.broadcast.v8i32.v2i32(<2 x i32> %vec)
 declare <vscale x 16 x i8> @llvm.vector.broadcast.nxv16i8.v16i8(<16 x i8> %vec)
 ```
 
 ##### Overview:
 
-The '`llvm.vector.broadcast.*`' intrinsic repeatedly copies the elements of
-the source vector, in order, until the result vector is filled. For example,
-broadcasting `<A, B>` to a vector with eight elements produces
-`<A, B, A, B, A, B, A, B>`.
-This intrinsic works for both fixed and scalable vectors but the recommended way
-to express this operation for fixed-width vectors is still to use a
-`shufflevector`, as that may allow for more optimization opportunities.
+The '`llvm.vector.broadcast.*`' intrinsic repeatedly copies the elements of the
+source fixed-length vector, in order, until the result scalable vector is
+filled. For example, broadcasting `<A, B>` produces a scalable vector containing
+`vscale` copies of `<A, B>`.
 
 ##### Arguments:
 
-The argument and result must be vectors with the same element type. A scalable
-argument cannot be broadcast to a fixed-width result. At runtime, the element
-count of the result must be a multiple of the element count of the argument.
-Otherwise, the results is a {ref}`poison value <poisonvalues>`.
+The argument must be a fixed-length vector and the result must be a scalable
+vector with the same element type and minimum element count. In other words,
+the result type is formed by adding `vscale x` in front of the argument type's
+element count.
 
 #### '`llvm.vector.reverse`' Intrinsic
 

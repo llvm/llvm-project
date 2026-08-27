@@ -6847,29 +6847,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::vector_broadcast: {
     auto *ResultTy = cast<VectorType>(Call.getType());
     auto *ArgTy = cast<VectorType>(Call.getArgOperand(0)->getType());
-    ElementCount ResultEC = ResultTy->getElementCount();
-    ElementCount InputEC = ArgTy->getElementCount();
 
     Check(ResultTy->getElementType() == ArgTy->getElementType(),
           "vector_broadcast argument and result must have the same element "
           "type.",
           &Call);
-
-    if (InputEC.isScalable() && ResultEC.isFixed()) {
-      CheckFailed("vector_broadcast cannot broadcast a scalable vector to a "
-                  "fixed-width vector.",
-                  &Call);
-      break;
-    }
-
-    // We can only compare element counts when the types are both scalable or
-    // non-scalable.
-    if (ResultEC.isScalable() == InputEC.isScalable()) {
-      Check(ResultEC.isKnownMultipleOf(InputEC),
-            "vector_broadcast result element count must be a multiple of the "
-            "argument element count.",
-            &Call);
-    }
+    Check(ArgTy->getElementCount().isFixed(),
+          "vector_broadcast argument must be a fixed-length vector.", &Call);
+    Check(ResultTy->getElementCount().isScalable(),
+          "vector_broadcast result must be a scalable vector.", &Call);
+    Check(ArgTy->getElementCount().getKnownMinValue() ==
+              ResultTy->getElementCount().getKnownMinValue(),
+          "vector_broadcast argument and result must have the same minimum "
+          "element count.",
+          &Call);
     break;
   }
   case Intrinsic::vector_insert: {

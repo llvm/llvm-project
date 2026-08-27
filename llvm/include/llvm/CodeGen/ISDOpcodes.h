@@ -637,9 +637,8 @@ enum NodeType {
   VECTOR_INTERLEAVE,
 
   /// VECTOR_BROADCAST(SRC_SUBVEC)
-  /// Duplicate a vector in a larger vector. The element count of the result
-  /// type is expected to be a multiple of the input vector's at runtime. If it
-  /// is not, the result is poison.
+  /// Duplicate a fixed-length vector in a scalable vector with the same minimum
+  /// element count.
   VECTOR_BROADCAST,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,

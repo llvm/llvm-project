@@ -2774,8 +2774,7 @@ foreach n = 2...8 in {
 }
 
 // vector_broadcast( SrcVector )
-// Broadcast a vector in a larger one.
-// This is the equivalent of a vector splat for vector types.
+// Broadcast a fixed-length vector to its "vscale x" equivalent.
 def int_vector_broadcast : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                  [llvm_anyvector_ty],
                                                  [IntrNoMem, IntrSpeculatable]>;
