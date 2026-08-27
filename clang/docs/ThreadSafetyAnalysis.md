@@ -504,6 +504,21 @@ determine success additionally warns where the analysis loses track of it --
 at a merge with a path that does not hold the capability, or at the end of
 the function -- since the capability may then be leaked.
 
+A success value that is a specific integer constant rather than a bool
+(`TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning `int`;
+enumerators and constexpr values work the same way) keys the acquisition to
+that exact return value. A branch comparing the result against a constant, or
+a `switch` case label, then resolves each capability by value: `result == 2`
+proves `mu2` was acquired and `mu1` was not, the other edge of that comparison
+proves only that `mu2` was not acquired (the result may still be any other
+value), and a `switch` default with all codes listed proves no capability was
+acquired. A plain truthiness branch (`if (result)`) still resolves every
+capability by its success value's truthiness. A boolean success value (`true`)
+keeps promising acquisition on any nonzero result, and the same capability
+listed under a falsy and a specific truthy code of an integer result is *not*
+"acquired regardless" -- a result matching neither code acquires nothing --
+so it stays a conditional acquisition resolved by value.
+
 ```c++
 Mutex mu;
 int a GUARDED_BY(mu);

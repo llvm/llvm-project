@@ -37,6 +37,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -1988,6 +1989,19 @@ class ThreadSafetyAnalyzer {
   struct TryAcquireCaps {
     CapExprSet TruthyExclusive, TruthyShared;
     CapExprSet FalsyExclusive, FalsyShared;
+    /// Capabilities whose attribute keys the acquisition to a specific
+    /// nonzero integer success code (a constant that is not a bool, e.g.
+    /// TRY_ACQUIRE(2, mu)): one entry per attribute per capability.
+    /// Falsy values need no entry -- zero is the only falsy integer, so a
+    /// falsy attribute's success region is exact already -- and a boolean
+    /// success value promises acquisition on any nonzero result
+    /// (TruthyAny).
+    llvm::SmallVector<std::pair<CapabilityExpr, llvm::APSInt>, 2> ExactCodes;
+    /// Capabilities with a truthy success value that is not a specific
+    /// integer code (`true`, or a value the constant evaluator cannot
+    /// compute): acquired on any nonzero result, so codes recorded for
+    /// the same capability by other attributes do not bound its region.
+    CapExprSet TruthyAny;
     /// Capabilities reconcileTryAcquireCaps() moved out of the polarity
     /// groups: acquired regardless of the call's result. handleCall()
     /// turns them into unconditional acquisitions, with the diagnostic.
@@ -2001,6 +2015,36 @@ class ThreadSafetyAnalyzer {
     /// re-materializes a lost fact for a call that tracked one to lose.
     bool TracksFacts = false;
   };
+  /// The success-value profile of the attributes naming one capability
+  /// among those recorded for a try-acquire call: the polarities that
+  /// report acquisition, and the exact truthy success region -- the
+  /// recorded codes, or any nonzero result (AnyNonzero: a boolean success
+  /// value, or no recorded codes).
+  struct CapProfile {
+    bool Truthy = false, Falsy = false, AnyNonzero = false;
+    SmallVector<llvm::APSInt, 2> Codes;
+
+    /// Whether pinning the result to the nonzero value \p V proves the
+    /// acquisition: the value lies in the truthy success region.
+    bool containsValue(const llvm::APSInt &V) const {
+      return Truthy &&
+             (AnyNonzero || llvm::any_of(Codes, [&](const llvm::APSInt &C) {
+                return llvm::APSInt::isSameValue(C, V);
+              }));
+    }
+    /// Whether the whole success region -- both polarities' -- is ruled
+    /// out by \p Excluded (a predicate for one value), proving the
+    /// capability was not acquired.
+    bool
+    regionExcludedBy(llvm::function_ref<bool(const llvm::APSInt &)> Excluded)
+        const {
+      return (!Truthy || (!AnyNonzero && llvm::all_of(Codes, Excluded))) &&
+             (!Falsy || Excluded(llvm::APSInt::get(0)));
+    }
+  };
+  static CapProfile getCapProfile(const TryAcquireCaps &Caps,
+                                  const CapabilityExpr &Probe);
+
   // Maps each try-acquire call to its attributes' capabilities, recorded
   // before the lockset walk.
   llvm::SmallDenseMap<const Expr *, TryAcquireCaps> TryAcquireCapsMap;
@@ -2035,7 +2079,7 @@ public:
                             til::SExpr *Self = nullptr,
                             TryAcquireCaps *NoExprCaps = nullptr);
   void recordTryAcquireCalls(const PostOrderCFGView *SortedGraph);
-  void reconcileTryAcquireCaps(TryAcquireCaps &Caps);
+  void reconcileTryAcquireCaps(const Expr *Exp, TryAcquireCaps &Caps);
 
   /// Intermediate state for decodeTrylockBranch.
   struct TrylockDecode {
@@ -2051,6 +2095,12 @@ public:
     /// The second of two structurally identical try-acquire calls whose
     /// merged result the condition branches on; null otherwise.
     const CallExpr *MergedCall = nullptr;
+    /// Set when the condition compares the (possibly stored) result
+    /// against a specific nonzero integer constant: the compared value.
+    /// The condition is then `result == CmpValue`, inverted per Negate;
+    /// resolveTrylockEdge() resolves the comparison's edges against each
+    /// capability's exact success codes.
+    std::optional<llvm::APSInt> CmpValue;
   };
 
   void decodeTrylockCond(const Stmt *Cond, LocalVarContext C, TrylockDecode &D);
@@ -2085,6 +2135,11 @@ public:
     /// capability's resolution holds only if it did (TrylockEdge's
     /// Ambiguous).
     bool AmbiguousTrue = false, AmbiguousFalse = false;
+    /// The branched-on value is the call's result itself -- no negation
+    /// or comparison in between -- so an exact value an edge carries (a
+    /// switch case label, a default edge's exclusions) applies to the
+    /// result and refines the capabilities' resolutions on that edge.
+    bool ValueIsResult = false;
     /// The call's capabilities for each branch direction.
     SmallVector<TrylockEdgeCap, 1> OnTrue, OnFalse;
   };
@@ -2524,8 +2579,9 @@ static bool getStaticBooleanValue(const Expr *E, bool &TCond,
 
 // If Cond can be traced back to a try-acquire function call, the `D` variable
 // will be populated with the call and with how the branched-on value relates
-// to its result -- negation (e.g. `if (!mu.tryLock(...))`), a merge with a
-// constant, or a merge of two structurally identical calls.
+// to its result -- negation (e.g. `if (!mu.tryLock(...))`), a comparison
+// against a constant, a merge with a constant, or a merge of two structurally
+// identical calls.
 void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
                                              LocalVarContext C,
                                              TrylockDecode &D) {
@@ -2633,8 +2689,14 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
         D2.MergedCall = nullptr;
         decodeTrylockCond(NonConst2, NonConstCtx2, D2);
         const CallExpr *Second = D2.TrylockCall;
+        auto SameCmp = [](const std::optional<llvm::APSInt> &A,
+                          const std::optional<llvm::APSInt> &B) {
+          return A.has_value() == B.has_value() &&
+                 (!A || llvm::APSInt::isSameValue(*A, *B));
+        };
         if (Second && Second != First && !D2.MergedCall &&
-            D2.Negate == D.Negate && D2.AmbiguousCond == D.AmbiguousCond) {
+            D2.Negate == D.Negate && D2.AmbiguousCond == D.AmbiguousCond &&
+            SameCmp(D2.CmpValue, D.CmpValue)) {
           // The stored expressions were compared above, but they may be
           // hops (a copy through another variable) that resolved to calls
           // of their own: the identical-resolution premise holds for the
@@ -2679,19 +2741,37 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
       if (BOP->getOpcode() == BO_NE)
         D.Negate = !D.Negate;
 
+      // Comparison against a constant. A falsy constant inverts the
+      // condition (`x == 0` is `!x`) and a truthy bool (`x == true`) is
+      // `x` itself; a specific nonzero integer constant additionally pins
+      // the compared value (CmpValue) -- the constant evaluator computes
+      // it, so enumerators and constexpr expressions pin like literals --
+      // and getEdgeLockset() resolves the edges of the comparison against
+      // each capability's exact success codes.
       bool TCond = false;
+      const Expr *ConstSide = nullptr, *VarSide = nullptr;
       if (getStaticBooleanValue(BOP->getRHS(), TCond, *ASTCtx)) {
-        if (!TCond)
-          D.Negate = !D.Negate;
-        return decodeTrylockCond(BOP->getLHS(), C, D);
+        ConstSide = BOP->getRHS();
+        VarSide = BOP->getLHS();
+      } else if (getStaticBooleanValue(BOP->getLHS(), TCond, *ASTCtx)) {
+        ConstSide = BOP->getLHS();
+        VarSide = BOP->getRHS();
+      } else {
+        return;
       }
-      TCond = false;
-      if (getStaticBooleanValue(BOP->getLHS(), TCond, *ASTCtx)) {
-        if (!TCond)
-          D.Negate = !D.Negate;
-        return decodeTrylockCond(BOP->getRHS(), C, D);
+      if (Expr::EvalResult ER;
+          TCond &&
+          !ConstSide->IgnoreParenImpCasts()->getType()->isBooleanType() &&
+          !ConstSide->isValueDependent() &&
+          ConstSide->EvaluateAsInt(ER, *ASTCtx)) {
+        if (D.CmpValue)
+          return; // A second value comparison determines nothing.
+        D.CmpValue = ER.Val.getInt();
+        return decodeTrylockCond(VarSide, C, D);
       }
-      return;
+      if (!TCond)
+        D.Negate = !D.Negate;
+      return decodeTrylockCond(VarSide, C, D);
     }
     if (BOP->getOpcode() == BO_LAnd) {
       // LHS must have been evaluated in a different block.
@@ -2855,10 +2935,28 @@ static bool getTrySuccessValue(ASTContext &Ctx, const Expr *BrE) {
   return BrE && getStaticBooleanValue(BrE, Result, Ctx) && Result;
 }
 
+ThreadSafetyAnalyzer::CapProfile
+ThreadSafetyAnalyzer::getCapProfile(const TryAcquireCaps &Caps,
+                                    const CapabilityExpr &Probe) {
+  CapProfile P;
+  auto MatchesAny = [&](const CapExprSet &S) {
+    return llvm::any_of(
+        S, [&](const CapabilityExpr &CE) { return Probe.matches(CE); });
+  };
+  P.Truthy = MatchesAny(Caps.TruthyExclusive) || MatchesAny(Caps.TruthyShared);
+  P.Falsy = MatchesAny(Caps.FalsyExclusive) || MatchesAny(Caps.FalsyShared);
+  for (const auto &[CE, Code] : Caps.ExactCodes)
+    if (Probe.matches(CE))
+      P.Codes.push_back(Code);
+  P.AnyNonzero = MatchesAny(Caps.TruthyAny) || P.Codes.empty();
+  return P;
+}
+
 /// If the terminator of \p Block branches on the result of a call to a
-/// function annotated with try_acquire_capability (possibly negated or stored
-/// in a local variable), return the capabilities recorded for the call, each
-/// with the resolution every branch direction proves for it.
+/// function annotated with try_acquire_capability (possibly negated,
+/// compared, merged, or stored in a local variable), return the capabilities
+/// recorded for the call, each with the resolution every branch direction
+/// proves for it.
 const ThreadSafetyAnalyzer::TrylockBranch &
 ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
   const unsigned BlockID = Block->getBlockID();
@@ -2891,21 +2989,60 @@ ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
   Result.TrylockCall2 = D.MergedCall;
   if (D.AmbiguousCond)
     (*D.AmbiguousCond ? Result.AmbiguousTrue : Result.AmbiguousFalse) = true;
+  // A comparison against a truthy constant on a provably boolean result
+  // is just a truthiness test (`b == 1` is `b`): resolve it as the plain
+  // branch, which also restores the exact failure edge (`!= 1` on a
+  // boolean result is `== 0`).
+  if (D.CmpValue && D.TrylockCall->isKnownToHaveBooleanValue())
+    D.CmpValue.reset();
+  Result.ValueIsResult = !D.Negate && !D.CmpValue;
+
+  // Per capability, on the direction where the condition reports the
+  // result (Direct) and its inverse:
+  //  * A branch comparing against a specific code (`result == code`)
+  //    proves success for a capability whose region contains the value
+  //    and failure for every other capability of the call: the declared
+  //    codes discriminate the outcomes. The inverse direction only
+  //    excludes that one value: failure for a capability whose whole
+  //    region is that value, and nothing more -- in particular NOT that
+  //    the result is falsy (a result of another code takes that edge with
+  //    its capability still acquired).
+  //  * A plain branch resolves by the success values' polarity: a
+  //    capability keyed to specific codes still succeeds on a truthy edge
+  //    -- its codes are nonzero, and `if (x)` on a two-code capability
+  //    must keep resolving -- while one acquired under both polarities
+  //    resolves only where an exact value does.
   if (auto MapIt = TryAcquireCapsMap.find(D.TrylockCall);
       MapIt != TryAcquireCapsMap.end()) {
     const TryAcquireCaps &Caps = MapIt->second;
-    auto AddCaps = [&](const CapExprSet &CapSet, LockKind LK, bool Success) {
+    auto AddCaps = [&](const CapExprSet &CapSet, LockKind LK) {
       for (const CapabilityExpr &CE : CapSet) {
-        (Success != D.Negate ? Result.OnTrue : Result.OnFalse)
-            .push_back({CE, LK, CapResolution::Success});
-        (Success != D.Negate ? Result.OnFalse : Result.OnTrue)
-            .push_back({CE, LK, CapResolution::Failure});
+        const CapProfile P = getCapProfile(Caps, CE);
+        CapResolution Direct, Inverse;
+        if (D.CmpValue) {
+          auto IsCmpValue = [&](const llvm::APSInt &C) {
+            return llvm::APSInt::isSameValue(C, *D.CmpValue);
+          };
+          Direct = P.containsValue(*D.CmpValue) ? CapResolution::Success
+                                                : CapResolution::Failure;
+          Inverse = P.regionExcludedBy(IsCmpValue) ? CapResolution::Failure
+                                                   : CapResolution::Unknown;
+        } else {
+          Direct = P.Truthy ? (P.Falsy ? CapResolution::Unknown
+                                       : CapResolution::Success)
+                            : CapResolution::Failure;
+          Inverse = P.Falsy ? CapResolution::Success : CapResolution::Failure;
+        }
+        (D.Negate ? Result.OnFalse : Result.OnTrue)
+            .push_back({CE, LK, Direct});
+        (D.Negate ? Result.OnTrue : Result.OnFalse)
+            .push_back({CE, LK, Inverse});
       }
     };
-    AddCaps(Caps.TruthyExclusive, LK_Exclusive, /*Success=*/true);
-    AddCaps(Caps.TruthyShared, LK_Shared, /*Success=*/true);
-    AddCaps(Caps.FalsyExclusive, LK_Exclusive, /*Success=*/false);
-    AddCaps(Caps.FalsyShared, LK_Shared, /*Success=*/false);
+    AddCaps(Caps.TruthyExclusive, LK_Exclusive);
+    AddCaps(Caps.TruthyShared, LK_Shared);
+    AddCaps(Caps.FalsyExclusive, LK_Exclusive);
+    AddCaps(Caps.FalsyShared, LK_Shared);
   }
   // A fully-reconciled call (every capability moved to the unconditional
   // groups) records nothing here: it creates no try-held facts, and a
@@ -2913,6 +3050,23 @@ ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
   if (Result.OnTrue.empty() && Result.OnFalse.empty())
     return CacheMiss();
   return TerminatorTrylockCache[BlockID] = std::move(Result);
+}
+
+/// Decode a truthy success value's exact integer code: the specific result
+/// value on which the attribute reports acquisition, computed by the
+/// constant evaluator (so enumerators and constexpr expressions key the
+/// same way as literals). A bool-typed value (`true`) instead promises
+/// acquisition on any nonzero result, and a value the evaluator cannot
+/// compute falls back the same way; both return nullopt.
+static std::optional<llvm::APSInt> getTrySuccessCode(ASTContext &Ctx,
+                                                     const Expr *BrE) {
+  if (!BrE || BrE->isValueDependent() ||
+      BrE->IgnoreParenImpCasts()->getType()->isBooleanType())
+    return std::nullopt;
+  Expr::EvalResult ER;
+  if (!BrE->EvaluateAsInt(ER, Ctx) || ER.Val.getInt() == 0)
+    return std::nullopt;
+  return ER.Val.getInt();
 }
 
 /// What an edge out of a terminator implies about the branched-on value.
@@ -2925,9 +3079,15 @@ enum class EdgeValue {
 };
 
 /// Determine the truthiness of a switch condition along the edge to
-/// \p CaseBlock.
-static EdgeValue getSwitchEdgeValue(ASTContext &Ctx, const SwitchStmt *SW,
-                                    const CFGBlock *CaseBlock) {
+/// \p CaseBlock. Also reports the exact value information the edge
+/// carries: a single-value nonzero case label pins the condition to that
+/// value (\p EqValue), and the default edge excludes every listed label
+/// range (\p Excluded); getEdgeLockset() resolves these against each
+/// capability's exact success codes.
+static EdgeValue getSwitchEdgeValue(
+    ASTContext &Ctx, const SwitchStmt *SW, const CFGBlock *CaseBlock,
+    std::optional<llvm::APSInt> &EqValue,
+    SmallVectorImpl<std::pair<llvm::APSInt, llvm::APSInt>> &Excluded) {
   // A case label pins the value -- but only a label belonging to this
   // switch: the implicit fall-out successor can itself be a labeled
   // statement, e.g. a case of an enclosing switch that the fall-out edge
@@ -2955,6 +3115,8 @@ static EdgeValue getSwitchEdgeValue(ASTContext &Ctx, const SwitchStmt *SW,
       return EdgeValue::False;
     if (Lo <= 0 && Hi >= 0)
       return EdgeValue::Unknown; // A GNU case range spanning zero and nonzero.
+    if (Lo == Hi)
+      EqValue = Lo; // A single nonzero label pins the value exactly.
     return EdgeValue::True;
   }
 
@@ -2971,6 +3133,7 @@ static EdgeValue getSwitchEdgeValue(ASTContext &Ctx, const SwitchStmt *SW,
     auto [Lo, Hi] = GetCaseRange(CS);
     ZeroListed |= Lo <= 0 && Hi >= 0;
     OneListed |= Lo <= 1 && Hi >= 1;
+    Excluded.push_back({Lo, Hi});
   }
   // Not just bool-typed conditions: an int-typed condition provably 0/1
   // (e.g. a comparison in C) derives the same way.
@@ -2984,8 +3147,10 @@ static EdgeValue getSwitchEdgeValue(ASTContext &Ctx, const SwitchStmt *SW,
 
 /// Decode what the edge from \p PredBlock to \p CurrBlock proves about
 /// conditional capabilities, selected by the truthiness the edge assigns
-/// to the branched-on value. An edge that does not determine the value
-/// reports no branch at all: the facts stay untouched either way.
+/// to the branched-on value -- or, for a switch edge that pins the exact
+/// branched-on value, by that value (see decodeTrylockBranch()). An edge
+/// that does not determine the value reports no branch at all: the facts
+/// stay untouched either way.
 ThreadSafetyAnalyzer::TrylockEdge
 ThreadSafetyAnalyzer::resolveTrylockEdge(const CFGBlock *PredBlock,
                                          const CFGBlock *CurrBlock) {
@@ -2994,12 +3159,32 @@ ThreadSafetyAnalyzer::resolveTrylockEdge(const CFGBlock *PredBlock,
   if (!B.TrylockCall)
     return Edge;
 
-  // Determine the truthiness of the branched-on value along this edge.
+  // Determine the truthiness of the branched-on value along this edge. An
+  // if/loop terminator has a true and a false successor; each case label
+  // of a switch pins the value. An edge that does not determine the value
+  // reports no branch at all: the facts stay untouched either way.
+  //
+  // Alongside truthiness, collect the exact value information the edge
+  // carries about the branched-on value: the value it pins it to
+  // (EqValue), or the ranges it excludes it from (Excluded).
   EdgeValue CondVal = EdgeValue::Unknown;
+  std::optional<llvm::APSInt> EqValue;
+  SmallVector<std::pair<llvm::APSInt, llvm::APSInt>, 4> Excluded;
   if (const auto *SW =
           dyn_cast_if_present<SwitchStmt>(PredBlock->getTerminatorStmt())) {
-    CondVal = getSwitchEdgeValue(
-        B.TrylockCall->getCalleeDecl()->getASTContext(), SW, CurrBlock);
+    CondVal =
+        getSwitchEdgeValue(B.TrylockCall->getCalleeDecl()->getASTContext(),
+                           SW, CurrBlock, EqValue, Excluded);
+    // The labels name the switched-on value, whose exact values apply to
+    // the result only when the branched-on value is the result itself: a
+    // negation or folded comparison in between (`switch (!ok)`,
+    // `switch (r == 2)`) makes them say nothing exact about the result --
+    // its truthiness still resolves through the capabilities' decoded
+    // per-direction resolutions.
+    if (!B.ValueIsResult) {
+      EqValue.reset();
+      Excluded.clear();
+    }
   } else {
     bool TrueEdge = false, FalseEdge = false;
     int i = 0;
@@ -3016,18 +3201,51 @@ ThreadSafetyAnalyzer::resolveTrylockEdge(const CFGBlock *PredBlock,
     Edge.Infeasible = true;
     return Edge;
   }
-  if (CondVal == EdgeValue::Unknown)
+  if (CondVal == EdgeValue::Unknown && Excluded.empty())
     return Edge;
 
   Edge.TrylockCall = B.TrylockCall;
   // If the branched-on variable merges the call's result with a constant,
   // an edge matching the constant's truthiness does not prove the call
   // executed.
-  Edge.Ambiguous = CondVal == EdgeValue::True ? B.AmbiguousTrue
-                                              : B.AmbiguousFalse;
-  const SmallVectorImpl<TrylockEdgeCap> &Dir =
-      CondVal == EdgeValue::True ? B.OnTrue : B.OnFalse;
-  Edge.Caps.assign(Dir.begin(), Dir.end());
+  Edge.Ambiguous = CondVal == EdgeValue::True    ? B.AmbiguousTrue
+                   : CondVal == EdgeValue::False ? B.AmbiguousFalse
+                                                 : false;
+
+  // Resolve one capability by the exact value the edge carries; nullopt
+  // when that information does not decide it, in which case the caller
+  // falls back to the capability's truthiness resolution.
+  auto ResolveByValue =
+      [&](const CapabilityExpr &Probe) -> std::optional<CapResolution> {
+    const auto CapsIt = TryAcquireCapsMap.find(B.TrylockCall);
+    assert(CapsIt != TryAcquireCapsMap.end() &&
+           "resolved capabilities without a record at their call");
+    if (CapsIt == TryAcquireCapsMap.end())
+      return std::nullopt;
+    const CapProfile P = getCapProfile(CapsIt->second, Probe);
+    if (EqValue)
+      return P.containsValue(*EqValue) ? CapResolution::Success
+                                       : CapResolution::Failure;
+    auto ValueExcluded = [&](const llvm::APSInt &V) {
+      return llvm::any_of(Excluded, [&](const auto &R) {
+        return llvm::APSInt::compareValues(V, R.first) >= 0 &&
+               llvm::APSInt::compareValues(V, R.second) <= 0;
+      });
+    };
+    if (P.regionExcludedBy(ValueExcluded))
+      return CapResolution::Failure;
+    return std::nullopt; // Beyond the exclusions, the truthiness decides.
+  };
+  for (auto [TC, FC] : llvm::zip_equal(B.OnTrue, B.OnFalse)) {
+    std::optional<CapResolution> R;
+    if (EqValue || !Excluded.empty())
+      R = ResolveByValue(TC.Cap);
+    if (!R)
+      R = CondVal == EdgeValue::True    ? TC.Resolution
+          : CondVal == EdgeValue::False ? FC.Resolution
+                                        : CapResolution::Unknown;
+    Edge.Caps.push_back({TC.Cap, TC.Kind, *R});
+  }
   return Edge;
 }
 
@@ -3069,21 +3287,19 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   // correct even on an ambiguous edge.)
   const bool Ambiguous = Edge.Ambiguous;
 
-  // Whether a capability is acquired on this edge: it is re-identified by
-  // matching against the capabilities recorded at the call, with the
-  // resolution this edge proves for each (resolveTrylockEdge()).
-  auto FactSucceedsHere = [&](const CapabilityExpr &FE) {
-    assert(!Edge.Caps.empty() &&
-           "try-acquire fact without capabilities recorded at its call");
-    if (llvm::any_of(Edge.Caps, [&](const TrylockEdgeCap &EC) {
-          return EC.Resolution == CapResolution::Success && FE.matches(EC.Cap);
-        }))
-      return true;
-    assert(llvm::any_of(
-               Edge.Caps,
-               [&](const TrylockEdgeCap &EC) { return FE.matches(EC.Cap); }) &&
-           "try-acquire fact matches neither polarity's capabilities");
-    return false;
+  // A fact is re-identified by matching against the capabilities recorded
+  // at the call, with the resolution this edge proves for each
+  // (resolveTrylockEdge()): every fact originating from the call was
+  // created from that record.
+  auto ResolveFact = [&](const CapabilityExpr &FE) {
+    const auto *EC = llvm::find_if(Edge.Caps, [&](const TrylockEdgeCap &C) {
+      return FE.matches(C.Cap);
+    });
+    assert(EC != Edge.Caps.end() &&
+           "try-acquire fact does not match any capability of its call");
+    if (EC == Edge.Caps.end())
+      return CapResolution::Unknown;
+    return EC->Resolution;
   };
 
   // This edge resolves every fact originating from this call, each with its
@@ -3120,7 +3336,7 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
       // whose paths carry a truthy result; nor can an ambiguous edge be
       // ruled out at all, since it does not prove the call executed.
       if (!Ambiguous && !FE.weak() && !FE.spentTryLock() &&
-          FactSucceedsHere(!FE))
+          ResolveFact(!FE) == CapResolution::Success)
         Infeasible = true;
       continue;
     }
@@ -3128,13 +3344,16 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
       ResolvedTryFacts.push_back(&FE);
       continue;
     }
-    if (!FactSucceedsHere(FE))
+    if (ResolveFact(FE) == CapResolution::Failure)
       Infeasible = true;
   }
   if (Infeasible)
     return true;
   for (const FactEntry *FE : ResolvedTryFacts) {
-    if (FactSucceedsHere(*FE)) {
+    const CapResolution R = ResolveFact(*FE);
+    if (R == CapResolution::Unknown)
+      continue; // The edge does not decide this capability's outcome.
+    if (R == CapResolution::Success) {
       // An ambiguous edge does not prove the call executed, so it cannot
       // promote the fact; it stays try-held, like an unresolved condition.
       if (Ambiguous)
@@ -3194,6 +3413,9 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   if (auto MapIt = TryAcquireCapsMap.find(Exp);
       !Ambiguous && MapIt != TryAcquireCapsMap.end() &&
       MapIt->second.TracksFacts) {
+    // Success is decided per capability (a value edge can prove one
+    // code's acquisition and another code's failure at once); the
+    // per-capability resolution picks the ones this edge proves acquired.
     for (const TrylockEdgeCap &EC : Edge.Caps) {
       if (EC.Resolution != CapResolution::Success)
         continue;
@@ -3943,14 +4165,21 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   // are not tracked conditionally.
   if (Exp && Scp.shouldIgnore() && TryCaps) {
     TryCaps->TracksFacts = true;
+    // A capability recorded under both polarities (specific-code truthy
+    // plus falsy, kept conditional by the reconciliation above) tracks
+    // one fact.
     for (const auto &M : TryCaps->TruthyExclusive)
       Analyzer->addTryLock(FSet, M, LK_Exclusive, Loc, Exp);
     for (const auto &M : TryCaps->FalsyExclusive)
-      Analyzer->addTryLock(FSet, M, LK_Exclusive, Loc, Exp);
+      if (!TryCaps->TruthyExclusive.contains(M) &&
+          !TryCaps->TruthyShared.contains(M))
+        Analyzer->addTryLock(FSet, M, LK_Exclusive, Loc, Exp);
     for (const auto &M : TryCaps->TruthyShared)
       Analyzer->addTryLock(FSet, M, LK_Shared, Loc, Exp);
     for (const auto &M : TryCaps->FalsyShared)
-      Analyzer->addTryLock(FSet, M, LK_Shared, Loc, Exp);
+      if (!TryCaps->TruthyExclusive.contains(M) &&
+          !TryCaps->TruthyShared.contains(M))
+        Analyzer->addTryLock(FSet, M, LK_Shared, Loc, Exp);
   }
 
   if (!Scp.shouldIgnore()) {
@@ -4710,11 +4939,29 @@ static bool neverReturns(const CFGBlock *B) {
 /// the result, so it keeps only the guarantee that holds either way: an
 /// unconditional shared hold. handleCall() adds the unconditional groups
 /// to the lockset, with the diagnostic.
-void ThreadSafetyAnalyzer::reconcileTryAcquireCaps(TryAcquireCaps &Caps) {
+/// "Regardless" is a truthiness conclusion, so it holds only when the
+/// two polarities cover the result's domain: always for a boolean
+/// result, and for an integer result whose truthy side promises any
+/// nonzero value. A truthy side keyed to specific integer codes does
+/// not cover -- TRY_ACQUIRE(1, mu) TRY_ACQUIRE(0, mu) on an int result
+/// acquires mu iff the result is 0 or 1, and a result of 2 acquires
+/// nothing -- so the capability stays conditional, recorded under both
+/// polarities, and the edges resolve it by value (resolveTrylockEdge()).
+void ThreadSafetyAnalyzer::reconcileTryAcquireCaps(const Expr *Exp,
+                                                   TryAcquireCaps &Caps) {
+  const auto *CE = dyn_cast_if_present<CallExpr>(Exp);
+  const bool BoolResult = CE && CE->isKnownToHaveBooleanValue();
+  auto CoversResultDomain = [&](const CapabilityExpr &M) {
+    if (BoolResult || Caps.TruthyAny.contains(M))
+      return true;
+    return llvm::none_of(Caps.ExactCodes,
+                         [&](const auto &P) { return P.first.matches(M); });
+  };
   CapExprSet Regardless;
   auto CollectAcquiredOnFailureToo = [&](const CapExprSet &Truthy) {
     for (const auto &M : Truthy)
-      if (Caps.FalsyExclusive.contains(M) || Caps.FalsyShared.contains(M))
+      if ((Caps.FalsyExclusive.contains(M) || Caps.FalsyShared.contains(M)) &&
+          CoversResultDomain(M))
         Regardless.push_back_nodup(M);
   };
   CollectAcquiredOnFailureToo(Caps.TruthyExclusive);
@@ -4752,12 +4999,20 @@ void ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp,
     const auto *A = dyn_cast<TryAcquireCapabilityAttr>(At);
     if (!A)
       continue;
-    bool Success = getTrySuccessValue(D->getASTContext(), A->getSuccessValue());
+    ASTContext &Ctx = D->getASTContext();
+    bool Success = getTrySuccessValue(Ctx, A->getSuccessValue());
     CapExprSet &Group =
         Success ? (A->isShared() ? Caps.TruthyShared : Caps.TruthyExclusive)
                 : (A->isShared() ? Caps.FalsyShared : Caps.FalsyExclusive);
     CapExprSet AttrCaps;
     getMutexIDs(AttrCaps, A, Exp, D, Self);
+    // A truthy success value that is a specific integer constant keys
+    // the acquisition to that exact result value; a boolean one
+    // promises it on any nonzero result (getTrySuccessCode()). The
+    // decode folds `== code` comparisons, and the edges resolve case
+    // labels and label exclusions, against the recorded codes.
+    std::optional<llvm::APSInt> Code =
+        getTrySuccessCode(Ctx, A->getSuccessValue());
     for (const auto &M : AttrCaps) {
       Group.push_back_nodup(M);
       // A recorded CallExpr always tracks facts (handleCall() creates them
@@ -4767,9 +5022,15 @@ void ThreadSafetyAnalyzer::recordTryAcquireCall(const Expr *Exp,
       // are created instead.
       if (isa_and_nonnull<CallExpr>(Exp))
         Caps.TracksFacts = true;
+      if (!Success)
+        continue;
+      if (Code)
+        Caps.ExactCodes.emplace_back(M, *Code);
+      else
+        Caps.TruthyAny.push_back_nodup(M);
     }
   }
-  reconcileTryAcquireCaps(Caps);
+  reconcileTryAcquireCaps(Exp, Caps);
 }
 
 /// Populate TryAcquireCapsMap for every try-acquire CallExpr in the
