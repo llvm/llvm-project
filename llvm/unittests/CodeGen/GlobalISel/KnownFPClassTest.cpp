@@ -1353,9 +1353,9 @@ TEST_F(AArch64GISelMITest, TestFPClassFRemSelf_KnownFiniteNonZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  // 2.0 % 2.0 = 0.0 exactly — NaN is impossible since 2.0 is finite and
+  // 2.0 % 2.0 = +0.0 exactly. NaN is impossible since 2.0 is finite and
   // nonzero.
-  EXPECT_EQ(fcZero, Known.getKnownFPClasses());
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassShuffleVec) {
