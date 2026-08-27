@@ -1240,15 +1240,14 @@ static void DiagnoseInvalidFlagEnumOperators(Sema &S, const EnumDecl *ED) {
       break;
     case OR_No_Viable_Function: {
       S.Diag(ED->getLocation(), diag::warn_flag_enum_operator)
-          << ED->getName() << Name.getAsString() << OR_No_Viable_Function
-          << false << "";
+          << ED << Name << OR_No_Viable_Function << false << "";
       auto Cands = CandidateSet.CompleteCandidates(S, OCD_AllCandidates, Args);
       CandidateSet.NoteCandidates(S, Args, Cands, Name.getAsString());
       break;
     }
     case OR_Ambiguous: {
       S.Diag(ED->getLocation(), diag::warn_flag_enum_operator)
-          << ED->getName() << Name.getAsString() << OR_Ambiguous << false << "";
+          << ED << Name << OR_Ambiguous << false << "";
       auto Cands =
           CandidateSet.CompleteCandidates(S, OCD_AmbiguousCandidates, Args);
       CandidateSet.NoteCandidates(S, Args, Cands, Name.getAsString());
@@ -1256,12 +1255,11 @@ static void DiagnoseInvalidFlagEnumOperators(Sema &S, const EnumDecl *ED) {
     }
     case OR_Deleted: {
       StringLiteral *Msg = Best->Function->getDeletedMessage();
-
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(ED->getLocation(),
                               S.PDiag(diag::warn_flag_enum_operator)
-                                  << ED->getName() << Name.getAsString()
-                                  << OR_Deleted << (Msg != nullptr)
+                                  << ED << Name << OR_Deleted
+                                  << (Msg != nullptr)
                                   << (Msg ? Msg->getString() : "")),
           S, OCD_AllCandidates, Args, Name.getAsString());
       break;
