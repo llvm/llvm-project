@@ -229,7 +229,8 @@ bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
-static bool isZIP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts, unsigned &WhichResult) {
+static bool isZIP_v_undef_Mask(ArrayRef<int> M, unsigned NumElts,
+                               unsigned &WhichResult) {
   if (NumElts % 2 != 0)
     return false;
   WhichResult = (M[0] == 0 ? 0 : 1);
@@ -252,8 +253,8 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder)
-      && !isZIP_v_undef_Mask(ShuffleMask, NumElts,  WhichResult))
+  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder) &&
+      !isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
