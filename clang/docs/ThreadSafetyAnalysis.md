@@ -476,7 +476,15 @@ as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
 
 The capability is tracked as conditionally ("try") held from the call until a
 recognized branch on its return value: on the success path the capability is
-held, on the failure path it is not. A conditionally held capability does not
+held, on the failure path it is not. A branch is recognized when it tests the
+call's result directly or through a local variable, including a variable that
+merges the result with an earlier constant initializer
+(`bool ok = false; if (...) ok = mu.TryLock(); if (ok) ...`) -- when the
+variable is true despite the false initializer, the try-acquire must have
+succeeded. The branch resolves only a still-tracked acquisition: a fact the
+analysis already lost -- at a merge with a path that does not hold the
+capability, or around an intervening loop -- is not revived, and the checked
+region stays conservatively diagnosed. A conditionally held capability does not
 satisfy requirements such as `GUARDED_BY` or `REQUIRES` and it also violates
 `LOCKS_EXCLUDED` and negative requirements (`REQUIRES(!mu)`). Acquiring a
 non-reentrant lock again before branching on the return value warns that it may

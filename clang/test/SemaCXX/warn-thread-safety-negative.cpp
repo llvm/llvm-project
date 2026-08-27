@@ -172,6 +172,23 @@ public:
 
   void needsNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu);
 
+  // A fact dropped at an unrelated join is re-materialized by the later
+  // branch on the stored result (no negative fact contradicts it), and the
+  // acquisition checks still run only at the call (one diagnostic at the
+  // TryLock, none at the branches -- re-materializing is not a new
+  // acquisition).
+  void tryLockReaddChecksOnce(bool c, bool d) {
+    bool b = false;
+    if (c)
+      b = mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}} \
+                        // expected-note{{mutex acquired here}}
+    if (d) {            // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+      a = 0;            // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    }
+    if (b) {
+      mu.Unlock();
+    }
+  }
 
   // A failed try-acquire proves the negative capability on its failure
   // edge: the acquire there needs no further evidence.
