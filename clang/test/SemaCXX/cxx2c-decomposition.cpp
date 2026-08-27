@@ -155,3 +155,128 @@ constexpr auto [e1] = E(true);
 //   expected-note@-1 {{in implicit initialization of binding declaration 'e1'}} \
 //   expected-note@-1 {{reference to temporary is not a constant expression}} \
 //   expected-note@#E-get {{temporary created here}}
+
+namespace GH170991 {
+// Test case: struct
+struct S { int x{}; };
+
+template <typename = void>
+void f() {
+  constexpr S s;
+  constexpr auto [x] = s;
+  constexpr auto [...xs] = s;
+}
+
+template void f<void>();
+
+// Test case: array
+template <typename = void>
+void g() {
+  constexpr int a[2]{};
+  constexpr auto [x, y] = a;
+  constexpr auto [...xs] = a;
+}
+
+template void g<void>();
+} // namespace GH170991
+
+// Test case: tuple-like
+namespace GH170991 {
+struct TupleLikeFnTemplate {
+  int x = 100;
+  char y = 'D';
+
+  // If a search for the name get in the scope of E [...] the initializer is e.get<i>()
+  template <unsigned I>
+  constexpr decltype(auto) get() const {
+    if constexpr (I == 0) return 500;
+    else return y;
+  }
+};
+
+struct TupleLikeADL {
+  int x = 100;
+  char y = 'D';
+};
+
+// Otherwise, the initializer is get<i>(e)[...]
+template <unsigned I>
+constexpr decltype(auto) get(const TupleLikeADL &t) {
+  if constexpr (I == 0) return 500;
+  else return t.y;
+}
+} // namespace GH170991
+
+namespace std {
+template <>
+struct tuple_size<const GH170991::TupleLikeFnTemplate> {
+  static constexpr unsigned value = 2;
+};
+template <>
+struct tuple_size<const GH170991::TupleLikeADL> {
+  static constexpr unsigned value = 2;
+};
+
+template <>
+struct tuple_element<0, const GH170991::TupleLikeFnTemplate> {
+  using type = int;
+};
+template <>
+struct tuple_element<0, const GH170991::TupleLikeADL> {
+  using type = int;
+};
+
+template <>
+struct tuple_element<1, const GH170991::TupleLikeFnTemplate> {
+  using type = char;
+};
+template <>
+struct tuple_element<1, const GH170991::TupleLikeADL> {
+  using type = char;
+};
+} // namespace std
+
+namespace GH170991 {
+template <typename = void>
+void h() {
+  constexpr TupleLikeFnTemplate fn_template{};
+  constexpr auto [x, y] = fn_template;
+  static_assert(x == 500); // Proves tuple_like.get<0>(tuple-like decomposition) was called
+  static_assert(y == 'D');
+  constexpr auto [...xs] = fn_template;
+  static_assert(xs...[0] == 500);
+  static_assert(xs...[1] == 'D');
+
+  constexpr TupleLikeADL adl{};
+  constexpr auto [x2, y2] = adl;
+  static_assert(x2 == 500); // Proves get<0>(tuple-like decomposition) was called
+  static_assert(y2 == 'D');
+  constexpr auto [...xs2] = adl;
+  static_assert(xs2...[0] == 500);
+  static_assert(xs2...[1] == 'D');
+}
+
+template void h<void>();
+
+// Test case: vector type(GCC generic vector type)
+typedef int v4si __attribute__ ((vector_size (8)));
+
+template <typename = void>
+void i() {
+  constexpr v4si vector_type{};
+  constexpr auto [x, y] = vector_type;
+  constexpr auto [...xs] = vector_type;
+}
+
+template void i<void>();
+
+// Test case: complex type
+template <typename = void>
+void j() {
+  constexpr _Complex float complex_type{};
+  constexpr auto [x, y] = complex_type;
+  constexpr auto [...xs] = complex_type;
+}
+
+template void j<void>();
+} // namespace GH170991
