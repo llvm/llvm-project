@@ -112,6 +112,7 @@ enum ActionType {
   GenRISCVVectorHeader,
   GenRISCVVectorBuiltins,
   GenRISCVVectorBuiltinCG,
+  GenRISCVVectorBuiltinCIRCG,
   GenRISCVVectorBuiltinSema,
   GenRISCVSiFiveVectorBuiltins,
   GenRISCVSiFiveVectorBuiltinCG,
@@ -333,6 +334,9 @@ cl::opt<ActionType> Action(
                    "Generate riscv_vector_builtins.inc for clang"),
         clEnumValN(GenRISCVVectorBuiltinCG, "gen-riscv-vector-builtin-codegen",
                    "Generate riscv_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVVectorBuiltinCIRCG,
+                   "gen-riscv-vector-builtin-cir-codegen",
+                   "Generate riscv_vector_builtin_cir_cg.inc for clang"),
         clEnumValN(GenRISCVVectorBuiltinSema, "gen-riscv-vector-builtin-sema",
                    "Generate riscv_vector_builtin_sema.inc for clang"),
         clEnumValN(GenRISCVSiFiveVectorBuiltins,
@@ -650,6 +654,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenRISCVVectorBuiltinCG:
     EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVVectorBuiltinCIRCG:
+    EmitRVVBuiltinCIRCG(Records, OS);
     break;
   case GenRISCVVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
