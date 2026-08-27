@@ -27,12 +27,6 @@ define void @callbr_simple() {
 ; CHECK:       [[INDIRECT]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 callbr:
@@ -72,41 +66,15 @@ define void @callbr_many_indirect(i1 %c) {
 ; CHECK-NEXT:    callbr void asm "", "!i,!i,!i,!i"()
 ; CHECK-NEXT:            to label %[[FT:.*]] [label %[[I0:.*]], label %[[I1:.*]], label %[[I2:.*]], label %[[I3:.*]]]
 ; CHECK:       [[FT]]:
-; CHECK-NEXT:    br label %[[FLOW:.*]]
-; CHECK:       [[I0]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[I1]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[I2]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[I3]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[ISLAND_SEL1:%.*]] = phi i1 [ false, %[[FT]] ], [ true, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[ISLAND_SEL2:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ true, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[ISLAND_SEL3:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ true, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[ISLAND_SEL3_INV:%.*]] = xor i1 [[ISLAND_SEL3]], true
-; CHECK-NEXT:    [[ISLAND_SEL2_INV:%.*]] = xor i1 [[ISLAND_SEL2]], true
-; CHECK-NEXT:    [[ISLAND_SEL1_INV:%.*]] = xor i1 [[ISLAND_SEL1]], true
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW4:.*]], label %[[FLOW8:.*]]
-; CHECK:       [[FLOW4]]:
-; CHECK-NEXT:    br i1 [[ISLAND_SEL1_INV]], label %[[FLOW5:.*]], label %[[FLOW9:.*]]
-; CHECK:       [[FLOW8]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[FLOW5]]:
-; CHECK-NEXT:    br i1 [[ISLAND_SEL2_INV]], label %[[FLOW6:.*]], label %[[FLOW10:.*]]
-; CHECK:       [[FLOW9]]:
-; CHECK-NEXT:    br label %[[FLOW8]]
-; CHECK:       [[FLOW6]]:
-; CHECK-NEXT:    br i1 [[ISLAND_SEL3_INV]], label %[[FLOW7:.*]], label %[[FLOW11:.*]]
-; CHECK:       [[FLOW10]]:
-; CHECK-NEXT:    br label %[[FLOW9]]
-; CHECK:       [[FLOW7]]:
-; CHECK-NEXT:    br label %[[FLOW11]]
-; CHECK:       [[FLOW11]]:
-; CHECK-NEXT:    br label %[[FLOW10]]
+; CHECK:       [[I0]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[I1]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[I2]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[I3]]:
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -132,14 +100,14 @@ define void @callbr_shared_target() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[ENTRY_TARGET_FT1:.*]] [label %[[ENTRY_TARGET_FT1]]]
-; CHECK:       [[FLOW2:.*]]:
-; CHECK-NEXT:    br label %[[FT:.*]]
-; CHECK:       [[FT]]:
+; CHECK:       [[FLOW:.*]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ENTRY_TARGET_FT1]]:
-; CHECK-NEXT:    br label %[[FLOW2]]
+; CHECK-NEXT:    br label %[[FLOW]]
 ;
 entry:
   callbr void asm "", "!i"() to label %ft [label %ft]
@@ -301,33 +269,52 @@ join:
   ret void
 }
 
-; Three callbr edges to the same block: the collapse defers the edge/phi cleanup
-; until the last duplicate is redirected onto the single forwarder.
-define void @callbr_shared_target_thrice(i1 %d) {
-; CHECK-LABEL: define void @callbr_shared_target_thrice(
-; CHECK-SAME: i1 [[D:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; Three callbr edges to the same block: the collapse defers the edge and phi
+; cleanup until the last duplicate is redirected onto the single forwarder. The
+; target has a second, non-callbr predecessor so that its phi cannot be folded
+; away and the two dropped incomings stay observable.
+define i32 @callbr_shared_target_thrice(i1 %c, i1 %d) {
+; CHECK-LABEL: define i32 @callbr_shared_target_thrice(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_INV:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br i1 [[C_INV]], label %[[W:.*]], label %[[FLOW:.*]]
+; CHECK:       [[W]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, %[[W]] ], [ true, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRE:.*]], label %[[X:.*]]
+; CHECK:       [[PRE]]:
 ; CHECK-NEXT:    callbr void asm "", "!i,!i"()
-; CHECK-NEXT:            to label %[[ENTRY_TARGET_X:.*]] [label %[[ENTRY_TARGET_X]], label %[[ENTRY_TARGET_X]]]
-; CHECK:       [[FLOW:.*]]:
-; CHECK-NEXT:    br label %[[X:.*]]
+; CHECK-NEXT:            to label %[[PRE_TARGET_X:.*]] [label %[[PRE_TARGET_X]], label %[[PRE_TARGET_X]]]
+; CHECK:       [[FLOW1:.*]]:
+; CHECK-NEXT:    br label %[[X]]
 ; CHECK:       [[X]]:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 9, %[[FLOW]] ], [ 7, %[[FLOW1]] ]
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[P]], 1
 ; CHECK-NEXT:    br i1 [[D]], label %[[A:.*]], label %[[JOIN:.*]]
 ; CHECK:       [[A]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[ENTRY_TARGET_X]]:
-; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK-NEXT:    ret i32 [[S]]
+; CHECK:       [[PRE_TARGET_X]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
 ;
 entry:
+  br i1 %c, label %pre, label %w
+w:
+  br label %x
+pre:
   callbr void asm "", "!i,!i"() to label %x [label %x, label %x]
 x:
+  %p = phi i32 [ 7, %pre ], [ 7, %pre ], [ 7, %pre ], [ 9, %w ]
+  %s = add i32 %p, 1
   br i1 %d, label %a, label %join
 a:
   br label %join
 join:
-  ret void
+  %q = phi i32 [ %s, %a ], [ %s, %x ]
+  ret i32 %q
 }
 
 ; A shared target whose phi cannot be folded away: an extra non-callbr
@@ -506,12 +493,10 @@ define void @callbr_kill_unreachable_with_successor(i1 %c) {
 ; CHECK-NEXT:            to label %[[CONT:.*]] [label %[[DEAD:.*]]]
 ; CHECK:       [[DEAD]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[CONT]]:
 ; CHECK-NEXT:    br label %[[FLOW:.*]]
+; CHECK:       [[CONT]]:
+; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -536,13 +521,11 @@ define void @callbr_two_unreachable_targets() {
 ; CHECK-NEXT:    br label %[[FLOW:.*]]
 ; CHECK:       [[DEAD1]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[DEAD2]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -602,19 +585,11 @@ define void @callbr_in_non_callbr(i1 %c) {
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[FALLTHROUGH:.*]] [label %[[INDIRECT:.*]]]
 ; CHECK:       [[FALLTHROUGH]]:
-; CHECK-NEXT:    br label %[[FLOW:.*]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[INDIRECT]]:
-; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[NOCALLBR]]:
 ; CHECK-NEXT:    br label %[[FLOW2]]
-; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[FLOW3]]
-; CHECK:       [[FLOW3]]:
-; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -761,15 +736,9 @@ define void @callbr_regions_around(i1 %c, i1 %d, i1 %e) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW1]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW2:.*]], label %[[POST:.*]]
-; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    br label %[[POST]]
-; CHECK:       [[POST]]:
 ; CHECK-NEXT:    br i1 [[E_INV]], label %[[POST2:.*]], label %[[FLOW:.*]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %[[POST2]] ], [ true, %[[POST]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %[[POST2]] ], [ true, %[[FLOW1]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[POST1:.*]], label %[[POSTCONT:.*]]
 ; CHECK:       [[POST1]]:
 ; CHECK-NEXT:    br label %[[POSTCONT]]
@@ -826,12 +795,6 @@ define void @callbr_pred_from_subregion(i1 %c, i1 %d) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1082,12 +1045,6 @@ define void @callbr_as_region_exit(i1 %c) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1170,26 +1127,18 @@ define void @callbr_target_is_callbr() {
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[FT1:.*]] [label %[[IND1:.*]]]
 ; CHECK:       [[FT1]]:
-; CHECK-NEXT:    br label %[[FLOW:.*]]
-; CHECK:       [[IND1]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[IND0]]:
 ; CHECK-NEXT:    br label %[[FLOW2:.*]]
-; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT1]] ], [ false, %[[IND1]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[FLOW3]]
-; CHECK:       [[FLOW3]]:
+; CHECK:       [[IND1]]:
+; CHECK-NEXT:    br label %[[FLOW2]]
+; CHECK:       [[IND0]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[ISLAND_SEL4:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_CB1]] ], [ false, %[[IND0]] ]
-; CHECK-NEXT:    br i1 [[ISLAND_SEL4]], label %[[CB1]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_CB1]] ], [ false, %[[IND0]] ]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[CB1]], label %[[FLOW2]]
+; CHECK:       [[FLOW2]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ENTRY_TARGET_CB1]]:
-; CHECK-NEXT:    br label %[[FLOW2]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ;
 entry:
   callbr void asm "", "!i"() to label %cb1 [label %ind0]
@@ -1219,13 +1168,7 @@ define i32 @callbr_phi_uses_return_value(i1 %c) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[JOIN:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[JOIN]]
-; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[V]], %[[FLOW]] ], [ 0, %[[FLOW1]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[V]], %[[FT]] ], [ 0, %[[IND]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
@@ -1245,19 +1188,14 @@ define i32 @callbr_return_value_in_fallthrough() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[V:%.*]] = callbr i32 asm "", "=r,!i"()
 ; CHECK-NEXT:            to label %[[ENTRY_TARGET_FT:.*]] [label %[[IND:.*]]]
-; CHECK:       [[FT:.*]]:
+; CHECK:       [[ENTRY_TARGET_FT]]:
 ; CHECK-NEXT:    [[W:%.*]] = add i32 [[V]], 1
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[IND]]:
-; CHECK-NEXT:    br label %[[FLOW:.*]]
-; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[FT]], label %[[EXIT]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 0, %[[FLOW]] ], [ [[W]], %[[FT]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[W]], %[[ENTRY_TARGET_FT]] ], [ 0, %[[IND]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
-; CHECK:       [[ENTRY_TARGET_FT]]:
-; CHECK-NEXT:    br label %[[FLOW]]
 ;
 entry:
   %v = callbr i32 asm "", "=r,!i"() to label %ft [label %ind]
@@ -1281,19 +1219,11 @@ define void @callbr_self_loop_fallthrough(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[IND:.*]]]
-; CHECK:       [[FLOW2:.*]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW3:.*]], label %[[CB]]
+; CHECK-NEXT:            to label %[[CB]] [label %[[FLOW3:.*]]]
 ; CHECK:       [[FLOW3]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[CB_TARGET_CB]]:
-; CHECK-NEXT:    br label %[[FLOW2]]
-; CHECK:       [[IND]]:
-; CHECK-NEXT:    br label %[[FLOW2]]
 ;
 entry:
   br label %cb
@@ -1313,18 +1243,11 @@ define void @callbr_self_loop_indirect(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[FT:.*]] [label %[[CB_TARGET_CB:.*]]]
-; CHECK:       [[EXIT:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[CB_TARGET_CB]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[FT1:.*]], label %[[CB]]
+; CHECK-NEXT:            to label %[[FT1:.*]] [label %[[CB]]]
 ; CHECK:       [[FT1]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[CB_TARGET_CB]]:
-; CHECK-NEXT:    br label %[[EXIT]]
 ;
 entry:
   br label %cb
@@ -1346,17 +1269,9 @@ define void @callbr_self_loop_exit_is_ret(i1 %c) {
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[CB_TARGET_RET:.*]]]
-; CHECK:       [[FLOW:.*]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[CB_TARGET_RET]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[RET:.*]], label %[[CB]]
+; CHECK-NEXT:            to label %[[CB]] [label %[[RET:.*]]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[CB_TARGET_CB]]:
-; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[CB_TARGET_RET]]:
-; CHECK-NEXT:    br label %[[FLOW]]
 ;
 entry:
   br label %cb
@@ -1515,16 +1430,10 @@ define void @callbr_inside_loop(i1 %c) {
 ; CHECK-NEXT:    br label %[[FLOW:.*]]
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
-; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[LATCH:.*]]
-; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[C_INV]], %[[LATCH]] ], [ true, %[[HEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[C_INV]], %[[FLOW]] ], [ true, %[[HEADER]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[HEADER]]
-; CHECK:       [[LATCH]]:
+; CHECK:       [[FLOW]]:
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

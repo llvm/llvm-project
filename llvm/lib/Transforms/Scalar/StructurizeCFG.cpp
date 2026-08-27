@@ -76,6 +76,44 @@ static bool isIsland(const BasicBlock *BB) {
   return isa<CallBrInst>(BB->getTerminator());
 }
 
+/// True if \p R is an island whose targets already form a structured fan: the
+/// island is the region entry, and every other node is a non-region straigt arm
+/// that is entered only from the island and leaves only to the region exit.
+///
+/// Such a region is already a well-formed single-entry/single-exit selection,
+/// so structurization has nothing to fix. Running the island transform on it
+/// would still interpose a forwarder per edge, materialize the target choice
+/// as an i1 phi and re-dispatch it through a ladder of 2-way branches: more
+/// blocks and more code expressing the same control flow.
+///
+/// Islands with several edges to one target are excluded: collapsing those
+/// edges is not an optimization but a requirement since nothing else in the
+/// pass maintains a target's phis accross multiple edges from the same
+/// predecessor, so they always take the normal path.
+static bool isAlreadyStructuredIsland(Region *R) {
+  BasicBlock *Entry = R->getEntry();
+  BasicBlock *Exit = R->getExit();
+  if (!Exit || !isIsland(Entry))
+    return false;
+
+  SmallPtrSet<const BasicBlock *, 4> Seen;
+  const Instruction *Term = Entry->getTerminator();
+  for (unsigned I = 0, E = Term->getNumSuccessors(); I != E; ++I)
+    if (!Seen.insert(Term->getSuccessor(I)).second)
+      return false;
+
+  for (RegionNode *N : R->elements()) {
+    if (N->isSubRegion())
+      return false;
+    BasicBlock *BB = N->getNodeAs<BasicBlock>();
+    if (BB == Entry)
+      continue;
+    if (BB->getUniquePredecessor() != Entry || BB->getSingleSuccessor() != Exit)
+      return false;
+  }
+  return true;
+}
+
 /// True if BB is an unreachable target block: it is terminated by
 /// `unreachable`, or (after exit unification) it is marked by an
 /// @llvm.amdgcn.unreachable call.
@@ -1722,7 +1760,7 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
                          const TargetTransformInfo *TTI) {
-  if (R->isTopLevelRegion())
+  if (R->isTopLevelRegion() || isAlreadyStructuredIsland(R))
     return false;
 
   this->DT = DT;
