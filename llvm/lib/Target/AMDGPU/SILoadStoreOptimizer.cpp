@@ -2686,6 +2686,16 @@ SILoadStoreOptimizer::collectMergeableInsts(
         LLVM_DEBUG(dbgs() << "Skip tbuffer with unknown format: " << MI);
         continue;
       }
+    } else if (InstClass == MIMG) {
+      // Do not merge MIMG instructions with tfe or lwe enabled.
+      // TFE/LWE add a status result that the image merge path does not model.
+      const auto *TFEOp = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+      if (TFEOp && TFEOp->getImm())
+        continue;
+
+      const auto *LWEOp = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+      if (LWEOp && LWEOp->getImm())
+        continue;
     }
 
     CombineInfo CI;
