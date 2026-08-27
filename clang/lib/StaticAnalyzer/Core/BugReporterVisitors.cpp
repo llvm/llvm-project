@@ -2907,6 +2907,7 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
                                       bool IsSameFieldName) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
+  OtherEx = OtherEx->IgnoreParenCasts();
 
   if (isa<GNUNullExpr, ObjCBoolLiteralExpr, CXXBoolLiteralExpr, IntegerLiteral,
           FloatingLiteral>(Ex)) {
@@ -2965,17 +2966,9 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       }
     }
 
-    // This literal is compared against OtherEx, and the note describes that
-    // operand ("Assuming 'x' is equal to ..."), so print the literal the way
-    // that operand would hold it. Otherwise an unsigned 4294967295 would
-    // render as -1.
-    bool IsSigned = IL->getType()->isSignedIntegerOrEnumerationType();
-    if (OtherEx) {
-      QualType OtherTy = OtherEx->IgnoreParenCasts()->getType();
-      if (OtherTy->isIntegralOrEnumerationType())
-        IsSigned = OtherTy->isSignedIntegerOrEnumerationType();
-    }
-    IL->getValue().print(Out, IsSigned);
+    bool IsAnySigned = Ex->getType()->isSignedIntegerOrEnumerationType() ||
+                       OtherEx->getType()->isSignedIntegerOrEnumerationType();
+    IL->getValue().print(Out, /*isSigned=*/IsAnySigned);
     return false;
   }
 
