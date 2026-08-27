@@ -4983,10 +4983,10 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // Otherwise, this is a pointer subtraction.
 
   // Do the raw subtraction part.
-  llvm::Value *LHS
-    = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS
-    = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  llvm::Value *LHS =
+      Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  llvm::Value *RHS =
+      Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
