@@ -1415,10 +1415,9 @@ namespace {
         if (!SavedExnVar) {
           CGF.EmitNoreturnRuntimeCallOrInvoke(RethrowFn, {});
         } else {
-          CGF.EmitRuntimeCallOrInvoke(
-              RethrowFn,
-              CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
-                                            CGF.getPointerAlign()));
+          CGF.EmitRuntimeCallOrInvoke(RethrowFn, CGF.Builder.CreateAlignedLoad(
+                                                     CGF.Int8PtrTy, SavedExnVar,
+                                                     CGF.getPointerAlign()));
           CGF.Builder.CreateUnreachable();
         }
 
