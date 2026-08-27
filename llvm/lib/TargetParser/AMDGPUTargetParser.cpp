@@ -43,6 +43,7 @@ struct GPUInfo {
   StringTable::Offset FamilyName;
   StringTable::Offset BaseName; // The canonical device name for a variant.
   uint8_t MaxWavesPerEU;
+  uint32_t MaxHWAddressableLocalMemorySize;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -428,6 +429,16 @@ unsigned AMDGPU::getSGPRAllocGranule(Triple::SubArchType SubArch) {
   if (Version.Major >= 8)
     return 16;
   return 8;
+}
+
+unsigned AMDGPU::getMaxHWAddressableLocalMemorySize(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->MaxHWAddressableLocalMemorySize : 32768;
+}
+
+unsigned
+AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
+  return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {

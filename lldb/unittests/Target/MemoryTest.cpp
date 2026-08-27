@@ -406,6 +406,45 @@ TEST_F(MemoryTest, TestL1Cache) {
   expect_l1({{0x9100, 0x80, 0xCC}});
 }
 
+TEST_F(MemoryTest, TestReadStopsAtAnInvalidRange) {
+  ArchSpec arch("arm64-apple-macosx");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  MemoryCache &cache = process->GetMemoryCache();
+  const lldb::addr_t base = 0xE000;
+
+  cache.AddInvalidRange(base + 16, 16);
+  process->SetMaxReadSize(4096);
+  process->SetFiller(0xBB);
+
+  // Only the bytes below the invalid range are served, and the read reports
+  // the failure.
+  Status error;
+  std::vector<uint8_t> buf(64, 0);
+  EXPECT_EQ(cache.Read(base, buf.data(), buf.size(), error), 16u);
+  EXPECT_TRUE(error.Fail());
+  for (size_t i = 0; i < 16; ++i)
+    EXPECT_EQ(buf[i], 0xBB) << "byte " << i;
+
+  // A read starting inside the range has nothing to serve.
+  Status inside_error;
+  std::vector<uint8_t> inside(8, 0);
+  EXPECT_EQ(cache.Read(base + 20, inside.data(), inside.size(), inside_error),
+            0u);
+  EXPECT_TRUE(inside_error.Fail());
+}
+
 TEST_F(MemoryTest, TestReadInteger) {
   ArchSpec arch("x86_64-apple-macosx-");
 

@@ -391,10 +391,10 @@ public:
   /// folded into the addressing mode of a load/store. If AccessType is null,
   /// then the resulting target type based off of PointeeType will be used as an
   /// approximation.
-  LLVM_ABI InstructionCost
-  getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands, Type *AccessType = nullptr,
-             TargetCostKind CostKind = TCK_SizeAndLatency) const;
+  LLVM_ABI InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                                      ArrayRef<const Value *> Operands,
+                                      TargetCostKind CostKind,
+                                      Type *AccessType = nullptr) const;
 
   /// Describe known properties for a set of pointers.
   struct PointersChainInfo {

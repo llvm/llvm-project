@@ -44,8 +44,7 @@ void CompilerGeneratedNamesConversionPass::runOnOperation() {
   llvm::DenseMap<mlir::StringAttr, mlir::FlatSymbolRefAttr> remappings;
 
   auto processOp = [&](mlir::Operation &op) {
-    auto symName = op.getAttrOfType<mlir::StringAttr>(
-        mlir::SymbolTable::getSymbolAttrName());
+    auto symName = mlir::cast<mlir::SymbolOpInterface>(&op).getNameAttr();
     auto deconstructedName = fir::NameUniquer::deconstruct(symName);
     if (deconstructedName.first != fir::NameUniquer::NameKind::NOT_UNIQUED &&
         !fir::NameUniquer::isExternalFacingUniquedName(deconstructedName)) {

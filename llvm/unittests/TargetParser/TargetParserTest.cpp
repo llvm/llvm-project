@@ -3070,6 +3070,38 @@ TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
   EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
+  // The addressable cap is a fixed hardware property, independent of how many
+  // SIMDs a work-group runs on.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch600),
+      32768u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch700),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch900),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch950),
+      163840u);
+  // gfx10+ addresses 64 KiB even though the physical block is 128 KiB.
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1030),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::AMDGPUSubArch1250),
+      327680u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX900),
+            65536u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX950),
+            163840u);
+  EXPECT_EQ(AMDGPU::getMaxHWAddressableLocalMemorySize(AMDGPU::GK_GFX1250),
+            327680u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
