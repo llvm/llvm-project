@@ -274,7 +274,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
   // Ensure the collapsed loop has an attribute indicating the number
   // of collapsed loops
   auto collapseAttr =
-      forOp->getAttrOfType<IntegerAttr>(getCollapseCountAttrName());
+      forOp->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName());
   ASSERT_TRUE(collapseAttr);
   EXPECT_EQ(collapseAttr.getInt(), 2);
 
@@ -311,7 +311,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
   EXPECT_TRUE(hasNestedFor);
 
   // No collapse happened, so no collapse_count attribute is expected
-  EXPECT_FALSE(forOp->hasAttr(getCollapseCountAttrName()));
+  EXPECT_FALSE(forOp->hasDiscardableAttr(getCollapseCountAttrName()));
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {

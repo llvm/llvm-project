@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ExecutorProcessInfo.h"
-#include "executor/TargetDetails.h"
-#include "orc-rt/Math.h"
+#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "bedrock/TargetDetails.h"
+#include "orc-rt/bedrock/Math.h"
 #include "gtest/gtest.h"
 
 #include <algorithm>

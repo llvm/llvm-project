@@ -7,22 +7,22 @@ define fp128 @f128_direct(fp128 %num) nounwind {
 ; SPARC32:       ! %bb.0:
 ; SPARC32-NEXT:    save %sp, -144, %sp
 ; SPARC32-NEXT:    ldd [%i0], %f0
-; SPARC32-NEXT:    ldd [%i0+8], %f4
+; SPARC32-NEXT:    ldd [%i0+8], %f2
 ; SPARC32-NEXT:    ld [%fp+64], %i0
 ; SPARC32-NEXT:    add %fp, -16, %i1
 ; SPARC32-NEXT:    st %i1, [%sp+64]
-; SPARC32-NEXT:    std %f4, [%fp+-40]
+; SPARC32-NEXT:    std %f2, [%fp+-40]
 ; SPARC32-NEXT:    std %f0, [%fp+-48]
-; SPARC32-NEXT:    std %f4, [%fp+-24]
+; SPARC32-NEXT:    std %f2, [%fp+-24]
 ; SPARC32-NEXT:    add %fp, -32, %o0
 ; SPARC32-NEXT:    add %fp, -48, %o1
 ; SPARC32-NEXT:    call f128_callee
 ; SPARC32-NEXT:    std %f0, [%fp+-32]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    ldd [%fp+-8], %f0
-; SPARC32-NEXT:    ldd [%fp+-16], %f4
+; SPARC32-NEXT:    ldd [%fp+-16], %f2
 ; SPARC32-NEXT:    std %f0, [%i0+8]
-; SPARC32-NEXT:    std %f4, [%i0]
+; SPARC32-NEXT:    std %f2, [%i0]
 ; SPARC32-NEXT:    ret
 ; SPARC32-NEXT:    restore
 ;
@@ -46,7 +46,7 @@ define fp128 @f128_direct_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32
 ; SPARC32-NEXT:    save %sp, -136, %sp
 ; SPARC32-NEXT:    ld [%fp+96], %g2
 ; SPARC32-NEXT:    ldd [%g2], %f0
-; SPARC32-NEXT:    ldd [%g2+8], %f4
+; SPARC32-NEXT:    ldd [%g2+8], %f2
 ; SPARC32-NEXT:    ld [%fp+64], %l0
 ; SPARC32-NEXT:    mov %i5, %o5
 ; SPARC32-NEXT:    mov %i4, %o4
@@ -58,14 +58,14 @@ define fp128 @f128_direct_spill(i32 %o0, i32 %o1, i32 %o2, i32 %o3, i32 %o4, i32
 ; SPARC32-NEXT:    st %i0, [%sp+92]
 ; SPARC32-NEXT:    add %fp, -16, %i0
 ; SPARC32-NEXT:    st %i0, [%sp+64]
-; SPARC32-NEXT:    std %f4, [%fp+-24]
+; SPARC32-NEXT:    std %f2, [%fp+-24]
 ; SPARC32-NEXT:    call f128_callee_spill
 ; SPARC32-NEXT:    std %f0, [%fp+-32]
 ; SPARC32-NEXT:    unimp 16
 ; SPARC32-NEXT:    ldd [%fp+-8], %f0
-; SPARC32-NEXT:    ldd [%fp+-16], %f4
+; SPARC32-NEXT:    ldd [%fp+-16], %f2
 ; SPARC32-NEXT:    std %f0, [%l0+8]
-; SPARC32-NEXT:    std %f4, [%l0]
+; SPARC32-NEXT:    std %f2, [%l0]
 ; SPARC32-NEXT:    ret
 ; SPARC32-NEXT:    restore
 ;
@@ -93,10 +93,10 @@ define inreg { fp128, fp128 } @f128_complex(fp128 %num) nounwind {
 ; SPARC32:       ! %bb.0:
 ; SPARC32-NEXT:    save %sp, -192, %sp
 ; SPARC32-NEXT:    ldd [%i0], %f0
-; SPARC32-NEXT:    ldd [%i0+8], %f4
-; SPARC32-NEXT:    std %f4, [%fp+-24]
+; SPARC32-NEXT:    ldd [%i0+8], %f2
+; SPARC32-NEXT:    std %f2, [%fp+-24]
 ; SPARC32-NEXT:    std %f0, [%fp+-32]
-; SPARC32-NEXT:    std %f4, [%fp+-8]
+; SPARC32-NEXT:    std %f2, [%fp+-8]
 ; SPARC32-NEXT:    add %fp, -16, %o0
 ; SPARC32-NEXT:    add %fp, -32, %o1
 ; SPARC32-NEXT:    call f128_complex_callee
@@ -104,11 +104,11 @@ define inreg { fp128, fp128 } @f128_complex(fp128 %num) nounwind {
 ; SPARC32-NEXT:    sethi %hi(.LCPI2_0), %i0
 ; SPARC32-NEXT:    ldd [%i0+%lo(.LCPI2_0)], %f8
 ; SPARC32-NEXT:    add %i0, %lo(.LCPI2_0), %i0
-; SPARC32-NEXT:    ldd [%i0+8], %f12
+; SPARC32-NEXT:    ldd [%i0+8], %f10
 ; SPARC32-NEXT:    std %f4, [%fp+-96]
 ; SPARC32-NEXT:    std %f6, [%fp+-88] ! 16-byte Folded Spill
 ; SPARC32-NEXT:    std %f8, [%fp+-80]
-; SPARC32-NEXT:    std %f12, [%fp+-72]
+; SPARC32-NEXT:    std %f10, [%fp+-72]
 ; SPARC32-NEXT:    std %f2, [%fp+-56]
 ; SPARC32-NEXT:    std %f0, [%fp+-64]
 ; SPARC32-NEXT:    add %fp, -48, %i0
@@ -138,11 +138,11 @@ define inreg { fp128, fp128 } @f128_complex(fp128 %num) nounwind {
 ; SPARC64-NEXT:    sllx %i0, 12, %i0
 ; SPARC64-NEXT:    ldd [%i0+%l44(.LCPI2_0)], %f4
 ; SPARC64-NEXT:    add %i0, %l44(.LCPI2_0), %i0
-; SPARC64-NEXT:    ldd [%i0+8], %f8
+; SPARC64-NEXT:    ldd [%i0+8], %f6
 ; SPARC64-NEXT:    std %f2, [%fp+2023]
 ; SPARC64-NEXT:    std %f0, [%fp+2015]
 ; SPARC64-NEXT:    std %f4, [%fp+1999]
-; SPARC64-NEXT:    std %f8, [%fp+2007]
+; SPARC64-NEXT:    std %f6, [%fp+2007]
 ; SPARC64-NEXT:    add %fp, 2031, %o0
 ; SPARC64-NEXT:    add %fp, 2015, %o1
 ; SPARC64-NEXT:    call _Qp_add

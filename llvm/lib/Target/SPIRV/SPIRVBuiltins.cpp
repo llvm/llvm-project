@@ -1928,9 +1928,13 @@ static bool generateDotOrFMulInst(StringRef DemangledCall,
 
   const auto *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-  if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt) &&
-      (ST->canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
-       ST->isAtLeastSPIRVVer(VersionTuple(1, 6)))) {
+  if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt)) {
+    if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) &&
+        !ST->isAtLeastSPIRVVer(VersionTuple(1, 6)))
+      report_fatal_error(Twine(Call->Builtin->name()) +
+                             ": the builtin requires the following SPIR-V "
+                             "extension: SPV_KHR_integer_dot_product",
+                         false);
     const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
     const SPIRV::IntegerDotProductBuiltin *IntDot =
         SPIRV::lookupIntegerDotProductBuiltin(Builtin->name());
