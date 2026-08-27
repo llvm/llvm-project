@@ -554,6 +554,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   guard warns that the capability may not be held. Some diagnostics under
   `-Wthread-safety` change accordingly.
 
+- Thread safety analysis now resolves a try-acquire by the value of its
+  result where the attributes key their capabilities to specific result
+  codes: `TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning
+  `int` names `mu1` for a result of 1 and `mu2` for a result of 2, and a
+  comparison against a constant or a `switch` case label decides each
+  capability. A function whose only success values are `1` or `true` -- the
+  same token in C before C23 -- names no such codes: it keeps promising each
+  acquisition on any nonzero result, as before. Previously every nonzero
+  result was read as acquiring every capability the call names, and every
+  other value as acquiring none of them.
+
 - Thread safety analysis has a new `-Wthread-safety-beta` diagnostic for a
   try-acquire whose result the analysis never sees checked: the capability may
   be leaked, and the warning is reported where the analysis loses track of the

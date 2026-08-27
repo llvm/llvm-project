@@ -5162,30 +5162,30 @@ struct TestTrylockSwitch {
     }
   } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
 
-  // A success code other than 1 is matched by value, not by truthiness: only
-  // the label pinning the code acquires the capability, and the other
-  // nonzero labels -- results the call reports as failures -- decide nothing
-  // here, so the capability stays conditionally held on them. (Reduced to
-  // truthiness, every nonzero label was the success edge and cases 1 and 2
-  // lost both their diagnostics.)
+  // A success code other than 1 is matched by value, not by truthiness: the
+  // label pinning the code acquires the capability, and every other label --
+  // a result the call reports as a failure -- proves it was not acquired.
+  // The labels cover the code, so no path leaves the result unchecked.
+  // (Reduced to truthiness, every nonzero label was the success edge and
+  // cases 1 and 2 lost both their diagnostics.)
   int TryLockCode() EXCLUSIVE_TRYLOCK_FUNCTION(3, mu);
 
   void switchExactSuccessCode() {
-    switch (TryLockCode()) { // expected-note {{mutex acquired here}}
+    switch (TryLockCode()) {
     case 1:
       a = 1;         // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
-      mu.Unlock();   // expected-warning {{releasing mutex 'mu' that may not be held}}
+      mu.Unlock();   // expected-warning {{releasing mutex 'mu' that was not held}}
       break;
     case 2:
       a = 2;         // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
-      mu.Unlock();   // expected-warning {{releasing mutex 'mu' that may not be held}}
+      mu.Unlock();   // expected-warning {{releasing mutex 'mu' that was not held}}
       break;
     case 3:
       a = 3;
       mu.Unlock();
       break;
     }
-  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+  }
 
   // With zero listed, the default edge implies a nonzero result: acquired.
   void switchIntDefaultNonzero() {
@@ -5218,6 +5218,514 @@ struct TestTrylockSwitch {
     }
   }
 };  // end TestTrylockSwitch
+
+// A try-acquire attribute whose success value is a specific integer
+// constant (not a bool) keys the acquisition to that exact result value:
+// distinct capabilities under distinct codes are discriminated by
+// `== code` comparisons and case labels, resolved against the codes
+// recorded at the call. Plain truthiness branches still resolve by the
+// success values' polarity (see switchExactSuccessCode above).
+struct TestTrylockValueCodes {
+  Mutex mu1, mu2;
+  int data1 GUARDED_BY(mu1);
+  int data2 GUARDED_BY(mu2);
+
+  int TryLockCodes() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu1)
+      EXCLUSIVE_TRYLOCK_FUNCTION(2, mu2);
+
+  // A result of 2 stands for mu2's acquisition and proves mu1 was never
+  // acquired: guarded uses of mu1 in the region diagnose (previously the
+  // truthiness collapse silently promoted both capabilities). On the
+  // other edge mu1's result was never checked, so its possible success
+  // (a result of 1) leaks out of the function (beta).
+  void valuecodes_wrong_code() {
+    if (TryLockCodes() == 2) { // expected-note {{mutex acquired here}}
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that was not held}}
+      mu2.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // Each comparison resolves its own code: the else edge of `== 1`
+  // proves only that the result is not 1 -- mu1 failed, mu2 undecided --
+  // and the chained `== 2` then resolves mu2. Clean end to end.
+  void valuecodes_chain() {
+    int r = TryLockCodes();
+    if (r == 1) {
+      data1 = 1;
+      mu1.Unlock();
+    } else if (r == 2) {
+      data2 = 1;
+      mu2.Unlock();
+    }
+  }
+
+  // The same through case labels; the default edge excludes both codes,
+  // proving neither capability was acquired.
+  void valuecodes_switch() {
+    switch (TryLockCodes()) {
+    case 1:
+      data1 = 1;
+      mu1.Unlock();
+      break;
+    case 2:
+      data2 = 1;
+      mu2.Unlock();
+      break;
+    default:
+      break;
+    }
+  }
+
+  // The implicit fall-out edge is the default edge: with both codes
+  // listed it proves both failures the same way.
+  void valuecodes_switch_fallout() {
+    switch (TryLockCodes()) {
+    case 1:
+      data1 = 1;
+      mu1.Unlock();
+      break;
+    case 2:
+      data2 = 1;
+      mu2.Unlock();
+      break;
+    }
+  }
+
+  // A blind release on the undecided edge stays conditional: the result
+  // may be 2 there, so releasing mu2 is a may-not-be-held, not the
+  // previous definite (and wrong) was-not-held with the fact removed.
+  // (The `== 1` edge resolves both facts -- mu1 acquired, mu2 not -- so
+  // nothing else leaks.)
+  void valuecodes_else_blind_release() {
+    int r = TryLockCodes();
+    if (r == 1) {
+      data1 = 1;
+      mu1.Unlock();
+    } else {
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  }
+
+  // Negation folds into the comparison: the else edge of `!(r == 2)` is
+  // the `== 2` edge and resolves mu2. mu1 stays undecided on the other
+  // edge (the result may be 1, unchecked), so its possible success is
+  // diagnosed at the join (beta).
+  void valuecodes_negated() {
+    int r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    if (!(r == 2)) {
+    } else {
+      data2 = 1;
+      mu2.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // The codes and the compared constants go through the constant
+  // evaluator: enumerators and constexpr values key acquisitions and
+  // resolve comparisons like literals.
+  enum LockResult { kFailed = 0, kAcquired = 5 };
+  Mutex mu5;
+  int data5 GUARDED_BY(mu5);
+  LockResult TryLockEnum() EXCLUSIVE_TRYLOCK_FUNCTION(kAcquired, mu5);
+  void valuecodes_enum() {
+    LockResult r = TryLockEnum();
+    if (r == kAcquired) {
+      data5 = 1;
+      mu5.Unlock();
+    }
+    if (r == kFailed) { // == 0 is the plain failure edge
+    }
+  }
+
+  // The same capability under a falsy and a specific truthy code on an
+  // integer result is NOT acquired regardless of the result -- a result
+  // of 3 acquires nothing -- so no degenerate-annotation diagnostic and
+  // no unconditional acquisition: the capability stays conditional and
+  // resolves by value (contrast tryheld_regardless_of_result, whose
+  // boolean result the two polarities do cover, and
+  // valuecodes_one_is_truthiness, whose success value of 1 promises
+  // every nonzero result and so does cover it).
+  Mutex mu3;
+  int data3 GUARDED_BY(mu3);
+  int TryLockZeroOrTwo() EXCLUSIVE_TRYLOCK_FUNCTION(2, mu3)
+      EXCLUSIVE_TRYLOCK_FUNCTION(0, mu3);
+  void valuecodes_mixed_switch() {
+    switch (TryLockZeroOrTwo()) {
+    case 2:
+      data3 = 1;
+      mu3.Unlock();
+      break;
+    case 0:
+      data3 = 2;
+      mu3.Unlock();
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Sequential comparisons do not accumulate: the second branch's edges
+  // no longer know the first excluded 2, so the fact rides through
+  // undecided and its possible success reads as leaking (beta).
+  // Deliberately conservative -- the switch above is the exact form.
+  void valuecodes_mixed_chain() {
+    int r = TryLockZeroOrTwo(); // expected-note {{mutex acquired here}}
+    if (r == 2) {
+      data3 = 1;
+      mu3.Unlock();
+    } else if (r == 0) {
+      data3 = 2;
+      mu3.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu3' may still be held at the end of function}}
+
+  // A success value of 1 keys nothing: it is how `true` is spelled before
+  // C23 and how a wrapper macro expands, so the call is read exactly as
+  // it was before codes existed -- every nonzero result acquires, and a
+  // comparison against a nonzero constant is the truthiness test. Both
+  // edges of `== 1` resolve, and so do those of `== 2`.
+  Mutex mu9;
+  int data9 GUARDED_BY(mu9);
+  int TryLockOne() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu9);
+  void valuecodes_one_is_truthiness() {
+    if (TryLockOne() == 1) {
+      data9 = 1;
+      mu9.Unlock();
+    }
+    if (TryLockOne() == 2) {
+      data9 = 2;
+      mu9.Unlock();
+    }
+  }
+  // A truthiness branch on a code-keyed call resolves nothing: the codes
+  // discriminate the capabilities, and "nonzero" does not say which
+  // result the call returned. Promoting both is how truthiness accepted a
+  // guaranteed-unheld release here.
+  void valuecodes_truthy_decides_nothing() {
+    if (TryLockCodes()) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  }
+
+  // The value model applies to the call's own result. A conversion on the
+  // way to the branch leaves the condition testing a converted copy --
+  // `ok` here is only "the result was nonzero" -- so no code may be
+  // pinned against it and the branch resolves by truthiness, exactly as
+  // `if (ok)` would. Pinning it would call a result of 2 a match for
+  // `== 1` and declare mu2 not acquired. Truthiness in turn decides
+  // nothing for a capability keyed to a code: "nonzero" is a result of 1
+  // or of 2, and only one of them acquires each capability, so both facts
+  // ride into the region unresolved and every use of them is diagnosed.
+  void valuecodes_narrowed_copy() {
+    bool ok = TryLockCodes();
+    if (ok) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  }
+
+  void valuecodes_narrowed_copy_compared() {
+    bool ok = TryLockCodes();
+    if (ok == 1) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  }
+
+  // Nor may a switch over the narrowed copy match its labels against the
+  // codes: `case 1:` is taken for every nonzero result.
+  void valuecodes_narrowed_copy_switch() {
+    bool ok = TryLockCodes();
+    switch (ok) { // expected-warning {{switch condition has boolean value}}
+    case 1:
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+      break;
+    default:
+      break;
+    }
+  }
+
+  // `x == true` on an integer result is `x == 1` after the promotions, so
+  // it pins the value like any other constant -- the constant's own type
+  // does not make it a truthiness test.
+  void valuecodes_eq_true() {
+    if (TryLockCodes() == true) { // expected-note {{mutex acquired here}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that was not held}}
+      mu1.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+  // A merge of the result with a constant blinds the value model: on an
+  // edge the constant can satisfy, an exact value neither proves nor
+  // disproves a code, because the constant may stand in for a different
+  // result of a call that did execute. Truthiness has no such hole, so
+  // the plain resolutions still apply and the releases stay conditional
+  // rather than being declared unheld.
+  void valuecodes_merged_constant_phi(bool c) {
+    int r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    int s = 5;
+    if (c)
+      s = r;
+    switch (s) {
+    case 2:
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+      break;
+    default:
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+      break;
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  void valuecodes_merged_constant_cond(bool c) {
+    int r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    if ((c ? r : 2) == 2) {
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // Only a conversion that can actually change the value costs the exact
+  // resolution. The integral promotions and widenings a condition applies
+  // on the way to the branch keep every value the result can have, so the
+  // comparison still pins a code.
+  void valuecodes_widened_copy() {
+    long r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    if (r == 2) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that was not held}}
+      mu2.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // Likewise the conversions around __builtin_expect: the widening of the
+  // comparison's own result is applied to a boolean, not to the value
+  // being compared, so `likely(r == 2)` resolves like the bare form.
+  void valuecodes_builtin_expect() {
+    int r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    if (__builtin_expect(r == 2, 1)) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that was not held}}
+      mu2.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // A narrowed copy compared against a value it cannot have: what has to
+  // be boolean is the compared operand, not the call, so this decides
+  // nothing rather than reading its always-taken edge as a failure.
+  void valuecodes_boolean_copy_impossible_value() {
+    bool ok = TryLockCodes();
+    if (ok == 2) { // expected-warning {{result of comparison of constant 2 with expression of type 'bool' is always false}}
+    } else {
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  }
+
+  // A copy narrowed to a non-boolean type compared against a value pins no
+  // code: every result whose low bits are that value satisfies it. One
+  // direction of its truthiness survives -- a nonzero copy is only ever a
+  // nonzero result -- so the equal edge resolves as a truthy branch, which
+  // for these code-keyed capabilities decides nothing either. The failing
+  // edge decides nothing at all: unlike a boolean copy, whose `!= 1` is
+  // `== 0`, the result there may be any other value, so reading it as a
+  // failure would lose the leak on it.
+  void valuecodes_short_copy_compared() {
+    short s = TryLockCodes(); // expected-note 2 {{mutex acquired here}}
+    if (s == 1) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}} \
+    // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+  // Which edge a merge makes ambiguous depends on what the condition asks.
+  // Here the constant 7 cannot satisfy `== 1`, so that edge carries the
+  // result alone and still resolves exactly -- only the other edge is
+  // ambiguous (contrast valuecodes_merged_constant_cond, whose constant is
+  // the compared value).
+  void valuecodes_merged_constant_other_value(bool c) {
+    int r = TryLockCodes(); // expected-note 2 {{mutex acquired here}}
+    int s = 7;
+    if (c)
+      s = r;
+    if (s == 1) {
+      data1 = 1;
+      mu1.Unlock();
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that was not held}}
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}} \
+    // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+  // A boolean result compared against a value it cannot have: the
+  // comparison is never true, so neither edge says anything about the
+  // result. Reading the always-taken edge as a failure would call the
+  // release below unheld.
+  Mutex mu4;
+  void valuecodes_boolean_impossible_value() {
+    bool ok = mu4.TryLock();
+    if (ok == 2) { // expected-warning {{result of comparison of constant 2 with expression of type 'bool' is always false}}
+    } else {
+      mu4.Unlock(); // expected-warning {{releasing mutex 'mu4' that may not be held}}
+    }
+  }
+
+  // One fact carries one lock kind, but a cross-kind pair of polarities
+  // promises different kinds on different outcomes, so the fact takes the
+  // weaker one and an exclusive write is diagnosed on both edges. The
+  // point is the edge promising only a shared hold: it no longer grants
+  // an exclusive one on the strength of the other polarity's attribute.
+  Mutex mu6;
+  int data6 GUARDED_BY(mu6);
+  int TryLockCross() EXCLUSIVE_TRYLOCK_FUNCTION(2, mu6)
+      SHARED_TRYLOCK_FUNCTION(0, mu6);
+  void valuecodes_cross_kind_takes_shared() {
+    switch (TryLockCross()) {
+    case 0:
+      data6 = 1; // expected-warning {{writing variable 'data6' requires holding mutex 'mu6' exclusively}}
+      mu6.Unlock();
+      break;
+    case 2:
+      data6 = 2; // expected-warning {{writing variable 'data6' requires holding mutex 'mu6' exclusively}}
+      mu6.Unlock();
+      break;
+    default:
+      break;
+    }
+  }
+
+  // The same narrowing over a capability promised on any nonzero result:
+  // there the surviving direction is the whole answer, and the equal edge
+  // resolves the acquisition exactly as `if (q)` would. Refusing the
+  // branch outright reported three warnings on correct code.
+  Mutex mu11;
+  int data11 GUARDED_BY(mu11);
+  int TryLockAny() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu11);
+  void valuecodes_short_copy_any_compared() {
+    short q = TryLockAny(); // expected-note {{mutex acquired here}}
+    if (q == 1) {
+      data11 = 1;
+      mu11.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu11' may still be held at the end of function}}
+
+  // A truncating conversion can make a nonzero result read as falsy (a
+  // result of 65536 stored in a short is zero), so the falsy edge of a
+  // branch on the copy proves nothing -- the release below may be
+  // releasing the hold the call took. Its truthy edge still stands: a
+  // conversion of zero is zero. A conversion to bool keeps truthiness
+  // both ways, and its falsy edge proves the failure as before.
+  Mutex mu12;
+  int data12 GUARDED_BY(mu12);
+  int TryLockAny12() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu12);
+  void valuecodes_truncated_copy_truthiness() {
+    short s = TryLockAny12();
+    if (s) {
+      data12 = 1;
+      mu12.Unlock();
+    } else {
+      mu12.Unlock(); // expected-warning {{releasing mutex 'mu12' that may not be held}} \
+                     // expected-note {{mutex released here}}
+    }
+    bool b = TryLockAny12();
+    if (b) {
+      data12 = 1;
+      mu12.Unlock();
+    } else {
+      mu12.Unlock(); // expected-warning {{releasing mutex 'mu12' that was not held}}
+    }
+  }
+
+  // A truthy constant that is not an integer pins no value and is no
+  // truthiness test either: `== 2.0` holds for one result and fails for
+  // every other, so neither edge resolves. Read as a plain branch, its
+  // else edge proved a failure that a result of 2 contradicts.
+  void valuecodes_non_integer_constant() {
+    int r = TryLockCodes(); // expected-note {{mutex acquired here}}
+    if (r == 2.0) {
+      data2 = 1;    // expected-warning {{writing variable 'data2' requires holding mutex 'mu2' exclusively}}
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    } else {
+      mu2.Unlock(); // expected-warning {{releasing mutex 'mu2' that may not be held}}
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
+  // Two paths storing the same call's result merge into one branch on it,
+  // and a conversion on either path leaves that value a converted copy:
+  // the merge takes both marks, so the exact resolution is refused
+  // whichever path the walk reaches first. Keyed on the first path alone,
+  // the two spellings below disagreed with each other.
+  void valuecodes_merged_narrowing_either_order(bool c) {
+    int t, ok;
+    if (c) {
+      bool b = TryLockCodes();
+      t = b;
+      ok = t;
+    } else {
+      t = TryLockCodes(); // expected-note 2 {{mutex acquired here}}
+      ok = t;
+    }
+    if (ok == 1) {
+      data1 = 1;    // expected-warning {{writing variable 'data1' requires holding mutex 'mu1' exclusively}}
+      mu1.Unlock(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}} \
+    // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+  // Two attributes naming one capability in both kinds under the same
+  // outcome contradict each other: one result cannot promise an exclusive
+  // and a shared hold. Nothing diagnoses that at the declaration, so the
+  // call reports it -- the weaker (shared) acquisition is the one that
+  // stands, and the exclusive one is refused there.
+  Mutex mu10;
+  int data10 GUARDED_BY(mu10);
+  bool TryLockBothKinds() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu10)
+      SHARED_TRYLOCK_FUNCTION(true, mu10);
+  void valuecodes_one_outcome_both_kinds() {
+    if (TryLockBothKinds()) { // expected-warning {{acquiring mutex 'mu10' that may already be held}} \
+                              // expected-note {{mutex acquired here}}
+      data10 = 1;             // expected-warning {{writing variable 'data10' requires holding mutex 'mu10' exclusively}}
+      mu10.ReaderUnlock();
+    }
+  }
+
+  // The success value is written in its own type, the result reported in
+  // the callee's: a code that only matches after the conversion the call
+  // applies to it (-1 in an unsigned result, 200 in a char one) still
+  // keys the acquisition, and the comparison the caller writes resolves
+  // it. Recorded unconverted, no result could ever equal the code and
+  // every one of these edges read as a failure.
+  Mutex mu7, mu8;
+  int data7 GUARDED_BY(mu7);
+  int data8 GUARDED_BY(mu8);
+  unsigned TryLockNegCode() EXCLUSIVE_TRYLOCK_FUNCTION(-1, mu7);
+  char TryLockCharCode() EXCLUSIVE_TRYLOCK_FUNCTION(200, mu8);
+
+  void valuecodes_converted_to_result_type() {
+    unsigned r = TryLockNegCode();
+    if (r == -1u) {
+      data7 = 1;
+      mu7.Unlock();
+    }
+    char c = TryLockCharCode();
+    if (c == (char)200) {
+      data8 = 1;
+      mu8.Unlock();
+    }
+  }
+};  // end TestTrylockValueCodes
 
 } // end namespace TrylockTest
 

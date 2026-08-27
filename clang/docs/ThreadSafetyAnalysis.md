@@ -470,15 +470,17 @@ a function releases all associated capabilities in whatever mode they're held.
 A constructor may also be annotated with {ref}`try_acquire`.
 
 (try_acquire)=
-### TRY_ACQUIRE(\<bool>, ...), TRY_ACQUIRE_SHARED(\<bool>, ...)
+### TRY_ACQUIRE(\<success>, ...), TRY_ACQUIRE_SHARED(\<success>, ...)
 
 *Previously:* `EXCLUSIVE_TRYLOCK_FUNCTION`, `SHARED_TRYLOCK_FUNCTION`
 
 These are attributes on a function or method that tries to acquire the given
-capability, and returns a boolean value indicating success or failure.
-The first argument must be `true` or `false`, to specify which return value
-indicates success, and the remaining arguments are interpreted in the same way
-as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
+capability, and returns a value indicating success or failure.
+The first argument is the return value that indicates success: `true` (any
+nonzero result) or `false` (a zero result), or an integer constant, which for
+a value other than `1` keys the acquisition to that exact result (see
+{ref}`trysuccesscodes`). The remaining arguments are interpreted in the same
+way as `ACQUIRE`. See {ref}`mutexheader`, below, for example uses.
 
 The capability is tracked as conditionally ("try") held from the call until a
 recognized branch on its return value: on the success path the capability is
@@ -529,6 +531,39 @@ parameter, or simply returned to the caller. One acquisition is reported once,
 at the first merge that loses it. A loop merge is exempt only while the result
 is branched on somewhere around the loop; a result never checked anywhere warns
 at the loop merge too.
+
+(trysuccesscodes)=
+A success value that is a specific integer constant other than `1`
+(`TRY_ACQUIRE(1, mu1) TRY_ACQUIRE(2, mu2)` on a function returning `int`;
+enumerators and constexpr values work the same way) keys the acquisition to that
+exact return value, and so do the other success values of the same function. A
+branch comparing the result against a constant, or a `switch` case label, then
+resolves each capability by value: `result == 2` proves `mu2` was acquired and
+`mu1` was not, the other edge of that comparison proves only that `mu2` was not
+acquired (the result may still be any other value), and a `switch` default with
+all codes listed proves no capability was acquired. A plain truthiness branch
+(`if (result)`) resolves such a capability only on its falsy edge, where no code
+can have been returned: a nonzero result is one code or another, and the branch
+does not say which, so the acquisition stays unresolved until a comparison or a
+label decides it. A success value of `true`, or of `1`, promises acquisition on
+any nonzero result: the two are the same token in C before C23, where
+`<stdbool.h>` defines `true` as the integer `1`, and a wrapper macro can expand
+to either. A function that names no value beyond those is not discriminating
+between its outcomes, so all of its capabilities resolve by truthiness, as every
+try-acquire did before success codes. The same capability listed under a falsy
+and a specific truthy code of an integer result is *not* "acquired regardless"
+-- a result matching neither code acquires nothing -- so it stays a conditional
+acquisition resolved by value.
+
+Value resolution applies to the call's own result. A branch on a copy that a
+conversion may have changed (`bool ok = try_lock_codes();`) tests only whether
+the result was nonzero, so it resolves by truthiness; conversions that keep
+every value the result can have -- the integral promotions and widenings a
+comparison applies, including inside `__builtin_expect` -- do not lose the
+codes. Where the branched-on value merges the result with a constant, the edge
+that constant can account for proves nothing about any code, since the value
+there may be the constant rather than a result the call did produce; the other
+edge carries the result alone and still resolves exactly.
 
 ```c++
 Mutex mu;
