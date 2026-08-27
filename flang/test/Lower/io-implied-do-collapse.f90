@@ -15,10 +15,20 @@ end module
 module pure_mod
   integer :: mi
 contains
-  ! A PURE function reading module state: conforming, but its body is invisible
-  ! to CollectSymbols/FindImpureCall.
+  ! A PURE (non-SIMPLE) function reading module state: conforming, but its body
+  ! is invisible to symbol collection.
   pure integer function pure_read()
     pure_read = mi
+  end function
+end module
+
+module simple_mod
+contains
+  ! A SIMPLE function (F2023) may reference only its arguments, so it cannot
+  ! read the do-variable or array through host or use association.
+  simple integer function simple_bound(k)
+    integer, intent(in) :: k
+    simple_bound = k
   end function
 end module
 
@@ -96,6 +106,25 @@ subroutine write_zerotrip_guard(a, n)
   write(10) (a(i), i=1,n)
 end subroutine
 
+! Zero-trip pin: the loop variable's final value (lower + tripCount*step, which
+! is lower for a zero-trip section) is stored unconditionally, after and outside
+! the trip-count guard, matching a zero-iteration DO.
+! CHECK-LABEL: func @_QPwrite_zerotrip_finalval(
+subroutine write_zerotrip_finalval(a, n, k)
+  integer :: n, k
+  real :: a(n)
+  ! CHECK: fir.if
+  ! CHECK:   fir.call @_FortranAioOutputDescriptor
+  ! CHECK: }
+  ! CHECK: %[[DIMS:.*]]:3 = fir.box_dims
+  ! CHECK: %[[TS:.*]] = arith.muli %[[DIMS]]#1, %{{.*}} : index
+  ! CHECK: %[[FV:.*]] = arith.addi %{{.*}}, %[[TS]] : index
+  ! CHECK: %[[FVC:.*]] = fir.convert %[[FV]] : (index) -> i32
+  ! CHECK: fir.store %[[FVC]] to %{{.*}} : !fir.ref<i32>
+  write(10) (a(i), i=1,n)
+  k = i
+end subroutine
+
 ! CHECK-LABEL: func @_QPwrite_fixed(
 subroutine write_fixed(b, n)
   integer :: n
@@ -116,15 +145,42 @@ subroutine write_step_valid(a, n)
   write(10) (a(i), i=1,n,2)
 end subroutine
 
-! CHECK-LABEL: func @_QPwrite_pure_bound(
-subroutine write_pure_bound(a, n)
-  use impure_mod
+! A negative step still designates a valid array-section descriptor, and the
+! final value lower + tripCount*step handles step < 0, so collapse.
+! CHECK-LABEL: func @_QPwrite_negstep(
+subroutine write_negstep(a, n)
   integer :: n
   real :: a(n)
   ! CHECK: fir.call @_FortranAioOutputDescriptor
   ! CHECK-NOT: fir.call @_FortranAioOutputReal
   ! CHECK-NOT: fir.do_loop
-  write(10) (a(i), i=1,pure_bound(n))
+  write(10) (a(i), i=n,1,-1)
+end subroutine
+
+! A SIMPLE function (F2023 C15115) may reference only its arguments, so it
+! cannot read the do-variable through host or use association; a bound calling
+! one is safe to re-evaluate, so collapse.
+! CHECK-LABEL: func @_QPwrite_simple_bound(
+subroutine write_simple_bound(a, n)
+  use simple_mod
+  integer :: n
+  real :: a(n)
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  ! CHECK-NOT: fir.call @_FortranAioOutputReal
+  ! CHECK-NOT: fir.do_loop
+  write(10) (a(i), i=1,simple_bound(n))
+end subroutine
+
+! A SIMPLE function in a retained subscript depends only on its arguments, so
+! evaluating it once for the collapsed section matches the per-iteration loop.
+! CHECK-LABEL: func @_QPwrite_simple_subscript(
+subroutine write_simple_subscript(a, n)
+  use simple_mod
+  integer :: n
+  real :: a(10, n)
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  ! CHECK-NOT: fir.do_loop
+  write(10) (a(simple_bound(3), i), i=1,n)
 end subroutine
 
 ! CHECK-LABEL: func @_QPwrite_alias_subscript(
@@ -135,6 +191,27 @@ subroutine write_alias_subscript(b, n)
   ! CHECK: fir.call @_FortranAioOutputDescriptor
   ! CHECK-NOT: fir.do_loop
   write(10) (b(b(1,1), i), i=1,n)
+end subroutine
+
+! Loop variable is a plain dummy argument (no TARGET/POINTER); the standard's
+! anti-aliasing rules let us assume it does not overlap the array, so collapse.
+! CHECK-LABEL: func @_QPwrite_dummy_loopvar(
+subroutine write_dummy_loopvar(a, i)
+  integer :: a(8), i
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  ! CHECK-NOT: fir.do_loop
+  write(10) (a(i), i=1,8)
+end subroutine
+
+! Input: a retained subscript that is a plain dummy argument (no TARGET/POINTER)
+! is assumed not to alias the array being read, so collapse.
+! CHECK-LABEL: func @_QPread_dummy_subscript(
+subroutine read_dummy_subscript(a, k, n)
+  integer :: n
+  integer :: a(10, n), k
+  ! CHECK: fir.call @_FortranAioInputDescriptor
+  ! CHECK-NOT: fir.do_loop
+  read(10) (a(k, i), i=1,n)
 end subroutine
 
 ! ===========================================================================
@@ -193,6 +270,30 @@ subroutine write_impure_bound(a, n)
   ! CHECK: fir.do_loop
   ! CHECK: fir.call @_FortranAioOutputDescriptor
   write(10) (a(i), i=1,impure_bound(n))
+end subroutine
+
+! A PURE but non-SIMPLE function may still read the do-variable through host or
+! use association, invisible to the symbol checks, and the bound is re-evaluated
+! to rebuild the final value. Only SIMPLE calls are allowed, so fall back.
+! CHECK-LABEL: func @_QPwrite_pure_bound(
+subroutine write_pure_bound(a, n)
+  use impure_mod
+  integer :: n
+  real :: a(n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,pure_bound(n))
+end subroutine
+
+! The do-variable is the module variable mi, and the PURE (non-SIMPLE) bound
+! function pure_read() reads it through use association, invisible to the checks.
+! CHECK-LABEL: func @_QPwrite_module_dovar_bound(
+subroutine write_module_dovar_bound(a)
+  use pure_mod
+  real :: a(8)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(mi), mi=pure_read(),pure_read()+7)
 end subroutine
 
 ! Loop variable used in more than one subscript, b(i,i).
@@ -312,30 +413,9 @@ subroutine write_associate_loopvar(a)
   end associate
 end subroutine
 
-! Loop variable is a dummy argument that may be argument associated with the
-! array (e.g. call sub(b, b(4))).
-! CHECK-LABEL: func @_QPwrite_dummy_loopvar(
-subroutine write_dummy_loopvar(a, i)
-  integer :: a(8), i
-  ! CHECK: fir.do_loop
-  ! CHECK: fir.call @_FortranAioOutputDescriptor
-  write(10) (a(i), i=1,8)
-end subroutine
-
-! Input: a retained subscript that is a dummy argument may be argument
-! associated with an element being read, so it must not be collapsed.
-! CHECK-LABEL: func @_QPread_dummy_subscript(
-subroutine read_dummy_subscript(a, k, n)
-  integer :: n
-  integer :: a(10, n), k
-  ! CHECK: fir.do_loop
-  ! CHECK: fir.call @_FortranAioInputDescriptor
-  read(10) (a(k, i), i=1,n)
-end subroutine
-
-! A PURE function in a retained subscript may read the loop variable (or, on
-! input, the array) through its body, which the symbol/impurity checks cannot
-! see. Bail on any call in a retained subscript.
+! A PURE but non-SIMPLE function in a retained subscript may read the loop
+! variable (or, on input, the array) through host or use association, invisible
+! to the symbol checks. Only SIMPLE calls are allowed, so fall back.
 ! CHECK-LABEL: func @_QPwrite_pure_subscript(
 subroutine write_pure_subscript(a, n)
   use pure_mod
@@ -344,6 +424,21 @@ subroutine write_pure_subscript(a, n)
   ! CHECK: fir.do_loop
   ! CHECK: fir.call @_FortranAioOutputDescriptor
   write(10) (a(pure_read(), i), i=1,n)
+end subroutine
+
+! A SIMPLE call whose actual argument hides a non-SIMPLE PURE function is not
+! safe: the inner function may read the do-variable (or, on input, the array)
+! through host or use association, invisible to the symbol checks. The finder
+! must descend into SIMPLE-call arguments, so fall back.
+! CHECK-LABEL: func @_QPwrite_simple_wraps_pure(
+subroutine write_simple_wraps_pure(a, n)
+  use simple_mod
+  use pure_mod
+  integer :: n
+  real :: a(10, n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(simple_bound(pure_read()), i), i=1,n)
 end subroutine
 
 ! Derived-type items may use defined (unformatted) I/O, which runs user code

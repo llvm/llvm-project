@@ -718,8 +718,8 @@ getIoItemLeafExpr(const Fortran::parser::InputItem &item) {
 }
 
 // CollectSymbols does not look through callee bodies, so this only
-// sees symbols the expression names directly (see ioExprContainsProcedureRef
-// for the call case).
+// sees symbols the expression names directly (see NonSimpleCallFinder for the
+// call case).
 template <typename A, typename Pred>
 static bool ioAnyReferencedSymbol(const A &expr, Pred pred) {
   for (const Fortran::semantics::SymbolRef &ref :
@@ -738,53 +738,47 @@ static bool ioExprReferencesSymbol(const A &expr,
   });
 }
 
-template <typename A>
-static bool ioExprReferencesVolatile(const A &expr) {
-  return ioAnyReferencedSymbol(expr, [](const Fortran::semantics::Symbol &s) {
-    return s.attrs().test(Fortran::semantics::Attr::VOLATILE);
-  });
-}
-
 namespace {
-// Finds any procedure reference in an expression. CollectSymbols and
-// FindImpureCall do not look through callee bodies, so a (possibly PURE)
-// function hidden in a retained subscript could read the io-implied-do variable
-// or the array being transferred without being visible to the symbol and
-// aliasing checks below.
-struct ProcedureRefFinder
-    : public Fortran::evaluate::AnyTraverse<ProcedureRefFinder, bool> {
-  using Base = Fortran::evaluate::AnyTraverse<ProcedureRefFinder, bool>;
-  ProcedureRefFinder() : Base{*this} {}
+// Symbol collection does not look through callee bodies, so a non-SIMPLE
+// function hidden in a bound or retained subscript could read the io-implied-do
+// variable or the array being transferred.
+struct NonSimpleCallFinder
+    : public Fortran::evaluate::AnyTraverse<NonSimpleCallFinder, bool> {
+  using Base = Fortran::evaluate::AnyTraverse<NonSimpleCallFinder, bool>;
+  NonSimpleCallFinder() : Base{*this} {}
   using Base::operator();
-  bool operator()(const Fortran::evaluate::ProcedureRef &) const {
-    return true;
+  bool operator()(const Fortran::evaluate::ProcedureRef &call) const {
+    if (!call.proc().IsSimple())
+      return true;
+    return Base::operator()(call);
   }
 };
 } // namespace
 
+// A bound or retained subscript is evaluated once for the collapsed section
+// rather than once per source-loop iteration, so it must not depend on the loop
+// variable, hide a non-SIMPLE call that could read it, or read a volatile.
 template <typename A>
-static bool ioExprContainsProcedureRef(const A &expr) {
-  return ProcedureRefFinder{}(expr);
+static bool
+ioExprUnsafeForSingleEvaluation(const A &expr,
+                                const Fortran::semantics::Symbol &loopSym) {
+  return ioExprReferencesSymbol(expr, loopSym) || NonSimpleCallFinder{}(expr) ||
+         ioAnyReferencedSymbol(expr, [](const Fortran::semantics::Symbol &s) {
+           return s.attrs().test(Fortran::semantics::Attr::VOLATILE);
+         });
 }
 
 /// Return true if \p symbol may share storage with another symbol via
-/// EQUIVALENCE, COMMON, POINTER/TARGET, ASSOCIATE, Cray pointee, or
-/// dummy-argument aliasing.
+/// EQUIVALENCE, COMMON, POINTER/TARGET, ASSOCIATE, or Cray pointee.
 static bool
 ioSymbolMayBeStorageAssociated(const Fortran::semantics::Symbol &symbol) {
   const Fortran::semantics::Symbol &ultimate = symbol.GetUltimate();
   return Fortran::semantics::IsPointer(ultimate) ||
-         Fortran::semantics::IsDummy(ultimate) ||
          ultimate.attrs().test(Fortran::semantics::Attr::TARGET) ||
          ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee) ||
          Fortran::semantics::FindEquivalenceSet(ultimate) ||
          Fortran::semantics::FindCommonBlockContaining(ultimate) ||
          ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>();
-}
-
-template <typename A>
-static bool ioExprReferencesStorageAssociatedSymbol(const A &expr) {
-  return ioAnyReferencedSymbol(expr, ioSymbolMayBeStorageAssociated);
 }
 
 namespace {
@@ -852,16 +846,11 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
   if (!lowerExpr || !upperExpr || (control.Step() && !stepExpr))
     return std::nullopt;
 
-  // A bound must not reference the loop variable, and lower/step are
-  // re-evaluated when rebuilding the loop variable's final value, so an impure
-  // or volatile call in a bound could run a different number of times than in
-  // the source loop.
-  Fortran::evaluate::FoldingContext &foldingContext =
-      converter.getFoldingContext();
+  // Lower and step are re-evaluated after the transfer to rebuild the loop
+  // variable's final value, so an unsafe bound could change the trip count or
+  // the stored result relative to the source loop.
   for (const Fortran::lower::SomeExpr *bound : {lowerExpr, upperExpr, stepExpr})
-    if (bound && (ioExprReferencesSymbol(*bound, *loopSym) ||
-                  Fortran::evaluate::FindImpureCall(foldingContext, *bound) ||
-                  ioExprReferencesVolatile(*bound)))
+    if (bound && ioExprUnsafeForSingleEvaluation(*bound, *loopSym))
       return std::nullopt;
 
   // The io-implied-do bounds and index are scalar integer expressions
@@ -919,18 +908,10 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
               std::move(stepSub)}});
     } else {
       // Every other subscript is retained and evaluated once for the collapsed
-      // section instead of once per iteration, so it must not reference the
-      // loop variable.
-      if (subExpr.Rank() != 0 || ioExprReferencesSymbol(subExpr, *loopSym))
-        return std::nullopt;
-
-      // A call in a retained subscript may read the loop variable or (on input)
-      // the array through its body, which CollectSymbols and FindImpureCall
-      // cannot see; bail on any call, pure or impure.
-      if (ioExprContainsProcedureRef(subExpr))
-        return std::nullopt;
-
-      if (ioExprReferencesVolatile(subExpr))
+      // section instead of once per iteration; it must be scalar and safe to
+      // evaluate a single time.
+      if (subExpr.Rank() != 0 ||
+          ioExprUnsafeForSingleEvaluation(subExpr, *loopSym))
         return std::nullopt;
 
       // For input, a retained subscript is re-evaluated each iteration and sees
@@ -939,7 +920,7 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
       // symbol.
       if (isInput &&
           (ioExprReferencesSymbol(subExpr, arrayRef->base().GetLastSymbol()) ||
-           ioExprReferencesStorageAssociatedSymbol(subExpr)))
+           ioAnyReferencedSymbol(subExpr, ioSymbolMayBeStorageAssociated)))
         return std::nullopt;
 
       newSubscripts.push_back(sub);
