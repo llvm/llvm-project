@@ -635,7 +635,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
          "Expected vector type for constant vector creation");
   const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  const auto &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
+  [[maybe_unused]] const auto &ST = I.getMF()->getSubtarget<SPIRVSubtarget>();
   assert((LLVMBaseTy->isIntegerTy() ||
           (LLVMBaseTy->isPointerTy() &&
            ST.canUseExtension(
