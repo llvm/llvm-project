@@ -1775,6 +1775,21 @@ void Verifier::visitDIObjCProperty(const DIObjCProperty &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
 }
 
+void Verifier::visitDIProperty(const DIProperty &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_property, "invalid tag", &N);
+  if (auto *T = N.getRawType())
+    CheckDI(isType(T), "invalid type ref", &N, T);
+  if (auto *F = N.getRawFile())
+    CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+  // DWARF allows a property getter to forward to a subprogram, variable, or
+  // constant too, but the backend only knows how to forward to a member.
+  if (DINode *BackingStorage = N.getBackingStorage()) {
+    auto *DT = dyn_cast<DIDerivedType>(BackingStorage);
+    CheckDI(DT && DT->getTag() == dwarf::DW_TAG_member,
+            "property backing storage must be a member", &N, BackingStorage);
+  }
+}
+
 void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_imported_module ||
               N.getTag() == dwarf::DW_TAG_imported_declaration,
@@ -6983,8 +6998,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // The result models VLMAX (or a VL bounded by it) and is only defined for
     // XLen (i32/i64). Narrower types cannot represent the architectural VLMAX
     // range of [1, 65536], which value analyses rely on.
-    unsigned BitWidth = Call.getType()->getScalarSizeInBits();
-    Check(BitWidth == 32 || BitWidth == 64,
+    Check(Call.getType()->isIntegerTy(32) || Call.getType()->isIntegerTy(64),
           "llvm.riscv.vsetvli/vsetvlimax result must be i32 or i64", &Call);
 
     // VSEW and VLMUL select the vtype and must encode a valid SEW/LMUL pair.

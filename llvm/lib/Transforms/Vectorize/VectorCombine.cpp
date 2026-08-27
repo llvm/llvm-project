@@ -281,8 +281,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, SQ.AC,
-                                   SQ.DT)) {
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
+                                   SQ.getWithInstruction(Load))) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -308,8 +308,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       return false;
     OffsetEltIndex = OffsetEltIndexAP.getZExtValue();
 
-    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
-                                     SQ.AC, SQ.DT))
+    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1),
+                                     SQ.getWithInstruction(Load)))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -394,8 +394,8 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), *DL, Load, SQ.AC,
-                                   SQ.DT))
+  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1),
+                                   SQ.getWithInstruction(Load)))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
@@ -2061,7 +2061,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
       continue;
     const Value *GEPIndices[] = {ConstantInt::get(Idx->getType(), 0), Idx};
     NewCost += TTI.getGEPCost(VecTy, SI->getPointerOperand(), GEPIndices,
-                              InsertVal->getType(), CostKind);
+                              CostKind, InsertVal->getType());
   }
 
   for (auto [InsertVal, Idx] : InsertElements) {
@@ -2384,6 +2384,10 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   for (User *U : Ext->users()) {
     uint64_t Idx;
     if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
+      return false;
+    // An out-of-bounds extractelement produces poison; bail out rather
+    // than computing a shift amount that overflows the packed type.
+    if (Idx >= SrcTy->getNumElements())
       return false;
     if (cast<Instruction>(U)->use_empty())
       continue;
