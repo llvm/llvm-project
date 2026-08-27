@@ -7131,6 +7131,14 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   if (std::optional<bool> Res = ICmpInst::compare(Op0Known, Op1Known, Pred))
     return replaceInstUsesWith(I, ConstantInt::getBool(I.getType(), *Res));
 
+  // For X known to contain only 0/1 values, "X != 0" is equivalent to
+  // "trunc X to i1". Restrict this to one-use shuffles, where existing folds
+  // can narrow the operands without retaining the widened shuffle.
+  if (Pred == ICmpInst::ICMP_NE && match(Op1, m_Zero()) && BitWidth > 1 &&
+      Op0->getType()->isIntOrIntVectorTy() && isa<ShuffleVectorInst>(Op0) &&
+      Op0->hasOneUse() && Op0Known.getMaxValue().ule(1))
+    return new TruncInst(Op0, I.getType());
+
   // Given the known and unknown bits, compute a range that the LHS could be
   // in.  Compute the Min, Max and RHS values based on the known bits. For the
   // EQ and NE we use unsigned values.
