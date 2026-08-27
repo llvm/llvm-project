@@ -29,19 +29,13 @@ bool Target::isValidFeatureListFormat(StringRef Features) {
   if (Features.empty())
     return true;
 
-  // Each feature starts with a '+' or '-' and ends with a ',', except
-  // the trailing comma is optional for the last feature.
-  if (Features[0] != '+' && Features[0] != '-')
-    return false;
-
+  // Each feature starts with '+'/'-' followed by at least one non-comma
+  // character. Features are comma-separated with an optional trailing comma.
   for (size_t I = 0; I < Features.size(); ++I) {
-    if (Features[I] == ',') {
-      if (I + 1 == Features.size()) // trailing comma
-        break;
-      if (Features[I + 1] != '+' && Features[I + 1] != '-')
-        return false;
-    } else if (Features[I] == '+' || Features[I] == '-') {
-      if (I + 1 == Features.size() || Features[I + 1] == ',') // empty feature
+    if (I == 0 || Features[I - 1] == ',') {
+      // At the start of a feature: must have a sign and a non-empty name.
+      if ((Features[I] != '+' && Features[I] != '-') ||
+          I + 1 == Features.size() || Features[I + 1] == ',')
         return false;
     }
   }
