@@ -685,8 +685,8 @@ define amdgpu_ps i16 @s_fshl_v2i8(i16 inreg %lhs.arg, i16 inreg %rhs.arg, i16 in
 ; GFX6-NEXT:    s_lshr_b32 s1, s1, 1
 ; GFX6-NEXT:    s_lshl_b32 s2, s3, s2
 ; GFX6-NEXT:    s_lshr_b32 s1, s1, s4
-; GFX6-NEXT:    s_or_b32 s2, s2, s1
-; GFX6-NEXT:    s_and_b32 s1, s2, 0xff
+; GFX6-NEXT:    s_or_b32 s1, s2, s1
+; GFX6-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xff
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 8
 ; GFX6-NEXT:    s_or_b32 s0, s0, s1
