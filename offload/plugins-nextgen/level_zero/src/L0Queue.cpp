@@ -442,7 +442,7 @@ Error L0SyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
 
 Error L0SyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
                                     size_t PatternSize, size_t Size) {
-  if (auto Err = L0QueueTy::memoryFillImpl(Ptr, Pattern, PatternSize, Size))
+  if (auto Err = L0InorderQueueTy::memoryFillImpl(Ptr, Pattern, PatternSize, Size))
     return Err;
   return CmdList->hostSynchronize();
 }
