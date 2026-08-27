@@ -987,7 +987,7 @@ public:
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
     if (CE->getNumArgs() == 1) {
-      auto* InnerArg = CE->getArg(0);
+      auto *InnerArg = CE->getArg(0);
       if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(InnerArg)) {
         auto *InnerExpr = MTE->getSubExpr();
         if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(InnerExpr))
