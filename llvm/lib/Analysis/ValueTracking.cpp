@@ -887,6 +887,31 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   return false;
 }
 
+static bool visitOrTree(Value *Root,
+                        function_ref<bool(Value *)> VisitOperand) {
+  SmallVector<Value *, 4> Worklist = {Root};
+  SmallPtrSet<Value *, 4> Visited = {Root};
+  while (!Worklist.empty()) {
+    Value *X, *Y;
+    if (!match(Worklist.pop_back_val(), m_Or(m_Value(X), m_Value(Y))))
+      continue;
+
+    for (Value *Op : {X, Y}) {
+      if (!Visited.insert(Op).second)
+        continue;
+      if (VisitOperand(Op))
+        return true;
+      Worklist.push_back(Op);
+    }
+  }
+  return false;
+}
+
+static bool isValueInOrTree(const Value *V, Value *Root) {
+  return V == Root ||
+         visitOrTree(Root, [V](Value *Op) { return V == Op; });
+}
+
 static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
                                     Value *LHS, Value *RHS, KnownBits &Known,
                                     const SimplifyQuery &Q) {
@@ -989,6 +1014,10 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
             (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
       }
     }
+    if (((Pred == ICmpInst::ICMP_SGT && C->isAllOnes()) ||
+         (Pred == ICmpInst::ICMP_SGE && C->isZero())) &&
+        isValueInOrTree(V, LHS))
+      Known.makeNonNegative();
   } break;
   }
 }
@@ -10723,6 +10752,14 @@ void llvm::findValuesAffectedByCondition(
             // X nuw- Y u> C -> X u> C
             if (match(A, m_NUWSub(m_Value(X), m_Value())))
               AddAffected(X);
+          } else if ((Pred == ICmpInst::ICMP_SGT && match(B, m_AllOnes())) ||
+                     (Pred == ICmpInst::ICMP_SGE && match(B, m_Zero()))) {
+            // (or X, Y) sgt -1 or (or X, Y) sge 0 implies that all values in
+            // the or tree are non-negative.
+            visitOrTree(A, [&AddAffected](Value *V) {
+              AddAffected(V);
+              return false;
+            });
           }
         }
 

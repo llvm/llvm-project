@@ -2040,8 +2040,8 @@ define i32 @sdiv_add_nonneg_guard(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[OR]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[UNREACHABLE:.*]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD]], 2
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[ADD]], 1
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
@@ -2061,9 +2061,9 @@ cont:
 
 define i32 @sdiv_add3_nonneg_guard(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @sdiv_add3_nonneg_guard(
-; CHECK:         [[ADD0:%.*]] = add nsw i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD0]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[ADD1]], 2
+; CHECK:         [[ADD0:%.*]] = add nuw nsw i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i32 [[ADD0]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[ADD1]], 1
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
 entry:
