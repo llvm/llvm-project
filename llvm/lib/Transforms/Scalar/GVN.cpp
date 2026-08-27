@@ -509,6 +509,14 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
     return NextValueNumber++;
   }
 
+  // Conservatively assign unique value numbers to calls with operand bundles.
+  // TODO: Bundle names could be included in the value numbering expression to
+  // allow combining calls with identical bundles.
+  if (C->hasOperandBundles()) {
+    ValueNumbering[C] = NextValueNumber;
+    return NextValueNumber++;
+  }
+
   if (AA->doesNotAccessMemory(C)) {
     Expression Exp = createExpr(C);
     uint32_t E = assignExpNewValueNum(Exp).first;

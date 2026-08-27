@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/NativeDylibManager.h"
-#include "orc-rt/Session.h"
+#include "orc-rt/bedrock/NativeDylibManager.h"
+#include "orc-rt/bedrock/Session.h"
 
 #include "gtest/gtest.h"
 
