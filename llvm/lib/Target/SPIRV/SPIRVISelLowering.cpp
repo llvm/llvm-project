@@ -688,6 +688,11 @@ SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::None;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
+    // AMD targets lower these to a helper call in SPIRVEmitIntrinsics, so keep
+    // them unexpanded there; other targets need the generic expansion.
+    return STI.getTargetTriple().getVendor() == Triple::AMD
+               ? AtomicExpansionKind::None
+               : AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Nand:
     return AtomicExpansionKind::CmpXChg;
   default:
