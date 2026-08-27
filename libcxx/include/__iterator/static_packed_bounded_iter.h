@@ -105,7 +105,7 @@ public:
 
   constexpr __static_packed_bounded_iterator()
     requires is_default_constructible_v<_Ptr>
-  = delete;
+  = default;
 
   template <class _Ptr2, class _Tag2>
     requires is_convertible_v<_Ptr2, _Ptr>

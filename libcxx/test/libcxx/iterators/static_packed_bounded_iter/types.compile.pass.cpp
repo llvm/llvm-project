@@ -26,3 +26,4 @@ static_assert(std::is_same_v<Iter::pointer, int*>, "");
 static_assert(std::is_same_v<Iter::reference, int&>, "");
 static_assert(std::is_same_v<Iter::iterator_category, std::random_access_iterator_tag>, "");
 static_assert(std::is_same_v<Iter::iterator_concept, std::contiguous_iterator_tag>, "");
+static_assert(std::forward_iterator<Iter>);
