@@ -2735,7 +2735,7 @@ static void genTaskwaitClauses(lower::AbstractConverter &converter,
   lower::StatementContext stmtCtx;
   lower::SymMap &symTable = converter.getSymbolMap();
   cp.processDepend(symTable, stmtCtx, clauseOps);
-  cp.processTODO<clause::Nowait>(loc, llvm::omp::Directive::OMPD_taskwait);
+  cp.processNowait(clauseOps);
 }
 
 static void genWorkshareClauses(lower::AbstractConverter &converter,

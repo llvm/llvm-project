@@ -2429,7 +2429,8 @@ void OpenMPIRBuilder::emitTaskwaitImpl(const LocationDescription &Loc) {
 }
 
 void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
-                                     DependenciesInfo Dependencies) {
+                                     DependenciesInfo Dependencies,
+                                     bool IsNowait) {
   if (!updateToLocation(Loc))
     return;
 
@@ -2468,7 +2469,7 @@ void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
         DepArray,
         ConstantInt::get(Builder.getInt32Ty(), 0),
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext())),
-        ConstantInt::get(Builder.getInt32Ty(), false)};
+        ConstantInt::get(Builder.getInt32Ty(), IsNowait)};
     createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(
             omp::RuntimeFunction::OMPRTL___kmpc_omp_taskwait_deps_51),

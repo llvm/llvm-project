@@ -459,10 +459,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("in_reduction");
     }
   };
-  auto checkNowait = [&todo](auto op, LogicalResult &result) {
-    if (op.getNowait())
-      result = todo("nowait");
-  };
   auto checkOrder = [&todo](auto op, LogicalResult &result) {
     if (op.getOrder() || op.getOrderMod())
       result = todo("order");
@@ -571,7 +567,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkTaskReductionByref(op, result);
       })
-      .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
@@ -4617,7 +4612,8 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
     return failure();
   }
 
-  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder, dds);
+  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder, dds,
+                                                       twOp.getNowait());
   if (dds.DepArray) {
     builder.CreateFree(dds.DepArray);
   }

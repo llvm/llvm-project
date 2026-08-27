@@ -5002,7 +5002,7 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
       /*depend_vars=*/clauses.dependVars,
       /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
       /*depend_iterated=*/ValueRange(clauses.dependIterated),
-      /*nowait=*/nullptr);
+      /*nowait=*/clauses.nowait);
 }
 
 //===----------------------------------------------------------------------===//
