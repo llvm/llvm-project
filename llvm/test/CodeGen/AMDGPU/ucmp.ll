@@ -49,28 +49,20 @@ define i32 @ucmp_i128(i128 %a, i128 %b) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[6:7]
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v9, 0, 1, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[2:3], v[6:7]
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cmp_lt_u64_e64 s0, v[0:1], v[4:5]
+; GFX12-SDAG-NEXT:    v_cmp_lt_u64_e64 s1, v[2:3], v[6:7]
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v8.l
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v1.l, v10.l
+; GFX12-SDAG-NEXT:    v_cmp_gt_u64_e64 s2, v[2:3], v[6:7]
+; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e64 s3, v[2:3], v[6:7]
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v0.h, 0, 1, s0
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v1.l, 0, 1, s1
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[6:7]
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v2.l, v9.l
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v3.l, v4.l
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_cndmask_b16 v0.h, v1.l, v2.l, vcc_lo
-; GFX12-SDAG-NEXT:    v_cndmask_b16 v1.l, v0.l, v3.l, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v0.l, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v1.h, 0, 1, s2
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v0.h, v1.l, v0.h, s3
+; GFX12-SDAG-NEXT:    v_cndmask_b16 v1.l, v1.h, v0.l, s3
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_and_b16 v0.l, 1, v0.h
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 1, v1
