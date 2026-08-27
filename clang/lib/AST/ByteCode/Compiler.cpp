@@ -3493,17 +3493,8 @@ bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
   LocalScope<Emitter> ES(this, ScopeKind::FullExpression);
   const Expr *SubExpr = E->getSubExpr();
 
-  if (DiscardResult && !SubExpr->isGLValue() &&
-      !canClassify(SubExpr->getType()) && containsDefaultInitExpr(SubExpr)) {
-    UnsignedOrNone LocalIndex =
-        allocateLocal(SubExpr, QualType(), ScopeKind::FullExpression);
-    if (!LocalIndex)
-      return false;
-    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
-      return false;
-    return this->visitInitializerPop(SubExpr) && ES.destroyLocals(E);
-  }
+  if (DiscardResult && this->discardNeedsResultObject(SubExpr))
+    return this->discardIntoResultObject(SubExpr) && ES.destroyLocals(E);
 
   return this->delegate(SubExpr) && ES.destroyLocals(E);
 }
@@ -4925,22 +4916,29 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   return BS.destroyLocals();
 }
 
+template <class Emitter>
+bool Compiler<Emitter>::discardNeedsResultObject(const Expr *E) const {
+  return !E->isGLValue() && !canClassify(E->getType()) &&
+         containsDefaultInitExpr(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::discardIntoResultObject(const Expr *E) {
+  UnsignedOrNone LocalIndex =
+      allocateLocal(E, QualType(), ScopeKind::FullExpression);
+  if (!LocalIndex)
+    return false;
+  InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
+  if (!this->emitGetPtrLocal(*LocalIndex, E))
+    return false;
+  return this->visitInitializerPop(E);
+}
+
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
-  // A discarded composite prvalue still needs a result object when a default
-  // member initializer refers to previously initialized subobjects. Let an
-  // ExprWithCleanups establish its full-expression scope before allocating
-  // that object.
-  if (!isa<ExprWithCleanups>(E) && !E->isGLValue() &&
-      !canClassify(E->getType()) && containsDefaultInitExpr(E)) {
-    UnsignedOrNone LocalIndex =
-        allocateLocal(E, QualType(), ScopeKind::FullExpression);
-    if (!LocalIndex)
-      return false;
-    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
-      return false;
-    return this->visitInitializerPop(E);
-  }
+  // Let an ExprWithCleanups establish its full-expression scope first; it
+  // allocates the result object itself.
+  if (!isa<ExprWithCleanups>(E) && this->discardNeedsResultObject(E))
+    return this->discardIntoResultObject(E);
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false, /*ToLValue=*/false);

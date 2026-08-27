@@ -321,6 +321,12 @@ protected:
   bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
+  /// Whether discarding \p E still requires a result object: a composite
+  /// prvalue whose default member initializer may refer to previously
+  /// initialized subobjects, so that `this` has something to denote.
+  bool discardNeedsResultObject(const Expr *E) const;
+  /// Allocate that result object and initialize \p E into it.
+  bool discardIntoResultObject(const Expr *E);
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
   /// intact.
   bool delegate(const Expr *E);
