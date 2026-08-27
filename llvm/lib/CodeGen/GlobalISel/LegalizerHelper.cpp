@@ -1205,7 +1205,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
         Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
-    if (!Status)
+    if (Status != Legalized)
       return {};
 
     // Compare temp with #0 to get the final result.
@@ -3006,6 +3006,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // don't affect the result) and then truncate the result back to the
     // original type.
     Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap and
+    // disjoint claims proved at the narrow width no longer hold. Paths that
+    // widen with value-preserving G_ZEXT/G_SEXT keep their flags.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap |
+                  MachineInstr::Disjoint);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
     widenScalarDst(MI, WideTy);
@@ -3031,6 +3036,10 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
+      // Widening the result with G_ANYEXT invalidates the no-wrap flags, as in
+      // the G_ADD/G_SUB/G_MUL case above. TypeIdx 1 widens only the shift
+      // amount, which is value-preserving, so it keeps them.
+      MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
       widenScalarDst(MI, WideTy);
     } else {
@@ -7074,7 +7083,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FPTOSI_SAT:
   case TargetOpcode::G_FPTOUI_SAT:
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP: {
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_TRUNC_SSAT_S:
+  case TargetOpcode::G_TRUNC_SSAT_U:
+  case TargetOpcode::G_TRUNC_USAT_U: {
     Observer.changingInstr(MI);
     LLT SrcExtTy;
     LLT DstExtTy;
@@ -9913,7 +9925,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
        (SrcTy.isVector() && DstTy == SrcTy.getElementType()))) {
     LLT SrcIntTy = SrcTy;
     if (!SrcTy.isScalar()) {
-      SrcIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      SrcIntTy = LLT::integer(SrcTy.getSizeInBits());
       SrcReg = MIRBuilder.buildCast(SrcIntTy, SrcReg).getReg(0);
     }
 

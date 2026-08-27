@@ -860,6 +860,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
       .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
+      .clampNumElements(0, v8s8, v8s8)
+      .clampNumElements(0, v4s16, v4s16)
       .clampNumElements(0, v2s32, v2s32)
       .lower();
 

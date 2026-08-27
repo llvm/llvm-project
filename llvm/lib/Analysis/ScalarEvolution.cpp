@@ -279,52 +279,8 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
     return;
   }
 
-  auto *NAry = dyn_cast<SCEVNAryExpr>(this);
-  SCEV::NoWrapFlags Flags = NAry ? NAry->getNoWrapFlags() : SCEV::FlagAnyWrap;
-  switch (getSCEVType()) {
-  case scPtrToAddr:
-    CanonicalSCEV = SE.getPtrToAddrExpr(CanonOps[0]);
-    return;
-  case scTruncate:
-    CanonicalSCEV = SE.getTruncateExpr(CanonOps[0], getType());
-    return;
-  case scZeroExtend:
-    CanonicalSCEV = SE.getZeroExtendExpr(CanonOps[0], getType());
-    return;
-  case scSignExtend:
-    CanonicalSCEV = SE.getSignExtendExpr(CanonOps[0], getType());
-    return;
-  case scUDivExpr:
-    CanonicalSCEV = SE.getUDivExpr(CanonOps[0], CanonOps[1]);
-    return;
-  case scAddExpr:
-    CanonicalSCEV = SE.getAddExpr(CanonOps, Flags);
-    return;
-  case scMulExpr:
-    CanonicalSCEV = SE.getMulExpr(CanonOps, Flags);
-    return;
-  case scAddRecExpr:
-    CanonicalSCEV = SE.getAddRecExpr(
-        CanonOps, cast<SCEVAddRecExpr>(this)->getLoop(), Flags);
-    return;
-  case scSMaxExpr:
-    CanonicalSCEV = SE.getSMaxExpr(CanonOps);
-    return;
-  case scUMaxExpr:
-    CanonicalSCEV = SE.getUMaxExpr(CanonOps);
-    return;
-  case scSMinExpr:
-    CanonicalSCEV = SE.getSMinExpr(CanonOps);
-    return;
-  case scUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps);
-    return;
-  case scSequentialUMinExpr:
-    CanonicalSCEV = SE.getUMinExpr(CanonOps, /*Sequential=*/true);
-    return;
-  default:
-    llvm_unreachable("Unknown SCEV type");
-  }
+  // Rebuild the expression from the canonical operands, stripping use flags.
+  CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1342,7 +1298,7 @@ const ExtendOpTraitsBase::GetExtendExprTy ExtendOpTraits<
 // expression "Step + sext/zext(PreIncAR)" is congruent with
 // "sext/zext(PostIncAR)"
 template <typename ExtendOpTy>
-static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR, Type *Ty,
+static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR,
                                         ScalarEvolution *SE, unsigned Depth) {
   auto WrapType = ExtendOpTraits<ExtendOpTy>::WrapType;
   auto GetExtendExpr = ExtendOpTraits<ExtendOpTy>::GetExtendExpr;
@@ -1424,7 +1380,7 @@ static const SCEV *getExtendAddRecStart(const SCEVAddRecExpr *AR, Type *Ty,
                                         unsigned Depth) {
   auto GetExtendExpr = ExtendOpTraits<ExtendOpTy>::GetExtendExpr;
 
-  const SCEV *PreStart = getPreStartForExtend<ExtendOpTy>(AR, Ty, SE, Depth);
+  const SCEV *PreStart = getPreStartForExtend<ExtendOpTy>(AR, SE, Depth);
   if (!PreStart)
     return (SE->*GetExtendExpr)(AR->getStart(), Ty, Depth);
 
@@ -8288,21 +8244,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     return IntOp;
   }
 
-  case Instruction::PtrToInt: {
-    // Keep ptrtoint as SCEVUnknown, except when the pointer operand has SCEV
-    // structure (e.g. a pointer add-rec or an offset from a known base). In
-    // that case model it via ptrtoaddr to preserve the integer structure
-    // (induction, constant folding). A bare SCEVUnknown pointer gains no
-    // structure from wrapping it in ptrtoaddr, so leave it opaque.
-    const SCEV *PtrSCEV = getSCEV(U->getOperand(0));
-    if (!isa<SCEVUnknown>(PtrSCEV)) {
-      const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
-      if (!isa<SCEVCouldNotCompute>(Addr) &&
-          getTypeSizeInBits(V->getType()) <= getTypeSizeInBits(Addr->getType()))
-        return getTruncateOrNoop(Addr, V->getType());
-    }
+  case Instruction::PtrToInt:
+    // SCEV only models ptrtoaddr.
     return getUnknown(V);
-  }
+
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.
     return getUnknown(V);
@@ -13440,6 +13385,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   bool PositiveStride = isKnownPositive(Stride);
 
+  // Whether the IV may reach the maximum value before the exit is taken.
+  bool IVMayOverflow = true;
+
   // Avoid negative or zero stride values.
   if (!PositiveStride) {
     // We can compute the correct backedge taken count for loops with unknown
@@ -13509,10 +13457,11 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
       }
     }
-  } else if (!NoWrap) {
+  } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    if (canIVOverflowOnLT(RHS, Stride, IsSigned))
+    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    if (IVMayOverflow && !NoWrap)
       return getCouldNotCompute();
   }
 
@@ -13693,8 +13642,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //
       // Using this information, try to prove whether the addition in
       // "(Start - End) + (Stride - 1)" has unsigned overflow.
+      //
+      // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
+      // value, so the distance End - Start is at most UMAX - (Stride - 1) and
+      // the (Stride - 1) addition below cannot overflow.
       const SCEV *One = getOne(Stride->getType());
-      bool MayAddOverflow = [&] {
+      bool MayAddOverflow = IVMayOverflow && [&] {
         if (isKnownToBeAPowerOfTwo(Stride)) {
           // Suppose Stride is a power of two, and Start/End are unsigned
           // integers.  Let UMAX be the largest representable unsigned

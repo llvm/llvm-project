@@ -320,14 +320,13 @@ exit:
 define void @scev_addrec_expanded(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'scev_addrec_expanded'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 4
-; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
-; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -359,7 +358,6 @@ exit:
 define void @addrec_outer_iv_narrow(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_outer_iv_narrow'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %indvar = phi i64 [ %indvar.next, %outer.latch ], [ 0, %entry ]
@@ -399,15 +397,14 @@ exit:
 define void @addrec_non_unit_outer_stride(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_non_unit_outer_stride'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 6
-; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
-; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
 ; CHECK-NEXT:    IR   %outer.iv.next = add nuw i64 %outer.iv, 2
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -440,11 +437,12 @@ exit:
 define void @addrec_over_grandparent_loop(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_over_grandparent_loop'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle>:
 ; CHECK-NEXT:    IR   %mid = phi i64 [ 0, %outermost ], [ %mid.next, %mid.latch ]
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -485,10 +483,11 @@ exit:
 define void @addrec_phi_not_in_inner_preheader(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_phi_not_in_inner_preheader'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<inner.ph>:
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -524,17 +523,16 @@ exit:
 define void @addrec_nuw_flags(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_nuw_flags'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %0 = shl nuw nsw i64 %outer.iv, 2
 ; CHECK-NEXT:    IR   %1 = add i64 %0, 4
-; CHECK-NEXT:    IR   %2 = udiv i64 %1, 3
-; CHECK-NEXT:    IR   %3 = add nuw nsw i64 %2, 1
 ; CHECK-NEXT:    IR   %m = mul nuw i64 %outer.iv, 4
 ; CHECK-NEXT:    IR   %bound = add nuw i64 %m, 5
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%3>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%1>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -569,17 +567,16 @@ exit:
 define void @addrec_non_affine_outer_recurrence_no_canonical_iv(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_non_affine_outer_recurrence_no_canonical_iv'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %induction.iv = phi i64 [ %induction.iv.next, %outer.latch ], [ 9, %entry ]
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 5, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
-; CHECK-NEXT:    IR   %umax = call i64 @llvm.umax.i64(i64 %induction.iv, i64 3)
-; CHECK-NEXT:    IR   %0 = add i64 %umax, -1
-; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
-; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.umax(ir<%induction.iv>, ir<3>)
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = udiv vp<[[VP3]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = add nuw nsw vp<[[VP4]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP5]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -615,17 +612,16 @@ exit:
 define void @addrec_non_affine_outer_recurrence_with_canonical_iv(ptr %dst) {
 ; CHECK-LABEL: VPlan for loop in 'addrec_non_affine_outer_recurrence_with_canonical_iv'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
-; CHECK-NEXT:  Live-in ir<%2> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %induction.iv = phi i64 [ %induction.iv.next, %outer.latch ], [ 9, %entry ]
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %ar = phi i64 [ 4, %entry ], [ %ar.next, %outer.latch ]
-; CHECK-NEXT:    IR   %umax = call i64 @llvm.umax.i64(i64 %induction.iv, i64 3)
-; CHECK-NEXT:    IR   %0 = add i64 %umax, -1
-; CHECK-NEXT:    IR   %1 = udiv i64 %0, 3
-; CHECK-NEXT:    IR   %2 = add nuw nsw i64 %1, 1
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%2>, ir<4>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = call i64 @llvm.umax(ir<%induction.iv>, ir<3>)
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = udiv vp<[[VP3]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = add nuw nsw vp<[[VP4]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP5]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;

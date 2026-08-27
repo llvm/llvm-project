@@ -1279,6 +1279,67 @@ TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUseDropsRedundantFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %x, i32 %y, i32 %z) { "
+                          "  ret void "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *Z = SE.getSCEV(getArgByName(F, "z"));
+    const SCEV *NUWAdd = SE.getAddExpr(X, Y, SCEV::FlagNUW);
+    ASSERT_TRUE(cast<SCEVAddExpr>(NUWAdd)->hasNoUnsignedWrap());
+    ASSERT_FALSE(cast<SCEVAddExpr>(NUWAdd)->hasNoSignedWrap());
+
+    // Flags the expression already carries are not attached to the use, so the
+    // use remains the expression itself.
+    SCEVUse RedundantFlags(NUWAdd, SCEV::FlagNUW);
+    EXPECT_FALSE(RedundantFlags.hasUseFlags());
+    EXPECT_EQ(RedundantFlags, NUWAdd);
+
+    // Only flags the expression does not carry itself remain on the use, while
+    // the flags the use provides stay the same.
+    SCEVUse MixedFlags(NUWAdd, SCEV::FlagNUW | SCEV::FlagNSW);
+    EXPECT_TRUE(MixedFlags.hasUseFlags());
+    EXPECT_FALSE(any(MixedFlags.getUseNoWrapFlags() & SCEV::FlagNUW));
+    EXPECT_TRUE(any(MixedFlags.getUseNoWrapFlags() & SCEV::FlagNSW));
+    EXPECT_EQ(MixedFlags.getNoWrapFlags(SCEV::FlagNUW | SCEV::FlagNSW),
+              SCEV::FlagNUW | SCEV::FlagNSW);
+
+    // Use flags are part of an expression's identity, so dropping the redundant
+    // ones keeps expressions built from RedundantFlags canonical.
+    const SCEV *MaxRedundantFlags = SE.getUMaxExpr(RedundantFlags, Z);
+    EXPECT_EQ(MaxRedundantFlags, SE.getUMaxExpr(NUWAdd, Z));
+    EXPECT_TRUE(SCEVUse(MaxRedundantFlags).isCanonical());
+
+    // Flags that add information are still part of the expression's identity.
+    const SCEV *MaxMixedFlags = SE.getUMaxExpr(MixedFlags, Z);
+    EXPECT_NE(MaxMixedFlags, MaxRedundantFlags);
+    EXPECT_FALSE(SCEVUse(MaxMixedFlags).isCanonical());
+    EXPECT_EQ(SCEVUse(MaxMixedFlags).getCanonical(), MaxRedundantFlags);
+
+    // Expressions that cannot carry no-wrap flags themselves must not get use
+    // flags either, while FlagAnyWrap remains fine for them.
+    const SCEV *ZExt =
+        SE.getZeroExtendExpr(X, Type::getInt64Ty(F.getContext()));
+    EXPECT_FALSE(SCEVUse(ZExt, SCEV::FlagAnyWrap).hasUseFlags());
+#ifndef NDEBUG
+    EXPECT_DEATH((void)SCEVUse(ZExt, SCEV::FlagNUW),
+                 "use flags require an expression that can carry no-wrap");
+    EXPECT_DEATH((void)SCEVUse(MaxRedundantFlags, SCEV::FlagNSW),
+                 "use flags require an expression that can carry no-wrap");
+#endif
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, ProveUMinULT) {
   LLVMContext C;
   SMDiagnostic Err;
@@ -2133,12 +2194,6 @@ TEST_F(ScalarEvolutionsTest, PrintUseFlagsOfOperands) {
               "(zext i32 (4 + %a)<u nsw> to i64)");
     EXPECT_EQ(Rendered(SE.getSignExtendExpr(NUWAdd, I64)),
               "(sext i32 (%a + %b)<u nuw> to i64)");
-
-    SCEVUse Trunc = SE.getTruncateExpr(Add, I16);
-    SCEVUse NUWTrunc(Trunc, SCEV::FlagNUW);
-    EXPECT_EQ(Rendered(NUWTrunc), "(trunc i32 (%a + %b) to i16)<u nuw>");
-    EXPECT_EQ(Rendered(SE.getUDivExpr(NUWTrunc, SE.getTruncateExpr(B, I16))),
-              "((trunc i32 (%a + %b) to i16)<u nuw> /u (trunc i32 %b to i16))");
   });
 }
 
@@ -2148,7 +2203,7 @@ TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      R"(define void @f(i32 %x, i32 %y, i1 %c) {
+      R"(define void @f(i32 %x, i32 %y, i32 %z, i1 %c) {
       entry:
         br label %loop
       loop:
@@ -2166,27 +2221,34 @@ TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
   runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
     const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
-    SCEVUse FlaggedX(X, SCEV::FlagNUW);
+    const SCEV *Z = SE.getSCEV(getArgByName(F, "z"));
+    // Only expressions that can carry no-wrap flags themselves may have use
+    // flags. Flag a product for the sum below and a sum for all other nodes, so
+    // the flagged operand does not fold into the expression built from it.
+    const SCEV *Mul = SE.getMulExpr(X, Y);
+    const SCEV *Add = SE.getAddExpr(X, Y);
+    SCEVUse MulNUW(Mul, SCEV::FlagNUW);
+    SCEVUse MulNSW(Add, SCEV::FlagNUW);
     ASSERT_FALSE(LI.empty());
     const Loop *L = *LI.begin();
 
     // Each builder keys its uniquing on the operand uses, so the flagged
     // operand yields a different expression for every kind of node.
-    SCEVUse FlaggedAdd = SE.getAddExpr(FlaggedX, Y);
-    EXPECT_NE(FlaggedAdd, SE.getAddExpr(X, Y));
-    EXPECT_NE(SE.getMulExpr(FlaggedX, Y), SE.getMulExpr(X, Y));
-    EXPECT_NE(SE.getUDivExpr(FlaggedX, Y), SE.getUDivExpr(X, Y));
-    EXPECT_NE(SE.getUMaxExpr(FlaggedX, Y), SE.getUMaxExpr(X, Y));
-    EXPECT_NE(SE.getAddRecExpr(FlaggedX, Y, L, SCEV::FlagAnyWrap),
-              SE.getAddRecExpr(X, Y, L, SCEV::FlagAnyWrap));
-    SmallVector<SCEVUse, 2> FlaggedSeqOps = {FlaggedX, Y};
-    SmallVector<SCEVUse, 2> BareSeqOps = {X, Y};
+    SCEVUse FlaggedAdd = SE.getAddExpr(MulNUW, Z);
+    EXPECT_NE(FlaggedAdd, SE.getAddExpr(Mul, Z));
+    EXPECT_NE(SE.getMulExpr(MulNSW, Z), SE.getMulExpr(Add, Z));
+    EXPECT_NE(SE.getUDivExpr(MulNSW, Z), SE.getUDivExpr(Add, Z));
+    EXPECT_NE(SE.getUMaxExpr(MulNSW, Z), SE.getUMaxExpr(Add, Z));
+    EXPECT_NE(SE.getAddRecExpr(MulNSW, Z, L, SCEV::FlagAnyWrap),
+              SE.getAddRecExpr(Add, Z, L, SCEV::FlagAnyWrap));
+    SmallVector<SCEVUse, 2> FlaggedSeqOps = {MulNSW, Z};
+    SmallVector<SCEVUse, 2> BareSeqOps = {Add, Z};
     EXPECT_NE(SE.getUMinExpr(FlaggedSeqOps, /*Sequential=*/true),
               SE.getUMinExpr(BareSeqOps, /*Sequential=*/true));
 
-    EXPECT_EQ(FlaggedAdd->getCanonical(), SE.getAddExpr(X, Y));
-    EXPECT_EQ(SE.getUDivExpr(FlaggedX, Y)->getCanonical(),
-              SE.getUDivExpr(X, Y));
+    EXPECT_EQ(FlaggedAdd->getCanonical(), SE.getAddExpr(Mul, Z));
+    EXPECT_EQ(SE.getUDivExpr(MulNSW, Z)->getCanonical(),
+              SE.getUDivExpr(Add, Z));
 
     // The flagged use is the operand of the expression built from it, while the
     // canonical form's operands are all bare.
@@ -2194,7 +2256,7 @@ TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
     copy_if(FlaggedAdd->operands(), std::back_inserter(FlaggedOps),
             [](SCEVUse Op) { return Op.hasUseFlags(); });
     ASSERT_EQ(FlaggedOps.size(), 1u);
-    EXPECT_EQ(FlaggedOps[0], FlaggedX);
+    EXPECT_EQ(FlaggedOps[0], MulNUW);
     EXPECT_TRUE(none_of(FlaggedAdd->getCanonical()->operands(),
                         [](SCEVUse Op) { return Op.hasUseFlags(); }));
   });
