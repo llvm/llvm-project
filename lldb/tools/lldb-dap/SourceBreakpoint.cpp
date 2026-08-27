@@ -86,7 +86,7 @@ void SourceBreakpoint::CreatePathBreakpoint(const protocol::Source &source) {
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
-    int64_t source_reference) {
+    src_ref_t source_reference) {
   std::optional<lldb::addr_t> raw_addr =
       m_dap.GetSourceReferenceAddress(source_reference);
   if (!raw_addr)

@@ -21,7 +21,13 @@ types:
   - type_name: tm_gmtoff_t
   - type_name: pid_t
 enums: []
-objects: []
+objects:
+  - object_name: tzname
+    object_type: char *[2]
+  - object_name: timezone
+    object_type: long
+  - object_name: daylight
+    object_type: int
 functions:
   - name: asctime
     standards:
@@ -169,6 +175,12 @@ functions:
     return_type: int
     arguments:
       - type: timer_t
+  - name: tzset
+    standards:
+      - posix
+    return_type: void
+    arguments:
+      - type: void
   - name: clock_getcpuclockid
     standards:
       - posix

@@ -170,9 +170,9 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = llvm.getelementptr %[[ARG]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
     %0 = llvm.mlir.constant(1 : i32) : i32
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-    %2 = llvm.mlir.constant(0 : index) : i64
-    %3 = llvm.mlir.constant(1 : index) : i64
-    %4 = llvm.mlir.constant(9 : index) : i64
+    %2 = llvm.mlir.constant(0 : i64) : i64
+    %3 = llvm.mlir.constant(1 : i64) : i64
+    %4 = llvm.mlir.constant(9 : i64) : i64
     %5 = llvm.mlir.constant(48 : i32) : i32
     "llvm.intr.memcpy"(%1, %arg0, %5) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
     %6 = llvm.getelementptr %1[0, 7, %2, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>

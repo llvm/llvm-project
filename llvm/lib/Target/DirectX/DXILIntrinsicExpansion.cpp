@@ -198,6 +198,14 @@ static Value *expand16BitIsNormal(CallInst *Orig) {
   return B1;
 }
 
+static bool shouldExpandFloatDotIntrinsic(Function &F) {
+  assert(F.getIntrinsicID() == Intrinsic::dx_fdot &&
+         "Function is not a dx.fdot intrinsic");
+  auto *ParamTy = cast<FixedVectorType>(F.getFunctionType()->getParamType(0));
+  return ParamTy->getNumElements() <= 4 ||
+         F.getParent()->getTargetTriple().getOSVersion() < VersionTuple(6, 9);
+}
+
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::assume:
@@ -220,7 +228,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_isnan:
   case Intrinsic::dx_normalize:
-  case Intrinsic::dx_fdot:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
@@ -234,6 +241,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_load_input:
   case Intrinsic::dx_store_output:
     return true;
+  case Intrinsic::dx_fdot:
+    return shouldExpandFloatDotIntrinsic(F);
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
         F.getParent(), F.getReturnType()->getStructElementType(0),
@@ -405,10 +414,8 @@ static Value *expandAbs(CallInst *Orig) {
                                  "dx.max");
 }
 
-// Create appropriate DXIL float dot intrinsic for the given A and B operands
-// The appropriate opcode will be determined by the size of the operands
-// The dot product is placed in the position indicated by Orig
-static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
+// Create a DXIL dot2, dot3, or dot4 for the given operands.
+static Value *expandFloatDotChunk(CallInst *Orig, Value *A, Value *B) {
   Type *ATy = A->getType();
   [[maybe_unused]] Type *BTy = B->getType();
   assert(ATy->isVectorTy() && BTy->isVectorTy());
@@ -419,8 +426,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
 
   assert(ATy->getScalarType()->isFloatingPointTy());
 
-  Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
-  int NumElts = AVec->getNumElements();
+  unsigned NumElts = AVec->getNumElements();
+  Intrinsic::ID DotIntrinsic;
   switch (NumElts) {
   case 2:
     DotIntrinsic = Intrinsic::dx_dot2;
@@ -434,24 +441,49 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   default:
     reportFatalUsageError(
         "Invalid dot product input vector: length is outside 2-4");
-    return nullptr;
   }
 
   SmallVector<Value *> Args;
-  for (int I = 0; I < NumElts; ++I)
+  for (unsigned I = 0; I < NumElts; ++I)
     Args.push_back(Builder.CreateExtractElement(A, Builder.getInt32(I)));
-  for (int I = 0; I < NumElts; ++I)
+  for (unsigned I = 0; I < NumElts; ++I)
     Args.push_back(Builder.CreateExtractElement(B, Builder.getInt32(I)));
   return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic, Args,
                                  nullptr, "dot");
 }
 
-// Create the appropriate DXIL float dot intrinsic for the operands of Orig
-// The appropriate opcode will be determined by the size of the operands
-// The dot product is placed in the position indicated by Orig
+// Expand an arbitrary-width float dot into the minimum number of legal DXIL
+// dot2, dot3, and dot4 operations.
 static Value *expandFloatDotIntrinsic(CallInst *Orig) {
-  return expandFloatDotIntrinsic(Orig, Orig->getOperand(0),
-                                 Orig->getOperand(1));
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  unsigned NumElts = cast<FixedVectorType>(A->getType())->getNumElements();
+
+  //  We return early here to avoid constructing unnecessary identity shuffles.
+  if (NumElts <= 4)
+    return expandFloatDotChunk(Orig, A, B);
+
+  assert(Orig->getModule()->getTargetTriple().getOSVersion() <
+             VersionTuple(6, 9) &&
+         "long fdot must not be expanded for shader model 6.9 or later");
+
+  IRBuilder<> Builder(Orig);
+  Value *Result = nullptr;
+  for (unsigned Offset = 0; Offset < NumElts;) {
+    unsigned Remaining = NumElts - Offset;
+    // Taking four is optimal unless it would leave an illegal one-element
+    // tail. In that case, take three and finish with dot2.
+    unsigned ChunkSize = Remaining == 5 ? 3 : std::min(Remaining, 4u);
+    SmallVector<int, 4> Mask;
+    for (unsigned I = 0; I < ChunkSize; ++I)
+      Mask.push_back(Offset + I);
+    Value *AChunk = Builder.CreateShuffleVector(A, Mask);
+    Value *BChunk = Builder.CreateShuffleVector(B, Mask);
+    Value *Chunk = expandFloatDotChunk(Orig, AChunk, BChunk);
+    Result = Result ? Builder.CreateFAdd(Result, Chunk, "dot.add") : Chunk;
+    Offset += ChunkSize;
+  }
+  return Result;
 }
 
 // Expand integer dot product to multiply and add ops
@@ -644,7 +676,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     return Builder.CreateFDiv(X, X);
   }
 
-  Value *DotProduct = expandFloatDotIntrinsic(Orig, X, X);
+  Value *DotProduct = expandFloatDotChunk(Orig, X, X);
 
   // verify that the length is non-zero
   // (if the dot product is non-zero, then the length is non-zero)

@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef ORC_RT_UTILS_COMMANDLINE_H
+#define ORC_RT_UTILS_COMMANDLINE_H
+
 #include <algorithm>
 #include <charconv>
 #include <functional>
@@ -255,4 +258,7 @@ private:
     return S.size() >= P.size() && S.compare(0, P.size(), P) == 0;
   }
 };
+
 } // namespace orc_rt
+
+#endif // ORC_RT_UTILS_COMMANDLINE_H

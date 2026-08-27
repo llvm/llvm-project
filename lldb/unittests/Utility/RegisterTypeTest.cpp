@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gmock/gmock.h"
@@ -596,4 +597,35 @@ TEST(RegisterTypeTest, XMLDefinitionsAreDeduplicatedByID) {
   EXPECT_EQ(strm.GetString(), "<enum id=\"same_id\">\n"
                               "  <evalue name=\"first\" value=\"0\"/>\n"
                               "</enum>\n");
+}
+
+TEST(RegisterTypeBuiltinTest, Construction) {
+  RegisterTypeBuiltin type("uint32", eEncodingUint, eFormatHex, 4);
+
+  EXPECT_EQ(type.GetID(), "uint32");
+  EXPECT_EQ(type.GetEncoding(), eEncodingUint);
+  EXPECT_EQ(type.GetFormat(), eFormatHex);
+  ASSERT_TRUE(type.GetByteSize());
+  EXPECT_EQ(*type.GetByteSize(), 4u);
+}
+
+TEST(RegisterTypeBuiltinTest, TargetDependentByteSize) {
+  RegisterTypeBuiltin type("data_ptr", eEncodingUint, eFormatAddressInfo,
+                           std::nullopt);
+
+  EXPECT_FALSE(type.GetByteSize());
+}
+
+TEST(RegisterTypeBuiltinTest, DoesNotSerialize) {
+  RegisterTypeBuiltin builtin("uint8", eEncodingUint, eFormatHex, 1);
+  const RegisterType &type = builtin;
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+
+  type.ToXML(strm, previously_emitted);
+  EXPECT_TRUE(strm.GetString().empty());
+  EXPECT_TRUE(previously_emitted.empty());
+
+  type.ToXMLElement(strm);
+  EXPECT_TRUE(strm.GetString().empty());
 }

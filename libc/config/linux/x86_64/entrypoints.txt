@@ -1623,6 +1623,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # time.h entrypoints
       libc.src.time.strptime
+      libc.src.time.tz_variables
+      libc.src.time.tzset
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf

@@ -32,6 +32,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimplePackedSerialization.h
     orc-rt/bedrock/SimpleSymbolTable.h
+    orc-rt/bedrock/SimpleRemoteCA.h
     orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/bedrock/StringPool.h
     orc-rt/bedrock/TaskGroup.h

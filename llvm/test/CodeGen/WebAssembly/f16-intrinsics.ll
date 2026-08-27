@@ -89,6 +89,18 @@ define <8 x half> @insert_lane_v8f16(<8 x half> %v, half %x) {
   ret <8 x half> %r
 }
 
+; CHECK-LABEL: bitselect_v8f16:
+; CHECK:       v128.bitselect $push0=, $0, $1, $2
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.wasm.bitselect.v8f16(<8 x half>, <8 x half>,
+                                              <8 x half>)
+define <8 x half> @bitselect_v8f16(<8 x half> %a, <8 x half> %b,
+                                    <8 x half> %mask) {
+  %result = call <8 x half> @llvm.wasm.bitselect.v8f16(
+      <8 x half> %a, <8 x half> %b, <8 x half> %mask)
+  ret <8 x half> %result
+}
+
 ; CHECK-LABEL: select_v8f16:
 ; CHECK:       v128.select $push0=, $1, $2, $0
 ; CHECK-NEXT:  return $pop0

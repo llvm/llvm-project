@@ -79,7 +79,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalForCartesianProduct({i32}, {i32, i64})
+      .legalForCartesianProduct({i32}, {i32, i64, p0})
       .widenScalarToNextPow2(1)
       .clampScalar(0, s32, s32)
       .clampScalar(1, s32, s64);
@@ -161,7 +161,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
       .clampScalar(1, s32, s64);
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalForCartesianProduct({i32, i64, f32, f64}, {i32})
+      .legalForCartesianProduct({i32, i64, f32, f64, p0}, {i32})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s32);
@@ -213,7 +213,7 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
 
                                  {i64, p0, i8, 1},
                                  {i64, p0, i16, 1},
-                                 {i64, p0, s32, 1},
+                                 {i64, p0, i32, 1},
                                  {i64, p0, i64, 1},
 
                                  {f32, p0, f32, 1},

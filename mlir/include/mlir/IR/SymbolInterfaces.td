@@ -31,41 +31,16 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "::mlir::StringAttr", "getNameAttr", (ins), [{
-        // Don't rely on the trait implementation as optional symbol operations
-        // may override this.
-        return mlir::SymbolTable::getSymbolName($_op);
-      }], /*defaultImplementation=*/[{
-        return mlir::SymbolTable::getSymbolName(this->getOperation());
-      }]
+      "::mlir::StringAttr", "getNameAttr", (ins)
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "::mlir::StringAttr":$name), [{}],
-      /*defaultImplementation=*/[{
-        this->getOperation()->setAttr(
-            mlir::SymbolTable::getSymbolAttrName(), name);
-      }]
+      "void", "setName", (ins "::mlir::StringAttr":$name)
     >,
-    InterfaceMethod<[{
-        Gets the visibility of this symbol. The default implementation reads
-        the `getDefaultVisibilityAttrName()` attribute and assumes public
-        visibility if it is absent.
-      }],
-      "mlir::SymbolTable::Visibility", "getVisibility", (ins), [{}],
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::defaultGetSymbolVisibility(
-            this->getOperation());
-      }]
+    InterfaceMethod<"Gets the visibility of this symbol.",
+      "mlir::SymbolTable::Visibility", "getVisibility", (ins)
     >,
-    InterfaceMethod<[{
-        Sets the visibility of this symbol. The default implementation writes
-        the `getDefaultVisibilityAttrName()` attribute and drops it for public
-        visibility.
-      }],
-      "void", "setVisibility", (ins "mlir::SymbolTable::Visibility":$vis), [{}],
-      /*defaultImplementation=*/[{
-        ::mlir::detail::defaultSetSymbolVisibility(this->getOperation(), vis);
-      }]
+    InterfaceMethod<"Sets the visibility of this symbol.",
+      "void", "setVisibility", (ins "mlir::SymbolTable::Visibility":$vis)
     >,
     InterfaceMethod<[{
         Get all of the uses of the current symbol that are nested within the
@@ -136,7 +111,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     // If this is an optional symbol, bail out early if possible.
     auto concreteOp = cast<ConcreteOp>($_op);
     if (concreteOp.isOptionalSymbol()) {
-      if(!concreteOp->getInherentAttr(::mlir::SymbolTable::getSymbolAttrName()).value_or(Attribute{}))
+      if (!concreteOp.getNameAttr())
         return success();
     }
     if (::mlir::failed(::mlir::detail::verifySymbol($_op)))
@@ -155,25 +130,25 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
   }];
 
   let extraClassDeclaration = [{
-    /// Return the name of the attribute used for symbol visibility by the
-    /// default implementations of `getVisibility` and `setVisibility`.
-    static ::mlir::StringRef getDefaultVisibilityAttrName() {
-      return "sym_visibility";
-    }
-  }];
-
-  let extraSharedClassDeclaration = [{
-    using Visibility = mlir::SymbolTable::Visibility;
-
     /// Convenience version of `getNameAttr` that returns a StringRef.
     ::mlir::StringRef getName() {
       return getNameAttr().getValue();
     }
 
-    /// Convenience version of `setName` that take a StringRef.
+    /// Convenience version of `setName` that takes a StringRef.
     void setName(::mlir::StringRef name) {
-      setName(::mlir::StringAttr::get($_op->getContext(), name));
+      setName(::mlir::StringAttr::get(getOperation()->getContext(), name));
     }
+
+    /// Return the conventional symbol visibility attribute name.
+    static ::mlir::StringRef getDefaultVisibilityAttrName() {
+      return "sym_visibility";
+    }
+
+  }];
+
+  let extraSharedClassDeclaration = [{
+    using Visibility = mlir::SymbolTable::Visibility;
 
     /// Returns true if this symbol has nested visibility.
     bool isNested() {
@@ -208,7 +183,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   // Add additional classof checks to properly handle "optional" symbols.
   let extraClassOf = [{
-    return $_op->hasAttr(::mlir::SymbolTable::getSymbolAttrName());
+    return static_cast<bool>($_op.getNameAttr());
   }];
 }
 
@@ -255,6 +230,12 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
 //===----------------------------------------------------------------------===//
 // Symbol Traits
 //===----------------------------------------------------------------------===//
+
+// Op stores its symbol name in a `sym_name` inherent attribute.
+def SymbolName : NativeOpTrait<"SymbolName">;
+
+// Op stores its symbol visibility in a `sym_visibility` inherent attribute.
+def SymbolVisibility : NativeOpTrait<"SymbolVisibility">;
 
 // Op defines a symbol table.
 def SymbolTable : NativeOpTrait<"SymbolTable">;

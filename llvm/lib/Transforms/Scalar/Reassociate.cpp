@@ -182,6 +182,10 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
 /// operand, both allowing contraction. Such pairs can be fused into a single
 /// fma, so they are kept together as leaves of the enclosing expression tree
 /// instead of being linearized into it.
+///
+/// Do not keep the pair together if the other operand is itself a reassociable
+/// fadd. Treating the outer fadd as a leaf would hide the nested addition from
+/// reassociation and prevent the complete expression from being optimized.
 static BinaryOperator *isFMulAddCandidate(Value *V) {
   BinaryOperator *FAdd = isReassociableOp(V, Instruction::FAdd);
   if (!FAdd || !FAdd->hasAllowContract())
@@ -192,10 +196,11 @@ static BinaryOperator *isFMulAddCandidate(Value *V) {
   };
   BinaryOperator *Mul = nullptr, *OtherMul = nullptr;
   Value *OtherOp = nullptr;
-  // Keep constants visible to the enclosing expression so they still can be
-  // folded there.
+  // Keep constants and nested additions visible to the enclosing expression so
+  // they can participate in folding and reassociation.
   if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
-      isa<Constant>(OtherOp) || match(OtherOp, ContractableFMul(OtherMul)))
+      isa<Constant>(OtherOp) || isReassociableOp(OtherOp, Instruction::FAdd) ||
+      match(OtherOp, ContractableFMul(OtherMul)))
     return nullptr;
   return Mul;
 }

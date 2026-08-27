@@ -254,8 +254,7 @@ static LogicalResult cloneFuncsToGPUModule(
                            "cannot replace symbol for acc routine");
         return failure();
       }
-      deviceFuncOp->setDiscardableAttr(SymbolTable::getSymbolAttrName(),
-                                       funcName);
+      deviceFuncOp.setName(funcName);
     }
     if (auto specAttr =
             srcFunc->getDiscardableAttrOfType<SpecializedRoutineAttr>(

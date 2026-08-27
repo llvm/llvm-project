@@ -75,6 +75,36 @@ private:
 
 namespace {
 
+TEST(SymbolOpInterface, NativeSymbolTraits) {
+  DialectRegistry registry;
+  ::test::registerTestDialect(registry);
+  MLIRContext context(registry);
+
+  constexpr static StringLiteral kInput = R"MLIR(
+    "test.symbol"() <{sym_name = "symbol_name"}> : () -> ()
+  )MLIR";
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(kInput, &context);
+  auto symOp = cast<SymbolOpInterface>(module->getBody()->front());
+
+  EXPECT_EQ(symOp.getName(), "symbol_name");
+  EXPECT_TRUE(symOp.isPublic());
+
+  symOp.setName("new_name");
+  EXPECT_EQ(symOp.getName(), "new_name");
+  EXPECT_EQ(symOp->getInherentAttr("sym_name").value_or(Attribute{}),
+            symOp.getNameAttr());
+
+  symOp.setPrivate();
+  EXPECT_TRUE(symOp.isPrivate());
+  symOp.setNested();
+  EXPECT_TRUE(symOp.isNested());
+  symOp.setPublic();
+  EXPECT_TRUE(symOp.isPublic());
+  EXPECT_FALSE(
+      symOp->getInherentAttr(SymbolOpInterface::getDefaultVisibilityAttrName())
+          .value_or(Attribute{}));
+}
+
 TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleOp) {
   // Symbol as `Operation *`, rename within module.
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,

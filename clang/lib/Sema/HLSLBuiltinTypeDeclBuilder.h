@@ -137,12 +137,14 @@ public:
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConstReturn,
                                                   bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType());
+                                                  QualType ElemTy = QualType(),
+                                                  bool TransposeResult = false);
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
-                                           QualType ValueType);
+                                           QualType ValueType,
+                                           bool TransposeArg = false);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName);

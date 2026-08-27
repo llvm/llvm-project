@@ -43,3 +43,15 @@ void RegisterType::PrintXMLAttributeValue(Stream &strm, llvm::StringRef value) {
   llvm::printHTMLEscaped(value, escape_strm);
   strm << escaped;
 }
+
+RegisterTypeBuiltin::RegisterTypeBuiltin(std::string id,
+                                         lldb::Encoding encoding,
+                                         lldb::Format format,
+                                         std::optional<uint64_t> byte_size)
+    : RegisterType(eRegisterTypeKindBuiltin, std::move(id)),
+      m_encoding(encoding), m_format(format), m_byte_size(byte_size) {}
+
+void RegisterTypeBuiltin::ToXML(Stream &, std::unordered_set<std::string> &,
+                                const RegisterType *) const {}
+
+void RegisterTypeBuiltin::ToXMLElement(Stream &, const RegisterType *) const {}

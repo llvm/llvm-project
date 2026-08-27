@@ -54,8 +54,8 @@ public:
   //  use the (non-const) version from `TargetTransformInfoImplCRTPBase`.
   virtual InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                                      ArrayRef<const Value *> Operands,
-                                     Type *AccessType,
-                                     TTI::TargetCostKind CostKind) const {
+                                     TTI::TargetCostKind CostKind,
+                                     Type *AccessType) const {
     // In the basic model, we just assume that all-constant GEPs will be folded
     // into their uses via addressing modes.
     for (const Value *Operand : Operands)
@@ -1337,8 +1337,9 @@ protected:
 
 public:
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) const override {
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind,
+                             Type *AccessType) const override {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
@@ -1444,7 +1445,7 @@ public:
         SmallVector<const Value *> Indices(GEP->indices());
         Cost += static_cast<const T *>(this)->getGEPCost(
             GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
-            AccessTy, CostKind);
+            CostKind, AccessTy);
       }
     }
     return Cost;
@@ -1507,7 +1508,7 @@ public:
 
       return TargetTTI->getGEPCost(GEP->getSourceElementType(),
                                    Operands.front(), Operands.drop_front(),
-                                   AccessType, CostKind);
+                                   CostKind, AccessType);
     }
     case Instruction::Add:
     case Instruction::FAdd:

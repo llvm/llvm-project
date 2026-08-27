@@ -274,14 +274,15 @@ class OpenMP_CriticalNameClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ];
 
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
-  let reqAssemblyFormat = "$sym_name";
+  let reqAssemblyFormat = "($sym_visibility^)? $sym_name";
 
   let description = [{
     The `sym_name` can be used in `omp.critical` constructs in the dialect.

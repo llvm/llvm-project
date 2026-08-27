@@ -86,8 +86,8 @@ llvm.func @test_omp_parallel_2() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_2:.*]])
   omp.parallel {
     ^bb0:
-      %0 = llvm.mlir.constant(1 : index) : i64
-      %1 = llvm.mlir.constant(42 : index) : i64
+      %0 = llvm.mlir.constant(1 : i64) : i64
+      %1 = llvm.mlir.constant(42 : i64) : i64
       llvm.call @body(%0) : (i64) -> ()
       llvm.call @body(%1) : (i64) -> ()
       llvm.br ^bb1
@@ -129,7 +129,7 @@ llvm.func @test_omp_parallel_num_threads_1(%arg0: i32) -> () {
 
 // CHECK: define void @test_omp_parallel_num_threads_2()
 llvm.func @test_omp_parallel_num_threads_2() -> () {
-  %0 = llvm.mlir.constant(4 : index) : i32
+  %0 = llvm.mlir.constant(4 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_2:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_2]], i32 %[[GTN_NUM_THREADS_VAR_2]], i32 4)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_2:.*]])
@@ -146,7 +146,7 @@ llvm.func @test_omp_parallel_num_threads_2() -> () {
 
 // CHECK: define void @test_omp_parallel_num_threads_3()
 llvm.func @test_omp_parallel_num_threads_3() -> () {
-  %0 = llvm.mlir.constant(4 : index) : i32
+  %0 = llvm.mlir.constant(4 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_3_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_3_1:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_3_1]], i32 %[[GTN_NUM_THREADS_VAR_3_1]], i32 4)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_3_1:.*]])
@@ -154,7 +154,7 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
     omp.barrier
     omp.terminator
   }
-  %1 = llvm.mlir.constant(8 : index) : i32
+  %1 = llvm.mlir.constant(8 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_3_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_3_2:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_3_2]], i32 %[[GTN_NUM_THREADS_VAR_3_2]], i32 8)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_3_2:.*]])
@@ -175,7 +175,7 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_EXPR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
-  %0 = llvm.mlir.constant(0 : index) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
@@ -403,9 +403,9 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   omp.parallel {
     "omp.wsloop"() ({
       omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
@@ -429,9 +429,9 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_inclusive_1
 llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   // CHECK: store i64 31, ptr %{{.*}}upperbound
   "omp.wsloop"() ({
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
@@ -448,9 +448,9 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_inclusive_2
 llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   // CHECK: store i64 32, ptr %{{.*}}upperbound
   "omp.wsloop"() ({
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) inclusive step (%2) {
@@ -1581,8 +1581,8 @@ llvm.func @omp_atomic_read_implicit_cast () {
   %5 = llvm.alloca %4 x !llvm.array<2 x struct<(f32, f32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
   %6 = llvm.mlir.constant(1 : i64) : i64
   %7 = llvm.alloca %6 x i32 {bindc_name = "w"} : (i64) -> !llvm.ptr
-  %8 = llvm.mlir.constant(1 : index) : i64
-  %9 = llvm.mlir.constant(2 : index) : i64
+  %8 = llvm.mlir.constant(1 : i64) : i64
+  %9 = llvm.mlir.constant(2 : i64) : i64
   %10 = llvm.mlir.constant(1 : i64) : i64
   %11 = llvm.mlir.constant(0 : i64) : i64
   %12 = llvm.sub %8, %10 overflow<nsw> : i64
@@ -4084,9 +4084,9 @@ module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_s
 // -----
 
 llvm.func @distribute() {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   omp.distribute {
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
       omp.yield

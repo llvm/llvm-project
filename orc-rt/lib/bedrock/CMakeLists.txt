@@ -12,6 +12,7 @@ set(ORC_RT_SOURCES
   Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
+  SimpleRemoteCA.cpp
   SimpleSymbolTable.cpp
   StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp

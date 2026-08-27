@@ -231,16 +231,17 @@ public:
     /// installing a handler via Session::setOnDisconnect:
     ///
     ///   - Success: the disconnection was orderly. Either it was requested
-    ///     locally via disconnect, or the controller announced that it was
-    ///     going away (e.g. by sending an explicit hangup message).
+    ///     locally via disconnect, or the controller cleanly disconnected (e.g.
+    ///     by sending an explicit hangup message with a success value).
     ///
     ///   - Failure: the disconnection was abnormal, and Err describes what was
-    ///     observed: a communication failure, a protocol error, or the
-    ///     controller vanishing without announcing it (e.g. end-of-file on a
-    ///     transport whose protocol requires an explicit hangup). The cause of
-    ///     an abnormal disconnection is generally unknowable -- the controller
-    ///     may have crashed, been killed, or become unreachable -- so Err
-    ///     should describe what was observed rather than assert a cause.
+    ///     observed: a communication failure, a protocol error, a failure the
+    ///     controller reported as it disconnected, or the controller vanishing
+    ///     without announcing it (e.g. end-of-file on a transport whose
+    ///     protocol requires an explicit hangup). The cause of an abnormal
+    ///     disconnection is generally unknowable -- the controller may have
+    ///     crashed, been killed, or become unreachable -- so Err should
+    ///     describe what was observed rather than assert a cause.
     ///
     /// Pass the terminal error here rather than to reportError: if no
     /// on-disconnect handler is installed the Session forwards Err to the error
@@ -349,13 +350,14 @@ public:
   /// The Error it receives describes how the connection ended:
   ///
   ///   - Success: the disconnection was orderly -- it was requested locally,
-  ///     the controller announced that it was going away, or no controller was
-  ///     ever attached (with no connection to lose, the disconnect trivially
+  ///     the controller cleanly disconnected, or no controller was ever
+  ///     attached (with no connection to lose, the disconnect trivially
   ///     succeeds).
   ///
   ///   - Failure: the disconnection was abnormal -- a failure to connect in
-  ///     the first place, a communication failure, or the controller vanishing
-  ///     without announcing it.
+  ///     the first place, a communication failure, a failure the controller
+  ///     reported as it disconnected, or the controller vanishing without
+  ///     announcing it.
   ///
   /// The handler takes ownership of the Error and must consume it. Note that
   /// success covers both an orderly disconnection and never having attached; a

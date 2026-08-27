@@ -259,7 +259,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
 
   firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
   auto declMapperOp = mlir::omp::DeclareMapperOp::create(
-      firOpBuilder, loc, mapperNameStr, recordType);
+      firOpBuilder, loc, mapperNameStr, /*sym_visibility=*/nullptr, recordType);
   auto &region = declMapperOp.getRegion();
   firOpBuilder.createBlock(&region);
   auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);

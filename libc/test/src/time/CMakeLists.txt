@@ -310,3 +310,14 @@ add_libc_test(
     libc.src.errno.errno
     libc.hdr.types.clock_t
 )
+
+add_libc_test(
+  tzset_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    tzset_test.cpp
+  DEPENDS
+    libc.src.time.tz_variables
+    libc.src.time.tzset
+)

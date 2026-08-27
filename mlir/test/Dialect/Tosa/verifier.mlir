@@ -2400,3 +2400,11 @@ func.func @test(%arg0: tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3
   // expected-error@+1 {{'tosa.dim' op operand #0 must be tosa-conformant tensor of at least rank 1 of number values: block scaled tensor type must have rank greater than zero, but got 'tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>'}}
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> !tosa.shape<1>
 }
+
+// -----
+
+func.func @test_transpose_block_scaled_illegal_perms(%input: tensor<29x12x32x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>> {
+  // expected-error@+1 {{expected no-op permutation on innermost dimension for block scaled input}}
+  %transpose = tosa.transpose %input  { perms = array<i32: 3, 0, 1, 2> } : (tensor<29x12x32x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  return %transpose : tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+}

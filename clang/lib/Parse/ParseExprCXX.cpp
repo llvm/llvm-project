@@ -1936,7 +1936,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
     // Handle '(; expr)', '([[...]]; expr)' and '(__attribute__((...)); expr)'
     // when GNU-style attributes are finalized.
-    if (Tok.is(tok::semi)) {
+    if (InitStmt && Tok.is(tok::semi)) {
       StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
       if (ParsedAttrs) {
         WarnOnInit();

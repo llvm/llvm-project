@@ -15,9 +15,9 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
   // CHECK-DAG: %[[OFFLOADPTR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
   // CHECK-DAG: store ptr @_QMtest_0Ezii, ptr %[[OFFLOADPTR]], align 8
   llvm.func @_QQmain() {
-    %0 = llvm.mlir.constant(1 : index) : i64
-    %1 = llvm.mlir.constant(0 : index) : i64
-    %2 = llvm.mlir.constant(11 : index) : i64
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
+    %2 = llvm.mlir.constant(11 : i64) : i64
     %3 = llvm.mlir.addressof @_QMtest_0Ezii : !llvm.ptr
     %4 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%2 : i64) extent(%2 : i64) stride(%0 : i64) start_idx(%1 : i64) stride_in_bytes(true)
     %5 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<11 x f32>) map_clauses(tofrom) capture(ByRef) bounds(%4) -> !llvm.ptr

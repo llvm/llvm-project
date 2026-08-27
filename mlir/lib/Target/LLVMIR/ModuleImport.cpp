@@ -1113,7 +1113,8 @@ void ModuleImport::processComdat(const llvm::Comdat *comdat) {
   builder.setInsertionPointToEnd(&comdatOp.getBody().back());
   auto selectorOp = ComdatSelectorOp::create(
       builder, mlirModule.getLoc(), comdat->getName(),
-      convertComdatFromLLVM(comdat->getSelectionKind()));
+      convertComdatFromLLVM(comdat->getSelectionKind()),
+      /*sym_visibility=*/nullptr);
   auto symbolRef =
       SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
                          FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
@@ -1547,7 +1548,8 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
                   convertLinkageFromLLVM(ifunc->getLinkage()),
                   ifunc->isDSOLocal(), ifunc->getAddressSpace(),
                   convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
-                  convertVisibilityFromLLVM(ifunc->getVisibility()));
+                  convertVisibilityFromLLVM(ifunc->getVisibility()),
+                  /*sym_visibility=*/nullptr);
   return success();
 }
 

@@ -16,6 +16,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 
 #include <cinttypes>
+#include <limits>
 
 #include <optional>
 #include <vector>
@@ -1239,14 +1240,14 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
 static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
                                           uint64_t relative_die_offset) {
   uint64_t bit_size;
-  bool sign;
+  llvm::dwarf::TypeKind encoding;
   if (relative_die_offset == 0) {
     // The generic type has the size of an address on the target
     // machine and an unspecified signedness. Scalar has no
     // "unspecified signedness", so we use unsigned types.
     if (!eval_ctx.module_sp)
       return llvm::createStringError("no module");
-    sign = false;
+    encoding = llvm::dwarf::DW_ATE_unsigned;
     bit_size = eval_ctx.module_sp->GetArchitecture().GetAddressByteSize() * 8;
     if (!bit_size)
       return llvm::createStringError("unspecified architecture");
@@ -1254,14 +1255,62 @@ static llvm::Error Evaluate_DW_OP_convert(EvalContext &eval_ctx,
     if (!eval_ctx.dwarf_cu)
       return llvm::createStringError(
           "DW_OP_convert with a DIE offset requires a DWARF unit");
-    auto bit_size_sign_or_err =
-        eval_ctx.dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
-    if (!bit_size_sign_or_err)
-      return bit_size_sign_or_err.takeError();
-    bit_size = bit_size_sign_or_err->first;
-    sign = bit_size_sign_or_err->second;
+    auto bit_size_encoding_or_err =
+        eval_ctx.dwarf_cu->GetDIEBitSizeAndEncoding(relative_die_offset);
+    if (!bit_size_encoding_or_err)
+      return bit_size_encoding_or_err.takeError();
+    bit_size = bit_size_encoding_or_err->first;
+    encoding = bit_size_encoding_or_err->second;
   }
-  eval_ctx.stack.back().GetScalar().TruncOrExtendTo(bit_size, sign);
+
+  Scalar &scalar = eval_ctx.stack.back().GetScalar();
+  if (encoding == llvm::dwarf::DW_ATE_float) {
+    const llvm::fltSemantics *semantics;
+    switch (bit_size) {
+    case 32:
+      semantics = &llvm::APFloat::IEEEsingle();
+      break;
+    case 64:
+      semantics = &llvm::APFloat::IEEEdouble();
+      break;
+    case 80:
+      semantics = &llvm::APFloat::x87DoubleExtended();
+      break;
+    default:
+      return llvm::createStringError("unsupported floating-point type size");
+    }
+
+    if (scalar.GetType() == Scalar::e_float) {
+      llvm::APFloat value = scalar.GetAPFloat();
+      bool loses_info;
+      value.convert(*semantics, llvm::APFloat::rmNearestTiesToEven,
+                    &loses_info);
+      scalar = Scalar(std::move(value));
+    } else if (!scalar.FloatPromote(*semantics)) {
+      return llvm::createStringError("cannot convert value to floating point");
+    }
+    return llvm::Error::success();
+  }
+
+  const bool sign = encoding == llvm::dwarf::DW_ATE_signed ||
+                    encoding == llvm::dwarf::DW_ATE_signed_char;
+  if (scalar.GetType() == Scalar::e_float) {
+    if (bit_size > std::numeric_limits<uint16_t>::max())
+      return llvm::createStringError("unsupported integer type size: %" PRIu64,
+                                     bit_size);
+
+    llvm::APSInt value(static_cast<unsigned>(bit_size),
+                       /*isUnsigned=*/!sign);
+    bool is_exact;
+    llvm::APFloat::opStatus status = scalar.GetAPFloat().convertToInteger(
+        value, llvm::APFloat::rmTowardZero, &is_exact);
+    if (status & llvm::APFloat::opInvalidOp)
+      return llvm::createStringError(
+          "cannot convert floating-point value to integer");
+    scalar = Scalar(std::move(value));
+  } else {
+    scalar.TruncOrExtendTo(bit_size, sign);
+  }
   return llvm::Error::success();
 }
 

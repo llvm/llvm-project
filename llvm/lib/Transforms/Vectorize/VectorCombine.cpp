@@ -2061,7 +2061,7 @@ bool VectorCombine::foldInsertElementsToStores(Instruction &I) {
       continue;
     const Value *GEPIndices[] = {ConstantInt::get(Idx->getType(), 0), Idx};
     NewCost += TTI.getGEPCost(VecTy, SI->getPointerOperand(), GEPIndices,
-                              InsertVal->getType(), CostKind);
+                              CostKind, InsertVal->getType());
   }
 
   for (auto [InsertVal, Idx] : InsertElements) {

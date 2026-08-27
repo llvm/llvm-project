@@ -1239,7 +1239,7 @@ static void AddAtomicFloatRequirements(const MachineInstr &MI,
   Register TypeReg = MI.getOperand(1).getReg();
   SPIRVTypeInst TypeDef = MI.getMF()->getRegInfo().getVRegDef(TypeReg);
 
-  if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(TypeDef))
     return AddAtomicVectorFloatRequirements(MI, Reqs, ST);
 
   if (TypeDef->getOpcode() != SPIRV::OpTypeFloat)
@@ -1483,7 +1483,7 @@ static void AddDotProductRequirements(const MachineInstr &MI,
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
-  } else if (TypeDef->getOpcode() == SPIRV::OpTypeVector) {
+  } else if (isVectorType(TypeDef)) {
     SPIRVTypeInst ScalarTypeDef =
         MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     assert(ScalarTypeDef->getOpcode() == SPIRV::OpTypeInt);
@@ -1533,6 +1533,19 @@ static void addImageOperandReqs(const MachineInstr &MI,
     if (Mask & (1U << I))
       Reqs.getAndAddRequirements(SPIRV::OperandCategory::ImageOperandOperand,
                                  1U << I, ST);
+}
+
+static inline void maybeAddScatterGatherReq(const MachineInstr &MI,
+                                            SPIRV::RequirementHandler &Reqs,
+                                            const SPIRVSubtarget &ST) {
+  assert(MI.getOperand(1).isReg());
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+  if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
+      ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+    Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+  }
 }
 
 void addInstrRequirements(const MachineInstr &MI,
@@ -1621,14 +1634,16 @@ void addInstrRequirements(const MachineInstr &MI,
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
 
-    assert(MI.getOperand(1).isReg());
-    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
-        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
-      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
-    }
+    maybeAddScatterGatherReq(MI, Reqs, ST);
+    break;
+  }
+  case SPIRV::OpTypeVectorIdEXT: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+      reportFatalUsageError("OpTypeVectorIdEXT requires the following SPIR-V "
+                            "extension: SPV_EXT_long_vector extension");
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_long_vector);
+    Reqs.addCapability(SPIRV::Capability::LongVectorEXT);
+    maybeAddScatterGatherReq(MI, Reqs, ST);
     break;
   }
   case SPIRV::OpTypePointer: {
@@ -2566,7 +2581,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFNegateV: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     SPIRVTypeInst TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
       if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
@@ -2596,7 +2611,7 @@ void addInstrRequirements(const MachineInstr &MI,
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *OperandDef = MRI.getVRegDef(MI.getOperand(2).getReg());
     SPIRVTypeInst TypeDef = MRI.getVRegDef(OperandDef->getOperand(1).getReg());
-    if (TypeDef->getOpcode() == SPIRV::OpTypeVector)
+    if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
       if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))

@@ -836,6 +836,35 @@ let TargetPrefix = "riscv" in {
     let ScalarOperand = 1;
     let VLOperand = 4;
   }
+  // UnMasked ternary operations whose first vector source precedes the
+  // vector/scalar source. The first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, vl, policy)
+  class RISCVTernaryVS2FirstUnMasked<
+      LLVMType VS2Type = LLVMMatchType<0>, int VLTypeIndex = 2,
+      bit HasVV = 1>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, VS2Type,
+                      !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                      llvm_anyint_ty, LLVMMatchType<VLTypeIndex>],
+                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // Masked ternary operations whose first vector source precedes the
+  // vector/scalar source. The first operand can not be undef.
+  // Input: (vector_in, vector_in, vector_in/scalar, mask, vl, policy)
+  class RISCVTernaryVS2FirstMasked<
+      LLVMType VS2Type = LLVMMatchType<0>, int VLTypeIndex = 2,
+      bit HasVV = 1>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                     [LLVMMatchType<0>, VS2Type,
+                      !if(HasVV, llvm_any_ty, llvm_anyint_ty),
+                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                      llvm_anyint_ty, LLVMMatchType<VLTypeIndex>],
+                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 4;
+  }
   // UnMasked Widening Vector Multiply-Add operations, its first operand can not be undef.
   // Input: (vector_in, vector_in/scalar, vector_in, frm, vl, policy)
   class RISCVTernaryWideUnMaskedRoundingMode
@@ -1308,6 +1337,12 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVTernaryWide {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryWideMasked;
+  }
+  multiclass RISCVTernaryWideVS2First {
+    def "int_riscv_" # NAME :
+        RISCVTernaryVS2FirstUnMasked<llvm_anyvector_ty, 3>;
+    def "int_riscv_" # NAME # "_mask" :
+        RISCVTernaryVS2FirstMasked<llvm_anyvector_ty, 3>;
   }
   multiclass RISCVTernaryWideRoundingMode {
     def "int_riscv_" # NAME : RISCVTernaryWideUnMaskedRoundingMode;
@@ -1933,11 +1968,10 @@ let TargetPrefix = "riscv" in {
 // Zvabd - Vector Absolute Difference
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in {
-  defm vabs    : RISCVUnaryAA;
-  defm vabd    : RISCVBinaryAAA;
-  defm vabdu   : RISCVBinaryAAA;
-  defm vwabda  : RISCVTernaryWide;
-  defm vwabdau : RISCVTernaryWide;
+  defm vabd    : RISCVBinaryAAX;
+  defm vabdu   : RISCVBinaryAAX;
+  defm vwabda  : RISCVTernaryWideVS2First;
+  defm vwabdau : RISCVTernaryWideVS2First;
 } // TargetPrefix = "riscv"
 
 // Zvzip - Reordering Structured Data in Vector Registers
@@ -2002,33 +2036,10 @@ let TargetPrefix = "riscv" in {
 let TargetPrefix = "riscv" in {
   // We use llvm_anyvector_ty and llvm_anyint_ty for future extensibility
   // purpose but only EEW=32 is defined for now
-  // Input: (vector_in, vector_in, vector_in/scalar_in, vl, policy)
-  class RISCVVDOT4AUnMasked<bit HasVV>
-        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, LLVMMatchType<0>,
-                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
-                                 llvm_anyint_ty, LLVMMatchType<2>],
-                                [ImmArg<ArgIndex<4>>, IntrNoMem]>,
-                                RISCVVIntrinsic {
-    let ScalarOperand = 2;
-    let VLOperand = 3;
-  }
-  // Input: (vector_in, vector_in, vector_in/scalar_in, mask, vl, policy)
-  class RISCVVDOT4AMasked<bit HasVV>
-        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                [LLVMMatchType<0>, LLVMMatchType<0>,
-                                 !if(HasVV, llvm_any_ty, llvm_anyint_ty),
-                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                 llvm_anyint_ty, LLVMMatchType<2>],
-                                [ImmArg<ArgIndex<5>>, IntrNoMem]>,
-                                RISCVVIntrinsic {
-    let ScalarOperand = 2;
-    let VLOperand = 4;
-  }
-
   multiclass RISCVVDOT4A<bit HasVV = 1> {
-    def "int_riscv_" # NAME : RISCVVDOT4AUnMasked<HasVV=HasVV>;
-    def "int_riscv_" # NAME # "_mask" : RISCVVDOT4AMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME : RISCVTernaryVS2FirstUnMasked<HasVV=HasVV>;
+    def "int_riscv_" # NAME # "_mask" :
+        RISCVTernaryVS2FirstMasked<HasVV=HasVV>;
   }
 
   defm vdot4a   : RISCVVDOT4A;

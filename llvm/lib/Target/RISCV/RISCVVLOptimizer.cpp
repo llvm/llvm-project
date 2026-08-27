@@ -599,9 +599,10 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VCLMULH_VX:
 
   // Zvabd
-  case RISCV::VABS_V:
   case RISCV::VABD_VV:
+  case RISCV::VABD_VX:
   case RISCV::VABDU_VV:
+  case RISCV::VABDU_VX:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -669,7 +670,9 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFWCVTBF16_F_F_V:
   // Zvabd
   case RISCV::VWABDA_VV:
+  case RISCV::VWABDA_VX:
   case RISCV::VWABDAU_VV:
+  case RISCV::VWABDAU_VX:
     return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
