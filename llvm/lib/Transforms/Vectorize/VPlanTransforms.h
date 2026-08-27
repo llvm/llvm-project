@@ -352,9 +352,10 @@ struct VPlanTransforms {
   static void convertToStridedAccesses(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L,
                                        VPCostContext &Ctx, VFRange &Range);
-  // Lower safe uniform (potentially masked) loads to unconditional scalar
+  // Convert safe uniform (potentially masked) loads to unconditional scalar
   // loads.
-  static void lowerSafeUniformLoads(VPlan &Plan, const TargetLibraryInfo &TLI);
+  static void convertToSingleScalarMemOps(VPlan &Plan,
+                                          const TargetLibraryInfo &TLI);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);

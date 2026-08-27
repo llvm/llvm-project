@@ -5824,8 +5824,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
   }
 }
 
-void VPlanTransforms::lowerSafeUniformLoads(VPlan &Plan,
-                                            const TargetLibraryInfo &TLI) {
+void VPlanTransforms::convertToSingleScalarMemOps(
+    VPlan &Plan, const TargetLibraryInfo &TLI) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {

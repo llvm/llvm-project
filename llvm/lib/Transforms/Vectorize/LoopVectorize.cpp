@@ -6871,7 +6871,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // legal and profitable.
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
                  *OrigLoop, CostCtx, Range);
-  RUN_VPLAN_PASS(VPlanTransforms::lowerSafeUniformLoads, *Plan, *TLI);
+  RUN_VPLAN_PASS(VPlanTransforms::convertToSingleScalarMemOps, *Plan, *TLI);
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
