@@ -4082,7 +4082,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
   CheckArgumentObjectKind(x);
 
   llvm::omp::Clause id{x.Id()};
-  auto clauseId{omp::WithSource(id, x.source)};
+  auto clauseId{WithSource(id, x.source)};
   switch (id) {
   case llvm::omp::Clause::OMPC_ompx_bare:
   case llvm::omp::Clause::OMPC_cancellation_construct_type:

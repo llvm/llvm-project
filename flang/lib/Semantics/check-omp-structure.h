@@ -358,17 +358,18 @@ private:
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
   FindMutuallyExclusiveClauses(llvm::omp::ClauseSet exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
-  bool VerifyModifierVersion(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierVersion(parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
-  bool VerifyModifierRequired(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierRequired(parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
-  bool VerifyModifierUnique(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierUnique(parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
-  bool VerifyModifierExclusive(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierExclusive(
+      parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
-  bool VerifyModifierUltimate(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifierUltimate(parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
-  bool VerifyModifiers(omp::WithSource<llvm::omp::Clause> clause,
+  bool VerifyModifiers(parser::omp::WithSource<llvm::omp::Clause> clause,
       const parser::omp::AppliedModifierInfo &info);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
