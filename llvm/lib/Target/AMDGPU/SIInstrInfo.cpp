@@ -3367,6 +3367,84 @@ bool SIInstrInfo::reverseBranchCondition(
   return true;
 }
 
+namespace {
+class AMDGPUPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
+private:
+  /// The compare instruction for loop control
+  const MachineInstr *CmpInst = nullptr;
+  /// The normalized condition used by createTripCountGreaterCondition()
+  SmallVector<MachineOperand, 2> Cond;
+
+public:
+  AMDGPUPipelinerLoopInfo(MachineInstr *CmpInst,
+                          const SmallVectorImpl<MachineOperand> &Cond)
+      : CmpInst(CmpInst), Cond(Cond.begin(), Cond.end()) {}
+
+  bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
+    return CmpInst && MI == CmpInst;
+  }
+
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &CondParam) override {
+    CondParam = this->Cond;
+    return {};
+  }
+
+  void adjustTripCount(int TripCountAdjust) override {}
+
+  void setPreheader(MachineBasicBlock *NewPreheader) override {}
+};
+} // namespace
+
+std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+SIInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 2> Cond;
+  // Unanalyzable terminator.
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return nullptr;
+
+  // Infinite loops are not supported.
+  if (TBB == LoopBB && FBB == LoopBB)
+    return nullptr;
+
+  // Must be conditional branch.
+  if (FBB == nullptr)
+    return nullptr;
+
+  assert((TBB == LoopBB || FBB == LoopBB) &&
+         "The Loop must be a single-basic-block loop");
+
+  // Divergent (VCC/EXEC) back-edge is not supported.
+  BranchPredicate Pred = static_cast<BranchPredicate>(Cond[0].getImm());
+  if (Pred != SCC_TRUE && Pred != SCC_FALSE)
+    return nullptr;
+
+  // Calls and inline assembly are not supported.
+  for (const MachineInstr &MI : *LoopBB)
+    if (MI.isCall() || MI.isInlineAsm())
+      return nullptr;
+
+  // Normalization for createTripCountGreaterCondition(): make Cond mean
+  // "exit the loop" so the expander emits correct prolog guard branches.
+  if (TBB == LoopBB)
+    reverseBranchCondition(Cond);
+
+  auto Instructions = make_range(
+      MachineBasicBlock::reverse_iterator(LoopBB->getFirstTerminator()),
+      LoopBB->rend());
+  auto CmpI = llvm::find_if(Instructions, [&](const MachineInstr &MI) {
+    return MI.modifiesRegister(Cond[1].getReg(), &RI);
+  });
+
+  if (CmpI == Instructions.end() || CmpI->isPHI())
+    return nullptr;
+  MachineInstr *CmpInst = &*CmpI;
+
+  return std::make_unique<AMDGPUPipelinerLoopInfo>(CmpInst, Cond);
+}
+
 bool SIInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                   ArrayRef<MachineOperand> Cond,
                                   Register DstReg, Register TrueReg,
@@ -9585,9 +9663,9 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
                                           MachineInstr &Inst, unsigned Opcode,
                                           MachineDominatorTree *MDT) const {
   //  (S_FLBIT_I32_B64 hi:lo) ->
-  // -> (umin (V_FFBH_U32_e32 hi), (uaddsat (V_FFBH_U32_e32 lo), 32))
+  // -> (umin (V_FFBH_U32_e32 hi), (or (V_FFBH_U32_e32 lo), 32))
   //  (S_FF1_I32_B64 hi:lo) ->
-  // ->(umin (uaddsat (V_FFBL_B32_e32 hi), 32) (V_FFBL_B32_e32 lo))
+  // ->(umin (or (V_FFBL_B32_e32 hi), 32) (V_FFBL_B32_e32 lo))
 
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
@@ -9600,8 +9678,6 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
   const MCInstrDesc &InstDesc = get(Opcode);
 
   bool IsCtlz = Opcode == AMDGPU::V_FFBH_U32_e32;
-  unsigned OpcodeAdd = ST.hasAddNoCarryInsts() ? AMDGPU::V_ADD_U32_e64
-                                               : AMDGPU::V_ADD_CO_U32_e32;
 
   const TargetRegisterClass *SrcRC =
       Src.isReg() ? MRI.getRegClass(Src.getReg()) : &AMDGPU::SGPR_32RegClass;
@@ -9622,10 +9698,9 @@ void SIInstrInfo::splitScalar64BitCountOp(SIInstrWorklist &Worklist,
 
   BuildMI(MBB, MII, DL, InstDesc, MidReg2).add(SrcRegSub1);
 
-  BuildMI(MBB, MII, DL, get(OpcodeAdd), MidReg3)
-      .addReg(IsCtlz ? MidReg1 : MidReg2)
+  BuildMI(MBB, MII, DL, get(AMDGPU::V_OR_B32_e32), MidReg3)
       .addImm(32)
-      .addImm(1); // enable clamp
+      .addReg(IsCtlz ? MidReg1 : MidReg2);
 
   BuildMI(MBB, MII, DL, get(AMDGPU::V_MIN_U32_e64), MidReg4)
       .addReg(MidReg3)

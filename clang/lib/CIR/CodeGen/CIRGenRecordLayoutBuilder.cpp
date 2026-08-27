@@ -64,6 +64,21 @@ struct CIRRecordLowering final {
       return offset < other.offset;
     }
   };
+
+  static bool isZeroWidthBitField(const MemberInfo &member) {
+    return cir::isZeroWidthBitField(member.data, member.memberKind);
+  }
+
+  /// A zero-width bit-field contributes nothing to a run of bit-fields, so it
+  /// would otherwise leave no member at all.  The array's element type is what
+  /// the ABI counts as user data, and its zero length keeps the member out of
+  /// the record's storage.
+  MemberInfo makeZeroWidthBitFieldInfo(const FieldDecl *field) {
+    return makeStorageInfo(
+        bitsToCharUnits(getFieldBitOffset(field)),
+        cir::ArrayType::get(cirGenTypes.convertTypeForMem(field->getType()), 0),
+        cir::RecordMemberKind::BitField);
+  }
   // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool packed);
@@ -412,6 +427,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
     for (; field != fieldEnd && field->isBitField(); ++field) {
       // Zero-width bitfields end runs.
       if (field->isZeroLengthBitField()) {
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
         run = fieldEnd;
         continue;
       }
@@ -634,6 +650,8 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
       assert(field != fieldEnd && field->isBitField() &&
              "Accumulating past end of bitfields");
       assert(!barrier && "Accumulating across barrier");
+      if (field->isZeroLengthBitField())
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
       // Accumulate this bitfield into the current (potential) span.
       bitSizeSinceBegin += field->getBitWidthValue();
       ++field;
@@ -722,7 +740,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
                          : CharUnits::Zero();
 
   for (const MemberInfo &member : members) {
-    if (!member.data)
+    if (!member.data || isZeroWidthBitField(member))
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
@@ -752,6 +770,19 @@ void CIRRecordLowering::insertPadding() {
   for (const MemberInfo &member : members) {
     if (!member.data)
       continue;
+    // A consumer recovers each member's offset by accumulating the sizes of the
+    // members before it, so the padding this one sits inside has to be split at
+    // its offset for that sum to come out right.
+    if (isZeroWidthBitField(member)) {
+      // The offset can sit behind the running size, since the access unit
+      // covering the bits around it may be wider than the offset it was
+      // declared at.
+      if (member.offset > size) {
+        padding.push_back(std::make_pair(size, member.offset - size));
+        size = member.offset;
+      }
+      continue;
+    }
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
@@ -1011,7 +1042,8 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     // and still marks bitfield.  Computed before clearFields() drops the
     // variant marks.
     const cir::RecordMemberKind storageKind = makeMemberKind(
-        /*holdsData=*/llvm::any_of(getFieldKinds(), cir::holdsDataForABI),
+        /*holdsData=*/
+        cir::anyMemberHoldsDataForABI(getFieldTypes(), getFieldKinds()),
         /*isBitFieldAccessUnit=*/llvm::any_of(getFieldKinds(),
                                               cir::isBitFieldAccessUnit));
     clearFields();

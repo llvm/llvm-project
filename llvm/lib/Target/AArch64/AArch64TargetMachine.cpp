@@ -11,6 +11,7 @@
 
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
+#include "AArch64AsmPrinter.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64MachineScheduler.h"
 #include "AArch64MacroFusion.h"
@@ -930,7 +931,7 @@ void AArch64PassConfig::addPreEmitPass() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&
