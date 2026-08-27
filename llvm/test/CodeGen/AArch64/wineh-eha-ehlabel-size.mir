@@ -1,0 +1,52 @@
+# Under async EH the AsmPrinter emits a nop after an EH_LABEL whose next
+# instruction can fault, so EH_LABEL is not free and BranchRelaxation has to
+# count it. The branch range is narrowed so eight labels decide it: without
+# counting them the TBZ looks in range and is left alone.
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass branch-relaxation \
+# RUN:     -aarch64-tbz-offset-bits=5 %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: eha
+# CHECK:      TBNZW renamable $w0, 0, %bb.1
+# CHECK-NEXT: B %bb.2
+
+--- |
+  define void @eha(i32 %x, ptr %p) {
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 2, !"eh-asynch", i32 1}
+...
+---
+name:            eha
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $x1
+    TBZW renamable $w0, 0, %bb.2
+
+  bb.1:
+    successors: %bb.2
+    liveins: $x1
+    EH_LABEL <mcsymbol .Ltmp0>
+    renamable $x2 = LDRXui renamable $x1, 0
+    EH_LABEL <mcsymbol .Ltmp1>
+    renamable $x2 = LDRXui renamable $x1, 1
+    EH_LABEL <mcsymbol .Ltmp2>
+    renamable $x2 = LDRXui renamable $x1, 2
+    EH_LABEL <mcsymbol .Ltmp3>
+    renamable $x2 = LDRXui renamable $x1, 3
+    EH_LABEL <mcsymbol .Ltmp4>
+    renamable $x2 = LDRXui renamable $x1, 4
+    EH_LABEL <mcsymbol .Ltmp5>
+    renamable $x2 = LDRXui renamable $x1, 5
+    EH_LABEL <mcsymbol .Ltmp6>
+    renamable $x2 = LDRXui renamable $x1, 6
+    EH_LABEL <mcsymbol .Ltmp7>
+    renamable $x2 = LDRXui renamable $x1, 7
+    B %bb.2
+
+  bb.2:
+    RET undef $lr
+...
