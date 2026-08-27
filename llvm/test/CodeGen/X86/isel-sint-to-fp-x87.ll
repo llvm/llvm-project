@@ -343,3 +343,82 @@ entry:
   store double %conv, ptr %p, align 4
   ret void
 }
+
+; %conv has type float, so it has to be rounded to float before it is used:
+; comparing it against its own reload from memory has to be true.
+define i32 @test_int32_to_float_roundtrip(i32 %x, ptr %p) nounwind {
+; SDAG-X64-LABEL: test_int32_to_float_roundtrip:
+; SDAG-X64:       # %bb.0: # %entry
+; SDAG-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    flds -{{[0-9]+}}(%rsp)
+; SDAG-X64-NEXT:    fsts (%rsi)
+; SDAG-X64-NEXT:    xorl %eax, %eax
+; SDAG-X64-NEXT:    fucompi %st(0), %st
+; SDAG-X64-NEXT:    setnp %al
+; SDAG-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_int32_to_float_roundtrip:
+; GISEL-X64:       # %bb.0: # %entry
+; GISEL-X64-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    fsts (%rsi)
+; GISEL-X64-NEXT:    flds (%rsi)
+; GISEL-X64-NEXT:    fxch %st(1)
+; GISEL-X64-NEXT:    fucompi %st(1), %st
+; GISEL-X64-NEXT:    fstp %st(0)
+; GISEL-X64-NEXT:    sete %al
+; GISEL-X64-NEXT:    setnp %cl
+; GISEL-X64-NEXT:    andb %al, %cl
+; GISEL-X64-NEXT:    movzbl %cl, %eax
+; GISEL-X64-NEXT:    andl $1, %eax
+; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: test_int32_to_float_roundtrip:
+; SDAG-X86:       # %bb.0: # %entry
+; SDAG-X86-NEXT:    subl $8, %esp
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fildl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fstps (%esp)
+; SDAG-X86-NEXT:    flds (%esp)
+; SDAG-X86-NEXT:    fsts (%eax)
+; SDAG-X86-NEXT:    fucomp %st(0)
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    xorl %ecx, %ecx
+; SDAG-X86-NEXT:    # kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setnp %cl
+; SDAG-X86-NEXT:    movl %ecx, %eax
+; SDAG-X86-NEXT:    addl $8, %esp
+; SDAG-X86-NEXT:    retl
+;
+; GISEL-X86-LABEL: test_int32_to_float_roundtrip:
+; GISEL-X86:       # %bb.0: # %entry
+; GISEL-X86-NEXT:    pushl %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    fildl (%esp)
+; GISEL-X86-NEXT:    fsts (%ecx)
+; GISEL-X86-NEXT:    flds (%ecx)
+; GISEL-X86-NEXT:    fxch %st(1)
+; GISEL-X86-NEXT:    fucompi %st(1), %st
+; GISEL-X86-NEXT:    fstp %st(0)
+; GISEL-X86-NEXT:    sete %al
+; GISEL-X86-NEXT:    setnp %cl
+; GISEL-X86-NEXT:    andb %al, %cl
+; GISEL-X86-NEXT:    movzbl %cl, %eax
+; GISEL-X86-NEXT:    andl $1, %eax
+; GISEL-X86-NEXT:    popl %ecx
+; GISEL-X86-NEXT:    retl
+entry:
+  %conv = sitofp i32 %x to float
+  store float %conv, ptr %p, align 4
+  %reload = load float, ptr %p, align 4
+  %cmp = fcmp oeq float %conv, %reload
+  %res = zext i1 %cmp to i32
+  ret i32 %res
+}
