@@ -666,6 +666,23 @@ body:             |
     %copy:_(s32) = COPY %fldexp
 ...
 ---
+name:            FFrexp
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FFrexp
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fabs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_mant:_ FPClasses:(pzero pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %frexp_exp:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero pnorm) SignBitKnown:0
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = nnan ninf G_FABS %val
+    %frexp_mant:_(s32), %frexp_exp:_(s32) = G_FFREXP %fabs
+    %copy:_(s32) = COPY %frexp_mant
+...
+---
 name:            FPowPos
 body:             |
   bb.0:
