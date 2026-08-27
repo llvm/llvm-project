@@ -25,9 +25,9 @@
 ;;     /   \
 ;;    B     C
 ;;
-;;   A = k_direct           : actual agpr 0,  agpr attribute 50, accum-offset 78
-;;   B = direct_leaf_hivgpr : actual agpr 0,  agpr attribute 0,  accum-offset 78
-;;   C = direct_leaf_agpr   : actual agpr 50, agpr attribute 50, accum-offset 78
+;;   A = k_direct           : agpr-alloc 50, accum-offset 78
+;;   B = direct_leaf_hivgpr : agpr-alloc 0,  accum-offset 78
+;;   C = direct_leaf_agpr   : agpr-alloc 50, accum-offset 78
 ;;
 ;; ===========================================================================
 
@@ -133,9 +133,9 @@ define amdgpu_kernel void @k_direct(ptr %p) {
 ;;     /   \
 ;;    B     C
 ;;
-;;   C = indirect_leaf_agpr   : real agpr 50, no accum-offset attribute -> 64
-;;   B = indirect_leaf_hivgpr : real agpr 0,  no accum-offset attribute -> 64
-;;   A = k_indirect           : no attributes                           -> 64
+;;   C = indirect_leaf_agpr   : agpr-alloc 50, accum-offset NA (no attribute) 
+;;   B = indirect_leaf_hivgpr : agpr-alloc 0,  accum-offset NA
+;;   A = k_indirect           : no attributes                           
 ;; ===========================================================================
 
 define internal void @indirect_use_most() {
@@ -225,10 +225,10 @@ define amdgpu_kernel void @k_indirect() {
 
 ;; ===========================================================================
 ;; Scenario 3 (cycle): shows how a cycle affects the up-then-down propagation.
-;;   use_most_hi            : real 0,  accum-offset 78
-;;   ping / pong / k_mutual : real 50, accum-offset 78
-;;   use_most_lo            : real 0,  accum-offset 96
-;;   self_rec / k_self      : real 32, accum-offset 96
+;;   use_most_hi            : agpr-alloc 0,  accum-offset 78
+;;   ping / pong / k_mutual : agpr-alloc 50, accum-offset 78
+;;   use_most_lo            : agpr-alloc 0,  accum-offset 96
+;;   self_rec / k_self      : agpr-alloc 32, accum-offset 96
 ;; ===========================================================================
 
 define internal void @use_most_hi() {
@@ -411,10 +411,10 @@ define amdgpu_kernel void @k_self(i1 %c) {
 ;;      A   B
 ;;     / \ /
 ;;    C   D
-;;   A = shared_k1 : real 0,  accum-offset 78
-;;   B = shared_k2 : real 0,  accum-offset 128
-;;   C = shared_f1 : real 50, accum-offset 78
-;;   D = shared_f2 : real 0,  accum-offset 78
+;;   A = shared_k1 : agpr-alloc 50, accum-offset 78
+;;   B = shared_k2 : agpr-alloc 0, accum-offset 128
+;;   C = shared_f1 : agpr-alloc 50, accum-offset 78
+;;   D = shared_f2 : agpr-alloc 0 accum-offset 78
 ;;
 ;; D takes the lower of its two callers' boundaries. Its AGPR ceiling is pinned
 ;; to its own requirement of 0 by getMaxNumVectorRegs, so B stays within budget
@@ -523,9 +523,9 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
 ;;      \ /
 ;;       C
 ;;
-;;   A = @noroom_kernel_agpr16 : agpr 16, boundary 128 - 16 -> 112
-;;   B = @noroom_kernel_noagpr : agpr 0,  boundary 128 - 0  -> 128
-;;   C = @noroom_shared          min(112, 128)             -> 112
+;;   A = @noroom_kernel_agpr16 : agpr-alloc 16,  accum-offset 112
+;;   B = @noroom_kernel_noagpr : agpr-alloc 0,   accum-offset 128
+;;   C = @noroom_shared          agpr-alloc NA,  accum-offset 112 <- min(112, 128)
 ;;
 ;; C may use 112 arch VGPRs and 0 AGPRs: any AGPR use would push it past the
 ;; 128-register limit when it runs under B's accum_offset.
@@ -615,15 +615,14 @@ define amdgpu_kernel void @noroom_kernel_noagpr() {
 ;;      \ /
 ;;       C
 ;;
-;;   A = @room_kernel_agpr16 : 16 AGPRs, boundary 128 - 16 -> 112
-;;   B = @room_kernel_agpr12 : 12 AGPRs, boundary 128 - 12 -> 116
-;;   C = @room_shared          min(112, 116)              -> 112
+;;   A = @room_kernel_agpr16 : agpr-alloc 16, accum-offset 112
+;;   B = @room_kernel_agpr12 : agpr-alloc 12, accum-offset 116
+;;   C = @room_shared        : agpr-alloc NA, accum-offset 112
 ;;
 ;; C may use 112 arch VGPRs. Its AGPR ceiling is its own requirement of 0 rather
 ;; than the 12 AGPRs both kernels happen to have headroom for, so it cannot use
 ;; AGPRs as spill space. That headroom is only recoverable by propagating a
-;; second, independent AGPR ceiling, which this attribute deliberately does not
-;; carry.
+;; second, independent AGPR ceiling, which this attribute does not carry.
 ;; ===========================================================================
 
 define internal void @room_use_most() {
@@ -708,9 +707,9 @@ define amdgpu_kernel void @room_kernel_agpr12() {
 ;;       A
 ;;     /   \
 ;;    B     C
-;;   A = @fanout_kernel : agpr 16, boundary 128 - 16 -> 112
-;;   B = @fanout_agpr   : clobbers a15, so 16 flows up into A
-;;   C = @fanout_noagpr : uses no AGPRs of its own, but inherits the boundary 112
+;;   A = @fanout_kernel : agpr-alloc 16, accum-offset - 112
+;;   B = @fanout_agpr   : agpr-alloc 16, accum-offset - 112
+;;   C = @fanout_noagpr : agpr-alloc 0,  accum-offset - 112
 ;;
 ;; ===========================================================================
 

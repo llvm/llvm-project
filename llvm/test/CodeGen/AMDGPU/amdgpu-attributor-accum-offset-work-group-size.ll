@@ -27,9 +27,9 @@
 ;; Scenario 1: the AGPR-hungry kernel is the one with the *larger* register
 ;; file, so its boundary is still lower than the other kernel's.
 ;;
-;;   A = @wgs_kernel_512_agpr130 : [1,512],  agpr 130 -> 256 - 130 = 126
-;;   B = @wgs_kernel_1024_noagpr : [1,1024], agpr 0   -> 128 -   0 = 128
-;;   C = @wgs_shared               min(126, 128)      -> 126
+;;   A = @wgs_kernel_512_agpr130 : [1,512],  agpr-alloc 130, accum-offset 126 <- 256 - 130
+;;   B = @wgs_kernel_1024_noagpr : [1,1024], agpr-alloc 0,   accum-offset 128 <- 128 -   0
+;;   C = @wgs_shared               [1,512],  agpr-alloc 0,   accum-offset 126 <- min(126,128)
 ;;
 ;; C is held to 126 arch VGPRs even though its own total is 128, because it has
 ;; to leave A's 130 AGPRs untouched in A's 256-register file.
@@ -108,9 +108,9 @@ define amdgpu_kernel void @wgs_kernel_1024_noagpr() #1 {
 ;; Scenario 2: the boundary of the kernel with the larger register file sits
 ;; above the other kernel's whole total, so it constrains nothing.
 ;;
-;;   A = @sat_kernel_512_agpr56 : [1,512],  agpr 56 -> 256 - 56 = 200
-;;   B = @sat_kernel_1024_noagpr: [1,1024], agpr 0  -> 128 -  0 = 128
-;;   C = @sat_shared              min(200, 128)     -> 128
+;;   A = @sat_kernel_512_agpr56 : [1,512],  agpr-alloc 56, accum-offset 200, <- 256 - 56
+;;   B = @sat_kernel_1024_noagpr: [1,1024], agpr-alloc 0,  accum-offset 128, <- 128 -  0
+;;   C = @sat_shared              [1,1024], agpr-alloc 0,  accum-offset 128, <- min(200, 128)
 ;;
 ;; C keeps a ceiling of 128 arch VGPRs, which is its own total anyway, so A's
 ;; boundary of 200 is inert. The 56 AGPRs A reserves are still safe: C uses no
