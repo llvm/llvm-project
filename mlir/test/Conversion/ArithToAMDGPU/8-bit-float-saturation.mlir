@@ -46,7 +46,7 @@ func.func @scalar_trunc(%v: f16) -> f8E5M2FNUZ {
 // CHECK: [[F0:%.+]] = vector.extract [[SATURATED]][0]
 // CHECK: [[F1:%.+]] = vector.extract [[SATURATED]][1]
 // CHECK: [[W0:%.+]] = amdgpu.packed_trunc_2xfp8 [[F0]], [[F1]] into undef[word 0] : f32 to vector<4xf8E4M3FNUZ>
-// CHECK: [[W:%.+]] = vector.extract_strided_slice [[W0]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xf8E4M3FNUZ> to vector<2xf8E4M3FNUZ>
+// CHECK: [[W:%.+]] = vector.extract_strided_slice [[W0]] offsets = [0], sizes = [2], strides = [1] : vector<4xf8E4M3FNUZ> to vector<2xf8E4M3FNUZ>
 // CHECK: return [[W]] : vector<2xf8E4M3FNUZ>
 func.func @vector_trunc_short(%v: vector<2xf32>) -> vector<2xf8E4M3FNUZ> {
   %w = arith.truncf %v : vector<2xf32> to vector<2xf8E4M3FNUZ>

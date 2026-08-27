@@ -321,11 +321,11 @@ struct MDConstantAttr : PyConcreteAttribute<MDConstantAttr> {
   }
 };
 
-struct MDFuncAttr : PyConcreteAttribute<MDFuncAttr> {
-  static constexpr IsAFunctionTy isaFunction = mlirLLVMAttrIsAMDFuncAttr;
+struct MDGlobalValueAttr : PyConcreteAttribute<MDGlobalValueAttr> {
+  static constexpr IsAFunctionTy isaFunction = mlirLLVMAttrIsAMDGlobalValueAttr;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirLLVMMDFuncAttrGetTypeID;
-  static constexpr const char *pyClassName = "MDFuncAttr";
+      mlirLLVMMDGlobalValueAttrGetTypeID;
+  static constexpr const char *pyClassName = "MDGlobalValueAttr";
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -335,13 +335,13 @@ struct MDFuncAttr : PyConcreteAttribute<MDFuncAttr> {
           MlirAttribute symRef = mlirFlatSymbolRefAttrGet(
               context.get()->get(),
               mlirStringRefCreate(name.data(), name.size()));
-          return MDFuncAttr(
+          return MDGlobalValueAttr(
               context->getRef(),
-              mlirLLVMMDFuncAttrGet(context.get()->get(), symRef));
+              mlirLLVMMDGlobalValueAttrGet(context.get()->get(), symRef));
         },
         "name"_a, nb::kw_only(), "context"_a = nb::none());
-    c.def_prop_ro("name", [](const MDFuncAttr &self) {
-      MlirAttribute symRef = mlirLLVMMDFuncAttrGetName(self);
+    c.def_prop_ro("name", [](const MDGlobalValueAttr &self) {
+      MlirAttribute symRef = mlirLLVMMDGlobalValueAttrGetName(self);
       MlirStringRef ref = mlirFlatSymbolRefAttrGetValue(symRef);
       return nb::str(ref.data, ref.length);
     });
@@ -390,7 +390,7 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   FunctionType::bind(m);
   MDStringAttr::bind(m);
   MDConstantAttr::bind(m);
-  MDFuncAttr::bind(m);
+  MDGlobalValueAttr::bind(m);
   MDNodeAttr::bind(m);
 
   m.def(

@@ -114,6 +114,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  else // __has_feature(ptrauth_calls)
 
+#    include <cstdint>
 #    include <ptrauth.h>
 
 #    if defined(_LIBCPP_OBJECT_FORMAT_MACHO)

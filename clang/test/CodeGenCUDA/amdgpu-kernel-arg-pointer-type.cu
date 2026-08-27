@@ -2,9 +2,9 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck --check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck --check-prefixes=CHECK-SPIRV %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -disable-O0-optnone -o - | opt -S -O2 | FileCheck %s --check-prefixes=OPT
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -disable-O0-optnone -o - | opt -S -O2 | FileCheck %s --check-prefixes=OPT
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -disable-O0-optnone -o - | opt -S -O2 | FileCheck %s --check-prefixes=OPT-SPIRV
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -x hip %s -o - | FileCheck -check-prefix=HOST %s
 

@@ -64,6 +64,7 @@
 #include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -1320,8 +1321,13 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
+    if (STM->hasNeedsAligned2addrDS() &&
+        (CI.I->memoperands_empty() ||
+         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
+      return nullptr;
     offsetsCanBeCombined(CI, *STM, Paired, true);
+  }
 
   if (CI.InstClass == DS_WRITE) {
     // Both data operands must be AGPR or VGPR, so the data registers needs to
@@ -2668,6 +2674,12 @@ SILoadStoreOptimizer::collectMergeableInsts(
       continue;
 
     if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
+      if (!STM->hasRelaxedTBufferOOBMode()) {
+        LLVM_DEBUG(
+            dbgs() << "Skip tbuffer combine: relaxed OOB mode not enabled\n");
+        continue;
+      }
+
       const MachineOperand *Fmt =
           TII->getNamedOperand(MI, AMDGPU::OpName::format);
       if (!AMDGPU::getGcnBufferFormatInfo(Fmt->getImm(), *STM)) {

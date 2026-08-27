@@ -17,6 +17,7 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <optional>
@@ -88,6 +89,12 @@ public:
     return oldStructureComponents_.find(name) != oldStructureComponents_.end();
   }
 
+  const common::LangOptions &langOptions() const { return langOptions_; }
+  UserState &set_langOptions(const common::LangOptions &langOptions) {
+    langOptions_ = langOptions;
+    return *this;
+  }
+
 private:
   const AllCookedSources &allCooked_;
 
@@ -102,6 +109,7 @@ private:
   std::set<CharBlock> oldStructureComponents_;
 
   common::LanguageFeatureControl features_;
+  common::LangOptions langOptions_;
 };
 
 // Definitions of parser classes that manipulate the UserState.

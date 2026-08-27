@@ -725,8 +725,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
-  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
-  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the executeCommands call below.
+  std::vector<std::string> ExtraArgsStorage =
+      Args.getAllArgValues(OPT_ocloc_options_EQ);
+  llvm::append_range(CmdArgs, ExtraArgsStorage);
 
   CmdArgs.push_back("-output");
   CmdArgs.push_back(OutputFile);
@@ -747,9 +750,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OA))
+  if (OA.isIntelGPU())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OA))
+  if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
@@ -975,8 +978,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  bool IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+  bool IsAOTCompileNeeded =
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 

@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -59,8 +60,8 @@ public:
 
 private:
   MachineInstr *getOperandDef(const MachineOperand &MO);
-  MachineInstr *convertToFlagSetting(MachineInstr &MI, bool IsFlagSetting,
-                                     bool Is64Bit);
+  MachineInstr *tryConvertToFlagSetting(MachineInstr &MI, bool IsFlagSetting,
+                                        bool Is64Bit);
   MachineInstr *convertToCondBr(MachineInstr &MI);
   bool tryToTuneBranch(MachineInstr &MI, MachineInstr &DefMI);
 };
@@ -82,9 +83,15 @@ MachineInstr *AArch64CondBrTuning::getOperandDef(const MachineOperand &MO) {
   return MRI->getUniqueVRegDef(MO.getReg());
 }
 
-MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
-                                                        bool IsFlagSetting,
-                                                        bool Is64Bit) {
+MachineInstr *AArch64CondBrTuning::tryConvertToFlagSetting(MachineInstr &MI,
+                                                           bool IsFlagSetting,
+                                                           bool Is64Bit) {
+  // If the instruction has a frame index operand, we can't safely convert it
+  // to a flag-setting form, because it can be expanded later into multiple
+  // instructions, which don't all have flag-setting forms (e.g. ADDVL).
+  if (any_of(MI.operands(), [](const MachineOperand &Op) { return Op.isFI(); }))
+    return nullptr;
+
   // If this is already the flag setting version of the instruction (e.g., SUBS)
   // just make sure the implicit-def of NZCV isn't marked dead.
   if (IsFlagSetting) {
@@ -198,12 +205,16 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
       // reads NZCV.
       if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
         return false;
+
+      NewCmp = tryConvertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/false);
+      if (!NewCmp)
+        return false;
+
       LLVM_DEBUG(dbgs() << "  Replacing instructions:\n    ");
       LLVM_DEBUG(DefMI.print(dbgs()));
       LLVM_DEBUG(dbgs() << "    ");
       LLVM_DEBUG(MI.print(dbgs()));
 
-      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/false);
       NewBr = convertToCondBr(MI);
       break;
     }
@@ -253,12 +264,16 @@ bool AArch64CondBrTuning::tryToTuneBranch(MachineInstr &MI,
       // reads NZCV.
       if (isNZCVTouchedInInstructionRange(DefMI, MI, TRI))
         return false;
+
+      NewCmp = tryConvertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/true);
+      if (!NewCmp)
+        return false;
+
       LLVM_DEBUG(dbgs() << "  Replacing instructions:\n    ");
       LLVM_DEBUG(DefMI.print(dbgs()));
       LLVM_DEBUG(dbgs() << "    ");
       LLVM_DEBUG(MI.print(dbgs()));
 
-      NewCmp = convertToFlagSetting(DefMI, IsFlagSetting, /*Is64Bit=*/true);
       NewBr = convertToCondBr(MI);
       break;
     }

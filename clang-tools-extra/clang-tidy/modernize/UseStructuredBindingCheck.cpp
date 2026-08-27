@@ -45,7 +45,7 @@ static bool matchNVarDeclStartingWith(
   const size_t N = InnerMatchers.size();
   size_t Count = 0;
 
-  auto Matches = [&](const Decl *VD) {
+  const auto Matches = [&](const Decl *VD) {
     // We don't want redundant decls in DeclStmt.
     if (Count == N)
       return false;
@@ -204,32 +204,33 @@ static auto typeOrLValueReferenceTo(
 }
 
 void UseStructuredBindingCheck::registerMatchers(MatchFinder *Finder) {
-  auto PairType = qualType(unless(isVolatileQualified()),
-                           hasUnqualifiedDesugaredType(recordType(
-                               hasDeclaration(cxxRecordDecl(isPairType())))));
+  const auto PairType =
+      qualType(unless(isVolatileQualified()),
+               hasUnqualifiedDesugaredType(
+                   recordType(hasDeclaration(cxxRecordDecl(isPairType())))));
 
   auto UnlessShouldBeIgnored =
       unless(anyOf(hasAnySpecifiersShouldBeIgnored(), isInMacro()));
 
-  auto VarInitWithFirstMember =
+  const auto VarInitWithFirstMember =
       getVarInitWithMemberMatcher(PairDeclName, "first", FirstTypeName,
                                   FirstVarDeclName, UnlessShouldBeIgnored);
-  auto VarInitWithSecondMember =
+  const auto VarInitWithSecondMember =
       getVarInitWithMemberMatcher(PairDeclName, "second", SecondTypeName,
                                   SecondVarDeclName, UnlessShouldBeIgnored);
 
-  auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name) {
+  const auto RefToBindName = [&UnlessShouldBeIgnored](const StringRef &Name) {
     return declRefExpr(to(varDecl(UnlessShouldBeIgnored).bind(Name)));
   };
 
-  auto HasAnyLambdaCaptureThisVar =
+  const auto HasAnyLambdaCaptureThisVar =
       [](const ast_matchers::internal::Matcher<VarDecl> &VDMatcher) {
         return compoundStmt(hasDescendant(
             lambdaExpr(hasAnyCapture(capturesVar(varDecl(VDMatcher))))));
       };
 
   // Captured structured bindings are a C++20 extension
-  auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
+  const auto UnlessFirstVarOrSecondVarIsCapturedByLambda =
       getLangOpts().CPlusPlus20
           ? compoundStmt()
           : compoundStmt(unless(HasAnyLambdaCaptureThisVar(
@@ -333,9 +334,10 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ScopeBlock = Result.Nodes.getNodeAs<CompoundStmt>(ScopeBlockName);
 
   const auto *CFRS = Result.Nodes.getNodeAs<CXXForRangeStmt>(ForRangeStmtName);
-  auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
-                     this](SourceLocation DiagLoc, SourceRange ReplaceRange,
-                           TransferType TT = TT_ByVal) {
+  const auto DiagAndFix = [&BeginDS, &EndDS, &FirstVar, &SecondVar, &CFRS,
+                           this](SourceLocation DiagLoc,
+                                 SourceRange ReplaceRange,
+                                 TransferType TT = TT_ByVal) {
     const auto Prefix = [&TT]() -> StringRef {
       switch (TT) {
       case TT_ByVal:
@@ -387,8 +389,8 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Check PairVar is not used except for assignment members to firstVar and
   // SecondVar.
-  if (auto AllRef = utils::decl_ref_expr::allDeclRefExprs(*PairVar, *ScopeBlock,
-                                                          *Result.Context);
+  if (const auto AllRef = utils::decl_ref_expr::allDeclRefExprs(
+          *PairVar, *ScopeBlock, *Result.Context);
       AllRef.size() != 2)
     return;
 

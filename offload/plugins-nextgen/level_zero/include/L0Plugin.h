@@ -13,13 +13,50 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 
-#include "L0Defs.h"
 #include "L0Device.h"
 #include "L0Memory.h"
 #include "L0Options.h"
 #include "L0Program.h"
+#include "L0Queue.h"
 
 namespace llvm::omp::target::plugin {
+
+/// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
+/// scoped to the set of devices grouped by the user through olCreateContext.
+class LevelZeroPluginContextTy final : public PluginContextTy {
+public:
+  LevelZeroPluginContextTy(GenericPluginTy &Plugin,
+                           llvm::ArrayRef<GenericDeviceTy *> Devices,
+                           ze_driver_handle_t Driver,
+                           ze_context_handle_t ZeContext, bool OwnsZeContext)
+      : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
+        OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
+
+  ~LevelZeroPluginContextTy() override = default;
+
+  Error deinit() override;
+
+  ze_driver_handle_t getZeDriver() const { return Driver; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  /// Pop an idle queue for \p Device from the cache, or create a new one.
+  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
+    return QueueCache.getQueue(*Device);
+  }
+
+  /// Return an idle queue to the cache.
+  void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+
+private:
+  ze_driver_handle_t Driver;
+  ze_context_handle_t ZeContext;
+  bool OwnsZeContext;
+
+  L0QueueCacheTy QueueCache;
+};
 
 /// Class implementing the LevelZero specific functionalities of the plugin.
 class LevelZeroPluginTy final : public GenericPluginTy {
@@ -67,6 +104,9 @@ public:
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override;
   GenericGlobalHandlerTy *createGlobalHandler() override;
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override;
 
   uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }
   Triple::ArchType getTripleArch() const override { return Triple::spirv64; }

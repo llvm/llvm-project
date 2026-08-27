@@ -383,10 +383,12 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs);
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs, MD);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
-         CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());
+         CallFnInfo.getCallingConvention() ==
+             CurFnInfo->getCallingConvention() &&
+         CallFnInfo.getX86ABIAVXLevel() == CurFnInfo->getX86ABIAVXLevel());
   assert(isa<CXXDestructorDecl>(MD) || // ignore dtor return types
          similar(CallFnInfo.getReturnInfo(), CallFnInfo.getReturnType(),
                  CurFnInfo->getReturnInfo(), CurFnInfo->getReturnType()));
@@ -1137,9 +1139,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (Kind) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
+      // Under OpenMP offloading we force-emit vtable definitions for classes
+      // mapped into target regions even when the key function is defined in
+      // another TU, so the linkage may legitimately be queried here.
       assert(
           (IsInNamedModule || def || CodeGenOpts.OptimizationLevel > 0 ||
-           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo ||
+           getLangOpts().OpenMP) &&
           "Shouldn't query vtable linkage without the class in module units, "
           "key function, optimizations, or debug info");
       if (IsExternalDefinition && CodeGenOpts.OptimizationLevel > 0)

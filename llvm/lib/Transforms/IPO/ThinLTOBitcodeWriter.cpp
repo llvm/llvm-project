@@ -30,23 +30,10 @@ using namespace llvm;
 
 namespace {
 
-// Determine if a promotion alias should be created for a symbol name.
-static bool allowPromotionAlias(const std::string &Name) {
-  // Promotion aliases are used only in inline assembly. It's safe to
-  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar()
-  // and MCAsmInfoXCOFF::isAcceptableChar().
-  for (const char &C : Name) {
-    if (isAlnum(C) || C == '_' || C == '.')
-      continue;
-    return false;
-  }
-  return true;
-}
-
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
-                      const SetVector<GlobalValue *> &PromoteExtra) {
+                      SetVector<GlobalValue *> *PromoteExtra = nullptr) {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
@@ -54,7 +41,8 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
 
     auto Name = ExportGV.getName();
     GlobalValue *ImportGV = nullptr;
-    if (!PromoteExtra.count(&ExportGV)) {
+    const bool MustPromote = PromoteExtra && PromoteExtra->count(&ExportGV);
+    if (!MustPromote) {
       ImportGV = ImportM.getNamedValue(Name);
       if (!ImportGV)
         continue;
@@ -72,23 +60,22 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       if (C->getName() == Name)
         RenamedComdats.try_emplace(C, ExportM.getOrInsertComdat(NewName));
 
-    ExportGV.setName(NewName);
-    ExportGV.setLinkage(GlobalValue::ExternalLinkage);
-    ExportGV.setVisibility(GlobalValue::HiddenVisibility);
-    // TODO: remove this reassign and instead create an alias.
-    ExportGV.reassignGUID();
+    auto *ExternalAlias = GlobalAlias::create(
+        ExportGV.getType(), ExportGV.getAddressSpace(),
+        GlobalValue::ExternalLinkage, NewName, &ExportGV, &ExportM);
+    ExternalAlias->setVisibility(GlobalValue::HiddenVisibility);
+    ExportGV.replaceUsesWithIf(
+        ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
+
+    if (MustPromote) {
+      PromoteExtra->remove(&ExportGV);
+      PromoteExtra->insert(ExternalAlias);
+    }
+
     if (ImportGV) {
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
       ImportGV->reassignGUID();
-    }
-
-    if (isa<Function>(&ExportGV) && allowPromotionAlias(OldName)) {
-      // Create a local alias with the original name to avoid breaking
-      // references from inline assembly.
-      std::string Alias =
-          ".lto_set_conditional " + OldName + "," + NewName + "\n";
-      ExportM.appendModuleInlineAsm(Alias);
     }
   }
 
@@ -207,9 +194,8 @@ void simplifyExternals(Module &M) {
         F.getName().starts_with("llvm."))
       continue;
 
-    Function *NewF =
-        Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
-                         F.getAddressSpace(), "", &M);
+    Function *NewF = Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
+                                      F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
     // Only copy function attribtues.
     NewF->setAttributes(AttributeList::get(M.getContext(),
@@ -435,8 +421,8 @@ void splitAndWriteThinLTOBitcode(
   // match values from its first argument (the "exporting module") in
   // CfiFunctions. So we only need CfiFunctions for the second promotion (M ->
   // MergedM)
-  promoteInternals(*MergedM, M, ModuleId, {});
-  promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
+  promoteInternals(*MergedM, M, ModuleId, nullptr);
+  promoteInternals(M, *MergedM, ModuleId, &CfiFunctions);
 
   auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;

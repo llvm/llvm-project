@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -304,7 +305,12 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
-  return m_locations.AddLocation(addr, m_resolve_indirect_symbols,
+  // A breakpoint must be set on an executable instruction, not on a function's
+  // non-instruction header.
+  Address bp_addr = addr;
+  if (Architecture *arch = m_target.GetArchitecturePlugin())
+    bp_addr = arch->SkipFunctionHeader(bp_addr);
+  return m_locations.AddLocation(bp_addr, m_resolve_indirect_symbols,
                                  new_location);
 }
 

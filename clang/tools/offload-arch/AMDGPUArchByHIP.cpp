@@ -229,8 +229,20 @@ static void primeLibraryLoad(StringRef Path) {
   static HMODULE PinnedModule = nullptr;
   if (PinnedModule || !sys::path::is_absolute(Path))
     return;
+
+  // Other paths here use '/' for consistency, but LoadLibraryExW's altered
+  // search path needs '\\' to locate dependencies relative to the DLL.
+  //
+  // See
+  // https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+  // "If the string specifies a fully qualified path, the function searches only
+  //  that path for the module. When specifying a path, be sure to use
+  //  backslashes (\), not forward slashes (/)."
+  SmallString<256> NativePath;
+  sys::path::native(Path, NativePath, sys::path::Style::windows_backslash);
+
   SmallVector<UTF16, 256> WPath;
-  if (!convertUTF8ToUTF16String(Path, WPath))
+  if (!convertUTF8ToUTF16String(NativePath, WPath))
     return;
   WPath.push_back(0);
   PinnedModule = LoadLibraryExW(reinterpret_cast<LPCWSTR>(WPath.data()),
