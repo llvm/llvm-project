@@ -5,11 +5,9 @@ define void @partial_deinterleave4_ptrs(ptr %src0, ptr %src1, ptr %dst0,
 ; CHECK-LABEL: define void @partial_deinterleave4_ptrs(
 ; CHECK-SAME: ptr [[SRC0:%.*]], ptr [[SRC1:%.*]], ptr [[DST0:%.*]], ptr [[DST1:%.*]]) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x ptr>, ptr [[SRC0]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } @llvm.vector.deinterleave4.v8p0(<8 x ptr> [[WIDE_VEC]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <8 x ptr> [[WIDE_VEC]], <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    [[WIDE_VEC_1:%.*]] = load <8 x ptr>, ptr [[SRC1]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC_1:%.*]] = call { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } @llvm.vector.deinterleave4.v8p0(<8 x ptr> [[WIDE_VEC_1]])
-; CHECK-NEXT:    [[FIELD0_1:%.*]] = extractvalue { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } [[STRIDED_VEC_1]], 0
+; CHECK-NEXT:    [[FIELD0_1:%.*]] = shufflevector <8 x ptr> [[WIDE_VEC_1]], <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    store <2 x ptr> [[FIELD0]], ptr [[DST0]], align 8
 ; CHECK-NEXT:    store <2 x ptr> [[FIELD0_1]], ptr [[DST1]], align 8
 ; CHECK-NEXT:    ret void
@@ -30,8 +28,7 @@ define <2 x ptr> @partial_deinterleave4_field1(ptr %src) {
 ; CHECK-LABEL: define <2 x ptr> @partial_deinterleave4_field1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x ptr>, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } @llvm.vector.deinterleave4.v8p0(<8 x ptr> [[WIDE_VEC]])
-; CHECK-NEXT:    [[FIELD1:%.*]] = extractvalue { <2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[FIELD1:%.*]] = shufflevector <8 x ptr> [[WIDE_VEC]], <8 x ptr> poison, <2 x i32> <i32 1, i32 5>
 ; CHECK-NEXT:    ret <2 x ptr> [[FIELD1]]
 ;
   %wide.vec = load <8 x ptr>, ptr %src, align 8
