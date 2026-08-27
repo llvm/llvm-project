@@ -1178,15 +1178,19 @@ private:
   /// \param CLI      A descriptor of the canonical loop to workshare.
   /// \param AllocaIP An insertion point for Alloca instructions usable in the
   ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
+  ///                     the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
   /// \param NoLoop   If true, no-loop code is generated.
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP, bool NeedsBarrier,
+                           omp::WorksharingLoopType LoopType, bool NoLoop,
+                           bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1344,8 +1348,8 @@ public:
   /// \param NoLoop If true, no-loop code is generated.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  ///
   /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1358,7 +1362,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool NeedsLastIter = false);
 
   /// Tile a loop nest.
   ///

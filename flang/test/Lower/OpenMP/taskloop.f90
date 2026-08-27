@@ -2,6 +2,9 @@
 ! RUN: bbc -emit-hlfir %openmp_flags -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 
+! CHECK-LABEL:  omp.private {type = firstprivate}
+! CHECK-SAME:     @[[FIRST_LAST_PRIVATE_X:.*]] : i32
+
 ! CHECK-LABEL:  omp.private
 ! CHECK-SAME:       {type = private} @[[LAST_PRIVATE_I:.*]] : i32
 
@@ -260,3 +263,15 @@ subroutine omp_taskloop_lastprivate()
    ! CHECK:  omp.terminator
    !$omp end taskloop
 end subroutine omp_taskloop_lastprivate
+
+! CHECK-LABEL:  func @_QPomp_taskloop_first_and_lastprivate()
+subroutine omp_taskloop_first_and_lastprivate()
+   integer x
+   x = 0
+   ! CHECK:  omp.taskloop.context private(@[[FIRST_LAST_PRIVATE_X]] {{.*}}) {
+   !$omp taskloop firstprivate(x) lastprivate(x)
+   do i = 1, 100
+      x = x + 1
+   end do
+   !$omp end taskloop
+end subroutine omp_taskloop_first_and_lastprivate

@@ -2083,13 +2083,27 @@ static bool opIsInSingleThread(mlir::Operation *op) {
   return false;
 }
 
-static LogicalResult copyFirstPrivateVars(
-    mlir::Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation,
-    SmallVectorImpl<llvm::Value *> &moldVars,
-    ArrayRef<llvm::Value *> llvmPrivateVars,
-    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls, bool insertBarrier,
-    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static LogicalResult
+emitPrivatizationBarrier(mlir::Operation *op, llvm::IRBuilderBase &builder,
+                         LLVM::ModuleTranslation &moduleTranslation,
+                         bool insertBarrier) {
+  if (!insertBarrier || opIsInSingleThread(op))
+    return success();
+
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy res =
+      ompBuilder->createBarrier(builder, llvm::omp::OMPD_barrier);
+  return handleError(res, *op);
+}
+
+static LogicalResult
+completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    SmallVectorImpl<llvm::Value *> &moldVars,
+                    ArrayRef<llvm::Value *> llvmPrivateVars,
+                    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+                    bool insertBarrier,
+                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -2098,7 +2112,8 @@ static LogicalResult copyFirstPrivateVars(
       });
 
   if (!needsFirstprivate)
-    return success();
+    return emitPrivatizationBarrier(op, builder, moduleTranslation,
+                                    insertBarrier);
 
   llvm::BasicBlock *copyBlock =
       splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
@@ -2137,24 +2152,18 @@ static LogicalResult copyFirstPrivateVars(
     moduleTranslation.forgetMapping(copyRegion);
   }
 
-  if (insertBarrier && !opIsInSingleThread(op)) {
-    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy res =
-        ompBuilder->createBarrier(builder, llvm::omp::OMPD_barrier);
-    if (failed(handleError(res, *op)))
-      return failure();
-  }
-
-  return success();
+  return emitPrivatizationBarrier(op, builder, moduleTranslation,
+                                  insertBarrier);
 }
 
-static LogicalResult copyFirstPrivateVars(
-    mlir::Operation *op, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation,
-    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-    ArrayRef<llvm::Value *> llvmPrivateVars,
-    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls, bool insertBarrier,
-    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
+static LogicalResult
+completePrivateVars(mlir::Operation *op, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation,
+                    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+                    ArrayRef<llvm::Value *> llvmPrivateVars,
+                    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+                    bool insertBarrier,
+                    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   llvm::SmallVector<llvm::Value *> moldVars(mlirPrivateVars.size());
   llvm::transform(mlirPrivateVars, moldVars.begin(), [&](mlir::Value mlirVar) {
     // map copyRegion rhs arg
@@ -2163,9 +2172,9 @@ static LogicalResult copyFirstPrivateVars(
     assert(moldVar);
     return moldVar;
   });
-  return copyFirstPrivateVars(op, builder, moduleTranslation, moldVars,
-                              llvmPrivateVars, privateDecls, insertBarrier,
-                              mappedPrivateVars);
+  return completePrivateVars(op, builder, moduleTranslation, moldVars,
+                             llvmPrivateVars, privateDecls, insertBarrier,
+                             mappedPrivateVars);
 }
 
 template <typename T>
@@ -2419,7 +2428,7 @@ convertOmpScope(omp::ScopeOp &scopeOp, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(copyFirstPrivateVars(
+    if (failed(completePrivateVars(
             scopeOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
             scopeOp.getPrivateNeedsBarrier())))
@@ -3336,7 +3345,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
 
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
-  if (failed(copyFirstPrivateVars(
+  if (failed(completePrivateVars(
           taskOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
           taskOp.getPrivateNeedsBarrier())))
@@ -3806,7 +3815,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
 
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
-  if (failed(copyFirstPrivateVars(
+  if (failed(completePrivateVars(
           contextOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
           contextOp.getPrivateNeedsBarrier())))
@@ -4105,10 +4114,10 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // through a stack allocated structure.
     }
 
-    if (failed(copyFirstPrivateVars(contextOp.getOperation(), builder,
-                                    moduleTranslation, srcGEPs, destGEPs,
-                                    privateVarsInfo.privatizers,
-                                    contextOp.getPrivateNeedsBarrier())))
+    if (failed(completePrivateVars(contextOp.getOperation(), builder,
+                                   moduleTranslation, srcGEPs, destGEPs,
+                                   privateVarsInfo.privatizers,
+                                   contextOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
@@ -4701,7 +4710,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  if (failed(copyFirstPrivateVars(
+  if (failed(completePrivateVars(
           wsloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
           wsloopOp.getPrivateNeedsBarrier())))
@@ -4814,7 +4823,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk);
+          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk,
+          !wsloopOp.getLinearVars().empty());
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
@@ -4932,7 +4942,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(copyFirstPrivateVars(
+    if (failed(completePrivateVars(
             opInst, builder, moduleTranslation, privateVarsInfo.mlirVars,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
             opInst.getPrivateNeedsBarrier())))
@@ -5171,7 +5181,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  // No call to copyFirstPrivateVars because FIRSTPRIVATE is not allowed for
+  // No call to completePrivateVars because FIRSTPRIVATE is not allowed for
   // SIMD.
 
   assert(afterAllocas.get()->getSinglePredecessor());
@@ -8645,10 +8655,10 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(copyFirstPrivateVars(
-            distributeOp, builder, moduleTranslation, privVarsInfo.mlirVars,
-            privVarsInfo.llvmVars, privVarsInfo.privatizers,
-            distributeOp.getPrivateNeedsBarrier())))
+    if (failed(completePrivateVars(distributeOp, builder, moduleTranslation,
+                                   privVarsInfo.mlirVars, privVarsInfo.llvmVars,
+                                   privVarsInfo.privatizers,
+                                   distributeOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -9529,7 +9539,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             .failed())
       return llvm::make_error<PreviouslyReportedError>();
 
-    if (failed(copyFirstPrivateVars(
+    if (failed(completePrivateVars(
             targetOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
             targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
