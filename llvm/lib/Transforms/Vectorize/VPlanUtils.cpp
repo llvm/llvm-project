@@ -1064,6 +1064,40 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   }
 }
 
+VPValue *VPSCEVExpander::tryToExpandPredicate(const SCEVPredicate *Pred) {
+  if (auto *CmpPred = dyn_cast<SCEVComparePredicate>(Pred)) {
+    VPValue *LHS = tryToExpand(CmpPred->getLHS());
+    if (!LHS)
+      return nullptr;
+    VPValue *RHS = tryToExpand(CmpPred->getRHS());
+    if (!RHS)
+      return nullptr;
+    // Match SCEVExpander::expandComparePredicate behavior:
+    auto InvPred = CmpInst::getInversePredicate(CmpPred->getPredicate());
+    return Builder.createICmp(InvPred, LHS, RHS, DL);
+  }
+
+  if (auto *UnionPred = dyn_cast<SCEVUnionPredicate>(Pred)) {
+    SmallVector<VPValue *, 4> Checks;
+    for (const auto *Pred : UnionPred->getPredicates()) {
+      VPValue *Check = tryToExpandPredicate(Pred);
+      if (!Check)
+        return nullptr;
+      Checks.push_back(Check);
+    }
+
+    if (Checks.empty())
+      return Builder.getPlan().getFalse();
+
+    VPValue *Result = Checks[0];
+    for (VPValue *Check : drop_begin(Checks))
+      Result = Builder.createOr(Result, Check, DL);
+    return Result;
+  }
+
+  llvm_unreachable("Unhandled predicate");
+}
+
 bool vputils::isDeadRecipe(VPRecipeBase &R) {
   // Do remove conditional assume instructions as their conditions may be
   // flattened.

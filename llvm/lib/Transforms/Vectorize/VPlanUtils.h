@@ -268,6 +268,10 @@ public:
   /// Try to expand \p S into recipes and live-ins using the builder. Returns
   /// nullptr if \p S cannot be expanded yet.
   VPValue *tryToExpand(const SCEV *S);
+
+  /// Try to expand \p Pred into recipes and live-ins using the builder. Returns
+  /// nullptr if \p Pred cannot be expanded yet.
+  VPValue *tryToExpandPredicate(const SCEVPredicate *Pred);
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

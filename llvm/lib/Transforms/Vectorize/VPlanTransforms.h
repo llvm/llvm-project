@@ -39,6 +39,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableVPlanBasedStrideMV;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -611,6 +612,19 @@ struct VPlanTransforms {
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder,
                                          VPCostContext &CostCtx);
+
+  /// Search \p MemOps for strided accesses where the stride is only known at
+  /// runtime and specialize the plan so that these accesses become
+  /// unit-strided. This is done by introducing run-time checks to only execute
+  /// vector loop if the stride is unit-sized and replacing any references of
+  /// the stride inside vector region with speculated constant. This
+  /// transformation does NOT perform the actual widening of the memory
+  /// operations - that is left to the subsequent `widenConsecutiveMemOps` which
+  /// is simply enabled by this pass.
+  static void
+  multiversionForUnitStridedMemOps(VPlan &Plan, VPCostContext &CostCtx,
+                                   VFRange &Range,
+                                   ArrayRef<VPInstruction *> MemOps);
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains

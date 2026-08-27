@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -911,6 +912,10 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // tested.
   // TODO: Add support for loops with an early exit.
   if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
+    return false;
+
+  // Not implemented yet.
+  if (EnableVPlanBasedStrideMV)
     return false;
 
   return true;
