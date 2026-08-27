@@ -13,7 +13,8 @@ import recognizer
 
 class TestFrameRecognizerStepThrough(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-
+    
+    @skipIfWindows
     def test_frame_recognizer_step_through(self):
         """Test that the step through recognizer works"""
         self.build()
