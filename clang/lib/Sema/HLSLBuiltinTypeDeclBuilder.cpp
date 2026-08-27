@@ -1671,13 +1671,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
 
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto AddLoads = [&](StringRef MethodName, QualType ReturnType) {
+  auto AddLoads = [&](StringRef MethodName, QualType ReturnType,
+                      bool TransposeResult = false) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Load(&II);
 
     addHandleAccessFunction(Load,
                             /*IsConstReturn=*/false, /*IsRef=*/false,
-                            AST.UnsignedIntTy, ReturnType);
+                            AST.UnsignedIntTy, ReturnType, TransposeResult);
     addLoadWithStatusFunction(Load, ReturnType);
   };
 
@@ -1687,14 +1688,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
 
   // Templated Load<T>() needs buffer-order-aware handling for matrix T.
-  {
-    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
-    DeclarationName Load(&II);
-    addHandleAccessFunction(Load, /*IsConstReturn=*/false, /*IsRef=*/false,
-                            AST.UnsignedIntTy, AST.DependentTy,
-                            /*TransposeResult=*/true);
-    addLoadWithStatusFunction(Load, AST.DependentTy);
-  }
+  AddLoads("Load", AST.DependentTy, /*TransposeResult=*/true);
 
   return *this;
 }
@@ -1705,11 +1699,12 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 
   ASTContext &AST = SemaRef.getASTContext();
 
-  auto AddStore = [&](StringRef MethodName, QualType ValueType) {
+  auto AddStore = [&](StringRef MethodName, QualType ValueType,
+                      bool TransposeArg = false) {
     IdentifierInfo &II = AST.Idents.get(MethodName, tok::TokenKind::identifier);
     DeclarationName Store(&II);
 
-    addStoreFunction(Store, /*IsConst=*/false, ValueType);
+    addStoreFunction(Store, /*IsConst=*/false, ValueType, TransposeArg);
   };
 
   AddStore("Store", AST.UnsignedIntTy);
@@ -1718,12 +1713,7 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   AddStore("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
 
   // Templated Store<T>(); see addByteAddressBufferLoadMethods() above.
-  {
-    IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
-    DeclarationName Store(&II);
-    addStoreFunction(Store, /*IsConst=*/false, AST.DependentTy,
-                     /*TransposeArg=*/true);
-  }
+  AddStore("Store", AST.DependentTy, /*TransposeArg=*/true);
 
   return *this;
 }
