@@ -1244,6 +1244,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
 
+  // TODO: Consider reusing Clang's addPGOAndCoverageFlags() for
+  // -fprofile-generate and other similar options handling instead of
+  // duplicating driver logic here.
   if (Arg *PGOGenerateArg = Args.getLastArg(
           options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
           options::OPT_fno_profile_generate)) {
