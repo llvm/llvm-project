@@ -1,10 +1,10 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict
 
-! Derived-type component references in OpenACC clauses are accepted for now, but
-! the current DSA handling is deliberately imprecise:
-! - duplicate and conflicting component references are not diagnosed;
-! - component clauses do not satisfy DEFAULT(NONE) for the base object;
-! - whole-object/component conflicts are not diagnosed.
+! Derived-type component references in OpenACC clauses are accepted. Exact
+! duplicate and conflicting component references in data-sharing clauses are
+! diagnosed, but broader containment is deliberately limited for now:
+! - component clauses satisfy DEFAULT(NONE) only for contained references;
+! - bare whole-object/component conflicts are not diagnosed.
 
 module component_ref_types
   implicit none
@@ -35,13 +35,38 @@ subroutine test_component_clauses_are_accepted()
   !$acc end parallel
 end subroutine
 
-subroutine test_default_none_component_does_not_cover_object()
+subroutine test_default_none_component_covers_same_component()
   use component_ref_types, only: point_t
   type(point_t) :: p
-  ! TODO: should be an error, needs precise tracking of component references.
+  !$acc parallel default(none) copy(p%x)
+  p%x = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_component_does_not_cover_sibling()
+  use component_ref_types, only: point_t
+  type(point_t) :: p
   !$acc parallel default(none) copy(p%x)
   !ERROR: The DEFAULT(NONE) clause requires that 'p' must be listed in a data-mapping clause
-  p%x = 1.0
+  p%y = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_component_covers_contained_component()
+  use component_ref_types, only: nested_t
+  type(nested_t) :: n
+  !$acc parallel default(none) copy(n%pt)
+  n%pt%x = 1.0
+  !$acc end parallel
+end subroutine
+
+subroutine test_default_none_component_does_not_cover_parent()
+  use component_ref_types, only: nested_t, point_t
+  type(nested_t) :: n
+  type(point_t) :: p
+  !$acc parallel default(none) copy(n%pt%x, p)
+  !ERROR: The DEFAULT(NONE) clause requires that 'n' must be listed in a data-mapping clause
+  n%pt = p
   !$acc end parallel
 end subroutine
 
@@ -67,6 +92,7 @@ subroutine test_same_object_same_dsa_components()
   use component_ref_types, only: point_t
   type(point_t) :: p
   integer :: i
+  !WARNING: 'p%x' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored [-Wopenacc-usage]
   !$acc parallel loop private(p%x, p%y, p%x)
   do i = 1, 10
     p%x = real(i)
@@ -79,6 +105,7 @@ subroutine test_same_object_incompatible_same_component()
   use component_ref_types, only: point_t
   type(point_t) :: p
   integer :: i
+  !ERROR: 'p%x' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(p%x) firstprivate(p%x)
   do i = 1, 10
     p%x = real(i)
@@ -98,10 +125,59 @@ subroutine test_same_object_incompatible_different_components()
   !$acc end parallel loop
 end subroutine
 
+subroutine test_contained_component_same_dsa()
+  use component_ref_types, only: nested_t
+  type(nested_t) :: n
+  integer :: i
+  !ERROR: 'n%pt%x' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+  !$acc parallel loop private(n%pt, n%pt%x)
+  do i = 1, 10
+    n%pt%x = real(i)
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine test_contained_component_same_dsa_child_first()
+  use component_ref_types, only: nested_t
+  type(nested_t) :: n
+  integer :: i
+  !ERROR: 'n%pt' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+  !$acc parallel loop private(n%pt%x, n%pt)
+  do i = 1, 10
+    n%pt%x = real(i)
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine test_contained_component_incompatible_parent_first()
+  use component_ref_types, only: nested_t
+  type(nested_t) :: n
+  integer :: i
+  !ERROR: 'n%pt%x' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel loop private(n%pt) firstprivate(n%pt%x)
+  do i = 1, 10
+    n%pt%x = real(i)
+  end do
+  !$acc end parallel loop
+end subroutine
+
+subroutine test_contained_component_incompatible_child_first()
+  use component_ref_types, only: nested_t
+  type(nested_t) :: n
+  integer :: i
+  !ERROR: 'n%pt' appears in more than one data-sharing clause on the same OpenACC directive
+  !$acc parallel loop private(n%pt%x) firstprivate(n%pt)
+  do i = 1, 10
+    n%pt%x = real(i)
+  end do
+  !$acc end parallel loop
+end subroutine
+
 subroutine test_whole_object_incompatible_with_component()
   use component_ref_types, only: point_t
   type(point_t) :: p
   integer :: i
+  !ERROR: 'p%x' appears in more than one data-sharing clause on the same OpenACC directive
   !$acc parallel loop private(p) firstprivate(p%x)
   do i = 1, 10
     p%x = real(i)
