@@ -484,6 +484,14 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
          Style.ColumnLimit > 0)))) {
     return true;
   }
+  // JavaScript import/export statements must not be wrapped when
+  // JavaScriptWrapImports is disabled. Existing line breaks are still kept
+  // (they are preserved outside of mustBreak), so this only prevents new,
+  // forced wrapping, e.g. with ColumnLimit set to 0.
+  if (Style.isJavaScript() && !Style.JavaScriptWrapImports &&
+      State.Line->Type == LT_ImportStatement) {
+    return false;
+  }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
        (Current.is(tok::r_brace) && Current.MatchingParen &&
