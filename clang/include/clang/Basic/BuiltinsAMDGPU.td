@@ -208,7 +208,6 @@ def __builtin_amdgcn_s_sleep : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_incperflevel : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_decperflevel : AMDGPUBuiltin<"void(_Constant int)">;
 def __builtin_amdgcn_s_setprio : AMDGPUBuiltin<"void(_Constant short)">;
-def __builtin_amdgcn_s_setprio_relaxed : AMDGPUBuiltin<"void(_Constant short)">;
 def __builtin_amdgcn_ds_swizzle : AMDGPUBuiltin<"int(int, _Constant int)", [Const]>;
 def __builtin_amdgcn_ds_permute : AMDGPUBuiltin<"int(int, int)", [Const]>;
 def __builtin_amdgcn_ds_bpermute : AMDGPUBuiltin<"int(int, int)", [Const]>;

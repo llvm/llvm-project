@@ -60,12 +60,6 @@ void test_s_setprio(int x)
   __builtin_amdgcn_s_setprio(65536); // expected-warning {{implicit conversion from 'int' to 'short' changes value from 65536 to 0}}
 }
 
-void test_s_setprio_relaxed(int x)
-{
-  __builtin_amdgcn_s_setprio_relaxed(x); // expected-error {{argument to '__builtin_amdgcn_s_setprio_relaxed' must be a constant integer}}
-  __builtin_amdgcn_s_setprio_relaxed(65536); // expected-warning {{implicit conversion from 'int' to 'short' changes value from 65536 to 0}}
-}
-
 void test_sched_barrier(int x)
 {
   __builtin_amdgcn_sched_barrier(x); // expected-error {{argument to '__builtin_amdgcn_sched_barrier' must be a constant integer}}

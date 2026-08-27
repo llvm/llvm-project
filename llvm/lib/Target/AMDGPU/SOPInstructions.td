@@ -1755,7 +1755,7 @@ def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$s
 }
 
 def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
-  [(int_amdgcn_s_setprio_relaxed timm:$simm16)]> {
+  [(int_amdgcn_s_setprio timm:$simm16)]> {
 }
 
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",

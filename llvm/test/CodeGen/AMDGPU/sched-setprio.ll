@@ -4,9 +4,7 @@ declare void @llvm.amdgcn.s.setprio(i16)
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x1f32:
-; GCN: sched_barrier mask(0x00000000)
-; GCN-NEXT: s_setprio 1
-; GCN-NEXT: sched_barrier mask(0x00000000)
+; GCN: s_setprio 1
 ; GCN: v_mfma
 ; GCN: v_mfma
 ; GCN: s_setprio 0
