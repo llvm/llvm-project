@@ -219,6 +219,20 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
   bool isThumb = ThunkIt->isThumb;
 
   const TargetInstrInfo *TII = MF.getSubtarget<ARMSubtarget>().getInstrInfo();
+
+  // Depending on whether this pass is in the same FunctionPassManager as the
+  // IR->MIR conversion, the thunk may be completely empty (no MBB at all),
+  // or contain a single basic block with a single return instruction.
+  // Normalise it to contain a single empty basic block.
+  if (MF.size() == 1) {
+    assert(MF.front().size() == 1);
+    assert(MF.front().front().isReturn());
+    MF.front().erase(MF.front().begin());
+  } else {
+    assert(MF.size() == 0);
+    MF.push_back(MF.CreateMachineBasicBlock());
+  }
+
   MachineBasicBlock *Entry = &MF.front();
   Entry->clear();
 
