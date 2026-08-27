@@ -13,7 +13,6 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1118,6 +1117,23 @@ SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+/// Returns \p Num / \p Denom as a BranchProbability, clamped so a ratio that is
+/// neither zero nor one does not round to zero or one. BlockFrequencyInfo also
+/// keeps a zero-weight edge distinguishable from an unreachable one.
+static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
+                                                            uint64_t Denom) {
+  BranchProbability P = BranchProbability::getBranchProbability(Num, Denom);
+  if (Num == 0 || Num == Denom)
+    return P;
+  return BranchProbability::getRaw(std::clamp(
+      P.getNumerator(), 1u, BranchProbability::getDenominator() - 1));
+}
+
+BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
+  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
+                                            AlwaysExecutesFreq);
+}
+
 /// Returns the probability of reaching each unique successor of \p VPBB, taken
 /// from the branch weights recorded on its terminator, or unknown if not
 /// available. See llvm::getBranchProbability in
@@ -1126,8 +1142,8 @@ static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
 getSuccessorProbabilities(const VPBasicBlock *VPBB) {
   ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
   // With a single successor the edge is always taken and needs no weights.
-  if (Successors.size() == 1)
-    return {{cast<VPBasicBlock>(Successors[0]), BranchProbability::getOne()}};
+  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
+    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
 
   // Take the branch weights off the terminator. Without usable weights all
   // successors have unknown probability; zero the weights, so the accumulation
@@ -1150,54 +1166,49 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
     auto [Succ, Weight] = SuccWeight;
     if (Total == 0)
       return std::make_pair(Succ, BranchProbability::getUnknown());
-    BranchProbability P =
-        BranchProbability::getBranchProbability(Weight, Total);
-    // A total wider than 32 bits gets scaled down, truncating the numerator.
-    // That can collapse a taken edge to probability zero, or a partially taken
-    // one to probability one; keep both ends apart, as BlockFrequencyInfo also
-    // gives a zero-weight edge a non-zero share.
-    if (P.isZero() && Weight != 0)
-      P = BranchProbability::getRaw(1);
-    else if (P.isOne() && Weight != Total)
-      P = BranchProbability::getRaw(BranchProbability::getDenominator() - 1);
-    return std::make_pair(Succ, P);
+    return std::make_pair(Succ,
+                          getBranchProbabilityKeepingPartial(Weight, Total));
   });
 }
 
-DenseMap<const VPBasicBlock *, VPExecutionProbability>
-vputils::computeExecutionProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
+/// Returns \p Freq scaled by \p Prob, rounding up to 1 instead of 0 to keep a
+/// rarely executed block distinguishable from an unreachable one.
+static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
+                                          BranchProbability Prob) {
+  BlockFrequency Scaled = Freq * Prob;
+  if (Scaled == BlockFrequency() && Freq != BlockFrequency() && !Prob.isZero())
+    return BlockFrequency(1);
+  return Scaled;
+}
+
+DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
-  // Push each block's probability along its outgoing edges, accumulating it in
-  // the successors. Blocks is in reverse post-order and the blocks form a DAG
-  // (the backedge of a loop region is implicit), so all incoming edges of a
-  // block have contributed by the time it is visited and its probability is
-  // final.
-  DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities;
-  Probabilities.reserve(Blocks.size());
-  // The header (first block) always executes.
-  Probabilities[Blocks.front()] = VPExecutionProbability::getOne();
+  // Push each block's frequency along its outgoing edges. Blocks is a DAG in
+  // reverse post-order (the loop region's backedge is implicit), so a block's
+  // frequency is final by the time it is visited.
+  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies;
+  Frequencies.reserve(Blocks.size());
+  // The header (first block) always executes, the others start out unreachable.
+  Frequencies[Blocks.front()] = BlockFrequency(AlwaysExecutesFreq);
   for (VPBasicBlock *VPBB : Blocks.drop_front())
-    Probabilities[VPBB] = VPExecutionProbability::getZero();
+    Frequencies[VPBB] = BlockFrequency();
 
   for (VPBasicBlock *VPBB : Blocks) {
-    VPExecutionProbability SrcProb = Probabilities.at(VPBB);
+    std::optional<BlockFrequency> SrcFreq = Frequencies.at(VPBB);
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      VPExecutionProbability &SuccProb = Probabilities.at(Succ);
-      // An unknown edge or predecessor poisons the successor: its probability
-      // is only known if all edges on paths reaching it carry branch weights.
-      if (SrcProb.isUnknown() || EdgeProb.isUnknown() || SuccProb.isUnknown()) {
-        SuccProb = VPExecutionProbability::getUnknown();
+      std::optional<BlockFrequency> &SuccFreq = Frequencies.at(Succ);
+      // An unknown edge or predecessor poisons the successor.
+      if (!SrcFreq || EdgeProb.isUnknown() || !SuccFreq) {
+        SuccFreq = std::nullopt;
         continue;
       }
-      VPExecutionProbability Contribution = SrcProb * EdgeProb;
-      // Force to the lowest possible probability if the product gets rounded to
-      // zero, to keep reachable blocks distinguishable from unreachable ones.
-      if (Contribution.isZero() && !SrcProb.isZero() && !EdgeProb.isZero())
-        Contribution = VPExecutionProbability::getRaw(1);
-      SuccProb += Contribution;
+      // The sum can only exceed AlwaysExecutesFreq by rounding.
+      SuccFreq = std::min(BlockFrequency(AlwaysExecutesFreq),
+                          *SuccFreq + scaleKeepingNonZero(*SrcFreq, EdgeProb));
     }
   }
-  return Probabilities;
+  return Frequencies;
 }
 
 VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,

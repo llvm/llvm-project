@@ -2129,44 +2129,50 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
-  assert(getExecutionProbability().isUnknown() &&
-         "VPlan-internal metadata must not be propagated to IR");
+  if (Metadata.empty())
+    return;
+  // The execution frequency is VPlan-internal and must not reach IR; recipes
+  // that end up unguarded may still carry one.
+  unsigned InternalKind = getMDKindID(ExecutionFrequencyMDName);
   for (const auto &[Kind, Node] : Metadata)
-    I.setMetadata(Kind, Node);
+    if (Kind != InternalKind)
+      I.setMetadata(Kind, Node);
 }
 
-/// Returns the execution probability recorded in \p Node.
-static VPExecutionProbability getExecutionProbabilityFromMD(const MDNode *Node) {
-  return VPExecutionProbability::getRaw(
-      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
+/// Returns the execution frequency recorded in \p Node.
+static BlockFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
+  uint64_t Freq =
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+  assert(Freq <= vputils::AlwaysExecutesFreq &&
+         "frequency cannot exceed the one of an always executing block");
+  return BlockFrequency(Freq);
 }
 
-void VPIRMetadata::setExecutionProbability(VPExecutionProbability Prob,
-                                           LLVMContext &Ctx) {
+void VPIRMetadata::setExecutionFrequency(std::optional<BlockFrequency> Freq,
+                                         LLVMContext &Ctx) {
   // A recipe that never or always executes needs no annotation.
-  if (Prob.isUnknown() || Prob.isZero() || Prob.isOne())
+  if (!Freq || Freq->getFrequency() == 0 ||
+      Freq->getFrequency() == vputils::AlwaysExecutesFreq)
     return;
-  // The numerator is relative to BranchProbability's fixed denominator and is
-  // less than it, as probability one has been excluded above.
-  Constant *Numerator =
-      ConstantInt::get(Type::getInt32Ty(Ctx), Prob.getNumerator());
-  setMetadata(Ctx.getMDKindID(ExecutionProbabilityMDName),
-              MDNode::get(Ctx, {ConstantAsMetadata::get(Numerator)}));
+  Constant *Frequency =
+      ConstantInt::get(Type::getInt64Ty(Ctx), Freq->getFrequency());
+  setMetadata(Ctx.getMDKindID(ExecutionFrequencyMDName),
+              MDNode::get(Ctx, {ConstantAsMetadata::get(Frequency)}));
 }
 
-VPExecutionProbability VPIRMetadata::getExecutionProbability() const {
+std::optional<BlockFrequency> VPIRMetadata::getExecutionFrequency() const {
   if (Metadata.empty())
-    return VPExecutionProbability::getUnknown();
-  MDNode *Node = getMetadata(getMDKindID(ExecutionProbabilityMDName));
+    return std::nullopt;
+  MDNode *Node = getMetadata(getMDKindID(ExecutionFrequencyMDName));
   if (!Node)
-    return VPExecutionProbability::getUnknown();
-  return getExecutionProbabilityFromMD(Node);
+    return std::nullopt;
+  return getExecutionFrequencyFromMD(Node);
 }
 
-void VPIRMetadata::clearExecutionProbability() {
+void VPIRMetadata::clearExecutionFrequency() {
   if (Metadata.empty())
     return;
-  unsigned ID = getMDKindID(ExecutionProbabilityMDName);
+  unsigned ID = getMDKindID(ExecutionFrequencyMDName);
   erase_if(Metadata, [ID](const auto &P) { return P.first == ID; });
 }
 
@@ -2203,14 +2209,11 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
       O << "{";
       interleaveComma(Weights, O);
       O << "}";
-    } else if (MDNames[Kind] == ExecutionProbabilityMDName) {
-      // Print execution probabilities as percentages, which relates them to
-      // the block frequencies of the original loop. Use %g with a few
-      // significant digits, so that the tiny probabilities of deeply nested
-      // blocks stay legible without adding noise to the common ones.
-      O << format("%.4g%%",
-                  100.0 * getExecutionProbabilityFromMD(Node).getNumerator() /
-                      VPExecutionProbability::getDenominator());
+    } else if (MDNames[Kind] == ExecutionFrequencyMDName) {
+      // Print the frequency together with the probability it corresponds to.
+      uint64_t Freq = getExecutionFrequencyFromMD(Node).getFrequency();
+      O << Freq
+        << format(" (%.4g%%)", 100.0 * Freq / vputils::AlwaysExecutesFreq);
     } else {
       Node->printAsOperand(O, M);
     }

@@ -485,13 +485,13 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       continue;
 
     // The merged region is entered whenever either of the original regions was,
-    // so use the higher, i.e. more conservative, of their entry probabilities.
+    // so use the higher, i.e. more conservative, of their entry frequencies.
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
-    VPExecutionProbability Prob1 =
-        Region1->getEntryBranchOnMask()->getExecutionProbability();
-    VPExecutionProbability Prob2 = Guard2->getExecutionProbability();
-    if (!Prob1.isUnknown() && !Prob2.isUnknown() && Prob2 < Prob1)
-      Guard2->setExecutionProbability(Prob1, Plan.getContext());
+    std::optional<BlockFrequency> Freq1 =
+        Region1->getEntryBranchOnMask()->getExecutionFrequency();
+    std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
+    if (Freq1 && Freq2 && *Freq2 < *Freq1)
+      Guard2->setExecutionFrequency(Freq1, Plan.getContext());
 
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
@@ -561,10 +561,10 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   // The predicated recipe executes exactly when the guarding branch-on-mask is
-  // taken, so move its execution probability there.
-  BOMRecipe->setExecutionProbability(
-      RecipeWithoutMask->getExecutionProbability(), Plan.getContext());
-  RecipeWithoutMask->clearExecutionProbability();
+  // taken, so move its execution frequency there.
+  BOMRecipe->setExecutionFrequency(RecipeWithoutMask->getExecutionFrequency(),
+                                   Plan.getContext());
+  RecipeWithoutMask->clearExecutionFrequency();
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
   auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
@@ -3728,9 +3728,9 @@ static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
   VPIRMetadata CommonMetadata = *Recipes.front();
   for (VPReplicateRecipe *Recipe : drop_begin(Recipes))
     CommonMetadata.intersect(*Recipe);
-  // The recipe the common metadata is used for is not predicated, so it does
-  // not execute with the probability shared by the recipes in the group.
-  CommonMetadata.clearExecutionProbability();
+  // The recipe using the common metadata is not predicated, so it does not
+  // share the group's execution frequency.
+  CommonMetadata.clearExecutionFrequency();
   return CommonMetadata;
 }
 
@@ -5591,19 +5591,6 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
-    }
-  }
-}
-
-void VPlanTransforms::dropUnguardedExecutionProbabilities(VPlan &Plan) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (RepR && RepR->isPredicated())
-        continue;
-      if (auto *MD = dyn_cast<VPIRMetadata>(&R))
-        MD->clearExecutionProbability();
     }
   }
 }

@@ -6453,25 +6453,21 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 static void printOptimizedVPlan(VPlan &) {}
 
 #ifndef NDEBUG
-/// Cross-check the execution probabilities computed by
-/// vputils::computeExecutionProbabilities for the blocks of the loop region of
-/// \p Plan against the frequencies \p BFI computed for the corresponding blocks
-/// of \p OrigLoop.
+/// Cross-check vputils::computeExecutionFrequencies for the loop region of
+/// \p Plan against BlockFrequencyInfo for the blocks of \p OrigLoop.
 /// FIXME: Temporary verification aid, to be removed.
-static bool verifyExecutionProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
-                                                 LoopInfo *LI,
-                                                 BlockFrequencyInfo &BFI) {
-  // The verification is limited to inner loops where the latch is the only
-  // exiting block and there are no extra VPBBs not mapped to IR BBs (when
-  // tail folding).
+static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
+                                               LoopInfo *LI,
+                                               LoopVectorizationCostModel &CM) {
+  // Limited to inner loops with the latch as only exiting block and no extra
+  // VPBBs without a matching IR BB (as introduced by tail folding).
   if (Plan.isOuterLoop() ||
       OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
       Plan.hasTailFolded())
     return true;
 
-  // Visit the blocks of the loop region in the same order as
-  // introduceMasksAndLinearize does. Both traversals are reverse post-orders of
-  // the same CFG, so they visit corresponding blocks at the same index.
+  // Visit the region's blocks in the same order as introduceMasksAndLinearize.
+  // Both are reverse post-orders of the same CFG, so indices correspond.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion()->getEntryBasicBlock());
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
@@ -6481,36 +6477,34 @@ static bool verifyExecutionProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
   LoopBlocksRPO OrigRPO(OrigLoop);
   OrigRPO.perform(LI);
 
+  // Only request the expensive BFI once the cheap bail-outs are past.
+  BlockFrequencyInfo &BFI = CM.getBFI();
   uint64_t HeaderFreq = BFI.getBlockFreq(OrigLoop->getHeader()).getFrequency();
   if (HeaderFreq == 0)
     return true;
 
-  // BFI's fixed-point mass propagation rounds once per edge, losing up to 1 ULP
-  // per edge on the paths reaching a block. Bound that by the total number of
-  // edges in the region, as a block distributing its frequency over many
-  // successors rounds once for each of them.
+  // BFI's fixed-point mass propagation loses up to 1 ULP per edge, so bound the
+  // error by the number of edges in the region.
   uint64_t Edges = 0;
   for (const VPBasicBlock *VPBB : Blocks)
     Edges += VPBB->getNumSuccessors();
   uint64_t Tolerance = Edges + BranchProbability::getDenominator() / HeaderFreq;
 
-  DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities =
-      vputils::computeExecutionProbabilities(Blocks);
+  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies =
+      vputils::computeExecutionFrequencies(Blocks);
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    // Currently VPlan-based probabilities are only computed when all blocks
-    // have branch-weights. Compare at BranchProbability's coarser resolution,
-    // which is as precise as BFI's frequencies get.
-    VPExecutionProbability Prob = Probabilities.lookup(VPBB);
-    if (Prob.isUnknown())
+    // Compare at BranchProbability's coarser resolution, which is as precise as
+    // BFI's frequencies get.
+    std::optional<BlockFrequency> Freq = Frequencies.lookup(VPBB);
+    if (!Freq)
       continue;
-    BranchProbability Computed = Prob;
+    BranchProbability Computed = vputils::getExecutionProbability(*Freq);
 
-    // Clamp the frequency to the header's; it may exceed it slightly due to
-    // BFI's rounding.
-    uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
+    // Clamp to the header's frequency, which BFI's rounding may exceed.
+    uint64_t BBFreq = BFI.getBlockFreq(BB).getFrequency();
     BranchProbability Expected = BranchProbability::getBranchProbability(
-        std::min(Freq, HeaderFreq), HeaderFreq);
+        std::min(BBFreq, HeaderFreq), HeaderFreq);
     if (AbsoluteDifference(Computed.getNumerator(), Expected.getNumerator()) <=
         Tolerance)
       continue;
@@ -6609,9 +6603,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
-  assert(verifyExecutionProbabilitiesMatchBFI(*VPlan0, OrigLoop, LI,
-                                              CM.getBFI()) &&
-         "execution probabilities do not match the loop's frequencies");
+  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, CM) &&
+         "execution frequencies do not match the loop's block frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   return VPlan0;
@@ -6828,7 +6821,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  RUN_VPLAN_PASS(VPlanTransforms::dropUnguardedExecutionProbabilities, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
 

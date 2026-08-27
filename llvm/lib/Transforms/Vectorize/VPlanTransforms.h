@@ -617,11 +617,6 @@ struct VPlanTransforms {
   /// enabled by prior widening of consecutive memory operations for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
-  /// Drop the execution probabilities recorded on all recipes that will not be
-  /// guarded by a branch. Currently those are all recipes except predicated
-  /// VPReplicateRecipes.
-  static void dropUnguardedExecutionProbabilities(VPlan &Plan);
-
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,

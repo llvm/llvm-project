@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -221,13 +223,20 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
-/// Computes for each block in \p Blocks the probability that it executes,
-/// relative to the first block in \p Blocks (the header block), which always
-/// executes. \p Blocks must be in reverse post-order. The probability of a
-/// block is the accumulated probability of its incoming edges, or unknown if
-/// any edge on a path reaching it lacks branch weights.
-DenseMap<const VPBasicBlock *, VPExecutionProbability>
-computeExecutionProbabilities(ArrayRef<VPBasicBlock *> Blocks);
+/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
+/// the frequency of a block that always executes. Wider than
+/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
+inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
+
+/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights.
+DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
 namespace detail {
 

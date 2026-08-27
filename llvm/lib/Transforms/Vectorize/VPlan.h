@@ -38,12 +38,13 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -73,10 +74,6 @@ class LoopVectorizationCostModel;
 struct VPCostContext;
 
 using VPlanPtr = std::unique_ptr<VPlan>;
-
-/// The probability with which a block or recipe executes, relative to the entry
-/// of the loop region, which always executes.
-using VPExecutionProbability = BranchProbability;
 
 /// \enum UncountableExitStyle
 /// Different methods of handling early exits.
@@ -1185,14 +1182,12 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
-  /// Name of the VPlan-internal metadata kind recording the probability with
-  /// which a recipe executes; see setExecutionProbability.
-  static constexpr StringLiteral ExecutionProbabilityMDName =
-      "vplan.execution.probability";
+  /// Name of the VPlan-internal metadata kind holding the execution frequency.
+  static constexpr StringLiteral ExecutionFrequencyMDName =
+      "vplan.execution.frequency";
 
-  /// Returns the ID of the metadata kind named \p Kind. Any attached node
-  /// provides the context the IDs are assigned in, as all nodes belong to the
-  /// context of the VPlan's function.
+  /// Returns the ID of the metadata kind named \p Kind, taking the context from
+  /// any attached node; all belong to the context of the VPlan's function.
   unsigned getMDKindID(StringRef Kind) const {
     assert(!Metadata.empty() && "no node to take the context from");
     return Metadata.front().second->getContext().getMDKindID(Kind);
@@ -1206,7 +1201,7 @@ public:
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
     // Retain the branch weights of terminators. They are used to compute the
-    // probabilities with which the blocks of the original loop execute.
+    // frequencies with which the blocks of the original loop execute.
     if (I.isTerminator())
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
@@ -1244,16 +1239,16 @@ public:
     return It != Metadata.end() ? It->second : nullptr;
   }
 
-  /// Record that the recipe executes with probability \p Prob, relative to the
-  /// entry of the loop region.
-  void setExecutionProbability(VPExecutionProbability Prob, LLVMContext &Ctx);
+  /// Record that the recipe executes with frequency \p Freq, relative to the
+  /// entry of the loop region; see vputils::AlwaysExecutesFreq.
+  void setExecutionFrequency(std::optional<BlockFrequency> Freq,
+                             LLVMContext &Ctx);
 
-  /// Returns the probability recorded by setExecutionProbability, or an unknown
-  /// probability if none has been recorded.
-  VPExecutionProbability getExecutionProbability() const;
+  /// Returns the frequency recorded by setExecutionFrequency, if any.
+  std::optional<BlockFrequency> getExecutionFrequency() const;
 
-  /// Drop the probability recorded by setExecutionProbability, if any.
-  void clearExecutionProbability();
+  /// Drop the frequency recorded by setExecutionFrequency, if any.
+  void clearExecutionFrequency();
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.

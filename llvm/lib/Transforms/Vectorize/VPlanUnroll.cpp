@@ -676,20 +676,19 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   return New;
 }
 
-/// Converts the probability \p Prob with which a block is entered to the branch
-/// weights of the conditional branch guarding it, or returns nullptr if \p Prob
-/// is unknown.
-static MDNode *convertProbabilityToBranchWeights(VPExecutionProbability Prob,
-                                                 LLVMContext &Ctx) {
-  if (Prob.isUnknown())
+/// Converts the frequency \p Freq with which a block is entered to branch
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown.
+static MDNode *
+convertFrequencyToBranchWeights(std::optional<BlockFrequency> Freq,
+                                LLVMContext &Ctx) {
+  if (!Freq)
     return nullptr;
-  BranchProbability P = Prob;
+  BranchProbability P = vputils::getExecutionProbability(*Freq);
 
   // Use the numerators of P and its complement as weights and reduce them via
-  // gcd to keep them small. Round a probability that underflows P up, to keep a
-  // rarely entered block distinguishable from a never entered one.
-  uint32_t Taken = std::max(P.getNumerator(), 1u);
-  uint32_t NotTaken = BranchProbability::getDenominator() - Taken;
+  // gcd to keep them small. Neither is zero, as P is neither zero nor one.
+  uint32_t Taken = P.getNumerator();
+  uint32_t NotTaken = P.getCompl().getNumerator();
   uint32_t GCD = std::gcd(Taken, NotTaken);
   return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
 }
@@ -743,12 +742,11 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
-        // Turn the probability with which the predicated block is entered into
-        // branch weights on the generated conditional branch.
+        // Turn the frequency of the predicated block into branch weights.
         auto *BOC = Builder.createNaryOp(VPInstruction::BranchOnCond,
                                          {BranchOnMask->getOperand(0)}, OldDL);
-        if (MDNode *Weights = convertProbabilityToBranchWeights(
-                BranchOnMask->getExecutionProbability(), Plan.getContext()))
+        if (MDNode *Weights = convertFrequencyToBranchWeights(
+                BranchOnMask->getExecutionFrequency(), Plan.getContext()))
           BOC->setMetadata(LLVMContext::MD_prof, Weights);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
