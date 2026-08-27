@@ -334,14 +334,15 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
-    // For streaming SME2p2, only consider 8bit or 16bit Scalar types.
-    if ((ST->isStreamingSVEAvailable() && ST->hasSME2p2()))
-      return Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16;
+    // 32-bit and 64-bit element types are legal if we have SVE.
+    if (Ty->getScalarSizeInBits() == 32 || Ty->getScalarSizeInBits() == 64)
+      return true;
 
-    return ((ST->hasSVE2p2() || ST->hasSME2p2()) &&
-            (Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16)) ||
-           Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
-           Ty->isIntegerTy(64);
+    // 8-bit and 16-bit types require +sve2p2 or +sme2p2.
+    if (Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16)
+      return ST->hasSVE2p2() || ST->hasSME2p2();
+
+    return false;
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
