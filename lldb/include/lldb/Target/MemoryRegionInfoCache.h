@@ -10,6 +10,7 @@
 #define LLDB_TARGET_MEMORYREGIONINFOCACHE_H
 
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/Locked.h"
 
 #include <map>
 #include <mutex>
@@ -34,8 +35,8 @@ public:
   size_t GetSize();
 
 private:
-  std::map<lldb::addr_t, MemoryRegionInfo> m_region_infos;
-  std::mutex m_mutex;
+  Guarded<std::map<lldb::addr_t, MemoryRegionInfo>, std::mutex>
+      m_region_infos;
 };
 } // namespace lldb_private
 
