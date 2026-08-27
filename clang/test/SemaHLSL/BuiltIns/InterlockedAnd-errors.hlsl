@@ -3,29 +3,24 @@
 // RUN:   -disable-llvm-passes -verify
 
 // InterlockedAnd is provided as a set of address-space-qualified overloads
-// (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg). All arg
-// mismatches surface as "no matching function" with 16 candidates. The
-// candidate notes come from synthesized FunctionDecls with no source
-// location, so they are matched with `@*:*`.
+// (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg).
 
-groupshared int   gs_i32;
+groupshared int gs_i32;
 groupshared float gs_f32;
 struct S { int x; };
-groupshared S     gs_s;
+groupshared S gs_s;
 
-void too_few(int v) {
+void too_few() {
   InterlockedAnd(gs_i32); // expected-error{{no matching function for call to 'InterlockedAnd'}}
   // expected-note@*:* 16 {{candidate function}}
 }
 
 void too_many(int v, int extra) {
-  int o;
-  InterlockedAnd(gs_i32, v, o, extra); // expected-error{{no matching function for call to 'InterlockedAnd'}}
+  int orig;
+  InterlockedAnd(gs_i32, v, orig, extra); // expected-error{{no matching function for call to 'InterlockedAnd'}}
   // expected-note@*:* 16 {{candidate function}}
 }
 
-// Atomics must operate on actual addresses in groupshared or device memory;
-// passing a plain local (no address space) must not bind to any overload.
 void local_dest(int v) {
   int dest;
   InterlockedAnd(dest, v); // expected-error{{no matching function for call to 'InterlockedAnd'}}
@@ -48,20 +43,14 @@ void mismatched_orig_type(int v) {
   // expected-note@*:* 16 {{candidate function}}
 }
 
-// The tests below exercise direct invocations of the underlying clang builtin
-// `__builtin_hlsl_interlocked_and`. These bypass overload resolution against
-// the synthesized `InterlockedAnd` overload set (the builtin's prototype in
-// Builtins.td is `void (...)`), so each error is produced by the explicit
-// checks in SemaHLSL.cpp rather than by candidate-set rejection.
-
 void direct_too_few() {
   __builtin_hlsl_interlocked_and(gs_i32);
   // expected-error@-1 {{too few arguments to function call, expected at least 2, have 1}}
 }
 
 void direct_too_many(int v, int extra) {
-  int o;
-  __builtin_hlsl_interlocked_and(gs_i32, v, o, extra);
+  int orig;
+  __builtin_hlsl_interlocked_and(gs_i32, v, orig, extra);
   // expected-error@-1 {{too many arguments to function call, expected at most 3, have 4}}
 }
 
@@ -77,8 +66,8 @@ void direct_nonlvalue_dest(int v) {
 }
 
 void direct_mismatched_value() {
-  uint uv = 1u;
-  __builtin_hlsl_interlocked_and(gs_i32, uv);
+  uint value = 1;
+  __builtin_hlsl_interlocked_and(gs_i32, value);
   // expected-error@-1 {{passing 'uint' (aka 'unsigned int') to parameter of incompatible type 'int'}}
 }
 
