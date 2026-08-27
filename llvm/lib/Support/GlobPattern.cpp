@@ -231,7 +231,7 @@ GlobPattern::asLiteral(SmallVectorImpl<char> &Storage) const {
   // this pattern denotes a single string is decided by the sub-patterns, which
   // recorded it while parsing. No sub-pattern at all means there was no
   // metacharacter; more than one means brace expansion produced a choice.
-  if (!SubGlobs.empty() && !(SubGlobs.size() == 1 && SubGlobs[0].isLiteral()))
+  if (SubGlobs.size() > 1 || (SubGlobs.size() == 1 && !SubGlobs[0].isLiteral()))
     return std::nullopt;
 
   StringRef Literal = Pattern;
