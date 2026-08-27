@@ -95,7 +95,7 @@ static bool isStringChar(char C) { return isPrint(C) || C == '\t'; }
 static void strings(raw_ostream &OS, StringRef FileName,
                     sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  auto printHeader = [&OS, FileName](unsigned StringStart) {
+  auto printHeader = [&OS, FileName](size_t StringStart) {
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
@@ -126,9 +126,13 @@ static void strings(raw_ostream &OS, StringRef FileName,
   SmallString<DefaultMinLength> Candidate;
   bool InString = false;
   // Offset of the start of the current chunk within the file.
-  unsigned ChunkOffset = 0;
+  size_t ChunkOffset = 0;
 
   Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
+
+  // To prevent performance regression under O0, access the raw pointer instead
+  // of using methods provided by the standard library, which are not inlined
+  // under O0.
   while (true) {
     Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
@@ -137,31 +141,40 @@ static void strings(raw_ostream &OS, StringRef FileName,
              << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
       return;
     }
-    std::size_t ChunkSize = *ReadBytesOrErr;
+    size_t ChunkSize = *ReadBytesOrErr;
     if (ChunkSize == 0)
       break;
 
-    const char *const B = Buffer.data();
-    const char *const E = B + ChunkSize;
-    const char *P = B;
+    const char *const Begin = Buffer.data();
+    const char *const End = Begin + ChunkSize;
+    const char *Cur = Begin;
 
+    // Handle the remaining part from the previous chunk.
+    // The previous chunk can be either no longer than MinSize or part of the
+    // string.
+    while (Cur != End && isStringChar(*Cur))
+      ++Cur;
+    size_t Len = Cur - Begin;
+    // Keep the buffer size bounded. With a small Min, a long string spanning
+    // multiple chunks will have at most DefaultReadChunkSize bytes, since the
+    // buffer is printed immediately with the header (guarded by the second if).
+    // With a large Min, the buffer must hold at least Min bytes, since we need
+    // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
-      while (P != E && isStringChar(*P))
-        ++P;
-      size_t Len = P - B;
       if (InString) {
-        OS << StringRef(B, Len);
+        OS << StringRef(Begin, Len);
       } else if (Candidate.size() + Len >= Min) {
         printHeader(ChunkOffset - Candidate.size());
-        OS << Candidate << StringRef(B, Len);
+        OS << Candidate << StringRef(Begin, Len);
         Candidate.clear();
         InString = true;
-      } else if (P == E) {
-        Candidate.append(B, E);
+      } else if (Cur == End) {
+        Candidate.append(Begin, End);
       } else {
         Candidate.clear();
       }
-      if (P == E) {
+
+      if (Cur == End) {
         ChunkOffset += ChunkSize;
         continue;
       }
@@ -172,27 +185,31 @@ static void strings(raw_ostream &OS, StringRef FileName,
     }
 
     const char *S = nullptr;
-    for (; P != E; ++P) {
-      if (isStringChar(*P)) {
+    for (; Cur != End; ++Cur) {
+      if (isStringChar(*Cur)) {
         if (!S)
-          S = P;
+          S = Cur;
       } else if (S) {
-        if (static_cast<size_t>(P - S) >= Min) {
-          printHeader(ChunkOffset + (S - B));
-          OS << StringRef(S, P - S) << '\n';
+        if (static_cast<size_t>(Cur - S) >= Min) {
+          printHeader(ChunkOffset + (S - Begin));
+          OS << StringRef(S, Cur - S) << '\n';
         }
         S = nullptr;
       }
     }
 
+    // Concatenate the last part.
+    // If the current buffer is no longer than Min, we can't print it, so just
+    // add it to the candidate buffer. If it is used, mark it as InString to
+    // prevent printing the header twice.
     if (S) {
-      size_t Len = E - S;
+      size_t Len = End - S;
       if (Len >= Min) {
-        printHeader(ChunkOffset + (S - B));
+        printHeader(ChunkOffset + (S - Begin));
         OS << StringRef(S, Len);
         InString = true;
       } else {
-        Candidate.append(S, E);
+        Candidate.append(S, End);
       }
     }
     ChunkOffset += ChunkSize;
