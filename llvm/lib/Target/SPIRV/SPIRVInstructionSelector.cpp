@@ -778,6 +778,7 @@ static bool isOpcodeWithNoSideEffects(unsigned Opcode) {
   case SPIRV::OpTypeInt:
   case SPIRV::OpTypeFloat:
   case SPIRV::OpTypeVector:
+  case SPIRV::OpTypeVectorIdEXT:
   case SPIRV::OpTypeMatrix:
   case SPIRV::OpTypeImage:
   case SPIRV::OpTypeSampler:
@@ -1259,14 +1260,12 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_UADDO:
     return selectOverflowArith(ResVReg, ResType, I,
-                               ResType->getOpcode() == SPIRV::OpTypeVector
-                                   ? SPIRV::OpIAddCarryV
-                                   : SPIRV::OpIAddCarryS);
+                               isVectorType(ResType) ? SPIRV::OpIAddCarryV
+                                                     : SPIRV::OpIAddCarryS);
   case TargetOpcode::G_USUBO:
     return selectOverflowArith(ResVReg, ResType, I,
-                               ResType->getOpcode() == SPIRV::OpTypeVector
-                                   ? SPIRV::OpISubBorrowV
-                                   : SPIRV::OpISubBorrowS);
+                               isVectorType(ResType) ? SPIRV::OpISubBorrowV
+                                                     : SPIRV::OpISubBorrowS);
   case TargetOpcode::G_UMULO:
     return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpUMulExtended);
   case TargetOpcode::G_SMULO:
@@ -1425,9 +1424,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMICRMW_FSUB:
     // Translate G_ATOMICRMW_FSUB to OpAtomicFAddEXT with negative value operand
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFAddEXT,
-                           ResType->getOpcode() == SPIRV::OpTypeVector
-                               ? SPIRV::OpFNegateV
-                               : SPIRV::OpFNegate);
+                           isVectorType(ResType) ? SPIRV::OpFNegateV
+                                                 : SPIRV::OpFNegate);
   case TargetOpcode::G_ATOMICRMW_FMIN:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMinEXT);
   case TargetOpcode::G_ATOMICRMW_FMAX:
@@ -2323,6 +2321,23 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     }
   }
 
+  SPIRVTypeInst PointeeTy = GR.getPointeeType(GR.getSPIRVTypeForVReg(Ptr));
+  SPIRVTypeInst StoreTy = GR.getSPIRVTypeForVReg(StoreVal);
+  if (PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+      StoreTy->getOpcode() != SPIRV::OpTypeVectorIdEXT &&
+      GR.getScalarOrVectorComponentCount(PointeeTy) == 1) {
+    MachineInstr *StoreValDef = getVRegDef(*MRI, StoreVal);
+    Register Reg = StoreValDef->getOperand(0).getReg();
+    if (auto FC = GFConstant::getConstant(Reg, *MRI))
+      StoreVal =
+          GR.getOrCreateConstVector(FC->getScalarValue(), I, PointeeTy, TII);
+    else if (auto IC = GIConstant::getConstant(Reg, *MRI))
+      StoreVal =
+          GR.getOrCreateConstVector(IC->getScalarValue(), I, PointeeTy, TII);
+    else
+      llvm_unreachable("Unexpected <1 x T> Store type!");
+  }
+
   if (I.getNumMemOperands()) {
     const MachineMemOperand *MemOp = *I.memoperands_begin();
     if (MemOp->isAtomic())
@@ -2735,7 +2750,7 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
       I.getOperand(ArgI).isReg() ? I.getOperand(ArgI).getReg() : Register(0);
   SPIRVTypeInst SrcType =
       SrcReg.isValid() ? GR.getSPIRVTypeForVReg(SrcReg) : nullptr;
-  if (!SrcType || SrcType->getOpcode() != SPIRV::OpTypeVector)
+  if (!SrcType || !isVectorType(SrcType))
     report_fatal_error(
         "cannot select G_UNMERGE_VALUES with a non-vector argument");
 
@@ -2758,7 +2773,7 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
       GR.assignSPIRVTypeToVReg(ResType, ResVReg, *GR.CurMF);
     }
 
-    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+    if (isVectorType(ResType)) {
       Register UndefReg = GR.getOrCreateUndef(I, SrcType, TII);
       auto MIB =
           BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorShuffle))
@@ -2789,11 +2804,11 @@ bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
 bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
   AtomicOrdering AO = AtomicOrdering(I.getOperand(0).getImm());
   uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO));
-  Register MemSemReg = buildI32Constant(MemSem, I);
+  Register MemSemReg = buildI32ConstantInEntryBlock(MemSem, I);
   SyncScope::ID Ord = SyncScope::ID(I.getOperand(1).getImm());
   uint32_t Scope = static_cast<uint32_t>(getMemScope(
       STI.getTargetTriple(), GR.CurMF->getFunction().getContext(), Ord));
-  Register ScopeReg = buildI32Constant(Scope, I);
+  Register ScopeReg = buildI32ConstantInEntryBlock(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemoryBarrier))
       .addUse(ScopeReg)
@@ -2827,7 +2842,8 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   assert(I.getNumDefs() > 1 && "Not enought operands");
   SPIRVTypeInst BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
   unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-  if (N > 1)
+  if (N > 1 || (isVectorType(ResType) &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
   Register ZeroReg = buildZerosVal(ResType, I);
@@ -3274,8 +3290,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
   assert(InputType && "VReg has no type assigned");
 
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
-  bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
-  if (IsBoolTy && !IsVectorTy) {
+  if (IsBoolTy && !isVectorType(InputType)) {
     assert(ResVReg == I.getOperand(0).getReg());
     return BuildCOPY(ResVReg, InputRegister, I);
   }
@@ -3287,7 +3302,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
   SPIRVTypeInst SpvBoolTy = SpvBoolScalarTy;
   Register NotEqualReg = ResVReg;
 
-  if (IsVectorTy) {
+  if (isVectorType(InputType)) {
     NotEqualReg =
         IsBoolTy ? InputRegister
                  : createVirtualRegister(SpvBoolTy, &GR, MRI, MRI->getMF());
@@ -3307,7 +3322,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
         .constrainAllUses(TII, TRI, RBI);
   }
 
-  if (IsVectorTy)
+  if (isVectorType(InputType))
     BuildMI(BB, I, I.getDebugLoc(), TII.get(OpAnyOrAll))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(SpvBoolScalarTy))
@@ -3339,9 +3354,11 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
   [[maybe_unused]] SPIRVTypeInst VecType =
       GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
 
-  assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
-         GR.getScalarOrVectorComponentCount(VecType) > 1 &&
-         "dot product requires a vector of at least 2 components");
+  assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
+           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
+          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
+         "dot product requires either a vector of at least 2 components or"
+         " the SPV_EXT_long vector extension.");
 
   [[maybe_unused]] SPIRVTypeInst EltType =
       GR.getScalarOrVectorComponentType(VecType);
@@ -3399,9 +3416,11 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
       .addUse(Vec1)
       .constrainAllUses(TII, TRI, RBI);
 
-  assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
-         GR.getScalarOrVectorComponentCount(VecType) > 1 &&
-         "dot product requires a vector of at least 2 components");
+  assert(((VecType->getOpcode() == SPIRV::OpTypeVector &&
+           GR.getScalarOrVectorComponentCount(VecType) > 1) ||
+          VecType->getOpcode() == SPIRV::OpTypeVectorIdEXT) &&
+         "dot product requires either a vector of at least 2 components "
+         "or the SPV_EXT_long_vector extension.");
 
   Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
@@ -3757,7 +3776,9 @@ bool SPIRVInstructionSelector::selectWaveActiveAllEqual(Register ResVReg,
 
   // Determine if input is vector
   unsigned NumElems = GR.getScalarOrVectorComponentCount(InputType);
-  bool IsVector = NumElems > 1;
+  bool IsVector = NumElems > 1 ||
+                  (InputType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                   STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector));
 
   // Determine element types
   SPIRVTypeInst ElemInputType = GR.getScalarOrVectorComponentType(InputType);
@@ -4048,7 +4069,8 @@ bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
                                     ? SPIRV::OpSConvert
                                     : SPIRV::OpUConvert;
 
-  if (N > 1) {
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
     Int32Type = GR.getOrCreateSPIRVVectorType(Int32Type, N, I, TII);
     ShiftOp = SPIRV::OpShiftRightLogicalV;
 
@@ -4255,7 +4277,8 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
   unsigned OrOp = SPIRV::OpBitwiseOrS;
   unsigned ShlOp = SPIRV::OpShiftLeftLogicalS;
   unsigned ShrOp = SPIRV::OpShiftRightLogicalS;
-  if (N > 1) {
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))) {
     AndOp = SPIRV::OpBitwiseAndV;
     OrOp = SPIRV::OpBitwiseOrV;
     ShlOp = SPIRV::OpShiftLeftLogicalV;
@@ -4267,7 +4290,9 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
   auto SwapBits = [&](const Register Input, const uint64_t Mask,
                       const unsigned Shift) -> Register {
     auto CreateConst = [&](const uint64_t Value) -> Register {
-      if (N == 1)
+      if (N == 1 &&
+          (ResType->getOpcode() != SPIRV::OpTypeVectorIdEXT ||
+           !STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
         return GR.getOrCreateConstInt(
             Value, I, GR.retrieveScalarOrVectorIntType(ResType), TII);
       return GR.getOrCreateConstVector(Value, I, ResType, TII);
@@ -4366,7 +4391,7 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
                                                  SPIRVTypeInst ResType,
                                                  MachineInstr &I) const {
   unsigned N = 0;
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     N = GR.getScalarOrVectorComponentCount(ResType);
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
@@ -4382,7 +4407,7 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
     if (!isConstReg(MRI, I.getOperand(i).getReg()))
       IsConst = false;
 
-  if (!IsConst && N < 2)
+  if (!IsConst && (N < 2 && ResType->getOpcode() != SPIRV::OpTypeVectorIdEXT))
     return diagnoseUnsupported(
         I, "There must be at least two constituent operands in a vector");
 
@@ -4418,7 +4443,7 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
                                                  SPIRVTypeInst ResType,
                                                  MachineInstr &I) const {
   unsigned N = 0;
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     N = GR.getScalarOrVectorComponentCount(ResType);
   else if (ResType->getOpcode() == SPIRV::OpTypeArray)
     N = getArrayComponentCount(MRI, ResType);
@@ -4433,7 +4458,7 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   Register OpReg = I.getOperand(OpIdx).getReg();
   bool IsConst = isConstReg(MRI, OpReg);
 
-  if (!IsConst && N < 2)
+  if (!IsConst && (N < 2 && ResType->getOpcode() != SPIRV::OpTypeVectorIdEXT))
     return diagnoseUnsupported(
         I, "There must be at least two constituent operands in a vector");
 
@@ -4455,7 +4480,7 @@ bool SPIRVInstructionSelector::selectConcatVectors(Register ResVReg,
   // Implement G_CONCAT_VECTORS using OpCompositeConstruct, which allows vector
   // constituents that share the result's component type to be
   // concatenated in operand order.
-  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+  if (!isVectorType(ResType))
     report_fatal_error(
         "Cannot select G_CONCAT_VECTORS with a non-vector result");
 
@@ -4622,8 +4647,7 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
     /// There is no exp10 in GLSL. Use exp10(x) = exp2(x * log2(10)) instead
     /// log2(10) ~= 3.3219280948874l
 
-    if (ResType->getOpcode() != SPIRV::OpTypeVector &&
-        ResType->getOpcode() != SPIRV::OpTypeFloat)
+    if (!isVectorType(ResType) && !ResType.isAnyTypeFloat())
       return false;
 
     MachineIRBuilder MIRBuilder(I);
@@ -4641,9 +4665,8 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
     Register ConstReg =
         GR.buildConstantFP(ConstVal, MIRBuilder, SpirvScalarType);
     Register ArgReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-    auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
-                      ? SPIRV::OpVectorTimesScalar
-                      : SPIRV::OpFMulS;
+    auto Opcode =
+        isVectorType(ResType) ? SPIRV::OpVectorTimesScalar : SPIRV::OpFMulS;
 
     if (!selectOpWithSrcs(ArgReg, ResType, I,
                           {I.getOperand(1).getReg(), ConstReg}, Opcode))
@@ -4663,7 +4686,7 @@ Register SPIRVInstructionSelector::buildZerosVal(SPIRVTypeInst ResType,
                                                  MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
   bool ZeroAsNull = !STI.isShader();
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     return GR.getOrCreateConstVector(0UL, I, ResType, TII, ZeroAsNull);
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
@@ -4719,7 +4742,7 @@ Register SPIRVInstructionSelector::buildZerosValF(SPIRVTypeInst ResType,
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
   bool ZeroAsNull = !STI.isShader();
   APFloat VZero = getZeroFP(GR.getTypeForSPIRVType(ResType));
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     return GR.getOrCreateConstVector(VZero, I, ResType, TII, ZeroAsNull);
   return GR.getOrCreateConstFP(VZero, I, ResType, TII, ZeroAsNull);
 }
@@ -4729,7 +4752,7 @@ Register SPIRVInstructionSelector::buildOnesValF(SPIRVTypeInst ResType,
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
   bool ZeroAsNull = !STI.isShader();
   APFloat VOne = getOneFP(GR.getTypeForSPIRVType(ResType));
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     return GR.getOrCreateConstVector(VOne, I, ResType, TII, ZeroAsNull);
   return GR.getOrCreateConstFP(VOne, I, ResType, TII, ZeroAsNull);
 }
@@ -4740,7 +4763,7 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
   unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
   APInt One =
       AllOnes ? APInt::getAllOnes(BitWidth) : APInt::getOneBitSet(BitWidth, 0);
-  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+  if (isVectorType(ResType))
     return GR.getOrCreateConstVector(One, I, ResType, TII);
   return GR.getOrCreateConstInt(One, I, ResType, TII);
 }
@@ -4757,13 +4780,11 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypeFloat);
   bool IsPtrTy =
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
-  bool IsVectorTy = GR.getSPIRVTypeForVReg(SelectFirstArg)->getOpcode() ==
-                    SPIRV::OpTypeVector;
 
   bool IsScalarBool =
       GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
   unsigned Opcode;
-  if (IsVectorTy) {
+  if (isVectorType(GR.getSPIRVTypeForVReg(SelectFirstArg))) {
     if (IsFloatTy) {
       Opcode = IsScalarBool ? SPIRV::OpSelectVFSCond : SPIRV::OpSelectVFVCond;
     } else if (IsPtrTy) {
@@ -4826,7 +4847,7 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
   if (GR.isScalarOrVectorOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool)) {
     unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
     SPIRVTypeInst TmpType = GR.getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-    if (ResType->getOpcode() == SPIRV::OpTypeVector) {
+    if (isVectorType(ResType)) {
       const unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
@@ -4862,7 +4883,8 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
   // Ensure we have bool.
   SPIRVTypeInst BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
   unsigned N = GR.getScalarOrVectorComponentCount(ResType);
-  if (N > 1)
+  if (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
     BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
   Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
   // Build less-than-equal and less-than.
@@ -4891,7 +4913,10 @@ bool SPIRVInstructionSelector::selectSUCmp(Register ResVReg,
   MRI->setType(NegOneOrZeroReg, LLT::scalar(64));
   GR.assignSPIRVTypeToVReg(ResType, NegOneOrZeroReg, MIRBuilder.getMF());
   unsigned SelectOpcode =
-      N > 1 ? SPIRV::OpSelectVIVCond : SPIRV::OpSelectSISCond;
+      (N > 1 || (ResType->getOpcode() == SPIRV::OpTypeVectorIdEXT &&
+                 STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector)))
+          ? SPIRV::OpSelectVIVCond
+          : SPIRV::OpSelectSISCond;
   BuildMI(BB, I, I.getDebugLoc(), TII.get(SelectOpcode))
       .addDef(NegOneOrZeroReg)
       .addUse(ResTypeReg)
@@ -4916,8 +4941,8 @@ bool SPIRVInstructionSelector::selectIntToBool(Register IntReg,
                                                SPIRVTypeInst BoolTy) const {
   // To truncate to a bool, we use OpBitwiseAnd 1 and OpINotEqual to zero.
   Register BitIntReg = createVirtualRegister(IntTy, &GR, MRI, MRI->getMF());
-  bool IsVectorTy = IntTy->getOpcode() == SPIRV::OpTypeVector;
-  unsigned Opcode = IsVectorTy ? SPIRV::OpBitwiseAndV : SPIRV::OpBitwiseAndS;
+  unsigned Opcode =
+      isVectorType(IntTy) ? SPIRV::OpBitwiseAndV : SPIRV::OpBitwiseAndS;
   Register Zero = buildZerosVal(IntTy, I);
   Register One = buildOnesVal(false, IntTy, I);
   MachineBasicBlock &BB = *I.getParent();
@@ -4962,9 +4987,22 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
     MachineBasicBlock &DepMBB = I.getMF()->front();
     MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
     Reg = GR.getOrCreateConstNullPtr(MIRBuilder, ResType);
+  } else if (TpOpcode == SPIRV::OpTypeVectorIdEXT) {
+    // We ended up here coming from a splat on a <1 x T> type, which
+    // IRTranslator translated into a scalar, so we have to restore the
+    // vectorness.
+    assert(GR.getScalarOrVectorComponentCount(ResType) == 1 &&
+           "Expected <1 x T> Vector!");
+    if (Opcode == TargetOpcode::G_FCONSTANT)
+      Reg = GR.getOrCreateConstVector(I.getOperand(1).getFPImm()->getValue(), I,
+                                      ResType, TII);
+    else // We handle vector of pointer here as well.
+      Reg = GR.getOrCreateConstVector(I.getOperand(1).getCImm()->getValue(), I,
+                                      ResType, TII);
   } else if (Opcode == TargetOpcode::G_FCONSTANT) {
     Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
                                 ResType, TII, !STI.isShader());
+
   } else {
     Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getValue(), I,
                                  ResType, TII, !STI.isShader());
@@ -5143,6 +5181,36 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
   for (unsigned i = StartingIndex; i < I.getNumExplicitOperands(); ++i)
     Res.addUse(I.getOperand(i).getReg());
   Res.constrainAllUses(TII, TRI, RBI);
+
+  // IRTranslator doesn't like <1 x T> vectors, and treats them as scalars. This
+  // creates an information loss issue, and also broken code where a
+  // OpCompositeExtract is applied to the scalar return of an OpPtrAccessChain,
+  // when it was meant to be applied to the OpCompositeInsert created <1 x T>.
+  // TODO: should we also re-create the index <1 x T>?
+  if (MRI->hasOneUse(ResVReg)) {
+    MachineInstr &Extract = *MRI->use_instr_begin(ResVReg);
+    if (Extract.getOpcode() == SPIRV::OpCompositeExtract) {
+      SPIRVTypeInst V = GR.getOrCreateSPIRVVectorType(ResType, 1, Extract, TII);
+      // We cannot use GlobalRegistry::getOrCreateUndef directly here because it
+      // tries to use UndefVal::get, which does not work for TypedPointerType,
+      // which we can get here if we're dealing with <1 x T*>.
+      Register Tmp = createVirtualRegister(V, &GR, MRI, *I.getMF());
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
+          .addDef(Tmp)
+          .addUse(GR.getSPIRVTypeID(V))
+          .constrainAllUses(TII, TRI, RBI);
+      Register InsertReg = createVirtualRegister(V, &GR, MRI, *I.getMF());
+      BuildMI(*I.getParent(), Extract, Extract.getDebugLoc(),
+              TII.get(SPIRV::OpCompositeInsert))
+          .addDef(InsertReg)
+          .addUse(GR.getSPIRVTypeID(V))
+          .addUse(ResVReg)
+          .addUse(Tmp)
+          .addImm(0)
+          .constrainAllUses(TII, TRI, RBI);
+      Extract.substituteRegister(ResVReg, InsertReg, 0, TRI);
+    }
+  }
   return true;
 }
 
@@ -6677,8 +6745,10 @@ bool SPIRVInstructionSelector::extractSubvector(
   [[maybe_unused]] uint64_t InputSize =
       GR.getScalarOrVectorComponentCount(InputType);
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
-  assert(InputSize > 1 && "The input must be a vector.");
-  assert(ResultSize > 1 && "The result must be a vector.");
+  bool IsLongVectorEXT =
+      STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
+  assert((InputSize > 1 || IsLongVectorEXT) && "The input must be a vector.");
+  assert((ResultSize > 1 || IsLongVectorEXT) && "The result must be a vector.");
   assert(ResultSize < InputSize &&
          "Cannot extract more element than there are in the input.");
   SmallVector<Register> ComponentRegisters;
@@ -6726,7 +6796,7 @@ bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
 
   Register CoordinateReg = I.getOperand(2).getReg();
   Register DataReg = I.getOperand(3).getReg();
-  assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
+  assert(isVectorType(GR.getResultType(DataReg)));
   assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageWrite))
       .addUse(NewImageReg)
@@ -6808,6 +6878,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
   // algoritm below converts i64 -> i32x2 and i64x4 -> i32x8 it can only
   // operate on vectors with 2 or less components. When largers vectors are
   // seen. Split them, recurse, then recombine them.
+  // TODO: handle the case where SPV_EXT_long_vector is enabled.
   if (ComponentCount > 2) {
     auto Func = [this, SwapPrimarySide](Register ResVReg, SPIRVTypeInst ResType,
                                         MachineInstr &I, Register SrcReg,
@@ -6839,7 +6910,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
   Register HighReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
   Register LowReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
 
-  bool IsScalarRes = ResType->getOpcode() != SPIRV::OpTypeVector;
+  bool IsScalarRes = !isVectorType(ResType);
   if (IsScalarRes) {
     // if scalar do a vector extract
     if (!selectOpWithSrcs(HighReg, ResType, I, {FBSReg, ConstIntOne},
@@ -7057,6 +7128,7 @@ static bool isConcreteSPIRVType(SPIRVTypeInst Ty,
     case SPIRV::OpTypePointer:
       break;
     case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeVectorIdEXT:
     case SPIRV::OpTypeMatrix:
     case SPIRV::OpTypeArray: {
       Register OperandReg = T->getOperand(1).getReg();
@@ -7368,8 +7440,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 
   // Build 0.30103.
-  assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
-         ResType->getOpcode() == SPIRV::OpTypeFloat);
+  assert(isVectorType(ResType) || ResType.isAnyTypeFloat());
   // TODO: Add matrix implementation once supported by the HLSL frontend.
   SPIRVTypeInst SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
   // The literal must match the precision of the scalar type, otherwise the
@@ -7383,9 +7454,8 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
   Register ScaleReg = GR.buildConstantFP(ScaleVal, MIRBuilder, SpirvScalarType);
 
   // Multiply log2(x) by 0.30103 to get log10(x) result.
-  auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
-                    ? SPIRV::OpVectorTimesScalar
-                    : SPIRV::OpFMulS;
+  auto Opcode =
+      isVectorType(ResType) ? SPIRV::OpVectorTimesScalar : SPIRV::OpFMulS;
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -7593,7 +7663,7 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
 SPIRVTypeInst SPIRVInstructionSelector::widenTypeToVec4(SPIRVTypeInst Type,
                                                         MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
-  if (Type->getOpcode() != SPIRV::OpTypeVector)
+  if (!isVectorType(Type))
     return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder, false);
 
   if (GR.getScalarOrVectorComponentCount(Type) == 4)
