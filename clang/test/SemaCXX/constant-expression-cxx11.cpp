@@ -1947,7 +1947,7 @@ namespace InitializerList {
 
 namespace ConstexprForRangeVar {
   void invalid() {
-    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note {{'begin' variable of range-based 'for' loop is not a constant expression}}
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note-re {{'__begin{{[0-9]+}}'-variable of range-based 'for' loop is not a constant expression}}
   }
 
   struct S {
