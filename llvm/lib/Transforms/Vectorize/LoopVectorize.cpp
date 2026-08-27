@@ -3075,7 +3075,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
     unsigned TC = ExactTC.getFixedValue();
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
-    unsigned MaxVFForTC = 1ULL << Log2_32(TC) / EffectiveIC;
+    unsigned MaxVFForTC = 1ULL << Log2_32(TC);
     if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() &&
         MaxVFForTC <= MaxFactors.FixedVF.getFixedValue() &&
         !Config.OptForSize) {
