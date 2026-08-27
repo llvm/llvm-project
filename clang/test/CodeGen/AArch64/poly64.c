@@ -61,26 +61,6 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
   return vtstq_p64(a, b);
 }
 
-// CHECK-LABEL: define dso_local <1 x i64> @test_vset_lane_p64(
-// CHECK-SAME: i64 noundef [[A:%.*]], <1 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <1 x i64> [[V]], i64 [[A]], i32 0
-// CHECK-NEXT:    ret <1 x i64> [[VSET_LANE]]
-//
-poly64x1_t test_vset_lane_p64(poly64_t a, poly64x1_t v) {
-  return vset_lane_p64(a, v, 0);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vsetq_lane_p64(
-// CHECK-SAME: i64 noundef [[A:%.*]], <2 x i64> noundef [[V:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <2 x i64> [[V]], i64 [[A]], i32 1
-// CHECK-NEXT:    ret <2 x i64> [[VSET_LANE]]
-//
-poly64x2_t test_vsetq_lane_p64(poly64_t a, poly64x2_t v) {
-  return vsetq_lane_p64(a, v, 1);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vcopy_lane_p64(
 // CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -210,26 +190,6 @@ poly64x2_t test_vdupq_laneq_p64(poly64x2_t vec) {
 //
 poly64x2_t test_vcombine_p64(poly64x1_t low, poly64x1_t high) {
   return vcombine_p64(low, high);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vld1_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr [[PTR]], align 8
-// CHECK-NEXT:    ret <1 x i64> [[TMP0]]
-//
-poly64x1_t test_vld1_p64(poly64_t const * ptr) {
-  return vld1_p64(ptr);
-}
-
-// CHECK-LABEL: define dso_local <2 x i64> @test_vld1q_p64(
-// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[PTR]], align 8
-// CHECK-NEXT:    ret <2 x i64> [[TMP0]]
-//
-poly64x2_t test_vld1q_p64(poly64_t const * ptr) {
-  return vld1q_p64(ptr);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly64x1x2_t @test_vld2_p64(

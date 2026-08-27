@@ -78,11 +78,11 @@ static const DeclRefExpr *findFirstNonVisibleDeclRef(const Stmt *S,
   if (!S)
     return nullptr;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-    if (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
-        !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM))
-      return DRE;
-  }
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+      DRE &&
+      (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
+       !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM)))
+    return DRE;
 
   for (const Stmt *Child : S->children())
     if (const auto *DRE = findFirstNonVisibleDeclRef(Child, Field, SM))

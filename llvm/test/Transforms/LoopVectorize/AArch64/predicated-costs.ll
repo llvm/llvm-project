@@ -212,7 +212,7 @@ define void @srem_sdiv_without_tail_folding(i32 %d.0, i32 %d.1, ptr %dst, i32 %e
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[END]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[END]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[END]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[END]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[D_0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -370,7 +370,7 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
 
 ; BFI computes if is taken 20 times, and loop 32 times. Make sure we round the

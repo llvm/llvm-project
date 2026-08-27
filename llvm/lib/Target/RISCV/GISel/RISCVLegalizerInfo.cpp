@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -33,6 +34,7 @@
 using namespace llvm;
 using namespace LegalityPredicates;
 using namespace LegalizeMutations;
+using namespace MIPatternMatch;
 
 static LegalityPredicate
 typeIsLegalIntOrFPVec(unsigned TypeIdx,
@@ -540,6 +542,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 
+  // On RV64 the 64-bit counter CSRs (cycle/time) are read directly. On RV32
+  // they are custom-legally lowered to a re-read-the-high-half loop (see
+  // legalizeReadCounter).
+  getActionDefinitionsBuilder({G_READCYCLECOUNTER, G_READSTEADYCOUNTER})
+      .legalFor(ST.is64Bit(), {s64})
+      .customFor(!ST.is64Bit(), {s64});
+
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
@@ -620,6 +629,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
+
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor(ST.hasStdExtF(), {{s32, sXLen}})
@@ -762,6 +786,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, sXLen, sXLen)
       .unsupported();
 
+  getActionDefinitionsBuilder(G_PREFETCH).legalIf(typeIs(0, p0));
+
   LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
     LLT VecTy = Query.Types[0];
     LLT EltTy = Query.Types[1];
@@ -869,6 +895,103 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
   MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeReadCounter(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert((MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER ||
+          MI.getOpcode() == TargetOpcode::G_READSTEADYCOUNTER) &&
+         "Unexpected opcode");
+  assert(!STI.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
+                           "has custom type legalization on riscv32");
+
+  // On RV32 a 64-bit counter CSR must be read as two 32-bit halves. Because
+  // the count may wrap between the two reads, re-read the high half and loop
+  // until the two high reads agree.
+  int64_t LoCounter, HiCounter;
+  if (MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER) {
+    LoCounter = RISCVSysReg::cycle;
+    HiCounter = RISCVSysReg::cycleh;
+  } else {
+    LoCounter = RISCVSysReg::time;
+    HiCounter = RISCVSysReg::timeh;
+  }
+
+  MachineBasicBlock *BB = MI.getParent();
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // Split BB into an entry that falls through into a loop block, and a done
+  // block that receives the remainder of BB and its original successors.
+  MachineFunction::iterator It = std::next(BB->getIterator());
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, LoopMBB);
+  MF.insert(It, DoneMBB);
+
+  // Splice the instructions after the readcyclecounter into DoneMBB, notifying
+  // the observer about each moved instruction so CSEInfo stays consistent.
+  for (MachineBasicBlock::iterator I = std::next(MI.getIterator()),
+                                   E = BB->end();
+       I != E; ++I)
+    Observer.changingInstr(*I);
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  for (MachineInstr &MovedMI : DoneMBB->instrs())
+    Observer.changedInstr(MovedMI);
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(LoopMBB);
+
+  LLT S32 = LLT::scalar(32);
+  // Generic vregs carry the s32 type for G_MERGE_VALUES below, but are also
+  // constrained to GPR so the target CSRRS/BNE instructions satisfy the
+  // verifier's register-class constraints.
+  auto CreateGPR = [&]() {
+    Register R = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegClass(R, &RISCV::GPRRegClass);
+    return R;
+  };
+  Register LoReg = CreateGPR();
+  Register HiReg = CreateGPR();
+  Register ReadAgainReg = CreateGPR();
+
+  // read:
+  //   csrrs HiReg, counterh    # high word
+  //   csrrs LoReg, counter     # low word
+  //   csrrs ReadAgainReg, counterh
+  //   bne   HiReg, ReadAgainReg, read
+  // Emit the target instructions directly with BuildMI.
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), LoReg)
+      .addImm(LoCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), ReadAgainReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+
+  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+      .addReg(HiReg)
+      .addReg(ReadAgainReg)
+      .addMBB(LoopMBB);
+
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(DoneMBB);
+
+  // Re-pair the two halves into the 64-bit result.
+  Register DstReg = MI.getOperand(0).getReg();
+  Observer.erasingInstr(MI);
+  MI.eraseFromParent();
+
+  MIRBuilder.setInsertPt(*DoneMBB, DoneMBB->begin());
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildMergeValues(DstReg, {LoReg, HiReg});
   return true;
 }
 
@@ -1296,8 +1419,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT BigTy = MRI.getType(BigVec);
   LLT LitTy = MRI.getType(LitVec);
 
-  if (Idx == 0 &&
-      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (Idx == 0 && mi_match(BigVec, MRI, m_GImplicitDef()))
     return true;
 
   // We don't have the ability to slide mask vectors up indexed by their i1
@@ -1575,6 +1697,19 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_LROUND: {
+    // The (i32 any_lround) Pat is IsRV32-only; on RV64 lower to
+    // riscv_fcvt_w_rv64 with FRM_RMM.
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(RISCV::G_FCVT_W_RV64));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RMM));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_READCYCLECOUNTER:
+  case TargetOpcode::G_READSTEADYCOUNTER:
+    return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();

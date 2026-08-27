@@ -15,7 +15,10 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 
@@ -33,7 +36,7 @@ class ProfileSummaryInfo;
 /// reverse order.
 ///
 /// \post for all inst in MF: not isPreISelGenericOpcode(inst.opcode)
-class LLVM_ABI InstructionSelect : public MachineFunctionPass {
+class LLVM_ABI InstructionSelectLegacy : public MachineFunctionPass {
 public:
   static char ID;
   StringRef getPassName() const override { return "InstructionSelect"; }
@@ -41,22 +44,37 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-        .setIsSSA()
-        .setLegalized()
-        .setRegBankSelected();
+    MachineFunctionProperties RequiredProperties;
+    RequiredProperties.setIsSSA().setLegalized();
+    if (RequireRegBankSelection)
+      RequiredProperties.setRegBankSelected();
+    return RequiredProperties;
   }
 
   MachineFunctionProperties getSetProperties() const override {
     return MachineFunctionProperties().setSelected();
   }
 
-  InstructionSelect(CodeGenOptLevel OL = CodeGenOptLevel::Default,
-                    char &PassID = ID);
+  InstructionSelectLegacy(CodeGenOptLevel OL = CodeGenOptLevel::Default,
+                          bool RequireRegBankSelection = true,
+                          char &PassID = ID);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+protected:
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
+  bool RequireRegBankSelection = true;
+};
+
+class InstructionSelectImpl {
+public:
   bool selectMachineFunction(MachineFunction &MF);
   void setInstructionSelector(InstructionSelector *NewISel) { ISel = NewISel; }
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<GISelValueTracking *()> GetVT,
+                            function_ref<ProfileSummaryInfo *()> GetPSI,
+                            function_ref<BlockFrequencyInfo *()> GetBFI);
+  InstructionSelectImpl(CodeGenOptLevel OL);
 
 protected:
   class MIIteratorMaintainer;
@@ -70,6 +88,31 @@ protected:
 
   bool selectInstr(MachineInstr &MI);
 };
+
+class InstructionSelectPass
+    : public RequiredPassInfoMixin<InstructionSelectPass> {
+  CodeGenOptLevel OptLevel;
+  bool RequireRegBankSelection = true;
+
+public:
+  InstructionSelectPass(CodeGenOptLevel OL = CodeGenOptLevel::Default,
+                        bool RequireRegBankSelection = true);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    MachineFunctionProperties RequiredProperties;
+    RequiredProperties.setIsSSA().setLegalized();
+    if (RequireRegBankSelection)
+      RequiredProperties.setRegBankSelected();
+    return RequiredProperties;
+  }
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setSelected();
+  }
+};
+
 } // End namespace llvm.
 
 #endif

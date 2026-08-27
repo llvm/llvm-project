@@ -28,7 +28,7 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[IV_LCSSA]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -212,24 +212,13 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SMAX]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[IV_1_LCSSA]], [[STEP]]
-; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP5]], i32 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[STEP]], -2
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[SMAX1]], [[TMP7]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP8]], i32 1)
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[UMIN]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP8]], [[UMIN]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[STEP]], i32 1)
-; CHECK-NEXT:    [[TMP11:%.*]] = udiv i32 [[TMP10]], [[UMAX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP4]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP4]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[IV_1_LCSSA]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
