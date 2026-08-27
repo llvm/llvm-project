@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeName.h"
 #include <optional>
 

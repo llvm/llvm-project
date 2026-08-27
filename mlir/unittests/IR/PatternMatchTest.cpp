@@ -33,9 +33,6 @@ TEST(OpRewritePatternTest, GetGeneratedNames) {
   ASSERT_EQ(ops.size(), 1u);
   ASSERT_EQ(ops.front().getStringRef(), test::OpB::getOperationName());
 }
-} // end anonymous namespace
-
-namespace {
 LogicalResult anOpRewritePatternFunc(test::OpA op, PatternRewriter &rewriter) {
   return failure();
 }
@@ -51,5 +48,15 @@ TEST(AnOpRewritePatternTest, PatternFuncAttributes) {
   ASSERT_EQ(pattern->getGeneratedOps().size(), 1U);
   ASSERT_EQ(pattern->getGeneratedOps().front().getStringRef(),
             test::OpB::getOperationName());
+}
+
+ShapedType rewriteShapedType(PatternRewriter & /*rewriter*/, ShapedType type,
+                             IntegerAttr /*rank*/) {
+  return type;
+}
+
+TEST(PDLPatternModuleTest, RegisterDerivedRewriteFunction) {
+  PDLPatternModule patterns;
+  patterns.registerRewriteFunction("rewrite_shaped_type", rewriteShapedType);
 }
 } // end anonymous namespace
