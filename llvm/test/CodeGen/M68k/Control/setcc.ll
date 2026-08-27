@@ -6,9 +6,7 @@
 define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    moveq #0, %d0
-; CHECK-NEXT:    move.w (6,%sp), %d0
-; CHECK-NEXT:    sub.l #26, %d0
+; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    shi %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
@@ -23,9 +21,7 @@ entry:
 define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    moveq #0, %d0
-; CHECK-NEXT:    move.w (6,%sp), %d0
-; CHECK-NEXT:    sub.l #26, %d0
+; CHECK-NEXT:    cmpi.w #26, (6,%sp)
 ; CHECK-NEXT:    scs %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
