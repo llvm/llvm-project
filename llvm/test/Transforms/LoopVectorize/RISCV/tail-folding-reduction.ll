@@ -1672,20 +1672,43 @@ define i64 @argmin_first_index(ptr %arr, i64 %N) {
 ; IF-EVL:       for.body.preheader:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL:       vector.body:
+; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ poison, [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
-; IF-EVL-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP1]], [[MIN_017]]
-; IF-EVL-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP3]], i64 [[I_018]], i64 [[MINLOC_016]]
-; IF-EVL-NEXT:    [[SPEC_SELECT14]] = tail call i64 @llvm.smin.i64(i64 [[TMP1]], i64 [[MIN_017]])
-; IF-EVL-NEXT:    [[INC]] = add nuw nsw i64 [[I_018]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N:%.*]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp slt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
+; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP7]])
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -1)
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 ; NO-VP-LABEL: @argmin_first_index(
@@ -1784,20 +1807,43 @@ define i64 @argmin_last_index(ptr %arr, i64 %N) {
 ; IF-EVL:       for.body.preheader:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MIN_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MINLOC_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL:       vector.body:
+; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
-; IF-EVL-NEXT:    [[CMP3:%.*]] = icmp sle i64 [[TMP1]], [[MIN_017]]
-; IF-EVL-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP3]], i64 [[I_018]], i64 [[MINLOC_016]]
-; IF-EVL-NEXT:    [[SPEC_SELECT14]] = tail call i64 @llvm.smin.i64(i64 [[TMP1]], i64 [[MIN_017]])
-; IF-EVL-NEXT:    [[INC]] = add nuw nsw i64 [[I_018]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N:%.*]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP24]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sle <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smin.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
+; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smin.nxv2i64(<vscale x 2 x i64> [[TMP7]])
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -9223372036854775808)
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[TMP13]], -9223372036854775808
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 0
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 ; NO-VP-LABEL: @argmin_last_index(
@@ -1896,20 +1942,43 @@ define i64 @argmax_first_index(ptr %arr, i64 %N) {
 ; IF-EVL:       for.body.preheader:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL:       vector.body:
+; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ poison, [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
-; IF-EVL-NEXT:    [[CMP3:%.*]] = icmp sgt i64 [[TMP1]], [[MAX_017]]
-; IF-EVL-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP3]], i64 [[I_018]], i64 [[MAX_016]]
-; IF-EVL-NEXT:    [[SPEC_SELECT14]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 [[MAX_017]])
-; IF-EVL-NEXT:    [[INC]] = add nuw nsw i64 [[I_018]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N:%.*]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP24]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
+; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64> [[TMP7]])
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -1)
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.umin.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[TMP10]], [[TMP0]]
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 0, i64 [[TMP13]]
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 ; NO-VP-LABEL: @argmax_first_index(
@@ -2008,20 +2077,43 @@ define i64 @argmax_last_index(ptr %arr, i64 %N) {
 ; IF-EVL:       for.body.preheader:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARR:%.*]], align 8
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MAX_017:%.*]] = phi i64 [ [[SPEC_SELECT14:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
-; IF-EVL-NEXT:    [[MAX_016:%.*]] = phi i64 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP0]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; IF-EVL:       vector.body:
+; IF-EVL-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP1]], [[FOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[BROADCAST_SPLAT]], [[FOR_BODY]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ splat (i64 -9223372036854775808), [[FOR_BODY]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[FOR_BODY]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; IF-EVL-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[ARR]], i64 [[I_018]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX2]], align 8
-; IF-EVL-NEXT:    [[CMP3:%.*]] = icmp sge i64 [[TMP1]], [[MAX_017]]
-; IF-EVL-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP3]], i64 [[I_018]], i64 [[MAX_016]]
-; IF-EVL-NEXT:    [[SPEC_SELECT14]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 [[MAX_017]])
-; IF-EVL-NEXT:    [[INC]] = add nuw nsw i64 [[I_018]], 1
-; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N:%.*]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP24]]
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[ARRAYIDX2]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP5:%.*]] = icmp sge <vscale x 2 x i64> [[VP_OP_LOAD]], [[VEC_PHI]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.smax.nxv2i64(<vscale x 2 x i64> [[VP_OP_LOAD]], <vscale x 2 x i64> [[VEC_PHI]])
+; IF-EVL-NEXT:    [[TMP7]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[TMP8]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP5]], <vscale x 2 x i64> [[VEC_IND]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP2]])
+; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[I_018]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP3]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; IF-EVL:       middle.block:
+; IF-EVL-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64> [[TMP7]])
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP10]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT4]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[TMP7]], [[BROADCAST_SPLAT5]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = select <vscale x 2 x i1> [[TMP11]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> splat (i64 -9223372036854775808)
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vector.reduce.smax.nxv2i64(<vscale x 2 x i64> [[TMP12]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp ne i64 [[TMP13]], -9223372036854775808
+; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = select i1 [[TMP14]], i64 [[TMP13]], i64 0
+; IF-EVL-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 ; NO-VP-LABEL: @argmax_last_index(

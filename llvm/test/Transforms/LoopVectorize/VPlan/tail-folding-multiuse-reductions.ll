@@ -22,8 +22,8 @@ define i64 @argmin(ptr %arr, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%i.018> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.017> = phi (smin) ir<%0>, ir<%spec.select14>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%minloc.016> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP7:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min.017> = phi (smin) ir<%0>, vp<[[VP6:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%minloc.016> = phi (find-iv) ir<poison>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.split:
@@ -38,7 +38,7 @@ define i64 @argmin(ptr %arr, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not vp<[[VP4]]>
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = select vp<[[VP4]]>, ir<%spec.select14>, ir<%min.017>
+; CHECK-NEXT:      EMIT vp<[[VP6]]> = select vp<[[VP4]]>, ir<%spec.select14>, ir<%min.017>
 ; CHECK-NEXT:      EMIT vp<[[VP7]]> = select vp<[[VP4]]>, ir<%spec.select>, ir<%minloc.016>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -48,33 +48,35 @@ define i64 @argmin(ptr %arr, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (smin) vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp ne vp<[[VP10]]>, ir<-9223372036854775808>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = select vp<[[VP11]]>, vp<[[VP10]]>, ir<0>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<[[VP9]]>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-lane vp<[[VP13]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = icmp eq vp<[[VP6]]>, vp<[[VP9]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP10]]>, vp<[[VP7]]>, ir<-1>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (umin) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP9]]>, ir<%0>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, ir<0>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-last-part vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-last-lane vp<[[VP15]]>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-part vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = extract-last-part vp<[[VP14]]>
 ; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = extract-last-lane vp<[[VP17]]>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = extract-last-part vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP20:%[0-9]+]]> = extract-last-lane vp<[[VP19]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%N>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP20:%[0-9]+]]> = extract-lane vp<[[VP19]]>, vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP21:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP22:%[0-9]+]]> = extract-lane vp<[[VP21]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP22:%[0-9]+]]> = extract-lane vp<[[VP21]]>, vp<[[VP9]]>
 ; CHECK-NEXT:    EMIT vp<[[VP23:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
-; CHECK-NEXT:    EMIT vp<[[VP24:%[0-9]+]]> = extract-lane vp<[[VP23]]>, vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP24:%[0-9]+]]> = extract-lane vp<[[VP23]]>, vp<[[VP14]]>
+; CHECK-NEXT:    EMIT vp<[[VP25:%[0-9]+]]> = last-active-lane vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP26:%[0-9]+]]> = extract-lane vp<[[VP25]]>, vp<[[VP14]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.end>:
-; CHECK-NEXT:    IR   %spec.select.lcssa = phi i64 [ %spec.select, %for.body ] (extra operand: vp<[[VP12]]> from middle.block)
+; CHECK-NEXT:    IR   %spec.select.lcssa = phi i64 [ %spec.select, %for.body ] (extra operand: vp<[[VP14]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<%N>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP9]]>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<for.body.preheader> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
