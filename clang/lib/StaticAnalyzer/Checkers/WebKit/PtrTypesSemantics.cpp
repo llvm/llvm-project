@@ -967,6 +967,10 @@ public:
     Arg = Arg->IgnoreParenCasts();
     if (!Arg->isPRValue())
       return Visit(Arg);
+    if (auto *Init = dyn_cast<InitListExpr>(Arg)) {
+      if (Init->getNumInits() == 1)
+        Arg = Init->getInit(0);
+    }
     if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(Arg))
       Arg = ExprWithClean->getSubExpr()->IgnoreParenCasts();
     if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
@@ -982,6 +986,24 @@ public:
   }
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+    if (CE->getNumArgs() == 1) {
+      auto* InnerArg = CE->getArg(0);
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(InnerArg)) {
+        auto *InnerExpr = MTE->getSubExpr();
+        if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(InnerExpr))
+          InnerExpr = BTE->getSubExpr();
+        auto InnerQT = InnerExpr->getType();
+        if (!InnerQT.isNull()) {
+          if (auto *InnerDecl = InnerQT->getAsCXXRecordDecl()) {
+            auto *OuterCls = CE->getConstructor()->getParent();
+            if (isRefType(safeGetName(OuterCls)) &&
+                isRefType(safeGetName(InnerDecl)))
+              return Visit(InnerExpr);
+          }
+        }
+      }
+    }
+
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
         return false;
