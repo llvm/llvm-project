@@ -2165,9 +2165,10 @@ bool VectorLegalizer::tryExpandVecMathCall(
     return false;
   while (LCImpl == RTLIB::Unsupported) {
     CallVT = CallVT.getDoubleNumVectorElementsVT(Ctx);
-    if (!TLI.isTypeLegal(CallVT))
+    if (!CallVT.isSimple())
       return false;
-    LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+    if (TLI.isTypeLegal(CallVT))
+      LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
   }
 
   const RTLIB::RuntimeLibcallsInfo &RTLCI = TLI.getRuntimeLibcallsInfo();
