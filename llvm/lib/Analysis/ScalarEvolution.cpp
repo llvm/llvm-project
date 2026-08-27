@@ -13579,11 +13579,10 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // our preconditions that Start - Stride is below both Start and RHS.
       // * For RHS <= Start (End is Start), the backedge-taken count must be
       //   zero.
-      //   "((End - 1) - (Start - Stride)) /u Stride" is <=
+      //   "((RHS - 1) - (Start - Stride)) /u Stride" is <=
       //   "((Start - 1) - (Start - Stride)) /u Stride" which simplies to
       //   "Stride - 1 /u Stride" which is indeed zero for all non-zero values
-      //     of Stride.  For 0 stride, we've used umax(Stride,1) above,
-      //     reducing this to the stride of 1 case.
+      //    of Stride.  For 0 stride, we've used umax(Stride,1) above.
       // * For RHS >= Start (End is RHS), the backedge count must be
       //   "RHS-Start /uceil Stride".
       //   "((RHS - 1) - (Start - Stride)) /u Stride" reassociates to
