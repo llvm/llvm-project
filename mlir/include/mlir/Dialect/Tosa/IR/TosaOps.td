@@ -385,7 +385,9 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
     Example:
 
     ```mlir
-     %output_real, %output_imag = tosa.fft2d %input_real, %input_imag : (tensor<8x9xf32>, tensor<8x9xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+    %output_real, %output_imag = tosa.fft2d %input_real, %input_imag
+        inverse(false) : (tensor<1x8x9xf32>, tensor<1x8x9xf32>) ->
+        (tensor<1x8x9xf32>, tensor<1x8x9xf32>)
     ```
   }];
 
@@ -401,12 +403,6 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
     Tosa_Tensor3D:$output_real,
     Tosa_Tensor3D:$output_imag
   );
-
-  let assemblyFormat = [{
-    $input_real `,` $input_imag `inverse` `(` $inverse `)`
-    oilist(`local_bound` `(` $local_bound `)`) attr-dict `:` `(` type($input_real) `,`
-    type($input_imag) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
-  }];
 
   let hasVerifier = 1;
 
@@ -616,7 +612,9 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     Example:
 
     ```mlir
-     %ouput_real, %output_imag = tosa.rfft2d %input_real : (tensor<8x16xf32>) -> (tensor<8x9xf32>, tensor<8x9xf32>)
+    %output_real, %output_imag = tosa.rfft2d %input_real :
+        (tensor<1x8x16xf32>) ->
+        (tensor<1x8x9xf32>, tensor<1x8x9xf32>)
     ```
   }];
 
@@ -629,11 +627,6 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     Tosa_Tensor3D:$output_real,
     Tosa_Tensor3D:$output_imag
   );
-
-  let assemblyFormat = [{
-    $input_real oilist(`local_bound` `(` $local_bound `)`) attr-dict `:`
-    `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
-  }];
 
   let hasVerifier = 1;
 
@@ -2065,17 +2058,17 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad", [Pure]> {
     Example:
 
     ```mlir
-    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-    tosa.pad %arg0, %padding, %pad_const: (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
+    %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+    %padding = tosa.const_shape values(dense<[1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x9xf32>
     ```
 
     Example 2:
 
     ```mlir
-    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
+    %pad_const = "tosa.const"() <{values = dense<3.14> : tensor<1xf32>}> : () -> tensor<1xf32>
+    %padding = tosa.const_shape values(dense<[-1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x9xf32>
     ```
   }];
 
@@ -2698,7 +2691,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 
     ```mlir
     // Generic form
-    %out = "tosa.const"() {values = dense<0> : tensor<2x3xi32>} : () -> tensor<2x3xi32>
+    %out = "tosa.const"() <{values = dense<0> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
     ```
   }];
 
@@ -2770,9 +2763,9 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     Example:
 
     ```mlir
-    %out = tosa.custom %in {domain_name = "tosa_mlir_test", operator_name =
-           "custom_test", implementation_attrs = ""}: (tensor<10xi32>) ->
-           (tensor<10xi32>)
+    %out = tosa.custom %in operator_name("custom_test")
+           domain_name("tosa_mlir_test") implementation_attrs("") :
+           (tensor<10xi32>) -> (tensor<10xi32>)
     ```
   }];
 
