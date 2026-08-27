@@ -110,7 +110,7 @@ WebAssemblyDebugValueManager::getSinkableDebugValues(
       return;
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
-    if (OurVars.count(Var) && !llvm::is_contained(DbgValues, &MI))
+    if (OurVars.contains(Var) && !llvm::is_contained(DbgValues, &MI))
       SeenDbgVarToDbgValues[Var].push_back(&MI);
   };
 
