@@ -468,6 +468,10 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed the destruction timing of temporaries created by default member
+  initializers during aggregate initialization. Such an initializer is part of
+  the full-expression containing the aggregate initialization. (#GH85601)
+
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.

@@ -5876,39 +5876,51 @@ static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
   return cast<FieldDecl>(*Rng.begin());
 }
 
-ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
-  assert(Field->hasInClassInitializer());
-
-  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
-
+ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
+                                             FieldDecl *Field,
+                                             const InitializedEntity &Entity,
+                                             bool NestedDefaultChecking,
+                                             bool NeedRebuild) {
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
-  std::optional<ExpressionEvaluationContextRecord::InitializationContext>
-      InitializationContext =
-          OutermostDeclarationWithDelayedImmediateInvocations();
-  if (!InitializationContext.has_value())
-    InitializationContext.emplace(Loc, Field, CurContext);
-
-  Expr *Init = nullptr;
-
-  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
-  EnterExpressionEvaluationContext EvalContext(
-      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
-
-  if (!Field->getInClassInitializer()) {
+  if (!Field->getInClassInitializer() &&
+      isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
     // Maybe we haven't instantiated the in-class initializer. Go check the
     // pattern FieldDecl to see if it has one.
-    if (isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
-      FieldDecl *Pattern =
-          FindFieldDeclInstantiationPattern(getASTContext(), Field);
-      assert(Pattern && "We must have set the Pattern!");
-      if (!Pattern->hasInClassInitializer() ||
-          InstantiateInClassInitializer(Loc, Field, Pattern,
-                                        getTemplateInstantiationArgs(Field))) {
-        return ExprError();
-      }
-    }
+    FieldDecl *Pattern =
+        FindFieldDeclInstantiationPattern(getASTContext(), Field);
+    assert(Pattern && "We must have set the Pattern!");
+    if (!Pattern->hasInClassInitializer() ||
+        InstantiateInClassInitializer(Loc, Field, Pattern,
+                                      getTemplateInstantiationArgs(Field)))
+      return ExprError();
+  }
+
+  Expr *InClassInit = Field->getInClassInitializer();
+  if (!InClassInit) {
+    // DR1351:
+    //   If the brace-or-equal-initializer of a non-static data member
+    //   invokes a defaulted default constructor of its class or of an
+    //   enclosing class in a potentially evaluated subexpression, the
+    //   program is ill-formed.
+    //
+    // This resolution is unworkable: the exception specification of the
+    // default constructor can be needed in an unevaluated context, in
+    // particular, in the operand of a noexcept-expression, and we can be
+    // unable to compute an exception specification for an enclosed class.
+    //
+    // Any attempt to resolve the exception specification of a defaulted default
+    // constructor before the initializer is lexically complete will ultimately
+    // come here at which point we can diagnose it.
+    RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
+    Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
+        << OutermostClass << Field;
+    Diag(Field->getEndLoc(),
+         diag::note_default_member_initializer_not_yet_parsed);
+    // Recover by marking the field invalid, unless we're in a SFINAE context.
+    if (!isSFINAEContext())
+      Field->setInvalidDecl();
+    return ExprError();
   }
 
   // CWG2631
@@ -5927,27 +5939,27 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // expression is an ExprWithCleanups. Then make sure the normal lifetime
   // extension code recurses into the default initializer and does lifetime
   // extension when warranted.
-  bool ContainsAnyTemporaries =
-      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
-  if (Field->getInClassInitializer() &&
-      !Field->getInClassInitializer()->containsErrors() &&
+  bool ContainsAnyTemporaries = isa<ExprWithCleanups>(InClassInit);
+  Expr *Init = InClassInit;
+  if (!InClassInit->containsErrors() &&
       (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
         NestedDefaultChecking;
     // Pass down lifetime extending flag, and collect temporaries in
-    // CreateMaterializeTemporaryExpr when we rewrite the call argument.
+    // CreateMaterializeTemporaryExpr when we rewrite the initializer.
     currentEvaluationContext().InLifetimeExtendingContext =
         parentEvaluationContext().InLifetimeExtendingContext;
+
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
     runWithSufficientStackSpace(Loc, [&] {
-      Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
+      Res = Immediate.TransformInitializer(InClassInit,
                                            /*CXXDirectInit=*/false);
     });
     if (!Res.isInvalid())
-      Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
+      Res = ConvertMemberDefaultInitExpression(Field, Entity, Res.get(), Loc);
     if (Res.isInvalid()) {
       Field->setInvalidDecl();
       return ExprError();
@@ -5955,52 +5967,92 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     Init = Res.get();
   }
 
-  if (Field->getInClassInitializer()) {
-    Expr *E = Init ? Init : Field->getInClassInitializer();
-    if (!NestedDefaultChecking)
-      runWithSufficientStackSpace(Loc, [&] {
-        MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
-      });
-    if (isInLifetimeExtendingContext())
-      DiscardCleanupsInEvaluationContext();
-    // C++11 [class.base.init]p7:
-    //   The initialization of each base and member constitutes a
-    //   full-expression.
-    ExprResult Res = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
-    if (Res.isInvalid()) {
-      Field->setInvalidDecl();
-      return ExprError();
-    }
-    Init = Res.get();
+  if (!NestedDefaultChecking)
+    runWithSufficientStackSpace(Loc, [&] {
+      MarkDeclarationsReferencedInExpr(Init, /*SkipLocalVariables=*/false);
+    });
+  return Init;
+}
 
-    return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
-                                      Field, InitializationContext->Context,
-                                      Init);
-  }
+ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
+                                             FieldDecl *Field) {
+  assert(Field->hasInClassInitializer());
 
-  // DR1351:
-  //   If the brace-or-equal-initializer of a non-static data member
-  //   invokes a defaulted default constructor of its class or of an
-  //   enclosing class in a potentially evaluated subexpression, the
-  //   program is ill-formed.
-  //
-  // This resolution is unworkable: the exception specification of the
-  // default constructor can be needed in an unevaluated context, in
-  // particular, in the operand of a noexcept-expression, and we can be
-  // unable to compute an exception specification for an enclosed class.
-  //
-  // Any attempt to resolve the exception specification of a defaulted default
-  // constructor before the initializer is lexically complete will ultimately
-  // come here at which point we can diagnose it.
-  RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
-      << OutermostClass << Field;
-  Diag(Field->getEndLoc(),
-       diag::note_default_member_initializer_not_yet_parsed);
-  // Recover by marking the field invalid, unless we're in a SFINAE context.
-  if (!isSFINAEContext())
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
+
+  // C++11 [class.base.init]p7:
+  //   The initialization of each base and member constitutes a
+  //   full-expression.
+  // So this initializer gets an evaluation context of its own, and is finished
+  // as a full-expression below.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field,
+      InitializedEntity::InitializeMemberFromDefaultMemberInitializer(Field),
+      NestedDefaultChecking, NeedRebuild);
+  if (Init.isInvalid())
+    return ExprError();
+
+  if (isInLifetimeExtendingContext())
+    DiscardCleanupsInEvaluationContext();
+  Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue=*/false);
+  if (Init.isInvalid()) {
     Field->setInvalidDecl();
-  return ExprError();
+    return ExprError();
+  }
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
+}
+
+ExprResult
+Sema::BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       const InitializedEntity &MemberEntity) {
+  assert(Field->hasInClassInitializer());
+
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  // Unlike a mem-initializer, this initializer is a subexpression of the
+  // full-expression containing the aggregate initialization. It is evaluated
+  // exactly as that full-expression is, so inherit the enclosing context kind
+  // rather than forcing a potentially evaluated one.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, currentEvaluationContext().Context, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  // CWG1815: always rebuild, never share the AST built when the field was
+  // declared. Only a copy rebuilt here has its MaterializeTemporaryExprs
+  // collected in this context, which is what lets the aggregate initialization
+  // lifetime-extend them; sharing one AST would also make several uses of the
+  // same field fight over its extension. A mem-initializer has no such need,
+  // as its temporaries die at the end of the initializer itself.
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field, MemberEntity, NestedDefaultChecking, /*NeedRebuild=*/true);
+  if (Init.isInvalid())
+    return ExprError();
+
+  // Deliberately not finished as a full-expression: leaving the temporaries it
+  // created on ExprCleanupObjects lets PopExpressionEvaluationContext merge
+  // them into the enclosing context, which eventually wraps them all in a
+  // single ExprWithCleanups. They are then destroyed at the end of the
+  // containing full-expression, in reverse construction order.
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
 }
 
 VariadicCallType Sema::getVariadicCallType(FunctionDecl *FDecl,

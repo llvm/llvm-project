@@ -3521,7 +3521,7 @@ public:
   /// routine to provide different behavior.
   ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
                                        FieldDecl *Field) {
-    return getSema().BuildCXXDefaultInitExpr(Loc, Field);
+    return getSema().BuildCXXCtorDefaultInitExpr(Loc, Field);
   }
 
   /// Build a new C++ zero-initialization expression.
