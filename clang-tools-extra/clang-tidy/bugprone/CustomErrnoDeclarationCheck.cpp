@@ -22,7 +22,7 @@ void CustomErrnoDeclarationCheck::registerPPCallbacks(const SourceManager &SM, P
 }
 
 void CustomErrnoDeclarationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(varDecl(hasType(asString("int")), hasName("errno"), hasExternalFormalLinkage()).bind("errnoDecl"), this);
+  Finder->addMatcher(varDecl(anyOf(hasType(asString("int")), hasType(asString("int32_t")), hasType(asString("int16_t"))), hasName("errno"), hasExternalFormalLinkage()).bind("errnoDecl"), this);
 }
 
 void CustomErrnoDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
