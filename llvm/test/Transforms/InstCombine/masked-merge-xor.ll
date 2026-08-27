@@ -430,9 +430,10 @@ define i32 @n3_constmask_samemask(i32 %x, i32 %y) {
 
 define i4 @masked_merge_inverted_mask_maybe_undef_x(i4 %x, i4 %y, i4 %m) {
 ; CHECK-LABEL: @masked_merge_inverted_mask_maybe_undef_x(
-; CHECK-NEXT:    [[N0:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i4 [[X1:%.*]]
+; CHECK-NEXT:    [[N0:%.*]] = xor i4 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[N0]], [[M:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i4 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %im = xor i4 %m, -1

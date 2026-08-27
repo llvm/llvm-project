@@ -4944,8 +4944,15 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
   Value *NotM;
   if (match(M, m_Not(m_Value(NotM)))) {
     // De-invert the mask and swap the value in B part.
-    Value *NewA = Builder.CreateAnd(D, NotM);
-    return BinaryOperator::CreateXor(NewA, X);
+    // If X isn't already known undef-free then freeze it.
+    Value *NewX = X;
+    Value *NewD = D;
+    if (!isGuaranteedNotToBeUndef(X)) {
+      NewX = Builder.CreateFreeze(X);
+      NewD = Builder.CreateXor(B, NewX);
+    }
+    Value *NewA = Builder.CreateAnd(NewD, NotM);
+    return BinaryOperator::CreateXor(NewA, NewX);
   }
 
   Constant *C;
