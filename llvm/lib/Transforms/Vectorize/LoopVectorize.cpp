@@ -1033,7 +1033,7 @@ public:
   /// every iteration of the loop header.
   inline uint64_t
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                          const BasicBlock *BB) const;
+                          const BasicBlock *BB);
 
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
@@ -1334,8 +1334,7 @@ private:
   InstructionCost getMemoryInstructionCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for scalarized memory instruction.
-  InstructionCost getMemInstScalarizationCost(Instruction *I,
-                                              ElementCount VF) const;
+  InstructionCost getMemInstScalarizationCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for interleaving group of memory instructions.
   InstructionCost getInterleaveGroupCost(Instruction *I, ElementCount VF) const;
@@ -1500,6 +1499,15 @@ public:
   /// unless necessary, e.g. when the loop isn't legal to vectorize or when
   /// there is no predication.
   std::function<BlockFrequencyInfo &()> GetBFI;
+  /// The BlockFrequencyInfo returned from GetBFI.
+  BlockFrequencyInfo *BFI = nullptr;
+  /// Returns the BlockFrequencyInfo for the function if cached, otherwise
+  /// fetches it via GetBFI. Avoids an indirect call to the std::function.
+  BlockFrequencyInfo &getBFI() {
+    if (!BFI)
+      BFI = &GetBFI();
+    return *BFI;
+  }
 
   const Function *TheFunction;
 
@@ -2472,7 +2480,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
 }
 
 uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
-    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) const {
+    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
   // If the block wasn't originally predicated then return early to avoid
@@ -2481,8 +2489,8 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
     return 1;
 
   uint64_t HeaderFreq =
-      GetBFI().getBlockFreq(TheLoop->getHeader()).getFrequency();
-  uint64_t BBFreq = GetBFI().getBlockFreq(BB).getFrequency();
+      getBFI().getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = getBFI().getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
   return std::round((double)HeaderFreq / BBFreq);
@@ -4135,7 +4143,7 @@ static const SCEV *getAddressAccessSCEV(
 
 InstructionCost
 LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
-                                                        ElementCount VF) const {
+                                                        ElementCount VF) {
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
   if (VF.isScalable())
