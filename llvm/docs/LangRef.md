@@ -7287,6 +7287,19 @@ be used for the structure type.
                      getter: "getFoo", attributes: 7, type: !2)
 ```
 
+##### DIProperty
+
+`DIProperty` nodes represent an entity that is syntactically accessed like a
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
+backing ivar).
+
+```text
+!3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
+                    line: 8, baseType: !4, size: 32)
+!5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
+```
+
 ##### DIImportedEntity
 
 `DIImportedEntity` nodes represent entities (such as modules) imported into a
@@ -9566,14 +9579,6 @@ flags metadata, using the following key-value pairs:
 ```
 
 ### Other Module Flags
-
-`executable-stack`
-:   A non-zero value indicates the module contains code requiring an executable
-    stack, such as a trampoline built in stack memory and jumped to. On ELF
-    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
-    telling the linker to mark the binary's stack executable. The flag must use
-    the `max` merge behavior, so that a module requiring an executable stack
-    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -20390,6 +20395,54 @@ than +0.0. If any element of the vector is a NaN, the result is NaN.
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
 
+(int_vector_reduce_fmaximumnum)=
+
+#### '`llvm.vector.reduce.fmaximumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
+`MAX` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fminimumnum)=
+
+#### '`llvm.vector.reduce.fminimumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
+`MIN` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
 ### Vector Partial Reduction Intrinsics
 
 Partial reductions of vectors can be expressed using the intrinsics described in
@@ -21733,9 +21786,10 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory which also contains code
-to splice the nest value into the argument list. This is used to
-implement the GCC nested function address extension.
+in advance in a "trampoline", a block of memory usually allocated on the
+stack, which also contains code to splice the nest value into the
+argument list. This is used to implement the GCC nested function address
+extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21774,13 +21828,6 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
-
-The block may be allocated anywhere - the stack, the heap, a global, or a
-runtime-managed pool - as long as it is writable when
-`llvm.init.trampoline` executes and the address returned by
-{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
-addresses need not be equal, so a W^X implementation may map the block
-twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the

@@ -27,6 +27,12 @@ class TestStrictPropertiesFormat_Op<string fmt, list<Trait> traits = []>
 // custom
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: AttrDictContextOperand::print
+// CHECK: _odsPrinter.printOptionalAttrDict(_odsAttrs.getDictionary((*this)->getContext()).getValue(), elidedAttrs);
+def AttrDictContextOperand : TestFormat_Op<[{
+  $context `:` type($context) attr-dict
+}]>, Arguments<(ins AnyType:$context)>;
+
 // CHECK-LABEL: AttrDictDefaultInherentAttr::parse
 // CHECK: verifyInherentAttrs
 def AttrDictDefaultInherentAttr : TestFormat_Op<[{
