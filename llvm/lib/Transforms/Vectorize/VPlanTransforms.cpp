@@ -1031,10 +1031,8 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   DebugLoc DL = ExtractR->getDebugLoc();
   VPBuilder Builder(ExtractR);
   VPSCEVExpander Expander(Builder, *PSE.getSE(), DL);
-  VPValue *StartVPV = Expander.tryToExpand(Start);
-  VPValue *StepVPV = Expander.tryToExpand(Step);
-  if (!StartVPV || !StepVPV)
-    return nullptr;
+  VPValue *StartVPV = Expander.expand(Start);
+  VPValue *StepVPV = Expander.expand(Step);
 
   Type *StartTy = StartVPV->getScalarType();
   assert(StartTy->isIntOrPtrTy() && "The type must be SCEVable");
@@ -5793,10 +5791,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
       // supports a general VPValue as the start value.
-      VPValue *StartVPV = VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc())
-                              .tryToExpand(Start);
-      if (!StartVPV)
-        StartVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Start);
+      VPValue *StartVPV =
+          VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
