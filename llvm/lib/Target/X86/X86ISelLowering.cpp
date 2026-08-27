@@ -738,6 +738,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_LRINT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_LLRINT, MVT::f16, Promote);
 
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+
     // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
@@ -22974,6 +22977,38 @@ static SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) {
   return Res;
 }
 
+SDValue X86TargetLowering::LowerBF16_TO_FP(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  // Bitcast incase the Operand has not been legalized into a i16 already
+  SDValue Src = DAG.getBitcast(MVT::i16, Op.getOperand(0));
+
+  SDValue Res;
+  if (!Subtarget.hasFP16() && ISD::isNormalLoad(Src.getNode())) {
+    // Without AVX512FP16 we need a GPR to load Src anyway (there's no direct
+    // memory-to-XMM move for a 16-bit value), so do the shift in GPR
+    // instead of in the vector domain, since SHL has better throughput
+    // than a vector shift.
+    SDValue Wide = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
+    Wide = DAG.getNode(ISD::SHL, DL, MVT::i32, Wide,
+                       DAG.getShiftAmountConstant(16, MVT::i32, DL));
+    Res = DAG.getBitcast(MVT::f32, Wide);
+  } else {
+    // Shift the bf16 bits into the high half of the f32.
+    SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Src);
+    Vec = DAG.getBitcast(MVT::v4i32, Vec);
+    Vec =
+        getTargetVShiftByConstNode(X86ISD::VSHLI, DL, MVT::v4i32, Vec, 16, DAG);
+    Vec = DAG.getBitcast(MVT::v4f32, Vec);
+    Res = DAG.getExtractVectorElt(DL, MVT::f32, Vec, 0);
+  }
+
+  EVT DstVT = Op.getValueType();
+  if (DstVT != MVT::f32)
+    Res = DAG.getNode(ISD::FP_EXTEND, DL, DstVT, Res);
+  return Res;
+}
+
 SDValue X86TargetLowering::LowerFP_TO_BF16(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -34549,6 +34584,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP16_TO_FP:  return LowerFP16_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16:
   case ISD::STRICT_FP_TO_FP16:  return LowerFP_TO_FP16(Op, DAG);
+  case ISD::BF16_TO_FP:         return LowerBF16_TO_FP(Op, DAG);
   case ISD::FP_TO_BF16:         return LowerFP_TO_BF16(Op, DAG);
   case ISD::LOAD:               return LowerLoad(Op, Subtarget, DAG);
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
@@ -62482,6 +62518,15 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
     if (VT == MVT::v2i64 && SrcOp.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
+    // Combine (v8i16 (scalar_to_vector (i16 (bitcast (f16/bf16))))) to VMOVW.
+    if (VT == MVT::v8i16 && Subtarget.hasFP16()) {
+      if (SrcOp.getValueType() == MVT::f16)
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, SrcOp));
+      if (SrcOp.getValueType() == MVT::bf16)
+        return DAG.getBitcast(
+            VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8bf16, SrcOp));
+    }
   }
 
   if (VT == MVT::v4i32) {

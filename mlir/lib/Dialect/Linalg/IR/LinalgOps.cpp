@@ -424,7 +424,10 @@ static void printNamedStructuredOpResults(OpAsmPrinter &p,
 static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
                                    ValueRange inputs, ValueRange outputs,
                                    ArrayRef<StringRef> elidedAttrs = {}) {
-  p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  NamedAttrList attrs(op->getDiscardableAttrDictionary());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+  p.printOptionalAttrDict(attrs, elidedAttrs);
 
   // Printing is shared with generic ops, except for the region and
   // attributes.
@@ -1224,7 +1227,11 @@ void GenericOp::print(OpAsmPrinter &p) {
   llvm::StringSet<> genericAttrNamesSet;
   genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
-  for (auto attr : (*this)->getAttrs()) {
+  for (StringRef attrName : genericAttrNames) {
+    std::optional<Attribute> value = (*this)->getInherentAttr(attrName);
+    if (!value || !*value)
+      continue;
+    NamedAttribute attr{StringAttr::get(getContext(), attrName), *value};
     if (attr.getName() == getIteratorTypesAttrName()) {
       auto iteratorTypes =
           llvm::cast<ArrayAttr>(attr.getValue())
@@ -1257,13 +1264,13 @@ void GenericOp::print(OpAsmPrinter &p) {
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
-  for (NamedAttribute n : (*this)->getAttrs()) {
+  for (NamedAttribute n : (*this)->getDiscardableAttrDictionary()) {
     if ((hasExtraAttrs = !genericAttrNamesSet.contains(n.getName().strref())))
       break;
   }
   if (hasExtraAttrs) {
     p << " attrs = ";
-    p.printOptionalAttrDict((*this)->getAttrs(),
+    p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                             /*elidedAttrs=*/genericAttrNames);
   }
 
@@ -1673,8 +1680,12 @@ static bool canUseShortForm(Block *body, bool initFirst = false,
 static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
   SmallVector<StringRef> elidedAttrs;
   std::string attrToElide;
+  NamedAttrList attrs(payloadOp->getDiscardableAttrDictionary());
+  payloadOp->getName().walkInherentAttrs(
+      payloadOp,
+      [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
   p << " { " << payloadOp->getName().getStringRef();
-  for (const auto &attr : payloadOp->getAttrs()) {
+  for (const auto &attr : attrs) {
     auto fastAttr =
         llvm::dyn_cast<mlir::arith::FastMathFlagsAttr>(attr.getValue());
     if (fastAttr && fastAttr.getValue() == mlir::arith::FastMathFlags::none) {
@@ -1683,7 +1694,7 @@ static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
       break;
     }
   }
-  p.printOptionalAttrDict(payloadOp->getAttrs(), elidedAttrs);
+  p.printOptionalAttrDict(attrs, elidedAttrs);
   p << " }";
 }
 
@@ -1696,7 +1707,7 @@ void MapOp::print(OpAsmPrinter &p) {
   }
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
 
   if (!useShortForm) {
     // Print region if the payload op was not detected.
@@ -1906,7 +1917,8 @@ void ReduceOp::print(OpAsmPrinter &p) {
 
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getDimensionsAttrName()});
   if (!useShortForm) {
     // Print region if the payload op was not detected.
     p.increaseIndent();
@@ -2085,7 +2097,8 @@ void TransposeOp::getAsmResultNames(
 void TransposeOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getPermutationAttrName()});
 }
 
 LogicalResult TransposeOp::verify() {
@@ -2333,7 +2346,8 @@ void BroadcastOp::getAsmResultNames(
 void BroadcastOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, getDpsInputs(), getDpsInits());
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
+                          {getDimensionsAttrName()});
 }
 
 LogicalResult BroadcastOp::verify() {
@@ -2481,7 +2495,7 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void linalg::YieldOp::print(OpAsmPrinter &p) {
   if (getNumOperands() > 0)
     p << ' ' << getOperands();
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary());
   if (getNumOperands() > 0)
     p << " : " << getOperandTypes();
 }
@@ -2642,13 +2656,13 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
   assert(isa<LinalgOp>(op));
   std::string name(op->getName().getStringRef().str());
   std::string fun = "";
-  for (NamedAttribute kv : op->getAttrs()) {
-    if (UnaryFnAttr ufa = llvm::dyn_cast<UnaryFnAttr>(kv.getValue())) {
+  op->getName().walkInherentAttrs(op, [&](StringRef, Attribute &attr) {
+    if (UnaryFnAttr ufa = llvm::dyn_cast<UnaryFnAttr>(attr)) {
       fun = stringifyEnum(ufa.getValue()).str() + "_";
-    } else if (BinaryFnAttr bfa = llvm::dyn_cast<BinaryFnAttr>(kv.getValue())) {
+    } else if (BinaryFnAttr bfa = llvm::dyn_cast<BinaryFnAttr>(attr)) {
       fun = stringifyEnum(bfa.getValue()).str() + "_";
     }
-  }
+  });
   name.reserve(128);
   llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
@@ -4217,9 +4231,9 @@ MatmulTransposeAOp::create(OpBuilder &builder, Location location,
 }
 
 bool MatmulTransposeAOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeAOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::MatmulOp>(op);
+  return matmulOp && MatmulTransposeAOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4311,9 +4325,9 @@ MatmulTransposeBOp::create(OpBuilder &builder, Location location,
 }
 
 bool MatmulTransposeBOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeBOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::MatmulOp>(op);
+  return matmulOp && MatmulTransposeBOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4404,9 +4418,9 @@ BatchMatmulTransposeAOp::create(OpBuilder &builder, Location location,
 }
 
 bool BatchMatmulTransposeAOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
-         BatchMatmulTransposeAOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::BatchMatmulOp>(op);
+  return matmulOp && BatchMatmulTransposeAOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 SmallVector<AffineMap>
@@ -4497,9 +4511,9 @@ BatchMatmulTransposeBOp::create(OpBuilder &builder, Location location,
 }
 
 bool BatchMatmulTransposeBOp::classof(Operation *op) {
-  return dyn_cast_or_null<linalg::BatchMatmulOp>(op) &&
-         BatchMatmulTransposeBOp::isDefaultIndexingMaps(
-             op->getAttr("indexing_maps"));
+  auto matmulOp = dyn_cast_or_null<linalg::BatchMatmulOp>(op);
+  return matmulOp && BatchMatmulTransposeBOp::isDefaultIndexingMaps(
+                         matmulOp.getIndexingMapsAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5553,7 +5567,7 @@ void PackOp::print(OpAsmPrinter &p) {
 
   p << " into " << getDest();
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                           {"static_inner_tiles", "inner_dims_pos",
                            "outer_dims_perm", "operandSegmentSizes"});
 
@@ -6302,7 +6316,7 @@ void UnPackOp::print(OpAsmPrinter &p) {
 
   p << " into " << getDest();
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary(),
                           {"static_inner_tiles", "inner_dims_pos",
                            "outer_dims_perm", "operandSegmentSizes"});
 
