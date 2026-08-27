@@ -2901,9 +2901,9 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
                                       const Expr *OtherEx, raw_ostream &Out,
                                       BugReporterContext &BRC,
-                                      PathSensitiveBugReport &report,
+                                      PathSensitiveBugReport &Report,
                                       const ExplodedNode *N,
-                                      std::optional<bool> &prunable,
+                                      std::optional<bool> &Prunable,
                                       bool IsSameFieldName) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
@@ -2935,13 +2935,13 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       if (const MemRegion *R =
               state->getLValue(cast<VarDecl>(DR->getDecl()), N->getStackFrame())
                   .getAsRegion()) {
-        if (report.isInteresting(R))
-          prunable = false;
+        if (Report.isInteresting(R))
+          Prunable = false;
         else {
           const ProgramState *state = N->getState().get();
           SVal V = state->getSVal(R);
-          if (report.isInteresting(V))
-            prunable = false;
+          if (Report.isInteresting(V))
+            Prunable = false;
         }
       }
     }
