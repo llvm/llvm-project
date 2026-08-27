@@ -1010,7 +1010,7 @@ define i32 @and_icmp_eq_non_zero(i64 %x, i64 %y) {
 ; RV64ZICOND-LABEL: and_icmp_eq_non_zero:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    srli a1, a1, 63
-; RV64ZICOND-NEXT:    xori a0, a0, 1234
+; RV64ZICOND-NEXT:    addi a0, a0, -1234
 ; RV64ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
 ;
@@ -1025,7 +1025,7 @@ define i32 @and_icmp_eq_non_zero(i64 %x, i64 %y) {
 ; RV64XVENTANACONDOPS-LABEL: and_icmp_eq_non_zero:
 ; RV64XVENTANACONDOPS:       # %bb.0:
 ; RV64XVENTANACONDOPS-NEXT:    srli a1, a1, 63
-; RV64XVENTANACONDOPS-NEXT:    xori a0, a0, 1234
+; RV64XVENTANACONDOPS-NEXT:    addi a0, a0, -1234
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a1, a0
 ; RV64XVENTANACONDOPS-NEXT:    ret
 
@@ -1052,7 +1052,7 @@ define i32 @and_icmp_ne_non_zero(i64 %x, i64 %y) {
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    addi a1, a1, -1234
 ; RV64ZICOND-NEXT:    snez a1, a1
-; RV64ZICOND-NEXT:    xori a0, a0, 1234
+; RV64ZICOND-NEXT:    addi a0, a0, -1234
 ; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
 ;
@@ -1070,7 +1070,7 @@ define i32 @and_icmp_ne_non_zero(i64 %x, i64 %y) {
 ; RV64XVENTANACONDOPS:       # %bb.0:
 ; RV64XVENTANACONDOPS-NEXT:    addi a1, a1, -1234
 ; RV64XVENTANACONDOPS-NEXT:    snez a1, a1
-; RV64XVENTANACONDOPS-NEXT:    xori a0, a0, 1234
+; RV64XVENTANACONDOPS-NEXT:    addi a0, a0, -1234
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a1, a0
 ; RV64XVENTANACONDOPS-NEXT:    ret
 
