@@ -464,11 +464,13 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
        /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
-  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
-  if (runOMPNonSimdPasses) {
+  if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
         flangomp::createLowerNontemporalPass());
+  }
 
+  bool runOMPNonSimdPasses = config.EnableOpenMP && !config.EnableOpenMPSimd;
+  if (runOMPNonSimdPasses) {
     // Propagate implicit declare target information early in order to diagnose
     // target device not-yet-implemented cases based on FIR.
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
