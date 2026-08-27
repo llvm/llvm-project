@@ -630,7 +630,6 @@ bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
     assert(BaseType->isDependentType());
     return false;
   }
-
   for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
     // If this is an implicit member reference and we find a
     // non-instance member, it's not an error.

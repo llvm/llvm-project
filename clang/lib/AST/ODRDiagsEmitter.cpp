@@ -739,11 +739,12 @@ bool ODRDiagsEmitter::diagnoseMismatch(
       return Diag(Loc, diag::note_module_odr_violation_definition_data)
              << SecondModule << Range << DiffType;
     };
-    auto GetSourceRange = [](const struct CXXRecordDecl::DefinitionData *DD) {
+    auto GetSourceRange = [](const CXXRecordDecl *Record,
+                             const struct CXXRecordDecl::DefinitionData *DD) {
       unsigned NumBases = DD->NumBases;
       if (NumBases == 0)
         return SourceRange();
-      ArrayRef<CXXBaseSpecifier> bases = DD->bases();
+      ArrayRef<CXXBaseSpecifier> bases = DD->bases(Record->getASTContext());
       return SourceRange(bases[0].getBeginLoc(),
                          bases[NumBases - 1].getEndLoc());
     };
@@ -753,27 +754,29 @@ bool ODRDiagsEmitter::diagnoseMismatch(
     unsigned SecondNumBases = SecondDD->NumBases;
     unsigned SecondNumVBases = SecondDD->NumVBases;
     if (FirstNumBases != SecondNumBases) {
-      DiagBaseError(FirstRecord->getLocation(), GetSourceRange(FirstDD),
-                    NumBases)
+      DiagBaseError(FirstRecord->getLocation(),
+                    GetSourceRange(FirstRecord, FirstDD), NumBases)
           << FirstNumBases;
-      DiagBaseNote(SecondRecord->getLocation(), GetSourceRange(SecondDD),
-                   NumBases)
+      DiagBaseNote(SecondRecord->getLocation(),
+                   GetSourceRange(SecondRecord, SecondDD), NumBases)
           << SecondNumBases;
       return true;
     }
 
     if (FirstNumVBases != SecondNumVBases) {
-      DiagBaseError(FirstRecord->getLocation(), GetSourceRange(FirstDD),
-                    NumVBases)
+      DiagBaseError(FirstRecord->getLocation(),
+                    GetSourceRange(FirstRecord, FirstDD), NumVBases)
           << FirstNumVBases;
-      DiagBaseNote(SecondRecord->getLocation(), GetSourceRange(SecondDD),
-                   NumVBases)
+      DiagBaseNote(SecondRecord->getLocation(),
+                   GetSourceRange(SecondRecord, SecondDD), NumVBases)
           << SecondNumVBases;
       return true;
     }
 
-    ArrayRef<CXXBaseSpecifier> FirstBases = FirstDD->bases();
-    ArrayRef<CXXBaseSpecifier> SecondBases = SecondDD->bases();
+    ArrayRef<CXXBaseSpecifier> FirstBases =
+        FirstDD->bases(FirstRecord->getASTContext());
+    ArrayRef<CXXBaseSpecifier> SecondBases =
+        SecondDD->bases(SecondRecord->getASTContext());
     for (unsigned I = 0; I < FirstNumBases; ++I) {
       const CXXBaseSpecifier FirstBase = FirstBases[I];
       const CXXBaseSpecifier SecondBase = SecondBases[I];
