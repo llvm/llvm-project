@@ -2161,6 +2161,8 @@ bool VectorLegalizer::tryExpandVecMathCall(
   // Try to widen the vector type when no libcall is available at that width.
   EVT CallVT = VT;
   RTLIB::LibcallImpl LCImpl = Libcalls.getLibcallImpl(GetLibcall(CallVT));
+  if (LCImpl == RTLIB::Unsupported && VT.getVectorElementCount().isScalar())
+    return false;
   while (LCImpl == RTLIB::Unsupported) {
     CallVT = CallVT.getDoubleNumVectorElementsVT(Ctx);
     if (!TLI.isTypeLegal(CallVT))
