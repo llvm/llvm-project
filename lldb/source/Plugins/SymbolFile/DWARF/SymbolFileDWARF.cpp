@@ -4194,6 +4194,21 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
   return parameters;
 }
 
+static void CollectCallSiteDIEs(DWARFDIE parent,
+                                std::vector<DWARFDIE> &call_site_dies) {
+  for (DWARFDIE child : parent.children()) {
+    if (child.Tag() == DW_TAG_call_site ||
+        child.Tag() == DW_TAG_GNU_call_site) {
+      call_site_dies.push_back(child);
+      continue;
+    }
+
+    // A nested subprogram owns its call sites independently of this function.
+    if (child.Tag() != DW_TAG_subprogram)
+      CollectCallSiteDIEs(child, call_site_dies);
+  }
+}
+
 /// Collect call graph edges present in a function DIE.
 std::vector<std::unique_ptr<lldb_private::CallEdge>>
 SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
@@ -4209,16 +4224,11 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
   LLDB_LOG(log, "CollectCallEdges: Found call site info in {0}",
            function_die.GetPubname());
 
-  // Scan the DIE for TAG_call_site entries.
-  // TODO: A recursive scan of all blocks in the subprogram is needed in order
-  // to be DWARF5-compliant. This may need to be done lazily to be performant.
-  // For now, assume that all entries are nested directly under the subprogram
-  // (this is the kind of DWARF LLVM produces) and parse them eagerly.
-  std::vector<std::unique_ptr<CallEdge>> call_edges;
-  for (DWARFDIE child : function_die.children()) {
-    if (child.Tag() != DW_TAG_call_site && child.Tag() != DW_TAG_GNU_call_site)
-      continue;
+  std::vector<DWARFDIE> call_site_dies;
+  CollectCallSiteDIEs(function_die, call_site_dies);
 
+  std::vector<std::unique_ptr<CallEdge>> call_edges;
+  for (DWARFDIE child : call_site_dies) {
     std::optional<DWARFDIE> call_origin;
     std::optional<DWARFExpressionList> call_target;
     addr_t return_pc = LLDB_INVALID_ADDRESS;

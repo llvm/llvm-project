@@ -486,8 +486,8 @@ protected:
 
   bool ClassContainsSelector(const DWARFDIE &class_die, ConstString selector);
 
-  /// Parse call site entries (DW_TAG_call_site), including any nested call site
-  /// parameters (DW_TAG_call_site_parameter).
+  /// Parse call site entries (DW_TAG_call_site), including entries in nested
+  /// scopes and their call site parameters (DW_TAG_call_site_parameter).
   std::vector<std::unique_ptr<CallEdge>>
   CollectCallEdges(lldb::ModuleSP module, DWARFDIE function_die);
 
