@@ -287,20 +287,3 @@ FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
   InsertNode(N, IP);
   return N;
 }
-
-//===----------------------------------------------------------------------===//
-// FoldingSetIteratorImpl Implementation
-
-FoldingSetIteratorImpl::FoldingSetIteratorImpl(const FoldingSetBase *Set,
-                                               unsigned Index)
-    : DebugEpochBase::HandleBase(Set), Set(Set), Index(Index) {
-  while (this->Index < Set->NumBuckets && !Set->Buckets[this->Index])
-    ++this->Index;
-}
-
-void FoldingSetIteratorImpl::advance() {
-  assert(isHandleInSync() && "invalid iterator access!");
-  do
-    ++Index;
-  while (Index < Set->NumBuckets && !Set->Buckets[Index]);
-}

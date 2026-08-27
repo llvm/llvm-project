@@ -1680,9 +1680,13 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         if (attr.getName() == getInterfaceAttrName() ||
             attr.getName() == getOpsAttrName())
           continue;
-        if (!op->hasAttr(attr.getName()))
+        std::optional<Attribute> inherent = op->getInherentAttr(attr.getName());
+        Attribute actual = inherent.has_value()
+                               ? *inherent
+                               : op->getDiscardableAttr(attr.getName());
+        if (!actual)
           return;
-        if (op->getAttr(attr.getName()) != attr.getValue())
+        if (actual != attr.getValue())
           return;
       }
     }
@@ -3118,8 +3122,11 @@ void SplitOp::print(OpAsmPrinter &printer) {
   else
     printer << getDynamicChunkSizes();
   printer << " ";
-  printer.printOptionalAttrDict(getOperation()->getAttrs(),
-                                {getStaticChunkSizesAttrName()});
+  NamedAttrList attrs(getOperation()->getDiscardableAttrDictionary());
+  attrs.append(getDimensionAttrName(), getDimensionAttr());
+  if (UnitAttr multiway = getMultiwayAttr())
+    attrs.append(getMultiwayAttrName(), multiway);
+  printer.printOptionalAttrDict(attrs, {getStaticChunkSizesAttrName()});
   printer << " : " << getTarget().getType();
   if (staticChunkSize == ShapedType::kDynamic)
     printer << ", " << getDynamicChunkSizes().getType();

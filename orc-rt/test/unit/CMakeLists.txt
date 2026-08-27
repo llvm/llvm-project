@@ -48,6 +48,7 @@ add_orc_rt_unittest(CoreTests
   SimpleNativeMemoryMapSPSCITest.cpp
   SimpleNativeMemoryMapTest.cpp
   SimplePackedSerializationTest.cpp
+  SimpleRemoteCATest.cpp
   SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
   StringExtrasTest.cpp

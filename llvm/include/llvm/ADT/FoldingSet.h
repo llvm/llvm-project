@@ -378,8 +378,6 @@ private:
   static bool nodeEquals(const FoldingSetInfo &Info, const FoldingSetBase *Self,
                          Node *N, const FoldingSetNodeID &ID, unsigned IDHash);
 
-  friend class FoldingSetIteratorImpl;
-
   /// Rehash into at least \p MinNumBuckets buckets, rounded up to a power of
   /// two and floored at the constructor's minimum.
   void grow(unsigned MinNumBuckets);
@@ -502,13 +500,19 @@ public:
 public:
   using iterator = FoldingSetIterator<T>;
 
-  iterator begin() { return iterator(this, 0); }
-  iterator end() { return iterator(this, NumBuckets); }
+  iterator begin() { return iterator(Buckets, Buckets + NumBuckets, this); }
+  iterator end() {
+    return iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
 
   using const_iterator = FoldingSetIterator<const T>;
 
-  const_iterator begin() const { return const_iterator(this, 0); }
-  const_iterator end() const { return const_iterator(this, NumBuckets); }
+  const_iterator begin() const {
+    return const_iterator(Buckets, Buckets + NumBuckets, this);
+  }
+  const_iterator end() const {
+    return const_iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -634,40 +638,31 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// This is the common iterator support shared by all folding sets, which knows
-/// how to walk the folding set hash table.
-class FoldingSetIteratorImpl : DebugEpochBase::HandleBase {
-protected:
-  const FoldingSetBase *Set = nullptr;
-  unsigned Index = 0;
+/// Forward iterator for FoldingSet and ContextualFoldingSet.
+template <class T> class FoldingSetIterator : DebugEpochBase::HandleBase {
+  void **Bucket = nullptr;
+  void **End = nullptr;
 
-  LLVM_ABI FoldingSetIteratorImpl(const FoldingSetBase *Set, unsigned Index);
-
-  LLVM_ABI void advance();
-
-  FoldingSetNode *getNode() const {
+  void advance() {
     assert(isHandleInSync() && "invalid iterator access!");
-    return static_cast<FoldingSetNode *>(Set->Buckets[Index]);
+    do
+      ++Bucket;
+    while (Bucket != End && *Bucket == nullptr);
   }
 
 public:
-  bool operator==(const FoldingSetIteratorImpl &RHS) const {
-    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
-    return Set == RHS.Set && Index == RHS.Index;
+  FoldingSetIterator(void **Bucket, void **End, const DebugEpochBase *Epoch)
+      : DebugEpochBase::HandleBase(Epoch), Bucket(Bucket), End(End) {
+    while (this->Bucket != this->End && *this->Bucket == nullptr)
+      ++this->Bucket;
   }
-  bool operator!=(const FoldingSetIteratorImpl &RHS) const {
-    return !(*this == RHS);
+
+  T &operator*() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    return *static_cast<T *>(*Bucket);
   }
-};
 
-template <class T> class FoldingSetIterator : public FoldingSetIteratorImpl {
-public:
-  explicit FoldingSetIterator(const FoldingSetBase *Set, unsigned Index)
-      : FoldingSetIteratorImpl(Set, Index) {}
-
-  T &operator*() const { return *static_cast<T *>(getNode()); }
-
-  T *operator->() const { return static_cast<T *>(getNode()); }
+  T *operator->() const { return &operator*(); }
 
   inline FoldingSetIterator &operator++() { // Preincrement
     advance();
@@ -677,6 +672,14 @@ public:
     FoldingSetIterator tmp = *this;
     ++*this;
     return tmp;
+  }
+
+  bool operator==(const FoldingSetIterator &RHS) const {
+    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
+    return Bucket == RHS.Bucket;
+  }
+  bool operator!=(const FoldingSetIterator &RHS) const {
+    return !(*this == RHS);
   }
 };
 
