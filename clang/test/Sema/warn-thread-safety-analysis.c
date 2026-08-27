@@ -763,6 +763,21 @@ void test_trylock_switch_comparison(void) {
   }
 }
 
+// An increment or decrement mutates the stored result like a compound
+// assignment: the branch below no longer identifies the call, so the path
+// on which the mutex stays held is diagnosed rather than pruned as
+// infeasible.
+void test_trylock_result_decremented(void) {
+  int r = mutex_exclusive_trylock(&mu1); // expected-note {{mutex acquired here}}
+  if (!r)
+    return;
+  r--;
+  if (r) {
+    mutex_unlock(&mu1);
+    return;
+  }
+} // expected-warning {{mutex 'mu1' is not held on every path through here}}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

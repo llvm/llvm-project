@@ -22,6 +22,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
@@ -38,9 +39,12 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -463,10 +467,40 @@ public:
   void addSpentTryAcquire(const Expr *Origin) {
     SpentTryAcquires.insert(Origin);
   }
+  /// A fresh execution of \p Origin overwrites its stored result, so
+  /// whatever spent the last one no longer speaks about this one.
+  void clearSpentTryAcquire(const Expr *Origin) {
+    SpentTryAcquires.erase(Origin);
+  }
+
+  /// Whether a join has lost \p Origin's conditional try fact without the
+  /// result being checked -- what the beta diagnostic reports, recorded
+  /// whether or not it is enabled. The call's outcome is then unaccounted
+  /// for, so a merge of its result with another call's cannot speak for
+  /// both (decodeTrylockCond()).
+  bool lostUnchecked(const Expr *Origin) const {
+    return LostUnchecked.contains(Origin);
+  }
+  void addLostUnchecked(const Expr *Origin) { LostUnchecked.insert(Origin); }
+
+  /// Whether \p Origin ever executed while another call's try fact of the
+  /// same capability was still unresolved: the two calls' holds can then
+  /// coexist, so neither's result speaks for the other and a merge of them
+  /// is not a twin (decodeTrylockCond()). In the retry idiom each call runs
+  /// only after the previous result was checked false, so this never
+  /// happens; in the retry-without-checking shape it always does.
+  bool coexecutedTryAcquire(const Expr *Origin) const {
+    return Coexecuted.contains(Origin);
+  }
+  void addCoexecutedTryAcquire(const Expr *Origin) {
+    Coexecuted.insert(Origin);
+  }
 
 private:
   llvm::SmallDenseMap<SourceLocation, CapExprSet, 4> TryAcquireLocs;
   llvm::SmallDenseSet<const Expr *, 4> SpentTryAcquires;
+  llvm::SmallDenseSet<const Expr *, 4> LostUnchecked;
+  llvm::SmallDenseSet<const Expr *, 4> Coexecuted;
 };
 
 inline const TryFactEntry *TryFactEntry::withState(FactManager &FactMan,
@@ -925,6 +959,21 @@ struct TrylockBranch {
   /// The try-acquire call whose result the terminator branches on, or null if
   /// it does not branch on one.
   const CallExpr *TrylockCall = nullptr;
+  /// When the branched-on variable merges the results of two structurally
+  /// identical try-acquire calls, the second path's call (TrylockCall
+  /// resolves to the first path's); null otherwise. A join folds the two
+  /// calls' try facts into the resolved call's (intersectAndWarn()).
+  const CallExpr *MergedCall = nullptr;
+  /// The call may not have executed on edges of this direction (the
+  /// branched-on variable merges its result with a constant): each
+  /// capability's resolution holds only if it did (TrylockEdge's
+  /// Ambiguous).
+  bool AmbiguousTrue = false, AmbiguousFalse = false;
+  /// The decode reached the call through the right-hand side of a `&&` or
+  /// `||` (TrylockDecode::ShortCircuit): a hold this branch's edge would
+  /// re-materialize may belong to a path that short-circuited past the
+  /// call, so no edge of this terminator manufactures one.
+  bool ShortCircuit = false;
   /// The call's capabilities for each branch direction. Every capability
   /// recorded for the call appears in both lists, since a direction that does
   /// not prove a capability acquired proves it not acquired.
@@ -1016,23 +1065,38 @@ public:
     // The expression for this variable, OR
     const Expr *Exp = nullptr;
 
-    // Direct reference to another VarDefinition
+    // Direct reference to another VarDefinition; for a merge ("phi"), the
+    // definition on the first joined path.
     unsigned DirectRef = 0;
 
     // Reference to underlying canonical non-reference VarDefinition.
     unsigned CanonicalRef = 0;
 
+    // For a merge ("phi") of two definitions, the definition on the second
+    // joined path (DirectRef holds the first); 0 otherwise. A phi is its own
+    // canonical definition and is opaque to lookupExpr(); it exists so that
+    // a branch on a try-acquire result merged with a constant initializer
+    // can still be resolved (see decodeTrylockCond()).
+    unsigned PhiAlt = 0;
+
     // The map with which Exp should be interpreted.
     Context Ctx;
 
-    bool isReference() const { return !Exp; }
+    // Whether this is the definition created at the variable's declaration
+    // when it has no initializer: the variable's birth, holding an
+    // indeterminate value. An invalidated reference has the same null
+    // shape but stands for an unknown later value (chainAvoids()).
+    bool UninitDecl = false;
 
-    void invalidateRef() { DirectRef = CanonicalRef = 0; }
+    bool isPhi() const { return PhiAlt != 0; }
+    bool isReference() const { return !Exp && !isPhi(); }
+
+    void invalidateRef() { DirectRef = CanonicalRef = PhiAlt = 0; }
 
   private:
     // Create ordinary variable definition
     VarDefinition(const NamedDecl *D, const Expr *E, Context C)
-        : Dec(D), Exp(E), Ctx(C) {}
+        : Dec(D), Exp(E), Ctx(C), UninitDecl(!E) {}
 
     // Create reference to previous definition
     VarDefinition(const NamedDecl *D, unsigned DirectRef, unsigned CanonicalRef,
@@ -1044,6 +1108,22 @@ private:
   Context::Factory ContextFactory;
   std::vector<VarDefinition> VarDefinitions;
   std::vector<std::pair<const Stmt *, Context>> SavedContexts;
+  // Whether the function contains a try-acquire call (a call or a
+  // construction whose callee is annotated try_acquire_capability), found
+  // by a scan of the CFG before the map is built (traverseCFG()). Only a
+  // branch on a try-acquire's stored result ever reads a merged
+  // definition ("phi"), a constant-folded join or an escape mark
+  // (decodeTrylockCond()), so none of them is computed for a function
+  // without one: its joins intersect by definition identity alone, as they
+  // always did.
+  bool TracksTryAcquires = false;
+  // Whether anything reads a variable's definition back in this run: a
+  // try-acquire's stored result is one reason (TracksTryAcquires), a beta
+  // run's capability translation through a local (`p->mu` after `p = &f`)
+  // the other. With neither, no definition is ever consulted, and keeping
+  // the map exact across a mutation that carries no assignment is pure
+  // cost (VarMapBuilder::VisitUnaryOperator()).
+  bool ReadsDefinitions = false;
   // The function's try-acquire calls, each with the context after it, memoized
   // in traversal order. Constructions are not listed: they record in-walk,
   // where the constructed object's placeholder exists.
@@ -1051,6 +1131,41 @@ private:
   // The calls whose result some definition stores in a local variable
   // (storesResultOf()), recorded as the definitions are added.
   llvm::SmallPtrSet<const CallExpr *, 4> StoredResults;
+  // Variables whose storage is reachable through an escaped reference
+  // (address taken, captured or bound by non-const reference), with the
+  // blocks the escape happens in: a mutation through the reference is
+  // invisible to the map, so from the escape onwards neither the
+  // variable's definitions nor its merges identify its value. Where the
+  // escape cannot reach, they still do -- an address taken after a checked
+  // region must not defeat what the region proved (see decodeTrylockCond()).
+  llvm::SmallDenseMap<const NamedDecl *, llvm::SmallVector<const CFGBlock *, 2>,
+                      4>
+      EscapedAt;
+  // Where each escaped variable with automatic storage is declared: passing
+  // the declaration again is fresh storage, which no earlier escape can
+  // reach into (escapeReaches()).
+  llvm::SmallDenseMap<const NamedDecl *, const CFGBlock *, 4> DeclaredIn;
+  // Memoized constant values of canonical definitions, keyed by definition
+  // ID (std::nullopt: does not constant-evaluate): intersectContexts()
+  // consults the same definitions at every join they reach.
+  llvm::DenseMap<unsigned, std::optional<llvm::APSInt>> ConstantValues;
+  // Per variable, the definitions whose chain of prior definitions holds
+  // constants only, all the way to the variable's declaration
+  // (chainNonConstantDefs()). A chain passes only through its own
+  // variable's definitions, and only intersectBackEdge() ever changes an
+  // existing definition: it drops the variable's entry when it does.
+  llvm::DenseMap<const NamedDecl *, llvm::SmallDenseSet<unsigned, 4>>
+      CleanChains;
+  // Memoized chainNonConstantDefs() results, keyed by the definition the
+  // chain leads up to (std::nullopt: the chain reaches an unknown
+  // definition, which is what the walk returns false for). The chain is a
+  // pure function of the definition graph, and every join a variable
+  // reaches asks about the same few definitions, so without this a
+  // variable with one non-constant definition makes the joins quadratic in
+  // their own number. Invalidated with CleanChains, by the one thing that
+  // changes an existing definition (intersectBackEdge()).
+  llvm::DenseMap<unsigned, std::optional<llvm::SmallDenseSet<unsigned, 8>>>
+      ChainDefs;
 
 public:
   LocalVariableMap() {
@@ -1067,6 +1182,37 @@ public:
     return &VarDefinitions[*i];
   }
 
+  /// Look up the canonical definition for \p D within the given context:
+  /// the definition its reference chain resolves to (e.g. a loop head wraps
+  /// every incoming definition in a reference).  Returns NULL if the
+  /// variable is not in the context or resolves to an unknown definition.
+  const VarDefinition *lookupCanonical(const NamedDecl *D, Context Ctx) {
+    const unsigned *i = Ctx.lookup(D);
+    if (!i)
+      return nullptr;
+    assert(*i < VarDefinitions.size());
+    unsigned ID = getCanonicalDefinitionID(*i);
+    return ID ? &VarDefinitions[ID] : nullptr;
+  }
+
+  /// Look up the expression for the definition \p i, looking through
+  /// references. Returns NULL if the expression is not statically known --
+  /// including for a phi, which has no single defining expression. If
+  /// successful, also modifies Ctx to hold the context of the returned Expr.
+  const Expr *lookupExprByID(unsigned i, Context &Ctx) {
+    while (i > 0) {
+      const VarDefinition &VD = VarDefinitions[i];
+      if (VD.Exp) {
+        Ctx = VD.Ctx;
+        return VD.Exp;
+      }
+      if (VD.isPhi())
+        return nullptr;
+      i = VD.DirectRef;
+    }
+    return nullptr;
+  }
+
   /// Look up the definition for D within the given context.  Returns
   /// NULL if the expression is not statically known.  If successful, also
   /// modifies Ctx to hold the context of the return Expr.
@@ -1074,16 +1220,269 @@ public:
     const unsigned *P = Ctx.lookup(D);
     if (!P)
       return nullptr;
+    return lookupExprByID(*P, Ctx);
+  }
 
-    unsigned i = *P;
-    while (i > 0) {
-      if (VarDefinitions[i].Exp) {
-        Ctx = VarDefinitions[i].Ctx;
-        return VarDefinitions[i].Exp;
+  void markEscaped(const NamedDecl *D, const CFGBlock *B) {
+    auto &Blocks = EscapedAt[D];
+    if (Blocks.empty() || Blocks.back() != B)
+      Blocks.push_back(B);
+  }
+  /// The blocks in which \p D's storage escapes, empty if it never does.
+  ArrayRef<const CFGBlock *> escapedAt(const NamedDecl *D) const {
+    auto It = EscapedAt.find(D);
+    return It == EscapedAt.end() ? ArrayRef<const CFGBlock *>()
+                                 : ArrayRef<const CFGBlock *>(It->second);
+  }
+  void markDeclaredIn(const NamedDecl *D, const CFGBlock *B) {
+    DeclaredIn.try_emplace(D, B);
+  }
+  /// The block declaring \p D's automatic storage, or null.
+  const CFGBlock *declaredIn(const NamedDecl *D) const {
+    auto It = DeclaredIn.find(D);
+    return It == DeclaredIn.end() ? nullptr : It->second;
+  }
+
+  /// What walkChain() does with a definition it has just visited.
+  enum class ChainVisit {
+    Fail,   ///< The walk's question is answered: stop and return false.
+    Follow, ///< Continue into this definition's own prior definitions.
+    Prune,  ///< This definition's chain adds nothing: do not follow it.
+  };
+
+  /// Walks the chain of \p D's definitions leading up to definition \p ID:
+  /// every path of prior definitions from \p ID back to \p D's declaration,
+  /// calling \p Visit on each definition passed through (a merge continues
+  /// into both of its operands' chains). Returns false if \p Visit rejects
+  /// a definition, or if a path reaches an unknown definition, about which
+  /// nothing can be concluded; true if every path ended at the declaration.
+  /// A loop back edge passes the loop-head definition as \p StopAt: a chain
+  /// that reaches the head has been walked as far as the iteration goes,
+  /// and what precedes the head is the merge being tested itself.
+  template <typename VisitFn>
+  bool walkChain(const NamedDecl *D, unsigned ID, unsigned StopAt,
+                 VisitFn Visit) {
+    SmallVector<unsigned, 4> Worklist = {ID};
+    llvm::SmallDenseSet<unsigned, 8> Visited;
+    while (!Worklist.empty()) {
+      unsigned ID = Worklist.pop_back_val();
+      // Resolve references one step at a time: \p StopAt is usually a
+      // loop-head reference, which one-hop canonicalization would skip
+      // right past.
+      bool PathEnds = false;
+      while (ID > 0 && VarDefinitions[ID].isReference()) {
+        if (ID == StopAt || VarDefinitions[ID].UninitDecl) {
+          // The loop head ends the path (see above); so does the variable's
+          // declaration, with or without an initializer.
+          PathEnds = true;
+          break;
+        }
+        ID = VarDefinitions[ID].DirectRef;
       }
-      i = VarDefinitions[i].DirectRef;
+      if (PathEnds || (StopAt != 0 && ID == StopAt))
+        continue; // A phi-converted loop head is its own canonical.
+      if (ID == 0)
+        return false;
+      if (!Visited.insert(ID).second)
+        continue; // A phi-converted loop head can make the graph cyclic.
+      ChainVisit Step = Visit(ID);
+      if (Step == ChainVisit::Fail)
+        return false;
+      if (Step == ChainVisit::Prune)
+        continue;
+      if (VarDefinitions[ID].isPhi()) {
+        // The merged value is one of the operands': the chain continues
+        // into both.
+        Worklist.push_back(VarDefinitions[ID].DirectRef);
+        Worklist.push_back(VarDefinitions[ID].PhiAlt);
+        continue;
+      }
+      const unsigned *P = VarDefinitions[ID].Ctx.lookup(D);
+      if (P)
+        Worklist.push_back(*P);
+      // Otherwise this path reached the declaration.
     }
-    return nullptr;
+    return true;
+  }
+
+  /// Returns true if the chain of \p D's definitions leading up to
+  /// definition \p ID provably does not contain definition \p Avoid: every
+  /// path of prior definitions from \p ID reaches \p D's declaration
+  /// without passing \p Avoid or an unknown definition (walkChain()). Used
+  /// to establish that the assignment creating \p Avoid was never executed
+  /// on the paths where \p ID is the reaching definition. \p StopAt is as
+  /// in walkChain(): a chain that reaches the loop head avoided \p Avoid
+  /// within the iteration.
+  bool chainAvoids(const NamedDecl *D, unsigned ID, unsigned Avoid,
+                   unsigned StopAt = 0) {
+    Avoid = getCanonicalDefinitionID(Avoid);
+    return walkChain(D, ID, StopAt, [Avoid](unsigned Def) {
+      return Def == Avoid ? ChainVisit::Fail : ChainVisit::Follow;
+    });
+  }
+
+  /// Collects into \p Defs every non-constant definition (a merge included)
+  /// that the chain of \p D's definitions leading up to \p ID passes
+  /// through: the definitions a chainAvoids() query on \p ID answers "no"
+  /// for, provided the definition asked about is itself non-constant. That
+  /// is what resolution asks about -- decodeTrylockCond() and phiAbsorbs()
+  /// both name a merge's non-constant operand -- but not what every caller
+  /// asks: the back-edge unwrap in intersectBackEdge() can name a constant
+  /// operand, and \p Defs deliberately says nothing about those
+  /// (constantToKeep() is not consulted there). Returns false if the chain
+  /// reaches an unknown definition, in which case \p Defs says nothing at
+  /// all.
+  ///
+  /// A chain that contributes nothing -- constant definitions all the way
+  /// to the declaration -- is memoized (CleanChains) and pruned when a
+  /// later walk reaches it, so that a variable assigned constants over and
+  /// over does not make every join walk its whole history.
+  bool chainNonConstantDefs(const NamedDecl *D, unsigned ID,
+                            llvm::SmallDenseSet<unsigned, 8> &Defs) {
+    if (auto It = ChainDefs.find(ID); It != ChainDefs.end()) {
+      if (!It->second)
+        return false;
+      Defs.insert(It->second->begin(), It->second->end());
+      return true;
+    }
+    const auto CleanIt = CleanChains.find(D);
+    llvm::SmallDenseSet<unsigned, 8> Walked;
+    bool Known = walkChain(D, ID, /*StopAt=*/0, [&](unsigned Def) {
+      // A definition whose own chain has been walked before answers for
+      // everything behind it: that is what makes a run of joins linear
+      // rather than quadratic, since each join's walk stops at the
+      // definition the previous join left behind.
+      if (auto It = ChainDefs.find(Def); It != ChainDefs.end()) {
+        if (!It->second)
+          return ChainVisit::Fail;
+        Walked.insert(It->second->begin(), It->second->end());
+        return ChainVisit::Prune;
+      }
+      if (CleanIt != CleanChains.end() && CleanIt->second.contains(Def))
+        return ChainVisit::Prune;
+      if (!constantValue(Def))
+        Walked.insert(Def);
+      return ChainVisit::Follow;
+    });
+    if (Known && Walked.empty())
+      if (unsigned Canon = getCanonicalDefinitionID(ID))
+        CleanChains[D].insert(Canon);
+    if (Known) {
+      Defs.insert(Walked.begin(), Walked.end());
+      ChainDefs[ID] = std::move(Walked);
+    } else {
+      ChainDefs[ID] = std::nullopt;
+    }
+    return Known;
+  }
+
+  /// The constant integer value of the canonical definition \p Canon,
+  /// memoized; std::nullopt if the definition is unknown, a merge, or does
+  /// not constant-evaluate. Any expression that constant-evaluates counts,
+  /// not just a literal: `bool b = kFalseConstant;` is the constant false.
+  std::optional<llvm::APSInt> constantValue(unsigned Canon) {
+    if (Canon == 0 || VarDefinitions[Canon].isPhi())
+      return std::nullopt;
+    auto [It, Inserted] = ConstantValues.try_emplace(Canon);
+    if (Inserted) {
+      const Expr *E = VarDefinitions[Canon].Exp;
+      Expr::EvalResult ER;
+      if (E && !E->isValueDependent() &&
+          E->EvaluateAsInt(ER, VarDefinitions[Canon].Dec->getASTContext()))
+        It->second = ER.Val.getInt();
+    }
+    return It->second;
+  }
+
+  /// Whether the canonical definitions \p Canon1 and \p Canon2 constant-
+  /// evaluate to the same integer value: e.g. after
+  /// `bool b = false; if (c) b = false;` the variable is still the constant
+  /// false, and can later merge with a try-acquire result (a merge of
+  /// merges is not resolved). The values must match exactly, not merely in
+  /// truthiness, and non-integer constants (e.g. two distinct addresses,
+  /// which are both "true") never match. Shared by the branch-join and
+  /// back-edge merge engines (intersectContexts() / intersectBackEdge())
+  /// so that they cannot drift apart.
+  bool valueEqualConstants(unsigned Canon1, unsigned Canon2) {
+    std::optional<llvm::APSInt> V1 = constantValue(Canon1);
+    if (!V1)
+      return false;
+    std::optional<llvm::APSInt> V2 = constantValue(Canon2);
+    return V2 && llvm::APSInt::isSameValue(*V1, *V2);
+  }
+
+  /// Which of two value-equal constant definitions of \p D a branch join
+  /// may keep for the other, or 0 if neither will do. Equal values alone
+  /// do not make the two interchangeable: resolving a merge asks whether
+  /// the constant's chain passes the try-acquire call (chainAvoids()), and
+  /// the definition that is kept answers that for both paths. In
+  /// `if (c1) { ok = mu.TryLock(); if (c2) ok = false; } else ok = false;`
+  /// only the first `ok = false` can follow the call, so keeping the else
+  /// arm's in its place would resolve a merge that must not resolve.
+  ///
+  /// The merged value's chain is really the union of the two, so the one
+  /// to keep is the one whose non-constant definitions
+  /// (chainNonConstantDefs(), the definitions resolution's queries name)
+  /// already cover the other's -- it then answers every such query exactly
+  /// as the union would, not merely conservatively. A chain that reaches an
+  /// unknown definition covers everything, being answered "no" throughout.
+  /// When neither covers the other, the join keeps no constant and merges
+  /// them.
+  unsigned constantToKeep(const NamedDecl *D, unsigned Canon1,
+                          unsigned Canon2) {
+    if (!valueEqualConstants(Canon1, Canon2))
+      return 0;
+    llvm::SmallDenseSet<unsigned, 8> Defs1, Defs2;
+    if (!chainNonConstantDefs(D, Canon1, Defs1))
+      return Canon1;
+    if (!chainNonConstantDefs(D, Canon2, Defs2))
+      return Canon2;
+    if (llvm::set_is_subset(Defs2, Defs1))
+      return Canon1;
+    if (llvm::set_is_subset(Defs1, Defs2))
+      return Canon2;
+    return 0;
+  }
+
+  /// Whether the merge \p CanonPhi already covers the definition
+  /// \p CanonOther of variable \p Dec, so that joining the two keeps the
+  /// phi as is: \p CanonOther is one of the phi's own operands, or a
+  /// definition that is not an operand but is value-equal to the phi's
+  /// constant operand (constants of the same value are interchangeable,
+  /// valueEqualConstants()) -- provided its chain avoids the phi's
+  /// non-constant operand, exactly as resolving the phi imposes on the
+  /// recorded constant (chainAvoids()): e.g. phi(call, false) absorbs
+  /// another `= false` assignment that cannot follow the call. \p StopAt
+  /// is forwarded to chainAvoids() by loop back edges. Like
+  /// valueEqualConstants(), shared by both merge engines.
+  bool phiAbsorbs(const NamedDecl *Dec, unsigned CanonPhi, unsigned CanonOther,
+                  unsigned StopAt = 0) {
+    if (CanonPhi == 0 || CanonOther == 0 || !VarDefinitions[CanonPhi].isPhi())
+      return false;
+    const VarDefinition &VD = VarDefinitions[CanonPhi];
+    unsigned Op1 = getCanonicalDefinitionID(VD.DirectRef);
+    unsigned Op2 = getCanonicalDefinitionID(VD.PhiAlt);
+    if (Op1 == CanonOther || Op2 == CanonOther)
+      return true;
+    std::optional<llvm::APSInt> VO = constantValue(CanonOther);
+    if (!VO)
+      return false;
+    std::optional<llvm::APSInt> V1 = constantValue(Op1);
+    std::optional<llvm::APSInt> V2 = constantValue(Op2);
+    if (V1 && V2)
+      // Both operands constant: absorb a matching value. Unlike a join of
+      // two constants (constantToKeep()), this keeps the phi without asking
+      // whether the absorbed definition's chain is covered by the operands'
+      // -- a phi of two constants has no non-constant operand, so it
+      // resolves no branch by itself, and a call the absorbed chain passed
+      // was overwritten before this join, which leaves its try fact
+      // unchecked for the lockset join to report.
+      return llvm::APSInt::isSameValue(*V1, *VO) ||
+             llvm::APSInt::isSameValue(*V2, *VO);
+    std::optional<llvm::APSInt> VC = V1 ? V1 : V2;
+    unsigned NonConstOp = V1 ? Op2 : Op1;
+    return VC && llvm::APSInt::isSameValue(*VC, *VO) &&
+           chainAvoids(Dec, CanonOther, NonConstOp, StopAt);
   }
 
   Context getEmptyContext() { return ContextFactory.getEmptyMap(); }
@@ -1143,9 +1542,16 @@ public:
   }
 
   /// Builds the variable map.
-  void traverseCFG(CFG *CFGraph, const PostOrderCFGView *SortedGraph,
-                   std::vector<CFGBlockInfo> &BlockInfo);
+  void traverseCFG(AnalysisDeclContext &AC, CFG *CFGraph,
+                   const PostOrderCFGView *SortedGraph,
+                   std::vector<CFGBlockInfo> &BlockInfo, bool BetaWarnings);
 
+  /// Whether the function contains any try-acquire call (see
+  /// TracksTryAcquires).
+  bool tracksTryAcquires() const { return TracksTryAcquires; }
+  /// Whether any consumer reads variable definitions back (see
+  /// ReadsDefinitions).
+  bool readsDefinitions() const { return ReadsDefinitions; }
   /// The function's try-acquire calls, each with the context after it.
   ArrayRef<std::pair<const CallExpr *, Context>> tryAcquireCalls() const {
     return TryAcquireCalls;
@@ -1165,6 +1571,18 @@ protected:
   friend class VarMapBuilder;
 
   // Resolve any definition ID down to its non-reference base ID.
+  //
+  // This follows the CanonicalRef each reference caches when it is created
+  // (addReference()), which intersectBackEdge() can outdate: it converts a
+  // loop-head reference into a phi, or invalidates it, in place -- after an
+  // inner loop's head has wrapped that reference in one of its own, and
+  // cached the base it resolved to back then. Stepping through DirectRef
+  // instead reaches the mutated head, so the two walks can disagree for a
+  // reference created inside a loop whose head is merged later. Nothing
+  // depends on the difference today: the consumers of this cache either run
+  // before the mutation or re-check isPhi() on what they get back, and a
+  // walk that must see the current state resolves references one at a time
+  // (walkChain()). A new consumer must not assume otherwise.
   unsigned getCanonicalDefinitionID(unsigned ID) const {
     while (ID > 0 && VarDefinitions[ID].isReference())
       ID = VarDefinitions[ID].CanonicalRef;
@@ -1203,6 +1621,21 @@ protected:
     Context NewCtx = ContextFactory.add(Ctx, D, newID);
     VarDefinitions.push_back(
         VarDefinition(D, Ref, getCanonicalDefinitionID(Ref), Ctx));
+    return NewCtx;
+  }
+
+  // Merge two distinct definitions into a phi definition: the variable's
+  // value is that of one of the two. Most consumers treat a phi like a
+  // cleared definition; see VarDefinition::PhiAlt for why it exists.
+  Context addPhiDefinition(const NamedDecl *D, unsigned Ref1, unsigned Ref2,
+                           Context Ctx) {
+    assert(Ref1 && Ref2 && "phi operands must be known definitions");
+    unsigned newID = VarDefinitions.size();
+    Context NewCtx =
+        ContextFactory.add(ContextFactory.remove(Ctx, D), D, newID);
+    VarDefinition VD(D, Ref1, /*CanonicalRef=*/0, Ctx);
+    VD.PhiAlt = Ref2;
+    VarDefinitions.push_back(VD);
     return NewCtx;
   }
 
@@ -1257,21 +1690,98 @@ namespace {
 /// Visitor which builds a LocalVariableMap
 class VarMapBuilder : public ConstStmtVisitor<VarMapBuilder> {
 public:
+  /// The block whose statements are being visited: where an escape found
+  /// here happens (LocalVariableMap::markEscaped()).
+  const CFGBlock *CurBlock = nullptr;
+
   LocalVariableMap* VMap;
   LocalVariableMap::Context Ctx;
 
-  VarMapBuilder(LocalVariableMap *VM, LocalVariableMap::Context C)
-      : VMap(VM), Ctx(C) {}
+  VarMapBuilder(LocalVariableMap *VM, LocalVariableMap::Context C,
+                AnalysisDeclContext &AC)
+      : VMap(VM), Ctx(C), AC(AC) {}
 
   void VisitDeclStmt(const DeclStmt *S);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitUnaryOperator(const UnaryOperator *UO);
+  void VisitLambdaExpr(const LambdaExpr *LE);
+  void VisitBlockExpr(const BlockExpr *BE);
+  void VisitInitListExpr(const InitListExpr *ILE);
   void VisitCallExpr(const CallExpr *CE);
+  void VisitCXXConstructExpr(const CXXConstructExpr *CE);
 
 private:
+  // Only used to reach the body's parent map, and only for an address-of
+  // expression: the map is built lazily, so functions that take no address
+  // never pay for it.
+  AnalysisDeclContext &AC;
+
+  void markEscapedIfDeclRef(const Expr *E);
+  void markEscapedRefBindings(const InitListExpr *ILE);
   void clearCallMutations(const CallExpr *CE);
 };
 
 } // namespace
+
+// The one rule for marking a variable whose storage becomes reachable
+// through a reference: it can then be mutated without a visible assignment.
+// Shared by every escape site so they cannot drift apart; IgnoreParenCasts,
+// because an explicit cast (`(bool &)b`) hides the variable just as well as
+// an implicit one.
+void VarMapBuilder::markEscapedIfDeclRef(const Expr *E) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts()))
+    VMap->markEscaped(DRE->getDecl(), CurBlock);
+}
+
+// Marks variables bound to non-const reference members in an aggregate
+// initialization (`struct W { bool &b; }; W w{ok};`): the aggregate can
+// mutate them without a visible assignment, like any reference binding.
+void VarMapBuilder::markEscapedRefBindings(const InitListExpr *ILE) {
+  // Descends into an initializer that is itself a list (an array element, a
+  // base class, a nested aggregate member).
+  auto Descend = [this](const Expr *Init) {
+    if (const auto *Nested = dyn_cast_or_null<InitListExpr>(
+            Init ? Init->IgnoreParenImpCasts() : nullptr))
+      markEscapedRefBindings(Nested);
+  };
+
+  // An array of aggregates has no fields of its own: every element carries
+  // its own initializer list.
+  if (ILE->getType()->isArrayType()) {
+    for (const Expr *Init : ILE->inits())
+      Descend(Init);
+    Descend(ILE->getArrayFiller());
+    return;
+  }
+
+  const RecordDecl *RD = ILE->getType()->getAsRecordDecl();
+  if (!RD || RD->isUnion())
+    return; // A union cannot have a reference member.
+  unsigned I = 0, N = ILE->getNumInits();
+  // C++17 aggregate initialization lists the base classes before the
+  // fields, so the field walk starts past them or the two run out of step.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (unsigned NumBases = CXXRD->getNumBases(); I < N && I < NumBases; ++I)
+      Descend(ILE->getInit(I));
+  auto FI = RD->field_begin(), FE = RD->field_end();
+  for (; I < N && FI != FE; ++I, ++FI) {
+    // An unnamed bit-field takes no initializer of its own; stepping over
+    // it with the initializer index would pair every later field with the
+    // wrong one.
+    while (FI != FE && FI->isUnnamedBitField())
+      ++FI;
+    if (FI == FE)
+      break;
+    const Expr *Init = ILE->getInit(I);
+    if (!Init)
+      continue;
+    QualType FT = FI->getType();
+    if (FT->isReferenceType() && !FT.getNonReferenceType().isConstQualified())
+      markEscapedIfDeclRef(Init);
+    else
+      Descend(Init);
+  }
+}
 
 // Add new local variables to the variable map
 void VarMapBuilder::VisitDeclStmt(const DeclStmt *S) {
@@ -1285,8 +1795,19 @@ void VarMapBuilder::VisitDeclStmt(const DeclStmt *S) {
       QualType T = VD->getType();
       if (T.isTrivialType(VD->getASTContext())) {
         Ctx = VMap->addDefinition(VD, E, Ctx);
+        if (VD->hasLocalStorage() && !VD->isStaticLocal())
+          VMap->markDeclaredIn(VD, CurBlock);
         modifiedCtx = true;
+      } else if (T->isReferenceType() && E &&
+                 !T.getNonReferenceType().isConstQualified()) {
+        // Binding a non-const reference to a variable lets the variable be
+        // mutated without a visible assignment.
+        markEscapedIfDeclRef(E);
       }
+      // Aggregate initialization can bind non-const reference members.
+      if (const auto *ILE = dyn_cast_or_null<InitListExpr>(
+              E ? E->IgnoreParenImpCasts() : nullptr))
+        markEscapedRefBindings(ILE);
     }
   }
   if (modifiedCtx)
@@ -1314,13 +1835,121 @@ void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 }
 
+// True if the address the expression produces can only be read through:
+// it is handed straight to a call as a pointer-to-const argument, and
+// nothing else. `observe(&b)` with `void observe(const bool *)` is the
+// shape this recognizes -- without it, passing `&b` to a const-taking API
+// would lose the plain `bool b = mu.TryLock(); if (b) ...` form.
+//
+// The address is followed out through the conversions it flows into, to
+// the last one that is still a pointer, and only that outermost type
+// decides: an intermediate `const bool *` proves nothing when a cast
+// strips the const again (`const_cast<bool *>(static_cast<const bool *>
+// (&b))`). It must also end there, as an argument of the call: a
+// pointer-to-const that is *stored* proves nothing either, since the
+// const can be cast away anywhere the stored pointer reaches
+// (`const bool *cp = &b; *const_cast<bool *>(cp) = true;`).
+static bool addrOfIsReadOnly(const UnaryOperator *UO, ParentMap &PM) {
+  const Expr *E = UO;
+  while (true) {
+    // Only the conversions the address itself flows through are followed;
+    // any other parent consumes the pointer as it stands.
+    const Stmt *P = PM.getParent(E);
+    if (!P || !(isa<ParenExpr>(P) || isa<CastExpr>(P)))
+      break;
+    // Once it is no longer a pointer (`(void)&b`, a cast to an integer)
+    // the address cannot be followed any further; the last pointer type it
+    // had is the one that reached that conversion.
+    const auto *PE = cast<Expr>(P);
+    if (!PE->getType()->isPointerType())
+      break;
+    E = PE;
+  }
+  QualType T = E->getType();
+  if (!T->isPointerType() || !T->getPointeeType().isConstQualified())
+    return false;
+  const Stmt *Consumer = PM.getParent(E);
+  return isa_and_nonnull<CallExpr>(Consumer) ||
+         isa_and_nonnull<CXXConstructExpr>(Consumer);
+}
+
+// An increment or decrement mutates the variable like a compound assignment
+// (VisitBinaryOperator()): its definition no longer identifies the stored
+// value. Otherwise, marks a variable whose address is taken: it can then be
+// mutated without a visible assignment. An address that is only readable
+// through is not an escape, the same const distinction VisitDeclStmt(),
+// VisitCallExpr() and VisitCXXConstructExpr() make for reference and pointer
+// parameters -- without it, passing `&b` to a const-taking API would lose
+// the plain `bool b = mu.TryLock(); if (b) ...` form.
+void VarMapBuilder::VisitUnaryOperator(const UnaryOperator *UO) {
+  if (UO->isIncrementDecrementOp()) {
+    // Gated like the address-of branch below: with no consumer for the
+    // definitions, clearing one costs a VarDefinition and a rebuilt
+    // ImmutableMap for nothing, on every increment in the translation unit.
+    if (!VMap->readsDefinitions())
+      return;
+    if (const auto *DRE =
+            dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenCasts())) {
+      const ValueDecl *VDec = DRE->getDecl();
+      if (Ctx.lookup(VDec)) {
+        Ctx = VMap->clearDefinition(VDec, Ctx);
+        VMap->saveContext(UO, Ctx);
+      }
+    }
+    return;
+  }
+  if (UO->getOpcode() != UO_AddrOf || !VMap->tracksTryAcquires())
+    return;
+  // Checked before the parent map is touched: building it is what makes
+  // this more than a type test, and nothing else here needs it.
+  if (!isa<DeclRefExpr>(UO->getSubExpr()->IgnoreParenCasts()))
+    return;
+  if (addrOfIsReadOnly(UO, AC.getParentMap()))
+    return;
+  markEscapedIfDeclRef(UO->getSubExpr());
+}
+
+// An initializer list can bind non-const reference members wherever it
+// appears, not only as a declaration's initializer: `sink(W{ok})` and
+// `new W{ok}` never reach VisitDeclStmt(), and `W w = W{ok}` reaches it
+// behind a functional cast that IgnoreParenImpCasts() does not strip.
+void VarMapBuilder::VisitInitListExpr(const InitListExpr *ILE) {
+  markEscapedRefBindings(ILE);
+}
+
+// Marks variables a block literal captures by reference (`__block`): any
+// later call of the block may mutate them without a visible assignment,
+// exactly as a lambda's by-reference capture may.
+void VarMapBuilder::VisitBlockExpr(const BlockExpr *BE) {
+  for (const BlockDecl::Capture &C : BE->getBlockDecl()->captures())
+    if (C.isByRef())
+      VMap->markEscaped(C.getVariable(), CurBlock);
+}
+
+// Marks variables captured by reference in a lambda: any later call may
+// mutate them without a visible assignment.
+void VarMapBuilder::VisitLambdaExpr(const LambdaExpr *LE) {
+  for (const LambdaCapture &LC : LE->captures()) {
+    if (!LC.capturesVariable() || LC.getCaptureKind() != LCK_ByRef)
+      continue;
+    const ValueDecl *VD = LC.getCapturedVar();
+    VMap->markEscaped(VD, CurBlock);
+    // A reference init-capture (`[&x = b]`) binds like a reference
+    // declaration: the escaped variable is the one in the initializer.
+    if (const auto *IC = dyn_cast<VarDecl>(VD); IC && IC->isInitCapture())
+      if (const Expr *Init = IC->getInit())
+        markEscapedIfDeclRef(Init);
+  }
+}
+
 // The context after a call: its non-const reference and pointer arguments'
 // definitions cleared; then try-acquire capabilities added back.
 void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
   clearCallMutations(CE);
-  if (const auto *D = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
-      D && D->hasAttr<TryAcquireCapabilityAttr>())
-    VMap->TryAcquireCalls.emplace_back(CE, Ctx);
+  if (VMap->tracksTryAcquires())
+    if (const auto *D = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl());
+        D && D->hasAttr<TryAcquireCapabilityAttr>())
+      VMap->TryAcquireCalls.emplace_back(CE, Ctx);
 }
 
 // Invalidates local variable definitions if variable escaped.
@@ -1374,6 +2003,25 @@ void VarMapBuilder::clearCallMutations(const CallExpr *CE) {
   VMap->saveContext(CE, Ctx);
 }
 
+// Marks variables bound to a constructor's non-const reference parameters:
+// the constructed object can store the reference and mutate them later
+// without a visible assignment. (VisitCallExpr() above only clears the
+// definition for an ordinary call, which is assumed to mutate during the
+// call but not to retain the reference.)
+void VarMapBuilder::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+  const CXXConstructorDecl *CD = CE->getConstructor();
+  if (!CD)
+    return;
+  for (unsigned Idx = 0, N = CE->getNumArgs(); Idx < N; ++Idx) {
+    if (Idx >= CD->getNumParams())
+      break;
+    QualType ParamType = CD->getParamDecl(Idx)->getType();
+    if (ParamType->isReferenceType() &&
+        !ParamType->getPointeeType().isConstQualified())
+      markEscapedIfDeclRef(CE->getArg(Idx));
+  }
+}
+
 // Computes the intersection of two contexts.  The intersection is the
 // set of variables which have the same definition in both contexts;
 // variables with different definitions are discarded.
@@ -1386,11 +2034,50 @@ LocalVariableMap::intersectContexts(Context C1, Context C2) {
     if (!I2) {
       // The variable doesn't exist on second path.
       Result = removeDefinition(Dec, Result);
-    } else if (getCanonicalDefinitionID(P.second) !=
-               getCanonicalDefinitionID(*I2)) {
-      // If canonical definitions mismatch the underlying definitions are
-      // different, invalidate.
-      Result = clearDefinition(Dec, Result);
+    } else if (P.second != *I2) {
+      unsigned Canon1 = getCanonicalDefinitionID(P.second);
+      unsigned Canon2 = getCanonicalDefinitionID(*I2);
+      if (Canon1 == Canon2 && Canon1 != 0)
+        continue; // Same underlying definition on both paths.
+      // Nothing below is ever read in a function without a try-acquire
+      // (see TracksTryAcquires): the definitions differ, and that is all.
+      if (!TracksTryAcquires) {
+        Result = clearDefinition(Dec, Result);
+        continue;
+      }
+      // Distinct definitions that constant-evaluate to the same integer
+      // value are interchangeable for resolution purposes, provided the
+      // one kept answers every later chain query for both paths
+      // (constantToKeep()).
+      if (unsigned Keep = constantToKeep(Dec, Canon1, Canon2)) {
+        if (Keep == Canon1)
+          continue; // Keep the first path's.
+        Result =
+            ContextFactory.add(ContextFactory.remove(Result, Dec), Dec, *I2);
+        continue;
+      }
+      // A phi merged with a definition it already covers is just the phi:
+      // at a join of three or more predecessors the paths merge pairwise,
+      // so e.g. (constant, call) -> phi followed by (phi, constant) must
+      // not discard the merge the first pair created; absorbing a
+      // value-equal constant that is not an operand keeps the result
+      // independent of the order in which the paths merge (phiAbsorbs()).
+      if (phiAbsorbs(Dec, Canon1, Canon2))
+        continue; // Keep the first path's phi.
+      if (phiAbsorbs(Dec, Canon2, Canon1)) {
+        // Keep the second path's phi.
+        Result =
+            ContextFactory.add(ContextFactory.remove(Result, Dec), Dec, *I2);
+        continue;
+      }
+      // The underlying definitions differ. If both are known (and not
+      // already merges themselves), remember the pair as a phi definition;
+      // otherwise invalidate.
+      if (Canon1 != 0 && Canon2 != 0 && !VarDefinitions[Canon1].isPhi() &&
+          !VarDefinitions[Canon2].isPhi())
+        Result = addPhiDefinition(Dec, P.second, *I2, Result);
+      else
+        Result = clearDefinition(Dec, Result);
     }
   }
   return Result;
@@ -1413,7 +2100,7 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
   for (const auto &P : C1) {
     const unsigned I1 = P.second;
     VarDefinition *VDef = &VarDefinitions[I1];
-    assert(VDef->isReference());
+    assert(VDef->isReference() || VDef->isPhi());
 
     const unsigned *I2 = C2.lookup(P.first);
     if (!I2) {
@@ -1422,10 +2109,87 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
       continue;
     }
 
+    const unsigned Canon2 = getCanonicalDefinitionID(*I2);
+
+    if (VDef->isPhi()) {
+      // A previous back edge already merged this variable. Keep the phi only
+      // if this back edge carries a definition the merge already covers --
+      // one of its operands, or a value-equal constant whose chain avoids
+      // the non-constant operand up to the loop head (phiAbsorbs(), as at
+      // branch joins) -- or the loop-head reference itself (Canon2 == I1, a
+      // phi is its own canonical): a back edge that does not reassign the
+      // variable, or reassigns it a value the merge covers, must not
+      // discard the merge another back edge created.
+      if (Canon2 != I1 && !phiAbsorbs(P.first, I1, Canon2, /*StopAt=*/I1))
+        VDef->invalidateRef();
+      continue;
+    }
+
     // Compare the canonical IDs. This correctly handles chains of references
     // and determines if the variable is truly loop-invariant.
-    if (VDef->CanonicalRef != getCanonicalDefinitionID(*I2))
-      VDef->invalidateRef(); // Mark this variable as undefined
+    if (VDef->CanonicalRef != Canon2) {
+      // The variable was reassigned in the loop a value that is a constant
+      // value-equal to the loop-head value: interchangeable for resolution
+      // purposes (valueEqualConstants(), as at branch joins), so the head
+      // reference stands.
+      if (valueEqualConstants(VDef->CanonicalRef, Canon2))
+        continue;
+      // The variable is redefined in the loop. The back-edge value may
+      // itself be a merge created at an intra-loop join with the loop-head
+      // value as one of its operands (e.g. the path of a `continue` that
+      // reassigned the variable joining the loop-end path that did not):
+      // the head value then merges with the other operand. An operand that
+      // is a constant value-equal to the head's constant stands in for the
+      // head value the same way -- provided its chain avoids the other
+      // operand up to the loop head, exactly as absorbing it at a branch
+      // join would require (phiAbsorbs()).
+      auto RefersTo = [this](unsigned ID, unsigned Target) {
+        while (ID > 0 && ID != Target && VarDefinitions[ID].isReference())
+          ID = VarDefinitions[ID].DirectRef;
+        return ID == Target;
+      };
+      unsigned Alt = *I2;
+      unsigned CanonAlt = Canon2;
+      if (!TracksTryAcquires)
+        Alt = CanonAlt = 0; // No merge is ever read: invalidate (below).
+      if (CanonAlt != 0 && VarDefinitions[CanonAlt].isPhi()) {
+        const VarDefinition &P2 = VarDefinitions[CanonAlt];
+        const unsigned OpD = getCanonicalDefinitionID(P2.DirectRef);
+        const unsigned OpA = getCanonicalDefinitionID(P2.PhiAlt);
+        if (RefersTo(P2.DirectRef, I1))
+          Alt = P2.PhiAlt;
+        else if (RefersTo(P2.PhiAlt, I1))
+          Alt = P2.DirectRef;
+        else if (valueEqualConstants(VDef->CanonicalRef, OpD) &&
+                 chainAvoids(P.first, OpD, OpA, /*StopAt=*/I1))
+          Alt = P2.PhiAlt;
+        else if (valueEqualConstants(VDef->CanonicalRef, OpA) &&
+                 chainAvoids(P.first, OpA, OpD, /*StopAt=*/I1))
+          Alt = P2.DirectRef;
+        else
+          Alt = 0;
+        CanonAlt = getCanonicalDefinitionID(Alt);
+      }
+      // If both the incoming definition and the back edge's are known (and
+      // the latter is not itself a merge), remember the pair as a phi
+      // definition (in place, like the invalidation below) rather than
+      // discarding it, so that a branch on a try-acquire result merged
+      // with its pre-loop initializer can still be resolved.
+      if (VDef->CanonicalRef != 0 && Alt != 0 && CanonAlt != 0 &&
+          !VarDefinitions[CanonAlt].isPhi()) {
+        VDef->PhiAlt = Alt;
+        VDef->CanonicalRef = 0;
+      } else {
+        VDef->invalidateRef(); // Mark this variable as undefined
+      }
+      // A back edge is the only thing that ever changes an existing
+      // definition (in place, above), which can make a memoized clean
+      // chain of this variable, and any memoized chain walk, stale. The
+      // walks are keyed by definition and a changed definition can be
+      // anywhere in another one's chain, so they all go.
+      CleanChains.erase(P.first);
+      ChainDefs.clear();
+    }
   }
 }
 
@@ -1466,10 +2230,28 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
 //   while (b)           { x -> x2, y -> y1  | [1st:] x2=x1; [2nd:] x2=NULL; }
 //     x = x+1;          { x -> x3, y -> y1  | x3 = x2 + 1, ... }
 //   ...                 { y -> y1           | x3 = 2, x2 = 1, ... }
-void LocalVariableMap::traverseCFG(CFG *CFGraph,
+void LocalVariableMap::traverseCFG(AnalysisDeclContext &AC, CFG *CFGraph,
                                    const PostOrderCFGView *SortedGraph,
-                                   std::vector<CFGBlockInfo> &BlockInfo) {
+                                   std::vector<CFGBlockInfo> &BlockInfo,
+                                   bool BetaWarnings) {
   PostOrderCFGView::CFGBlockSet VisitedBlocks(CFGraph);
+
+  // Whether any try-acquire is called (or constructed) at all (see
+  // TracksTryAcquires).
+  TracksTryAcquires = llvm::any_of(*CFGraph, [](const CFGBlock *B) {
+    return llvm::any_of(*B, [](const CFGElement &E) {
+      std::optional<CFGStmt> CS = E.getAs<CFGStmt>();
+      if (!CS)
+        return false;
+      const Decl *Callee = nullptr;
+      if (const auto *CE = dyn_cast<CallExpr>(CS->getStmt()))
+        Callee = CE->getCalleeDecl();
+      else if (const auto *CtorE = dyn_cast<CXXConstructExpr>(CS->getStmt()))
+        Callee = CtorE->getConstructor();
+      return Callee && Callee->hasAttr<TryAcquireCapabilityAttr>();
+    });
+  });
+  ReadsDefinitions = TracksTryAcquires || BetaWarnings;
 
   for (const auto *CurrBlock : *SortedGraph) {
     unsigned CurrBlockID = CurrBlock->getBlockID();
@@ -1513,7 +2295,8 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
     CurrBlockInfo->EntryIndex = getContextIndex();
 
     // Visit all the statements in the basic block.
-    VarMapBuilder VMapBuilder(this, CurrBlockInfo->EntryContext);
+    VarMapBuilder VMapBuilder(this, CurrBlockInfo->EntryContext, AC);
+    VMapBuilder.CurBlock = CurrBlock;
     for (const auto &BI : *CurrBlock) {
       switch (BI.getKind()) {
         case CFGElement::Statement: {
@@ -2116,6 +2899,32 @@ struct JoinContext {
   /// on the escaping paths -- though the fact is still demoted so the
   /// paths that do rebranch resolve it.
   bool RebranchResolvesAllPaths = true;
+
+  /// Record what the branch below \p Call resolves. The one setter both
+  /// join sites use: a branch join and a loop back edge ask the same
+  /// question of the block whose condition re-resolves the facts, so they
+  /// must record the same answer -- a short-circuit escape that leaves the
+  /// result unresolved defeats the exemption at either.
+  template <typename CallT> void setRebranch(const CallT &Call) {
+    RebranchTryLock = Call.TrylockCall;
+    RebranchMergedCall = Call.MergedCall;
+    RebranchResolvesAllPaths = Call.ResolvesAllPaths;
+  }
+  /// When the branched-on variable merges the results of two structurally
+  /// identical try-acquire calls (the merge resolves to \c RebranchTryLock,
+  /// the first path's call), the second path's call. A side holding one
+  /// of the two calls' try facts alone holds "the result of that call"
+  /// either way, so its try fact folds into the try fact of
+  /// \c RebranchTryLock, which the outgoing edges resolve like a single
+  /// call's.
+  const Expr *RebranchMergedCall = nullptr;
+  /// For a loop join under -Wthread-safety-beta: the try-acquire calls
+  /// whose results are branched on somewhere inside the loop, and so are
+  /// (or will be, on the next iteration) checked around it. A conditional
+  /// try fact of any other call reaching the back edge is re-executed or
+  /// discarded unchecked (LocksetJoin::joinTryFactFromExit()). Null where
+  /// the information is not computed, which exempts every try fact.
+  const llvm::SmallPtrSetImpl<const Expr *> *CheckedAroundLoop = nullptr;
   /// The entry set belongs to an already-analyzed loop head (the back-edge
   /// comparison): suppression still applies, but the set must not be
   /// rewritten in place -- the head's edges were processed long ago.
@@ -2149,6 +2958,7 @@ class ThreadSafetyAnalyzer {
 
   ThreadSafetyHandler &Handler;
   const FunctionDecl *CurrentFunction;
+  ASTContext *ASTCtx = nullptr;
   LocalVariableMap LocalVarMap;
   // The beta unchecked-result diagnostics already emitted, keyed by
   // "<join location>:<acquisition location>:<capability>". A join of three
@@ -2238,6 +3048,8 @@ public:
                                        til::SExpr *Self = nullptr,
                                        TryAcquireCaps *NoExprCaps = nullptr);
   TryAcquireCaps *recordedTryAcquireCaps(const Expr *Exp);
+  bool sameTryAcquireCaps(const Expr *A, const Expr *B);
+  void spendTryAcquiresOf(const CapabilityExpr &Cp);
   void recordTryAcquireCalls();
   void reconcileTryAcquireCaps(TryAcquireCaps &Caps);
 
@@ -2248,9 +3060,36 @@ public:
     const CallExpr *TrylockCall = nullptr;
     /// The condition tests the negation of the call's result.
     bool Negate = false;
+    /// Set when the branched-on variable merges the call's result with a
+    /// constant: the branch-condition truthiness of the edges where the
+    /// value may be the constant rather than the call's result (see
+    /// decodeTrylockCond()).
+    std::optional<bool> AmbiguousCond;
+    /// The second of two structurally identical try-acquire calls whose
+    /// merged result the condition branches on; null otherwise.
+    const CallExpr *MergedCall = nullptr;
+    /// The merged ("phi") definitions the walk has descended into. A
+    /// phi-converted loop head makes the definition graph cyclic (`ok2 =
+    /// ok; ok = ok2;` inside the loop resolves each variable's merge
+    /// through the other's), so a merge reached again resolves nothing
+    /// (decodeTrylockCond()).
+    llvm::SmallPtrSet<const LocalVariableMap::VarDefinition *, 4> VisitedPhis;
+    /// The block whose terminator is being decoded: where the branch reads
+    /// the variable, which decides whether an escape has happened yet
+    /// (escapeReaches()).
+    const CFGBlock *UseBlock = nullptr;
+    /// The walk descended into the right-hand side of a `&&` or `||`. The
+    /// left-hand side can decide the condition on its own, and when the
+    /// block carrying the whole condition is also reached through the
+    /// short-circuit -- `while (!(i >= n || ok))`, where the `||`'s value
+    /// is materialized for the `!` -- an edge out of it says nothing about
+    /// the call on that path.
+    bool ShortCircuit = false;
   };
 
   void decodeTrylockCond(const Stmt *Cond, LocalVarContext C, TrylockDecode &D);
+  bool escapeReaches(const NamedDecl *VD, const CFGBlock *Use);
+  llvm::SmallDenseMap<const CFGBlock *, llvm::BitVector, 2> ReachableFrom;
 
   // Memoize per-switch summaries (resolveTrylockEdge() visits a switch
   // once per successor).
@@ -2258,10 +3097,17 @@ public:
   const SwitchSummary &getSwitchSummary(ASTContext &Ctx, const SwitchStmt *SW);
   const TrylockBranch &decodeTrylockBranch(const CFGBlock *Block);
 
-  /// The try-acquire call a condition branches on, found through its
-  /// short-circuit blocks (getConditionTrylockCallExpr()).
-  struct ConditionTrylockCall {
+  /// The try-acquire calls a block's terminator branches on: the call, and
+  /// the second of two identical calls whose merged result it branches on
+  /// (TrylockBranch::MergedCall).
+  struct TerminatorTrylockCall {
     const CallExpr *TrylockCall = nullptr;
+    const CallExpr *MergedCall = nullptr;
+  };
+  TerminatorTrylockCall getTerminatorTrylockCall(const CFGBlock *Block);
+  /// The try-acquire calls a condition branches on, found through its
+  /// short-circuit blocks (getConditionTrylockCallExpr()).
+  struct ConditionTrylockCall : TerminatorTrylockCall {
     /// Whether every outgoing path of the block reaches the branch on the
     /// call's result; computed on request only.
     bool ResolvesAllPaths = true;
@@ -2272,9 +3118,20 @@ public:
   /// What one edge proves about the capabilities of a TrylockBranch.
   struct TrylockEdge {
     const CallExpr *TrylockCall = nullptr;
+    /// The terminator reached the call through a short-circuit operand
+    /// (TrylockBranch::ShortCircuit).
+    bool ShortCircuit = false;
+    /// The second of two identical calls whose merged result the branch
+    /// tests (TrylockBranch::MergedCall): its try facts resolve on this
+    /// edge exactly like TrylockCall's.
+    const CallExpr *MergedCall = nullptr;
     /// The edge cannot be taken at all (e.g. the implicit default of a
     /// switch that lists every value of a boolean condition).
     bool Infeasible = false;
+    /// The call may not have executed on this edge (the branched-on
+    /// variable merges its result with a constant): each capability's
+    /// resolution holds only if it did.
+    bool Ambiguous = false;
     SmallVector<TrylockEdgeCap, 2> Caps;
   };
   TrylockEdge resolveTrylockEdge(const CFGBlock *PredBlock,
@@ -2593,6 +3450,12 @@ bool ThreadSafetyAnalyzer::addTryLock(FactSet &FSet, const CapabilityExpr &CE,
                                  /*MaybeHeld=*/true);
         return false;
       }
+      // Another call's result is still pending here, so both calls may end
+      // up holding the capability: neither result stands for the other, and
+      // a merge of the two is not the retry idiom
+      // (FactManager::coexecutedTryAcquire()).
+      FactMan.addCoexecutedTryAcquire(W->origin());
+      FactMan.addCoexecutedTryAcquire(Call);
     } else if (W->origin() == Call && W->kind() == LK) {
       // A fresh execution of the call overwrites its stored result: a hold
       // an earlier execution proved is no longer determined by it, and the
@@ -2614,6 +3477,14 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 
   const FactEntry *LDat = FSet.findDefinite(FactMan, Cp);
   if (!LDat) {
+    // The release is unconditional and the capability is not definitely
+    // held: it took a hold or aborted, so nothing is held afterwards and
+    // every stored result for the capability is stale. Conditional try
+    // facts record that themselves (releaseConditional() below); a result
+    // whose try fact an earlier join already lost has no fact left to
+    // record it, so the call is spent instead -- otherwise a later branch
+    // on it re-materializes the hold this release gave up.
+    spendTryAcquiresOf(Cp);
     if (handleUncheckedConditionalUnlock(FSet, FactMan, Cp, UnlockLoc,
                                          &Handler))
       return;
@@ -2664,24 +3535,60 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
   }
 }
 
-static bool getStaticBooleanValue(Expr *E, bool &TCond) {
-  if (isa<CXXNullPtrLiteralExpr>(E) || isa<GNUNullExpr>(E)) {
-    TCond = false;
-    return true;
-  } else if (const auto *BLE = dyn_cast<CXXBoolLiteralExpr>(E)) {
-    TCond = BLE->getValue();
-    return true;
-  } else if (const auto *ILE = dyn_cast<IntegerLiteral>(E)) {
-    TCond = ILE->getValue().getBoolValue();
-    return true;
-  } else if (auto *CE = dyn_cast<ImplicitCastExpr>(E))
-    return getStaticBooleanValue(CE->getSubExpr(), TCond);
+// Returns whether E is a compile-time constant, setting TCond to its boolean
+// value. Looks through parentheses and evaluates constant expressions
+// (constexpr values, enumerators), not just literals.
+static bool getStaticBooleanValue(const Expr *E, bool &TCond,
+                                  const ASTContext &Ctx) {
+  return !E->isValueDependent() && E->EvaluateAsBooleanCondition(TCond, Ctx);
+}
+
+/// Whether \p VD's storage may already have escaped when \p Use's terminator
+/// reads it: some block where it escapes reaches \p Use, itself included, so
+/// on some path a reference to the variable is live before the branch. An
+/// escape only reachable *after* the branch -- an address taken past the
+/// checked region -- leaves the branch alone. Reachability is memoized per
+/// escaping block; a function with no escaped variable computes none.
+bool ThreadSafetyAnalyzer::escapeReaches(const NamedDecl *VD,
+                                         const CFGBlock *Use) {
+  ArrayRef<const CFGBlock *> Escapes = LocalVarMap.escapedAt(VD);
+  if (Escapes.empty() || !Use)
+    return false;
+  for (const CFGBlock *E : Escapes) {
+    if (!E)
+      return true; // Recorded without a block: assume the worst.
+    auto [It, Inserted] = ReachableFrom.try_emplace(E);
+    llvm::BitVector &Reached = It->second;
+    if (Inserted) {
+      // The walk stops at the block declaring the variable: re-entering the
+      // declaration is fresh storage, which the reference that escaped the
+      // old storage cannot reach into. That is what keeps a result declared
+      // inside a loop resolvable when the escape sits at the end of the
+      // body -- the only path back to the branch runs through the
+      // declaration.
+      const CFGBlock *Decl = LocalVarMap.declaredIn(VD);
+      Reached.resize(BlockInfo.size());
+      SmallVector<const CFGBlock *, 16> Work{E};
+      Reached.set(E->getBlockID());
+      while (!Work.empty()) {
+        const CFGBlock *B = Work.pop_back_val();
+        for (const CFGBlock *S : B->succs())
+          if (S && S != Decl && !Reached.test(S->getBlockID())) {
+            Reached.set(S->getBlockID());
+            Work.push_back(S);
+          }
+      }
+    }
+    if (Reached.test(Use->getBlockID()))
+      return true;
+  }
   return false;
 }
 
 // If Cond can be traced back to a try-acquire function call, the `D` variable
 // will be populated with the call and with how the branched-on value relates
-// to its result.
+// to its result -- negation (e.g. `if (!mu.tryLock(...))`), a merge with a
+// constant, or a merge of two structurally identical calls.
 void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
                                              LocalVarContext C,
                                              TrylockDecode &D) {
@@ -2703,8 +3610,163 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
   else if (const auto *FE = dyn_cast<FullExpr>(Cond))
     return decodeTrylockCond(FE->getSubExpr(), C, D);
   else if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    const Expr *E = LocalVarMap.lookupExpr(DRE->getDecl(), C);
-    return decodeTrylockCond(E, C, D);
+    // The reasoning below assumes every assignment to the variable is
+    // visible in the map. A variable whose reference has escaped (captured
+    // or bound by reference, address taken) can be mutated by any call in
+    // between, so neither its direct definitions nor its merges identify
+    // the branched-on value -- but only from the escape onwards. An escape
+    // that cannot reach this branch has not happened yet on any path to it,
+    // and the branch reads exactly what the map says (escapeReaches()).
+    if (escapeReaches(DRE->getDecl(), D.UseBlock))
+      return;
+    LocalVarContext DefCtx = C;
+    if (const Expr *E = LocalVarMap.lookupExpr(DRE->getDecl(), DefCtx))
+      return decodeTrylockCond(E, DefCtx, D);
+    // A merged ("phi") definition: if the variable merges one non-constant
+    // definition with a constant of truthiness K (e.g. a try-acquire result
+    // stored over a constant initializer), a branch on the variable still
+    // identifies the non-constant definition -- on an edge where the
+    // variable's truthiness is !K the value can only be that definition's
+    // result. Record in AmbiguousCond the branch-condition truthiness of
+    // the edges where the value may instead be the constant;
+    // getEdgeLockset() refuses to treat those edges as proof that the call
+    // executed. Only one merge can be resolved per condition.
+    // The merge may sit behind a chain of references (a loop head wraps
+    // every variable in a reference definition), so test the canonical
+    // definition, not the immediate one.
+    const auto *VDef = LocalVarMap.lookupCanonical(DRE->getDecl(), C);
+    if (!VDef || !VDef->isPhi() || D.AmbiguousCond)
+      return;
+    // A merge the walk is already resolving through: the chain is cyclic
+    // (a loop-carried copy between two variables), and nothing below can
+    // identify the value.
+    if (!D.VisitedPhis.insert(VDef).second)
+      return;
+    ASTContext &ACtx = DRE->getDecl()->getASTContext();
+    const Expr *NonConst = nullptr, *NonConst2 = nullptr;
+    LocalVarContext NonConstCtx = C, NonConstCtx2 = C;
+    unsigned NonConstID = 0, ConstID = 0;
+    std::optional<bool> K;
+    for (unsigned Op : {VDef->DirectRef, VDef->PhiAlt}) {
+      LocalVarContext OpCtx = C;
+      const Expr *E = LocalVarMap.lookupExprByID(Op, OpCtx);
+      if (!E)
+        return;
+      // Any expression that constant-evaluates counts as the constant, not
+      // just a literal: `bool b = kFalseConstant;` merges the same way as
+      // `bool b = false;`.
+      bool B;
+      if (getStaticBooleanValue(E, B, ACtx)) {
+        if (K && *K != B)
+          return; // Constants of both truthinesses determine nothing.
+        K = B;
+        ConstID = Op;
+      } else if (NonConst) {
+        NonConst2 = E;
+        NonConstCtx2 = OpCtx;
+      } else {
+        NonConst = E;
+        NonConstCtx = OpCtx;
+        NonConstID = Op;
+      }
+    }
+    if (NonConst2) {
+      // Two non-constant definitions: a branch still resolves the merge if
+      // both are the same branch-relevant expression -- in practice two
+      // structurally identical try-acquire calls, as in the retry idiom
+      // `ok = mu.TryLock(); while (!ok) ok = mu.TryLock();` -- since either
+      // way the variable holds "the result of that call". Resolve to the
+      // first path's call: its try fact is the one in the entry set wherever
+      // this merge is branched on, and joins have verified the two paths'
+      // states agree.
+      llvm::FoldingSetNodeID ID1, ID2;
+      NonConst->IgnoreParens()->Profile(ID1, ACtx, /*Canonical=*/true);
+      NonConst2->IgnoreParens()->Profile(ID2, ACtx, /*Canonical=*/true);
+      if (ID1 != ID2)
+        return;
+      // (In the unsound retry-without-checking variant
+      // `b = mu.TryLock(); while (work()) b = mu.TryLock();` the second
+      // call executes while the first result may still be pending: its
+      // try fact is a second one of the capability, and the first's goes
+      // unchecked, which the loop join reports under -Wthread-safety-beta.)
+      // The second path's call resolves the same way; report it through
+      // MergedCall so a join can fold the two calls' try facts into the
+      // resolved call's (intersectAndWarn()).
+      //
+      // Whenever the second path does not agree, the whole merge is
+      // refused, not just the companion: the branch is decoded as a branch
+      // on the first path's call, which only holds if the second path
+      // reaches the same call in the same sense. Restoring the decode to
+      // what it was on entry (BeforeD) leaves the merge unresolved, the
+      // conservative answer -- dropping the companion alone would keep an
+      // unsound resolution whose outcome depends on predecessor order.
+      // Note the expression comparison above does not establish agreement:
+      // the same expression (a reference to one variable) can resolve
+      // differently per path (`if (c) { t = !t; ok = t; } else ok = t;`).
+      const TrylockDecode BeforeD = D;
+      D.MergedCall = nullptr;
+      decodeTrylockCond(NonConst, NonConstCtx, D);
+      const CallExpr *First = D.TrylockCall;
+      // Either the first path resolves to no call at all, or its
+      // resolution nests a two-call merge of its own, which a single
+      // companion call cannot represent.
+      if (!First || D.MergedCall) {
+        D = BeforeD;
+        return;
+      }
+      TrylockDecode D2 = BeforeD;
+      D2.MergedCall = nullptr;
+      decodeTrylockCond(NonConst2, NonConstCtx2, D2);
+      const CallExpr *Second = D2.TrylockCall;
+      if (!Second || D2.MergedCall || D2.Negate != D.Negate ||
+          D2.AmbiguousCond != D.AmbiguousCond) {
+        D = BeforeD;
+        return;
+      }
+      // Both paths reaching the very same call needs no companion: the
+      // merged value is that one call's result either way.
+      if (Second == First)
+        return;
+      // A call whose result a join has already lost unchecked cannot be
+      // half of a twin: the retry idiom is sound because each call runs
+      // only after the previous result was checked false, and a lost
+      // result is exactly the case where it was not
+      // (`b = mu.TryLock(); while (work()) b = mu.TryLock();`, where the
+      // loop re-runs the call over a hold the first call may still have).
+      // Refusing the merge leaves the branch unresolved, so the hold is
+      // diagnosed in the default group rather than only by the beta report
+      // at the loop join.
+      if (FactMan.lostUnchecked(First) || FactMan.lostUnchecked(Second) ||
+          FactMan.coexecutedTryAcquire(First) ||
+          FactMan.coexecutedTryAcquire(Second)) {
+        D = BeforeD;
+        return;
+      }
+      // The stored expressions were compared above, but they may be hops
+      // (a copy through another variable) that resolved to calls of their
+      // own: the identical-resolution premise holds for the calls
+      // themselves, so compare those -- and compare what they acquire, not
+      // how they read (sameTryAcquireCaps()).
+      if (!sameTryAcquireCaps(First, Second)) {
+        D = BeforeD;
+        return;
+      }
+      D.MergedCall = Second;
+      return;
+    }
+    if (!NonConst || !K)
+      return;
+    // The reasoning below is only sound if the constant is not a later
+    // overwrite of the non-constant definition (`b = try_lock(); b = false;`
+    // -- the capability may be held although the variable is false again):
+    // the constant's definition chain must show the non-constant assignment
+    // never executed on its paths.
+    if (!LocalVarMap.chainAvoids(DRE->getDecl(), ConstID, NonConstID))
+      return;
+    // On the ambiguous edges the variable's truthiness is K; the
+    // condition's is K adjusted by the negations applied so far.
+    D.AmbiguousCond = *K != D.Negate;
+    return decodeTrylockCond(NonConst, NonConstCtx, D);
   }
   else if (const auto *UOP = dyn_cast<UnaryOperator>(Cond)) {
     if (UOP->getOpcode() == UO_LNot) {
@@ -2719,25 +3781,26 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
         D.Negate = !D.Negate;
 
       bool TCond = false;
-      if (getStaticBooleanValue(BOP->getRHS(), TCond)) {
+      if (getStaticBooleanValue(BOP->getRHS(), TCond, *ASTCtx)) {
         if (!TCond)
           D.Negate = !D.Negate;
         return decodeTrylockCond(BOP->getLHS(), C, D);
       }
       TCond = false;
-      if (getStaticBooleanValue(BOP->getLHS(), TCond)) {
+      if (getStaticBooleanValue(BOP->getLHS(), TCond, *ASTCtx)) {
         if (!TCond)
           D.Negate = !D.Negate;
         return decodeTrylockCond(BOP->getRHS(), C, D);
       }
       return;
     }
-    if (BOP->getOpcode() == BO_LAnd) {
-      // LHS must have been evaluated in a different block.
+    if (BOP->getOpcode() == BO_LAnd || BOP->getOpcode() == BO_LOr) {
+      // LHS must have been evaluated in a different block -- which the
+      // short-circuit path may have left without evaluating the RHS at all
+      // (see TrylockDecode::ShortCircuit).
+      D.ShortCircuit = true;
       return decodeTrylockCond(BOP->getRHS(), C, D);
     }
-    if (BOP->getOpcode() == BO_LOr)
-      return decodeTrylockCond(BOP->getRHS(), C, D);
     // An assignment used as a condition (`if ((b = mu.TryLock()))`)
     // evaluates to its right-hand side.
     if (BOP->getOpcode() == BO_Assign)
@@ -2745,14 +3808,34 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
     return;
   } else if (const auto *COP = dyn_cast<ConditionalOperator>(Cond)) {
     bool TCond, FCond;
-    if (getStaticBooleanValue(COP->getTrueExpr(), TCond) &&
-        getStaticBooleanValue(COP->getFalseExpr(), FCond)) {
+    if (getStaticBooleanValue(COP->getTrueExpr(), TCond, *ASTCtx) &&
+        getStaticBooleanValue(COP->getFalseExpr(), FCond, *ASTCtx)) {
       if (TCond && !FCond)
         return decodeTrylockCond(COP->getCond(), C, D);
       if (!TCond && FCond) {
         D.Negate = !D.Negate;
         return decodeTrylockCond(COP->getCond(), C, D);
       }
+      return;
+    }
+    // One arm is a constant of truthiness K, the other is not: like the
+    // merged variable above, a branch on the value still identifies the
+    // non-constant arm -- on an edge where the value's truthiness is !K it
+    // can only be that arm's result. Edges matching K are recorded as
+    // ambiguous; only one merge can be resolved per condition.
+    bool ArmCond;
+    const Expr *NonConstArm = nullptr;
+    std::optional<bool> K;
+    if (getStaticBooleanValue(COP->getTrueExpr(), ArmCond, *ASTCtx)) {
+      K = ArmCond;
+      NonConstArm = COP->getFalseExpr();
+    } else if (getStaticBooleanValue(COP->getFalseExpr(), ArmCond, *ASTCtx)) {
+      K = ArmCond;
+      NonConstArm = COP->getTrueExpr();
+    }
+    if (K && !D.AmbiguousCond) {
+      D.AmbiguousCond = *K != D.Negate;
+      return decodeTrylockCond(NonConstArm, C, D);
     }
   } else if (const auto *SE = dyn_cast<StmtExpr>(Cond)) {
     if (const auto *CS = SE->getSubStmt(); CS && !CS->body_empty()) {
@@ -2762,10 +3845,16 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
   }
 }
 
+ThreadSafetyAnalyzer::TerminatorTrylockCall
+ThreadSafetyAnalyzer::getTerminatorTrylockCall(const CFGBlock *Block) {
+  const TrylockBranch &B = decodeTrylockBranch(Block);
+  return {B.TrylockCall, B.MergedCall};
+}
+
 /// Find the try-acquire call whose result the condition starting at
-/// \p Block branches on. Unlike the plain terminator decode, this looks
+/// \p Block branches on. Unlike getTerminatorTrylockCall(), this looks
 /// through short-circuit evaluation: in a compound condition such as
-/// `if (c && ok)`, \p Block tests only `c` and the branch on the
+/// `while (i < n && !ok)`, \p Block tests only `i < n` and the branch on the
 /// try-acquire result sits in a successor block of the condition.
 ///
 /// With \p CheckAllPaths, also reports whether every outgoing path of
@@ -2779,29 +3868,39 @@ void ThreadSafetyAnalyzer::decodeTrylockCond(const Stmt *Cond,
 ThreadSafetyAnalyzer::ConditionTrylockCall
 ThreadSafetyAnalyzer::getConditionTrylockCallExpr(const CFGBlock *Block,
                                                   bool CheckAllPaths) {
-  // The walk follows only the successor edges of logical-operator
-  // terminators, which stay within one condition expression: a back edge
-  // originates only from a loop or goto terminator, so the walk cannot
-  // cycle and is linear in the size of the condition. The visited set is
-  // shared with the escape walks below: a walk that reaches an
-  // already-visited block has merged into a path already verified to reach
-  // the call (any walk that fails ends the search).
+  // The walk follows the successor edges of logical-operator terminators,
+  // which stay within one condition expression, and the fall-through edge
+  // of transition blocks (single successor, no terminator) -- e.g. where a
+  // branch join meets a loop back edge, one hop before the loop condition
+  // that rebranches on the merged variable. A transition block need not be
+  // empty: its statements cannot invalidate the decode, which uses the
+  // condition block's own ExitContext, and a write to the branched-on
+  // variable in it makes the resolution itself refuse (decodeTrylockCond).
+  // A fall-through edge can reach an earlier block (the transition block's
+  // successor is the back edge's target), so the visited set keeps the walk
+  // finite; it is shared with the escape walks below (any walk that fails
+  // ends the search, and the all-paths check below describes how a merge
+  // into a visited block resolves).
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
   SmallVector<const CFGBlock *, 4> Escapes;
+  const CallExpr *WalkMerged = nullptr;
   // The blocks whose terminator decodes to the call: their outgoing edges
   // are what must actually resolve the demoted fact.
   SmallVector<const CFGBlock *, 2> Deciders;
   auto Walk = [&](const CFGBlock *Block) -> const CallExpr * {
     while (Block) {
       if (!Visited.insert(Block).second) {
-        const CallExpr *Exp = decodeTrylockBranch(Block).TrylockCall;
-        if (Exp)
+        TerminatorTrylockCall T = getTerminatorTrylockCall(Block);
+        WalkMerged = T.MergedCall;
+        if (T.TrylockCall)
           Deciders.push_back(Block);
-        return Exp;
+        return T.TrylockCall;
       }
-      if (const CallExpr *Exp = decodeTrylockBranch(Block).TrylockCall) {
+      if (TerminatorTrylockCall T = getTerminatorTrylockCall(Block);
+          T.TrylockCall) {
+        WalkMerged = T.MergedCall;
         Deciders.push_back(Block);
-        return Exp;
+        return T.TrylockCall;
       }
       if (const auto *BOP =
               dyn_cast_or_null<BinaryOperator>(Block->getTerminatorStmt());
@@ -2821,6 +3920,10 @@ ThreadSafetyAnalyzer::getConditionTrylockCallExpr(const CFGBlock *Block,
         Block = SI == Block->succ_end() ? nullptr : SI->getReachableBlock();
         continue;
       }
+      if (!Block->getTerminatorStmt() && Block->succ_size() == 1) {
+        Block = Block->succ_begin()->getReachableBlock();
+        continue;
+      }
       return nullptr;
     }
     return nullptr;
@@ -2828,6 +3931,7 @@ ThreadSafetyAnalyzer::getConditionTrylockCallExpr(const CFGBlock *Block,
 
   ConditionTrylockCall Result;
   const CallExpr *Exp = Result.TrylockCall = Walk(Block);
+  Result.MergedCall = Exp ? WalkMerged : nullptr;
   if (CheckAllPaths) {
     Result.ResolvesAllPaths = Exp != nullptr;
     // Each escape edge must itself lead to a branch on the same call (its
@@ -2876,8 +3980,7 @@ ThreadSafetyAnalyzer::getConditionTrylockCallExpr(const CFGBlock *Block,
 /// not constant-evaluate reads as false.
 static bool getTrySuccessValue(ASTContext &Ctx, const Expr *BrE) {
   bool Result;
-  return BrE && !BrE->isValueDependent() &&
-         BrE->EvaluateAsBooleanCondition(Result, Ctx) && Result;
+  return BrE && getStaticBooleanValue(BrE, Result, Ctx) && Result;
 }
 
 /// The exact result code a try-acquire's attributes declare for success,
@@ -2936,8 +4039,14 @@ static bool switchEdgePins(const SwitchSummary &Sum, const CFGBlock *CaseBlock,
 /// returned reference stays valid for the rest of the analysis.
 const TrylockBranch &
 ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
-  const unsigned BlockID = Block->getBlockID();
+  // No try-acquire call is recorded anywhere in this function (the record
+  // is complete before the lockset walk, recordTryAcquireCalls()), so no
+  // decode can find one: skip the walk, and the cache, entirely.
+  static const TrylockBranch NoBranch;
+  if (TryAcquireCapsMap.empty())
+    return NoBranch;
 
+  const unsigned BlockID = Block->getBlockID();
   std::optional<TrylockBranch> &Memo = BlockInfo[BlockID].TryBranch;
   if (Memo)
     return *Memo;
@@ -2954,6 +4063,7 @@ ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
       return CacheMiss();
 
   TrylockDecode D;
+  D.UseBlock = Block;
   decodeTrylockCond(Cond, BlockInfo[BlockID].ExitContext, D);
   if (!D.TrylockCall)
     return CacheMiss();
@@ -2961,6 +4071,10 @@ ThreadSafetyAnalyzer::decodeTrylockBranch(const CFGBlock *Block) {
   // Translate call truthiness to branch truthiness.
   TrylockBranch Result;
   Result.TrylockCall = D.TrylockCall;
+  Result.MergedCall = D.MergedCall;
+  Result.ShortCircuit = D.ShortCircuit;
+  if (D.AmbiguousCond)
+    (*D.AmbiguousCond ? Result.AmbiguousTrue : Result.AmbiguousFalse) = true;
   if (auto MapIt = TryAcquireCapsMap.find(D.TrylockCall);
       MapIt != TryAcquireCapsMap.end()) {
     const TryAcquireCaps &Caps = MapIt->second;
@@ -3119,6 +4233,13 @@ ThreadSafetyAnalyzer::resolveTrylockEdge(const CFGBlock *PredBlock,
     return Edge;
 
   Edge.TrylockCall = B.TrylockCall;
+  Edge.MergedCall = B.MergedCall;
+  Edge.ShortCircuit = B.ShortCircuit;
+  // If the branched-on variable merges the call's result with a constant,
+  // an edge matching the constant's truthiness does not prove the call
+  // executed.
+  Edge.Ambiguous =
+      CondVal == EdgeValue::True ? B.AmbiguousTrue : B.AmbiguousFalse;
   const SmallVectorImpl<TrylockEdgeCap> &Dir =
       CondVal == EdgeValue::True ? B.OnTrue : B.OnFalse;
   Edge.Caps.assign(Dir.begin(), Dir.end());
@@ -3147,6 +4268,23 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
     return true;
   if (!Exp)
     return false;
+
+  // If the branched-on variable merges the call's result with a constant,
+  // an edge matching the constant's truthiness does not prove the call
+  // executed. Each try fact decides for itself what such an edge still
+  // proves: it resolves as a failure edge for one whose own attribute
+  // reports no success here (even the call executing would mean failure
+  // for that capability, and the call not executing means it was never
+  // acquired), while one whose attribute reports success is left
+  // untouched, like an unresolved condition -- attributes carry their own
+  // success values, so one call's capabilities can split both ways across
+  // the same edge. A ProvedNotHeld try fact likewise concludes no infeasibility
+  // on such an edge: the edge may be taken with the constant's value, the call
+  // never executed. Neither does a ProvedHeld one: it proves the call
+  // executed and succeeded on every path into PredBlock, but not which of
+  // the merge's two values the branched-on variable holds here, so a
+  // constant-falsy edge stays feasible beside the proved hold.
+  const bool Ambiguous = Edge.Ambiguous;
 
   // Whether a capability is acquired on this edge: it is re-identified by
   // matching against the capabilities recorded at the call, with the
@@ -3197,10 +4335,14 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   // again. A Released try fact says less: its result is truthy on only some
   // paths, so it rules no edge out.
   SmallVector<const TryFactEntry *> Resolvable;
+  // The branch tests "the result of that call" for the try facts of either
+  // of two merged identical calls (Edge.MergedCall): a path that executed
+  // the second holds only its try fact, and this branch resolves it.
   bool Infeasible = false;
   for (const auto &Fact : Result) {
     const auto *W = dyn_cast<TryFactEntry>(&FactMan[Fact]);
-    if (!W || W->origin() != Exp)
+    if (!W || (W->origin() != Exp &&
+               !(Edge.MergedCall && W->origin() == Edge.MergedCall)))
       continue;
     switch (W->state()) {
     case TryFactEntry::State::Conditional:
@@ -3209,8 +4351,12 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
       break;
     case TryFactEntry::State::ProvedHeld:
       // The hold proved by this call's success: an edge on which the
-      // capability's own attribute reports failure cannot be taken.
-      if (!FactSucceedsHere(*W))
+      // capability's own attribute reports failure cannot be taken -- unless
+      // the edge is ambiguous, where the branched-on value merges the call's
+      // result with a constant. The call having succeeded says nothing about
+      // which of the two the merge holds, so an edge the merge's constant
+      // makes falsy is feasible beside the proved hold.
+      if (!Ambiguous && !FactSucceedsHere(*W))
         Infeasible = true;
       break;
     case TryFactEntry::State::ProvedNotHeld:
@@ -3218,8 +4364,10 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
       // every path here, so an edge on which the capability's own
       // attribute reports success cannot be taken; any other edge is
       // simply consistent with it (attributes carry their own success
-      // values, so the test is per try fact, not per edge).
-      if (FactSucceedsHere(*W))
+      // values, so the test is per try fact, not per edge). An ambiguous
+      // edge cannot be ruled out at all, since it does not prove the call
+      // executed.
+      if (!Ambiguous && FactSucceedsHere(*W))
         Infeasible = true;
       break;
     }
@@ -3235,6 +4383,11 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
     return true;
   for (const TryFactEntry *W : Resolvable) {
     const bool Succeeds = FactSucceedsHere(*W);
+    // An ambiguous edge does not prove the call executed, so it cannot
+    // promote the try fact; it stays as it is, like an unresolved
+    // condition.
+    if (Succeeds && Ambiguous)
+      continue;
     // A released try fact is a stale truth: the success edge resurrects
     // nothing. The failure edge excludes the paths its result was truthy
     // on, so what remains is the failure, recorded as for a conditional
@@ -3346,9 +4499,16 @@ bool ThreadSafetyAnalyzer::getEdgeLockset(FactSet &Result,
   // of the capability refutes the hold (refutesHoldOf()) or a definite fact
   // of the inverse capability does: a negative proves the hold released on
   // every path here, and for a try-release the positive hold means the
-  // release already discharged a level.
+  // release already discharged a level. An ambiguous edge proves no
+  // acquisition either way -- the call may never have executed -- so it
+  // re-materializes nothing, and neither does one whose terminator reached
+  // the call through a short-circuit operand: the path that short-circuited
+  // never ran the call, and the edge does not tell the two apart
+  // (`while (!(i >= n || ok))`, whose `||` is materialized for the `!`, so
+  // both paths leave through the same terminator).
   if (auto MapIt = TryAcquireCapsMap.find(Exp);
-      MapIt != TryAcquireCapsMap.end() && !FactMan.spentTryAcquire(Exp)) {
+      !Ambiguous && !Edge.ShortCircuit && MapIt != TryAcquireCapsMap.end() &&
+      !FactMan.spentTryAcquire(Exp)) {
     for (const TrylockEdgeCap &EC : Edge.Caps) {
       if (EC.Resolution != CapResolution::Success)
         continue;
@@ -4095,8 +5255,10 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     // decoded before the call is walked -- a loop-top `if (ok)` above
     // `ok = mu.TryLock()` -- must not re-materialize a hold for an
     // acquisition that has not happened on the first iteration
-    // (tryheld_retry_with_continue). A fresh execution records afresh.
+    // (tryheld_retry_with_continue). A fresh execution records afresh, and
+    // starts over from whatever spent the previous result.
     TryCaps->TrackedCaps.clear();
+    Analyzer->FactMan.clearSpentTryAcquire(Exp);
     // A scoped object manages the try facts its construction created, and
     // only those, each once whatever its kinds: a capability the construction
     // also acquires definitely is managed by that acquisition, and one whose
@@ -4155,6 +5317,12 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
     case UO_PreDec:
     case UO_PreInc:
       checkAccess(UO->getSubExpr(), AK_Written);
+      // The increment cleared the variable's definition
+      // (VarMapBuilder::VisitUnaryOperator()); consume that context, or the
+      // sequential cursor never reaches it and every later context saved in
+      // this block is unreachable too -- capability translation would stay
+      // frozen at the state before the increment.
+      updateLocalVarMapCtx(UO);
       break;
     default:
       break;
@@ -4462,8 +5630,16 @@ public:
 private:
   /// \name Exemptions
   /// \{
+  /// Whether the joining block's terminator branches on the result of the
+  /// call \p C: the rebranched call, or the second of two identical calls
+  /// whose merged result it branches on (JoinContext::RebranchMergedCall)
+  /// -- the outgoing edges resolve the try facts of either.
+  bool isRebranchedCall(const Expr *C) const {
+    return Ctx.RebranchTryLock &&
+           (C == Ctx.RebranchTryLock || C == Ctx.RebranchMergedCall);
+  }
   bool isTrylockRebranched(const TryFactEntry &W) const {
-    return Ctx.RebranchTryLock && W.origin() == Ctx.RebranchTryLock;
+    return isRebranchedCall(W.origin());
   }
   const TryFactEntry *rebranchProof(const FactSet &Set,
                                     const FactEntry &Def) const;
@@ -4495,6 +5671,13 @@ private:
                        const FactSet &CondSet) const;
   bool conditionalKeptAgainst(const TryFactEntry &W, const FactSet &OtherSet,
                               bool AllowRebranch = true) const;
+  /// The conditional try fact of \p Cap from \p Origin in \p Kind in
+  /// \p Set, if any.
+  const TryFactEntry *condTryFact(const FactSet &Set, const CapabilityExpr &Cap,
+                                  const Expr *Origin, LockKind Kind) const {
+    const TryFactEntry *W = Set.findTryFact(FactMan, Cap, Origin, Kind);
+    return W && W->conditional() ? W : nullptr;
+  }
   /// \}
 
   /// \name Diagnostics
@@ -4544,7 +5727,7 @@ const TryFactEntry *LocksetJoin::rebranchProof(const FactSet &Set,
   if (!Ctx.RebranchTryLock)
     return nullptr;
   return Set.findTryFactIf(FactMan, Def, [&](const TryFactEntry &W) {
-    return W.provedHeld() && W.origin() == Ctx.RebranchTryLock;
+    return W.provedHeld() && isRebranchedCall(W.origin());
   });
 }
 
@@ -4576,8 +5759,9 @@ bool LocksetJoin::isRebranchedInverseHold(const FactSet &OtherSet,
 // is per call.
 bool LocksetJoin::rebranchVetoedByReleased(const FactSet &OtherSet,
                                            const FactEntry &FE) const {
-  return OtherSet.findTryFactFrom(FactMan, FE, Ctx.RebranchTryLock,
-                                  TryFactEntry::State::Released);
+  return OtherSet.findTryFactIf(FactMan, FE, [&](const TryFactEntry &W) {
+    return W.released() && isRebranchedCall(W.origin());
+  });
 }
 
 // Whether a conditional try fact one-sided at the join is carried into the
@@ -4596,14 +5780,22 @@ bool LocksetJoin::conditionalKeptAgainst(const TryFactEntry &W,
 // The mixed join is forgiven when the definite side's extra level was
 // proved by the call the terminator rebranches on and the other side
 // holds that call's conditional try fact: the merged state re-resolves it.
+// Under a rebranch on the merged result of two identical calls, the other
+// side's conditional try fact may be the twin call's: the retry-once idiom
+// `if (!ok) ok = mu.TryLock();` meets the first call's proved hold with
+// the second call's conditional try fact, and the branch on the merged
+// variable resolves either.
 bool LocksetJoin::mixedJoinExempt(const FactSet &DefSet,
                                   const FactEntry &DefSide,
                                   const FactSet &CondSet) const {
   if (!rebranchProof(DefSet, DefSide) || !Ctx.RebranchResolvesAllPaths)
     return false;
-  const TryFactEntry *W = CondSet.findTryFact(
-      FactMan, DefSide, Ctx.RebranchTryLock, DefSide.kind());
-  return W && W->conditional();
+  auto CondOf = [&](const Expr *C) {
+    const TryFactEntry *W =
+        C ? CondSet.findTryFact(FactMan, DefSide, C, DefSide.kind()) : nullptr;
+    return W && W->conditional();
+  };
+  return CondOf(Ctx.RebranchTryLock) || CondOf(Ctx.RebranchMergedCall);
 }
 
 // Warn about a fact the intersection removes (or weakens to conditional).
@@ -4637,15 +5829,19 @@ void LocksetJoin::warnRemovedExitFact(const FactEntry &ExitFact) const {
 void LocksetJoin::warnNeverChecked(const TryFactEntry &W, LockErrorKind LEK) {
   assert(W.conditional() &&
          "only a conditional try fact carries an unchecked result");
+  // Recorded whether or not the diagnostic is enabled: what a join loses
+  // here is a result nothing accounts for, which the merge of two calls'
+  // results must not paper over (FactManager::lostUnchecked()).
+  FactMan.addLostUnchecked(W.origin());
   if (!Handler.issueBetaWarnings() || !W.lossNeedsWarning())
     return;
   // A capability managed by a scoped object is exempt at an interior
   // join, as for the lost-hold diagnostics above: the scoped fact is
   // still live and its destructor discharges the conditional acquisition.
   // Only at the end of the function, where the guard may have escaped its
-  // scope, can the guard fail to check it.
-  assert(LEK != LEK_LockedSomeLoopIterations &&
-         "the exemption at a loop join is the caller's to make");
+  // scope, can the guard fail to check it. (A loop join reaches here now
+  // that the exemption there is narrowed to the results the loop really
+  // checks -- the caller's decision still, joinTryFactFromExit().)
   if (W.managed() && !isEndOfFunctionLEK(LEK))
     return;
   if (!Analyzer.NeverCheckedWarned
@@ -4849,11 +6045,11 @@ void LocksetJoin::joinTryFactPair(FactSet::iterator EntryIt,
 // try-acquire result into the join without its result having been checked --
 // the capability may be leaked, the beta diagnostic. So does one reaching the
 // end of the function, however the expected set holds the capability: nothing
-// after can check it. Loop joins are exempt for now -- a result the code checks
-// on the paths around the loop is not a leak, and telling those apart from a
-// result never checked anywhere takes resolution of stored results, introduced
-// separately. A ProvedHeld try fact is never carried one-sided: the merged
-// hold, if any, is not proved by its call, and the definite join demotes it to
+// after can check it. At a loop join it is a leak only when the result is not
+// branched on anywhere inside the loop (JoinContext::CheckedAroundLoop): the
+// next iteration re-executes the call, or the loop discards the result,
+// unchecked. A ProvedHeld try fact is never carried one-sided: the merged hold,
+// if any, is not proved by its call, and the definite join demotes it to
 // conditional where the rebranch exemption applies.
 void LocksetJoin::joinTryFactFromExit(FactID Fact, const TryFactEntry &ExitW) {
   if (ExitW.released()) {
@@ -4868,17 +6064,47 @@ void LocksetJoin::joinTryFactFromExit(FactID Fact, const TryFactEntry &ExitW) {
   // ProvedNotHeld one proves the failure on its own side only: dropped.
   if (!ExitW.conditional())
     return;
-  // A loop join is exempt for now: the result may be checked on the paths
-  // around the loop, which this join alone cannot see. (A commit above
-  // narrows the exemption to the results the loop really checks.) A loop
-  // join also may not rewrite the entry set, which is why nothing below
-  // runs for one.
-  if (Ctx.isLoopJoin())
+  if (Ctx.isLoopJoin()) {
+    // At a loop join it warns only when the result is not branched on
+    // anywhere inside the loop (CheckedAroundLoop): then the next
+    // iteration re-executes the call (or the loop discards the result)
+    // while this iteration's possible success was never checked -- a
+    // check after the loop sees only the last result and cannot make
+    // this sound. Joins without that information (continue joins, see
+    // runAnalysis()) stay exempt, and so does a try fact the pre-loop
+    // state holds definitely (the depth mismatch is diagnosed instead);
+    // another call's conditional try fact there is no check of this one.
+    if (!EntrySetOrig.findDefinite(FactMan, ExitW) &&
+        !isTrylockRebranched(ExitW) && Ctx.CheckedAroundLoop &&
+        !Ctx.CheckedAroundLoop->count(ExitW.origin()))
+      warnNeverChecked(ExitW, Ctx.EntryLEK);
     return;
+  }
   if (Ctx.EntryLEK == LEK_LockedAtEndOfFunction) {
     warnNeverChecked(ExitW, Ctx.EntryLEK);
     return;
   }
+  // Two structurally identical calls whose merged result the joining
+  // block's terminator branches on (RebranchMergedCall): a side holding one
+  // of them alone holds "the result of that call" either way, so its
+  // try fact folds into the try fact of the call the merge resolves to (the
+  // first path's), which the outgoing edges resolve like a single call's.
+  // A side holding both executed the second call over the first's
+  // unresolved try fact: the variable then holds only the second call's
+  // result, and the first's try fact is left alone, to be reported
+  // unchecked where it is lost.
+  const Expr *Rebranch = Ctx.RebranchTryLock, *Twin = Ctx.RebranchMergedCall;
+  const LockKind Kind = ExitW.kind();
+  if (Twin && ExitW.origin() == Twin &&
+      !condTryFact(ExitSet, ExitW, Rebranch, Kind) &&
+      condTryFact(EntrySetOrig, ExitW, Rebranch, Kind))
+    return;
+  if (Twin && ExitW.origin() == Rebranch &&
+      !condTryFact(ExitSet, ExitW, Twin, Kind) &&
+      !condTryFact(EntrySetOrig, ExitW, Rebranch, Kind))
+    if (const TryFactEntry *TwinW =
+            condTryFact(EntrySetOrig, ExitW, Twin, Kind))
+      EntrySet.removeFact(FactMan, *TwinW);
   if (conditionalKeptAgainst(ExitW, EntrySetOrig)) {
     EntrySet.addLockByID(Fact);
     return;
@@ -4905,12 +6131,30 @@ void LocksetJoin::joinTryFactFromEntry(const TryFactEntry &EntryW) {
   // it, which every join that rewrites the entry set does.
   if (EntryW.released())
     return;
-  // As in joinTryFactFromExit(), a loop join neither reports the loss nor
-  // rewrites the set, so it has nothing to look for here.
-  if (EntryW.conditional() && Ctx.ExitLEK != LEK_LockedSomeLoopIterations) {
+  if (EntryW.conditional()) {
+    // A try fact of the second of two identical calls the terminator's
+    // merged variable resolves (RebranchMergedCall), held alone on this
+    // side, folds into the first call's try fact, kept from the exit side
+    // above.
+    const Expr *Rebranch = Ctx.RebranchTryLock, *Twin = Ctx.RebranchMergedCall;
+    const LockKind Kind = EntryW.kind();
+    if (Twin && Ctx.ExitLEK == LEK_LockedSomePredecessors &&
+        EntryW.origin() == Twin &&
+        !condTryFact(EntrySetOrig, EntryW, Rebranch, Kind) &&
+        condTryFact(ExitSet, EntryW, Rebranch, Kind)) {
+      EntrySet.removeFact(FactMan, EntryW);
+      return;
+    }
     if (conditionalKeptAgainst(EntryW, ExitSet))
       return;
-    warnNeverChecked(EntryW, Ctx.ExitLEK);
+    // (The CheckedAroundLoop narrowing the exit-set side applies is
+    // deliberately not mirrored here: a try fact reaching this arm was
+    // released inside the loop, which is diagnosed at the release itself
+    // unless an assert claimed the hold -- and a loop join leaves the
+    // entry set unmodified, so the try fact is diagnosed again wherever it
+    // is finally lost.)
+    if (Ctx.ExitLEK != LEK_LockedSomeLoopIterations)
+      warnNeverChecked(EntryW, Ctx.ExitLEK);
     // As above: a lost may-be-released try fact leaves its stale result
     // behind, wherever the join keeps such evidence at all -- the same
     // question joinTryFactFromExit() asks, and a property of the join, not
@@ -4999,15 +6243,17 @@ void LocksetJoin::joinDefiniteFromExit(FactID Fact, const FactEntry &ExitFact) {
     // the try-acquire that proved it (or gives it up): demote it to
     // conditionally held without warning, as getEdgeLockset() will re-resolve
     // it on the outgoing edges.
-    if (Ctx.canModify()) {
-      // A rebranch behind a short-circuit does not resolve the result on
-      // the escaping edge: a definite hold weakened here can leak there,
-      // so it is diagnosed at this join after all (the demotion stands,
-      // for the paths that do rebranch).
-      if (!Ctx.RebranchResolvesAllPaths)
-        warnRemovedExitFact(ExitFact);
+    // A rebranch behind a short-circuit does not resolve the result on
+    // the escaping edge: a definite hold weakened here can leak there,
+    // so it is diagnosed at this join after all (the demotion stands,
+    // for the paths that do rebranch). The report does not wait for a
+    // join that may rewrite the set -- a loop condition escapes through a
+    // short circuit exactly as a branch condition does, and its back edge
+    // is where the leak shows.
+    if (!Ctx.RebranchResolvesAllPaths)
+      warnRemovedExitFact(ExitFact);
+    if (Ctx.canModify())
       demoteExitFact(ExitFact, Ctx.EntryLEK);
-    }
     return;
   }
   // The hold is lost on the other path, whether or not the capability is
@@ -5033,13 +6279,12 @@ void LocksetJoin::joinDefiniteFromEntry(const FactEntry &EntryFact) {
     return;
   }
   if (holdDemotable(EntrySetOrig, ExitSet, EntryFact)) {
-    if (Ctx.canModify()) {
-      // As above: an escaping short-circuit edge means the weakened
-      // definite hold is diagnosed at the join after all.
-      if (!Ctx.RebranchResolvesAllPaths)
-        warnRemovedEntryFact(EntryFact);
+    // As above: an escaping short-circuit edge means the weakened
+    // definite hold is diagnosed at the join after all, loop join included.
+    if (!Ctx.RebranchResolvesAllPaths)
+      warnRemovedEntryFact(EntryFact);
+    if (Ctx.canModify())
       demoteEntryFactInPlace(EntryFact, Ctx.ExitLEK);
-    }
     return;
   }
   warnRemovedEntryFact(EntryFact);
@@ -5223,6 +6468,44 @@ ThreadSafetyAnalyzer::TryAcquireCaps *
 ThreadSafetyAnalyzer::recordedTryAcquireCaps(const Expr *Exp) {
   auto It = TryAcquireCapsMap.find(Exp);
   return It == TryAcquireCapsMap.end() ? nullptr : &It->second;
+}
+
+/// Mark every recorded try-acquire call that names \p Cp as spent
+/// (FactManager::spentTryAcquire()): its stored result no longer determines
+/// a level, so no branch on it may re-materialize a hold. The call executing
+/// again clears the mark (handleCall()).
+void ThreadSafetyAnalyzer::spendTryAcquiresOf(const CapabilityExpr &Cp) {
+  for (const auto &[Exp, Caps] : TryAcquireCapsMap)
+    if (Caps.TruthyExclusive.contains(Cp) || Caps.TruthyShared.contains(Cp) ||
+        Caps.FalsyExclusive.contains(Cp) || Caps.FalsyShared.contains(Cp))
+      FactMan.addSpentTryAcquire(Exp);
+}
+
+/// Whether two try-acquire calls are twins: their recorded capabilities
+/// agree group for group, so a variable merging their results holds "the
+/// result of acquiring these capabilities" whichever path assigned it, and
+/// a branch on it resolves the same facts either way. Decided on the
+/// record and not on the syntax, because two calls that read alike can
+/// acquire different capabilities -- `Mutex *p = &m1; ok = p->TryLock();
+/// p = &m2; ok = p->TryLock();` profiles identically on both paths and
+/// resolving the second against the first's capabilities asserts (in a
+/// release build, silently resolves a genuine hold as a failure).
+bool ThreadSafetyAnalyzer::sameTryAcquireCaps(const Expr *A, const Expr *B) {
+  const TryAcquireCaps *CA = recordedTryAcquireCaps(A);
+  const TryAcquireCaps *CB = recordedTryAcquireCaps(B);
+  if (!CA || !CB)
+    return false;
+  auto SameSet = [](const CapExprSet &X, const CapExprSet &Y) {
+    return X.size() == Y.size() &&
+           llvm::all_of(X,
+                        [&](const CapabilityExpr &C) { return Y.contains(C); });
+  };
+  return SameSet(CA->TruthyExclusive, CB->TruthyExclusive) &&
+         SameSet(CA->TruthyShared, CB->TruthyShared) &&
+         SameSet(CA->FalsyExclusive, CB->FalsyExclusive) &&
+         SameSet(CA->FalsyShared, CB->FalsyShared) &&
+         SameSet(CA->UnconditionalExclusive, CB->UnconditionalExclusive) &&
+         SameSet(CA->UnconditionalShared, CB->UnconditionalShared);
 }
 
 ThreadSafetyAnalyzer::TryAcquireCaps &
@@ -5409,6 +6692,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   CFG *CFGraph = walker.getGraph();
   const NamedDecl *D = walker.getDecl();
   CurrentFunction = dyn_cast<FunctionDecl>(D);
+  ASTCtx = &D->getASTContext();
 
   if (D->hasAttr<NoThreadSafetyAnalysisAttr>())
     return;
@@ -5440,7 +6724,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   Initial.Reachable = true;
 
   // Compute SSA names for local variables
-  LocalVarMap.traverseCFG(CFGraph, SortedGraph, BlockInfo);
+  LocalVarMap.traverseCFG(AC, CFGraph, SortedGraph, BlockInfo,
+                          Handler.issueBetaWarnings());
 
   // Fill in source locations for all CFGBlocks.
   findBlockLocations(CFGraph, SortedGraph, BlockInfo);
@@ -5587,11 +6872,14 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     bool LocksetInitialized = false;
     // The branch-join context. Its try-acquire call -- the one whose
     // result the condition starting at this block branches on, if any --
-    // is computed lazily on the first join of sets that carry a try fact
-    // at all.
+    // is computed lazily on the first join where a set carries a try fact
+    // at all. Each incoming set is scanned once as it arrives
+    // (JoinHasTryLockFact accumulates); the entry set itself never gains
+    // try facts from anywhere else.
     JoinContext Ctx{CurrBlockInfo->EntryLoc, LEK_LockedSomePredecessors,
                     LEK_LockedSomePredecessors};
     bool RebranchTryLockComputed = false;
+    bool JoinHasTryLockFact = false;
     auto HasTryLockFact = [this](const FactSet &FS) {
       // Functions without a try-acquire (the common case) record none:
       // skip scanning the fact sets entirely. (A construction records
@@ -5634,6 +6922,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
       if (!LocksetInitialized) {
         CurrBlockInfo->EntrySet = PrevLockset;
+        JoinHasTryLockFact = HasTryLockFact(PrevLockset);
         LocksetInitialized = true;
       } else {
         // Surprisingly 'continue' doesn't always produce back edges, because
@@ -5650,16 +6939,14 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           // edges if the condition branches on that call's result --
           // possibly behind short-circuit blocks of a compound condition
           // like `c && ok`.
-          if (!RebranchTryLockComputed &&
-              (HasTryLockFact(CurrBlockInfo->EntrySet) ||
-               HasTryLockFact(PrevLockset))) {
+          if (!RebranchTryLockComputed && !JoinHasTryLockFact)
+            JoinHasTryLockFact = HasTryLockFact(PrevLockset);
+          if (!RebranchTryLockComputed && JoinHasTryLockFact) {
             // Compute once; the result depends only on CurrBlock, not on *PI.
             // Skipped entirely (the common case) until some try fact reaches
             // this join.
-            const ConditionTrylockCall Call =
-                getConditionTrylockCallExpr(CurrBlock, /*CheckAllPaths=*/true);
-            Ctx.RebranchTryLock = Call.TrylockCall;
-            Ctx.RebranchResolvesAllPaths = Call.ResolvesAllPaths;
+            Ctx.setRebranch(
+                getConditionTrylockCallExpr(CurrBlock, /*CheckAllPaths=*/true));
             RebranchTryLockComputed = true;
           }
           intersectAndWarn(CurrBlockInfo->EntrySet, PrevLockset, Ctx);
@@ -5767,14 +7054,63 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       CFGBlock *FirstLoopBlock = *SI;
       CFGBlockInfo *PreLoop = &BlockInfo[FirstLoopBlock->getBlockID()];
       CFGBlockInfo *LoopEnd = &BlockInfo[CurrBlockID];
+      // A back-edge difference in the holds a try-acquire's try facts prove
+      // is forgiven when the loop condition branches on that call's result
+      // (e.g. a spin loop storing the result), possibly behind
+      // short-circuit blocks of a compound condition: the entry set keeps
+      // the (weaker) pre-loop facts and the condition's outgoing edges
+      // re-resolve the try fact each iteration, so it does not leak around
+      // the loop -- even behind a short-circuit.
       JoinContext Ctx{PreLoop->EntryLoc, LEK_LockedSomeLoopIterations,
                       LEK_LockedSomeLoopIterations};
+      Ctx.setRebranch(
+          getConditionTrylockCallExpr(FirstLoopBlock, /*CheckAllPaths=*/true));
       Ctx.SealedEntry = true;
+      // For the unchecked-result warning: the try-acquire results branched
+      // on inside this back edge's natural loop are (or will be, on the
+      // next iteration) checked around the loop. Results checked only
+      // outside the loop are not: the loop re-executes the call (or
+      // discards the result) unchecked.
+      llvm::SmallPtrSet<const Expr *, 4> CheckedInLoop;
+      if (Handler.issueBetaWarnings() && HasTryLockFact(LoopEnd->ExitSet)) {
+        // The natural loop of this back edge: the head, plus every block
+        // reaching this latch without passing through the head. (All these
+        // blocks precede the latch in the traversal, so their exit contexts
+        // are available for the decode below; on an irreducible CFG the
+        // walk may escape the loop, erring toward suppression.)
+        llvm::SmallPtrSet<const CFGBlock *, 8> LoopBlocks;
+        SmallVector<const CFGBlock *, 8> Worklist;
+        LoopBlocks.insert(FirstLoopBlock);
+        if (LoopBlocks.insert(CurrBlock).second)
+          Worklist.push_back(CurrBlock);
+        while (!Worklist.empty()) {
+          const CFGBlock *B = Worklist.pop_back_val();
+          for (CFGBlock::const_pred_iterator BPI = B->pred_begin(),
+                                             BPE = B->pred_end();
+               BPI != BPE; ++BPI)
+            if (*BPI && LoopBlocks.insert(*BPI).second)
+              Worklist.push_back(*BPI);
+        }
+        // Decode each loop block's terminator now, rather than consulting
+        // what happened to be decoded already: a goto-rotated loop's latch
+        // terminator has not had its forward edges processed yet, and its
+        // check must still count. (The decode is memoized, so blocks whose
+        // edges were already processed cost a cache hit.)
+        for (const CFGBlock *B : LoopBlocks) {
+          TerminatorTrylockCall Checked = getTerminatorTrylockCall(B);
+          if (Checked.TrylockCall)
+            CheckedInLoop.insert(Checked.TrylockCall);
+          // A branch on a merge of two identical calls checks both results.
+          if (Checked.MergedCall)
+            CheckedInLoop.insert(Checked.MergedCall);
+        }
+        Ctx.CheckedAroundLoop = &CheckedInLoop;
+      }
       intersectAndWarn(PreLoop->EntrySet, LoopEnd->ExitSet, Ctx);
-      // A released try fact reaching the loop head on its back edge is
-      // evidence that an iteration may have released the capability its
-      // call acquired: patch it into the sealed exit sets the loop's exit
-      // edges are computed from.
+      // A released try fact or negative fact reaching the loop head on its
+      // back edge is evidence that an iteration may have released the
+      // capability (or failed to re-acquire it): patch it into the sealed
+      // exit sets the loop's exit edges are computed from.
       injectLoopReleasedTryFacts(FirstLoopBlock, CurrBlock, VisitedBlocks);
     }
   }
