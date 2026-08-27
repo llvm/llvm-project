@@ -1005,310 +1005,114 @@ define <4 x i64> @pdep_v4i64(<4 x i64> %val, <4 x i64> %mask) nounwind {
 ;
 
 define <4 x i32> @pdep_v4i32_minsize(<4 x i32> %val, <4 x i32> %mask) nounwind minsize {
-; SLOW-ZNVER-LABEL: pdep_v4i32_minsize:
-; SLOW-ZNVER:       # %bb.0:
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm1, %eax
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm0, %ecx
-; SLOW-ZNVER-NEXT:    vmovd %xmm0, %edx
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm0, %esi
-; SLOW-ZNVER-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-ZNVER-NEXT:    vmovd %xmm1, %ecx
-; SLOW-ZNVER-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm1, %edx
-; SLOW-ZNVER-NEXT:    pdepl %edx, %esi, %edx
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm0, %esi
-; SLOW-ZNVER-NEXT:    vmovd %ecx, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm1, %ecx
-; SLOW-ZNVER-NEXT:    pdepl %ecx, %esi, %ecx
-; SLOW-ZNVER-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm0
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    retq
-;
-; SLOW-BDVER4-LABEL: pdep_v4i32_minsize:
-; SLOW-BDVER4:       # %bb.0:
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm1, %eax
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm0, %ecx
-; SLOW-BDVER4-NEXT:    vmovd %xmm0, %edx
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm0, %esi
-; SLOW-BDVER4-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-BDVER4-NEXT:    vmovd %xmm1, %ecx
-; SLOW-BDVER4-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm1, %edx
-; SLOW-BDVER4-NEXT:    pdepl %edx, %esi, %edx
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm0, %esi
-; SLOW-BDVER4-NEXT:    vmovd %ecx, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm1, %ecx
-; SLOW-BDVER4-NEXT:    pdepl %ecx, %esi, %ecx
-; SLOW-BDVER4-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm0
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; SLOW-BDVER4-NEXT:    retq
-;
-; FAST-LABEL: pdep_v4i32_minsize:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vpextrd $1, %xmm1, %eax
-; FAST-NEXT:    vpextrd $1, %xmm0, %ecx
-; FAST-NEXT:    vmovd %xmm0, %edx
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vmovd %xmm1, %ecx
-; FAST-NEXT:    pdepl %ecx, %edx, %ecx
-; FAST-NEXT:    vmovd %ecx, %xmm2
-; FAST-NEXT:    vpextrd $2, %xmm0, %ecx
-; FAST-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; FAST-NEXT:    vpextrd $2, %xmm1, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpextrd $3, %xmm0, %ecx
-; FAST-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
-; FAST-NEXT:    vpextrd $3, %xmm1, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
-; FAST-NEXT:    retq
+; CHECK-LABEL: pdep_v4i32_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpextrd $1, %xmm1, %eax
+; CHECK-NEXT:    vpextrd $1, %xmm0, %ecx
+; CHECK-NEXT:    vmovd %xmm0, %edx
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vmovd %xmm1, %ecx
+; CHECK-NEXT:    pdepl %ecx, %edx, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm2
+; CHECK-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
+; CHECK-NEXT:    vpextrd $2, %xmm1, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpextrd $3, %xmm0, %ecx
+; CHECK-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; CHECK-NEXT:    vpextrd $3, %xmm1, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
+; CHECK-NEXT:    retq
   %res = call <4 x i32> @llvm.pdep.v4i32(<4 x i32> %val, <4 x i32> %mask)
   ret <4 x i32> %res
 }
 
 define <8 x i32> @pdep_v8i32_minsize(<8 x i32> %val, <8 x i32> %mask) nounwind minsize {
-; SLOW-ZNVER-LABEL: pdep_v8i32_minsize:
-; SLOW-ZNVER:       # %bb.0:
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm0, %r8d
-; SLOW-ZNVER-NEXT:    vmovd %xmm0, %r9d
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm2, %eax
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm3, %ecx
-; SLOW-ZNVER-NEXT:    vmovd %xmm3, %edx
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm3, %esi
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm3, %edi
-; SLOW-ZNVER-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-ZNVER-NEXT:    vmovd %xmm2, %ecx
-; SLOW-ZNVER-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm2, %edx
-; SLOW-ZNVER-NEXT:    pdepl %edx, %esi, %edx
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm2, %esi
-; SLOW-ZNVER-NEXT:    pdepl %esi, %edi, %esi
-; SLOW-ZNVER-NEXT:    vpextrd $1, %xmm1, %edi
-; SLOW-ZNVER-NEXT:    pdepl %edi, %r8d, %edi
-; SLOW-ZNVER-NEXT:    vmovd %xmm1, %r8d
-; SLOW-ZNVER-NEXT:    pdepl %r8d, %r9d, %r8d
-; SLOW-ZNVER-NEXT:    vmovd %ecx, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm0, %ecx
-; SLOW-ZNVER-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrd $2, %xmm1, %eax
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %edx, %xmm2, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm0, %edx
-; SLOW-ZNVER-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-ZNVER-NEXT:    vpextrd $3, %xmm1, %ecx
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %esi, %xmm2, %xmm2
-; SLOW-ZNVER-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-ZNVER-NEXT:    vmovd %r8d, %xmm3
-; SLOW-ZNVER-NEXT:    vpinsrd $1, %edi, %xmm3, %xmm3
-; SLOW-ZNVER-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm0
-; SLOW-ZNVER-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    retq
-;
-; SLOW-BDVER4-LABEL: pdep_v8i32_minsize:
-; SLOW-BDVER4:       # %bb.0:
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm0, %r8d
-; SLOW-BDVER4-NEXT:    vmovd %xmm0, %r9d
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm2, %eax
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm3, %ecx
-; SLOW-BDVER4-NEXT:    vmovd %xmm3, %edx
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm3, %esi
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm3, %edi
-; SLOW-BDVER4-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-BDVER4-NEXT:    vmovd %xmm2, %ecx
-; SLOW-BDVER4-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm2, %edx
-; SLOW-BDVER4-NEXT:    pdepl %edx, %esi, %edx
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm2, %esi
-; SLOW-BDVER4-NEXT:    pdepl %esi, %edi, %esi
-; SLOW-BDVER4-NEXT:    vpextrd $1, %xmm1, %edi
-; SLOW-BDVER4-NEXT:    pdepl %edi, %r8d, %edi
-; SLOW-BDVER4-NEXT:    vmovd %xmm1, %r8d
-; SLOW-BDVER4-NEXT:    pdepl %r8d, %r9d, %r8d
-; SLOW-BDVER4-NEXT:    vmovd %ecx, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm0, %ecx
-; SLOW-BDVER4-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrd $2, %xmm1, %eax
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %edx, %xmm2, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm0, %edx
-; SLOW-BDVER4-NEXT:    pdepl %eax, %ecx, %eax
-; SLOW-BDVER4-NEXT:    vpextrd $3, %xmm1, %ecx
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %esi, %xmm2, %xmm2
-; SLOW-BDVER4-NEXT:    pdepl %ecx, %edx, %ecx
-; SLOW-BDVER4-NEXT:    vmovd %r8d, %xmm3
-; SLOW-BDVER4-NEXT:    vpinsrd $1, %edi, %xmm3, %xmm3
-; SLOW-BDVER4-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm0
-; SLOW-BDVER4-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
-; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; SLOW-BDVER4-NEXT:    retq
-;
-; FAST-LABEL: pdep_v8i32_minsize:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; FAST-NEXT:    vpextrd $1, %xmm2, %eax
-; FAST-NEXT:    vpextrd $1, %xmm3, %ecx
-; FAST-NEXT:    vmovd %xmm3, %edx
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vmovd %xmm2, %ecx
-; FAST-NEXT:    pdepl %ecx, %edx, %ecx
-; FAST-NEXT:    vmovd %xmm0, %edx
-; FAST-NEXT:    vmovd %ecx, %xmm4
-; FAST-NEXT:    vpextrd $2, %xmm3, %ecx
-; FAST-NEXT:    vpinsrd $1, %eax, %xmm4, %xmm4
-; FAST-NEXT:    vpextrd $2, %xmm2, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpextrd $3, %xmm3, %ecx
-; FAST-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; FAST-NEXT:    vpextrd $3, %xmm2, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpextrd $1, %xmm0, %ecx
-; FAST-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
-; FAST-NEXT:    vpextrd $1, %xmm1, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vmovd %xmm1, %ecx
-; FAST-NEXT:    pdepl %ecx, %edx, %ecx
-; FAST-NEXT:    vmovd %ecx, %xmm3
-; FAST-NEXT:    vpextrd $2, %xmm0, %ecx
-; FAST-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; FAST-NEXT:    vpextrd $2, %xmm1, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpextrd $3, %xmm0, %ecx
-; FAST-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; FAST-NEXT:    vpextrd $3, %xmm1, %eax
-; FAST-NEXT:    pdepl %eax, %ecx, %eax
-; FAST-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
-; FAST-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; FAST-NEXT:    retq
+; CHECK-LABEL: pdep_v8i32_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpextrd $1, %xmm2, %eax
+; CHECK-NEXT:    vpextrd $1, %xmm3, %ecx
+; CHECK-NEXT:    vmovd %xmm3, %edx
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vmovd %xmm2, %ecx
+; CHECK-NEXT:    pdepl %ecx, %edx, %ecx
+; CHECK-NEXT:    vmovd %xmm0, %edx
+; CHECK-NEXT:    vmovd %ecx, %xmm4
+; CHECK-NEXT:    vpextrd $2, %xmm3, %ecx
+; CHECK-NEXT:    vpinsrd $1, %eax, %xmm4, %xmm4
+; CHECK-NEXT:    vpextrd $2, %xmm2, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpextrd $3, %xmm3, %ecx
+; CHECK-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
+; CHECK-NEXT:    vpextrd $3, %xmm2, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpextrd $1, %xmm0, %ecx
+; CHECK-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm2
+; CHECK-NEXT:    vpextrd $1, %xmm1, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vmovd %xmm1, %ecx
+; CHECK-NEXT:    pdepl %ecx, %edx, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm3
+; CHECK-NEXT:    vpextrd $2, %xmm0, %ecx
+; CHECK-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; CHECK-NEXT:    vpextrd $2, %xmm1, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpextrd $3, %xmm0, %ecx
+; CHECK-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; CHECK-NEXT:    vpextrd $3, %xmm1, %eax
+; CHECK-NEXT:    pdepl %eax, %ecx, %eax
+; CHECK-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    retq
   %res = call <8 x i32> @llvm.pdep.v8i32(<8 x i32> %val, <8 x i32> %mask)
   ret <8 x i32> %res
 }
 
 define <2 x i64> @pdep_v2i64_minsize(<2 x i64> %val, <2 x i64> %mask) nounwind minsize {
-; SLOW-ZNVER-LABEL: pdep_v2i64_minsize:
-; SLOW-ZNVER:       # %bb.0:
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm1, %rax
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm0, %rcx
-; SLOW-ZNVER-NEXT:    vmovq %xmm1, %rsi
-; SLOW-ZNVER-NEXT:    vmovq %xmm0, %rdx
-; SLOW-ZNVER-NEXT:    pdepq %rax, %rcx, %rax
-; SLOW-ZNVER-NEXT:    pdepq %rsi, %rdx, %rcx
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm0
-; SLOW-ZNVER-NEXT:    vmovq %rcx, %xmm1
-; SLOW-ZNVER-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; SLOW-ZNVER-NEXT:    retq
-;
-; SLOW-BDVER4-LABEL: pdep_v2i64_minsize:
-; SLOW-BDVER4:       # %bb.0:
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm1, %rax
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm0, %rcx
-; SLOW-BDVER4-NEXT:    vmovq %xmm1, %rsi
-; SLOW-BDVER4-NEXT:    vmovq %xmm0, %rdx
-; SLOW-BDVER4-NEXT:    pdepq %rax, %rcx, %rax
-; SLOW-BDVER4-NEXT:    pdepq %rsi, %rdx, %rcx
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm0
-; SLOW-BDVER4-NEXT:    vmovq %rcx, %xmm1
-; SLOW-BDVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; SLOW-BDVER4-NEXT:    retq
-;
-; FAST-LABEL: pdep_v2i64_minsize:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vpextrq $1, %xmm1, %rax
-; FAST-NEXT:    vpextrq $1, %xmm0, %rcx
-; FAST-NEXT:    vmovq %xmm1, %rdx
-; FAST-NEXT:    pdepq %rax, %rcx, %rax
-; FAST-NEXT:    vmovq %xmm0, %rcx
-; FAST-NEXT:    vmovq %rax, %xmm2
-; FAST-NEXT:    pdepq %rdx, %rcx, %rax
-; FAST-NEXT:    vmovq %rax, %xmm0
-; FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; FAST-NEXT:    retq
+; CHECK-LABEL: pdep_v2i64_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpextrq $1, %xmm1, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rcx
+; CHECK-NEXT:    vmovq %xmm1, %rdx
+; CHECK-NEXT:    pdepq %rax, %rcx, %rax
+; CHECK-NEXT:    vmovq %xmm0, %rcx
+; CHECK-NEXT:    vmovq %rax, %xmm2
+; CHECK-NEXT:    pdepq %rdx, %rcx, %rax
+; CHECK-NEXT:    vmovq %rax, %xmm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    retq
   %res = call <2 x i64> @llvm.pdep.v2i64(<2 x i64> %val, <2 x i64> %mask)
   ret <2 x i64> %res
 }
 
 define <4 x i64> @pdep_v4i64_minsize(<4 x i64> %val, <4 x i64> %mask) nounwind minsize {
-; SLOW-ZNVER-LABEL: pdep_v4i64_minsize:
-; SLOW-ZNVER:       # %bb.0:
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; SLOW-ZNVER-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm2, %rax
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm3, %rcx
-; SLOW-ZNVER-NEXT:    vmovq %xmm2, %rsi
-; SLOW-ZNVER-NEXT:    vmovq %xmm3, %rdx
-; SLOW-ZNVER-NEXT:    pdepq %rax, %rcx, %rax
-; SLOW-ZNVER-NEXT:    pdepq %rsi, %rdx, %rcx
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm0, %rdx
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm2
-; SLOW-ZNVER-NEXT:    vpextrq $1, %xmm1, %rax
-; SLOW-ZNVER-NEXT:    vmovq %rcx, %xmm3
-; SLOW-ZNVER-NEXT:    vmovq %xmm0, %rcx
-; SLOW-ZNVER-NEXT:    pdepq %rax, %rdx, %rax
-; SLOW-ZNVER-NEXT:    vmovq %xmm1, %rdx
-; SLOW-ZNVER-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm3
-; SLOW-ZNVER-NEXT:    pdepq %rdx, %rcx, %rax
-; SLOW-ZNVER-NEXT:    vmovq %rax, %xmm0
-; SLOW-ZNVER-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SLOW-ZNVER-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; SLOW-ZNVER-NEXT:    retq
-;
-; SLOW-BDVER4-LABEL: pdep_v4i64_minsize:
-; SLOW-BDVER4:       # %bb.0:
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; SLOW-BDVER4-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm2, %rax
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm3, %rcx
-; SLOW-BDVER4-NEXT:    vmovq %xmm2, %rsi
-; SLOW-BDVER4-NEXT:    vmovq %xmm3, %rdx
-; SLOW-BDVER4-NEXT:    pdepq %rax, %rcx, %rax
-; SLOW-BDVER4-NEXT:    pdepq %rsi, %rdx, %rcx
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm0, %rdx
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm2
-; SLOW-BDVER4-NEXT:    vpextrq $1, %xmm1, %rax
-; SLOW-BDVER4-NEXT:    vmovq %rcx, %xmm3
-; SLOW-BDVER4-NEXT:    vmovq %xmm0, %rcx
-; SLOW-BDVER4-NEXT:    pdepq %rax, %rdx, %rax
-; SLOW-BDVER4-NEXT:    vmovq %xmm1, %rdx
-; SLOW-BDVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm3
-; SLOW-BDVER4-NEXT:    pdepq %rdx, %rcx, %rax
-; SLOW-BDVER4-NEXT:    vmovq %rax, %xmm0
-; SLOW-BDVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SLOW-BDVER4-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; SLOW-BDVER4-NEXT:    retq
-;
-; FAST-LABEL: pdep_v4i64_minsize:
-; FAST:       # %bb.0:
-; FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; FAST-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; FAST-NEXT:    vpextrq $1, %xmm1, %rsi
-; FAST-NEXT:    vpextrq $1, %xmm2, %rax
-; FAST-NEXT:    vpextrq $1, %xmm3, %rcx
-; FAST-NEXT:    vmovq %xmm2, %rdx
-; FAST-NEXT:    pdepq %rax, %rcx, %rax
-; FAST-NEXT:    vmovq %xmm3, %rcx
-; FAST-NEXT:    vmovq %rax, %xmm4
-; FAST-NEXT:    pdepq %rdx, %rcx, %rax
-; FAST-NEXT:    vpextrq $1, %xmm0, %rcx
-; FAST-NEXT:    vmovq %xmm1, %rdx
-; FAST-NEXT:    vmovq %rax, %xmm2
-; FAST-NEXT:    pdepq %rsi, %rcx, %rax
-; FAST-NEXT:    vmovq %xmm0, %rcx
-; FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
-; FAST-NEXT:    vmovq %rax, %xmm3
-; FAST-NEXT:    pdepq %rdx, %rcx, %rax
-; FAST-NEXT:    vmovq %rax, %xmm0
-; FAST-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; FAST-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; FAST-NEXT:    retq
+; CHECK-LABEL: pdep_v4i64_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; CHECK-NEXT:    vpextrq $1, %xmm1, %rsi
+; CHECK-NEXT:    vpextrq $1, %xmm2, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm3, %rcx
+; CHECK-NEXT:    vmovq %xmm2, %rdx
+; CHECK-NEXT:    pdepq %rax, %rcx, %rax
+; CHECK-NEXT:    vmovq %xmm3, %rcx
+; CHECK-NEXT:    vmovq %rax, %xmm4
+; CHECK-NEXT:    pdepq %rdx, %rcx, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rcx
+; CHECK-NEXT:    vmovq %xmm1, %rdx
+; CHECK-NEXT:    vmovq %rax, %xmm2
+; CHECK-NEXT:    pdepq %rsi, %rcx, %rax
+; CHECK-NEXT:    vmovq %xmm0, %rcx
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; CHECK-NEXT:    vmovq %rax, %xmm3
+; CHECK-NEXT:    pdepq %rdx, %rcx, %rax
+; CHECK-NEXT:    vmovq %rax, %xmm0
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    retq
   %res = call <4 x i64> @llvm.pdep.v4i64(<4 x i64> %val, <4 x i64> %mask)
   ret <4 x i64> %res
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
