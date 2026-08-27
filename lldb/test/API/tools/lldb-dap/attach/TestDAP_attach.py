@@ -16,7 +16,7 @@ from lldbsuite.test.tools.lldb_dap.types import (
 )
 
 
-# Often fails on Arm/AArch64 Linux, but not specifically because of the,
+# Often fails on Arm/AArch64 Linux, but not specifically because of the
 # architecture, something in process scheduling can cause a massive (minutes)
 # delay during this test.
 # https://github.com/llvm/llvm-project/issues/137660
