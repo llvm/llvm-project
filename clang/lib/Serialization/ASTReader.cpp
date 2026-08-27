@@ -924,6 +924,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -946,16 +956,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
