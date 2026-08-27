@@ -146,13 +146,13 @@ class TestVarPath(TestBase):
             ("circle_ptr", "Circle *"),
         ]
         for name, expected_type in concrete:
-            for mode in (lldb.eNoDynamicValues, lldb.eDynamicDontRunTarget):
-                val: lldb.SBValue = frame.GetValueForVariablePath(name, mode)
+            for dyn_val in (lldb.eNoDynamicValues, lldb.eDynamicDontRunTarget):
+                val: lldb.SBValue = frame.GetValueForVariablePath(name, dyn_val)
                 self.assertSuccess(val.GetError(), f"Make sure we find {name!r}")
                 self.assertEqual(val.GetTypeName(), expected_type)
 
                 # Test the helper.
-                val: lldb.SBValue = frame.var(name, mode)
+                val: lldb.SBValue = frame.var(name, dyn_val)
                 self.assertTrue(val.GetError().Success(), f"Make sure we find {name!r}")
                 self.assertEqual(val.GetTypeName(), expected_type)
 
