@@ -111,9 +111,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is a packed VOP3P instruction
   field bit IsPacked = 0;
 
-  // This bit indicates that this is a D16 buffer instruction.
-  field bit D16Buf = 0;
-
   // This field indicates that FLAT instruction accesses FLAT_GLBL segment.
   // Must be 0 for non-FLAT instructions.
   field bit FlatGlobal = 0;
@@ -227,8 +224,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{48} = ClampHi;
 
   let TSFlags{49} = IsPacked;
-
-  let TSFlags{50} = D16Buf;
 
   let TSFlags{51} = FlatGlobal;
 

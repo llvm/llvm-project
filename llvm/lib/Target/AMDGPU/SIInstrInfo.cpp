@@ -10708,6 +10708,11 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::SEA_ISLANDS:
     return SIEncodingFamily::SI;
   case AMDGPUSubtarget::VOLCANIC_ISLANDS:
+    // The GFX80 encoding family only contains buffer instructions with unpacked
+    // D16 data; pseudoToMCOpcode falls back on VI for everything else.
+    // TODO: remove this when we discard GFX80 encoding.
+    return ST.hasUnpackedD16VMem() ? SIEncodingFamily::GFX80
+                                   : SIEncodingFamily::VI;
   case AMDGPUSubtarget::GFX9:
     return SIEncodingFamily::VI;
   case AMDGPUSubtarget::GFX10:
@@ -10786,12 +10791,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   if (ST.getGeneration() == AMDGPUSubtarget::GFX9 && isRenamedInGFX9(Opcode))
     Gen = SIEncodingFamily::GFX9;
 
-  // Adjust the encoding family to GFX80 for D16 buffer instructions when the
-  // subtarget has UnpackedD16VMem feature.
-  // TODO: remove this when we discard GFX80 encoding.
-  if (ST.hasUnpackedD16VMem() && SIInstrFlags::isD16Buf(get(Opcode)))
-    Gen = SIEncodingFamily::GFX80;
-
   if (SIInstrFlags::isSDWA(get(Opcode))) {
     switch (ST.getGeneration()) {
     default:
@@ -10813,6 +10812,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  // Only buffer instructions with unpacked D16 data have a GFX80 encoding.
+  // Anything else on such a subtarget uses the plain VI encoding.
+  // TODO: remove this when we discard GFX80 encoding.
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && Gen == SIEncodingFamily::GFX80)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::VI);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX11_7Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);

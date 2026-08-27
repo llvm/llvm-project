@@ -146,9 +146,6 @@ enum : uint64_t {
   // Is a packed VOP3P instruction.
   IsPacked = UINT64_C(1) << 49,
 
-  // Is a D16 buffer instruction.
-  D16Buf = UINT64_C(1) << 50,
-
   // FLAT instruction accesses FLAT_GLBL segment.
   FlatGlobal = UINT64_C(1) << 51,
 
@@ -340,9 +337,6 @@ template <typename... T> constexpr bool hasClampHi(const T &...O) {
 }
 template <typename... T> constexpr bool isPacked(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::IsPacked;
-}
-template <typename... T> constexpr bool isD16Buf(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::D16Buf;
 }
 template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::FlatGlobal;
