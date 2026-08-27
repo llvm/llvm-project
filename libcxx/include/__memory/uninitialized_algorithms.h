@@ -27,10 +27,10 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>

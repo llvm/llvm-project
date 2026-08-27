@@ -6926,7 +6926,7 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   llvm::FoldingSetNodeID ID;
   AutoType::Profile(ID, *this, DK, DeducedAsType, Keyword,
                     TypeConstraintConcept, TypeConstraintArgs);
-  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+  if (auto const AT_iter = AutoTypes.find_as(ID); AT_iter != AutoTypes.end())
     return QualType(AT_iter->getSecond(), 0);
 
   if (DK == DeducedKind::Deduced) {
@@ -6956,7 +6956,7 @@ ASTContext::getAutoType(DeducedKind DK, QualType DeducedAsType,
   assert(InsertedID == ID && "ID does not match");
 #endif
   Types.push_back(AT);
-  AutoTypes.try_emplace(ID, AT);
+  AutoTypes.try_emplace(ID.Intern(BumpAlloc), AT);
   return QualType(AT, 0);
 }
 
@@ -8232,20 +8232,18 @@ QualType ASTContext::getBaseElementType(QualType type) const {
   return getQualifiedType(type, qs);
 }
 
-/// getConstantArrayElementCount - Returns number of constant array elements.
-uint64_t
-ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
+uint64_t ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA) {
   uint64_t ElementCount = 1;
   do {
     ElementCount *= CA->getZExtSize();
-    CA = dyn_cast_or_null<ConstantArrayType>(
-      CA->getElementType()->getAsArrayTypeUnsafe());
+    CA = dyn_cast_if_present<ConstantArrayType>(
+        CA->getElementType()->getAsArrayTypeUnsafe());
   } while (CA);
   return ElementCount;
 }
 
-uint64_t ASTContext::getArrayInitLoopExprElementCount(
-    const ArrayInitLoopExpr *AILE) const {
+uint64_t
+ASTContext::getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) {
   if (!AILE)
     return 0;
 
