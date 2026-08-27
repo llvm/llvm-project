@@ -2406,8 +2406,8 @@ class ClassPat<Instruction inst, ValueType vt> : GCNPat <
 >;
 
 class ClassPat_t16<Instruction inst, ValueType vt> : GCNPat <
-  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask))),
-  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B32_e32 timm:$mask))
+  (i1 (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i16 timm:$mask))),
+  (inst i32:$src0_mods, vt:$src0, SRCMODS.NONE, (V_MOV_B16_t16_e64 0, timm:$mask, 0))
 >;
 
 def : ClassPat<V_CMP_CLASS_F16_e64, f16> {

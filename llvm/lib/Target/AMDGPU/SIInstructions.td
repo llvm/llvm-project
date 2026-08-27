@@ -3161,16 +3161,16 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
-  (V_BFE_I32_e64
+  (EXTRACT_SUBREG (V_BFE_I32_e64
    (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
-   (i32 0), (i32 1))
+   (i32 0), (i32 1)), lo16)
 >;
 
 def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
-  (V_BFE_I32_e64
+  (EXTRACT_SUBREG (V_BFE_I32_e64
    (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
-   (i32 0), (i32 8))
+   (i32 0), (i32 8)) , lo16)
 >;
 }
 
@@ -3742,12 +3742,15 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
-  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001))), lo16)
+  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), 
+        (REG_SEQUENCE VGPR_32, VGPR_16:$a, lo16, (i16 (IMPLICIT_DEF)), hi16),
+        (S_MOV_B32 (i32 0x0c0c0001))), lo16)
 >;
 
 def : GCNPat <
   (i32 (zext (bswap i16:$a))),
-  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+  (V_PERM_B32_e64  (i32 0), (REG_SEQUENCE VGPR_32, $a, lo16, (IMPLICIT_DEF), hi16),
+            (S_MOV_B32 (i32 0x0c0c0001)))
 >;
 }
 
@@ -4000,7 +4003,8 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_16:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_16:$src1))
+  (v2i16 (V_LSHLREV_B32_e64 (i16 16), 
+     (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)))
 >;
 
 def : GCNPat <

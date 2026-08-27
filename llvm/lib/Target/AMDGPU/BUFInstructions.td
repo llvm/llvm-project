@@ -2384,13 +2384,15 @@ let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
-                                        string opcode, ValueType memoryVt = vt> {
+                                        string opcode, ValueType memoryVt = vt, bit isTrue16 = false> {
   defvar st = !if(!eq(memoryVt, vt), name, mtbuf_intrinsic_store<name, memoryVt>);
 
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) 
+      !if(isTrue16, (lo16_to_vgpr32 $vdata), (vt getVregSrcForVT<vt>.ret:$vdata)),
+      SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2398,7 +2400,9 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, timm),
-    (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) 
+      !if(isTrue16, (lo16_to_vgpr32 $vdata), (vt getVregSrcForVT<vt>.ret:$vdata)),
+      VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2406,7 +2410,9 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
-    (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+    (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact)
+      !if(isTrue16, (lo16_to_vgpr32 $vdata), (vt getVregSrcForVT<vt>.ret:$vdata)),
+      VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
@@ -2415,7 +2421,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset),
           timm:$offset, timm:$format, timm:$auxiliary, timm),
     (!cast<MTBUF_Pseudo>(opcode # _BOTHEN_exact)
-      getVregSrcForVT<vt>.ret:$vdata,
+      !if(isTrue16, (lo16_to_vgpr32 $vdata), (vt getVregSrcForVT<vt>.ret:$vdata)),
       (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
       SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, (as_i8timm $format),
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
@@ -2423,11 +2429,11 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
 }
 
 multiclass MTBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
-                                  string opcode, ValueType memoryVt = vt> {
+                                  string opcode, ValueType memoryVt = vt, bit isTrue16 = false> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
-    defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt>;
+    defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode, memoryVt, isTrue16>;
   }
-  defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt>;
+  defm : MTBUF_StoreIntrinsicPat_Common<name, vt, opcode # "_VBUFFER", memoryVt, isTrue16>;
 }
 
 let OtherPredicates = [HasMTBUFInsts] in {
@@ -2457,6 +2463,9 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   foreach vt = Reg16Types.types in {
+    let True16Predicate = UseRealTrue16Insts in
+    defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X", vt, /*isTrue16*/true>;
+    let True16Predicate = NotUseRealTrue16Insts in
     defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, vt, "TBUFFER_STORE_FORMAT_D16_X">;
   }
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X">;
