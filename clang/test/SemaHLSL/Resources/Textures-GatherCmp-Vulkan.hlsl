@@ -1,5 +1,15 @@
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -fsyntax-only -verify -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -fsyntax-only -verify -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -fsyntax-only -verify \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -fsyntax-only -verify \
+// RUN:   -finclude-default-header -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_TYPE=float3 %s
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
 
 TEXTURE<float4> Tex;
 SamplerComparisonState SampCmp;

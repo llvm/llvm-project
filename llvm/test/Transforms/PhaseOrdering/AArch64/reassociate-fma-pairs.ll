@@ -11,52 +11,51 @@ define double @md_vdw_energy(ptr nocapture readonly %coeffs, double %energy, dou
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul fast double [[TABLE_DELTA]], [[TABLE_DELTA]]
 ; CHECK-NEXT:    [[FACTOR_OP_FMUL:%.*]] = fmul fast double [[TMP0]], f0x3FC5555555555555
-; CHECK-NEXT:    [[FACTOR_OP_FMUL5:%.*]] = fmul fast double [[TABLE_DELTA]], -5.000000e-01
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast double [[TABLE_DELTA]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP22]], double [[FACTOR_OP_FMUL]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> <double -2.500000e-01, double poison>, double [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[SCALE]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[FACTOR_OP_FMUL2:%.*]] = fmul fast double [[TABLE_DELTA]], 5.000000e-01
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP5]], double [[FACTOR_OP_FMUL]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double 2.500000e-01, double poison>, double [[TABLE_DELTA]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[SCALE]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ [[ENERGY]], %[[ENTRY]] ], [ [[RESULT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC1:%.*]] = phi double [ [[ENERGY]], %[[ENTRY]] ], [ [[RESULT1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr inbounds [8 x i8], ptr [[COEFFS]], i64 [[I]]
 ; CHECK-NEXT:    [[C0_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 16
 ; CHECK-NEXT:    [[C2_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 32
 ; CHECK-NEXT:    [[C4_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 48
-; CHECK-NEXT:    [[C6_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 64
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr [[BASE]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[C0_PTR]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[C2_PTR]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <2 x double> [[TMP12]], [[TMP9]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x double>, ptr [[C4_PTR]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP14]], [[TMP9]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fsub fast <2 x double> [[TMP15]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[BASE]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[TMP3]], [[TMP11]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load <2 x double>, ptr [[C0_PTR]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = fmul fast <2 x double> [[TMP20]], [[TMP4]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load <2 x double>, ptr [[C2_PTR]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP22]], [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x double>, ptr [[C4_PTR]], align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <2 x double> [[TMP13]], [[TMP4]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <2 x double> [[TMP14]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fsub fast <2 x double> [[TMP14]], [[SHIFT]]
 ; CHECK-NEXT:    [[D2:%.*]] = extractelement <2 x double> [[FOLDEXTEXTBINOP]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x double>, ptr [[C6_PTR]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> [[TMP11]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x double> [[TMP13]], <2 x double> [[TMP11]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP19:%.*]] = fsub fast <2 x double> [[TMP17]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul fast <2 x double> [[TMP19]], [[TMP5]]
-; CHECK-NEXT:    [[T4_REASS_REASS:%.*]] = fmul fast double [[D2]], [[FACTOR_OP_FMUL5]]
-; CHECK-NEXT:    [[S1:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double [[T4_REASS_REASS]], <2 x double> [[TMP20]])
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul fast <2 x double> [[TMP16]], [[TMP9]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP21]], i64 0
-; CHECK-NEXT:    [[D3_NEG:%.*]] = fsub fast double [[ACC]], [[TMP2]]
-; CHECK-NEXT:    [[Q3_NEG_NEG:%.*]] = extractelement <2 x double> [[TMP21]], i64 1
-; CHECK-NEXT:    [[S2_NEG:%.*]] = fadd fast double [[Q3_NEG_NEG]], [[D3_NEG]]
-; CHECK-NEXT:    [[RESULT]] = fadd fast double [[S1]], [[S2_NEG]]
+; CHECK-NEXT:    [[C6_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 64
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> [[TMP21]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> [[TMP21]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP17:%.*]] = fsub fast <2 x double> [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <2 x double> [[TMP17]], [[TMP19]]
+; CHECK-NEXT:    [[T4_REASS:%.*]] = fmul fast double [[D2]], [[FACTOR_OP_FMUL2]]
+; CHECK-NEXT:    [[RESULT:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double [[T4_REASS]], <2 x double> [[TMP18]])
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[C6_PTR]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x double> [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast double [[RESULT]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i64 1
+; CHECK-NEXT:    [[S2_NEG1:%.*]] = fadd fast double [[ACC1]], [[TMP10]]
+; CHECK-NEXT:    [[RESULT1]] = fsub fast double [[S2_NEG1]], [[REASS_ADD]]
 ; CHECK-NEXT:    [[NEXT]] = add nuw i64 [[I]], 10
 ; CHECK-NEXT:    [[DONE_NOT:%.*]] = icmp ult i64 [[NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[DONE_NOT]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    ret double [[RESULT1]]
 ;
 entry:
   br label %loop

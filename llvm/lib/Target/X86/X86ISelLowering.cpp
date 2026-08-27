@@ -481,11 +481,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (Subtarget.hasBMI2()) {
+    bool SlowPDEP = Subtarget.isPDEPSlow();
+    bool SlowPEXT = Subtarget.isPEXTSlow();
     setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i8, Promote);
     setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i16, Promote);
-    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Legal);
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Legal);
+    setOperationAction(ISD::PDEP, MVT::i32, SlowPDEP ? Custom : Legal);
+    setOperationAction(ISD::PEXT, MVT::i32, SlowPEXT ? Custom : Legal);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::PDEP, MVT::i64, SlowPDEP ? Custom : Legal);
+      setOperationAction(ISD::PEXT, MVT::i64, SlowPEXT ? Custom : Legal);
+    }
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
@@ -1776,6 +1781,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
                        MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 })
         setOperationAction(ISD::MGATHER,  VT, Custom);
+
+      // Custom PDEP/PEXT lowering to only scalarize for minsize.
+      if (Subtarget.hasBMI2() && Subtarget.isPDEPSlow())
+        for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64})
+          setOperationAction(ISD::PDEP, VT, Custom);
+
+      if (Subtarget.hasBMI2() && Subtarget.isPEXTSlow())
+        for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64})
+          setOperationAction(ISD::PEXT, VT, Custom);
     }
 
     if (Subtarget.hasGFNI()) {
@@ -33807,6 +33821,23 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   return Result;
 }
 
+static SDValue LowerPDEPPEXT(SDValue Op, const X86Subtarget &Subtarget,
+                             SelectionDAG &DAG) {
+  assert(Subtarget.hasBMI2() && "BMI2 expected for PDEP/PEXT lowering");
+  MVT VT = Op.getSimpleValueType();
+  bool IsMinSize = DAG.getMachineFunction().getFunction().hasMinSize();
+
+  // Always scalarize for minsize builds.
+  if (VT.isVector()) {
+    if (IsMinSize)
+      return DAG.UnrollVectorOp(Op.getNode());
+    return SDValue();
+  }
+
+  assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected PDEP/PEXT type");
+  return Op;
+}
+
 static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -34643,6 +34674,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SHL:                return LowerShift(Op, Subtarget, DAG);
+  case ISD::PDEP:
+  case ISD::PEXT:               return LowerPDEPPEXT(Op, Subtarget, DAG);
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SSUBO:

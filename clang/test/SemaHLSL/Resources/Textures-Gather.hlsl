@@ -1,5 +1,17 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -verify -finclude-default-header -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -fsyntax-only -verify -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -verify -finclude-default-header -DTEXTURE=Texture2D \
+// RUN:   -DOFFSET_TYPE=int2 -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -fsyntax-only -verify -finclude-default-header \
+// RUN:   -DTEXTURE=Texture2DArray -DOFFSET_TYPE=int2 -DCOORD_TYPE=float3 %s
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   OFFSET_TYPE        offset type, one component per resource dimension
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
 
 TEXTURE<float4> Tex;
 SamplerState Samp;
@@ -7,7 +19,7 @@ SamplerComparisonState SampCmp;
 
 void main() {
   COORD_TYPE uv = (COORD_TYPE)0.5;
-  int2 offset = int2(1, 1);
+  OFFSET_TYPE offset = (OFFSET_TYPE)1;
   float compare = 0.5;
 
   // Gather
