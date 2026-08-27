@@ -97,7 +97,7 @@ public:
   void applyCvtF32UByteN(MachineInstr &MI,
                          const CvtF32UByteMatchInfo &MatchInfo) const;
 
-  bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
+  bool matchRemoveFcanonicalize(MachineInstr &MI) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
   // signed buffer load instructions.
@@ -364,11 +364,10 @@ void AMDGPUPostLegalizerCombinerImpl::applyCvtF32UByteN(
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
-    MachineInstr &MI, Register &Reg) const {
+    MachineInstr &MI) const {
   const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
-  Reg = MI.getOperand(1).getReg();
-  return TLI->isCanonicalized(Reg, MF);
+  return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF);
 }
 
 // The buffer_load_{i8, i16} intrinsics are initially lowered as
