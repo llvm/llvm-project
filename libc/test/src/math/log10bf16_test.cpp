@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcLogBf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
+using LlvmLibcLog10Bf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -24,7 +24,7 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcLogBf16Test, PositiveRange) {
+TEST_F(LlvmLibcLog10Bf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
@@ -32,7 +32,7 @@ TEST_F(LlvmLibcLogBf16Test, PositiveRange) {
   }
 }
 
-TEST_F(LlvmLibcLogBf16Test, NegativeRange) {
+TEST_F(LlvmLibcLog10Bf16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,

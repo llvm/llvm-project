@@ -12620,6 +12620,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "log10bf16",
+    additional_deps = [
+        ":__support_math_log10bf16",
+    ],
+)
+
+libc_math_function(
     name = "log10p1f16",
     additional_deps = [
         ":__support_math_log10p1f16",

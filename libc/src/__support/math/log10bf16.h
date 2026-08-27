@@ -107,7 +107,7 @@ LIBC_INLINE bfloat16 log10bf16(bfloat16 x) {
     return x;
   }
 
-  constexpr fputil::ExceptValues<bfloat16, 4> EXPBF16_EXCEPTS = {{
+  constexpr fputil::ExceptValues<bfloat16, 3> EXPBF16_EXCEPTS = {{
       // x = 0x4120 (10.0)
       {0x4120U, 0x3F80U, 0U, 0U, 0U},
       // x = 0x42C8 (100.0)
