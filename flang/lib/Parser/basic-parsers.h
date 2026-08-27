@@ -203,8 +203,8 @@ template <typename PA> class WithMessageParser {
 public:
   using resultType = typename PA::resultType;
   constexpr WithMessageParser(const WithMessageParser &) = default;
-  constexpr WithMessageParser(MessageFixedText t, PA p)
-      : text_{t}, parser_{p} {}
+  constexpr WithMessageParser(MessageFixedText t, PA p, bool atStart = true)
+      : text_{t}, parser_{p}, emitAtStart_{atStart} {}
   std::optional<resultType> Parse(ParseState &state) const {
     if (state.deferMessages()) { // fast path
       std::optional<resultType> result{parser_.Parse(state)};
@@ -230,7 +230,7 @@ public:
       messages.Annex(std::move(state.messages()));
     } else {
       emitMessage = true;
-      emitAtStart = true;
+      emitAtStart = emitAtStart_;
       if (hadAnyTokenMatched) {
         state.set_anyTokenMatched();
       }
@@ -249,11 +249,23 @@ public:
 private:
   const MessageFixedText text_;
   const PA parser_;
+  // When true (the default), a failure that matched no tokens reports the
+  // message at the location where this parser started rather than where it
+  // stopped. Opt out with withMessageAtFailure() where a start-anchored
+  // message would collide with and outrank a more specific diagnostic.
+  const bool emitAtStart_{true};
 };
 
 template <typename PA>
 inline constexpr auto withMessage(MessageFixedText msg, PA parser) {
   return WithMessageParser{msg, parser};
+}
+
+// Like withMessage(), but anchors the overriding message where the parse
+// failed instead of at its start location.
+template <typename PA>
+inline constexpr auto withMessageAtFailure(MessageFixedText msg, PA parser) {
+  return WithMessageParser{msg, parser, /*atStart=*/false};
 }
 
 // If a and b are parsers, then a >> b returns a parser that succeeds when
