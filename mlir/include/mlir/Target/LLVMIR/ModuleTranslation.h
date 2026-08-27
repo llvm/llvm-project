@@ -436,6 +436,10 @@ private:
   /// symbol references (globals, aliases, functions, and ifuncs) can be
   /// resolved.
   LogicalResult convertGlobalMetadata();
+  /// Converts a symbol ref to LLVM IR metadata, or fails if unresolved.
+  FailureOr<llvm::Metadata *>
+  convertSymbolRefToMetadata(FlatSymbolRefAttr name,
+                             function_ref<InFlightDiagnostic()> emitError);
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,
