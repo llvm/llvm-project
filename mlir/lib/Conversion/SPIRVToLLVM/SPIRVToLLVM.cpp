@@ -331,7 +331,7 @@ public:
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     Value zero =
         LLVM::ConstantOp::create(rewriter, op.getLoc(), llvmIndexType,
-                                 rewriter.getIntegerAttr(indexType, 0));
+                                 rewriter.getIntegerAttr(llvmIndexType, 0));
     indices.insert(indices.begin(), zero);
 
     auto elementType = getTypeConverter()->convertType(

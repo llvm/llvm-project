@@ -301,8 +301,18 @@ def CudaHeapAllocPromotion
     allocation pass the pipeline happens to select. The pairs it creates are
     marked fir.must_be_heap, which keeps those passes from moving them back to
     the stack. Without the module attribute the pass does nothing.
+
+    Under mem:unified every host address is device accessible, including the
+    stack, so there the promotion is a placement choice that -fstack-arrays
+    opts out of. Under mem:managed only what the managed allocator hands out
+    is, so the promotion always happens.
   }];
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [
+    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+           "Keep the automatic arrays of mem:unified on the stack, as "
+           "requested by -fstack-arrays.">
+  ];
 }
 
 def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
@@ -781,7 +791,9 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
             clEnumValN(::fir::LICMNestedHoistingMode::None,
                        "none", "Do not hoist from nested regions"),
             clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
-                       "cheap", "Only hoist cheap ops like fir.convert"),
+                       "cheap", "Only hoist cheap ops like fir.convert, "
+                                "fir.address_of, and scalar or descriptor "
+                                "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
            )}]>];

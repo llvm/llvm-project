@@ -3292,29 +3292,29 @@ combiner {
 // CHECK-LABEL: omp_targets_with_map_bounds
 // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr)
 func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> () {
-  // CHECK: %[[C_00:.*]] = llvm.mlir.constant(4 : index) : i64
-  // CHECK: %[[C_01:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : index) : i64
+  // CHECK: %[[C_00:.*]] = llvm.mlir.constant(4 : i64) : i64
+  // CHECK: %[[C_01:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK: %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C_01]] : i64) upper_bound(%[[C_00]] : i64) stride(%[[C_02]] : i64) start_idx(%[[C_03]] : i64)
   // CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) name("") -> !llvm.ptr
-    %0 = llvm.mlir.constant(4 : index) : i64
-    %1 = llvm.mlir.constant(1 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(4 : i64) : i64
+    %1 = llvm.mlir.constant(1 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
+    %3 = llvm.mlir.constant(1 : i64) : i64
     %4 = omp.map.bounds   lower_bound(%1 : i64) upper_bound(%0 : i64) stride(%2 : i64) start_idx(%3 : i64)
 
     %mapv1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%4) name("") -> !llvm.ptr
-  // CHECK: %[[C_10:.*]] = llvm.mlir.constant(9 : index) : i64
-  // CHECK: %[[C_11:.*]] = llvm.mlir.constant(1 : index) : i64
-  // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
-  // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
+  // CHECK: %[[C_10:.*]] = llvm.mlir.constant(9 : i64) : i64
+  // CHECK: %[[C_11:.*]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : i64) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
   // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%[[BOUNDS1]]) name("") -> !llvm.ptr
-    %6 = llvm.mlir.constant(9 : index) : i64
-    %7 = llvm.mlir.constant(1 : index) : i64
-    %8 = llvm.mlir.constant(2 : index) : i64
-    %9 = llvm.mlir.constant(2 : index) : i64
+    %6 = llvm.mlir.constant(9 : i64) : i64
+    %7 = llvm.mlir.constant(1 : i64) : i64
+    %8 = llvm.mlir.constant(2 : i64) : i64
+    %9 = llvm.mlir.constant(2 : i64) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
     %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(storage) capture(ByCopy) mapper(@my_mapper) bounds(%10) name("") -> !llvm.ptr
 

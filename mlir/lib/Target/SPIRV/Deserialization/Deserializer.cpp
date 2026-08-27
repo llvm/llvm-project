@@ -986,7 +986,8 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
-                                          defaultValue);
+                                          defaultValue,
+                                          /*sym_visibility=*/nullptr);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
       setInherentOrDiscardableAttr(op, attr.getName(), attr.getValue());
@@ -2013,7 +2014,7 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
   auto op = spirv::SpecConstantCompositeOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      opBuilder.getArrayAttr(elements));
+      opBuilder.getArrayAttr(elements), /*sym_visibility=*/nullptr);
   specConstCompositeMap[resultID] = op;
 
   return success();
@@ -2047,7 +2048,8 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
       getSpecConstant(operands[2]);
   auto op = spirv::EXTSpecConstantCompositeReplicateOp::create(
       opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
-      SymbolRefAttr::get(constituentSpecConstantOp));
+      SymbolRefAttr::get(constituentSpecConstantOp),
+      /*sym_visibility=*/nullptr);
 
   specConstCompositeReplicateMap[resultID] = op;
 

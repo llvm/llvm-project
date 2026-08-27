@@ -884,6 +884,11 @@ def xor_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 1));
 }]>;
 
+def xor_flag_dead_result : PatFrag<(ops node:$lhs, node:$rhs),
+                                   (X86xor_flag node:$lhs, node:$rhs), [{
+  return SDValue(N, 0).use_empty();
+}]>;
+
 def and_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
                             (X86and_flag node:$lhs, node:$rhs), [{
   return hasNoCarryFlagUses(SDValue(N, 1));

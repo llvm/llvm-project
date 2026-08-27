@@ -6462,7 +6462,21 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         } else if (TrailingZeros == 0 && SavesBytes) {
           // If the mask covers the least significant bit, then we can replace
           // TEST+AND with a SHL and check eflags.
-          // This emits a redundant TEST which is subsequently eliminated.
+          // This emits a redundant TEST which is subsequently eliminated,
+          // except for shift amounts 1 to 3: isDefConvertible() rejects those
+          // SHLs to keep them convertible to LEA, so the TEST would survive.
+          if (LeadingZeros == 1) {
+            // Shift out the top bit by doubling with ADD reg,reg instead: it
+            // is the same length and sets ZF identically, but the peephole
+            // does fold the TEST into it, and it runs on more ports.
+            MachineSDNode *Add = CurDAG->getMachineNode(
+                GET_ND_IF_ENABLED(X86::ADD64rr), dl, MVT::i64, MVT::i32,
+                N0.getOperand(0), N0.getOperand(0));
+            MachineSDNode *Test = CurDAG->getMachineNode(
+                X86::TEST64rr, dl, MVT::i32, SDValue(Add, 0), SDValue(Add, 0));
+            ReplaceNode(Node, Test);
+            return;
+          }
           ShiftOpcode = GET_ND_IF_ENABLED(X86::SHL64ri);
           ShiftAmt = LeadingZeros;
           SubRegIdx = 0;

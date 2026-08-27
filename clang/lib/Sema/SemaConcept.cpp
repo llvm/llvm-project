@@ -269,6 +269,12 @@ public:
     return Result;
   }
 
+  QualType TransformPackIndexingType(TypeLocBuilder &TLB,
+                                     PackIndexingTypeLoc TL) {
+    llvm::SaveAndRestore _1(RemoveNonPackExpansionPacks, false);
+    return inherited::TransformPackIndexingType(TLB, TL);
+  }
+
   bool AlreadyTransformed(QualType T) {
     if (T.isNull())
       return true;
@@ -475,7 +481,8 @@ public:
     return inherited::TraverseStmt(E->getReplacement());
   }
 
-  bool TraverseTemplateName(TemplateName Template) {
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
     if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
             Template.getAsTemplateDecl());
         TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -494,7 +501,7 @@ public:
       UsedTemplateArgs.push_back(
           SemaRef.Context.getCanonicalTemplateArgument(Arg));
     }
-    return inherited::TraverseTemplateName(Template);
+    return inherited::TraverseTemplateName(Template, TraverseQualifier);
   }
 
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
@@ -546,6 +553,30 @@ private:
   UnsignedOrNone getOuterPackIndex(const Constraint &C) const {
     return C.getPackSubstitutionIndex() ? C.getPackSubstitutionIndex()
                                         : PackSubstitutionIndex;
+  }
+
+  StringRef allocateStringFromConceptDiagnostic(const PartialDiagnostic &Diag) {
+    SmallString<128> DiagString;
+    DiagString = ": ";
+    Diag.EmitToString(S.getDiagnostics(), DiagString);
+    return S.getASTContext().backupStr(DiagString);
+  }
+
+  void consumeSFINAEFailure(TemplateDeductionInfo &Info,
+                            ConstraintSatisfaction &Satisfaction) {
+    PartialDiagnosticAt SubstDiag{SourceLocation(),
+                                  PartialDiagnostic::NullDiagnostic()};
+    Info.takeSFINAEDiagnostic(SubstDiag);
+    // FIXME: This is an unfortunate consequence of there
+    //  being no serialization code for PartialDiagnostics and the fact
+    //  that serializing them would likely take a lot more storage than
+    //  just storing them as strings. We would still like, in the
+    //  future, to serialize the proper PartialDiagnostic as serializing
+    //  it as a string defeats the purpose of the diagnostic mechanism.
+    Satisfaction.Details.emplace_back(
+        new (S.Context) ConstraintSubstitutionDiagnostic{
+            SubstDiag.first,
+            allocateStringFromConceptDiagnostic(SubstDiag.second)});
   }
 
   ExprResult
@@ -600,14 +631,6 @@ public:
                       const MultiLevelTemplateArgumentList &MLTAL);
 };
 
-StringRef allocateStringFromConceptDiagnostic(const Sema &S,
-                                              const PartialDiagnostic Diag) {
-  SmallString<128> DiagString;
-  DiagString = ": ";
-  Diag.EmitToString(S.getDiagnostics(), DiagString);
-  return S.getASTContext().backupStr(DiagString);
-}
-
 } // namespace
 
 ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
@@ -646,21 +669,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
         // A non-SFINAE error has occurred as a result of this
         // substitution.
         return ExprError();
-
-      PartialDiagnosticAt SubstDiag{SourceLocation(),
-                                    PartialDiagnostic::NullDiagnostic()};
-      Info.takeSFINAEDiagnostic(SubstDiag);
-      // FIXME: This is an unfortunate consequence of there
-      //  being no serialization code for PartialDiagnostics and the fact
-      //  that serializing them would likely take a lot more storage than
-      //  just storing them as strings. We would still like, in the
-      //  future, to serialize the proper PartialDiagnostic as serializing
-      //  it as a string defeats the purpose of the diagnostic mechanism.
-      Satisfaction.Details.emplace_back(
-          new (S.Context) ConstraintSubstitutionDiagnostic{
-              SubstDiag.first,
-              allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
-      Satisfaction.IsSatisfied = false;
+      consumeSFINAEFailure(Info, Satisfaction);
       return ExprEmpty();
     }
   }
@@ -726,6 +735,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
           SubstArgs)) {
     Satisfaction.IsSatisfied = false;
+    if (Trap.hasErrorOccurred())
+      consumeSFINAEFailure(Info, Satisfaction);
     return std::nullopt;
   }
 
@@ -786,7 +797,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
       SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
-    return ExprEmpty();
+    return ExprError();
   }
 
   // Make sure that concepts are not evaluated in the context they are used,
@@ -820,7 +831,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.Details.emplace_back(
         new (S.Context) ConstraintSubstitutionDiagnostic{
             SubstitutedAtomicExpr.get()->getBeginLoc(),
-            allocateStringFromConceptDiagnostic(S, Msg)});
+            allocateStringFromConceptDiagnostic(Msg)});
     return SubstitutedAtomicExpr;
   }
 
@@ -1026,7 +1037,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
-    // FIXME: diagnostics?
     return ExprError();
   }
 
@@ -1053,23 +1063,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                       OutArgs) ||
              Trap.hasErrorOccurred()) {
     Satisfaction.IsSatisfied = false;
-    if (!Trap.hasErrorOccurred())
-      return ExprError();
-
-    PartialDiagnosticAt SubstDiag{SourceLocation(),
-                                  PartialDiagnostic::NullDiagnostic()};
-    Info.takeSFINAEDiagnostic(SubstDiag);
-    // FIXME: This is an unfortunate consequence of there
-    //  being no serialization code for PartialDiagnostics and the fact
-    //  that serializing them would likely take a lot more storage than
-    //  just storing them as strings. We would still like, in the
-    //  future, to serialize the proper PartialDiagnostic as serializing
-    //  it as a string defeats the purpose of the diagnostic mechanism.
-    Satisfaction.Details.insert(
-        Satisfaction.Details.begin() + Size,
-        new (S.Context) ConstraintSubstitutionDiagnostic{
-            SubstDiag.first,
-            allocateStringFromConceptDiagnostic(S, SubstDiag.second)});
+    if (Trap.hasErrorOccurred())
+      consumeSFINAEFailure(Info, Satisfaction);
     return ExprError();
   }
 
@@ -1297,9 +1292,6 @@ static bool CheckConstraintSatisfaction(
           S.ArgPackSubstIndex, Satisfaction,
           /*BuildExpression=*/ConvertedExpr != nullptr)
           .Evaluate(*C, TemplateArgsLists);
-
-  if (Res.isInvalid())
-    return true;
 
   if (Res.isUsable() && ConvertedExpr)
     *ConvertedExpr = Res.get();
@@ -1719,10 +1711,8 @@ bool Sema::EnsureTemplateArgumentListConstraints(
   llvm::SmallVector<AssociatedConstraint, 3> AssociatedConstraints;
   TD->getAssociatedConstraints(AssociatedConstraints);
   if (CheckConstraintSatisfaction(TD, AssociatedConstraints, TemplateArgsLists,
-                                  TemplateIDRange, Satisfaction))
-    return true;
-
-  if (!Satisfaction.IsSatisfied) {
+                                  TemplateIDRange, Satisfaction) ||
+      !Satisfaction.IsSatisfied) {
     SmallString<128> TemplateArgString;
     TemplateArgString = " ";
     TemplateArgString += getTemplateArgumentBindingsText(
@@ -2015,18 +2005,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
       break;
     }
   } else if (auto *RE = dyn_cast<RequiresExpr>(SubstExpr)) {
-    // FIXME: RequiresExpr should store dependent diagnostics.
-    for (concepts::Requirement *Req : RE->getRequirements())
-      if (!Req->isDependent() && !Req->isSatisfied()) {
-        if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
-          diagnoseUnsatisfiedRequirement(S, E, First);
-        else if (auto *T = dyn_cast<concepts::TypeRequirement>(Req))
-          diagnoseUnsatisfiedRequirement(S, T, First);
-        else
-          diagnoseUnsatisfiedRequirement(
-              S, cast<concepts::NestedRequirement>(Req), First);
-        break;
-      }
+    S.DiagnoseUnsatisfiedRequiresExpr(RE, First);
     return;
   } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(SubstExpr)) {
     // Drill down concept ids treated as atomic constraints
@@ -2069,6 +2048,21 @@ static void diagnoseUnsatisfiedConstraintExpr(
   }
   diagnoseWellFormedUnsatisfiedConstraintExpr(
       S, cast<const class Expr *>(Record), First);
+}
+
+void Sema::DiagnoseUnsatisfiedRequiresExpr(const RequiresExpr *RE, bool First) {
+  // FIXME: RequiresExpr should store dependent diagnostics.
+  for (concepts::Requirement *Req : RE->getRequirements())
+    if (!Req->isDependent() && !Req->isSatisfied()) {
+      if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
+        diagnoseUnsatisfiedRequirement(*this, E, First);
+      else if (auto *T = dyn_cast<concepts::TypeRequirement>(Req))
+        diagnoseUnsatisfiedRequirement(*this, T, First);
+      else
+        diagnoseUnsatisfiedRequirement(
+            *this, cast<concepts::NestedRequirement>(Req), First);
+      break;
+    }
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(

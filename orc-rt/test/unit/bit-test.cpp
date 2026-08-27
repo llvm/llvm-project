@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/bit.h"
+#include "orc-rt/bedrock/bit.h"
 #include "gtest/gtest.h"
 
 #include <cstdint>

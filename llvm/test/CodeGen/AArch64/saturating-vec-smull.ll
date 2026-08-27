@@ -43,10 +43,7 @@ define <4 x i16> @saturating_4xi16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-GI-LABEL: saturating_4xi16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    smull v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    movi v1.4s, #127, msl #8
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #15
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    sqshrn v0.4h, v0.4s, #15
 ; CHECK-GI-NEXT:    ret
   %as = sext <4 x i16> %a to <4 x i32>
   %bs = sext <4 x i16> %b to <4 x i32>
@@ -65,14 +62,10 @@ define <8 x i16> @saturating_8xi16(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: saturating_8xi16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v3.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    smull2 v0.4s, v1.8h, v0.8h
-; CHECK-GI-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-GI-NEXT:    sshr v1.4s, v3.4s, #15
-; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #15
-; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    smull v2.4s, v1.4h, v0.4h
+; CHECK-GI-NEXT:    smull2 v1.4s, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sqshrn v0.4h, v2.4s, #15
+; CHECK-GI-NEXT:    sqshrn2 v0.8h, v1.4s, #15
 ; CHECK-GI-NEXT:    ret
   %as = sext <8 x i16> %a to <8 x i32>
   %bs = sext <8 x i16> %b to <8 x i32>
@@ -92,12 +85,7 @@ define <2 x i32> @saturating_2xi32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-GI-LABEL: saturating_2xi32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    smull v0.2d, v1.2s, v0.2s
-; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #31
-; CHECK-GI-NEXT:    cmgt v2.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    sqshrn v0.2s, v0.2d, #31
 ; CHECK-GI-NEXT:    ret
   %as = sext <2 x i32> %a to <2 x i64>
   %bs = sext <2 x i32> %b to <2 x i64>
@@ -117,16 +105,9 @@ define <4 x i32> @saturating_4xi32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-LABEL: saturating_4xi32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    smull v2.2d, v1.2s, v0.2s
-; CHECK-GI-NEXT:    smull2 v0.2d, v1.4s, v0.4s
-; CHECK-GI-NEXT:    adrp x8, .LCPI4_0
-; CHECK-GI-NEXT:    sshr v1.2d, v2.2d, #31
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #31
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    smull2 v1.2d, v1.4s, v0.4s
+; CHECK-GI-NEXT:    sqshrn v0.2s, v2.2d, #31
+; CHECK-GI-NEXT:    sqshrn2 v0.4s, v1.2d, #31
 ; CHECK-GI-NEXT:    ret
   %as = sext <4 x i32> %a to <4 x i64>
   %bs = sext <4 x i32> %b to <4 x i64>
@@ -147,25 +128,13 @@ define <8 x i32> @saturating_8xi32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-LABEL: saturating_8xi32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    smull v4.2d, v2.2s, v0.2s
-; CHECK-GI-NEXT:    smull2 v0.2d, v2.4s, v0.4s
-; CHECK-GI-NEXT:    adrp x8, .LCPI5_0
-; CHECK-GI-NEXT:    smull v2.2d, v3.2s, v1.2s
-; CHECK-GI-NEXT:    smull2 v1.2d, v3.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI5_0]
-; CHECK-GI-NEXT:    sshr v4.2d, v4.2d, #31
-; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #31
-; CHECK-GI-NEXT:    sshr v2.2d, v2.2d, #31
-; CHECK-GI-NEXT:    sshr v1.2d, v1.2d, #31
-; CHECK-GI-NEXT:    cmgt v5.2d, v3.2d, v4.2d
-; CHECK-GI-NEXT:    cmgt v6.2d, v3.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v7.2d, v3.2d, v2.2d
-; CHECK-GI-NEXT:    cmgt v16.2d, v3.2d, v1.2d
-; CHECK-GI-NEXT:    bif v4.16b, v3.16b, v5.16b
-; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v6.16b
-; CHECK-GI-NEXT:    bif v2.16b, v3.16b, v7.16b
-; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v16.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v4.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    smull v5.2d, v3.2s, v1.2s
+; CHECK-GI-NEXT:    smull2 v2.2d, v2.4s, v0.4s
+; CHECK-GI-NEXT:    smull2 v3.2d, v3.4s, v1.4s
+; CHECK-GI-NEXT:    sqshrn v0.2s, v4.2d, #31
+; CHECK-GI-NEXT:    sqshrn v1.2s, v5.2d, #31
+; CHECK-GI-NEXT:    sqshrn2 v0.4s, v2.2d, #31
+; CHECK-GI-NEXT:    sqshrn2 v1.4s, v3.2d, #31
 ; CHECK-GI-NEXT:    ret
   %as = sext <8 x i32> %a to <8 x i64>
   %bs = sext <8 x i32> %b to <8 x i64>
@@ -217,38 +186,31 @@ define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
 ; CHECK-GI-NEXT:    smov w9, v0.h[0]
 ; CHECK-GI-NEXT:    smov w10, v1.h[1]
 ; CHECK-GI-NEXT:    smov w11, v0.h[1]
-; CHECK-GI-NEXT:    smov w12, v1.h[2]
-; CHECK-GI-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-GI-NEXT:    fmov s3, w8
-; CHECK-GI-NEXT:    fmov s4, w9
-; CHECK-GI-NEXT:    smov w8, v0.h[2]
-; CHECK-GI-NEXT:    smov w9, v1.h[3]
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    smov w8, v1.h[2]
+; CHECK-GI-NEXT:    smov w9, v0.h[2]
+; CHECK-GI-NEXT:    mov v2.s[1], w10
+; CHECK-GI-NEXT:    mov v3.s[1], w11
+; CHECK-GI-NEXT:    smov w10, v1.h[3]
 ; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    mov v3.s[1], w10
-; CHECK-GI-NEXT:    mov v4.s[1], w11
-; CHECK-GI-NEXT:    smov w10, v0.h[3]
+; CHECK-GI-NEXT:    mov v2.s[2], w8
+; CHECK-GI-NEXT:    smov w8, v0.h[3]
+; CHECK-GI-NEXT:    mov v3.s[2], w9
 ; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    mov v3.s[2], w12
-; CHECK-GI-NEXT:    mov v4.s[2], w8
+; CHECK-GI-NEXT:    mov v2.s[3], w10
+; CHECK-GI-NEXT:    mov v3.s[3], w8
 ; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    movi v1.2s, #127, msl #8
-; CHECK-GI-NEXT:    mov v3.s[3], w9
-; CHECK-GI-NEXT:    mov v4.s[3], w10
+; CHECK-GI-NEXT:    mul v2.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #15
-; CHECK-GI-NEXT:    smin v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mul v3.4s, v3.4s, v4.4s
-; CHECK-GI-NEXT:    sshr v3.4s, v3.4s, #15
-; CHECK-GI-NEXT:    smin v2.4s, v3.4s, v2.4s
-; CHECK-GI-NEXT:    mov w8, v2.s[1]
-; CHECK-GI-NEXT:    mov w9, v2.s[2]
-; CHECK-GI-NEXT:    mov w10, v2.s[3]
-; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v2.h[2], w9
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    mov v2.h[3], w10
-; CHECK-GI-NEXT:    mov v2.h[4], w8
-; CHECK-GI-NEXT:    mov v2.h[5], w9
+; CHECK-GI-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    sqshrn v3.4h, v2.4s, #15
+; CHECK-GI-NEXT:    mov v2.h[0], v3.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
+; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
+; CHECK-GI-NEXT:    mov v2.h[3], v3.h[3]
+; CHECK-GI-NEXT:    mov v2.h[4], v0.h[0]
+; CHECK-GI-NEXT:    mov v2.h[5], v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %as = sext <6 x i16> %a to <6 x i32>

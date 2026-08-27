@@ -81,4 +81,25 @@ func.func @dyn_temp(%n: index) {
   return
 }
 
+// Small temporary inside an OpenACC compute construct -> stack, but the
+// allocation must stay inside the construct.
+// CHECK-LABEL: func.func @small_temp_in_acc_parallel
+// CHECK-NOT: fir.alloca
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.alloca !fir.array<10xi32>
+// CHECK-NOT: fir.allocmem
+func.func @small_temp_in_acc_parallel() {
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  acc.parallel {
+    %0 = fir.allocmem !fir.array<10xi32>
+    %r = fir.convert %0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+    %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+    fir.store %v to %e : !fir.ref<i32>
+    fir.freemem %0 : !fir.heap<!fir.array<10xi32>>
+    acc.yield
+  }
+  return
+}
+
 }

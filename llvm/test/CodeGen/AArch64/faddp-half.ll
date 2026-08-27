@@ -5,7 +5,6 @@
 define half @faddp_2xhalf(<2 x half> %a) {
 ; CHECK-LABEL: faddp_2xhalf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
@@ -29,7 +28,6 @@ entry:
 define half @faddp_2xhalf_commute(<2 x half> %a) {
 ; CHECK-LABEL: faddp_2xhalf_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
@@ -53,7 +51,6 @@ entry:
 define half @faddp_4xhalf(<4 x half> %a) {
 ; CHECK-LABEL: faddp_4xhalf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
@@ -77,7 +74,6 @@ entry:
 define half @faddp_4xhalf_commute(<4 x half> %a) {
 ; CHECK-LABEL: faddp_4xhalf_commute:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;

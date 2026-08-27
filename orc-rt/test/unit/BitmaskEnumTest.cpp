@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/BitmaskEnum.h"
+#include "orc-rt/bedrock/BitmaskEnum.h"
 #include "gtest/gtest.h"
 
 #include <string>

@@ -47,6 +47,10 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   // A pseudo target ("generic"/"generic-hsa") that represents no
   // hardware.
   bit IsPseudoTarget = false;
+
+  // An explicit triple subarch spelling (e.g. "12.50"). If unset,
+  // this will be guessed from the device name.
+  string SubArchSpelling;
 }
 
 // An R600 processor that is also a canonical TargetParser GPU.

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/SPSMemoryFlags.h"
+#include "orc-rt/bedrock/SPSMemoryFlags.h"
 
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"

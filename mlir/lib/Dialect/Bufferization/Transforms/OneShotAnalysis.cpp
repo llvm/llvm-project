@@ -89,7 +89,7 @@ constexpr StringLiteral kBbArgAliasSetAttrName = "__bbarg_alias_set_attr__";
 static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   Operation *op = opOperand.getOwner();
   SmallVector<StringRef> inPlaceVector;
-  if (auto attr = op->getAttr(kInPlaceOperandsAttrName)) {
+  if (auto attr = op->getDiscardableAttr(kInPlaceOperandsAttrName)) {
     inPlaceVector = SmallVector<StringRef>(llvm::to_vector<4>(
         cast<ArrayAttr>(attr).getAsValueRange<StringAttr>()));
     // The existing attribute may have fewer entries than the current operand
@@ -104,8 +104,8 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
         inPlaceVector[opOperand.getOperandNumber()] = "false";
   }
   inPlaceVector[opOperand.getOperandNumber()] = inPlace ? "true" : "false";
-  op->setAttr(kInPlaceOperandsAttrName,
-              OpBuilder(op).getStrArrayAttr(inPlaceVector));
+  op->setDiscardableAttr(kInPlaceOperandsAttrName,
+                         OpBuilder(op).getStrArrayAttr(inPlaceVector));
 }
 
 //===----------------------------------------------------------------------===//
@@ -446,21 +446,23 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
       id +
       "[CONFL-WRITE: " + std::to_string(uConflictingWrite->getOperandNumber()) +
       "]";
-  conflictingWritingOp->setAttr(conflictingWriteAttr, b.getUnitAttr());
+  conflictingWritingOp->setDiscardableAttr(conflictingWriteAttr,
+                                           b.getUnitAttr());
 
   std::string readAttr =
       id + "[READ: " + std::to_string(uRead->getOperandNumber()) + "]";
-  readingOp->setAttr(readAttr, b.getUnitAttr());
+  readingOp->setDiscardableAttr(readAttr, b.getUnitAttr());
 
   if (auto opResult = dyn_cast<OpResult>(definition)) {
     std::string defAttr =
         id + "[DEF: result " + std::to_string(opResult.getResultNumber()) + "]";
-    opResult.getDefiningOp()->setAttr(defAttr, b.getUnitAttr());
+    opResult.getDefiningOp()->setDiscardableAttr(defAttr, b.getUnitAttr());
   } else {
     auto bbArg = cast<BlockArgument>(definition);
     std::string defAttr =
         id + "[DEF: bbArg " + std::to_string(bbArg.getArgNumber()) + "]";
-    bbArg.getOwner()->getParentOp()->setAttr(defAttr, b.getUnitAttr());
+    bbArg.getOwner()->getParentOp()->setDiscardableAttr(defAttr,
+                                                        b.getUnitAttr());
   }
 }
 
@@ -908,12 +910,12 @@ static void annotateNonWritableTensor(Value value) {
   if (auto opResult = dyn_cast<OpResult>(value)) {
     std::string attr = id + "[NOT-WRITABLE: result " +
                        std::to_string(opResult.getResultNumber()) + "]";
-    opResult.getDefiningOp()->setAttr(attr, b.getUnitAttr());
+    opResult.getDefiningOp()->setDiscardableAttr(attr, b.getUnitAttr());
   } else {
     auto bbArg = cast<BlockArgument>(value);
     std::string attr = id + "[NOT-WRITABLE: bbArg " +
                        std::to_string(bbArg.getArgNumber()) + "]";
-    bbArg.getOwner()->getParentOp()->setAttr(attr, b.getUnitAttr());
+    bbArg.getOwner()->getParentOp()->setDiscardableAttr(attr, b.getUnitAttr());
   }
 }
 
@@ -1299,7 +1301,8 @@ static void annotateOpsWithAliasSets(Operation *op,
       }
     }
     if (!opResultAliasSets.empty())
-      op->setAttr(kOpResultAliasSetAttrName, b.getArrayAttr(opResultAliasSets));
+      op->setDiscardableAttr(kOpResultAliasSetAttrName,
+                             b.getArrayAttr(opResultAliasSets));
 
     // Build alias set array for every BlockArgument.
     SmallVector<Attribute> regionAliasSets;
@@ -1319,7 +1322,8 @@ static void annotateOpsWithAliasSets(Operation *op,
       regionAliasSets.push_back(b.getArrayAttr(blockAliasSets));
     }
     if (hasTensorBbArg)
-      op->setAttr(kBbArgAliasSetAttrName, b.getArrayAttr(regionAliasSets));
+      op->setDiscardableAttr(kBbArgAliasSetAttrName,
+                             b.getArrayAttr(regionAliasSets));
   });
 }
 

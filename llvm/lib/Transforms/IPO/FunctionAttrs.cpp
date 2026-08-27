@@ -952,7 +952,8 @@ determinePointerAccessAttrs(Argument *A,
       if (isModSet(ArgMR) && !CB->onlyReadsMemory(UseIndex)) {
         Props.IsWrite = true;
         if (CB->isArgOperand(U) && !CB->hasFnAttr(Attribute::NoFree) &&
-            !CB->paramHasAttr(UseIndex, Attribute::NoFree))
+            !CB->paramHasAttr(UseIndex, Attribute::NoFree) &&
+            !CB->paramHasAttr(UseIndex, Attribute::NoFreeObj))
           Props.IsFree = true;
       }
     } else {
@@ -1075,7 +1076,8 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   assert(A && "Argument must not be null.");
 
   bool Changed = false;
-  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree)) {
+  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree) &&
+      !A->hasAttribute(Attribute::NoFreeObj)) {
     ++NumNoFreeArg;
     A->addAttr(Attribute::NoFree);
     Changed = true;

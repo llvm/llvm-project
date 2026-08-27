@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/Compiler.h"
+#include "orc-rt/bedrock/Compiler.h"
 
 #include "gtest/gtest.h"
 

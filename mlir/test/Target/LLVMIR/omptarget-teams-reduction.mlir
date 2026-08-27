@@ -27,9 +27,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %9 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("sum") -> !llvm.ptr
     %10 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("index_") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%9 -> %arg0, %10 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-      %11 = llvm.mlir.constant(0 : index) : i64
-      %12 = llvm.mlir.constant(10000 : index) : i64
-      %13 = llvm.mlir.constant(1 : index) : i64
+      %11 = llvm.mlir.constant(0 : i64) : i64
+      %12 = llvm.mlir.constant(10000 : i64) : i64
+      %13 = llvm.mlir.constant(1 : i64) : i64
       omp.teams reduction(@add_reduction_i32 %arg0 -> %arg2 : !llvm.ptr) {
         %14 = llvm.trunc %13 : i64 to i32
         llvm.br ^bb1(%14, %12 : i32, i64)

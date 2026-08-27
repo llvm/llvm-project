@@ -1914,9 +1914,9 @@ static void emitCommonOMPParallelDirective(
 
   if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
-    NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
+    NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads().front(),
                                     /*IgnoreResultAssign=*/true);
-    Modifier = NumThreadsClause->getModifier();
+    Modifier = NumThreadsClause->getPrescriptivenessModifier();
     if (const auto *MessageClause = S.getSingleClause<OMPMessageClause>()) {
       Message = MessageClause->getMessageString();
       MessageLoc = MessageClause->getBeginLoc();
@@ -2114,7 +2114,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     llvm::Value *NumThreads = nullptr;
     if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>())
-      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads(),
+      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads().front(),
                                   /*IgnoreResultAssign=*/true);
 
     ProcBindKind ProcBind = OMP_PROC_BIND_default;

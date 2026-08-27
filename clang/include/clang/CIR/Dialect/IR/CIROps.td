@@ -3336,6 +3336,7 @@ def CIR_TLSModelAttr: CIR_EnumAttr<CIR_TLSModel, "tls_model"> {
 
 def CIR_GlobalOp : CIR_Op<"global", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  SymbolName, SymbolVisibility,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
 ]> {
@@ -3388,6 +3389,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
+                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -4170,7 +4172,8 @@ def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
 ]>;
 
 def CIR_FuncOp : CIR_Op<"func", [
-  AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
+  FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   HasAtMostOneOfAttrs<["global_ctor_priority", "global_dtor_priority"]>,
   IsolatedFromAbove
@@ -9198,31 +9201,43 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
 // MemChrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+def CIR_MemChrOp : CIR_Op<"libc.memchr",
+    [AllTypesMatch<["src", "result"]>]> {
   let summary = "libc's `memchr`";
   let description = [{
     Search for `pattern` in data range from `src` to `src` + `len`.
     `len` provides a bound to the search in `src`. `result` is a pointer to
     found `pattern` or a null pointer.
 
+    `pattern` has the width of the target int and `len` has the width of
+    the target size_t. The module records these widths as
+    `cir.int_type_width` and `cir.size_type_width`, each a signless i32
+    holding a fundamental integer width, and the verifier checks the
+    operands against them. `src` must be a void pointer in the default
+    address space and `result` has the same type as `src`.
+
     Examples:
 
     ```
-    %p = cir.libc.memchr(%src, %pattern, %len)
+    %p = cir.libc.memchr(%src, %pattern, %len) : !cir.ptr<!void>, !s32i, !u64i
     ```
   }];
 
   let arguments = (ins
     Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
-    CIR_SInt32:$pattern,
-    CIR_UInt64:$len
+    CIR_AnyFundamentalSIntType:$pattern,
+    CIR_AnyFundamentalUIntType:$len
   );
 
   let results = (outs CIR_VoidPtrType:$result);
 
   let assemblyFormat = [{
     `(` $src `,` $pattern `,` $len `)` attr-dict
+    `:` qualified(type($src)) `,` qualified(type($pattern)) `,`
+    qualified(type($len))
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

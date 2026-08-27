@@ -62,7 +62,7 @@
 //       scf.reduce
 //     } {acc.par_dims = #acc<par_dims[thread_x]>}
 //     acc.yield
-//   } {origin = "acc.parallel"}
+//   } <{origin = "acc.parallel"}>
 //
 // After:
 //   gpu.launch blocks(%bidx, %bidy, %bidz) in (%gdimx = %c1, ...)
@@ -193,12 +193,14 @@ getAccRoutineParDim(RoutineOp routineOp, MLIRContext *ctx,
 static RoutineOp getRoutineOpForAccRoutineFunction(FunctionOpInterface funcOp,
                                                    const SymbolTable &symTab) {
   if (isSpecializedAccRoutine(funcOp)) {
-    SpecializedRoutineAttr attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
-        getSpecializedRoutineAttrName());
+    SpecializedRoutineAttr attr =
+        funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
+            getSpecializedRoutineAttrName());
     return symTab.lookup<RoutineOp>(attr.getRoutine().getLeafReference());
   }
   RoutineInfoAttr routineInfo =
-      funcOp->getAttrOfType<RoutineInfoAttr>(getRoutineInfoAttrName());
+      funcOp->getDiscardableAttrOfType<RoutineInfoAttr>(
+          getRoutineInfoAttrName());
   if (!routineInfo || routineInfo.getAccRoutines().empty())
     return nullptr;
   return symTab.lookup<RoutineOp>(
@@ -210,7 +212,7 @@ static GPUParallelDimAttr
 getSpecializedRoutineDim(FunctionOpInterface funcOp,
                          const ACCToGPUMappingPolicy &policy) {
   SpecializedRoutineAttr specAttr =
-      funcOp->getAttrOfType<SpecializedRoutineAttr>(
+      funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
           getSpecializedRoutineAttrName());
   assert(specAttr && "expected specialized routine attribute");
   return policy.map(funcOp->getContext(), specAttr.getLevel().getValue());

@@ -27,7 +27,7 @@ gpu.module @test {
     %offset = arith.constant dense<0> : vector<256xindex>
     %mask = arith.constant dense<1> : vector<256xi1>
     // expected-error@+1 {{Failed to determine required layout for store scatter.}}
-    xegpu.store %val, %dest[%offset], %mask {chunk_size = 1, l1_hint = #xegpu.cache_hint<cached>}
+    xegpu.store %val, %dest[%offset], %mask <{chunk_size = 1, l1_hint = #xegpu.cache_hint<cached>}>
       : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
     gpu.return
   }

@@ -155,6 +155,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  grp
+  ../libc/include/grp.yaml
+  grp.h
+  DEPENDS
+    .llvm-libc-types.struct_group
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.size_t
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   libgen
   ../libc/include/libgen.yaml
   libgen.h
@@ -377,6 +388,8 @@ add_header_macro(
     .llvm-libc-types.tm_gmtoff_t
     .llvm-libc-types.locale_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sigevent
+    .llvm-libc-types.pid_t
 )
 
 add_header_macro(
@@ -772,6 +785,7 @@ add_header_macro(
     .llvm-libc-macros.sys_resource_macros
     .llvm-libc-types.rlim_t
     .llvm-libc-types.struct_rlimit
+    .llvm-libc-types.struct_rusage
 )
 
 add_header_macro(

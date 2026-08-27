@@ -3,17 +3,19 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = conditional_expression ;
+expression = assignment_expression ;
 
-conditional_expression = assignment_expression
-                       | assignment_expression "?" expression ":" expression ;
-
-assignment_expression = logical_or_expression
-                      | logical_or_expression assignment_operator assignment_expression ;
+assignment_expression = conditional_expression
+                      | logical_or_expression assignment_operator pure_expression ;
 
 assignment_operator = "="
                     | "+="
                     | "-=" ;
+
+pure_expression = conditional_expression ;
+
+conditional_expression = logical_or_expression
+                       | logical_or_expression "?" pure_expression ":" pure_expression ;
 
 logical_or_expression = logical_and_expression {"||" logical_and_expression} ;
 
@@ -52,16 +54,16 @@ unary_expression = postfix_expression
 unary_operator = "*" | "&" | "+" | "-" | "~" | "!" ;
 
 postfix_expression = primary_expression
-                   | postfix_expression "[" expression "]"
-                   | postfix_expression "[" expression ":" expression "]"
+                   | postfix_expression "[" pure_expression "]"
+                   | postfix_expression "[" pure_expression ":" pure_expression "]"
                    | postfix_expression "." id_expression
                    | postfix_expression "->" id_expression ;
 
 primary_expression = numeric_literal
                    | boolean_literal
                    | id_expression
-                   | "(" expression ")"
-                   | "sizeof" "(" expression ")"
+                   | "(" pure_expression ")"
+                   | "sizeof" "(" pure_expression ")"
                    | "sizeof" "(" type_id ")" ;
 
 id_expression = unqualified_id

@@ -50,6 +50,13 @@ inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   return builder.getI64Type();
 }
 
+/// Get the block of \p region where alloca-like operations should be inserted:
+/// the block where the closest parent operation owning the stack allocations of
+/// \p region expects them (an OpenACC compute construct, an outlineable OpenMP
+/// operation, a privatization or reduction recipe, ...), or the entry block of
+/// the enclosing function.
+mlir::Block *getAllocaBlock(mlir::Region &region);
+
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
 //===----------------------------------------------------------------------===//

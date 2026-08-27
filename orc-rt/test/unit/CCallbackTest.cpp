@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/CCallback.h"
+#include "orc-rt/bedrock/CCallback.h"
 
 #include "gtest/gtest.h"
 

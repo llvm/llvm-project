@@ -70,12 +70,13 @@ struct MsEmptyMiddle {
 // CIR-DAG: !rec_MsEmptyMiddle = !cir.struct<"MsEmptyMiddle" {bitfield !s32i, empty !s8i, bitfield !s16i}>
 
 // A zero-width bit-field ends the run here too, so the unit after it is a
-// fresh one that has to be marked on its own.
+// fresh one that has to be marked on its own, and the bit-field itself becomes
+// a member.
 struct MsZeroWidthSplit { int a : 3; int : 0; int : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsZeroWidthSplit = !cir.struct<"MsZeroWidthSplit" {bitfield !s32i, empty !s32i}>
+// CIR-DAG: !rec_MsZeroWidthSplit = !cir.struct<"MsZeroWidthSplit" {bitfield !s32i, bitfield !cir.array<!s32i x 0>, empty !s32i}>
 
 struct MsZeroWidthSplit2 { int : 3; int : 0; int b : 3; } __attribute__((ms_struct));
-// CIR-DAG: !rec_MsZeroWidthSplit2 = !cir.struct<"MsZeroWidthSplit2" {empty !s32i, bitfield !s32i}>
+// CIR-DAG: !rec_MsZeroWidthSplit2 = !cir.struct<"MsZeroWidthSplit2" {empty !s32i, bitfield !cir.array<!s32i x 0>, bitfield !s32i}>
 
 union UnnamedBitUnion { int : 8; };
 // CIR-DAG: !rec_UnnamedBitUnion = !cir.union<"UnnamedBitUnion" {empty !u8i}>

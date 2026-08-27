@@ -585,9 +585,9 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
           scf::ForOp::create(rewriter, loc, forOp.getLowerBound(),
                              forOp.getUpperBound(), step, vinit,
                              /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
-      forOpNew->setAttr(
+      forOpNew->setDiscardableAttr(
           LoopEmitter::getLoopEmitterLoopAttrName(),
-          forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
+          forOp->getDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName()));
       rewriter.setInsertionPointToStart(forOpNew.getBody());
     } else {
       rewriter.modifyOpInPlace(forOp, [&]() { forOp.setStep(step); });
@@ -666,7 +666,7 @@ public:
     // sparsifier, which means no data dependence analysis is required,
     // and its loop-body is very restricted in form.
     if (!op.getRegion().hasOneBlock() || !isOneInteger(op.getStep()) ||
-        !op->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName()))
+        !op->hasDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName()))
       return failure();
     // Analyze (!codegen) and rewrite (codegen) loop-body.
     if (vectorizeStmt(rewriter, op, vl, /*codegen=*/false) &&
@@ -683,7 +683,8 @@ static LogicalResult cleanReducChain(PatternRewriter &rewriter, Operation *op,
                                      Value inp) {
   if (auto redOp = inp.getDefiningOp<vector::ReductionOp>()) {
     if (auto forOp = redOp.getVector().getDefiningOp<scf::ForOp>()) {
-      if (forOp->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName())) {
+      if (forOp->hasDiscardableAttr(
+              LoopEmitter::getLoopEmitterLoopAttrName())) {
         rewriter.replaceOp(op, redOp.getVector());
         return success();
       }

@@ -1035,13 +1035,13 @@ func.func @testdataopmodifiers(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>
 }
 
 // CHECK:      func @testdataopmodifiers(%[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>) {
-// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) <{modifiers = #acc<data_clause_modifier zero,capture>}> -> memref<f32>
-// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always,readonly,capture>}> -> memref<f32>
-// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
-// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
-// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always,zero,capture>}>
-// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
-// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
+// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) <modifiers = "zero,capture"> -> memref<f32>
+// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) <modifiers = "always,readonly,capture"> -> memref<f32>
+// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
+// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
+// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) <modifiers = "always,zero,capture">
+// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) <modifiers = "always">
+// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always">
 
 // -----
 

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/IntervalMap.h"
+#include "orc-rt/bedrock/IntervalMap.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

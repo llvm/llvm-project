@@ -344,7 +344,7 @@ private:
       ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                      VecTy, {}, CostKind, 0, nullptr, {});
+                                      VecTy, CostKind, {}, 0, nullptr, {});
     }
 
     // Lowering to a library call (with output pointers) may require us to emit
@@ -580,9 +580,10 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) const override {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind,
+                             Type *AccessType) const override {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind, AccessType);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(
@@ -1216,7 +1217,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
@@ -2047,10 +2048,10 @@ public:
       if (isa<ScalableVectorType>(RetTy))
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
-      return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                     cast<VectorType>(RetTy),
-                                     cast<VectorType>(Args[0]->getType()), {},
-                                     CostKind, Index, cast<VectorType>(RetTy));
+      return thisT()->getShuffleCost(
+          TTI::SK_ExtractSubvector, cast<VectorType>(RetTy),
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
+          cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_insert: {
       // FIXME: Handle case where a scalable vector is inserted into a scalable
@@ -2060,7 +2061,7 @@ public:
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_InsertSubvector, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind, Index,
+          cast<VectorType>(Args[0]->getType()), CostKind, {}, Index,
           cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::vector_splice_left:
@@ -2071,7 +2072,7 @@ public:
       unsigned Index = COffset->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
-          cast<VectorType>(Args[0]->getType()), {}, CostKind,
+          cast<VectorType>(Args[0]->getType()), CostKind, {},
           IID == Intrinsic::vector_splice_left ? Index : -Index,
           cast<VectorType>(RetTy));
     }
@@ -2086,6 +2087,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
@@ -2546,6 +2549,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {
@@ -2560,8 +2565,8 @@ public:
                                           CostKind, 1, nullptr, nullptr);
       Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SearchTy,
                                           CostKind, 0, nullptr, nullptr);
-      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy, {},
-                                      CostKind, 0, nullptr);
+      Cost += thisT()->getShuffleCost(TTI::SK_Broadcast, SearchTy, SearchTy,
+                                      CostKind, {}, 0, nullptr);
       Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, SearchTy, RetTy,
                                           CmpInst::ICMP_EQ, CostKind);
       Cost +=
@@ -2573,8 +2578,8 @@ public:
     }
     case Intrinsic::vector_reverse:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
-                                     cast<VectorType>(ICA.getArgTypes()[0]), {},
-                                     CostKind, 0, cast<VectorType>(RetTy));
+                                     cast<VectorType>(ICA.getArgTypes()[0]),
+                                     CostKind, {}, 0, cast<VectorType>(RetTy));
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
@@ -3339,7 +3344,7 @@ public:
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -3355,7 +3360,7 @@ public:
     // By default reductions need one shuffle per reduction level.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
@@ -3430,7 +3435,7 @@ public:
       auto *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
 
       ShuffleCost += thisT()->getShuffleCost(
-          TTI::SK_ExtractSubvector, SubTy, Ty, {}, CostKind, NumVecElts, SubTy);
+          TTI::SK_ExtractSubvector, SubTy, Ty, CostKind, {}, NumVecElts, SubTy);
 
       IntrinsicCostAttributes Attrs(IID, SubTy, {SubTy, SubTy}, FMF);
       MinMaxCost += getIntrinsicInstrCost(Attrs, CostKind);
@@ -3446,7 +3451,7 @@ public:
     // architecture-dependent length.
     ShuffleCost +=
         NumReduxLevels * thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
-                                                 Ty, {}, CostKind, 0, Ty);
+                                                 Ty, CostKind, {}, 0, Ty);
     IntrinsicCostAttributes Attrs(IID, Ty, {Ty, Ty}, FMF);
     MinMaxCost += NumReduxLevels * getIntrinsicInstrCost(Attrs, CostKind);
     // The last min/max should be in vector registers and we counted it above.

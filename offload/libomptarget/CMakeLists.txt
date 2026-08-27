@@ -52,7 +52,7 @@ target_link_options(omptarget PRIVATE ${offload_link_flags})
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
-                      INSTALL_RPATH "$ORIGIN"
+                      INSTALL_RPATH "${OFFLOAD_INSTALL_RPATH}"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 if(UNIX AND NOT APPLE)
   set_target_properties(omptarget PROPERTIES

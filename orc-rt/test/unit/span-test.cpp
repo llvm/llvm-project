@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/span.h"
+#include "orc-rt/bedrock/span.h"
 #include "gtest/gtest.h"
 
 #include <string>

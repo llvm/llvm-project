@@ -971,6 +971,10 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
                                 lldb::ValueObjectSP rhs, uint32_t location) {
 
+  // Verify that lhs can accept an assignment.
+  if (llvm::Error err = lhs->CanSetValue())
+    return err;
+
   auto all_ok =
       VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
   if (!all_ok)

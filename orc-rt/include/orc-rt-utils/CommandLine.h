@@ -19,8 +19,8 @@
 #include <string_view>
 #include <vector>
 
-#include "orc-rt/Error.h"
-#include "orc-rt/StringExtras.h"
+#include "orc-rt/bedrock/Error.h"
+#include "orc-rt/bedrock/StringExtras.h"
 
 namespace orc_rt {
 namespace detail {

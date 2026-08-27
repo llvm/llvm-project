@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-utils/CommandLine.h"
-#include "orc-rt/Error.h"
+#include "orc-rt/bedrock/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 

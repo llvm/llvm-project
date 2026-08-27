@@ -87,6 +87,9 @@ public:
   ~ProcessProperties() override;
 
   bool GetDisableMemoryCache() const;
+#ifndef NDEBUG
+  bool GetVerifyMemoryReads() const;
+#endif
   uint64_t GetMemoryCacheLineSize() const;
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
@@ -3733,6 +3736,13 @@ protected:
 
 private:
   Status DestroyImpl(bool force_kill);
+
+#ifndef NDEBUG
+  /// Re-read \a size bytes at \a addr and assert they match the cache.
+  void VerifyMemoryRead(lldb::addr_t addr, const void *cache_buf,
+                        size_t cache_bytes_read, size_t size,
+                        const Status &cache_error);
+#endif
 
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to

@@ -177,7 +177,7 @@ SampleProfileWriterExtBinaryBase::markSectionStart(SecType Type,
   assert(LayoutIdx < SectionHdrLayout.size() && "LayoutIdx out of range");
   const auto &Entry = SectionHdrLayout[LayoutIdx];
   assert(Entry.Type == Type && "Unexpected section type");
-  // Use LocalBuf as a temporary output for writting data.
+  // Use LocalBuf as a temporary output for writing data.
   if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress))
     LocalBufStream.swap(OutputStream);
   return SectionStart;
@@ -188,7 +188,7 @@ std::error_code SampleProfileWriterExtBinaryBase::compressAndOutput() {
     return sampleprof_error::zlib_unavailable;
   std::string &UncompressedStrings =
       static_cast<raw_string_ostream *>(LocalBufStream.get())->str();
-  if (UncompressedStrings.size() == 0)
+  if (UncompressedStrings.empty())
     return sampleprof_error::success;
   auto &OS = *OutputStream;
   SmallVector<uint8_t, 128> CompressedStrings;

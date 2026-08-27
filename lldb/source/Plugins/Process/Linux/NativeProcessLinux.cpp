@@ -20,7 +20,6 @@
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -40,8 +39,12 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
-#include <linux/unistd.h>
 #include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <linux/unistd.h>
+#include <sys/ptrace.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -61,6 +64,22 @@
 
 #ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
+#endif
+
+#ifndef PTRACE_SETREGS
+#define PTRACE_SETREGS 13
+#endif
+
+#ifndef PTRACE_SETFPREGS
+#define PTRACE_SETFPREGS 15
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_SETREGSET
+#define PTRACE_SETREGSET 0x4205
 #endif
 
 using namespace lldb;
@@ -131,7 +150,8 @@ static void MaybeLogLaunchInfo(const ProcessLaunchInfo &info) {
 
 static void DisplayBytes(StreamString &s, void *bytes, uint32_t count) {
   uint8_t *ptr = (uint8_t *)bytes;
-  const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+  constexpr uint32_t kDebugPTraceMaxBytes = 20;
+  const uint32_t loop_count = std::min<uint32_t>(kDebugPTraceMaxBytes, count);
   for (uint32_t i = 0; i < loop_count; i++) {
     s.Printf("[%x]", *ptr);
     ptr++;

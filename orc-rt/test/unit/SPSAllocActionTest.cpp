@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/SPSAllocAction.h"
+#include "orc-rt/bedrock/SPSAllocAction.h"
 
-#include "orc-rt/ExecutorAddress.h"
+#include "orc-rt/bedrock/ExecutorAddress.h"
 
 #include "AllocActionTestUtils.h"
 #include "SimplePackedSerializationTestUtils.h"

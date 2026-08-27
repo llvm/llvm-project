@@ -400,10 +400,12 @@ void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
   parser << " ";
   parser.printOperands(op->getOperands());
 
-  NamedAttrList toPrint(op->getAttrs());
+  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
   // remove default NanPropagate attribute
   const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
-  for (auto attr : op->getAttrs()) {
+  for (auto attr : toPrint) {
     if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
       if (nanAttr.getValue() == kDefaultNanValue) {
         // elide from toPrint
@@ -430,12 +432,14 @@ void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
   parser << " ";
   parser.printOperands(op->getOperands());
 
-  if (!op->getAttrs().empty()) {
+  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
+  if (!toPrint.empty()) {
     parser << " {";
-    llvm::interleaveComma(op->getAttrs(), parser,
-                          [&](const NamedAttribute namedAttr) {
-                            printNamedAttr(parser, namedAttr);
-                          });
+    llvm::interleaveComma(toPrint, parser, [&](NamedAttribute attr) {
+      printNamedAttr(parser, attr);
+    });
     parser << "}";
   }
 
@@ -5762,7 +5766,7 @@ void IfOp::print(OpAsmPrinter &p) {
     p.printRegion(elseRegion);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult IfOp::verify() {
@@ -5971,7 +5975,8 @@ void WhileOp::print(OpAsmPrinter &parser) {
   parser.printRegion(getCondGraph(), /*printEntryBlockArgs=*/false);
   parser << " do ";
   parser.printRegion(getBodyGraph());
-  parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+  parser.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 // Create a rank-1 const tensor for zero point of the source tensor.

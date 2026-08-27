@@ -4161,8 +4161,13 @@ namespace {
     }
 
     llvm::SmallPtrSet<QualType, 4> UninitializedBaseClasses;
-    for (const auto &I : RD->bases())
+    for (const auto &I : RD->bases()) {
+      // Virtual bases are initialized from the most derived class, so an
+      // abstract base class constructor can assume it to be initialized.
+      if (I.isVirtual() && RD->isAbstract())
+        continue;
       UninitializedBaseClasses.insert(I.getType().getCanonicalType());
+    }
 
     if (UninitializedFields.empty() && UninitializedBaseClasses.empty())
       return;
@@ -17836,6 +17841,8 @@ static bool UsefulToPrintExpr(const Expr *E) {
 }
 
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
+  // FIXME: Should we also ignore explicit casts?
+  E = E->IgnoreParenImpCasts();
   if (const auto *Op = dyn_cast<BinaryOperator>(E);
       Op && Op->getOpcode() != BO_LOr) {
     const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
@@ -17870,6 +17877,8 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
           << DiagSides[0].ValueString << Op->getOpcodeStr()
           << DiagSides[1].ValueString << Op->getSourceRange();
     }
+  } else if (const auto *RE = dyn_cast<RequiresExpr>(E)) {
+    DiagnoseUnsatisfiedRequiresExpr(RE);
   } else {
     DiagnoseTypeTraitDetails(E);
   }

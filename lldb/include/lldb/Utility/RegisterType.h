@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_REGISTERTYPE_H
 #define LLDB_UTILITY_REGISTERTYPE_H
 
+#include "llvm/ADT/StringRef.h"
+
 #include <cstdint>
 #include <string>
 #include <unordered_set>
@@ -36,10 +38,12 @@ public:
 
   /// Output XML that describes this type, to be inserted into a target XML
   /// file. Reserved characters like "<" are replaced with their XML safe
-  /// equivalents like "&gt;".
-  void ToXML(Stream &strm,
-             std::unordered_set<const RegisterType *> &previously_emitted,
+  /// equivalents like "&lt;".
+  void ToXML(Stream &strm, std::unordered_set<std::string> &previously_emitted,
              const RegisterType *user = nullptr) const;
+
+  /// Print a string escaped for use as an XML attribute value.
+  static void PrintXMLAttributeValue(Stream &strm, llvm::StringRef value);
 
   virtual ~RegisterType() = default;
 

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-c/WrapperFunction.h"
-#include "orc-rt/WrapperFunction.h"
+#include "orc-rt/bedrock/WrapperFunction.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

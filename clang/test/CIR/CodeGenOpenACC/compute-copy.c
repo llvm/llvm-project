@@ -67,23 +67,23 @@ void acc_compute(int parmVar) {
 
 #pragma acc parallel copy(alwaysin: localVar1) copy(alwaysout: localVar2) copy(always: localVar3)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <{modifiers = #acc<data_clause_modifier alwaysin>}> -> !cir.ptr<!s32i> loc
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LOCAL2]] : !cir.ptr<!s16i>) dataClause(acc_copy) name("localVar2") <{modifiers = #acc<data_clause_modifier alwaysout>}> -> !cir.ptr<!s16i> loc
-  // CHECK-NEXT: %[[COPYIN3:.*]] = acc.copyin varPtr(%[[LOCAL3]] : !cir.ptr<!cir.float>) dataClause(acc_copy) name("localVar3") <{modifiers = #acc<data_clause_modifier always>}> -> !cir.ptr<!cir.float> loc
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <modifiers = alwaysin> -> !cir.ptr<!s32i> loc
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LOCAL2]] : !cir.ptr<!s16i>) dataClause(acc_copy) name("localVar2") <modifiers = alwaysout> -> !cir.ptr<!s16i> loc
+  // CHECK-NEXT: %[[COPYIN3:.*]] = acc.copyin varPtr(%[[LOCAL3]] : !cir.ptr<!cir.float>) dataClause(acc_copy) name("localVar3") <modifiers = "always"> -> !cir.ptr<!cir.float> loc
   // CHECK-NEXT: acc.parallel dataOperands(%[[COPYIN1]], %[[COPYIN2]], %[[COPYIN3]] : !cir.ptr<!s32i>, !cir.ptr<!s16i>, !cir.ptr<!cir.float>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN3]] : !cir.ptr<!cir.float>) to varPtr(%[[LOCAL3]] : !cir.ptr<!cir.float>) dataClause(acc_copy) name("localVar3") <{modifiers = #acc<data_clause_modifier always>}> loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s16i>) to varPtr(%[[LOCAL2]] : !cir.ptr<!s16i>) dataClause(acc_copy) name("localVar2") <{modifiers = #acc<data_clause_modifier alwaysout>}> loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <{modifiers = #acc<data_clause_modifier alwaysin>}> loc
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN3]] : !cir.ptr<!cir.float>) to varPtr(%[[LOCAL3]] : !cir.ptr<!cir.float>) dataClause(acc_copy) name("localVar3") <modifiers = "always"> loc
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s16i>) to varPtr(%[[LOCAL2]] : !cir.ptr<!s16i>) dataClause(acc_copy) name("localVar2") <modifiers = alwaysout> loc
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <modifiers = alwaysin> loc
 
 #pragma acc serial copy(always, alwaysin, alwaysout: localVar1)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}> -> !cir.ptr<!s32i> loc
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <modifiers = "always"> -> !cir.ptr<!s32i> loc
   // CHECK-NEXT: acc.serial dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}> loc
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCAL1]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar1") <modifiers = "always"> loc
 
   short *localPointer;
   float localArray[5];
@@ -903,38 +903,38 @@ void modifier_list() {
 
 #pragma acc parallel copy(always:localVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier always>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = "always"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.parallel dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier always>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = "always">
 
 #pragma acc serial copy(alwaysin:localVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier alwaysin>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = alwaysin> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.serial dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier alwaysin>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = alwaysin>
 #pragma acc kernels copy(alwaysout:localVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = alwaysout> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.kernels dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = alwaysout>
 #pragma acc parallel copy(capture:localVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier capture>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = capture> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.parallel dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier capture>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = capture>
 #pragma acc serial copy(capture, always, alwaysin, alwaysout:localVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier always,capture>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = "always,capture"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.serial dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <{modifiers = #acc<data_clause_modifier always,capture>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[LOCALVAR]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("localVar") <modifiers = "always,capture">
 }

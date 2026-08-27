@@ -30,8 +30,8 @@ struct s3 {
     int c : 14;
 } zero_bit;
 
-// CIR-DAG:  !rec_s3 = !cir.struct<"s3" {bitfield !s32i, bitfield !s32i}>
-// LLVM-DAG: %struct.s3 = type { i32, i32 }
+// CIR-DAG:  !rec_s3 = !cir.struct<"s3" {bitfield !s32i, bitfield !cir.array<!s32i x 0>, bitfield !s32i}>
+// LLVM-DAG: %struct.s3 = type { i32, [0 x i8], i32 }
 // OGCG-DAG: %struct.s3 = type { i32, i32 }
 
 #pragma pack (push,1)

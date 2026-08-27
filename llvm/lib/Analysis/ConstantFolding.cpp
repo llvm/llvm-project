@@ -4367,12 +4367,14 @@ static Constant *ConstantFoldFixedVectorCall(
     auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
     if (Op0 && Op1) {
       unsigned Lanes = FVTy->getNumElements();
-      uint64_t Base = Op0->getZExtValue();
-      uint64_t Limit = Op1->getZExtValue();
+      APInt Base = Op0->getValue();
+      APInt Limit = Op1->getValue();
 
       SmallVector<Constant *, 16> NCs;
-      for (unsigned i = 0; i < Lanes; i++) {
-        if (Base + i < Limit)
+      for (unsigned I = 0; I < Lanes; I++) {
+        bool Overflow;
+        if (Base.uadd_ov(APInt(Base.getBitWidth(), I), Overflow).ult(Limit) &&
+            !Overflow)
           NCs.push_back(ConstantInt::getTrue(Ty));
         else
           NCs.push_back(ConstantInt::getFalse(Ty));

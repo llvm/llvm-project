@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/MacroUtils.h"
+#include "orc-rt/bedrock/MacroUtils.h"
 
 #include "gtest/gtest.h"
 

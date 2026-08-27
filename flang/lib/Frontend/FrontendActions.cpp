@@ -278,7 +278,7 @@ bool CodeGenAction::beginSourceFileAction() {
     mlir::omp::setOpenMPVersionAttribute(
         lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
     if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
-      setOpenMPIntegerWrapAround(lb.getModule(), false);
+      mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {

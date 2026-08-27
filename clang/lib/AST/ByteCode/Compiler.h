@@ -346,12 +346,12 @@ protected:
                      bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
-  unsigned allocateLocalPrimitive(DeclOrExpr &&Decl, PrimType Ty, bool IsConst,
+  unsigned allocateLocalPrimitive(DeclOrExpr Decl, PrimType Ty, bool IsConst,
                                   bool IsVolatile = false,
                                   ScopeKind SC = ScopeKind::Block);
 
   /// Allocates a space storing a local given its type.
-  UnsignedOrNone allocateLocal(DeclOrExpr &&Decl, QualType Ty = QualType(),
+  UnsignedOrNone allocateLocal(DeclOrExpr Decl, QualType Ty = QualType(),
                                ScopeKind = ScopeKind::Block);
   UnsignedOrNone allocateTemporary(const Expr *E);
 

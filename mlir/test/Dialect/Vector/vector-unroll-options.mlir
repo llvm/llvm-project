@@ -864,3 +864,27 @@ func.func @deinterleave_2d(%v: vector<4x8xi32>) -> (vector<4x4xi32>, vector<4x4x
 // CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, {{.*}} offsets = [2, 0], strides = [1, 1] : vector<2x4xi32> into vector<4x4xi32>
 // CHECK:   {{.*}} = vector.insert_strided_slice {{.*}}, {{.*}} offsets = [2, 0], strides = [1, 1] : vector<2x4xi32> into vector<4x4xi32>
 // CHECK:   return {{.*}}, {{.*}} : vector<4x4xi32>, vector<4x4xi32>
+
+// -----
+
+// TargetShape [2, 2] has a lower rank than the reduced source <2x2x4>, so it
+// applies to the trailing dimensions and is padded to [1, 2, 2].
+func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: vector<2x2xf32>) -> vector<2x2xf32> {
+  %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [2] : vector<2x2x4xf32> to vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}
+// CHECK-LABEL: func @vector_multi_reduction_rank_mismatch
+//       CHECK:   %[[V0:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf32>
+//       CHECK:   %[[E0:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x4xf32> to vector<1x2x2xf32>
+//       CHECK:   %[[ACC0:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[R0:.*]] = vector.multi_reduction <add>, %[[E0]], %[[ACC0]] [2] : vector<1x2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[E1:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x4xf32> to vector<1x2x2xf32>
+//       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[E1]], %[[R0]] [2] : vector<1x2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[E2:.*]] = vector.extract_strided_slice %{{.*}} offsets = [1, 0, 0], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x4xf32> to vector<1x2x2xf32>
+//       CHECK:   %[[ACC1:.*]] = vector.extract_strided_slice %{{.*}} offsets = [1, 0], sizes = [1, 2], strides = [1, 1] : vector<2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[R2:.*]] = vector.multi_reduction <add>, %[[E2]], %[[ACC1]] [2] : vector<1x2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[E3:.*]] = vector.extract_strided_slice %{{.*}} offsets = [1, 0, 2], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<2x2x4xf32> to vector<1x2x2xf32>
+//       CHECK:   %[[R3:.*]] = vector.multi_reduction <add>, %[[E3]], %[[R2]] [2] : vector<1x2x2xf32> to vector<1x2xf32>
+//       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
+//       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R3]], %[[V1]] offsets = [1, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
+//       CHECK:   return %[[V2]] : vector<2x2xf32>

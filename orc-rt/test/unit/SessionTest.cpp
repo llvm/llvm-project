@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/Session.h"
-#include "orc-rt/QueueingRunner.h"
-#include "orc-rt/SPSWrapperFunction.h"
+#include "orc-rt/bedrock/Session.h"
+#include "orc-rt/bedrock/QueueingRunner.h"
+#include "orc-rt/bedrock/SPSWrapperFunction.h"
 
 #include "orc-rt-c/Session.h"
 

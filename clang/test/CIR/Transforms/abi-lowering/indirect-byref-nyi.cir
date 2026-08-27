@@ -1,0 +1,155 @@
+// RUN: not cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // A record value with no storage behind it: nothing to forward.
+  cir.func @caller_byref_value(%novalue: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    cir.call @takes_big_byref(%novalue) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%novalue)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // A volatile load is an observable access the look-through would delete.
+  cir.func @caller_byref_volatile(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %volatileload = cir.load volatile %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%volatileload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%volatileload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // An atomic load carries ordering the look-through would drop.
+  cir.func @caller_byref_atomic(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %atomicload = cir.load align(8) atomic(seq_cst) %tmp
+        : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%atomicload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%atomicload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Outer = !cir.struct<"Outer" {data !rec_Big}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // A load of a member of an enclosing record is not the temporary the caller
+  // destroys, so it is reported rather than forwarded.
+  cir.func @caller_byref_member(%s: !rec_Outer)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "outer" align(8) : !cir.ptr<!rec_Outer>
+    cir.store %s, %tmp : !rec_Outer, !cir.ptr<!rec_Outer>
+    %member = cir.get_member %tmp[0] {name = "inner"}
+        : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Big>
+    %memberload = cir.load %member : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%memberload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that is not a load of an alloca is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%memberload)
+
+}

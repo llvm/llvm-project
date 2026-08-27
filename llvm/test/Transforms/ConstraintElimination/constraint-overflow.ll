@@ -193,3 +193,25 @@ then:
 else:
   ret i1 false
 }
+
+; The offset of %a is INT64_MIN. Negating it overflows, so no constraint can
+; be built for the assume. Make sure %r is not folded to true.
+define i1 @constraint_offset_negation_overflow(i64 %x) {
+; CHECK-LABEL: define i1 @constraint_offset_negation_overflow(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A0:%.*]] = add nsw i64 [[X]], -9223372036854775807
+; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[A0]], -1
+; CHECK-NEXT:    [[A_NONPOS:%.*]] = icmp sle i64 [[A]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NONPOS]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %a0 = add nsw i64 %x, -9223372036854775807
+  %a = add nsw i64 %a0, -1
+  %a.nonpos = icmp sle i64 %a, 0
+  call void @llvm.assume(i1 %a.nonpos)
+  %r = icmp slt i64 %x, 0
+  ret i1 %r
+}

@@ -65,96 +65,96 @@ void acc_combined(int parmVar) {
 
 #pragma acc serial loop copyin(capture: parmVar) copyin(always: localVar1)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "always"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[COPYIN1]], %[[COPYIN2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.loop combined(serial) {
   // CHECK: acc.yield
   // CHECK-NEXT: } seq loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}>
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <modifiers = "always">
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = capture>
 
 #pragma acc kernels loop copyout(capture: parmVar) copyout(always: localVar1)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("localVar1") <modifiers = "always"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[CREATE1]], %[[CREATE2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.loop combined(kernels) {
   // CHECK: acc.yield
   // CHECK-NEXT: } auto_ loc
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier always>}>
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "always">
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture>
 
 #pragma acc parallel loop create(capture: parmVar)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.loop combined(parallel) {
   // CHECK: acc.yield
   // CHECK-NEXT: } independent loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <{modifiers = #acc<data_clause_modifier capture>}>
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = capture>
 
 #pragma acc serial loop copyin(capture, always: parmVar, localVar1)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier always,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier always,capture>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "always,capture"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[COPYIN1]], %[[COPYIN2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.loop combined(serial) {
   // CHECK: acc.yield
   // CHECK-NEXT: } seq loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <{modifiers = #acc<data_clause_modifier always,capture>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <{modifiers = #acc<data_clause_modifier always,capture>}>
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <modifiers = "always,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = "always,capture">
 
 #pragma acc kernels loop copyin(readonly, always, alwaysin, capture: parmVar, localVar1, localVar2)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN3:.*]] = acc.copyin varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}> -> !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always,readonly,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "always,readonly,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN3:.*]] = acc.copyin varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <modifiers = "always,readonly,capture"> -> !cir.ptr<!cir.float>
   // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[COPYIN1]], %[[COPYIN2]], %[[COPYIN3]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!cir.float>) {
   // CHECK-NEXT: acc.loop combined(kernels) {
   // CHECK: acc.yield
   // CHECK-NEXT: } auto_ loc
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN3]] : !cir.ptr<!cir.float>) dataClause(acc_copyin) name("localVar2") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <{modifiers = #acc<data_clause_modifier always,readonly,capture>}>
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN3]] : !cir.ptr<!cir.float>) dataClause(acc_copyin) name("localVar2") <modifiers = "always,readonly,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("localVar1") <modifiers = "always,readonly,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = "always,readonly,capture">
 
 #pragma acc parallel loop copyout(zero, always, alwaysout, capture: parmVar, localVar1, localVar2)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <{modifiers = #acc<data_clause_modifier always,zero,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("localVar1") <{modifiers = #acc<data_clause_modifier always,zero,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE3:.*]] = acc.create varPtr(%[[LV2]] : !cir.ptr<!cir.float>) dataClause(acc_copyout) name("localVar2") <{modifiers = #acc<data_clause_modifier always,zero,capture>}> -> !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = "always,zero,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("localVar1") <modifiers = "always,zero,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE3:.*]] = acc.create varPtr(%[[LV2]] : !cir.ptr<!cir.float>) dataClause(acc_copyout) name("localVar2") <modifiers = "always,zero,capture"> -> !cir.ptr<!cir.float>
   // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[CREATE1]], %[[CREATE2]], %[[CREATE3]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!cir.float>) {
   // CHECK-NEXT: acc.loop combined(parallel) {
   // CHECK: acc.yield
   // CHECK-NEXT: } independent loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE3]] : !cir.ptr<!cir.float>) to varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <{modifiers = #acc<data_clause_modifier always,zero,capture>}>
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier always,zero,capture>}>
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier always,zero,capture>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE3]] : !cir.ptr<!cir.float>) to varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <modifiers = "always,zero,capture">
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "always,zero,capture">
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always,zero,capture">
 
 #pragma acc serial loop create(zero, capture: parmVar, localVar1, localVar2)
   for(int i = 0; i < 5; ++i);
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <{modifiers = #acc<data_clause_modifier zero,capture>}> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE3:.*]] = acc.create varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <{modifiers = #acc<data_clause_modifier zero,capture>}> -> !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "zero,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[LV1]] : !cir.ptr<!s32i>) name("localVar1") <modifiers = "zero,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE3:.*]] = acc.create varPtr(%[[LV2]] : !cir.ptr<!cir.float>) name("localVar2") <modifiers = "zero,capture"> -> !cir.ptr<!cir.float>
   // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[CREATE1]], %[[CREATE2]], %[[CREATE3]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>, !cir.ptr<!cir.float>) {
   // CHECK-NEXT: acc.loop combined(serial) {
   // CHECK: acc.yield
   // CHECK-NEXT: } seq loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE3]] : !cir.ptr<!cir.float>) dataClause(acc_create) name("localVar2") <{modifiers = #acc<data_clause_modifier zero,capture>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) dataClause(acc_create) name("localVar1") <{modifiers = #acc<data_clause_modifier zero,capture>}>
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,capture>}>
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE3]] : !cir.ptr<!cir.float>) dataClause(acc_create) name("localVar2") <modifiers = "zero,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) dataClause(acc_create) name("localVar1") <modifiers = "zero,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = "zero,capture">
 }

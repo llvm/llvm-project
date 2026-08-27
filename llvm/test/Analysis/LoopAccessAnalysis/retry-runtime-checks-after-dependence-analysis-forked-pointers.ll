@@ -246,3 +246,43 @@ loop:
 exit:
   ret void
 }
+
+; The bounds of the second pointer of the forked store cannot be computed: the
+; step direction is unknown and evaluating at the symbolic max BTC may wrap. The
+; store must not be inserted partially.
+define void @forked_ptr_with_uncomputable_bounds(ptr %P, ptr %S, i32 %step.a, i32 %step.b, i1 %c) {
+; CHECK-LABEL: 'forked_ptr_with_uncomputable_bounds'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %l = load i32, ptr %S, align 4 ->
+; CHECK-NEXT:            store i32 %l, ptr %select, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %step = add i32 %step.a, %step.b
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S, align 4
+  %select = select i1 %c, ptr %S, ptr %ptr.iv
+  store i32 %l, ptr %select, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 %step
+  %iv.next = add nsw i32 %iv, 1
+  %ec = icmp slt i32 %iv.next, %l
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}

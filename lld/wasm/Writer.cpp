@@ -1091,8 +1091,13 @@ void Writer::allocateCommonSymbols() {
   uint32_t alignLog2 = 0;
 
   for (CommonSymbol *c : commons) {
+    assert(c->getAlignment() <= 32);
     alignLog2 = std::max(alignLog2, c->getAlignment());
     size = alignTo(size, 1ULL << c->getAlignment());
+    if (size > UINT32_MAX || c->getSize() > UINT32_MAX - size) {
+      error("common symbols section size overflow");
+      return;
+    }
     size += c->getSize();
   }
 

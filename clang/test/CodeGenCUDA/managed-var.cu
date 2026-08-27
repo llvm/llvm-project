@@ -161,6 +161,24 @@ __device__ __host__ int load4() {
   return ex;
 }
 
+namespace gh198079 {
+__managed__ int x = 0;
+
+struct S {
+  int *p;
+};
+
+__device__ __host__ void f() {
+  S s{&x};
+}
+// COMMON-LABEL: define {{.*}}@{{.*}}gh198079{{.*}}f{{.*}}()
+// DEV: %ld.managed = load ptr addrspace(1), ptr addrspace(1) @_ZN8gh1980791xE, align 4
+// DEV: %0 = addrspacecast ptr addrspace(1) %ld.managed to ptr
+// DEV: store ptr %0, ptr %p
+// HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE, align 4
+// HOST: store ptr %ld.managed, ptr %p
+}
+
 // HOST-DAG: __hipRegisterManagedVar({{.*}}, ptr @x, ptr @x.managed, ptr @[[DEVNAMEX]], i64 4, i32 4)
 // HOST-DAG: __hipRegisterManagedVar({{.*}}, ptr @_ZL2sx, ptr @_ZL2sx.managed, ptr @[[DEVNAMESX]]
 // HOST-NOT: __hipRegisterManagedVar({{.*}}, ptr @ex, ptr @ex.managed

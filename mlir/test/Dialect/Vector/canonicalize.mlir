@@ -3853,9 +3853,9 @@ func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
 // CHECK-NEXT:    return %[[CST]] : vector<3xi64>
 func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
-  %cst0 = llvm.mlir.constant(0 : index) : i64
-  %cst1 = llvm.mlir.constant(1 : index) : i64
-  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %cst0 = llvm.mlir.constant(0 : i64) : i64
+  %cst1 = llvm.mlir.constant(1 : i64) : i64
+  %cst42 = llvm.mlir.constant(42 : i64) : i64
   %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
   return %v : vector<3xi64>
 }

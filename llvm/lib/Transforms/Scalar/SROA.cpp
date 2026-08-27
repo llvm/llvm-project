@@ -1612,7 +1612,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize, DL, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize,
+                                    SimplifyQuery(DL, TI)))
       continue;
 
     return false;
@@ -1708,8 +1709,8 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
 
   const DataLayout &DL = SI.getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
-    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
-                                    &LI))
+    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(),
+                                    SimplifyQuery(DL, &LI)))
       Spec.setAsSpeculatable(/*isTrueVal=*/Value == SI.getTrueValue());
     else if (PreserveCFG)
       return Spec;

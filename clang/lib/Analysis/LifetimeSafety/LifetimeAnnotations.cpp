@@ -108,32 +108,19 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
-FunctionCallInfo getFunctionCallInfo(const Expr *Call) {
-  FunctionCallInfo Info;
+FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!Call)
-    return Info;
+    return;
 
-  Call = Call->IgnoreParenImpCasts();
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call);
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
   if (!AC)
-    return Info;
+    return;
 
-  Info.FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!Info.FD)
-    return Info;
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+  if (!FD)
+    return;
 
-  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call))
-    Info.Args.push_back(MCE->getImplicitObjectArgument());
-
-  Info.Args.append(AC->arg_begin(), AC->arg_end());
-
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call))
-    // For `static operator()`, the first argument is the object argument,
-    // remove it from the argument list to avoid off-by-one errors.
-    if (OCE->getOperator() == OO_Call && Info.FD->isStatic())
-      Info.Args.erase(Info.Args.begin());
-
-  return Info;
+  Args = AC->arguments();
 }
 
 std::optional<LifetimeBoundParamInfo>
@@ -178,15 +165,14 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
-  FunctionCallInfo CallInfo = getFunctionCallInfo(Call);
-  if (!CallInfo.FD)
+  auto [FD, Args] = FunctionCallInfo(Call);
+  if (!FD)
     return std::nullopt;
 
-  for (unsigned I = 0; I < CallInfo.Args.size(); ++I)
-    if (CallInfo.Args[I]->IgnoreParenImpCasts() ==
-        Source->IgnoreParenImpCasts())
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
-              getTrackedArgInfo(CallInfo.FD, CallInfo.Args, I))
+              getTrackedArgInfo(FD, Args, I))
         return ParamInfo;
 
   return std::nullopt;

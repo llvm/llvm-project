@@ -2073,6 +2073,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::MQWACC:
+  case RISCVISD::MQRWACC: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    SDValue Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Node->getOperand(0),
+                               Node->getOperand(1));
+    unsigned Opc = Opcode == RISCVISD::MQRWACC ? RISCV::MQRWACC : RISCV::MQWACC;
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::ADDD:
     // Try to match WMACC pattern: ADDD where one operand pair comes from a
     // widening multiply.

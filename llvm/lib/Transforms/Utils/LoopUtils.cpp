@@ -956,20 +956,12 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // indicates that, each time execution reaches the peeled iterations,
   // execution is estimated to exit them without reaching the remaining loop's
   // header.
-  //
-  // Even if the probability of reaching a loop's header is low, if it is
-  // reached, it is the start of an iteration.  Consequently, some passes
-  // historically assume that llvm::getLoopEstimatedTripCount always returns a
-  // positive count or std::nullopt.  Thus, return std::nullopt when
-  // llvm.loop.estimated_trip_count is 0.
   if (std::optional<unsigned> TC =
           getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC
-                      << (*TC == 0 ? " (returning std::nullopt)" : "")
-                      << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : TC;
+                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
+    return TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1206,6 +1198,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vector_reduce_fminimumnum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1255,6 +1249,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
     return Intrinsic::minimum;
   case Intrinsic::vector_reduce_fmaximum:
     return Intrinsic::maximum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1305,6 +1303,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMaximum;
   case Intrinsic::vector_reduce_fminimum:
     return RecurKind::FMinimum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return RecurKind::FMaximumNum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return RecurKind::FMinimumNum;
   default:
     return RecurKind::None;
   }

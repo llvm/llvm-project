@@ -20,9 +20,9 @@ func.func @load_nd_with_conflicting_tensor_desc(%arg0: memref<64x64xf16>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.create_nd_tdesc %arg0 : memref<64x64xf16>
     -> !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
-  %1 = xegpu.load_nd %0 [%c0, %c0] {layout = #inst_data_8x16} : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
+  %1 = xegpu.load_nd %0 [%c0, %c0] <{layout = #inst_data_8x16}> : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
     -> vector<16x16xf16>
-  xegpu.prefetch_nd %0 [%c0, %c0] {layout = #inst_data_16x16} : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
+  xegpu.prefetch_nd %0 [%c0, %c0] <{layout = #inst_data_16x16}> : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   return
 }
 
@@ -44,11 +44,11 @@ func.func @multiple_tensor_desc_conflicts(%arg0: memref<64x64xf16>) {
   %c0 = arith.constant 0 : index
   %tdesc1 = xegpu.create_nd_tdesc %arg0 : memref<64x64xf16>
     -> !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
-  %load1 = xegpu.load_nd %tdesc1 [%c0, %c0] {layout = #inst_data_8x16} : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
+  %load1 = xegpu.load_nd %tdesc1 [%c0, %c0] <{layout = #inst_data_8x16}> : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
     -> vector<32x16xf16>
-  %load2 = xegpu.load_nd %tdesc1 [%c0, %c0] {layout = #inst_data_32x16} : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
+  %load2 = xegpu.load_nd %tdesc1 [%c0, %c0] <{layout = #inst_data_32x16}> : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
     -> vector<32x16xf16>
-  xegpu.prefetch_nd %tdesc1 [%c0, %c0] {layout = #inst_data_16x16} : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
+  xegpu.prefetch_nd %tdesc1 [%c0, %c0] <{layout = #inst_data_16x16}> : !xegpu.tensor_desc<32x16xf16, #inst_data_8x16>
   return
 }
 
@@ -74,12 +74,12 @@ func.func @load_nd_with_conflicting_tensor_desc_in_loop(%arg0: memref<64x64xf16>
     -> !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   %1:2 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst, %tdesc = %0)
     -> (vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>) {
-    %2 = xegpu.load_nd %tdesc [%c0, %c0] {layout = #inst_data_8x16} : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
+    %2 = xegpu.load_nd %tdesc [%c0, %c0] <{layout = #inst_data_8x16}> : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
       -> vector<16x16xf16>
     %3 = arith.addf %acc, %2 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
     scf.yield %3, %tdesc : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   } {layout_result_0 = #inst_data_8x16}
-  xegpu.prefetch_nd %0 [%c0, %c0] {layout = #inst_data_16x16} : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
+  xegpu.prefetch_nd %0 [%c0, %c0] <{layout = #inst_data_16x16}> : !xegpu.tensor_desc<16x16xf16, #inst_data_16x16>
   return
 }
 

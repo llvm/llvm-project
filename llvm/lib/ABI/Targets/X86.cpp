@@ -121,6 +121,9 @@ public:
   bool has64BitPointers() const { return Has64BitPointers; }
 };
 
+static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
+                                  unsigned EndBit);
+
 // Gets the "best" type to represent the union.
 static const Type *reduceUnionForX8664(const RecordType *UnionType,
                                        TypeBuilder &TB) {
@@ -145,6 +148,16 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
       StorageType = FieldType;
       break;
     }
+
+    // A member that holds no user data supplies no bytes for a coercion to
+    // read, so it must not become the storage type however wide or aligned it
+    // is declared.  Clang compares lowered types instead, where an empty class
+    // is a byte array whose i8 leaf lets getIntegerTypeAtOffset narrow the
+    // coercion.  A record mapped here holds no fields, so there is no such
+    // leaf and the eightbyte would be sized from the union.
+    if (bitsContainNoUserData(FieldType, 0,
+                              FieldType->getSizeInBits().getFixedValue()))
+      continue;
 
     if (!StorageType ||
         FieldType->getAlignment() > StorageType->getAlignment() ||
@@ -512,6 +525,9 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     // If this is a C++ record, classify the bases first.
     if (RT->isCXXRecord()) {
       for (const auto &Base : RT->getBaseClasses()) {
+        // A class with a virtual base has a non-trivial copy constructor, so
+        // getRecordArgABI() above returned before we got here.
+        assert(!Base.IsVirtualBase && "Unexpected base class!");
 
         // Classify this field.
         //
@@ -942,6 +958,9 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     if (RT->isCXXRecord()) {
       for (unsigned I = 0; I < RT->getNumBaseClasses(); ++I) {
         const FieldInfo &Base = RT->getBaseClasses()[I];
+        // This only runs for types being passed in registers, which cannot
+        // have virtual bases.
+        assert(!Base.IsVirtualBase && "Unexpected base class!");
         if (Base.OffsetInBits >= EndBit)
           continue;
 

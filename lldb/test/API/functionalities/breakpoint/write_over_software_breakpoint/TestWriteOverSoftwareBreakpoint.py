@@ -15,9 +15,7 @@ class WriteOverSoftwareBreakpoint(TestBase):
 
     # Could not find a way to make place_break_here visible to lldb on Windows.
     @skipIfWindows
-    # debugserver needs fixing, see:
-    # https://github.com/llvm/llvm-project/issues/217359
-    # https://github.com/llvm/llvm-project/issues/217840
+    # Fails with a sanitized build of debugserver.
     @llgs_test
     def test_write_over_breakpoint(self):
         TestBase.setUp(self)
@@ -159,3 +157,91 @@ class WriteOverSoftwareBreakpoint(TestBase):
             self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
             self.assertEqual(loop_start_breakpoint_addr, thread.selected_frame.GetPC())
+
+    def test_write_over_uncommitted_breakpoint(self):
+        TestBase.setUp(self)
+        self.line = line_number("main.c", "// break here")
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        self.runCmd("settings set target.process.use-delayed-breakpoints true")
+
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True
+        )
+        self.runCmd("run", RUN_SUCCEEDED)
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+
+        loop_start_breakpoint_addr = (
+            target.breakpoints[0].GetLocationAtIndex(0).GetLoadAddress()
+        )
+
+        bkpt = target.BreakpointCreateByName("foo")
+        self.assertTrue(bkpt.IsValid())
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertFalse(bkpt.IsHardware())
+
+        # At this point only lldb knows about the breakpoint, it has not been
+        # sent to the debug server yet. It is treated as software with a 0 size
+        # breakpoint site.
+
+        bkpt_address = bkpt.GetLocationAtIndex(0).GetLoadAddress()
+        # The largest breakpoint instruction we know of is 4 bytes.
+        read_size = 4
+        err = lldb.SBError()
+        original_data = bytearray(process.ReadMemory(bkpt_address, read_size, err))
+        self.assertSuccess(err)
+        self.assertEqual(len(original_data), read_size)
+
+        # The smallest break instruction we know about is 1 byte, so we will
+        # write only 1 byte. The value is ideally != byte 1 of the break and
+        # != to the value currently in memory. 0xcd is different to x86's 0xcc,
+        # and not used by any other platform we support. 0xdc is the fallback
+        # and if the original value is also 0xcd.
+        write_data = bytearray([0xCD if original_data[0] != 0xCD else 0xDC])
+
+        # Write something over the breakpoint. Use a single byte since x86's
+        # break is a single byte and we do not want to corrupt other code.
+        # LLDB used to crash at this point.
+        err = lldb.SBError()
+        wrote = process.WriteMemory(bkpt_address, write_data, err)
+        self.assertSuccess(err)
+        self.assertEqual(wrote, 1)
+
+        def check_memory():
+            err = lldb.SBError()
+            got = bytearray(process.ReadMemory(bkpt_address, read_size, err))
+            self.assertSuccess(err)
+            self.assertEqual(len(got), read_size)
+            read_expected = write_data + original_data[1:]
+            self.assertEqual(got, read_expected)
+
+        # We should see the original data with our new single byte at the start.
+        check_memory()
+
+        # The instruction in memory should still be intact so we can continue
+        # to the breakpoint.
+        process.Continue()
+
+        thread = process.thread[0]
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
+        # Should be stopped at the breakpoint we placed in foo. This proves that
+        # the breakpoint instruction was intact.
+        self.assertEqual(
+            bkpt_address,
+            thread.selected_frame.GetPC(),
+        )
+
+        # We should see the new first byte still. At this point the debug server
+        # should be managing the breakpoint, but this checks that the handover
+        # was done correctly.
+        check_memory()
