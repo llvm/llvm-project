@@ -15,10 +15,8 @@
 // RUN:   -DTEXTURE=RWTexture2D -DINDEX_DIM=2 -DDIM_NAME=2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DINDEX_ARG_TYPE=uint3 \
-// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture2DArray -DRW=1 -o - \
-// RUN:   %s \
-// RUN:   | FileCheck %s \
-// RUN:   --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC \
+// RUN:   -DINDEX_ARG="uint3(0, 0, 0)" -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC \
 // RUN:   -DTEXTURE=RWTexture2DArray -DINDEX_DIM=3 -DDIM_NAME=2D
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
