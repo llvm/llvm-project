@@ -459,6 +459,7 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig) {
   Value *B = Orig->getOperand(1);
   unsigned NumElts = cast<FixedVectorType>(A->getType())->getNumElements();
 
+  //  We return early here to avoid constructing unnecessary identity shuffles.
   if (NumElts <= 4)
     return expandFloatDotChunk(Orig, A, B);
 
