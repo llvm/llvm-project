@@ -3064,19 +3064,20 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       }
     }
 
-    // Allow cases where the ExactTC == (VF * IC) + 1.
+    // Allow cases where the ExactTC == (VF * IC) or ExactTC == (VF * IC) + 1.
     //
-    // This produces 1 vector iteration, and 1 scalar iteration with
-    // no remainder. Later passes will eliminate the loop and leave
+    // This produces at most 1 vector iteration, and at most 1 scalar iteration
+    // with no remainder. Later passes will eliminate the loop and leave
     // straight-line code as the both iteration counts are statically known.
     //
     // If a function is marked as minsize/optsize or OptForSize is set, do not
     // allow this form of transformation as this will increase CodeSize.
     ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
     unsigned TC = ExactTC.getFixedValue();
-    unsigned MaxVFForTC = 1ULL << Log2_32(TC);
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
+    unsigned MaxVFForTC = 1ULL << Log2_32(TC) / EffectiveIC;
     if (TC - MaxVFForTC <= 1 && !TheFunction->hasOptSize() &&
+        MaxVFForTC <= MaxFactors.FixedVF.getFixedValue() &&
         !Config.OptForSize) {
       unsigned VF = MaxVFForTC / EffectiveIC;
       LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
@@ -5829,12 +5830,11 @@ LoopVectorizationPlanner::computeBestVF() {
     if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
-    // For loops where the Trip Count is below the Tail Folding Threshold, only
-    // consider the largest VF to ensure, where TC == VF * IC or TC - 1 == VF *
-    // IC, one vector iteration, and one scalar iteration if needed is
-    // generated.
-    // FIXME: Encode this directly in LVPlanner rather than as part of the
-    // LoopVectorizer.
+    // For loops where the Trip Count is below the TailFoldingThreshold, only
+    // consider the largest VF to result in at most one vector iteration, and at
+    // most one scalar iteration.
+    // FIXME: Encode this decision directly in LVPlanner rather than as part of
+    // the LoopVectorizer.
     if (!ForceVectorization && P->hasScalarTail() && ExactTC.isFixed() &&
         ExactTC.getFixedValue() > 0 &&
         ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
