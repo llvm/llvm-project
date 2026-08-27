@@ -82,6 +82,10 @@ private:
   /// usually because it could not reason about something.
   BlocksAborted blocksAborted;
 
+  /// Whether the single-TU phase ran out of budget with work left over.
+  /// The CTU phase replaces \c WList, so this has to be remembered separately.
+  bool STUHadWorkRemaining = false;
+
   /// The information about functions shared by the whole translation unit.
   /// (This data is owned by AnalysisConsumer.)
   FunctionSummariesTy *FunctionSummaries;
@@ -148,6 +152,7 @@ public:
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
   bool hasWorkRemaining() const { return wasBlocksExhausted() ||
                                          WList->hasWork() ||
+                                         STUHadWorkRemaining ||
                                          wasBlockAborted(); }
 
   /// Inform the CoreEngine that a basic block was aborted because
