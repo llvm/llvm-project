@@ -50,6 +50,15 @@
 #include <cmath>
 #include <optional>
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+static int SkipLeakCheck;
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
+static void skipLeakCheck() { SkipLeakCheck = 1; }
+#else
+static void skipLeakCheck() {}
+#endif
+
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
@@ -533,6 +542,10 @@ static void exitWithError(Twine Message, StringRef Whence = "",
   errs() << Message << "\n";
   if (!Hint.empty())
     WithColor::note() << Hint << "\n";
+  // exit() terminates without unwinding the stack or running destructors, and
+  // there is no guaranty that pointers to allocations will be preserved, so
+  // LSan reports in-flight heap allocations as leaks at atexit.
+  skipLeakCheck();
   ::exit(1);
 }
 

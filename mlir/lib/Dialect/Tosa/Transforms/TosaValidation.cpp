@@ -29,6 +29,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
@@ -1022,7 +1023,10 @@ LogicalResult TosaValidation::CheckVariable(Operation *op) {
 LogicalResult TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr =
+        TypeSwitch<Operation *, mlir::StringAttr>(op)
+            .Case<mlir::tosa::VariableReadOp, mlir::tosa::VariableWriteOp>(
+                [](auto variableOp) { return variableOp.getNameAttr(); });
     if (!variablesMap.count(nameAttr))
       return op->emitOpError() << "name has not been declared";
 
