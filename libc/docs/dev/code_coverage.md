@@ -259,6 +259,8 @@ llvm-cov show \
 
 ## Interpreting Results
 
+For detailed documentation on the LLVM coverage reporting format, refer to the [official Clang Source-Based Code Coverage documentation](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#interpreting-reports).
+
 ### Coverage Metrics Overview
 
 * **Line Coverage:**  
