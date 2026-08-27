@@ -89,6 +89,10 @@ static cl::opt<unsigned>
                         "prior to scheduling, at which point a trade-off "
                         "is made to avoid excessive compile time."));
 
+static cl::opt<unsigned> DAGLimitAACalls(
+    "dag-limit-aa-calls", cl::Hidden, cl::init(300),
+    cl::desc("Limit the number of AA calls during MI DAG construction"));
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> SchedPrintCycles(
     "sched-print-cycles", cl::Hidden, cl::init(false),
@@ -556,10 +560,23 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
+void ScheduleDAGInstrs::addChainDependencies(SUnit *SU, SUList &SUs,
+                                             unsigned Latency) {
+  unsigned AACalls = 0;
+  bool HasAA = getAAForDep() != nullptr;
+  for (SUnit *Entry : SUs) {
+    bool ForceDisableAA = AACalls >= DAGLimitAACalls;
+    addChainDependency(SU, Entry, Latency, ForceDisableAA);
+    if (HasAA && !ForceDisableAA)
+      AACalls++;
+  }
+}
 
-void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
-                                            unsigned Latency) {
-  if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
+void ScheduleDAGInstrs::addChainDependency(SUnit *SUa, SUnit *SUb,
+                                           unsigned Latency,
+                                           bool ForceDisableAA) {
+  BatchAAResults *AA = ForceDisableAA ? nullptr : getAAForDep();
+  if (SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);
