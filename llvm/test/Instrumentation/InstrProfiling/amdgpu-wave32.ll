@@ -2,7 +2,7 @@
 ;; Verifies sampling guard and __llvm_profile_instrument_gpu call with correct
 ;; addrspace(1) counter pointers.
 
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof -S | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof -S | FileCheck %s
 
 @__hip_cuid_abcdef456 = addrspace(1) global i8 0
 @__profn_kernel_w32 = private constant [10 x i8] c"kernel_w32"

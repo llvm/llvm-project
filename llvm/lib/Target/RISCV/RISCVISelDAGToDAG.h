@@ -53,23 +53,48 @@ public:
   bool SelectAddrRegImm9(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
-  bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
+  bool SelectAddrRegRegScale(SDValue Addr, ArrayRef<unsigned> Amounts,
                              SDValue &Base, SDValue &Index, SDValue &Scale);
+
+  template <unsigned ShiftAmount>
+  bool SelectAddrRegRegFixedScale(SDValue Addr, SDValue &Base, SDValue &Index) {
+    SDValue Scale;
+    if (!SelectAddrRegRegScale(Addr, ShiftAmount, Base, Index, Scale))
+      return false;
+    assert(Scale->getAsZExtVal() == ShiftAmount &&
+           "ShiftAmount doesn't match!");
+    return true;
+  }
 
   template <unsigned MaxShift>
   bool SelectAddrRegRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                              SDValue &Scale) {
-    return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
+    std::array<unsigned, MaxShift + 1> Amounts;
+    std::iota(Amounts.begin(), Amounts.end(), 0);
+    return SelectAddrRegRegScale(Addr, Amounts, Base, Index, Scale);
   }
 
-  bool SelectAddrRegZextRegScale(SDValue Addr, unsigned MaxShiftAmount,
+  bool SelectAddrRegZextRegScale(SDValue Addr, ArrayRef<unsigned> Amounts,
                                  unsigned Bits, SDValue &Base, SDValue &Index,
                                  SDValue &Scale);
+
+  template <unsigned ShiftAmount, unsigned Bits>
+  bool SelectAddrRegZextRegFixedScale(SDValue Addr, SDValue &Base,
+                                      SDValue &Index) {
+    SDValue Scale;
+    if (!SelectAddrRegZextRegScale(Addr, ShiftAmount, Bits, Base, Index, Scale))
+      return false;
+    assert(Scale->getAsZExtVal() == ShiftAmount &&
+           "ShiftAmount doesn't match!");
+    return true;
+  }
 
   template <unsigned MaxShift, unsigned Bits>
   bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                                  SDValue &Scale) {
-    return SelectAddrRegZextRegScale(Addr, MaxShift, Bits, Base, Index, Scale);
+    std::array<unsigned, MaxShift + 1> Amounts;
+    std::iota(Amounts.begin(), Amounts.end(), 0);
+    return SelectAddrRegZextRegScale(Addr, Amounts, Bits, Base, Index, Scale);
   }
 
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);

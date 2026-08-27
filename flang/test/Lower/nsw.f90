@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: bbc -emit-fir -fwrapv %s -o - | FileCheck %s --check-prefix=NO-NSW
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-fir -fwrapv %s -o - | FileCheck %s --check-prefix=NO-NSW
 
 ! NO-NSW-NOT: overflow<nsw>
 

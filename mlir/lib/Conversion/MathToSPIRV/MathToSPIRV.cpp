@@ -128,6 +128,12 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
         failed(res))
       return res;
 
+    // Defer to the CL copysign op on Kernel targets.
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (typeConverter.getTargetEnv().allows(spirv::Capability::Kernel))
+      return rewriter.notifyMatchFailure(copySignOp,
+                                         "Kernel target has native CL op");
+
     Type type = getTypeConverter()->convertType(copySignOp.getType());
     if (!type)
       return failure();
@@ -259,19 +265,24 @@ struct CountTrailingZerosPattern final
     if (!type)
       return failure();
 
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.getTargetEnv().allows(spirv::Capability::Shader))
+      return rewriter.notifyMatchFailure(countOp, "requires Shader capability");
+
     unsigned bitwidth = 0;
     if (isa<IntegerType>(type))
       bitwidth = type.getIntOrFloatBitWidth();
     else if (auto vectorType = dyn_cast<VectorType>(type))
       bitwidth = vectorType.getElementTypeBitWidth();
-    if (bitwidth != 32)
-      return failure();
 
     Location loc = countOp.getLoc();
     Value input = adaptor.getOperand();
-    Value val0 = getScalarOrVectorI32Constant(type, 0, rewriter, loc);
-    Value valBitwidth =
-        getScalarOrVectorI32Constant(type, bitwidth, rewriter, loc);
+    Value val0 = spirv::ConstantOp::getZero(type, loc, rewriter);
+    Type elemType = getElementTypeOrSelf(type);
+    Attribute bwAttr = IntegerAttr::get(elemType, bitwidth);
+    if (auto vecType = dyn_cast<VectorType>(type))
+      bwAttr = SplatElementsAttr::get(vecType, bwAttr);
+    Value valBitwidth = spirv::ConstantOp::create(rewriter, loc, type, bwAttr);
 
     Value lsb = spirv::GLFindILsbOp::create(rewriter, loc, input);
     Value isZero = spirv::IEqualOp::create(rewriter, loc, input, val0);
@@ -684,6 +695,7 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       CheckedElementwiseOpPattern<math::Atan2Op, spirv::CLAtan2Op>,
       CheckedElementwiseOpPattern<math::CbrtOp, spirv::CLCbrtOp>,
       CheckedElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
+      CheckedElementwiseOpPattern<math::CopySignOp, spirv::CLCopysignOp>,
       CheckedElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
       CheckedElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,
       CheckedElementwiseOpPattern<math::ErfcOp, spirv::CLErfcOp>,

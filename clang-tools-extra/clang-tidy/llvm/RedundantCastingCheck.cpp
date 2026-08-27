@@ -47,9 +47,9 @@ static constexpr StringRef IsaFunctionNames[] = {"isa", "isa_and_nonnull",
                                                  "isa_and_present"};
 
 void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsInLLVMNamespace = hasDeclContext(
+  const auto IsInLLVMNamespace = hasDeclContext(
       namespaceDecl(hasName("llvm"), hasDeclContext(translationUnitDecl())));
-  auto AnyCastCalleeName =
+  const auto AnyCastCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
             callee(expr(declRefExpr(to(namedDecl(hasAnyName(CastFunctionNames),
                                                  IsInLLVMNamespace)),
@@ -67,7 +67,7 @@ void RedundantCastingCheck::registerMatchers(MatchFinder *Finder) {
           .bind("call"),
       this);
 
-  auto AnyIsaCalleeName =
+  const auto AnyIsaCalleeName =
       allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
             callee(expr(declRefExpr(to(namedDecl(hasAnyName(IsaFunctionNames),
                                                  IsInLLVMNamespace)),
@@ -103,7 +103,7 @@ static QualType stripPointerOrReference(QualType Ty) {
 static bool isLLVMNamespace(NestedNameSpecifier NNS) {
   if (NNS.getKind() != NestedNameSpecifier::Kind::Namespace)
     return false;
-  auto Pair = NNS.getAsNamespaceAndPrefix();
+  const auto Pair = NNS.getAsNamespaceAndPrefix();
   if (Pair.Namespace->getNamespace()->getName() != "llvm")
     return false;
   const NestedNameSpecifier::Kind Kind = Pair.Prefix.getKind();

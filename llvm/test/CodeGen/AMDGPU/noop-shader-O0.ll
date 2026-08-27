@@ -6,8 +6,6 @@
 ; Confirm registers reserved in SIMachineFunctionInfo are those expected during
 ; lowering, even when e.g. spilling is required due to being at OptNone.
 
-target triple = "amdgcn-amd-amdpal"
-
 define amdgpu_vs void @noop_vs() {
 ; GCN-LABEL: noop_vs:
 ; GCN:       ; %bb.0: ; %entry

@@ -15,7 +15,8 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
     %pythoncode %{
         def __iter__(self):
             '''Iterate over all members in a lldb.SBTypeEnumMemberList object.'''
-            return lldb_iter(self, 'GetSize', 'GetTypeEnumMemberAtIndex')
+            for i in range(self.GetSize()):
+                yield self.GetTypeEnumMemberAtIndex(i)
 
         def __len__(self):
             '''Return the number of members in a lldb.SBTypeEnumMemberList object.'''

@@ -23,7 +23,6 @@
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos1, typename S::size_type n1, S str, S expected) {
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos1 <= old_size) {
     s.replace(pos1, n1, str);
     LIBCPP_ASSERT(s.__invariants());
@@ -35,6 +34,7 @@ TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos1, typename S::size
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.replace(pos1, n1, str);
       assert(false);

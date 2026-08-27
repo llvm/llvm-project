@@ -743,6 +743,7 @@ def LLVM_InvokeOp
                    Variadic<LLVM_Type>:$unwindDestOperands,
                    OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+                   OptionalAttr<DictionaryAttr>:$default_func_attrs,
                    VariadicOfVariadic<LLVM_Type,
                                       "op_bundle_sizes">:$op_bundle_operands,
                    DenseI32ArrayAttr:$op_bundle_sizes,
@@ -766,6 +767,11 @@ def LLVM_InvokeOp
   let extraClassDeclaration = [{
     /// Returns the callee function type.
     LLVMFunctionType getCalleeFunctionType();
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
   }];
 }
 
@@ -1122,6 +1128,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 def LLVM_CondBrOp
     : LLVM_TerminatorOp<
@@ -1159,6 +1171,12 @@ def LLVM_CondBrOp
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1277,6 +1295,11 @@ def LLVM_SwitchOp
     MutableOperandRange getCaseOperandsMutable(unsigned index) {
       return getCaseOperandsMutable()[index];
     }
+
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
   }];
 }
 
@@ -1378,14 +1401,15 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
+     SymbolVisibility, Symbol]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
     StrAttr:$sym_name,
     Linkage:$linkage,
     UnitAttr:$dso_local,
-    UnitAttr:$thread_local_,
+    DefaultValuedAttr<LLVM_TLSMode, "mlir::LLVM::ThreadLocalMode::NotThreadLocal">:$tls_mode,
     UnitAttr:$externally_initialized,
     OptionalAttr<AnyAttr>:$value,
     OptionalAttr<I64Attr>:$alignment,
@@ -1395,7 +1419,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<DIGlobalVariableExpressionArrayAttr>:$dbg_exprs,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
-    OptionalAttr<ArrayAttr>:$target_specific_attrs
+    OptionalAttr<ArrayAttr>:$target_specific_attrs,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect global.";
   let description = [{
@@ -1517,7 +1542,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"uint64_t", "0">:$alignment,
       CArg<"unsigned", "0">:$addrSpace,
       CArg<"bool", "false">:$dsoLocal,
-      CArg<"bool", "false">:$thread_local_,
+      CArg<"ThreadLocalMode", "ThreadLocalMode::NotThreadLocal">:$tls_mode,
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<Attribute>", "{}">:$dbgExprs)>
@@ -1624,15 +1649,17 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 }
 
 def LLVM_AliasOp : LLVM_Op<"mlir.alias",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
+     SymbolVisibility, Symbol]> {
   let arguments = (ins
     TypeAttr:$alias_type,
     StrAttr:$sym_name,
     Linkage:$linkage,
     UnitAttr:$dso_local,
-    UnitAttr:$thread_local_,
+    DefaultValuedAttr<LLVM_TLSMode, "mlir::LLVM::ThreadLocalMode::NotThreadLocal">:$tls_mode,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect alias.";
   let description = [{
@@ -1675,7 +1702,7 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     OpBuilder<(ins "Type":$type, "Linkage":$linkage,
       "StringRef":$name,
       CArg<"bool", "false">:$dsoLocal,
-      CArg<"bool", "false">:$thread_local_,
+      CArg<"ThreadLocalMode", "ThreadLocalMode::NotThreadLocal">:$tls_mode,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -1703,7 +1730,8 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
 }
 
 def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
-    [IsolatedFromAbove, Symbol, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    [IsolatedFromAbove, SymbolName, SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttr:$i_func_type,
@@ -1713,7 +1741,8 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
     UnitAttr:$dso_local,
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$address_space,
     DefaultValuedAttr<UnnamedAddr, "mlir::LLVM::UnnamedAddr::None">:$unnamed_addr,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect ifunc";
   let description = [{
@@ -1756,7 +1785,8 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   ];
 
   let assemblyFormat = [{
-    custom<LLVMLinkage>($linkage) ($visibility_^)? ($unnamed_addr^)?
+    ($sym_visibility^)? custom<LLVMLinkage>($linkage)
+    ($visibility_^)? ($unnamed_addr^)?
     $sym_name `:` $i_func_type `,` $resolver_type $resolver attr-dict
   }];
   let hasVerifier = 1;
@@ -1936,12 +1966,20 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
       CArg<"BlockRange", "{}">:$successors
       )>
   ];
+  let extraClassDeclaration = [{
+    /// Successor operands are restricted to LLVM-compatible types.
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
+    }
+  }];
 }
 
-def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
+def LLVM_ComdatSelectorOp
+    : LLVM_Op<"comdat_selector", [SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    Comdat:$comdat
+    Comdat:$comdat,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let summary = "LLVM dialect comdat selector declaration";
@@ -1957,12 +1995,15 @@ def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
     llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
     ```
   }];
-  let assemblyFormat = "$sym_name $comdat attr-dict";
+  let assemblyFormat = "($sym_visibility^)? $sym_name $comdat attr-dict";
 }
 
-def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTable, Symbol]> {
+def LLVM_ComdatOp
+    : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTable,
+                          SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect comdat region";
 
@@ -1983,12 +2024,13 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "StringRef":$symName)>];
 
-  let assemblyFormat = "$sym_name $body attr-dict";
+  let assemblyFormat = "($sym_visibility^)? $sym_name $body attr-dict";
   let hasRegionVerifier = 1;
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
+    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
+    SymbolVisibility, FunctionOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -2076,6 +2118,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
+    OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
     OptionalAttr<BoolAttr>:$use_sample_profile
   );
@@ -2526,7 +2569,8 @@ def LLVM_MetadataAsValueOp
 
     * `#llvm.md_string<"...">` -> `llvm::MDString`.
     * `#llvm.md_const<...>` -> `llvm::ConstantAsMetadata`.
-    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function.
+    * `#llvm.md_global_value<@symbol>` -> `llvm::ValueAsMetadata` of a
+      symbol-backed global value.
     * `#llvm.md_node<...>` -> `llvm::MDNode` over any of the above.
 
     These can be nested arbitrarily to form metadata trees. Lowering to LLVM
@@ -2560,12 +2604,14 @@ def LLVM_MetadataAsValueOp
   ];
 
   let llvmBuilder = [{
-    ::llvm::Metadata *md = convertMetadataAttr(
-        op.getMetadataAttr(), builder, moduleTranslation);
-    if (!md)
-      return ::mlir::emitError(op.getLoc(),
-          "llvm.mlir.metadata_as_value: cannot lower metadata attribute");
-    $res = ::llvm::MetadataAsValue::get(builder.getContext(), md);
+    ::mlir::FailureOr<::llvm::Metadata *> md =
+        moduleTranslation.convertMetadataAttr(op.getMetadataAttr(), [&]() {
+          return ::mlir::emitError(op.getLoc(),
+              "llvm.mlir.metadata_as_value: cannot lower metadata attribute: ");
+        });
+    if (::mlir::failed(md))
+      return ::mlir::failure();
+    $res = ::llvm::MetadataAsValue::get(builder.getContext(), *md);
   }];
 
   let hasFolder = 1;
@@ -2701,7 +2747,7 @@ def LLVM_NamedMetadataOp
     ]
     llvm.named_metadata "foo.kernel" [
       #llvm.md_node<
-        #llvm.md_func<@my_kernel>,
+        #llvm.md_global_value<@my_kernel>,
         #llvm.md_node<>,
         #llvm.md_node<
           #llvm.md_node<#llvm.md_const<0 : i32>,
@@ -2712,13 +2758,13 @@ def LLVM_NamedMetadataOp
     ]
     ```
   }];
-  let arguments = (ins StrAttr:$metadata_name, ArrayAttr:$nodes);
+  let arguments = (ins StrAttr:$metadata_name, LLVM_MDNodeArrayAttr:$nodes);
   let assemblyFormat = [{
     $metadata_name $nodes attr-dict
   }];
 
   let llvmBuilder = [{
-    convertNamedMetadataOp($metadata_name, $nodes, builder, moduleTranslation);
+    return convertNamedMetadataOp(op, moduleTranslation);
   }];
 }
 

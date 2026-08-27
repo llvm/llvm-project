@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -226,6 +227,10 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
+    // The pragma changed diagnostic severities; drop any cached analysis
+    // warning policies derived from the previous state.
+    S->AnalysisWarnings.clearPolicyCache();
+
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
     // can be run at the end of the function body even if the analysis warnings
@@ -568,17 +573,20 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
-      (Context.getTargetInfo().getTriple().isSPIRV() &&
-       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
-        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
-         Context.getAuxTargetInfo()->getTriple().getVendor() ==
-             llvm::Triple::AMD)))) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
+  }
+
+  if (Context.getTargetInfo().getTriple().isSPIRV() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
@@ -1170,8 +1178,9 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   for (CXXRecordDecl::friend_iterator I = RD->friend_begin(),
                                       E = RD->friend_end();
        I != E && Complete; ++I) {
+    FriendDecl *Friend = *I;
     // Check if friend classes and methods are complete.
-    if (TypeSourceInfo *TSI = (*I)->getFriendType()) {
+    if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
       if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
@@ -1180,7 +1189,7 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
       if (const FunctionDecl *FD =
-          dyn_cast<FunctionDecl>((*I)->getFriendDecl()))
+              dyn_cast<FunctionDecl>(Friend->getFriendDecl()))
         Complete = FD->isDefined();
       else
         // This is a template friend, give up.
@@ -1327,6 +1336,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
+  DiagnoseUnusedAPINotesSelectors();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -1405,8 +1415,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
@@ -2400,6 +2420,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
+
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
 
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&

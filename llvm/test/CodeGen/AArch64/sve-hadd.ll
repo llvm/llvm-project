@@ -303,14 +303,22 @@ entry:
 }
 
 define <vscale x 4 x i16> @hadds_v4i16_lsh(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
-; CHECK-LABEL: hadds_v4i16_lsh:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
-; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
-; CHECK-NEXT:    ret
+; SVE-LABEL: hadds_v4i16_lsh:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE-NEXT:    add z0.s, z0.s, z1.s
+; SVE-NEXT:    lsr z0.s, z0.s, #1
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: hadds_v4i16_lsh:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE2-NEXT:    saddwb z0.s, z0.s, z1.h
+; SVE2-NEXT:    lsr z0.s, z0.s, #1
+; SVE2-NEXT:    ret
 entry:
   %s0s = sext <vscale x 4 x i16> %s0 to <vscale x 4 x i32>
   %s1s = sext <vscale x 4 x i16> %s1 to <vscale x 4 x i32>
@@ -511,14 +519,22 @@ entry:
 }
 
 define <vscale x 8 x i8> @hadds_v8i8_lsh(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
-; CHECK-LABEL: hadds_v8i8_lsh:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
-; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    lsr z0.h, z0.h, #1
-; CHECK-NEXT:    ret
+; SVE-LABEL: hadds_v8i8_lsh:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE-NEXT:    add z0.h, z0.h, z1.h
+; SVE-NEXT:    lsr z0.h, z0.h, #1
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: hadds_v8i8_lsh:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE2-NEXT:    saddwb z0.h, z0.h, z1.b
+; SVE2-NEXT:    lsr z0.h, z0.h, #1
+; SVE2-NEXT:    ret
 entry:
   %s0s = sext <vscale x 8 x i8> %s0 to <vscale x 8 x i16>
   %s1s = sext <vscale x 8 x i8> %s1 to <vscale x 8 x i16>

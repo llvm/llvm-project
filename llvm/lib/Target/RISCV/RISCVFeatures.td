@@ -185,8 +185,8 @@ def FeatureStdExtZicfilp
                                  [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<1, 0, "Shadow stack",
-                                 [FeatureStdExtZicsr, FeatureStdExtZimop]>,
+    : RISCVExtension<1, 0, "Shadow stack",
+                     [FeatureStdExtZicsr, FeatureStdExtZimop]>,
       RISCVExtensionBitmask<1, 27>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfiss),
@@ -203,6 +203,13 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
 def FeatureZilsdWordAlign
     : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
+
+def FeatureStdExtZilx
+    : RISCVExperimentalExtension<0, 1, "Indexed Integer Load Instructions">;
+def HasStdExtZilx
+    : Predicate<"Subtarget->hasStdExtZilx()">,
+      AssemblerPredicate<(all_of FeatureStdExtZilx),
+                          "'Zilx' (Indexed Integer Load Instructions)">;
 
 // Multiply Extensions
 
@@ -1065,6 +1072,20 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
+def FeatureStdExtSmcsps
+    : RISCVExperimentalExtension<0, 20,
+                                 "Conditional Stack Pointer Swap at Machine Level">;
+def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSmcsps),
+                          "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
+def FeatureStdExtSscsps
+    : RISCVExperimentalExtension<0, 20,
+                                 "Conditional Stack Pointer Swap at Supervisor Level",
+                                 [FeatureStdExtSmcsps]>;
+def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSscsps),
+                          "'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)">;
+
 def FeatureStdExtSmcsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Machine Level">;
 def FeatureStdExtSscsrind
@@ -1077,6 +1098,37 @@ def FeatureStdExtSsdbltrp
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
+
+def FeatureStdExtSmijt
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Jump Table at Machine Level">;
+def FeatureStdExtSsijt
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Jump Table at Supervisor Level">;
+
+def FeatureStdExtSmehv
+    : RISCVExperimentalExtension<0, 20,
+                                 "Synchronous Exception Hardware Vectoring at Machine Level",
+                                 [FeatureStdExtSmijt]>;
+def FeatureStdExtSsehv
+    : RISCVExperimentalExtension<0, 20,
+                                 "Synchronous Exception Hardware Vectoring at Supervisor Level",
+                                 [FeatureStdExtSsijt]>;
+
+def FeatureStdExtSmip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Machine Level">;
+def HasStdExtSmip : Predicate<"Subtarget->hasStdExtSmip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSmip),
+                        "'Smip' (Support for Interrupt Handler Push/Pop at "
+                        "Machine Level)">;
+def FeatureStdExtSsip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Supervisor Level">;
+def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSsip),
+                        "'Ssip' (Support for Interrupt Handler Push/Pop at "
+                        "Supervisor Level)">;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1176,7 +1228,7 @@ def FeatureStdExtSha
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
 def FeatureStdExtSvukte
-    : RISCVExperimentalExtension<0, 3,
+    : RISCVExperimentalExtension<1, 0,
                                  "Address-Independent Latency of User-Mode Faults to Supervisor Addresses">;
 
 // Pointer Masking extensions
@@ -1660,6 +1712,8 @@ def HasVendorXqcibi
     : Predicate<"Subtarget->hasVendorXqcibi()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibi),
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+def NoVendorXqcibiOrNoShortForwardBranch
+    : Predicate<"!Subtarget->hasVendorXqcibi() || !Subtarget->hasShortForwardBranchIALU()">;
 
 def FeatureVendorXqcibm
     : RISCVExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
@@ -2129,13 +2183,6 @@ def TuneShortForwardBranchILoad
           "Enable short forward branch optimization for load instructions",
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
-
-def TuneShortForwardBranchImm
-    : RISCVSimpleTuneFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
-                             "true", "Enable short forward branch optimization for branches with immediates",
-                             [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
-def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

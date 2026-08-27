@@ -119,7 +119,8 @@ define linkonce_odr dso_local void @_Z4testIfEvT_(float noundef %arg) sanitize_m
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 193514046488576
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[_MSLD]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i32 [[_MSLD]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i1 [[TMP12]] to i64
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP7]] to double
 ; CHECK-NEXT:    store i32 [[_MSLD]], ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
