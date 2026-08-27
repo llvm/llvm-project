@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes=amdgpu-attributor %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu9.50 -passes=amdgpu-attributor %s | FileCheck %s
 
 ; The async marker intrinsics only set/await a marker in the stream of async
 ; requests; they cannot transfer control out of the module. Make sure they do
