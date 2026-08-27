@@ -1,0 +1,367 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 16-bit nanoMIPS instructions (compact ALU, moves,
+# arithmetic, load/store, jumps, branches, save/restore)
+#
+# Since load/store and branch-target operands will be fully supported in the
+# next upstreaming batch, they are set to 0 to allow confirming the mnemonics
+# and encoding of the remaining instruction parts.
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- alu / logic / move ---
+---
+# CHECK-LABEL: addiur1sp:
+# CHECK: addiu $a0, $sp, 4 # encoding: [0x41,0x72]
+name: addiur1sp
+body: |
+  bb.0:
+    $a0_nm = ADDIUR1SP_NM $sp_nm, 4
+...
+---
+# CHECK-LABEL: addiur2:
+# CHECK: addiu $a0, $a1, 4 # encoding: [0x51,0x92]
+name: addiur2
+body: |
+  bb.0:
+    $a0_nm = ADDIUR2_NM $a1_nm, 4
+...
+---
+# CHECK-LABEL: and16:
+# CHECK: and $a0, $a0, $a1 # encoding: [0x48,0x52]
+name: and16
+body: |
+  bb.0:
+    $a0_nm = AND16_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: andi16:
+# CHECK: andi $a0, $a1, 3 # encoding: [0x53,0xf2]
+name: andi16
+body: |
+  bb.0:
+    $a0_nm = ANDI16_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: break16:
+# CHECK: break 3 # encoding: [0x13,0x10]
+name: break16
+body: |
+  bb.0:
+    BREAK16_NM 3
+...
+---
+# CHECK-LABEL: li16:
+# CHECK: li $a0, 5 # encoding: [0x05,0xd2]
+name: li16
+body: |
+  bb.0:
+    $a0_nm = LI16_NM 5
+...
+---
+# CHECK-LABEL: move:
+# CHECK: move $a0, $a1 # encoding: [0x85,0x10]
+name: move
+body: |
+  bb.0:
+    $a0_nm = MOVE_NM $a1_nm
+...
+---
+# CHECK-LABEL: not16:
+# CHECK: not $a0, $a1 # encoding: [0x50,0x52]
+name: not16
+body: |
+  bb.0:
+    $a0_nm = NOT16_NM $a1_nm
+...
+---
+# CHECK-LABEL: or16:
+# CHECK: or $a0, $a0, $a1 # encoding: [0x4c,0x52]
+name: or16
+body: |
+  bb.0:
+    $a0_nm = OR16_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: sdbbp16:
+# CHECK: sdbbp 3 # encoding: [0x1b,0x10]
+name: sdbbp16
+body: |
+  bb.0:
+    SDBBP16_NM 3
+...
+---
+# CHECK-LABEL: sll16:
+# CHECK: sll $a0, $a1, 3 # encoding: [0x53,0x32]
+name: sll16
+body: |
+  bb.0:
+    $a0_nm = SLL16_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: srl16:
+# CHECK: srl $a0, $a1, 3 # encoding: [0x5b,0x32]
+name: srl16
+body: |
+  bb.0:
+    $a0_nm = SRL16_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: syscall16:
+# CHECK: syscall 3 # encoding: [0x0b,0x10]
+name: syscall16
+body: |
+  bb.0:
+    SYSCALL16_NM 3
+...
+---
+# CHECK-LABEL: xor16:
+# CHECK: xor $a0, $a0, $a1 # encoding: [0x44,0x52]
+name: xor16
+body: |
+  bb.0:
+    $a0_nm = XOR16_NM $a0_nm, $a1_nm
+...
+
+# --- arithmetic ---
+---
+# CHECK-LABEL: addu16:
+# CHECK: addu $a0, $a1, $a2 # encoding: [0x58,0xb3]
+name: addu16
+body: |
+  bb.0:
+    $a0_nm = ADDu16_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: addu4x4:
+# CHECK: addu $a0, $a0, $a1 # encoding: [0x85,0x3c]
+name: addu4x4
+body: |
+  bb.0:
+    $a0_nm = ADDu4x4_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: movep:
+# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xe6,0xbc]
+name: movep
+body: |
+  bb.0:
+    $a0_nm, $a1_nm = MOVEP_NM $a2_nm, $a3_nm
+...
+---
+# CHECK-LABEL: moveprev:
+# CHECK: movep $a0, $a1, $a2, $a3 # encoding: [0xac,0xfc]
+name: moveprev
+body: |
+  bb.0:
+    $a0_nm, $a1_nm = MOVEPREV_NM $a2_nm, $a3_nm
+...
+---
+# CHECK-LABEL: mul4x4:
+# CHECK: mul $a0, $a0, $a1 # encoding: [0x8d,0x3c]
+name: mul4x4
+body: |
+  bb.0:
+    $a0_nm = MUL4x4_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: subu16:
+# CHECK: subu $a0, $a1, $a2 # encoding: [0x59,0xb3]
+name: subu16
+body: |
+  bb.0:
+    $a0_nm = SUBu16_NM $a1_nm, $a2_nm
+...
+
+# --- load / store (with placeholder operands for now) ---
+---
+# CHECK-LABEL: lb16:
+# CHECK: lb $a0, 0 # encoding: [0x00,0x5e]
+name: lb16
+body: |
+  bb.0:
+    $a0_nm = LB16_NM 0
+...
+---
+# CHECK-LABEL: lbu16:
+# CHECK: lbu $a0, 0 # encoding: [0x08,0x5e]
+name: lbu16
+body: |
+  bb.0:
+    $a0_nm = LBU16_NM 0
+...
+---
+# CHECK-LABEL: lh16:
+# CHECK: lh $a0, 0 # encoding: [0x00,0x7e]
+name: lh16
+body: |
+  bb.0:
+    $a0_nm = LH16_NM 0
+...
+---
+# CHECK-LABEL: lhu16:
+# CHECK: lhu $a0, 0 # encoding: [0x08,0x7e]
+name: lhu16
+body: |
+  bb.0:
+    $a0_nm = LHU16_NM 0
+...
+---
+# CHECK-LABEL: lw16:
+# CHECK: lw $a0, 0 # encoding: [0x00,0x16]
+name: lw16
+body: |
+  bb.0:
+    $a0_nm = LW16_NM 0
+...
+---
+# CHECK-LABEL: lw4x4:
+# CHECK: lw $a0, 0 # encoding: [0x80,0x74]
+name: lw4x4
+body: |
+  bb.0:
+    $a0_nm = LW4x4_NM 0
+...
+---
+# CHECK-LABEL: lwgp16:
+# CHECK: lw $a0, 0 # encoding: [0x00,0x56]
+name: lwgp16
+body: |
+  bb.0:
+    $a0_nm = LWGP16_NM 0
+...
+---
+# CHECK-LABEL: lwsp16:
+# CHECK: lw $a0, 0 # encoding: [0x80,0x34]
+name: lwsp16
+body: |
+  bb.0:
+    $a0_nm = LWSP16_NM 0
+...
+---
+# CHECK-LABEL: lwxs16:
+# CHECK: lwxs $a0, 0 # encoding: [0x09,0x50]
+name: lwxs16
+body: |
+  bb.0:
+    $a0_nm = LWXS16_NM 0
+...
+---
+# CHECK-LABEL: sb16:
+# CHECK: sb $a0, 0 # encoding: [0x04,0x5e]
+name: sb16
+body: |
+  bb.0:
+    SB16_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sh16:
+# CHECK: sh $a0, 0 # encoding: [0x01,0x7e]
+name: sh16
+body: |
+  bb.0:
+    SH16_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sw16:
+# CHECK: sw $a0, 0 # encoding: [0x00,0x96]
+name: sw16
+body: |
+  bb.0:
+    SW16_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sw4x4:
+# CHECK: sw $a0, 0 # encoding: [0x80,0xf4]
+name: sw4x4
+body: |
+  bb.0:
+    SW4x4_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swgp16:
+# CHECK: sw $a0, 0 # encoding: [0x00,0xd6]
+name: swgp16
+body: |
+  bb.0:
+    SWGP16_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swsp16:
+# CHECK: sw $a0, 0 # encoding: [0x80,0xb4]
+name: swsp16
+body: |
+  bb.0:
+    SWSP16_NM $a0_nm, 0
+...
+
+# --- jump ---
+---
+# CHECK-LABEL: jalrc16:
+# CHECK: jalrc $ra, $a1 # encoding: [0xb0,0xd8]
+name: jalrc16
+body: |
+  bb.0:
+    $ra_nm = JALRC16_NM $a1_nm
+...
+---
+# CHECK-LABEL: jrc:
+# CHECK: jrc $ra # encoding: [0xe0,0xdb]
+name: jrc
+body: |
+  bb.0:
+    JRC_NM $ra_nm
+...
+
+# --- branch (with placeholder operands for now) ---
+---
+# CHECK-LABEL: balc16:
+# CHECK: balc 0 # encoding: [0x00,0x38]
+name: balc16
+body: |
+  bb.0:
+    BALC16_NM 0
+...
+---
+# CHECK-LABEL: bc16:
+# CHECK: bc 0 # encoding: [0x00,0x18]
+name: bc16
+body: |
+  bb.0:
+    BC16_NM 0
+...
+---
+# CHECK-LABEL: beqzc16:
+# CHECK: beqzc $a0, 0 # encoding: [0x00,0x9a]
+name: beqzc16
+body: |
+  bb.0:
+    BEQZC16_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: bnezc16:
+# CHECK: bnezc $a0, 0 # encoding: [0x00,0xba]
+name: bnezc16
+body: |
+  bb.0:
+    BNEZC16_NM $a0_nm, 0
+...
+
+# --- save / restore ---
+---
+# CHECK-LABEL: restorejrc16:
+# CHECK: restore.jrc 00 # encoding: [0x00,0x1d]
+name: restorejrc16
+body: |
+  bb.0:
+    RESTOREJRC16_NM 0, 0
+...
+---
+# CHECK-LABEL: save16:
+# CHECK: save 00 # encoding: [0x00,0x1c]
+name: save16
+body: |
+  bb.0:
+    SAVE16_NM 0, 0
+...

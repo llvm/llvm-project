@@ -1,0 +1,186 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 32-bit nanoMIPS control-transfer instructions (indirect
+# jumps/calls, direct branches/calls, conditional branches)
+#
+# Since the branch and call target operands will be fully supported in the
+# next upstreaming batch, they are set to 0 to allow confirming the mnemonics
+# and encoding of the remaining instruction parts.
+#
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- indirect jump / call (register) ---
+---
+# CHECK-LABEL: balrsc:
+# CHECK: balrsc $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x80]
+name: balrsc
+body: |
+  bb.0:
+    $ra_nm = BALRSC_NM $a1_nm
+...
+---
+# CHECK-LABEL: jalrc:
+# CHECK: jalrc $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x00]
+name: jalrc
+body: |
+  bb.0:
+    $ra_nm = JALRC_NM $a1_nm
+...
+---
+# CHECK-LABEL: jalrchb:
+# CHECK: jalrc.hb $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x10]
+name: jalrchb
+body: |
+  bb.0:
+    $ra_nm = JALRCHB_NM $a1_nm
+...
+
+# --- direct branch / call (with placeholder operands for now) ---
+---
+# CHECK-LABEL: balc:
+# CHECK: balc 0 # encoding: [0x00,0x2a,0x00,0x00]
+name: balc
+body: |
+  bb.0:
+    BALC_NM 0
+...
+---
+# CHECK-LABEL: bc:
+# CHECK: bc 0 # encoding: [0x00,0x28,0x00,0x00]
+name: bc
+body: |
+  bb.0:
+    BC_NM 0
+...
+---
+# CHECK-LABEL: movebalc:
+# CHECK: move.balc $a0, $a1, 0 # encoding: [0xa0,0x08,0x00,0x00]
+name: movebalc
+body: |
+  bb.0:
+    $a0_nm = MOVEBALC_NM $a1_nm, 0
+...
+
+# --- conditional branch (with placeholder operands for now) ---
+---
+# CHECK-LABEL: bbeqzc:
+# CHECK: bbeqzc $a0, 3, 0 # encoding: [0x84,0xc8,0x00,0x18]
+name: bbeqzc
+body: |
+  bb.0:
+    BBEQZC_NM $a0_nm, 3, 0
+...
+---
+# CHECK-LABEL: bbnezc:
+# CHECK: bbnezc $a0, 3, 0 # encoding: [0x94,0xc8,0x00,0x18]
+name: bbnezc
+body: |
+  bb.0:
+    BBNEZC_NM $a0_nm, 3, 0
+...
+---
+# CHECK-LABEL: beqc:
+# CHECK: beqc $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0x00]
+name: beqc
+body: |
+  bb.0:
+    BEQC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: beqic:
+# CHECK: beqic $a0, 5, 0 # encoding: [0x80,0xc8,0x00,0x28]
+name: beqic
+body: |
+  bb.0:
+    BEQIC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: bgec:
+# CHECK: bgec $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0x80]
+name: bgec
+body: |
+  bb.0:
+    BGEC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: bgeic:
+# CHECK: bgeic $a0, 5, 0 # encoding: [0x88,0xc8,0x00,0x28]
+name: bgeic
+body: |
+  bb.0:
+    BGEIC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: bgeiuc:
+# CHECK: bgeiuc $a0, 5, 0 # encoding: [0x8c,0xc8,0x00,0x28]
+name: bgeiuc
+body: |
+  bb.0:
+    BGEIUC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: bgeuc:
+# CHECK: bgeuc $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0xc0]
+name: bgeuc
+body: |
+  bb.0:
+    BGEUC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: bltc:
+# CHECK: bltc $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0x80]
+name: bltc
+body: |
+  bb.0:
+    BLTC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: bltic:
+# CHECK: bltic $a0, 5, 0 # encoding: [0x98,0xc8,0x00,0x28]
+name: bltic
+body: |
+  bb.0:
+    BLTIC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: bltiuc:
+# CHECK: bltiuc $a0, 5, 0 # encoding: [0x9c,0xc8,0x00,0x28]
+name: bltiuc
+body: |
+  bb.0:
+    BLTIUC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: bltuc:
+# CHECK: bltuc $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0xc0]
+name: bltuc
+body: |
+  bb.0:
+    BLTUC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: bnec:
+# CHECK: bnec $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0x00]
+name: bnec
+body: |
+  bb.0:
+    BNEC_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: bneic:
+# CHECK: bneic $a0, 5, 0 # encoding: [0x90,0xc8,0x00,0x28]
+name: bneic
+body: |
+  bb.0:
+    BNEIC_NM $a0_nm, 5, 0
+...
+---
+# CHECK-LABEL: brsc:
+# CHECK: brsc $a0 # encoding: [0x04,0x48,0x00,0x80]
+name: brsc
+body: |
+  bb.0:
+    BRSC_NM $a0_nm, 0
+...
