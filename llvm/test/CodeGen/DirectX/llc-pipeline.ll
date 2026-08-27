@@ -1,7 +1,8 @@
-; RUN: llc -filetype=asm -mtriple=dxil-pc-shadermodel6.3-library -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-ASM
-; RUN: llc -filetype=asm -mtriple=dxil-pc-shadermodel6.3-library -O1 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-O1,CHECK-ASM
-; RUN: llc -filetype=obj -mtriple=dxil-pc-shadermodel6.3-library -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-OBJ
-; RUN: llc -filetype=obj -mtriple=dxil-pc-shadermodel6.3-library -O1 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-O1,CHECK-OBJ
+; RUN: llc -filetype=asm -mtriple=dxil-pc-shadermodel6.3-library -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-SCALAR,CHECK-ASM
+; RUN: llc -filetype=asm -mtriple=dxil-pc-shadermodel6.3-library -O1 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-SCALAR,CHECK-O1,CHECK-ASM
+; RUN: llc -filetype=asm -mtriple=dxil-pc-shadermodel6.9-library -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-VECTOR,CHECK-ASM
+; RUN: llc -filetype=obj -mtriple=dxil-pc-shadermodel6.3-library -O0 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-SCALAR,CHECK-OBJ
+; RUN: llc -filetype=obj -mtriple=dxil-pc-shadermodel6.3-library -O1 -debug-pass=Structure < %s -o /dev/null 2>&1 | grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=CHECK,CHECK-SCALAR,CHECK-O1,CHECK-OBJ
 
 ; REQUIRES: asserts
 
@@ -27,9 +28,10 @@
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL Data Scalarization
-; CHECK-NEXT:   FunctionPass Manager
-; CHECK-NEXT:     Dominator Tree Construction
-; CHECK-NEXT:     Scalarize vector operations
+; CHECK-SCALAR-NEXT: FunctionPass Manager
+; CHECK-SCALAR-NEXT:   Dominator Tree Construction
+; CHECK-SCALAR-NEXT:   Scalarize vector operations
+; CHECK-VECTOR-NOT:  Scalarize vector operations
 ; CHECK-NEXT:   DXIL Array Flattener
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
