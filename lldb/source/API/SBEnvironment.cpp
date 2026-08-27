@@ -94,7 +94,7 @@ bool SBEnvironment::Unset(const char *name) {
   if (name_ref.trim().empty())
     return false;
 
-  return m_opaque_up->erase(llvm::StringRef(name));
+  return m_opaque_up->erase(name_ref);
 }
 
 SBStringList SBEnvironment::GetEntries() {

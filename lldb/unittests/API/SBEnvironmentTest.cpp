@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===/
 
+// Use the umbrella header for -Wdocumentation.
+#include "lldb/API/LLDB.h"
+
 #include "lldb/API/SBEnvironment.h"
 #include "gtest/gtest.h"
 
