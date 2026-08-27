@@ -30,7 +30,7 @@ bool Target::isValidFeatureListFormat(StringRef Features) {
 
   // Each feature starts with '+'/'-' followed by at least one non-comma
   // character. Features are comma-separated with an optional trailing comma.
-  for (size_t I = 0; I < Features.size(); ++I) {
+  for (size_t I = 0, E = Features.size(); I != E; ++I) {
     if (I == 0 || Features[I - 1] == ',') {
       // At the start of a feature: must have a sign and a non-empty name.
       if ((Features[I] != '+' && Features[I] != '-') ||
