@@ -2705,7 +2705,7 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool filterArgAndResAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
   for (mlir::NamedAttribute attr : func->getAttrs()) {
-    if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
+    if (attr.getName() == func.getSymNameAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == getLinkageAttrNameString() ||
         attr.getName() == func.getCallingConvAttrName() ||
@@ -3163,7 +3163,7 @@ CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
   builder.setInsertionPointToStart(&comdatOp.getBody().back());
   auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
       builder, comdatOp.getLoc(), op.getSymName(),
-      mlir::LLVM::comdat::Comdat::Any);
+      mlir::LLVM::comdat::Comdat::Any, /*sym_visibility=*/nullptr);
   return mlir::SymbolRefAttr::get(
       builder.getContext(), comdatName,
       mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));

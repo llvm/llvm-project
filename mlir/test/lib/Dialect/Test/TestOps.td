@@ -169,13 +169,15 @@ def TestTokenRegionWithoutTraitOp
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
-def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
+def SymbolOp
+    : TEST_Op<"symbol", [NoMemoryEffect, SymbolName, SymbolVisibility, Symbol]> {
   let summary =  "operation which defines a new symbol";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
-def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+def SymbolWithResultOp
+    : TEST_Op<"symbol_with_result", [SymbolName, SymbolVisibility, Symbol]> {
   let summary = "invalid symbol operation that produces an SSA result";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
@@ -183,6 +185,7 @@ def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
 }
 
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
+  SymbolName,
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
   let summary =  "operation overridden symbol visibility accessors";
@@ -729,7 +732,9 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
   }];
 }
 
-def ConversionFuncOp : TEST_Op<"conversion_func_op", [FunctionOpInterface]> {
+def ConversionFuncOp
+    : TEST_Op<"conversion_func_op",
+              [SymbolName, SymbolVisibility, FunctionOpInterface]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
