@@ -1,4 +1,4 @@
-# Our random sample implementation is not consistent across platforms
+# Our random sample implementation is inconsistent across platforms
 # REQUIRES: x86_64-linux
 
 # RUN: llvm-profdata merge --random-seed=1234 --temporal-profile-trace-reservoir-size=2 %s --text | FileCheck %s
