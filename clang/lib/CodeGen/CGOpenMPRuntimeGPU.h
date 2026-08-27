@@ -141,6 +141,10 @@ public:
   bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
                                    const VarDecl *VD) const override;
 
+  /// Check whether a target kernel can be promoted to a "no-loop" SPMD kernel,
+  /// mirroring Flang's MLIR promotion path.
+  bool canPromoteToNoLoop(const OMPExecutableDirective &D) const override;
+
   /// Get call to __kmpc_alloc_shared
   std::pair<llvm::Value *, llvm::Value *>
   getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) override;
