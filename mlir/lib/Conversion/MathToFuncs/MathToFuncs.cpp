@@ -197,7 +197,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -424,7 +424,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   Block *entryBlock = funcOp.addEntryBlock();
@@ -674,7 +674,7 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   LLVM::linkage::Linkage inlineLinkage = LLVM::linkage::Linkage::LinkonceODR;
   Attribute linkage =
       LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  funcOp->setAttr("llvm.linkage", linkage);
+  funcOp->setDiscardableAttr("llvm.linkage", linkage);
   funcOp.setPrivate();
 
   // set the insertion point to the start of the function

@@ -202,6 +202,27 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
+/// \returns Maximum LDS in bytes a single work-group can address. This is a
+/// fixed hardware cap and does not depend on how many SIMDs a work-group runs
+/// on.
+LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
+LLVM_ABI unsigned
+getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
+/// functional block in full-SIMD mode, half of them otherwise.
+constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
+  return FullSIMDMode ? 4 : 2;
+}
+
+/// \returns Minimum number of waves per execution unit.
+constexpr unsigned getMinWavesPerEU() { return 1; }
+
+/// \returns Maximum number of waves per execution unit without any kind of
+/// limitation.
+LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
+LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
 /// default target features with entries overridden by \p Features.
