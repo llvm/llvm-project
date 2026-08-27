@@ -33,6 +33,11 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- Fortran-standard-compliant reassociation within individual `REAL` and
+  `COMPLEX` sum expressions is now enabled by default at `-O1` and above.
+  This may change exact floating-point results. Flang users can restore
+  left-to-right evaluation with `-fno-fp-sum-reassociation`.
+
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,
   `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,

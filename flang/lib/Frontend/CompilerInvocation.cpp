@@ -318,7 +318,8 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.EnableSafeTrampoline = 1;
 
   if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
-                   clang::options::OPT_fno_fp_sum_reassociation, false))
+                   clang::options::OPT_fno_fp_sum_reassociation,
+                   opts.OptimizationLevel > 0))
     opts.SplitSumExpressionTree = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
