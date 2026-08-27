@@ -1,0 +1,44 @@
+## Long section names (>8 bytes) go into the COFF string table.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --rename-section=.text=.longsectionname %t %t2
+# RUN: llvm-readobj --sections --symbols --string-table %t2 | FileCheck %s
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '90'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+...
+
+# CHECK:      Name: .longsectionname
+# CHECK:      Characteristics [
+# CHECK-NEXT:   IMAGE_SCN_ALIGN_16BYTES
+# CHECK-NEXT:   IMAGE_SCN_CNT_CODE
+# CHECK-NEXT:   IMAGE_SCN_MEM_EXECUTE
+# CHECK-NEXT:   IMAGE_SCN_MEM_READ
+# CHECK-NEXT: ]
+
+# CHECK:      Name: .longsectionname
+# CHECK-NEXT: Value: 0
+# CHECK-NEXT: Section: .longsectionname
+
+# CHECK:      StringTable {
+# CHECK:        .longsectionname

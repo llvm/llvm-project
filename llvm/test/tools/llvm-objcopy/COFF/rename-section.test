@@ -1,0 +1,101 @@
+# RUN: yaml2obj %s -o %t
+
+## Basic rename: section header, contents, alignment, and section symbol.
+# RUN: llvm-objcopy --rename-section=.foo=.bar %t %t2
+# RUN: llvm-readobj --sections --section-data --symbols %t2 | FileCheck %s
+
+## Bad format / multiple renames of the same source (CLI, format-agnostic).
+# RUN: not llvm-objcopy --rename-section=.foo.bar --rename-section=.foo=.other %t %t2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-FORMAT
+# RUN: not llvm-objcopy --rename-section=.foo=.bar --rename-section=.foo=.other %t %t2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MULTIPLE-RENAMES
+
+## Section renames do not chain in one invocation.
+# RUN: llvm-objcopy --rename-section=.foo=.bar --rename-section=.bar=.baz %t %t3
+# RUN: cmp %t2 %t3
+
+## Renaming a nonexistent section is a silent no-op.
+# RUN: llvm-objcopy --rename-section=.missing=.other %t %t4
+# RUN: cmp %t %t4
+
+## Empty new name is allowed (matches LLVM ELF and COFF --add-section).
+# RUN: llvm-objcopy --rename-section=.foo= %t %t5
+# RUN: llvm-readobj --sections %t5 | FileCheck %s --check-prefix=EMPTY-NAME
+
+## PE executable smoke: rename a section header when there are no symbols.
+# RUN: yaml2obj %p/Inputs/x86_64-exe.yaml -o %t.exe
+# RUN: llvm-objcopy --rename-section=.rdata=.rodata %t.exe %t.exe2
+# RUN: llvm-readobj --sections %t.exe2 | FileCheck %s --check-prefix=PE
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name:            .foo
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     'C3C3C3C3'
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '90'
+symbols:
+  - Name:            .foo
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            .text
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            main
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+# CHECK:      Name: .bar
+# CHECK:      Characteristics [
+# CHECK-NEXT:   IMAGE_SCN_ALIGN_4BYTES
+# CHECK-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-NEXT:   IMAGE_SCN_MEM_READ
+# CHECK-NEXT: ]
+# CHECK:      SectionData (
+# CHECK-NEXT:   0000: C3C3C3C3
+# CHECK-NEXT: )
+# CHECK:      Name: .text
+
+# CHECK:      Name: .bar
+# CHECK-NEXT: Value: 0
+# CHECK-NEXT: Section: .bar
+# CHECK:      Name: .text
+# CHECK:      Name: main
+
+# BAD-FORMAT: bad format for --rename-section: missing '='
+# MULTIPLE-RENAMES: multiple renames of section '.foo'
+
+# EMPTY-NAME: Name: (00 00 00 00 00 00 00 00)
+
+# PE: Name: .text
+# PE: Name: .rodata
+# PE: Name: .data
+# PE: Name: .pdata
