@@ -59813,12 +59813,12 @@ static SDValue combineADOX(SDNode *N, SelectionDAG &DAG) {
   if (AddOp.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
       !needCarryOrOverflowFlag(SDValue(N, 1))) {
     if (AddOp != LHS) {
-      unsigned OrigBits = AddOp.getValueType().getScalarSizeInBits();
+      unsigned OrigBits = AddOp.getValueSizeInBits();
       for (SDUse &Use : N->uses()) {
         if (Use.getResNo() == 0) {
           SDNode *User = Use.getUser();
           if (User->getOpcode() != ISD::TRUNCATE ||
-              User->getValueType(0).getScalarSizeInBits() > OrigBits)
+              User->getValueSizeInBits(0) > OrigBits)
             return SDValue();
         }
       }
