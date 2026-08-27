@@ -225,7 +225,8 @@ public:
                                        FilteredDstRange.end());
       }
       if (!FilteredSubGraph.empty())
-        BPG.try_emplace(Id, BoundsPropagationGraph{std::move(FilteredSubGraph)});
+        BPG.try_emplace(Id,
+                        BoundsPropagationGraph{std::move(FilteredSubGraph)});
     }
 
     // Filter out type-constrained pointers from `UnsafePtrs`:

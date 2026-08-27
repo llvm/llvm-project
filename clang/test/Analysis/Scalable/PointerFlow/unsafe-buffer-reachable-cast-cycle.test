@@ -42,7 +42,7 @@ void f(char **a, char ***b, int i, int j) {
 // CHECK-DAG: "id": [[a_ID:[0-9]+]],$NS$WS"suffix": "1",$WS"usr": "c:@F@f#**C#*S0_#I#I#"
 // CHECK-DAG: "id": [[b_ID:[0-9]+]],$NS$WS"suffix": "2",$WS"usr": "c:@F@f#**C#*S0_#I#I#"
 
-// The reachable set is exactly {(a, 1), (a, 2), (b, 2), (b, 3)} 
+// The reachable set is exactly {(a, 1), (a, 2), (b, 2), (b, 3)}
 // CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
 // CHECK: "@": [[a_ID]]$PTR_L1
 // CHECK: "@": [[a_ID]]$PTR_L2
