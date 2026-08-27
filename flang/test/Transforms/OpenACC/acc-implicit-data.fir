@@ -37,6 +37,39 @@ func.func @test_fir_scalar_in_kernels() {
   return
 }
 
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) implicit(true) name("scalarvar") -> !fir.ref<f64>
+// CHECK-NOT: acc.copyout
+// CHECK: acc.delete accPtr(%[[COPYIN]] : !fir.ref<f64>) dataClause(acc_copyin) implicit(true) name("scalarvar")
+
+// -----
+
+func.func @test_fir_scalar_written_in_kernels() {
+  %livein = fir.alloca f64 {bindc_name = "scalarvar"}
+  acc.kernels {
+    %cst = arith.constant 1.000000e+00 : f64
+    fir.store %cst to %livein : !fir.ref<f64>
+    acc.terminator
+  }
+  return
+}
+
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar") -> !fir.ref<f64>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar")
+
+// -----
+
+// The store goes through a fir.convert - the write still has to be seen.
+func.func @test_fir_scalar_written_through_convert_in_kernels() {
+  %livein = fir.alloca f64 {bindc_name = "scalarvar"}
+  acc.kernels {
+    %cst = arith.constant 1.000000e+00 : f64
+    %ptr = fir.convert %livein : (!fir.ref<f64>) -> !fir.ptr<f64>
+    fir.store %cst to %ptr : !fir.ptr<f64>
+    acc.terminator
+  }
+  return
+}
+
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar") -> !fir.ref<f64>
 // CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar")
 
@@ -202,8 +235,9 @@ func.func @test_fir_scalar_in_kernels_defaultpresent() {
   return
 }
 
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar") -> !fir.ref<f64>
-// CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<f64>) to varPtr({{.*}} : !fir.ref<f64>) dataClause(acc_copy) implicit(true) name("scalarvar")
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<f64>) implicit(true) name("scalarvar") -> !fir.ref<f64>
+// CHECK-NOT: acc.copyout
+// CHECK: acc.delete accPtr(%[[COPYIN]] : !fir.ref<f64>) dataClause(acc_copyin) implicit(true) name("scalarvar")
 
 // -----
 

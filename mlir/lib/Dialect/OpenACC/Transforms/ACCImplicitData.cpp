@@ -23,7 +23,8 @@
 //    - In a copy clause otherwise.
 //
 // 3. A scalar variable will be treated as if it appears in:
-//    - A copy clause if the compute construct is a kernels construct.
+//    - A copy clause if the compute construct is a kernels construct, or a
+//      copyin clause when the construct cannot write the scalar.
 //    - A firstprivate clause otherwise (parallel, serial).
 //
 // Requirements:
@@ -109,7 +110,7 @@
 //     }
 //   }
 //
-// Example 2: Scalar in kernels construct (implicit copy)
+// Example 2: Scalar only read in kernels construct (implicit copyin)
 //
 // Before:
 //   func.func @test() {
@@ -124,16 +125,14 @@
 //   func.func @test() {
 //     %scalar = memref.alloca() {acc.var_name = "n"} : memref<i32>
 //     %copyin = acc.copyin varPtr(%scalar : memref<i32>) -> memref<i32>
-//                 {dataClause = #acc<data_clause acc_copy>,
-//                  implicit = true, name = "n"}
+//                 {implicit = true, name = "n"}
 //     acc.kernels dataOperands(%copyin : memref<i32>) {
 //       %val = memref.load %copyin[] : memref<i32>
 //       acc.terminator
 //     }
-//     acc.copyout accPtr(%copyin : memref<i32>)
-//                 to varPtr(%scalar : memref<i32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
-//                  implicit = true, name = "n"}
+//     acc.delete accPtr(%copyin : memref<i32>)
+//                {dataClause = #acc<data_clause acc_copyin>,
+//                 implicit = true, name = "n"}
 //   }
 //
 // Example 3: Array (aggregate) in parallel (implicit copy)
@@ -209,10 +208,13 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -425,6 +427,40 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
   }
 }
 
+/// Returns true when no operation in `region` can write to `var`. Views and
+/// casts of the variable are followed; a user whose effect on it cannot be
+/// established is treated as a write.
+static bool isNeverWrittenInRegion(Value var, Region &region) {
+  SmallVector<Value> worklist{var};
+  llvm::SmallPtrSet<Value, 8> visited;
+  while (!worklist.empty()) {
+    Value val = worklist.pop_back_val();
+    if (!visited.insert(val).second)
+      continue;
+    for (Operation *user : val.getUsers()) {
+      if (!region.isAncestor(user->getParentRegion()))
+        continue;
+      if (isa<ViewLikeOpInterface, CastOpInterface>(user)) {
+        worklist.append(user->result_begin(), user->result_end());
+        continue;
+      }
+      auto memInterface = dyn_cast<MemoryEffectOpInterface>(user);
+      if (!memInterface)
+        return false;
+      SmallVector<MemoryEffects::EffectInstance> effects;
+      memInterface.getEffectsOnValue(val, effects);
+      if (effects.empty())
+        return false;
+      if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &e) {
+            return isa<MemoryEffects::Write, MemoryEffects::Free>(
+                e.getEffect());
+          }))
+        return false;
+    }
+  }
+  return true;
+}
+
 // Generates the data entry data op clause so that it adheres to OpenACC
 // rules as follows (line numbers and specification from OpenACC 3.4):
 // 1388 An aggregate variable will be treated as if it appears either:
@@ -513,7 +549,10 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,
                                 accSupport.getVariableName(var));
-      copyinOp.setDataClause(acc::DataClause::acc_copy);
+      // Keep the copy-back only when the region can actually write the scalar.
+      // Otherwise it is an async race against the host code that follows.
+      if (!isNeverWrittenInRegion(var, computeConstructOp->getRegion(0)))
+        copyinOp.setDataClause(acc::DataClause::acc_copy);
       return copyinOp.getOperation();
     } else {
       // Scalars are implicit firstprivate in parallel and serial construct.
@@ -605,6 +644,8 @@ static Operation *findDataExitOp(Operation *dataEntryOp) {
 // Key ones used here:
 // * acc {construct} copy -> acc.copyin (before region) + acc.copyout (after
 // region)
+// * acc {construct} copyin -> acc.copyin (before region) + acc.delete (after
+// region)
 // * acc {construct} present -> acc.present (before region) + acc.delete
 // (after region)
 static void
@@ -626,11 +667,20 @@ generateDataExitOperations(OpBuilder &builder, Operation *accOp,
         builder.setInsertionPointAfter(dataExitOp);
     Operation *dataEntryOp = dataEntry.getDefiningOp();
     if (isa<acc::CopyinOp>(dataEntryOp)) {
-      auto copyoutOp = acc::CopyoutOp::create(
-          builder, dataEntryOp->getLoc(), dataEntry, acc::getVar(dataEntryOp),
-          /*structured=*/true, /*implicit=*/true,
-          acc::getVarName(dataEntryOp).value(), acc::getBounds(dataEntryOp));
-      copyoutOp.setDataClause(acc::DataClause::acc_copy);
+      // A copyin entry has no copy-back - just release the device copy.
+      if (acc::getDataClause(dataEntryOp) == acc::DataClause::acc_copyin) {
+        auto deleteOp = acc::DeleteOp::create(
+            builder, dataEntryOp->getLoc(), dataEntry,
+            /*structured=*/true, /*implicit=*/true,
+            acc::getVarName(dataEntryOp).value(), acc::getBounds(dataEntryOp));
+        deleteOp.setDataClause(acc::DataClause::acc_copyin);
+      } else {
+        auto copyoutOp = acc::CopyoutOp::create(
+            builder, dataEntryOp->getLoc(), dataEntry, acc::getVar(dataEntryOp),
+            /*structured=*/true, /*implicit=*/true,
+            acc::getVarName(dataEntryOp).value(), acc::getBounds(dataEntryOp));
+        copyoutOp.setDataClause(acc::DataClause::acc_copy);
+      }
     } else if (isa<acc::PresentOp, acc::NoCreateOp>(dataEntryOp)) {
       auto deleteOp = acc::DeleteOp::create(
           builder, dataEntryOp->getLoc(), dataEntry,

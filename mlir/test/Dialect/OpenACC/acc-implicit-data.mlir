@@ -32,7 +32,7 @@ func.func @test_scalar_in_parallel() {
 
 // -----
 
-// Test scalar in kernels construct - should generate copyin/copyout
+// Test scalar only read in kernels construct - should generate copyin/delete
 func.func @test_scalar_in_kernels() {
   %alloc = memref.alloca() : memref<f64>
   acc.kernels {
@@ -43,6 +43,42 @@ func.func @test_scalar_in_kernels() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_in_kernels
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : memref<f64>) implicit(true) name("") -> memref<f64>
+// CHECK-NOT: acc.copyout
+// CHECK: acc.delete accPtr(%[[COPYIN]] : memref<f64>) dataClause(acc_copyin) implicit(true) name("")
+
+// -----
+
+// Test scalar written in kernels construct - should generate copyin/copyout
+func.func @test_scalar_written_in_kernels() {
+  %alloc = memref.alloca() : memref<f64>
+  acc.kernels {
+    %cst = arith.constant 1.000000e+00 : f64
+    memref.store %cst, %alloc[] : memref<f64>
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_scalar_written_in_kernels
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : memref<f64>) dataClause(acc_copy) implicit(true) name("") -> memref<f64>
+// CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<f64>) to varPtr({{.*}} : memref<f64>) dataClause(acc_copy) implicit(true) name("")
+
+// -----
+
+// Test scalar passed to a call in kernels construct - the effect on it cannot
+// be established so the copy-back is kept
+func.func private @use_scalar(memref<f64>)
+func.func @test_scalar_escapes_call_in_kernels() {
+  %alloc = memref.alloca() : memref<f64>
+  acc.kernels {
+    func.call @use_scalar(%alloc) : (memref<f64>) -> ()
+    acc.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @test_scalar_escapes_call_in_kernels
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : memref<f64>) dataClause(acc_copy) implicit(true) name("") -> memref<f64>
 // CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<f64>) to varPtr({{.*}} : memref<f64>) dataClause(acc_copy) implicit(true) name("")
 
