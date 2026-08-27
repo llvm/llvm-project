@@ -34,6 +34,9 @@ struct SignalContext;
 struct StackTrace;
 struct SymbolizedStack;
 
+// The full type of the function `main`.
+using MainFnTy = int (*)(int argc, char** argv, char** envp);
+
 // Constants.
 const uptr kWordSize = SANITIZER_WORDSIZE / 8;
 const uptr kWordSizeInBits = 8 * kWordSize;
