@@ -3064,12 +3064,9 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
     RD->startDefinition();
     for (const auto &Pair : Privates) {
       const VarDecl *VD = Pair.second.Original;
-      // For BindingDecls, use the OriginalRef type (the binding's type),
-      // not the VD type (which is the DecompositionDecl's type).
-      QualType Type =
-          Pair.second.OriginalRef
-              ? Pair.second.OriginalRef->getType().getNonReferenceType()
-              : VD->getType().getNonReferenceType();
+      // Use VD type - for BindingDecls, Sema has already set VD to the full
+      // DecompositionDecl type so all bindings are accessible.
+      QualType Type = VD->getType().getNonReferenceType();
       // If the private variable is a local variable with lvalue ref type,
       // allocate the pointer instead of the pointee type.
       if (Pair.second.isLocalPrivate()) {

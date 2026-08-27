@@ -20519,19 +20519,43 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     }
 
     Type = Type.getUnqualifiedType();
+
+    // For BindingDecls, use the DecompositionDecl's type so all bindings from
+    // the same decomposition are accessible in the privatized region. We do
+    // this after conflict checking to preserve diagnostic errors. Don't modify
+    // RefExpr/SimpleRefExpr to keep diagnostics working.
+    bool IsBindingDecl = isa<BindingDecl>(D);
+    VarDecl *PrivateVD = VD;
+    QualType PrivateType = Type;
+    if (IsBindingDecl) {
+      const auto *BD = cast<BindingDecl>(D);
+      PrivateVD = cast<VarDecl>(BD->getDecomposedDecl());
+      PrivateType = PrivateVD->getType().getUnqualifiedType();
+    }
+
     VarDecl *VDPrivate =
-        buildVarDecl(SemaRef, ELoc, Type, D->getName(),
+        buildVarDecl(SemaRef, ELoc, PrivateType, D->getName(),
                      D->hasAttrs() ? &D->getAttrs() : nullptr,
-                     VD ? cast<DeclRefExpr>(SimpleRefExpr) : nullptr);
+                     PrivateVD ? cast<DeclRefExpr>(SimpleRefExpr) : nullptr);
     // Generate helper private variable and initialize it with the value of the
     // original variable. The address of the original variable is replaced by
     // the address of the new private variable in the CodeGen. This new variable
     // is not added to IdResolver, so the code in the OpenMP region uses
     // original variable for proper diagnostics and variable capturing.
     Expr *VDInitRefExpr = nullptr;
-    // For arrays generate initializer for single element and replace it by the
-    // original array element in CodeGen.
-    if (Type->isArrayType()) {
+
+    // For BindingDecls, CodeGen will handle initialization by copying the
+    // entire DecompositionDecl, so we don't need to set an initializer here.
+    // Just create a dummy init var for consistency with the normal path.
+    if (IsBindingDecl) {
+      QualType DREType = PrivateType.getNonReferenceType();
+      VarDecl *VDInit = buildVarDecl(SemaRef, RefExpr->getExprLoc(), DREType,
+                                     ".firstprivate.temp");
+      VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, DREType, ELoc);
+    }
+    // For arrays generate initializer for single element and replace it by
+    // the original array element in CodeGen.
+    else if (Type->isArrayType()) {
       VarDecl *VDInit =
           buildVarDecl(SemaRef, RefExpr->getExprLoc(), ElemType, D->getName());
       VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, ElemType, ELoc);
@@ -20572,7 +20596,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(),
         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
-    bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate) {
         Ref = TopDVar.PrivateCopy;

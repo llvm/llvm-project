@@ -1218,7 +1218,33 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
         EmitDecl(*VD);
         LocalDeclMap.erase(VDInit);
         Address VDAddr = GetAddrOfLocalVar(VD);
-        bool IsRegistered = PrivateScope.addPrivate(BD, VDAddr);
+
+        // VD contains the full DecompositionDecl, but we need to map BD to
+        // its specific field. Temporarily map the DecompositionDecl to
+        // VDAddr and emit the binding expression to extract the field.
+        const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+        auto It = LocalDeclMap.find(DD);
+        bool WasMapped = It != LocalDeclMap.end();
+        Address SavedAddr = WasMapped ? It->second : Address::invalid();
+        if (WasMapped)
+          It->second = VDAddr;
+        else
+          LocalDeclMap.insert({DD, VDAddr});
+
+        const Expr *BindingExpr = BD->getBinding();
+        LValue BindingLVal = EmitLValue(const_cast<Expr *>(BindingExpr));
+        Address BindingAddr = BindingLVal.getAddress();
+
+        // Restore the DecompositionDecl mapping
+        if (WasMapped) {
+          auto RestoreIt = LocalDeclMap.find(DD);
+          assert(RestoreIt != LocalDeclMap.end());
+          RestoreIt->second = SavedAddr;
+        } else {
+          LocalDeclMap.erase(DD);
+        }
+
+        bool IsRegistered = PrivateScope.addPrivate(BD, BindingAddr);
         assert(IsRegistered &&
                "firstprivate var already registered as firstprivate");
         (void)IsRegistered;
@@ -1476,28 +1502,10 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
           const auto *DestVD =
               cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
 
-          // If the BindingDecl was already privatized (e.g., by firstprivate),
-          // temporarily remove it from OMPPrivatizedBindings to get the true
-          // original address.
-          const BindingDecl *CanonBD =
-              cast<BindingDecl>(BD->getCanonicalDecl());
-          Address SavedPrivAddr = Address::invalid();
-          auto PrivIt = OMPPrivatizedBindings.find(CanonBD);
-          if (PrivIt != OMPPrivatizedBindings.end()) {
-            SavedPrivAddr = PrivIt->second;
-            OMPPrivatizedBindings.erase(PrivIt);
-          }
-
           // Get the original binding address.
           Address OrigAddr =
               EmitOMPBindingOriginalAddr(BD, (*IRef)->getExprLoc());
           PrivateScope.addPrivate(DestVD, OrigAddr);
-
-          // Restore the privatized binding.
-          if (SavedPrivAddr.isValid()) {
-            OMPPrivatizedBindings.insert_or_assign(CanonBD, SavedPrivAddr);
-          }
-
           if (IInit) {
             const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
             // Emit private VarDecl with copy init.
@@ -1619,12 +1627,6 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
         } else if (OMPPrivatizedBindings.count(BD)) {
           // Parallel for case: BindingDecl is directly privatized.
           // Leave PrivateVD as nullptr to handle specially below.
-        } else {
-          // BindingDecl not privatized and no .lastprivate.src - skip it.
-          ++IRef;
-          ++ISrcRef;
-          ++IDestRef;
-          continue;
         }
       } else {
         PrivateVD = cast<VarDecl>(PrivateDecl);
@@ -2974,11 +2976,6 @@ void CodeGenFunction::EmitOMPLinearClause(
         // Emit private VarDecl with copy init.
         EmitVarDecl(*PrivateVD);
         Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
-
-        // For BindingDecls, also register in OMPPrivatizedBindings for lookup.
-        if (const auto *BD = dyn_cast<BindingDecl>(VD))
-          OMPPrivatizedBindings.insert_or_assign(BD, PrivateAddr);
-
         bool IsRegistered = PrivateScope.addPrivate(VD, PrivateAddr);
         assert(IsRegistered && "linear var already registered as private");
         // Silence the warning about unused variable.
