@@ -14,6 +14,11 @@
 ; RUN:   -stop-after=hexagon-global-array-alignment < %s \
 ; RUN:   | FileCheck %s --check-prefix=RODATA
 ;
+; With -hexagon-disable-align-opt-byte-half the .rodata size reduction is off,
+; so byte and half-word arrays are promoted to 8 bytes even at -O2, as at -O3.
+; RUN: llc -mtriple=hexagon -O2 -hexagon-disable-align-opt-byte-half \
+; RUN:   -stop-after=hexagon-global-array-alignment < %s | FileCheck %s
+;
 ; The pass can be disabled with -hexagon-disable-global-array-align.
 ; RUN: llc -mtriple=hexagon -O3 -hexagon-disable-global-array-align \
 ; RUN:   -stop-after=hexagon-global-array-alignment < %s \
