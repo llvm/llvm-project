@@ -151,14 +151,13 @@ Error SPIRVCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 }
 
 void SPIRVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerCombiner when it has been
-  // ported.
-  // TODO(boomanaiden154): Add SPIRVPreLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPreLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(SPIRVPreLegalizerPass(), PMW);
 }
 
 Error SPIRVCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LegalizerPass(), PMW);
-  // TODO(boomanaiden154): Add SPIRVPostLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPostLegalizerPass(), PMW);
   return Error::success();
 }
 
