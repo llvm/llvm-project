@@ -28,7 +28,7 @@ func.func @noinline_with_arg(%arg0 : i32) -> i32 {
   // CHECK-NEXT: func_with_arg
   // CHECK-NEXT: return
 
-  %0 = call @func_with_arg(%arg0) no_inline : (i32) -> i32
+  %0 = call @func_with_arg(%arg0) <no_inline = unit> : (i32) -> i32
   return %0 : i32
 }
 
