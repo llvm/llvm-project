@@ -1354,7 +1354,7 @@ feature_test_macros = [
             "name": "__cpp_lib_simd_bitops",
             "values": {
                 # "c++29": 202606 # P3793R2 Better shifting
-                "c++29": 202607 # P3772R2 std::simd overloads for bit permutations
+                "c++29": 202607  # P3772R2 std::simd overloads for bit permutations
             },
             "headers": ["simd"],
             "unimplemented": True,
