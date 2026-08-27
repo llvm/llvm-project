@@ -1337,11 +1337,6 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
-            "name": "__cpp_lib_smart_ptr_for_overwrite",
-            "values": {"c++20": 202002},
-            "headers": ["memory"],
-        },
-        {
             "name": "__cpp_lib_simd",
             "values": {
                 "c++26": 202606
@@ -1371,6 +1366,11 @@ feature_test_macros = [
             },  # P3319R6 Add an iota object for simd (and more)
             "headers": ["simd"],
             "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_smart_ptr_for_overwrite",
+            "values": {"c++20": 202002},
+            "headers": ["memory"],
         },
         {
             "name": "__cpp_lib_smart_ptr_owner_equality",
