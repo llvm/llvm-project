@@ -228,6 +228,9 @@ public:
   void handleUseOfUndefinedPromisedInterface(TypeID interfaceRequestorID,
                                              TypeID interfaceID,
                                              StringRef interfaceName = "") {
+    // Most dialects promise nothing; skip hashing a key and probing the set.
+    if (unresolvedPromisedInterfaces.empty())
+      return;
     if (unresolvedPromisedInterfaces.count(
             {interfaceRequestorID, interfaceID})) {
       llvm::report_fatal_error(
