@@ -5454,8 +5454,8 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     assert(Array->getType()->isArrayType() &&
            "Array to pointer decay must have array source type!");
     LValue ArrayLV;
-    // For simple multidimensional array indexing, set the 'accessed' flag for
-    // better bounds-checking of the base expression.
+    // A section names storage that has to exist, so the row it is taken from does
+    // too; unlike a subscript, that does not depend on the enclosing context.
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
       ArrayLV = EmitArraySubscriptExpr(ASE, ObjectRequired);
     else

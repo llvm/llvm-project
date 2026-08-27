@@ -3401,10 +3401,10 @@ public:
                      SanitizerSet SkippedChecks = SanitizerSet(),
                      llvm::Value *ArraySize = nullptr);
 
-  /// Whether the context an lvalue appears in requires the object it designates
-  /// to exist. Threaded down through the lvalue emitters so that a subscript can
-  /// tell `x = a[i]` (which requires the element) from `p = &a[i]` (which does
-  /// not, per C99 6.5.6p8 and 6.5.3.2p3).
+  /// Whether the context requires the object an expression designates -- or,
+  /// for an expression of pointer type, the object it points to -- to exist.
+  /// Threaded down so that a subscript can tell `x = a[i]`, which requires the
+  /// element, from `p = &a[i]`, which does not (C99 6.5.6p8, 6.5.3.2p3).
   enum ObjectRequirement_t { ObjectNotRequired, ObjectRequired };
 
   /// Emit a check that \p Base points into an array object, which we can access
@@ -5624,6 +5624,7 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
+  /// \p Req is about the object \p Addr points to, not about \p Addr itself.
   Address
   EmitPointerWithAlignment(const Expr *Addr, LValueBaseInfo *BaseInfo = nullptr,
                            TBAAAccessInfo *TBAAInfo = nullptr,
