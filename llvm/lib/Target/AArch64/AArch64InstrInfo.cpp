@@ -216,6 +216,16 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
+  // Under async EH the AsmPrinter emits a nop after an EH_LABEL when the next
+  // instruction can fault, so this has to come before the meta check below.
+  if (MI.getOpcode() == TargetOpcode::EH_LABEL &&
+      F.getParent()->getModuleFlag("eh-asynch")) {
+    auto Next = std::next(MI.getIterator());
+    if (Next != MBB.end() &&
+        (Next->mayLoadOrStore() || Next->mayRaiseFPException()))
+      return 4;
+  }
+
   // Meta-instructions emit no code.
   if (MI.isMetaInstruction())
     return 0;
