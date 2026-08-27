@@ -5410,7 +5410,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   }
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   // TODO: Though vector loads usually perform well on AArch64, in some targets
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).

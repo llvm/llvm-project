@@ -4,20 +4,20 @@
 
 ; RISCVTTIImpl::instCombineIntrinsic attaches a range return attribute to
 ; vsetvli. The result is vl = f(AVL, VLMAX) with 0 <= vl <= min(AVL, VLMAX).
-; The result equals AVL only when AVL cannot exceed the smallest possible VLMAX;
-; for any larger (or runtime) AVL, vl may shrink below VLMAX all the way to 0,
-; so only the VLMAX-derived upper bound is sound.
+; A constant AVL not exceeding the smallest possible VLMAX folds to that
+; constant. For any larger (or runtime) AVL, vl may shrink below VLMAX all the
+; way to 0, so only the VLMAX-derived upper bound is sound.
 
 ;------------------------------------------------------------------------------
 ; Constant AVL.
 ;------------------------------------------------------------------------------
 
-; AVL below the smallest VLMAX (16 at VLEN128, 64 at VLEN512): vl == AVL exactly.
+; AVL below the smallest VLMAX (16 at VLEN128, 64 at VLEN512): vl == AVL, so the
+; intrinsic folds to the constant.
 define i64 @vsetvli_const_avl_below_min() {
 ; CHECK-LABEL: define i64 @vsetvli_const_avl_below_min(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[VL:%.*]] = call range(i64 5, 6) i64 @llvm.riscv.vsetvli.i64(i64 5, i64 0, i64 0)
-; CHECK-NEXT:    ret i64 [[VL]]
+; CHECK-NEXT:    ret i64 5
 ;
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 5, i64 0, i64 0)
   ret i64 %vl
@@ -27,15 +27,14 @@ define i64 @vsetvli_const_avl_below_min() {
 define i64 @vsetvli_const_avl_at_min128() {
 ; CHECK-LABEL: define i64 @vsetvli_const_avl_at_min128(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[VL:%.*]] = call range(i64 16, 17) i64 @llvm.riscv.vsetvli.i64(i64 16, i64 0, i64 0)
-; CHECK-NEXT:    ret i64 [[VL]]
+; CHECK-NEXT:    ret i64 16
 ;
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 16, i64 0, i64 0)
   ret i64 %vl
 }
 
 ; AVL == 20 sits in (MinVLMAX, ...) at VLEN128, so vl is only known to be
-; [0, 20]; at VLEN512 it is still below VLMAX (64), so vl == 20 exactly.
+; [0, 20]; at VLEN512 it is still below VLMAX (64), so vl == 20 folds.
 define i64 @vsetvli_const_avl_mid() {
 ; VLEN128-LABEL: define i64 @vsetvli_const_avl_mid(
 ; VLEN128-SAME: ) #[[ATTR0]] {
@@ -44,8 +43,7 @@ define i64 @vsetvli_const_avl_mid() {
 ;
 ; VLEN512-LABEL: define i64 @vsetvli_const_avl_mid(
 ; VLEN512-SAME: ) #[[ATTR0]] {
-; VLEN512-NEXT:    [[VL:%.*]] = call range(i64 20, 21) i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
-; VLEN512-NEXT:    ret i64 [[VL]]
+; VLEN512-NEXT:    ret i64 20
 ;
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 20, i64 0, i64 0)
   ret i64 %vl
@@ -78,8 +76,7 @@ define i64 @vsetvli_const_avl_and() {
 define i32 @vsetvli_i32_const_avl_below_min() {
 ; CHECK-LABEL: define i32 @vsetvli_i32_const_avl_below_min(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[VL:%.*]] = call range(i32 5, 6) i32 @llvm.riscv.vsetvli.i32(i32 5, i32 0, i32 0)
-; CHECK-NEXT:    ret i32 [[VL]]
+; CHECK-NEXT:    ret i32 5
 ;
   %vl = call i32 @llvm.riscv.vsetvli.i32(i32 5, i32 0, i32 0)
   ret i32 %vl

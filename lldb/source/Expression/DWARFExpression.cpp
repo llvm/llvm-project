@@ -1601,6 +1601,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
       tmp = stack.back();
       stack.pop_back();
+      if (IsPotentiallyGenericIntegerOperand(tmp.GetScalar(), address_size) &&
+          IsPotentiallyGenericIntegerOperand(stack.back().GetScalar(),
+                                             address_size)) {
+        tmp.GetScalar().MakeUnsigned();
+        stack.back().GetScalar().MakeUnsigned();
+      }
       stack.back().GetScalar() = stack.back().GetScalar() % tmp.GetScalar();
       break;
 

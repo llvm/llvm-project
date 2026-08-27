@@ -3011,7 +3011,7 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
     } else {
       SmallVector<const Value *> Indices(GEP->indices());
       Cost += getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices, AccessTy, CostKind);
+                         Indices, CostKind, AccessTy);
     }
   }
   return Cost;
@@ -3699,7 +3699,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.NumLoadsPerBlock = IsZeroCmp ? Options.MaxNumLoads : 1;
   if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
     Options.AllowedTailExpansions = {3, 5, 6};
@@ -3758,6 +3758,11 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   // validation is needed here.
   if (is_contained({Intrinsic::riscv_vsetvli, Intrinsic::riscv_vsetvlimax},
                    II.getIntrinsicID())) {
+    // These intrinsics require the V extension; without it the VLEN queries
+    // below would assert. Such IR would fail isel anyway, so just bail out.
+    if (!ST->hasVInstructions())
+      return {};
+
     bool HasAVL = II.getIntrinsicID() == Intrinsic::riscv_vsetvli;
     unsigned Offset = HasAVL ? 1 : 0;
     unsigned BitWidth = II.getType()->getIntegerBitWidth();
@@ -3784,11 +3789,12 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       APInt MaxVL = VLMAXRange.getUnsignedMax();
       if (auto *AVL = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
         const APInt &C = AVL->getValue();
+        // A constant AVL not exceeding the smallest possible VLMAX means vl is
+        // exactly AVL, so replace the intrinsic with that constant.
         if (C.ule(VLMAXRange.getUnsignedMin()))
-          VLRange = ConstantRange(C);
-        else
-          VLRange = ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
-                                               APIntOps::umin(C, MaxVL) + 1);
+          return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), C));
+        VLRange = ConstantRange::getNonEmpty(APInt::getZero(BitWidth),
+                                             APIntOps::umin(C, MaxVL) + 1);
       } else {
         VLRange =
             ConstantRange::getNonEmpty(APInt::getZero(BitWidth), MaxVL + 1);
