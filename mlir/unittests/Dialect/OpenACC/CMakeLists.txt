@@ -22,6 +22,7 @@ mlir_target_link_libraries(MLIROpenACCTests
   MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRArithDialect
+  MLIRArithValueBoundsOpInterfaceImpl
   MLIROpenACCAnalysis
   MLIROpenACCDialect
   MLIROpenACCUtils

@@ -120,6 +120,14 @@ foreach i = {6-28} in
     def FeatureReservedR#i : SubtargetFeature<"reserved-r"#i,
         "UserReservedRegister[Hexagon::R"#i#"]",
         "true", "Reserve register R"#i>;
+// Selects which register holds the shadow call stack pointer.  Only the
+// callee-saved registers (R16-R27, see the Hexagon ABI "Register usage across
+// calls") can hold a value across a call, so only those are offered here.  At
+// most one may be selected; if none is, R18 is used (see getSCSPReg()).
+foreach i = {16-27} in
+    def FeatureSCSRegR#i : SubtargetFeature<"scs-reg-r"#i,
+        "SCSPointerRegister[Hexagon::R"#i#"]",
+        "true", "Use register R"#i#" as the shadow call stack pointer">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
       "NoreturnStackElim", "true",
       "Eliminate stack allocation in a noreturn function when possible">;

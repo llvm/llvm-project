@@ -22,6 +22,7 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
@@ -91,7 +92,9 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DynamicDebugging.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -391,17 +394,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
     break;
   }
 
-  // Set float ABI type.
-  assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
-          CodeGenOpts.FloatABI == "hard" || CodeGenOpts.FloatABI.empty()) &&
-         "Invalid Floating Point ABI!");
-  Options.FloatABIType =
-      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
-          .Case("soft", llvm::FloatABI::Soft)
-          .Case("softfp", llvm::FloatABI::Soft)
-          .Case("hard", llvm::FloatABI::Hard)
-          .Default(llvm::FloatABI::Default);
-
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {
   case LangOptions::FPM_Off:
@@ -481,7 +473,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
   Options.LoopAlignment = CodeGenOpts.LoopAlignment;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
-  Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
+  Options.ObjectFilenameForDebug =
+      CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
   Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
@@ -668,7 +661,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
       TargetTriple.isAArch64(64) || TargetTriple.isRISCV() ||
-      TargetTriple.isARM() || TargetTriple.isThumb())
+      TargetTriple.isARM() || TargetTriple.isThumb() ||
+      TargetTriple.getArch() == llvm::Triple::hexagon)
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
@@ -1139,8 +1133,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
-  if (CodeGenOpts.LinkBitcodePostopt)
+  if (CodeGenOpts.LinkBitcodePostopt) {
     MPM.addPass(LinkInModulesPass(BC));
+    MPM.addPass(AssignGUIDPass());
+  }
 
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
@@ -1248,7 +1244,11 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (CodeGenOpts.EnableNewPMCodeGen) {
+  if (CodeGenOpts.getEnableNewPMCodeGen() ==
+          CodeGenOptions::NewPMEnablementLevel::ForceEnable ||
+      (CodeGenOpts.getEnableNewPMCodeGen() ==
+           CodeGenOptions::NewPMEnablementLevel::Auto &&
+       TM->shouldDefaultToNewPM())) {
     RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
   } else {
     RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
@@ -1271,9 +1271,9 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   const llvm::TargetOptions &Options = TM->Options;
-  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
+  CodeGenPasses.add(
+      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
+                                    Options.MCOptions.ABIName, Options.VecLib));
 
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
@@ -1487,6 +1487,91 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
+static void createAndEmbedModuleForDynamicDebugging(
+    CompilerInstance &CI, CodeGenOptions &CGOpts, llvm::Module *M,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, BackendConsumer *BC) {
+  /// Helper for saving the module(s) at various dyndbg stages.
+  auto SaveModule = [&](StringRef Name, llvm::Module &M) {
+    if (CGOpts.SaveDynDbgTempsFilePrefix == "")
+      return;
+    std::error_code EC;
+    std::string Path =
+        Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
+    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+    if (EC) {
+      // Copy -save-temps behaviour: this is a debugging option so we simply
+      // exit if there's an issue.
+      errs() << "failed to open " << Path << ": " << EC.message() << '\n';
+      errs().flush();
+      exit(1);
+    }
+    M.print(OS, nullptr);
+  };
+
+  // Compute a hash suffix for promoting static globals (once per TU).
+  std::string PromotionSuffix;
+  {
+    // LLVM's hash/hash_combine is not guaranteed to be stable.
+    MD5 Hash;
+    // Include args in the hash else preprocessor definitions used to alter
+    // the same source file compiled twice won't generate unique hashes.
+    Hash.update(CGOpts.CmdArgs);
+    for (auto *CU : M->debug_compile_units()) {
+      if (CU->getDirectory().size() > 0)
+        Hash.update(CU->getDirectory());
+
+      Hash.update(CU->getFilename());
+    }
+
+    MD5::MD5Result Result;
+    Hash.final(Result);
+    PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
+  }
+
+  SaveModule("dyndbg.0.input", *M);
+  // Modify M as needed and create an "unoptimized" clone.
+  auto UnoptM = prepareForDynamicDebugging(M, PromotionSuffix);
+  SaveModule("dyndbg.1.inner", *UnoptM);
+
+  if (!CGOpts.DiscardDynamicDebuggingDebugModule) {
+    CodeGenOptions UnoptOpts = CGOpts;
+    UnoptOpts.OptimizationLevel = 0;
+    UnoptOpts.OptimizeSize = 0;
+    EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
+
+    // Create a buffer and ostream for the inner ELF.
+    SmallVector<char, 0> UnoptBuf;
+    std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
+        std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
+
+    // Always run the full codegen pipeline (Backend_EmitObj). This causes
+    // assertion failures if there's no registered backend which is why we
+    // disable the feature if that's the case (see
+    // warn_dyndbg_unable_to_create_target above).
+    AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
+    assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
+
+    // Inject the inner ELF into the outer module.
+    StringRef SR(UnoptBuf.data(), UnoptBuf.size());
+    std::unique_ptr<MemoryBuffer> Buf =
+        MemoryBuffer::getMemBuffer(SR, "", false);
+
+    GlobalVariable *EmbeddedGV =
+        llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8),
+                                  /*SectionExclude*/ false);
+    // Add ELF section properties metadata.
+    auto &C = M->getContext();
+    auto getU32Metadata = [&C](unsigned Val) {
+      return ConstantAsMetadata::get(ConstantInt::get(C, APInt(32, Val)));
+    };
+    EmbeddedGV->addMetadata(
+        LLVMContext::MD_elf_section_properties,
+        *MDTuple::get(C, {/*sh_type*/ getU32Metadata(ELF::SHT_LLVM_DYNDBG_ELF),
+                          /*sh_entsize*/ getU32Metadata(0)}));
+  }
+  SaveModule("dyndbg.2.outer", *M);
+}
+
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               StringRef TDesc, llvm::Module *M,
                               BackendAction Action,
@@ -1510,7 +1595,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                       .moveInto(CombinedIndex)) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
-                            CGOpts.ThinLTOIndexFile + "': ");
+                                CGOpts.ThinLTOIndexFile + "': ");
       return;
     }
 
@@ -1535,6 +1620,30 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       M = EmptyModule.get();
     }
   }
+
+  bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
+  if (EnableDynamicDebugging) {
+    // Disable dyndbg if the target isn't available as we're compiling to the
+    // inner module (unless we're discarding it for debugging/testing).
+    std::string Error;
+    const llvm::Target *TheTarget =
+        TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
+    if (!TheTarget && !CGOpts.DiscardDynamicDebuggingDebugModule) {
+      Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
+      EnableDynamicDebugging = false;
+    }
+
+    // Instrumentation causes issues (parts of LLVM expect certain globals to
+    // have initializers). Intrinsics may already have been added to IR by now,
+    // so we can't just turn it off for the inner module (we'd have to strip
+    // them out / not clone them). TODO: Support instrumentation.
+    if (CGOpts.getProfileInstr() != driver::ProfileInstrKind::ProfileNone) {
+      Diags.Report(diag::err_dyndbg_no_instrumentation);
+      EnableDynamicDebugging = false;
+    }
+  }
+  if (EnableDynamicDebugging)
+    createAndEmbedModuleForDynamicDebugging(CI, CGOpts, M, VFS, BC);
 
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), BC);

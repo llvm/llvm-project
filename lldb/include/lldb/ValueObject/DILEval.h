@@ -73,6 +73,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode &node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) override;
 
   /// Perform usual unary conversions on a value. At the moment this
   /// includes array-to-pointer and integral promotion for eligible types.
@@ -106,6 +109,13 @@ private:
                                                        lldb::ValueObjectSP rhs,
                                                        CompilerType result_type,
                                                        uint32_t location);
+  llvm::Error ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
+                                 lldb::ValueObjectSP &rhs, bool lhs_is_literal,
+                                 bool rhs_is_literal, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateComparison(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                     lldb::ValueObjectSP rhs, bool lhs_is_literal,
+                     bool rhs_is_literal, uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                       lldb::ValueObjectSP rhs, uint32_t location);
@@ -126,6 +136,10 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                           uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                        lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP> EvaluateLogical(const BinaryOpNode &node);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system, ExecutionContextScope &ctx,
                   const IntegerLiteralNode &literal);

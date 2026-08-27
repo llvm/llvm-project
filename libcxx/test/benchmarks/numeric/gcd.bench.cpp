@@ -13,6 +13,7 @@
 #include <cstring>
 #include <numeric>
 #include <random>
+#include "test_macros.h"
 
 template <class T>
 static std::array<T, 1000> generate(std::uniform_int_distribution<T> distribution = std::uniform_int_distribution<T>{
@@ -23,7 +24,7 @@ static std::array<T, 1000> generate(std::uniform_int_distribution<T> distributio
   return result;
 }
 
-static void bm_gcd_random(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_gcd_random(benchmark::State& state) {
   std::array data = generate<int>();
   while (state.KeepRunningBatch(data.size() * data.size()))
     for (auto v0 : data)
@@ -32,7 +33,7 @@ static void bm_gcd_random(benchmark::State& state) {
 }
 BENCHMARK(bm_gcd_random)->Name("std::gcd() (random numbers)");
 
-static void bm_gcd_trivial(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_gcd_trivial(benchmark::State& state) {
   int lhs = ~static_cast<int>(0), rhs = 1;
   for (auto _ : state) {
     benchmark::DoNotOptimize(lhs);
@@ -42,7 +43,7 @@ static void bm_gcd_trivial(benchmark::State& state) {
 }
 BENCHMARK(bm_gcd_trivial)->Name("std::gcd() (trivial inputs)");
 
-static void bm_gcd_complex(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_gcd_complex(benchmark::State& state) {
   long long lhs = 2971215073;
   long long rhs = 1836311903;
   for (auto _ : state) {

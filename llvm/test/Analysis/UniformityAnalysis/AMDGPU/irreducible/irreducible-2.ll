@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple=amdgpu6.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @cycle_diverge_enter(i32 %n, i32 %a, i32 %b) #0 {
 ;      entry(div)

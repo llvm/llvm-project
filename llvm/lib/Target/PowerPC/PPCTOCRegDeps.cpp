@@ -68,6 +68,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -128,6 +129,7 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };

@@ -1730,23 +1730,9 @@ Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,
 //  Constant Folding for Calls
 //
 
-bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
-  if (Call->isNoBuiltin())
-    return false;
-  if (Call->getFunctionType() != F->getFunctionType())
-    return false;
-
-  // Allow FP calls (both libcalls and intrinsics) to avoid being folded.
-  // This can be useful for GPU targets or in cross-compilation scenarios
-  // when the exact target FP behaviour is required, and the host compiler's
-  // behaviour may be slightly different from the device's run-time behaviour.
-  if (DisableFPCallFolding && (F->getReturnType()->isFloatingPointTy() ||
-                               any_of(F->args(), [](const Argument &Arg) {
-                                 return Arg.getType()->isFloatingPointTy();
-                               })))
-    return false;
-
-  switch (F->getIntrinsicID()) {
+/// Returns true if the intrinsic can be constant folded, given \p IsStrictFP.
+static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
+  switch (ID) {
   // Operations that do not operate floating-point numbers and do not depend on
   // FP environment can be folded even in strictfp functions.
   case Intrinsic::bswap:
@@ -2007,7 +1993,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_sqrt_rn_d:
   case Intrinsic::nvvm_sqrt_rn_f:
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
-    return !Call->isStrictFP();
+    return !IsStrictFP;
 
   // NVVM add intrinsics with explicit rounding modes
   case Intrinsic::nvvm_add_rm_d:
@@ -2104,8 +2090,35 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return true;
   default:
     return false;
-  case Intrinsic::not_intrinsic: break;
   }
+}
+
+/// Given a function's return type and its operands, determine if any of them of
+/// of floating-point type.
+static bool anyTypeContainsFP(Type *RetTy, ArrayRef<Value *> Ops) {
+  return RetTy->isFloatingPointTy() || any_of(Ops, [](Value *V) {
+           return V->getType()->isFloatingPointTy();
+         });
+}
+
+bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
+  if (Call->isNoBuiltin())
+    return false;
+  if (Call->getFunctionType() != F->getFunctionType())
+    return false;
+
+  // Allow FP calls (both libcalls and intrinsics) to avoid being folded.
+  // This can be useful for GPU targets or in cross-compilation scenarios
+  // when the exact target FP behaviour is required, and the host compiler's
+  // behaviour may be slightly different from the device's run-time behaviour.
+  if (DisableFPCallFolding &&
+      anyTypeContainsFP(
+          F->getReturnType(),
+          ArrayRef<Value *>((Value *const *)(F->arg_begin()), F->arg_size())))
+    return false;
+
+  if (F->getIntrinsicID() != Intrinsic::not_intrinsic)
+    return canConstantFoldIntrinsic(F->getIntrinsicID(), Call->isStrictFP());
 
   if (!F->hasName() || Call->isStrictFP())
     return false;
@@ -2632,9 +2645,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return GetConstantFoldFPValue128(Result, Ty);
       }
 
-      LibFunc Fp128Func = NotLibFunc;
-      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
-          Fp128Func == LibFunc_logl)
+      if (TLI && TLI->getLibFunc(Name) == LibFunc_logl &&
+          TLI->has(LibFunc_logl))
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
 #endif
@@ -3008,8 +3020,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (!TLI)
       return nullptr;
 
-    LibFunc Func = NotLibFunc;
-    if (!TLI->getLibFunc(Name, Func))
+    LibFunc Func = TLI->getLibFunc(Name);
+    if (Func == NotLibFunc)
       return nullptr;
 
     switch (Func) {
@@ -3355,8 +3367,8 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   if (!TLI)
     return nullptr;
 
-  LibFunc Func = NotLibFunc;
-  if (!TLI->getLibFunc(Name, Func))
+  LibFunc Func = TLI->getLibFunc(Name);
+  if (Func == NotLibFunc)
     return nullptr;
 
   const auto *Op1 = dyn_cast<ConstantFP>(Operands[0]);
@@ -3742,23 +3754,24 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
+        // Square-and-multiply using the operand's own semantics, matching
+        // the multiply sequence ExpandPowI builds in SelectionDAG.
         int Exp = static_cast<int>(Op2C->getSExtValue());
-        switch (Ty->getTypeID()) {
-        case Type::HalfTyID:
-        case Type::FloatTyID: {
-          APFloat Res(static_cast<float>(std::pow(Op1V.convertToFloat(), Exp)));
-          if (Ty->isHalfTy()) {
-            bool Unused;
-            Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
-                        &Unused);
-          }
-          return ConstantFP::get(Ty, Res);
+        unsigned UExp = static_cast<unsigned>(Exp);
+        if (Exp < 0)
+          UExp = -UExp;
+        const fltSemantics &Semantics = Op1V.getSemantics();
+        APFloat Res = APFloat::getOne(Semantics);
+        APFloat CurSquare = Op1V;
+        while (UExp) {
+          if (UExp & 1)
+            Res = Res * CurSquare;
+          CurSquare = CurSquare * CurSquare;
+          UExp >>= 1;
         }
-        case Type::DoubleTyID:
-          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), Exp));
-        default:
-          return nullptr;
-        }
+        if (Exp < 0)
+          Res = APFloat::getOne(Semantics) / Res;
+        return ConstantFP::get(Ty, Res);
       }
       default:
         break;
@@ -4286,7 +4299,7 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
 static Constant *ConstantFoldFixedVectorCall(
     StringRef Name, Intrinsic::ID IntrinsicID, FixedVectorType *FVTy,
     ArrayRef<Constant *> Operands, const DataLayout &DL,
-    const TargetLibraryInfo *TLI, const CallBase *Call) {
+    const TargetLibraryInfo *TLI = nullptr, const CallBase *Call = nullptr) {
   SmallVector<Constant *, 4> Result(FVTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = FVTy->getElementType();
@@ -4354,12 +4367,14 @@ static Constant *ConstantFoldFixedVectorCall(
     auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
     if (Op0 && Op1) {
       unsigned Lanes = FVTy->getNumElements();
-      uint64_t Base = Op0->getZExtValue();
-      uint64_t Limit = Op1->getZExtValue();
+      APInt Base = Op0->getValue();
+      APInt Limit = Op1->getValue();
 
       SmallVector<Constant *, 16> NCs;
-      for (unsigned i = 0; i < Lanes; i++) {
-        if (Base + i < Limit)
+      for (unsigned I = 0; I < Lanes; I++) {
+        bool Overflow;
+        if (Base.uadd_ov(APInt(Base.getBitWidth(), I), Overflow).ult(Limit) &&
+            !Overflow)
           NCs.push_back(ConstantInt::getTrue(Ty));
         else
           NCs.push_back(ConstantInt::getFalse(Ty));
@@ -4452,9 +4467,12 @@ static Constant *ConstantFoldFixedVectorCall(
 
     for (unsigned I = 0; I < NumElements; ++I) {
       ConstantInt *Elt0 =
-          cast<ConstantInt>(Operands[0]->getAggregateElement(I));
+          dyn_cast<ConstantInt>(Operands[0]->getAggregateElement(I));
       ConstantInt *Elt1 =
-          cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+          dyn_cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+
+      if (!Elt0 || !Elt1)
+        return nullptr;
 
       MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
     }
@@ -4698,7 +4716,16 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
-                                      ArrayRef<Constant *> Ops, Type *Ty) {
+                                      ArrayRef<Constant *> Ops, Type *Ty,
+                                      const DataLayout &DL, Function *CxtF) {
+  // In the absence of CxtF, assume strictfp conservatively.
+  if (!canConstantFoldIntrinsic(ID, CxtF ? CxtF->isStrictFP() : true) ||
+      (DisableFPCallFolding &&
+       anyTypeContainsFP(
+           Ty, ArrayRef<Value *>((Value *const *)Ops.data(), Ops.size()))))
+    return nullptr;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return ConstantFoldFixedVectorCall("", ID, FVTy, Ops, DL);
   return ConstantFoldScalarCall("", ID, Ty, Ops);
 }
 
@@ -4716,8 +4743,7 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
   if (IID == Intrinsic::not_intrinsic) {
     if (!TLI)
       return nullptr;
-    LibFunc LibF;
-    if (!TLI->getLibFunc(*F, LibF))
+    if (TLI->getLibFunc(*F) == NotLibFunc)
       return nullptr;
   }
 
@@ -4756,8 +4782,11 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
   if (!F)
     return false;
 
-  LibFunc Func;
-  if (!TLI || !TLI->getLibFunc(*F, Func))
+  if (!TLI)
+    return false;
+
+  LibFunc Func = TLI->getLibFunc(*F);
+  if (Func == NotLibFunc)
     return false;
 
   if (Call->arg_size() == 1) {

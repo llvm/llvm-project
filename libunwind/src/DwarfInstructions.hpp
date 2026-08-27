@@ -117,8 +117,14 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
 
   case CFI_Parser<A>::kRegisterInRegister:
     return registers.getRegister((int)savedReg.value);
+
   case CFI_Parser<A>::kRegisterUndefined:
     return 0;
+
+  case CFI_Parser<A>::kRegisterIsPseudo:
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    return savedReg.value;
+#endif
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
     // FIX ME
@@ -145,6 +151,7 @@ double DwarfInstructions<A, R>::getSavedFloatRegister(
 #ifndef _LIBUNWIND_TARGET_ARM
     return registers.getFloatRegister((int)savedReg.value);
 #endif
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
@@ -168,6 +175,7 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
         evaluateExpression((pint_t)savedReg.value, addressSpace,
                             registers, cfa));
 
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterUndefined:
@@ -216,7 +224,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(
       // __unw_step_stage2 is not used for cross unwinding, so we use
       // __aarch64__ rather than LIBUNWIND_TARGET_AARCH64 to make sure we are
       // building for AArch64 natively.
-#if defined(__aarch64__)
+#if defined(__aarch64__) && !defined(__LFI__)
       if (stage2 && cieInfo.mteTaggedFrame) {
         pint_t sp = registers.getSP();
         pint_t p = sp;
@@ -292,16 +300,28 @@ int DwarfInstructions<A, R>::stepWithDwarf(
 
       isSignalFrame = cieInfo.isSignalFrame;
 
-#if defined(_LIBUNWIND_TARGET_AARCH64) &&                                      \
-    !defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#if defined(_LIBUNWIND_TARGET_AARCH64)
       // There are two ways of return address signing: pac-ret (enabled via
       // -mbranch-protection=pac-ret) and ptrauth-returns (enabled as part of
       // Apple's arm64e or experimental pauthtest ABI on Linux). The code
-      // below handles signed RA for pac-ret, while ptrauth-returns uses
-      // different logic.
+      // below handles signed RA for ptrauth-returns, while pac-ret uses pacm
+      // instructions from the hint space.
+      //
       // TODO: unify logic for both cases, see
       // https://github.com/llvm/llvm-project/issues/160110
-      //
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+      if (getReturnAddressSignStatus(addressSpace, registers, cfa, prolog) ==
+          RASignedWithPC) {
+        newRegisters.setIPPAuthLR(returnAddress, prolog.ptrAuthDiversifier);
+      } else {
+        newRegisters.setIP(returnAddress);
+      }
+
+      // Simulate the step by replacing the register set with the new ones.
+      registers = newRegisters;
+
+      return UNW_STEP_SUCCESS;
+#else
       // If the target is aarch64 then the return address may have been signed
       // using the v8.3 pointer authentication extensions. The original
       // return address needs to be authenticated before the return address is
@@ -343,6 +363,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(
         returnAddress = x17;
 #endif
       }
+#endif
 #endif
 
 #if defined(_LIBUNWIND_IS_NATIVE_ONLY) && defined(_LIBUNWIND_TARGET_ARM) &&    \

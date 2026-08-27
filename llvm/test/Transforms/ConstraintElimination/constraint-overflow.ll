@@ -130,3 +130,88 @@ then:
 else:
   ret i1 false
 }
+
+; The offsets of the decomposed operands overflow, so no constraint is built for
+; the ne fact. Make sure it is not added as its ule relaxation; %t must not be
+; folded, as it is false for %x = -1, %y = 0.
+define i1 @ne_fact_with_overflowing_offsets_not_added(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @ne_fact_with_overflowing_offsets_not_added(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i64 [[X]], 4611686018427387904
+; CHECK-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 4611686018427387904
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %a = sub nuw i64 %x, 4611686018427387904
+  %b = add nuw i64 %y, 4611686018427387904
+  %cmp = icmp ne i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t = icmp ule i64 %a, %b
+  ret i1 %t
+
+else:
+  ret i1 false
+}
+
+; Same as @ne_fact_with_overflowing_offsets_not_added, but with an eq fact.
+; Combining the offsets overflows, so no constraint is built and %t is not
+; folded.
+; TODO: %t could be proven by using %a and %b as-is.
+define i1 @eq_fact_with_overflowing_offsets_not_added(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @eq_fact_with_overflowing_offsets_not_added(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i64 [[X]], 4611686018427387904
+; CHECK-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 4611686018427387904
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T:%.*]] = icmp ule i64 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[T]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %a = sub nuw i64 %x, 4611686018427387904
+  %b = add nuw i64 %y, 4611686018427387904
+  %cmp = icmp eq i64 %a, %b
+  br i1 %cmp, label %then, label %else
+
+then:
+  %t = icmp ule i64 %a, %b
+  ret i1 %t
+
+else:
+  ret i1 false
+}
+
+; The offset of %a is INT64_MIN. Negating it overflows, so no constraint can
+; be built for the assume. Make sure %r is not folded to true.
+define i1 @constraint_offset_negation_overflow(i64 %x) {
+; CHECK-LABEL: define i1 @constraint_offset_negation_overflow(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A0:%.*]] = add nsw i64 [[X]], -9223372036854775807
+; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[A0]], -1
+; CHECK-NEXT:    [[A_NONPOS:%.*]] = icmp sle i64 [[A]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NONPOS]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+entry:
+  %a0 = add nsw i64 %x, -9223372036854775807
+  %a = add nsw i64 %a0, -1
+  %a.nonpos = icmp sle i64 %a, 0
+  call void @llvm.assume(i1 %a.nonpos)
+  %r = icmp slt i64 %x, 0
+  ret i1 %r
+}

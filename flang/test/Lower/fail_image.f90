@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPfail_image_test(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "fail"}) {

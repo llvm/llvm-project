@@ -7,75 +7,75 @@
 ; SI: s_or_b64 exec, exec, [[SAVED:s\[[0-9]+:[0-9]+\]|[a-z]+]]
 ; SI-NOT: v_readlane_b32 [[SAVED]]
 
-define amdgpu_ps void @main(<4 x i32> inreg %rsrc) #0 {
+define amdgpu_ps void @main(ptr addrspace(8) inreg %rsrc) #0 {
 main_body:
-  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 16, i32 0)
-  %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 32, i32 0)
-  %tmp2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 80, i32 0)
-  %tmp3 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 84, i32 0)
-  %tmp4 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 88, i32 0)
-  %tmp5 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 96, i32 0)
-  %tmp6 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 100, i32 0)
-  %tmp7 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 104, i32 0)
-  %tmp8 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 112, i32 0)
-  %tmp9 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 116, i32 0)
-  %tmp10 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 120, i32 0)
-  %tmp11 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 128, i32 0)
-  %tmp12 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 132, i32 0)
-  %tmp13 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 136, i32 0)
-  %tmp14 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 144, i32 0)
-  %tmp15 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 148, i32 0)
-  %tmp16 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 152, i32 0)
-  %tmp17 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 160, i32 0)
-  %tmp18 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 164, i32 0)
-  %tmp19 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 168, i32 0)
-  %tmp20 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 176, i32 0)
-  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 180, i32 0)
-  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 184, i32 0)
-  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 192, i32 0)
-  %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 196, i32 0)
-  %tmp25 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 200, i32 0)
-  %tmp26 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 208, i32 0)
-  %tmp27 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 212, i32 0)
-  %tmp28 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 216, i32 0)
-  %tmp29 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 224, i32 0)
-  %tmp30 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 228, i32 0)
-  %tmp31 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 232, i32 0)
-  %tmp32 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 240, i32 0)
-  %tmp33 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 244, i32 0)
-  %tmp34 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 248, i32 0)
-  %tmp35 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 256, i32 0)
-  %tmp36 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 260, i32 0)
-  %tmp37 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 264, i32 0)
-  %tmp38 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 272, i32 0)
-  %tmp39 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 276, i32 0)
-  %tmp40 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 280, i32 0)
-  %tmp41 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 288, i32 0)
-  %tmp42 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 292, i32 0)
-  %tmp43 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 296, i32 0)
-  %tmp44 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 304, i32 0)
-  %tmp45 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 308, i32 0)
-  %tmp46 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 312, i32 0)
-  %tmp47 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 320, i32 0)
-  %tmp48 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 324, i32 0)
-  %tmp49 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 328, i32 0)
-  %tmp50 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 336, i32 0)
-  %tmp51 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 340, i32 0)
-  %tmp52 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 344, i32 0)
-  %tmp53 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 352, i32 0)
-  %tmp54 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 356, i32 0)
-  %tmp55 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 360, i32 0)
-  %tmp56 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 368, i32 0)
-  %tmp57 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 372, i32 0)
-  %tmp58 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 376, i32 0)
-  %tmp59 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 384, i32 0)
-  %tmp60 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 388, i32 0)
-  %tmp61 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 392, i32 0)
-  %tmp62 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 400, i32 0)
-  %tmp63 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 404, i32 0)
-  %tmp64 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 408, i32 0)
-  %tmp65 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 416, i32 0)
-  %tmp66 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 420, i32 0)
+  %tmp = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 16, i32 0), !invariant.load !{}
+  %tmp1 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 32, i32 0), !invariant.load !{}
+  %tmp2 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 80, i32 0), !invariant.load !{}
+  %tmp3 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 84, i32 0), !invariant.load !{}
+  %tmp4 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 88, i32 0), !invariant.load !{}
+  %tmp5 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 96, i32 0), !invariant.load !{}
+  %tmp6 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 100, i32 0), !invariant.load !{}
+  %tmp7 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 104, i32 0), !invariant.load !{}
+  %tmp8 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 112, i32 0), !invariant.load !{}
+  %tmp9 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 116, i32 0), !invariant.load !{}
+  %tmp10 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 120, i32 0), !invariant.load !{}
+  %tmp11 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 128, i32 0), !invariant.load !{}
+  %tmp12 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 132, i32 0), !invariant.load !{}
+  %tmp13 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 136, i32 0), !invariant.load !{}
+  %tmp14 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 144, i32 0), !invariant.load !{}
+  %tmp15 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 148, i32 0), !invariant.load !{}
+  %tmp16 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 152, i32 0), !invariant.load !{}
+  %tmp17 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 160, i32 0), !invariant.load !{}
+  %tmp18 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 164, i32 0), !invariant.load !{}
+  %tmp19 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 168, i32 0), !invariant.load !{}
+  %tmp20 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 176, i32 0), !invariant.load !{}
+  %tmp21 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 180, i32 0), !invariant.load !{}
+  %tmp22 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 184, i32 0), !invariant.load !{}
+  %tmp23 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 192, i32 0), !invariant.load !{}
+  %tmp24 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 196, i32 0), !invariant.load !{}
+  %tmp25 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 200, i32 0), !invariant.load !{}
+  %tmp26 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 208, i32 0), !invariant.load !{}
+  %tmp27 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 212, i32 0), !invariant.load !{}
+  %tmp28 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 216, i32 0), !invariant.load !{}
+  %tmp29 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 224, i32 0), !invariant.load !{}
+  %tmp30 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 228, i32 0), !invariant.load !{}
+  %tmp31 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 232, i32 0), !invariant.load !{}
+  %tmp32 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 240, i32 0), !invariant.load !{}
+  %tmp33 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 244, i32 0), !invariant.load !{}
+  %tmp34 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 248, i32 0), !invariant.load !{}
+  %tmp35 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 256, i32 0), !invariant.load !{}
+  %tmp36 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 260, i32 0), !invariant.load !{}
+  %tmp37 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 264, i32 0), !invariant.load !{}
+  %tmp38 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 272, i32 0), !invariant.load !{}
+  %tmp39 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 276, i32 0), !invariant.load !{}
+  %tmp40 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 280, i32 0), !invariant.load !{}
+  %tmp41 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 288, i32 0), !invariant.load !{}
+  %tmp42 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 292, i32 0), !invariant.load !{}
+  %tmp43 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 296, i32 0), !invariant.load !{}
+  %tmp44 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 304, i32 0), !invariant.load !{}
+  %tmp45 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 308, i32 0), !invariant.load !{}
+  %tmp46 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 312, i32 0), !invariant.load !{}
+  %tmp47 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 320, i32 0), !invariant.load !{}
+  %tmp48 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 324, i32 0), !invariant.load !{}
+  %tmp49 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 328, i32 0), !invariant.load !{}
+  %tmp50 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 336, i32 0), !invariant.load !{}
+  %tmp51 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 340, i32 0), !invariant.load !{}
+  %tmp52 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 344, i32 0), !invariant.load !{}
+  %tmp53 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 352, i32 0), !invariant.load !{}
+  %tmp54 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 356, i32 0), !invariant.load !{}
+  %tmp55 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 360, i32 0), !invariant.load !{}
+  %tmp56 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 368, i32 0), !invariant.load !{}
+  %tmp57 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 372, i32 0), !invariant.load !{}
+  %tmp58 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 376, i32 0), !invariant.load !{}
+  %tmp59 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 384, i32 0), !invariant.load !{}
+  %tmp60 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 388, i32 0), !invariant.load !{}
+  %tmp61 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 392, i32 0), !invariant.load !{}
+  %tmp62 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 400, i32 0), !invariant.load !{}
+  %tmp63 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 404, i32 0), !invariant.load !{}
+  %tmp64 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 408, i32 0), !invariant.load !{}
+  %tmp65 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 416, i32 0), !invariant.load !{}
+  %tmp66 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %rsrc, i32 420, i32 0), !invariant.load !{}
   br label %LOOP
 
 LOOP:                                             ; preds = %ENDIF2795, %main_body
@@ -436,7 +436,7 @@ declare float @llvm.minnum.f32(float, float) #1
 declare float @llvm.maxnum.f32(float, float) #1
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

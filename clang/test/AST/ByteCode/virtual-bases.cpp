@@ -437,7 +437,7 @@ namespace Offsets {
   };
 
   constexpr C c{12};
-#if !defined(_WIN32)
+#if !defined(_WIN32) || defined(__MINGW32__)
 #if __SIZEOF_SIZE_T__ == 8
   static_assert( (fold((char*)&c.c - (char*)&c)) == 12);
   static_assert( (fold((char*)&c.b - (char*)&c)) == 8);

@@ -5,7 +5,7 @@
 # and tagged appropriately. The selection of which Docker image version is used by the libc++
 # CI nodes at any given point is controlled from the workflow files themselves.
 
-name: Build Docker images for libc++ CI
+name: "[libc++] Build CI Docker images"
 
 permissions:
   contents: read

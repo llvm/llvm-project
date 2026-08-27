@@ -111,7 +111,7 @@ private:
   enum class DWARFVersion { DWARFLegacy, DWARF5 };
 
   /// Used to track last CU offset for GDB Index.
-  uint32_t CUOffset{0};
+  uint64_t CUOffset{0};
 
   llvm::ThreadPoolInterface &
   getOrCreateDebugInfoThreadPool(unsigned ThreadCount);
