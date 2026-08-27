@@ -70,7 +70,7 @@ static bool isVarPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
   if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
     Var = VarD;
   } else if (const auto *BD = dyn_cast<BindingDecl>(VD)) {
-    if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
+    if (const DecompositionDecl *DD = BD->getDecomposedDecl())
       Var = DD;
   }
 
@@ -225,14 +225,14 @@ static bool overlap(ArrayRef<CallGraphNode *> SCC,
 /// returns true iff `Cond` involves at least one static local variable.
 static bool hasStaticLocalVariable(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      if (VD->isStaticLocal())
-        return true;
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        VD && VD->isStaticLocal())
+      return true;
 
     if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
-      if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl()))
-        if (DD->isStaticLocal())
-          return true;
+      if (const DecompositionDecl *DD = BD->getDecomposedDecl();
+          DD && DD->isStaticLocal())
+        return true;
   }
 
   return llvm::any_of(Cond->children(), [](const Stmt *Child) {

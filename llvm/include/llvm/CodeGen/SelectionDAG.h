@@ -510,6 +510,8 @@ public:
   const Pass *getPass() const { return SDAGISelPass; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
+  bool hasSwiftErrorArg() const;
+
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
   const TargetMachine &getTarget() const { return TM; }
@@ -1090,11 +1092,6 @@ public:
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
-  /// Return the expression required to zero extend the Op
-  /// value assuming it was the smaller SrcTy value.
-  LLVM_ABI SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
-                                        const SDLoc &DL, EVT VT);
-
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
   /// appropriate extension for the pointer's semantics.
@@ -1119,26 +1116,6 @@ public:
 
   /// Create a logical NOT operation as (XOR Val, BooleanOne).
   LLVM_ABI SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
-
-  /// Create a vector-predicated logical NOT operation as (VP_XOR Val,
-  /// BooleanOne, Mask, EVL).
-  LLVM_ABI SDValue getVPLogicalNOT(const SDLoc &DL, SDValue Val, SDValue Mask,
-                                   SDValue EVL, EVT VT);
-
-  /// Convert a vector-predicated Op, which must be an integer vector, to the
-  /// vector-type VT, by performing either vector-predicated zext or truncating
-  /// it. The Op will be returned as-is if Op and VT are vectors containing
-  /// integer with same width.
-  LLVM_ABI SDValue getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                    SDValue Mask, SDValue EVL);
-
-  /// Convert a vector-predicated Op, which must be of integer type, to the
-  /// vector-type integer type VT, by either truncating it or performing either
-  /// vector-predicated zero or sign extension as appropriate extension for the
-  /// pointer's semantics. This function just redirects to getVPZExtOrTrunc
-  /// right now.
-  LLVM_ABI SDValue getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                      SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
@@ -1391,18 +1368,6 @@ public:
                      {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
                      Flags);
     return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
-  }
-
-  /// Helper function to make it easier to build VP_SETCCs if you just have an
-  /// ISD::CondCode instead of an SDValue.
-  SDValue getSetCCVP(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
-                     ISD::CondCode Cond, SDValue Mask, SDValue EVL) {
-    assert(LHS.getValueType().isVector() && RHS.getValueType().isVector() &&
-           "Cannot compare scalars");
-    assert(Cond != ISD::SETCC_INVALID &&
-           "Cannot create a setCC of an invalid node.");
-    return getNode(ISD::VP_SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Mask,
-                   EVL);
   }
 
   /// Helper function to make it easier to build Select's if you just have

@@ -30,8 +30,8 @@ define void @test(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META3]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <2 x i32> [[TMP36]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP36]], <2 x i32> [[TMP25]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -444,8 +444,8 @@ define void @different_alignments_same_address(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 2, !alias.scope [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 2, !alias.scope [[META39]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = add <2 x i32> [[TMP25]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP25]], <2 x i32> [[TMP26]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -583,8 +583,8 @@ define void @duplicate_gep(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP10]], align 4, !alias.scope [[META49:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP15]], align 4, !alias.scope [[META49]]
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i32> poison, i32 [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i32> poison, i32 [[TMP22]], i64 0
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <2 x i32> [[TMP29]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> [[TMP29]], <2 x i32> [[TMP19]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -661,8 +661,8 @@ define void @non_unit_stride_i64(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP12]], align 4, !alias.scope [[META59:![0-9]+]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP17]], align 4, !alias.scope [[META59]]
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP24]], i32 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP24]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <2 x i32> [[TMP31]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x i32> [[TMP31]], <2 x i32> [[TMP21]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]

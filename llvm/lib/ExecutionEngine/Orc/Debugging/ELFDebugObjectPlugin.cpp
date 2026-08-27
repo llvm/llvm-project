@@ -193,9 +193,8 @@ Error DebugObject::visitSections(GetLoadAddressFn Callback) {
 
 ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
                                            bool RequireDebugSections,
-                                           bool AutoRegisterCode, Error &Err)
-    : ES(ES), RequireDebugSections(RequireDebugSections),
-      AutoRegisterCode(AutoRegisterCode) {
+                                           Error &Err)
+    : ES(ES), RequireDebugSections(RequireDebugSections) {
   // Pass bootstrap symbol for registration function to enable debugging
   ErrorAsOutParameter _(&Err);
   Err = ES.getExecutorProcessControl().getBootstrapSymbols(
@@ -377,9 +376,8 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
     using namespace shared;
     G.allocActions().push_back(
-        {cantFail(WrapperFunctionCall::Create<
-                  SPSArgList<SPSExecutorAddrRange, bool>>(
-             RegistrationAction, *R, AutoRegisterCode)),
+        {cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+             RegistrationAction, *R)),
          {/* no deregistration */}});
     return Error::success();
   });

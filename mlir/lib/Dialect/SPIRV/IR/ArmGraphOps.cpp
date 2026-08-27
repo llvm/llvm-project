@@ -34,9 +34,11 @@ ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   Builder &builder = parser.getBuilder();
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -75,16 +77,18 @@ ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
 
 void spirv::GraphARMOp::print(OpAsmPrinter &printer) {
   // Print graph name, signature, and control.
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   GraphType grType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       printer, *this, grType.getInputs(),
       /*isVariadic=*/false, grType.getResults());
-  function_interface_impl::printFunctionAttributes(printer, *this,
-                                                   {getFunctionTypeAttrName(),
-                                                    getArgAttrsAttrName(),
-                                                    getResAttrsAttrName()});
+  function_interface_impl::printFunctionAttributes(
+      printer, *this,
+      {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
+       getSymVisibilityAttrName()});
 
   // Print the body.
   Region &body = this->getBody();
@@ -159,7 +163,7 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
 void spirv::GraphARMOp::build(OpBuilder &builder, OperationState &state,
                               StringRef name, GraphType type,
                               ArrayRef<NamedAttribute> attrs, bool entryPoint) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
+  state.addAttribute(getSymNameAttrName(state.name),
                      builder.getStringAttr(name));
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.attributes.append(attrs);

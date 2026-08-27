@@ -93,7 +93,7 @@
 ; ACTIVE-PIC-NEXT:        Offset:
 ; ACTIVE-PIC-NEXT:          Opcode:          GLOBAL_GET
 ; ACTIVE-PIC-NEXT:          Index:           1
-; ACTIVE-PIC-NEXT:        Content:         63000000636F6E7374616E74000000002B00000068656C6C6F00676F6F646279650000002A000000
+; ACTIVE-PIC-NEXT:        Content:         636F6E7374616E74000000002B00000068656C6C6F00676F6F646279650000002A00000063000000
 
 ; PASSIVE-LABEL: - Type:            START
 ; PASSIVE-NEXT:    StartFunction:   2
@@ -114,13 +114,13 @@
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
 ; PASSIVE-NEXT:        InitFlags:       1
-; PASSIVE-NEXT:        Content:         '63000000'
-; PASSIVE-NEXT:      - SectionOffset:   9
-; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         636F6E7374616E74000000002B
-; PASSIVE-NEXT:      - SectionOffset:   24
+; PASSIVE-NEXT:      - SectionOffset:   18
 ; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; PASSIVE-NEXT:      - SectionOffset:   40
+; PASSIVE-NEXT:        InitFlags:       1
+; PASSIVE-NEXT:        Content:         '63000000'
 ; PASSIVE-NEXT:  - Type:            CUSTOM
 ; PASSIVE-NEXT:    Name:            name
 ; PASSIVE-NEXT:    FunctionNames:
@@ -153,13 +153,13 @@
 ; PASSIVE-PIC-NEXT:    Segments:
 ; PASSIVE-PIC-NEXT:      - SectionOffset:   3
 ; PASSIVE-PIC-NEXT:        InitFlags:       1
-; PASSIVE-PIC-NEXT:        Content:         '63000000'
-; PASSIVE-PIC-NEXT:      - SectionOffset:   9
-; PASSIVE-PIC-NEXT:        InitFlags:       1
 ; PASSIVE-PIC-NEXT:        Content:         636F6E7374616E74000000002B
-; PASSIVE-PIC-NEXT:      - SectionOffset:   24
+; PASSIVE-PIC-NEXT:      - SectionOffset:   18
 ; PASSIVE-PIC-NEXT:        InitFlags:       1
 ; PASSIVE-PIC-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; PASSIVE-PIC-NEXT:      - SectionOffset:   40
+; PASSIVE-PIC-NEXT:        InitFlags:       1
+; PASSIVE-PIC-NEXT:        Content:         '63000000'
 ; PASSIVE-PIC-NEXT:  - Type:            CUSTOM
 ; PASSIVE-PIC-NEXT:    Name:            name
 ; PASSIVE-PIC-NEXT:    FunctionNames:
@@ -212,9 +212,27 @@
 ; DIS-NEXT:            end
 
 ; NOPIC-DIS-NEXT:      [[PTR]].const   65536
-; NOPIC-DIS-NEXT:      [[PTR]].const   65536
-; NOPIC-DIS-NEXT:      global.set      1
 ; PIC-DIS-NEXT:        [[PTR]].const   0
+; PIC-DIS-NEXT:        global.get      1
+; PIC-DIS-NEXT:        [[PTR]].add
+
+; DIS-NEXT:            i32.const       0
+; DIS-NEXT:            i32.const       13
+; DIS-NEXT:            memory.init     0, 0
+
+; NOPIC-DIS-NEXT:      [[PTR]].const   65552
+; PIC-DIS-NEXT:        [[PTR]].const   16
+; PIC-DIS-NEXT:        global.get      1
+; PIC-DIS-NEXT:        [[PTR]].add
+
+; DIS-NEXT:            i32.const       0
+; DIS-NEXT:            i32.const       20
+; DIS-NEXT:            memory.init     1, 0
+
+; NOPIC-DIS-NEXT:      [[PTR]].const   65572
+; NOPIC-DIS-NEXT:      [[PTR]].const   65572
+; NOPIC-DIS-NEXT:      global.set      1
+; PIC-DIS-NEXT:        [[PTR]].const   36
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
 ; PIC-DIS-NEXT:        local.tee       1
@@ -222,24 +240,6 @@
 ; PIC-DIS-NEXT:        local.get       1
 ; DIS-NEXT:            i32.const       0
 ; DIS-NEXT:            i32.const       4
-; DIS-NEXT:            memory.init  0, 0
-
-; NOPIC-DIS-NEXT:      [[PTR]].const   65540
-; PIC-DIS-NEXT:        [[PTR]].const   4
-; PIC-DIS-NEXT:        global.get      1
-; PIC-DIS-NEXT:        [[PTR]].add
-
-; DIS-NEXT:            i32.const       0
-; DIS-NEXT:            i32.const       13
-; DIS-NEXT:            memory.init     1, 0
-
-; NOPIC-DIS-NEXT:      [[PTR]].const   65556
-; PIC-DIS-NEXT:        [[PTR]].const   20
-; PIC-DIS-NEXT:        global.get      1
-; PIC-DIS-NEXT:        [[PTR]].add
-
-; DIS-NEXT:            i32.const       0
-; DIS-NEXT:            i32.const       20
 ; DIS-NEXT:            memory.init     2, 0
 ; NOPIC-DIS-NEXT:      [[PTR]].const   65576
 ; PIC-DIS-NEXT:        [[PTR]].const   40
@@ -272,6 +272,6 @@
 ; DIS-NEXT:           memory.atomic.wait32    0
 ; DIS-NEXT:           drop
 ; DIS-NEXT:          end
+; DIS-NEXT:          data.drop       0
 ; DIS-NEXT:          data.drop       1
-; DIS-NEXT:          data.drop       2
 ; DIS-NEXT:         end

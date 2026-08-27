@@ -1543,24 +1543,38 @@ bool PreRARematStage::initGCNSchedStage() {
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
-    // Single user only.
-    unsigned NumUsers = 0;
-    for (const auto &[_, RegionUses] : CandReg.Uses)
-      NumUsers += RegionUses.size();
-    if (NumUsers != 1)
+    // All users must be in a single region.
+    if (CandReg.Uses.size() != 1)
+      continue;
+    const auto [UseRegion, Users] = *CandReg.Uses.begin();
+
+    // Rematerialization moves the defining instruction into the region of its
+    // use, which may sit under different control dependencies (e.g., across a
+    // change of EXEC). Convergent operations must not be made control-dependent
+    // on additional values, so they cannot be safely relocated this way. This
+    // mirrors the check MachineSink performs before sinking an instruction.
+    if (any_of(CandReg.Defs,
+               [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
       continue;
 
     // We further filter the registers that we can rematerialize based on our
-    // current tracking capabilities in the stage. The user cannot itself be
+    // current tracking capabilities in the stage. Users cannot themselves be
     // marked rematerializable, and no register operand of the defining MI can
     // be marked rematerializable. We also do not rematerialize an instruction
     // if it uses registers that aren't available at its use. This ensures that
     // we are not extending any live range while rematerializing.
-    MachineInstr *UseMI = *CandReg.Uses.begin()->getSecond().begin();
-    const MachineOperand &UseMO = UseMI->getOperand(0);
-    if (UseMO.isReg() && MarkedRegs.contains(UseMO.getReg()))
+    if (llvm::any_of(Users, [&MarkedRegs](const MachineInstr *UserMI) {
+          assert(UserMI->getNumOperands() > 0 &&
+                 "user must have at least one operand");
+          const MachineOperand &UseMO = UserMI->getOperand(0);
+          return UseMO.isReg() && MarkedRegs.contains(UseMO.getReg());
+        }))
       continue;
-    SlotIndex UseIdx = DAG.LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+    MachineInstr *FirstUseMI =
+        CandReg.getRegionUseBounds(UseRegion, *DAG.LIS).first;
+    assert(FirstUseMI && "there must be a user in the region");
+    SlotIndex FirstUseIdx =
+        DAG.LIS->getInstructionIndex(*FirstUseMI).getRegSlot(true);
     SlotIndex RefIdx =
         DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
     if (llvm::any_of(CandReg.Dependencies, [&](RegisterIdx DepRegIdx) {
@@ -1568,14 +1582,14 @@ bool PreRARematStage::initGCNSchedStage() {
           Register DepDefReg = DepReg.getDefReg();
           return MarkedRegs.contains(DepDefReg) ||
                  !Remater.isRegIdenticalAtUses(DepDefReg, DepReg.Mask, RefIdx,
-                                               {UseIdx});
+                                               {FirstUseIdx});
         }))
       continue;
     if (llvm::any_of(Remater.getUnrematableDeps(RegIdx),
                      [&](const std::pair<Register, LaneBitmask> &RegAndMask) {
                        const auto &[Reg, Mask] = RegAndMask;
                        return !Remater.isRegIdenticalAtUses(Reg, Mask, RefIdx,
-                                                            {UseIdx});
+                                                            {FirstUseIdx});
                      }))
       continue;
 
@@ -2127,10 +2141,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureBefore.getVGPRNum(false));
+        ST, PressureBefore.getVGPRNum(false),
+        DAG.MFI.getDynamicVGPRBlockSize());
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
+        ST, PressureAfter.getVGPRNum(false), DAG.MFI.getDynamicVGPRBlockSize());
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2287,8 +2301,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
     RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
     if (DAG.ShouldTrackLaneMasks) {
       // Adjust liveness and add missing dead+read-undef flags.
-      SlotIndex SlotIdx = DAG.LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, SlotIdx, MI);
+      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, *MI);
     } else {
       // Adjust for missing dead-def flags.
       RegOpers.detectDeadDefs(*MI, *DAG.LIS);

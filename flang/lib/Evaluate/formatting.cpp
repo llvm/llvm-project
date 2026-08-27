@@ -894,6 +894,15 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
   return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
 }
 
+llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
+  // A RankOneBoundElement extracts a single element from a rank-1 array that
+  // was used as an array bound in a declaration; it has no true Fortran
+  // surface syntax.  Render it in an internal, clearly-synthetic form.
+  base().AsFortran(o << "rank1BoundElement(")
+      << ",dim=" << (dimension_ + 1) << ')';
+  return o;
+}
+
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
   common::visit(
       common::visitors{

@@ -5,18 +5,18 @@
 !s64i = !cir.int<s, 64>
 
 // Named source structs.
-!rec_TwoLong  = !cir.struct<"TwoLong"  {!s64i, !s64i}>
-!rec_ThreeInt = !cir.struct<"ThreeInt" {!s32i, !s32i, !s32i}>
+!rec_TwoLong  = !cir.struct<"TwoLong"  {data !s64i, data !s64i}>
+!rec_ThreeInt = !cir.struct<"ThreeInt" {data !s32i, data !s32i, data !s32i}>
 // dim3-equivalent: three i32 fields totalling 12 bytes.
-!rec_Dim3     = !cir.struct<"Dim3"     {!s32i, !s32i, !s32i}>
+!rec_Dim3     = !cir.struct<"Dim3"     {data !s32i, data !s32i, data !s32i}>
 
 // ABI-coerced anonymous structs.  MLIR auto-generates their aliases
 // (!rec_anon_struct, !rec_anon_struct1, etc.) in encounter order.
-!rec_coerced_two   = !cir.struct<{!s64i, !s64i}>
-!rec_coerced_three = !cir.struct<{!s32i, !s32i, !s32i}>
+!rec_coerced_two   = !cir.struct<{data !s64i, data !s64i}>
+!rec_coerced_three = !cir.struct<{data !s32i, data !s32i, data !s32i}>
 // x86-64 SysV packs dim3's first two i32s into an i64; the third i32
 // is a separate half of the second eightbyte.
-!rec_coerced_dim3  = !cir.struct<{!s64i, !s32i}>
+!rec_coerced_dim3  = !cir.struct<{data !s64i, data !s32i}>
 
 #flatten_two = {
   return = { kind = "direct" },

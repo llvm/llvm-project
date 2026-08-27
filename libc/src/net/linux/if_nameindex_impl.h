@@ -24,6 +24,7 @@
 #include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
+#include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -60,6 +61,101 @@ LIBC_INLINE ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
 /// A reasonable buffer size for netlink messages (see NLMSG_GOODSIZE in the
 /// kernel).
 constexpr size_t NLMSG_BUFFER_SIZE = 8192;
+
+struct InterfaceEntry {
+  unsigned int index;
+  uint8_t name_length;        // Length of next field.
+  char name[IF_NAMESIZE - 1]; // No null terminator.
+  static_assert(IF_NAMESIZE - 1 < (1u << 8));
+};
+
+LIBC_INLINE ErrorOr<void>
+parse_netlink_messages(cpp::span<uint8_t> buf,
+                       BlockStore<InterfaceEntry, 16> &store) {
+  size_t len = buf.size();
+  for (auto *nh = reinterpret_cast<struct nlmsghdr *>(buf.data());
+       NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
+    if (nh->nlmsg_type == NLMSG_DONE)
+      break;
+    if (nh->nlmsg_type == NLMSG_ERROR) {
+      if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr)))
+        return Error(EINVAL);
+      auto *err = reinterpret_cast<struct nlmsgerr *>(NLMSG_DATA(nh));
+      if (err->error == 0) {
+        // Zero means an ACK, which we shouldn't get because we didn't ask for
+        // it...
+        continue;
+      }
+      return Error(-err->error);
+    }
+    if (nh->nlmsg_type != RTM_NEWLINK)
+      continue;
+    if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct ifinfomsg)))
+      continue;
+
+    auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
+    size_t attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
+    struct rtattr *rta = IFLA_RTA(ifm);
+    for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
+      if (rta->rta_type != IFLA_IFNAME)
+        continue;
+
+      size_t rta_payload_len = RTA_PAYLOAD(rta);
+      const char *name_data = reinterpret_cast<const char *>(RTA_DATA(rta));
+      size_t name_len = internal::strnlen(name_data, rta_payload_len);
+      // Defensive check: kernel should not be providing us with names that
+      // don't fit.
+      if (name_len >= IF_NAMESIZE)
+        name_len = IF_NAMESIZE - 1;
+
+      InterfaceEntry entry;
+      entry.index = static_cast<unsigned int>(ifm->ifi_index);
+      entry.name_length = static_cast<uint8_t>(name_len);
+      inline_memcpy(entry.name, name_data, name_len);
+
+      if (!store.push_back(entry))
+        return Error(ENOBUFS);
+      break;
+    }
+  }
+  return {};
+}
+
+LIBC_INLINE ErrorOr<struct if_nameindex *>
+build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
+  size_t count = 0;
+  size_t strings_size = 0;
+  for (const InterfaceEntry &entry : store) {
+    ++count;
+    strings_size += entry.name_length + 1;
+  }
+
+  size_t total_size = (count + 1) * sizeof(struct if_nameindex) + strings_size;
+  AllocChecker ac;
+  uint8_t *buffer = new (ac) uint8_t[total_size];
+  if (!ac)
+    return Error(ENOBUFS);
+
+  cpp::span<struct if_nameindex> result(
+      reinterpret_cast<struct if_nameindex *>(buffer), count + 1);
+  char *str_ptr = reinterpret_cast<char *>(result.end());
+
+  size_t idx = 0;
+  for (const InterfaceEntry &entry : store) {
+    result[idx].if_index = entry.index;
+    result[idx].if_name = str_ptr;
+    inline_memcpy(str_ptr, entry.name, entry.name_length);
+    str_ptr[entry.name_length] = '\0';
+    str_ptr += entry.name_length + 1;
+    ++idx;
+  }
+
+  result[count].if_index = 0;
+  result[count].if_name = nullptr;
+
+  return result.data();
+}
+
 } // namespace detail
 
 template <typename Policy>
@@ -87,73 +183,17 @@ LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
     return Error(close_res.error());
 
   // TODO: Read more than one message.
-  // TODO: Read more than one interface per message.
   // TODO: Deduplicate interfaces to handle restarts.
-  auto len = static_cast<size_t>(*recv_res);
-  for (auto *nh = reinterpret_cast<struct nlmsghdr *>(buf); NLMSG_OK(nh, len);
-       nh = NLMSG_NEXT(nh, len)) {
-    if (nh->nlmsg_type == NLMSG_DONE)
-      break;
-    if (nh->nlmsg_type == NLMSG_ERROR) {
-      if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr)))
-        return Error(EINVAL);
-      auto *err = reinterpret_cast<struct nlmsgerr *>(NLMSG_DATA(nh));
-      if (err->error == 0) {
-        // Zero means an ACK, which we shouldn't get because we didn't ask for
-        // it...
-        continue;
-      }
-      return Error(-err->error);
-    }
-    if (nh->nlmsg_type != RTM_NEWLINK)
-      continue;
-    if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct ifinfomsg)))
-      continue;
+  BlockStore<detail::InterfaceEntry, 16> store;
+  cpp::scope_exit destroy_store(
+      [&store]() { BlockStore<detail::InterfaceEntry, 16>::destroy(&store); });
 
-    auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
-    size_t attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
-    struct rtattr *rta = IFLA_RTA(ifm);
-    for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
-      if (rta->rta_type != IFLA_IFNAME)
-        continue;
+  if (ErrorOr<void> parse_res = detail::parse_netlink_messages(
+          {buf, static_cast<size_t>(*recv_res)}, store);
+      !parse_res.has_value())
+    return Error(parse_res.error());
 
-      size_t rta_payload_len = RTA_PAYLOAD(rta);
-      auto index = static_cast<unsigned int>(ifm->ifi_index);
-      const char *name_data = reinterpret_cast<const char *>(RTA_DATA(rta));
-      size_t name_len = internal::strnlen(name_data, rta_payload_len);
-
-      size_t total_size = 2 * sizeof(struct if_nameindex) + name_len + 1;
-      AllocChecker ac;
-      uint8_t *buffer = new (ac) uint8_t[total_size];
-      if (!ac)
-        return Error(ENOBUFS);
-
-      cpp::span<uint8_t> buffer_span(buffer, total_size);
-      cpp::span<struct if_nameindex> result(
-          reinterpret_cast<struct if_nameindex *>(buffer_span.data()), 2);
-      cpp::span<char> string_span(reinterpret_cast<char *>(result.end()),
-                                  reinterpret_cast<char *>(buffer_span.end()));
-
-      result[0].if_index = index;
-      result[0].if_name = string_span.data();
-      inline_memcpy(string_span.data(), name_data, name_len);
-      string_span[name_len] = '\0';
-
-      result[1].if_index = 0;
-      result[1].if_name = nullptr;
-
-      return result.data();
-    }
-  }
-
-  AllocChecker ac;
-  uint8_t *buffer = new (ac) uint8_t[sizeof(struct if_nameindex)];
-  if (!ac)
-    return Error(ENOBUFS);
-  cpp::span<struct if_nameindex> result(
-      reinterpret_cast<struct if_nameindex *>(buffer), 1);
-  result[0] = {};
-  return result.data();
+  return detail::build_if_nameindex_list(store);
 }
 
 } // namespace net

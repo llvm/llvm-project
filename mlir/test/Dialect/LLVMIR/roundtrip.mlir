@@ -1165,6 +1165,14 @@ llvm.func @metadata_as_value_shapes() {
   %2 = llvm.mlir.metadata_as_value #llvm.md_global_value<@md_kernel>
   // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
   %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  %4 = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  %5 = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  %6 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@md_kernel>, 0>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
+  %7 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_null<1>, 0>
   llvm.return
 }
 
@@ -1252,3 +1260,25 @@ llvm.named_metadata "foo.kernel" [
     >
   >
 ]
+
+// CHECK-LABEL: llvm.func @generic_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"annotation", <#llvm.md_string<"function annotation">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+llvm.func @generic_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"annotation", #llvm.md_node<#llvm.md_string<"function annotation">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid">>>
+  ]
+}
+
+// CHECK-LABEL: llvm.func @repeated_function_metadata
+// CHECK-SAME: function_metadata
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>
+// CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+llvm.func @repeated_function_metadata() attributes {
+  function_metadata = [
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>,
+    #llvm.func_metadata<"type", #llvm.md_node<#llvm.md_const<0 : i64>, #llvm.md_string<"typeid1">>>
+  ]
+}

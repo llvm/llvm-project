@@ -69,12 +69,10 @@ public:
 
 static const NamedDecl *findDecl(const RecordDecl &RecDecl,
                                  StringRef DeclName) {
-  for (const Decl *D : RecDecl.decls()) {
-    if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-      if (ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
-        return ND;
-    }
-  }
+  for (const Decl *D : RecDecl.decls())
+    if (const auto *ND = dyn_cast<NamedDecl>(D);
+        ND && ND->getDeclName().isIdentifier() && ND->getName() == DeclName)
+      return ND;
   return nullptr;
 }
 
