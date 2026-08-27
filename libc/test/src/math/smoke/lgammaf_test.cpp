@@ -88,10 +88,10 @@ TEST_F(LlvmLibcLgammafTest, Overflow) {
       continue;
     for (float x : overflow_inputs) {
       libc_errno = 0;
-      float expected = (mode == RoundingMode::Downward ||
-                        mode == RoundingMode::TowardZero)
-                           ? FPBits::max_normal().get_val()
-                           : inf;
+      float expected =
+          (mode == RoundingMode::Downward || mode == RoundingMode::TowardZero)
+              ? FPBits::max_normal().get_val()
+              : inf;
       EXPECT_FP_EQ_WITH_EXCEPTION(expected, LIBC_NAMESPACE::lgammaf(x),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
