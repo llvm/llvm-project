@@ -127,6 +127,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  fnmatch
+  ../libc/include/fnmatch.yaml
+  fnmatch.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.fnmatch_macros
+)
+
+add_header_macro(
   stdint
   ../libc/include/stdint.yaml
   stdint.h
