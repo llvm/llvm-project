@@ -199,6 +199,14 @@ public:
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // SEH pseudos emit no code, so hold them to an exact size of 0.
+    if (isSEHInstruction(MI))
+      return InstSizeVerifyMode::ExactSize;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
+
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
   bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
