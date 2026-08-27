@@ -152,15 +152,15 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // Handle the remaining part from the previous chunk.
     // The previous chunk can be either no longer than MinSize or part of the
     // string.
-    while (Cur != End && isStringChar(*Cur))
-      ++Cur;
-    size_t Len = Cur - Begin;
     // Keep the buffer size bounded. With a small Min, a long string spanning
     // multiple chunks will have at most DefaultReadChunkSize bytes, since the
     // buffer is printed immediately with the header (guarded by the second if).
     // With a large Min, the buffer must hold at least Min bytes, since we need
     // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
+      while (Cur != End && isStringChar(*Cur))
+        ++Cur;
+      size_t Len = Cur - Begin;
       if (InString) {
         OS << StringRef(Begin, Len);
       } else if (Candidate.size() + Len >= Min) {
