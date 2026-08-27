@@ -441,9 +441,11 @@ static RecipeOp genRecipeOp(
   RecipeOp recipe;
   if constexpr (std::is_same_v<RecipeOp, mlir::acc::ReductionRecipeOp>) {
     recipe = mlir::acc::ReductionRecipeOp::create(modBuilder, loc, recipeName,
+                                                  /*sym_visibility=*/nullptr,
                                                   ty, op);
   } else {
-    recipe = RecipeOp::create(modBuilder, loc, recipeName, ty);
+    recipe = RecipeOp::create(modBuilder, loc, recipeName,
+                              /*sym_visibility=*/nullptr, ty);
   }
 
   assert(hlfir::isFortranVariableType(ty) && "expect Fortran variable type");

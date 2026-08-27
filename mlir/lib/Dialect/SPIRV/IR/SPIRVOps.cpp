@@ -1129,9 +1129,11 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type> resultTypes;
   auto &builder = parser.getBuilder();
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1173,7 +1175,9 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void spirv::FuncOp::print(OpAsmPrinter &printer) {
   // Print function name, signature, and control.
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   auto fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
@@ -1185,7 +1189,7 @@ void spirv::FuncOp::print(OpAsmPrinter &printer) {
       printer, *this,
       {spirv::attributeName<spirv::FunctionControl>(),
        getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
-       getFunctionControlAttrName()});
+       getFunctionControlAttrName(), getSymVisibilityAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = this->getBody();
@@ -1317,7 +1321,7 @@ void spirv::FuncOp::build(OpBuilder &builder, OperationState &state,
                           StringRef name, FunctionType type,
                           spirv::FunctionControl control,
                           ArrayRef<NamedAttribute> attrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
+  state.addAttribute(getSymNameAttrName(state.name),
                      builder.getStringAttr(name));
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.addAttribute(spirv::attributeName<spirv::FunctionControl>(),
@@ -1414,11 +1418,13 @@ void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
 
 ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
                                            OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse variable name.
   StringAttr nameAttr;
   StringRef initializerAttrName =
       spirv::GlobalVariableOp::getInitializerAttrName(result.name);
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes)) {
     return failure();
   }
@@ -1458,8 +1464,11 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
 
   // Print variable name.
   printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
-  elidedAttrs.push_back(SymbolTable::getSymbolAttrName());
+  elidedAttrs.push_back(getSymNameAttrName());
+  elidedAttrs.push_back(getSymVisibilityAttrName());
 
   StringRef initializerAttrName = this->getInitializerAttrName();
   // Print optional initializer
@@ -1675,7 +1684,7 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
   OpBuilder::InsertionGuard guard(builder);
   builder.createBlock(state.addRegion());
   if (name) {
-    state.attributes.append(mlir::SymbolTable::getSymbolAttrName(),
+    state.attributes.append(getSymNameAttrName(state.name),
                             builder.getStringAttr(*name));
   }
 }
@@ -1695,7 +1704,7 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
   if (vceTriple)
     state.addAttribute(getVCETripleAttrName(), *vceTriple);
   if (name)
-    state.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+    state.addAttribute(getSymNameAttrName(state.name),
                        builder.getStringAttr(*name));
 }
 
@@ -1703,10 +1712,12 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   Region *body = result.addRegion();
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // If the name is present, parse it.
   StringAttr nameAttr;
   (void)parser.parseOptionalSymbolName(
-      nameAttr, mlir::SymbolTable::getSymbolAttrName(), result.attributes);
+      nameAttr, getSymNameAttrName(result.name), result.attributes);
 
   // Parse attributes
   spirv::AddressingModel addrModel;
@@ -1737,6 +1748,8 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
 }
 
 void spirv::ModuleOp::print(OpAsmPrinter &printer) {
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << ' ' << visibility.getValue();
   if (std::optional<StringRef> name = getName()) {
     printer << ' ';
     printer.printSymbolName(*name);
@@ -1749,7 +1762,7 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
   auto addressingModelAttrName = spirv::attributeName<spirv::AddressingModel>();
   auto memoryModelAttrName = spirv::attributeName<spirv::MemoryModel>();
   elidedAttrs.assign({addressingModelAttrName, memoryModelAttrName,
-                      mlir::SymbolTable::getSymbolAttrName()});
+                      getSymNameAttrName(), getSymVisibilityAttrName()});
 
   if (std::optional<spirv::VerCapExtAttr> triple = getVceTriple()) {
     printer << " requires " << *triple;
@@ -1865,12 +1878,14 @@ LogicalResult spirv::ReferenceOfOp::verify() {
 
 ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr nameAttr;
   Attribute valueAttr;
   StringRef defaultValueAttrName =
       spirv::SpecConstantOp::getDefaultValueAttrName(result.name);
 
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1892,6 +1907,8 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
 
 void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   if (auto specID =
           (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
@@ -1952,8 +1969,10 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr compositeName;
-  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(compositeName, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1994,7 +2013,9 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
 }
 
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   printer << " (" << llvm::interleaved(this->getConstituents().getValue())
           << ") : " << getType();
@@ -2053,13 +2074,15 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
 ParseResult
 spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr compositeName;
   FlatSymbolRefAttr specConstRef;
   const char *attrName = "spec_const";
   NamedAttrList attrs;
   Type type;
 
-  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(compositeName, getSymNameAttrName(result.name),
                              result.attributes) ||
       parser.parseLParen() ||
       parser.parseAttribute(specConstRef, Type(), attrName, attrs) ||
@@ -2079,7 +2102,9 @@ spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
 }
 
 void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   printer << " (" << this->getConstituent() << ") : " << getType();
 }
