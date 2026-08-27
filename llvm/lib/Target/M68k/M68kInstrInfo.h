@@ -323,6 +323,10 @@ public:
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
 
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
+
   /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the
   /// function entry block, if necessary.
