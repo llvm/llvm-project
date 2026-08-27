@@ -11113,13 +11113,13 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
     }
   }
 
-  // For a defined unsigned division, the quotient is zero exactly when the
-  // numerator is less than the denominator. The constant-range canonicalization
-  // above reduces equivalent zero/nonzero comparisons to EQ/NE against zero.
-  if (const auto *Div = dyn_cast<SCEVUDivExpr>(LHS);
-      Div && RHS->isZero() && ICmpInst::isEquality(Pred)) {
-    LHS = Div->getLHS();
-    RHS = Div->getRHS();
+  // a /u b == 0 => a < b
+  // a /u b != 0 => a >= b
+  SCEVUse UDivLHS, UDivRHS;
+  if (ICmpInst::isEquality(Pred) && RHS->isZero() &&
+      match(LHS, m_scev_UDiv(m_SCEV(UDivLHS), m_SCEV(UDivRHS)))) {
+    LHS = UDivLHS;
+    RHS = UDivRHS;
     Pred = Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
     Changed = true;
   }
