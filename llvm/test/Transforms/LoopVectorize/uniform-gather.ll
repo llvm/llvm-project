@@ -411,3 +411,212 @@ exit:
   ret void
 }
 
+; Uniform load from allocation function with statically-known-size(16).
+; The access (bytes [12,16)) is inside the range.
+define void @deref_tli_alloc_in_range(ptr noalias %out, ptr noalias %cond) gc "statepoint-example" {
+; FIXED-LABEL: define void @deref_tli_alloc_in_range(
+; FIXED-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]]) gc "statepoint-example" {
+; FIXED-NEXT:  [[ENTRY:.*:]]
+; FIXED-NEXT:    [[TABLE:%.*]] = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 16)
+; FIXED-NEXT:    call void @init(ptr addrspace(1) [[TABLE]])
+; FIXED-NEXT:    br label %[[VECTOR_PH:.*]]
+; FIXED:       [[VECTOR_PH]]:
+; FIXED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TABLE]], i64 3
+; FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FIXED:       [[VECTOR_BODY]]:
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; FIXED-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; FIXED-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[TMP0]], align 4
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
+; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[BROADCAST_SPLAT]], <2 x i32> zeroinitializer
+; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
+; FIXED-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP4]], align 4
+; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; FIXED-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; FIXED:       [[MIDDLE_BLOCK]]:
+; FIXED-NEXT:    br label %[[EXIT:.*]]
+; FIXED:       [[EXIT]]:
+; FIXED-NEXT:    ret void
+;
+; SCALABLE-LABEL: define void @deref_tli_alloc_in_range(
+; SCALABLE-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]]) gc "statepoint-example" {
+; SCALABLE-NEXT:  [[ENTRY:.*:]]
+; SCALABLE-NEXT:    [[TABLE:%.*]] = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 16)
+; SCALABLE-NEXT:    call void @init(ptr addrspace(1) [[TABLE]])
+; SCALABLE-NEXT:    br label %[[VECTOR_PH:.*]]
+; SCALABLE:       [[VECTOR_PH]]:
+; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; SCALABLE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; SCALABLE-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 16, [[TMP2]]
+; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; SCALABLE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TABLE]], i64 3
+; SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; SCALABLE:       [[VECTOR_BODY]]:
+; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], splat (i64 15)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP6]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
+; SCALABLE-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) [[TMP3]], align 4
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP8]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i32> [[BROADCAST_SPLAT2]], <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
+; SCALABLE-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[PREDPHI]], ptr align 4 [[TMP9]], <vscale x 2 x i1> [[TMP5]])
+; SCALABLE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; SCALABLE:       [[MIDDLE_BLOCK]]:
+; SCALABLE-NEXT:    br label %[[EXIT:.*]]
+; SCALABLE:       [[EXIT]]:
+; SCALABLE-NEXT:    ret void
+;
+entry:
+  %table = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 16)
+  call void @init(ptr addrspace(1) %table)
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %arrayidx.cond = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %c = load i32, ptr %arrayidx.cond, align 4
+  %cmp = icmp ne i32 %c, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %gep.table = getelementptr inbounds i32, ptr addrspace(1) %table, i64 3
+  %v.then = load i32, ptr addrspace(1) %gep.table, align 4
+  br label %if.end
+
+if.end:
+  %v = phi i32 [ %v.then, %if.then ], [ 0, %for.body ]
+  %arrayidx.out = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %v, ptr %arrayidx.out, align 4
+  br label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 16
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Uniform load from allocation function with statically-known-size(15).
+; The last byte of the accessed i32 falls outside the range.
+define void @deref_tli_alloc_out_of_range(ptr noalias %out, ptr noalias %cond) gc "statepoint-example" {
+; FIXED-LABEL: define void @deref_tli_alloc_out_of_range(
+; FIXED-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]]) gc "statepoint-example" {
+; FIXED-NEXT:  [[ENTRY:.*:]]
+; FIXED-NEXT:    [[TABLE:%.*]] = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 15)
+; FIXED-NEXT:    call void @init(ptr addrspace(1) [[TABLE]])
+; FIXED-NEXT:    br label %[[VECTOR_PH:.*]]
+; FIXED:       [[VECTOR_PH]]:
+; FIXED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TABLE]], i64 3
+; FIXED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[TMP0]], i64 0
+; FIXED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[BROADCAST_SPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
+; FIXED-NEXT:    br label %[[VECTOR_BODY:.*]]
+; FIXED:       [[VECTOR_BODY]]:
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
+; FIXED-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; FIXED-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p1(<2 x ptr addrspace(1)> align 4 [[BROADCAST_SPLAT]], <2 x i1> [[TMP2]], <2 x i32> poison)
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_MASKED_GATHER]], <2 x i32> zeroinitializer
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
+; FIXED-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP3]], align 4
+; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; FIXED-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; FIXED-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; FIXED:       [[MIDDLE_BLOCK]]:
+; FIXED-NEXT:    br label %[[EXIT:.*]]
+; FIXED:       [[EXIT]]:
+; FIXED-NEXT:    ret void
+;
+; SCALABLE-LABEL: define void @deref_tli_alloc_out_of_range(
+; SCALABLE-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[COND:%.*]]) gc "statepoint-example" {
+; SCALABLE-NEXT:  [[ENTRY:.*:]]
+; SCALABLE-NEXT:    [[TABLE:%.*]] = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 15)
+; SCALABLE-NEXT:    call void @init(ptr addrspace(1) [[TABLE]])
+; SCALABLE-NEXT:    br label %[[VECTOR_PH:.*]]
+; SCALABLE:       [[VECTOR_PH]]:
+; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; SCALABLE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; SCALABLE-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; SCALABLE-NEXT:    [[N_RND_UP:%.*]] = add i64 16, [[TMP2]]
+; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; SCALABLE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TABLE]], i64 3
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x ptr addrspace(1)> poison, ptr addrspace(1) [[TMP3]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x ptr addrspace(1)> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x ptr addrspace(1)> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
+; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; SCALABLE:       [[VECTOR_BODY]]:
+; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], splat (i64 15)
+; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[INDEX]]
+; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr align 4 [[TMP6]], <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], zeroinitializer
+; SCALABLE-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP5]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer
+; SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p1(<vscale x 2 x ptr addrspace(1)> align 4 [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i32> poison)
+; SCALABLE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], <vscale x 2 x i32> zeroinitializer
+; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[INDEX]]
+; SCALABLE-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[PREDPHI]], ptr align 4 [[TMP9]], <vscale x 2 x i1> [[TMP5]])
+; SCALABLE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALABLE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SCALABLE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; SCALABLE:       [[MIDDLE_BLOCK]]:
+; SCALABLE-NEXT:    br label %[[EXIT:.*]]
+; SCALABLE:       [[EXIT]]:
+; SCALABLE-NEXT:    ret void
+;
+entry:
+  %table = call nonnull align 16 ptr addrspace(1) @_Znwm(i64 15)
+  call void @init(ptr addrspace(1) %table)
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %arrayidx.cond = getelementptr inbounds i32, ptr %cond, i64 %iv
+  %c = load i32, ptr %arrayidx.cond, align 4
+  %cmp = icmp ne i32 %c, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %gep.table = getelementptr inbounds i32, ptr addrspace(1) %table, i64 3
+  %v.then = load i32, ptr addrspace(1) %gep.table, align 4
+  br label %if.end
+
+if.end:
+  %v = phi i32 [ %v.then, %if.then ], [ 0, %for.body ]
+  %arrayidx.out = getelementptr inbounds i32, ptr %out, i64 %iv
+  store i32 %v, ptr %arrayidx.out, align 4
+  br label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 16
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+declare nonnull ptr addrspace(1) @_Znwm(i64)
+declare void @init(ptr addrspace(1))
