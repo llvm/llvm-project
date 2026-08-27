@@ -2650,7 +2650,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (MO->isReg()) {
         if (MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
             (MCOI.OperandType == MCOI::OPERAND_PCREL &&
-             !TII->isPCRelRegisterOperandLegal(*MO)))
+             !TII->isPCRelRegisterOperandLegal(*MI, MONum)))
           report("Expected a non-register operand.", MO, MONum);
       }
     }
