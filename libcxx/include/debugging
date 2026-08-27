@@ -40,9 +40,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept;
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE inline void breakpoint() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI inline void breakpoint() noexcept {
 #    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #    elif defined(_MSC_VER)
@@ -52,17 +50,16 @@ _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE inline void breakpoint() no
 #    endif
 }
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-
 _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_OVERRIDABLE_FUNC_VIS bool
 is_debugger_present() noexcept;
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE inline void breakpoint_if_debugging() noexcept {
+_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI inline void
+breakpoint_if_debugging() noexcept {
   if (is_debugger_present())
     breakpoint();
 }
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_END_NAMESPACE_STD
 
