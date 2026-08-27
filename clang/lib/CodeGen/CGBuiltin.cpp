@@ -256,19 +256,20 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
 void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
                                 llvm::Function *F) {
   llvm::FunctionType *FTy = F->getFunctionType();
-  if (Args.size() == FTy->getNumParams())
+  unsigned NumParams = FTy->getNumParams();
+  if (Args.size() >= NumParams)
     return;
 
   auto [FirstDefault, Defaults] =
       Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
   assert(Args.size() >= FirstDefault &&
-         "fewer arguments than the intrinsic's required parameters");
-  for (unsigned I = Args.size(), E = FTy->getNumParams(); I != E; ++I) {
-    unsigned DefaultIdx = I - FirstDefault;
+         "builtin passes fewer arguments than the intrinsic requires");
+
+  for (unsigned I = Args.size(); I != NumParams; ++I) {
     llvm::Type *ParamTy = FTy->getParamType(I);
-    assert(ParamTy->isIntOrIntVectorTy() &&
-           "intrinsic default arguments must be integer-typed, as enforced "
-           "by TableGen");
+    unsigned DefaultIdx = I - FirstDefault;
+    assert(ParamTy->isIntegerTy() &&
+           "intrinsic default arguments must be integer-typed");
     Args.push_back(llvm::ConstantInt::get(ParamTy, Defaults[DefaultIdx]));
   }
 }
