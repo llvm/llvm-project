@@ -57,7 +57,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
-  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVPostLegalizerLegacyPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
@@ -247,7 +247,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new LegalizerLegacy());
-  addPass(createSPIRVPostLegalizerPass());
+  addPass(createSPIRVPostLegalizerLegacyPass());
   return false;
 }
 

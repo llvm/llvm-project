@@ -157,7 +157,7 @@ void SPIRVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LegalizerPass(), PMW);
-  // TODO(boomanaiden154): Add SPIRVPostLegalizerPass when it has been ported.
+  addMachineFunctionPass(SPIRVPostLegalizerPass(), PMW);
   return Error::success();
 }
 

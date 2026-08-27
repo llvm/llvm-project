@@ -136,7 +136,15 @@ public:
 };
 
 FunctionPass *createSPIRVPreLegalizerCombinerLegacyPass();
-FunctionPass *createSPIRVPostLegalizerPass();
+
+class SPIRVPostLegalizerPass
+    : public RequiredPassInfoMixin<SPIRVPostLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createSPIRVPostLegalizerLegacyPass();
 
 class SPIRVEmitIntrinsicsPass
     : public RequiredPassInfoMixin<SPIRVEmitIntrinsicsPass> {
@@ -175,7 +183,7 @@ void initializeSPIRVAsmPrinterPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVPreLegalizerCombinerLegacyPass(PassRegistry &);
-void initializeSPIRVPostLegalizerPass(PassRegistry &);
+void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
