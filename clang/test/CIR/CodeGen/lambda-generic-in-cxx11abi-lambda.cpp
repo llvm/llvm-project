@@ -15,8 +15,14 @@ void g() {
 }
 int main() { g(); }
 
-// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_
-// LLVM-LABEL: define internal noundef i32 @"_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_"
+// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ1gvENK3$_0clB5cxx11Ev
+// CIR-NOT: define
+// CIR: %[[ONE:.*]] = cir.const #cir.int<1> 
+// CIR: cir.call @_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_(%[[ONE]], %{{.*}})
+
+// LLVM-LABEL: define internal i32 @"_ZZ1gvENK3$_0clB5cxx11Ev"(
+// LLVM-NOT: define
+// LLVM: call noundef i32 @"_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_"(i32 noundef 1, i32 %{{.*}})
 
 // Testing to make sure we emit this in particular as a definition.
 // CIR-LABEL: cir.func no_inline internal private dso_local @_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_
@@ -27,16 +33,9 @@ int main() { g(); }
 // LLVM-NOT: define
 // LLVM: call noundef i32 @"_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_"
 
-// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ1gvENK3$_0clB5cxx11Ev
-// CIR-NOT: define
-// CIR: %[[ONE:.*]] = cir.const #cir.int<1> 
-// CIR: cir.call @_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_(%[[ONE]], %{{.*}})
+// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_
+// LLVM-LABEL: define internal noundef i32 @"_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_"
 
-// LLVM-LABEL: define internal i32 @"_ZZ1gvENK3$_0clB5cxx11Ev"(
-// LLVM-NOT: define
-// LLVM: call noundef i32 @"_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_"(i32 noundef 1, i32 %{{.*}})
-
-// NOTE: Only difference between these is the ordering being reversed.
 // OGCG-LABEL: define internal i32 @"_ZZ1gvENK3$_0clB5cxx11Ev"(
 // OGCG-NOT: define
 // OGCG: call noundef i32 @"_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_"(i32 noundef 1, i32 %{{.*}})

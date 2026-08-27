@@ -10,12 +10,21 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/DataFormatters/VectorIterator.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
 namespace lldb_private {
 namespace formatters {
+
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp) {
+  return valobj_sp ? new VectorIteratorSyntheticFrontEnd(valobj_sp,
+                                                         {ConstString("_Ptr")})
+                   : nullptr;
+}
 
 class MsvcStlVectorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:

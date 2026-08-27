@@ -24,12 +24,12 @@ func.func @load_store_zero_rank_float(%arg0: memref<f32, #spirv.storage_class<St
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : f32
   %0 = memref.load %arg0[] : memref<f32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : f32
@@ -43,12 +43,12 @@ func.func @load_store_zero_rank_int(%arg0: memref<i32, #spirv.storage_class<Stor
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : i32
   %0 = memref.load %arg0[] : memref<i32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : i32
@@ -89,21 +89,21 @@ func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i :
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %[[IDX:.+]]: index)
 func.func @load_aligned(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_nontemporal
 func.func @load_aligned_nontemporal(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned|Nontemporal", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32, nontemporal = true } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) nontemporal(true) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_psb
 func.func @load_aligned_psb(%src: memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>, %i : index) -> i1 {
   // CHECK: %[[VAL:.+]] = spirv.Load "PhysicalStorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
   return %0: i1
 }
 
@@ -231,7 +231,7 @@ func.func @static_linearized_index(
   // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
   // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
   // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
-  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
   %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
   return %0 : f32
 }
@@ -247,7 +247,7 @@ func.func @unsigned_only_linearized_index(
   // CHECK-NOT: no_signed_wrap
   // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_unsigned_wrap} : i32
   // CHECK-NOT: no_signed_wrap
-  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
   %0 = memref.load %arg0[%row, %column] : memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>
   return %0 : f32
 }
@@ -620,17 +620,17 @@ module attributes {
   ]>, #spirv.resource_limits<>>
 } {
   func.func @load_nontemporal(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Load "StorageBuffer" %{{.+}} ["Nontemporal"] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} ["Nontemporal"] : f32
     return
   }
 
   func.func @load_nontemporal_aligned(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned|Nontemporal", 4] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned|Nontemporal", 4] : f32
     return
   }

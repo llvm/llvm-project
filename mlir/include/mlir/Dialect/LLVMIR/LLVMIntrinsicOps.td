@@ -1666,23 +1666,6 @@ class LLVM_VPBinaryBase<string mnem, Type element>
 
 class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnySignlessInteger>;
 
-class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
-
-class LLVM_VPUnaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
-      Arguments<(ins LLVM_VectorOf<element>:$op,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
-
-class LLVM_VPUnaryF<string mnem> : LLVM_VPUnaryBase<mnem, AnyFloat>;
-
-class LLVM_VPTernaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
-      Arguments<(ins LLVM_VectorOf<element>:$op1, LLVM_VectorOf<element>:$op2,
-                     LLVM_VectorOf<element>:$op3, LLVM_VectorOf<I1>:$mask,
-                     I32:$evl)>;
-
-class LLVM_VPTernaryF<string mnem> : LLVM_VPTernaryBase<mnem, AnyFloat>;
-
 class LLVM_VPReductionBase<string mnem, Type element>
     : LLVM_OneResultIntrOp<"vp.reduce." # mnem, [], [1], [Pure]>,
       Arguments<(ins element:$satrt_value, LLVM_VectorOf<element>:$val,
@@ -1697,49 +1680,11 @@ class LLVM_VPSelectBase<string mnem>
       Arguments<(ins LLVM_VectorOf<I1>:$cond, LLVM_AnyVector:$true_val,
                      LLVM_AnyVector:$false_val, I32:$evl)>;
 
-class LLVM_VPCastBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [0], [Pure]>,
-      Arguments<(ins LLVM_VectorOf<element>:$src,
-                     LLVM_VectorOf<I1>:$mask, I32:$evl)>;
-
-class LLVM_VPCastI<string mnem>   : LLVM_VPCastBase<mnem, AnySignlessInteger>;
-
-class LLVM_VPCastF<string mnem>   : LLVM_VPCastBase<mnem, AnyFloat>;
-
-class LLVM_VPCastPtr<string mnem> : LLVM_VPCastBase<mnem, LLVM_AnyPointer>;
-
 // Integer Binary
-def LLVM_VPAddOp  : LLVM_VPBinaryI<"add">;
-def LLVM_VPSubOp  : LLVM_VPBinaryI<"sub">;
-def LLVM_VPMulOp  : LLVM_VPBinaryI<"mul">;
 def LLVM_VPSDivOp : LLVM_VPBinaryI<"sdiv">;
 def LLVM_VPUDivOp : LLVM_VPBinaryI<"udiv">;
 def LLVM_VPSRemOp : LLVM_VPBinaryI<"srem">;
 def LLVM_VPURemOp : LLVM_VPBinaryI<"urem">;
-def LLVM_VPAShrOp : LLVM_VPBinaryI<"ashr">;
-def LLVM_VPLShrOp : LLVM_VPBinaryI<"lshr">;
-def LLVM_VPShlOp  : LLVM_VPBinaryI<"shl">;
-def LLVM_VPOrOp   : LLVM_VPBinaryI<"or">;
-def LLVM_VPAndOp  : LLVM_VPBinaryI<"and">;
-def LLVM_VPXorOp  : LLVM_VPBinaryI<"xor">;
-def LLVM_VPSMaxOp : LLVM_VPBinaryI<"smax">;
-def LLVM_VPSMinOp : LLVM_VPBinaryI<"smin">;
-def LLVM_VPUMaxOp : LLVM_VPBinaryI<"umax">;
-def LLVM_VPUMinOp : LLVM_VPBinaryI<"umin">;
-
-// Float Binary
-def LLVM_VPFAddOp : LLVM_VPBinaryF<"fadd">;
-def LLVM_VPFSubOp : LLVM_VPBinaryF<"fsub">;
-def LLVM_VPFMulOp : LLVM_VPBinaryF<"fmul">;
-def LLVM_VPFDivOp : LLVM_VPBinaryF<"fdiv">;
-def LLVM_VPFRemOp : LLVM_VPBinaryF<"frem">;
-
-// Float Unary
-def LLVM_VPFNegOp : LLVM_VPUnaryF<"fneg">;
-
-// Float Ternary
-def LLVM_VPFMulAddOp  : LLVM_VPTernaryF<"fmuladd">;
-def LLVM_VPFmaOp      : LLVM_VPTernaryF<"fma">;
 
 // Integer Reduction
 def LLVM_VPReduceAddOp  : LLVM_VPReductionI<"add">;
@@ -1758,7 +1703,6 @@ def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
 def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
 def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
 
-def LLVM_VPSelectMinOp : LLVM_VPSelectBase<"select">;
 def LLVM_VPMergeMinOp  : LLVM_VPSelectBase<"merge">;
 
 // Load/store
@@ -1783,21 +1727,5 @@ def LLVM_VPStridedStoreOp
     : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
       Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
                      AnySignlessInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
-
-def LLVM_VPTruncOp : LLVM_VPCastI<"trunc">;
-def LLVM_VPZExtOp  : LLVM_VPCastI<"zext">;
-def LLVM_VPSExtOp  : LLVM_VPCastI<"sext">;
-
-def LLVM_VPFPTruncOp : LLVM_VPCastF<"fptrunc">;
-def LLVM_VPFPExtOp   : LLVM_VPCastF<"fpext">;
-
-def LLVM_VPFPToUIOp : LLVM_VPCastF<"fptoui">;
-def LLVM_VPFPToSIOp : LLVM_VPCastF<"fptosi">;
-
-def LLVM_VPUIToFPOp : LLVM_VPCastI<"uitofp">;
-def LLVM_VPSIToFPOp : LLVM_VPCastI<"sitofp">;
-
-def LLVM_VPPtrToIntOp : LLVM_VPCastPtr<"ptrtoint">;
-def LLVM_VPIntToPtrOp : LLVM_VPCastI<"inttoptr">;
 
 #endif // LLVM_INTRINSIC_OP

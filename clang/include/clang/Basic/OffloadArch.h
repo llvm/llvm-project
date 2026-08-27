@@ -10,11 +10,11 @@
 #define LLVM_CLANG_BASIC_OFFLOADARCH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <tuple>
 
 namespace llvm {
-class Triple;
 template <typename T> class SmallVectorImpl;
 namespace NVPTX {
 enum GPUKind : uint8_t;
@@ -115,6 +115,9 @@ OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 /// Append the canonical names of all NVIDIA and AMDGPU GPUs.
 void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values);
+
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID);

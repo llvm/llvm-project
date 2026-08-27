@@ -1,4 +1,4 @@
-//===- LibcallLoweringInfo.cpp - Interface for runtime libcalls -----------===//
+//===- LibcallLoweringInfo.cpp - Legacy wrapper for libcall lowering ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,43 +10,16 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
-LibcallLoweringInfo::LibcallLoweringInfo(
-    const RTLIB::RuntimeLibcallsInfo &RTLCI,
-    const TargetSubtargetInfo &Subtarget)
-    : RTLCI(RTLCI) {
-  // TODO: This should be generated with lowering predicates, and assert the
-  // call is available.
-  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
-    if (RTLCI.isAvailable(Impl)) {
-      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-      // FIXME: Hack, assume the first available libcall wins.
-      if (LibcallImpls[LC] == RTLIB::Unsupported)
-        LibcallImpls[LC] = Impl;
-    }
-  }
-
-  Subtarget.initLibcallLoweringInfo(*this);
-}
-
-AnalysisKey LibcallLoweringModuleAnalysis::Key;
-
-bool ModuleLibcallLoweringInfo::invalidate(
-    Module &, const PreservedAnalyses &PA,
-    ModuleAnalysisManager::Invalidator &) {
-  // Passes that change the runtime libcall set must explicitly invalidate this
-  // pass.
-  auto PAC = PA.getChecker<LibcallLoweringModuleAnalysis>();
-  return !PAC.preservedWhenStateless();
-}
-
-ModuleLibcallLoweringInfo
-LibcallLoweringModuleAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  LibcallLoweringMap.init(&MAM.getResult<RuntimeLibraryAnalysis>(M));
-  return LibcallLoweringMap;
+const LibcallLoweringInfo &
+llvm::getLibcallLowering(const ModuleLibcallLoweringInfo &ModuleInfo,
+                         const TargetSubtargetInfo &Subtarget) {
+  return ModuleInfo.getLibcallLowering(
+      &Subtarget, [&](LibcallLoweringInfo &Info) {
+        Subtarget.initLibcallLoweringInfo(Info);
+      });
 }
 
 INITIALIZE_PASS_BEGIN(LibcallLoweringInfoWrapper, "libcall-lowering-info",
@@ -58,6 +31,21 @@ INITIALIZE_PASS_END(LibcallLoweringInfoWrapper, "libcall-lowering-info",
 char LibcallLoweringInfoWrapper::ID = 0;
 
 LibcallLoweringInfoWrapper::LibcallLoweringInfoWrapper() : ImmutablePass(ID) {}
+
+const LibcallLoweringInfo &LibcallLoweringInfoWrapper::getLibcallLowering(
+    const Module &M, const TargetSubtargetInfo &Subtarget) {
+  return getResult(M).getLibcallLowering(
+      &Subtarget, [&](LibcallLoweringInfo &Info) {
+        Subtarget.initLibcallLoweringInfo(Info);
+      });
+}
+
+const ModuleLibcallLoweringInfo &
+LibcallLoweringInfoWrapper::getResult(const Module &M) {
+  if (!Result)
+    Result.init(&RuntimeLibcallsWrapper->getRTLCI(M));
+  return Result;
+}
 
 void LibcallLoweringInfoWrapper::initializePass() {
   RuntimeLibcallsWrapper = &getAnalysis<RuntimeLibraryInfoWrapper>();

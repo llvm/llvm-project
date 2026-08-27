@@ -37,6 +37,12 @@ public:
     return m_scripted_metadata;
   }
 
+  /// Whether the user can invoke this extension directly, the way a scripted
+  /// command can. Those never introduce the target's API mutex bypass, so at
+  /// top level they serialize like any other command; nested inside an
+  /// already-bypassed callback every extension inherits the ambient policy.
+  virtual bool UserCanRunDirectly() const { return false; }
+
   struct AbstractMethodRequirement {
     llvm::StringLiteral name;
     size_t min_arg_count = 0;

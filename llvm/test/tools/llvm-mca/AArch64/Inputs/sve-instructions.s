@@ -550,12 +550,16 @@ facge	p0.h, p0/z, z0.h, z1.h
 facge	p0.h, p0/z, z1.h, z0.h
 facge	p0.s, p0/z, z0.s, z1.s
 facge	p0.s, p0/z, z1.s, z0.s
+facle	p0.d, p0/z, z0.d, z1.d
+facle	p0.s, p0/z, z0.s, z1.s
 facgt	p0.d, p0/z, z0.d, z1.d
 facgt	p0.d, p0/z, z1.d, z0.d
 facgt	p0.h, p0/z, z0.h, z1.h
 facgt	p0.h, p0/z, z1.h, z0.h
 facgt	p0.s, p0/z, z0.s, z1.s
 facgt	p0.s, p0/z, z1.s, z0.s
+faclt	p0.d, p0/z, z0.d, z1.d
+faclt	p0.s, p0/z, z0.s, z1.s
 fadd	z0.d, p0/m, z0.d, #0.5
 fadd	z0.d, p7/m, z0.d, z31.d
 fadd	z0.d, z1.d, z31.d

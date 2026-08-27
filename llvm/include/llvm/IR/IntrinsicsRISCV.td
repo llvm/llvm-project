@@ -2117,6 +2117,14 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
+  // Packed Multiply High Accumulate.
+  def int_riscv_pmhacc    : RVPTernaryIntrinsic;
+  def int_riscv_pmhracc   : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccu   : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
+  def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -2142,6 +2150,31 @@ class RVPBinaryIntrinsic
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_pnclipp  : RVPNarrowingClipIntrinsic;
   def int_riscv_pnclipup : RVPNarrowingClipIntrinsic;
+
+  // Packed "Q-format" Multiply Parts Accumulate
+  class RVPQFormatAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_any_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mqacc_h00  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_h01  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_h11  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_h00 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_h01 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_h11 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h00  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h01  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqacc_h11  : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h00 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h01 : RVPQFormatAccIntrinsic;
+  def int_riscv_pmqracc_h11 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_w00  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_w01  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqacc_w11  : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_w00 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_w01 : RVPQFormatAccIntrinsic;
+  def int_riscv_mqracc_w11 : RVPQFormatAccIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//

@@ -579,6 +579,9 @@ unsigned X86_32ABIInfo::getTypeStackAlignInBytes(QualType Ty,
   if (Align <= MinABIStackAlignInBytes)
     return 0; // Use default alignment.
 
+  if (Ty->isFloat128Type())
+    return 16;
+
   if (IsLinuxABI) {
     // Exclude other System V OS (e.g Darwin, PS4 and FreeBSD) since we don't
     // want to spend any effort dealing with the ramifications of ABI breaks.

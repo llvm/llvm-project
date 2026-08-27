@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/StringPool.h"
+#include "orc-rt/bedrock/StringPool.h"
 #include "gtest/gtest.h"
 
 #include <unordered_set>

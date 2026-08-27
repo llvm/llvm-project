@@ -1,7 +1,12 @@
 ; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --ignore-case %s
+; RUN: llc <%s --mtriple s390x-ibm-zos | FileCheck --check-prefix CHECK-ASM %s
 
 @x = common global i32 0, align 4
+
+; CHECK-ASM: x CSECT
+; CHECK-ASM: C_WSA64 CATTR ALIGN(2),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(x)
+; CHECK-ASM: x XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(EXPORT)
 
 ; ESD record, type SD.
 ; The name is x.

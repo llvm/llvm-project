@@ -157,11 +157,13 @@ public:
   /// Return if we're checking if a global variable has a constant destructor
   /// and the given pointer is pointing to the variable we're checking that for.
   bool checkingConstantDestruction(const Pointer &Ptr) const {
-    return checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl());
+    return checkingConstantDestruction(Ptr.getRootVarDecl());
   }
   bool checkingConstantDestruction(const VarDecl *VD) const {
     return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
   }
+
+  unsigned newStringID() { return StringID++; }
 
 private:
   friend class EvaluationResult;
@@ -198,6 +200,8 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+
+  unsigned StringID = 0;
 
   EvaluationKind EvalKind = EvaluationKind::None;
 

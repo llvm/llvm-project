@@ -209,17 +209,23 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
     }
 
     if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
-        !Ptr.getFieldDesc()->isPrimitiveArray())
+        !Ptr.inArray())
       return false;
 
     // Must be char.
-    if (Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
+    if (Ptr.isBlockPointer() &&
+        Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
+      return false;
+    if (Ptr.isStringPointer() &&
+        !Ptr.asStringPointer().getLiteral()->isOrdinary())
       return false;
 
+    bool Limited = false;
     if (Size > Ptr.getNumElems()) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
           << AK_Read;
       Size = Ptr.getNumElems();
+      Limited = true;
     }
 
     if constexpr (std::is_same_v<ResultT, APValue>) {
@@ -236,7 +242,13 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       assert((std::is_same_v<ResultT, std::string>));
       if (Size < Result.max_size())
         Result.resize(Size);
-      Result.assign(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+
+      const char *Addr = reinterpret_cast<const char *>(Ptr.getRawAddress());
+
+      if (Ptr.isStringPointer())
+        Result.assign(Addr, Size - static_cast<unsigned>(Limited));
+      else
+        Result.assign(Addr, Size);
     }
 
     return true;
@@ -274,20 +286,23 @@ bool Context::evaluateString(State &Parent, const Expr *E,
 
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
                                             const Pointer &Ptr) {
-    if (!Ptr.isBlockPointer())
-      return false;
-
-    const Descriptor *FieldDesc = Ptr.getFieldDesc();
-    if (!FieldDesc->isPrimitiveArray())
+    if (!Ptr.isReadablePointerType())
       return false;
 
     if (!Ptr.isConst())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
       return false;
 
     unsigned N = Ptr.getNumElems();
 
     if (Ptr.elemSize() == 1 /* bytes */) {
       const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
+      if (Ptr.isStringPointer()) {
+        Result.assign(Chars, N - 1);
+        return true;
+      }
       unsigned Length = strnlen(Chars, N);
       // Wasn't null terminated.
       if (N == Length)
@@ -296,10 +311,22 @@ bool Context::evaluateString(State &Parent, const Expr *E,
       return true;
     }
 
-    PrimType ElemT = FieldDesc->getPrimType();
+    PrimType ElemT;
+    if (Ptr.isBlockPointer()) {
+      ElemT = Ptr.getFieldDesc()->getPrimType();
+    } else {
+      // It may happen here that the string literal has not been decayed or
+      // indexed, so check the element type in that case.
+      assert(Ptr.isStringPointer());
+      if (!Ptr.asStringPointer().Decayed)
+        ElemT =
+            *classify(Ptr.getType()->getAsArrayTypeUnsafe()->getElementType());
+      else
+        ElemT = *classify(Ptr.getType());
+    }
     for (unsigned I = Ptr.getIndex(); I != N; ++I) {
       INT_TYPE_SWITCH(ElemT, {
-        auto Elem = Ptr.elem<T>(I);
+        auto Elem = Ptr.loadElem<T>(I);
         if (Elem.isZero())
           return true;
         Result.push_back(static_cast<char>(Elem));
@@ -324,14 +351,30 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
                                             const Pointer &Ptr) {
-    if (!Ptr.isBlockPointer())
+    if (!Ptr.isReadablePointerType())
       return false;
+
+    if (Ptr.isPastEnd())
+      return false;
+
+    if (Ptr.isStringPointer()) {
+      const auto *Lit = Ptr.asStringPointer().getLiteral();
+      int64_t Off = Ptr.getByteOffset();
+      if (Off < 0)
+        return false;
+
+      UnsignedOrNone ZeroIndex = Lit->findZeroCodeUnit(Off);
+      if (!ZeroIndex)
+        return false;
+      Result = *ZeroIndex;
+      return true;
+    }
 
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
-    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
       return false;
 
     PrimType ElemT = FieldDesc->getPrimType();
@@ -463,8 +506,9 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
 }
 
 OptPrimType Context::classify(QualType T) const {
+  T = T.getCanonicalType();
 
-  if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
+  if (const auto *BT = dyn_cast<BuiltinType>(T)) {
     auto Kind = BT->getKind();
     if (Kind == BuiltinType::Bool)
       return PT_Bool;
@@ -528,10 +572,7 @@ OptPrimType Context::classify(QualType T) const {
   if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
-  if (const auto *DT = dyn_cast<DecltypeType>(T))
-    return classify(DT->getUnderlyingType());
-
-  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+  if (const auto *OBT = T->getAs<OverflowBehaviorType>())
     return classify(OBT->getUnderlyingType());
 
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
@@ -687,8 +728,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     unsigned PrimTSize = align(primSize(PT));
     ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
@@ -718,8 +759,8 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));

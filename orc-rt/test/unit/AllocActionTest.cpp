@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/AllocAction.h"
+#include "orc-rt/bedrock/AllocAction.h"
 
 #include "gtest/gtest.h"
 

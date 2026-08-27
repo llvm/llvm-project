@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/sps-ci/NativeDylibManagerSPSCI.h"
-#include "orc-rt/NativeDylibManager.h"
-#include "orc-rt/SPSWrapperFunction.h"
-#include "orc-rt/Session.h"
+#include "orc-rt/bedrock/sps-ci/NativeDylibManagerSPSCI.h"
+#include "orc-rt/bedrock/NativeDylibManager.h"
+#include "orc-rt/bedrock/SPSWrapperFunction.h"
+#include "orc-rt/bedrock/Session.h"
 
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"

@@ -273,9 +273,15 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-      libc.test.UnitTest.ErrnoSetterMatcher)
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
+  if(LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  else()
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
@@ -364,12 +370,6 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
-
-  # LibcTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcTest)
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors)
-  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -784,7 +784,13 @@ function(add_libc_hermetic test_name)
     libc.src.string.memset
     libc.src.strings.bcmp
     libc.src.strings.bzero
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.LibcTest
+    libc.test.UnitTest.HermeticTestUtils
   )
+  if(HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  endif()
   if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
   endif()
@@ -792,6 +798,7 @@ function(add_libc_hermetic test_name)
   # Syscalls used by death tests.
   if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
+      libc.test.UnitTest.LibcDeathTestExecutors
       libc.src.poll.poll
       libc.src.signal.kill
       libc.src.stdio.fflush
@@ -918,19 +925,9 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
-      LibcHermeticTestSupport
-      # Working around dependency issues caused by compiler introduced libcalls.
-      # We need to repeat the libc target so that we can resolve libcalls which
-      # pull in functions from LibcHermeticTestSupport (which then foward to
-      # internal implementations).
-      # TODO: clean this up
-      ${fq_target_name}.__libc__
       ${compiler_runtime}
   )
-  add_dependencies(${fq_build_target_name}
-    LibcTest
-    libc.test.UnitTest.ErrnoSetterMatcher
-    ${fq_deps_list})
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)
@@ -1017,13 +1014,7 @@ function(add_libc_test test_name)
   )
   if(LLVM_LIBC_FULL_BUILD)
     if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
-      add_libc_hermetic(
-        ${test_name}
-        LINK_LIBRARIES
-          LibcTest
-          LibcDeathTestExecutors
-          ${LIBC_TEST_UNPARSED_ARGUMENTS}
-      )
+      add_libc_hermetic(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   else()
     # Overlay mode
@@ -1049,12 +1040,11 @@ function(add_libc_multi_impl_test name suite)
           ${suite}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
         ${ARGN}
         DEPENDS
           ${fq_config_name}
           libc.src.__support.macros.sanitizer
+          libc.test.UnitTest.MemoryMatcher
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

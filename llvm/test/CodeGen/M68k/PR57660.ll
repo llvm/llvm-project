@@ -7,7 +7,7 @@ define dso_local void @foo1() {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #2, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -6
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    movem.w %d0, (0,%sp)
 ; CHECK-NEXT:  .LBB0_1: ; %do.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -42,7 +42,7 @@ define i32 @foo2(ptr noundef %0) {
 ; CHECK-NEXT:    movem.w %d0, (4,%sp)
 ; CHECK-NEXT:    and.b #1, %d0
 ; CHECK-NEXT:    movem.w %d0, (6,%sp)
-; CHECK-NEXT:    sub.b #1, %d0
+; CHECK-NEXT:    cmpi.b #1, %d0
 ; CHECK-NEXT:    bgt .LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if
 ; CHECK-NEXT:    movem.w (4,%sp), %d1

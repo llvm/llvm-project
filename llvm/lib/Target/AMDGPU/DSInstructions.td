@@ -1115,9 +1115,14 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
+  let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32_gfx9, vt, load_local>;
     def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, vt, store_local>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasNeedsAligned2addrDS] in {
+    def : DSReadPat<DS_READ_B64_gfx9, vt, load_local>;
+    def : DSWritePat<DS_WRITE_B64_gfx9, vt, store_local>;
   }
 }
 
@@ -1127,9 +1132,14 @@ multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
+  let OtherPredicates = [NotLDSRequiresM0Init, NotNeedsAligned2addrDS] in {
     def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64_gfx9, vt, load_local>;
     def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64_gfx9, vt, store_local>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init, HasNeedsAligned2addrDS] in {
+    def : DSReadPat<DS_READ_B128_gfx9, vt, load_local>;
+    def : DSWritePat<DS_WRITE_B128_gfx9, vt, store_local>;
   }
 }
 

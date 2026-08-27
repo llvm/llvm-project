@@ -51,6 +51,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+
 Deprecations and Removals
 -------------------------
 
@@ -67,6 +69,8 @@ Potentially breaking changes
 - Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
   be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
 
+- libc++ no longer depends on msvcprt/libcpmt in the MSVC mode.
+
 Announcements About Future Releases
 -----------------------------------
 
@@ -80,6 +84,10 @@ Announcements About Future Releases
 
 ABI Affecting Changes
 ---------------------
+
+- ``std::set_new_handler`` and ``std::get_new_handler`` are now implemented by libc++ on Windows using ``VCRuntime``
+  directly instead of implicitly relying on ``msvcprt`` to implement them, therefore the global state of the handler
+  is no longer shared with ``msvcprt`` since libc++ now maintains its own internal state of the handler.
 
 Build System Changes
 --------------------

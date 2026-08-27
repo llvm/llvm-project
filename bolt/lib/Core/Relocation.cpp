@@ -606,14 +606,6 @@ static bool isTLSAArch64(uint32_t Type) {
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSLE_LDST8_TPREL_LO12:
-  case ELF::R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSLE_LDST16_TPREL_LO12:
-  case ELF::R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSLE_LDST32_TPREL_LO12:
-  case ELF::R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSLE_LDST64_TPREL_LO12:
-  case ELF::R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
   case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
@@ -900,7 +892,7 @@ bool Relocation::isTLS(uint32_t Type) {
 }
 
 bool Relocation::isInstructionReference(uint32_t Type) {
-  if (Arch != Triple::riscv64)
+  if (Arch != Triple::riscv64 && Arch != Triple::riscv32)
     return false;
 
   switch (Type) {

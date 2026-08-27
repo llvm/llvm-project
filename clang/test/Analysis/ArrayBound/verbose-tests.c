@@ -100,6 +100,22 @@ void taintedIndexNonneg(void) {
   // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be too large}}
 }
 
+void taintedIndexNonlarge(void) {
+  int index;
+  scanf("%d", &index);
+  // expected-note@-1 {{Taint originated here}}
+  // expected-note@-2 {{Taint propagated to the 2nd argument}}
+
+  // expected-note@+2 {{Assuming 'index' is < 10}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= 10)
+    return;
+
+  TenElements[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted index}}
+  // expected-note@-2 {{Access of 'TenElements' with a tainted index that may be negative}}
+}
+
 void taintedIndexUnsigned(void) {
   unsigned index;
   scanf("%u", &index);
@@ -142,6 +158,18 @@ void taintedOffset(void) {
   p[0] = 5;
   // expected-warning@-1 {{Potential out of bound access to 'TenElements' with tainted offset}}
   // expected-note@-2 {{Access of 'TenElements' with a tainted offset that may be negative or too large}}
+}
+
+void taintedIndexCast(void) {
+  // '(unsigned)index < 10' guarantees that index is non-negative and less than
+  // 10, because the cast converts negative values to large positive values.
+  int index;
+  scanf("%d", &index);
+  if ((unsigned)index < 10)
+    TenElements[index] = 5; // no-warning
+  unsigned uidx = (unsigned)index;
+  if (uidx < 10)
+    TenElements[index] = 5; // no-warning
 }
 
 void arrayOverflow(void) {
@@ -361,6 +389,34 @@ int *mallocRegionDeref(void) {
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of the heap area at index 3, while it holds only 2 'int' elements}}
   return mem;
+}
+
+void taintedExtentNotInteresting(void) {
+  // This is a potential underflow report, so the extent is not interesting
+  // (and e.g. we should not print notes about its taintedness).
+  int n;
+  scanf("%d", &n);
+  // expected-note@+4 {{Assuming 'n' is >= 1}}
+  // expected-note@+3 {{Left side of '||' is false}}
+  // expected-note@+2 {{Assuming 'n' is <= 100}}
+  // expected-note@+1 {{Taking false branch}}
+  if (n < 1 || n > 100)
+    return;
+
+  char *p = (char *)malloc(n);
+  int index;
+  // expected-note@+2 {{Taint originated here}}
+  // expected-note@+1 {{Taint propagated to the 2nd argument}}
+  scanf("%d", &index);
+  // expected-note@+2 {{Assuming 'index' is < 'n'}}
+  // expected-note@+1 {{Taking false branch}}
+  if (index >= n) {
+    free(p);
+    return;
+  }
+  p[index] = 5;
+  // expected-warning@-1 {{Potential out of bound access to the heap area with tainted index}}
+  // expected-note@-2 {{Access of the heap area with a tainted index that may be negative}}
 }
 
 void *alloca(size_t size);

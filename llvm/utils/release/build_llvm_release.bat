@@ -186,7 +186,7 @@ set common_cmake_flags=^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" ^
   -DCPACK_GENERATOR="WIX" ^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
@@ -264,6 +264,7 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
@@ -356,6 +357,7 @@ cd build_%arch%
 call :do_generate_profile || exit /b 1
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1

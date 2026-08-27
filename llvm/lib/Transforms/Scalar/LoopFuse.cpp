@@ -791,20 +791,21 @@ private:
           continue;
         }
 
-        // If TCDifference is not set or if it is zero, peeling is not needed.
-        // In this case we must ensure if the loops are guarded the guards
-        // are identical.
-        if (!TCDifference || *TCDifference == 0) {
-          if (FC0.GuardBranch && FC1.GuardBranch &&
-              !haveIdenticalGuards(FC0, FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
-                                 "guards. Not Fusing.\n");
-            ++NonIdenticalGuards;
-            reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonIdenticalGuards",
-                "Candidates have different guards");
-            continue;
-          }
+        // If Loops are guarded, we expect the guards to be identical.
+        // Currently peeling is supported only for loops with constant
+        // iteration counts. If two loops have different loop guards
+        // there is no mechanism in loop fusion to make their fusion legal.
+        // The trivial case where the guards compare two constant values can be
+        // ignored. Those guards will be optimized away by other passes.
+        if (FC0.GuardBranch && FC1.GuardBranch &&
+            !haveIdenticalGuards(FC0, FC1)) {
+          LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
+                               "guards. Not Fusing.\n");
+          ++NonIdenticalGuards;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "NonIdenticalGuards",
+              "Candidates have different guards");
+          continue;
         }
 
         if (FC0.GuardBranch) {

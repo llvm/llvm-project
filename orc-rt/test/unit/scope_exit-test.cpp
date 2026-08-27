@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/scope_exit.h"
+#include "orc-rt/bedrock/scope_exit.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;

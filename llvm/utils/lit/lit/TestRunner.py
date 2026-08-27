@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import functools
 import io
 import os
 import pathlib
@@ -1438,7 +1439,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     return substitutions
 
 
-@lit.util.memoize  # Intentionally unbounded: see applySubstitutions
+@functools.lru_cache(maxsize=None)  # Intentionally unbounded: see applySubstitutions
 def _caching_re_compile(r):
     return re.compile(r)
 

@@ -110,8 +110,8 @@ thread_local CtorDtor tls_cd = 5;
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_INIT]]() {
@@ -139,8 +139,8 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i 
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i 
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_DYN_INIT]]() {
@@ -199,8 +199,8 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // CIR:   %[[GET_DTOR:.*]] = cir.get_global @_ZN8CtorDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>>
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
-// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
+// CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() {

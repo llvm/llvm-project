@@ -502,6 +502,11 @@ public:
   virtual void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                                      ArrayRef<StringRef> elidedAttrs = {}) = 0;
 
+  void printOptionalAttrDict(DictionaryAttr attrs,
+                             ArrayRef<StringRef> elidedAttrs = {}) {
+    printOptionalAttrDict(attrs.getValue(), elidedAttrs);
+  }
+
   /// If the specified operation has attributes, print out an attribute
   /// dictionary prefixed with 'attributes'.
   virtual void

@@ -1923,27 +1923,30 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
       return;
 
     // Classic codegen calls registerGlobalDtor here, passing either the
-    // destructor or a generated array-destroy helper. CIR handles globals with
-    // non-trivial destructors by attaching a dtor region to the cir.global op.
+    // destructor or a generated array-destroy helper. CIR instead emits the
+    // destruction into the dtor region of whatever destroys the variable that
+    // extended the temporary: the cir.global's own region at namespace scope,
+    // and the enclosing cir.local_init's for a function-local static, which the
+    // verifier requires to be destroyed in-function under its guard.
     CIRGenModule &cgm = cgf.cgm;
     auto globalOp =
         mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
 
-    // The destruction of the reference temporary is done in the dtor
-    // region of the global object it is associated with.
-    const auto *extendingDecl = cast<VarDecl>(m->getExtendingDecl());
-    cir::GlobalOp extendingGlobalOp = cgm.getOrCreateCIRGlobal(
-        extendingDecl, /*ty=*/nullptr, NotForDefinition);
+    mlir::Region *dtorRegion = cgf.curStaticVarDtorRegion;
+    assert(dtorRegion && "temporary extended outside a static initializer");
 
     CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
-    assert(extendingGlobalOp.getDtorRegion().empty() &&
-           "extending global already has a dtor region");
-    mlir::Block *block =
-        builder.createBlock(&extendingGlobalOp.getDtorRegion());
-    builder.setInsertionPointToStart(block);
-
     mlir::Location loc = cgm.getLoc(m->getSourceRange());
+
+    // Temporaries are destroyed in reverse order of construction, so each one
+    // goes in front of those registered before it.
+    if (dtorRegion->empty()) {
+      builder.setInsertionPointToStart(builder.createBlock(dtorRegion));
+      cir::YieldOp::create(builder, loc);
+    }
+    builder.setInsertionPointToStart(&dtorRegion->front());
+
     mlir::Value tempAddr = builder.createGetGlobal(globalOp);
 
     if (e->getType()->isArrayType()) {
@@ -1958,8 +1961,6 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
       cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
       builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr});
     }
-
-    cir::YieldOp::create(builder, loc);
     break;
   }
 

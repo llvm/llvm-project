@@ -161,6 +161,19 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+
+  // clang-sycl-linker needs the device target triple and architecture to
+  // finalize a device image. Emit the values derived from --target/-march=
+  // before the linker inputs, so that -triple=/-arch= passed through
+  // -Xlinker/-Wl take priority.
+  if (Args.hasArg(options::OPT_sycl_link)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-triple=" + ToolChain.getTripleString()));
+    StringRef Arch = Args.getLastArgValue(options::OPT_march_EQ);
+    if (!Arch.empty())
+      CmdArgs.push_back(Args.MakeArgString("-arch=" + Arch));
+  }
+
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");

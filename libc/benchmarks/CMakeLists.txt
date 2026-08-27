@@ -261,6 +261,23 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
 add_dependencies(libc.benchmarks.memory_functions.opt_host google-benchmark-libc)
 
+add_executable(libc.benchmarks.str_to_float.opt_host
+  EXCLUDE_FROM_ALL
+  LibcStrToFloatGoogleBenchmarkMain.cpp
+)
+target_include_directories(libc.benchmarks.str_to_float.opt_host
+  PRIVATE
+    ${LIBC_SOURCE_DIR}
+    ${LIBC_INCLUDE_DIR}
+)
+target_link_libraries(libc.benchmarks.str_to_float.opt_host
+  PRIVATE
+    benchmark_main
+    libc-benchmark
+    libc.src.errno.errno.__internal__
+)
+llvm_update_compile_flags(libc.benchmarks.str_to_float.opt_host)
+
 if(LIBC_TYPES_HAS_FLOAT16)
   add_executable(libc.benchmarks.rsqrtf16.opt_host
     EXCLUDE_FROM_ALL

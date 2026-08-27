@@ -1949,7 +1949,7 @@ the configuration (without a prefix: `Auto`).
 
   - `InlineOnly`
     Only merge functions defined inside a class. Same as `inline`,
-    except it does not implies `empty`: i.e. top level empty functions
+    except it does not imply `empty`: i.e. top level empty functions
     are not merged either. See `Inline` of `ShortFunctionStyle`.
 
     ```c++
@@ -2579,6 +2579,16 @@ the configuration (without a prefix: `Auto`).
     false:
     union foo {
       int x;
+    }
+    ```
+
+  - `bool AfterExportBlock` Wrap export blocks.
+
+    ```c++
+    true:                            false:
+    export             vs.           export {
+    {                                  int foo();
+      int foo();                     }
     }
     ```
 

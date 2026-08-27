@@ -61,8 +61,8 @@ func.func @conv(
     // Note the fastmath attributes that allow operations to be recombined into
     //   %0 = math.fma %in, %f, %b : f32
     // later on and to reorder reductions.
-    %m1 = arith.mulf %in, %f  {fastmath = #arith.fastmath<fast>} : f32
-    %0 = arith.addf %b, %m1  {fastmath = #arith.fastmath<fast>} : f32
+    %m1 = arith.mulf %in, %f fastmath<fast> : f32
+    %0 = arith.addf %b, %m1 fastmath<fast> : f32
     linalg.yield %0 : f32
   } -> !toutput
 

@@ -15,10 +15,11 @@
 ; RUN:     -enable-legalize-types-checking \
 ; RUN:     | FileCheck %s --check-prefix=WIN-X86
 
-; NOTE: Only fp128 arithmetic (add/sub/mul/div), powi and the compares have a
-; libcall on every triple here. The strict fp128 math/rem/fma/rounding/lrint
-; cases only have a libcall where libc provides the f128-suffixed functions
-; (glibc); those are covered in fp128-libcalls-strict-gnu.ll.
+; NOTE: Only fp128 arithmetic (add/sub/mul/div) and the compares have a libcall
+; on every triple here. The strict fp128 math/rem/fma/rounding/lrint cases only
+; have a libcall where libc provides the f128-suffixed functions (glibc); those
+; are covered in fp128-libcalls-strict-gnu.ll. powi (including the MSVCRT
+; no-libcall case) is covered in fp128-powi-strict.ll.
 
 ; Check all soft floating point library function calls.
 
@@ -538,118 +539,6 @@ entry:
   ret fp128 %div
 }
 
-define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
-; CHECK-LABEL: powi:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __powitf2@PLT
-; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    retq
-;
-; ANDROID-LABEL: powi:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq __powitf2@PLT
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: powi:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq __powitf2@PLT
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: powi:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __powitf2
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $64, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    retl $4
-;
-; WIN-LABEL: powi:
-; WIN:       # %bb.0: # %entry
-; WIN-NEXT:    pushq %rsi
-; WIN-NEXT:    subq $64, %rsp
-; WIN-NEXT:    movq %rcx, %rsi
-; WIN-NEXT:    movaps (%rdx), %xmm0
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN-NEXT:    callq __powitf2
-; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; WIN-NEXT:    movaps %xmm0, (%rsi)
-; WIN-NEXT:    movq %rsi, %rax
-; WIN-NEXT:    addq $64, %rsp
-; WIN-NEXT:    popq %rsi
-; WIN-NEXT:    retq
-;
-; WIN-X86-LABEL: powi:
-; WIN-X86:       # %bb.0: # %entry
-; WIN-X86-NEXT:    pushl %ebp
-; WIN-X86-NEXT:    movl %esp, %ebp
-; WIN-X86-NEXT:    pushl %ebx
-; WIN-X86-NEXT:    pushl %edi
-; WIN-X86-NEXT:    pushl %esi
-; WIN-X86-NEXT:    andl $-16, %esp
-; WIN-X86-NEXT:    subl $80, %esp
-; WIN-X86-NEXT:    movl 8(%ebp), %esi
-; WIN-X86-NEXT:    movl 24(%ebp), %eax
-; WIN-X86-NEXT:    movl 28(%ebp), %ecx
-; WIN-X86-NEXT:    movl 32(%ebp), %edx
-; WIN-X86-NEXT:    movl 36(%ebp), %edi
-; WIN-X86-NEXT:    movl 40(%ebp), %ebx
-; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; WIN-X86-NEXT:    movl %eax, (%esp)
-; WIN-X86-NEXT:    calll ___powitf2
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN-X86-NEXT:    movl %edi, 8(%esi)
-; WIN-X86-NEXT:    movl %edx, 12(%esi)
-; WIN-X86-NEXT:    movl %eax, (%esi)
-; WIN-X86-NEXT:    movl %ecx, 4(%esi)
-; WIN-X86-NEXT:    movl %esi, %eax
-; WIN-X86-NEXT:    leal -12(%ebp), %esp
-; WIN-X86-NEXT:    popl %esi
-; WIN-X86-NEXT:    popl %edi
-; WIN-X86-NEXT:    popl %ebx
-; WIN-X86-NEXT:    popl %ebp
-; WIN-X86-NEXT:    retl
-entry:
-  %powi = call fp128 @llvm.experimental.constrained.powi.f128(fp128 %x, i32 %y, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  ret fp128 %powi
-}
-
 define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-LABEL: cmp:
 ; CHECK:       # %bb.0:
@@ -760,13 +649,13 @@ define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
-; WIN-X86-NEXT:    je LBB5_1
+; WIN-X86-NEXT:    je LBB4_1
 ; WIN-X86-NEXT:  # %bb.2:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
-; WIN-X86-NEXT:    jmp LBB5_3
-; WIN-X86-NEXT:  LBB5_1:
+; WIN-X86-NEXT:    jmp LBB4_3
+; WIN-X86-NEXT:  LBB4_1:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
-; WIN-X86-NEXT:  LBB5_3:
+; WIN-X86-NEXT:  LBB4_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
 ; WIN-X86-NEXT:    movl 4(%ecx), %edx
 ; WIN-X86-NEXT:    movl %ebp, %esp
@@ -890,13 +779,13 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
-; WIN-X86-NEXT:    je LBB6_1
+; WIN-X86-NEXT:    je LBB5_1
 ; WIN-X86-NEXT:  # %bb.2:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
-; WIN-X86-NEXT:    jmp LBB6_3
-; WIN-X86-NEXT:  LBB6_1:
+; WIN-X86-NEXT:    jmp LBB5_3
+; WIN-X86-NEXT:  LBB5_1:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
-; WIN-X86-NEXT:  LBB6_3:
+; WIN-X86-NEXT:  LBB5_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
 ; WIN-X86-NEXT:    movl 4(%ecx), %edx
 ; WIN-X86-NEXT:    movl %ebp, %esp
@@ -1110,13 +999,13 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    orb %bl, %al
 ; WIN-X86-NEXT:    testb $1, %al
-; WIN-X86-NEXT:    jne LBB7_1
+; WIN-X86-NEXT:    jne LBB6_1
 ; WIN-X86-NEXT:  # %bb.2:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
-; WIN-X86-NEXT:    jmp LBB7_3
-; WIN-X86-NEXT:  LBB7_1:
+; WIN-X86-NEXT:    jmp LBB6_3
+; WIN-X86-NEXT:  LBB6_1:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
-; WIN-X86-NEXT:  LBB7_3:
+; WIN-X86-NEXT:  LBB6_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
 ; WIN-X86-NEXT:    movl 4(%ecx), %edx
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
@@ -1335,13 +1224,13 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    testl %eax, %eax
 ; WIN-X86-NEXT:    sete %al
 ; WIN-X86-NEXT:    testb %bl, %al
-; WIN-X86-NEXT:    jne LBB8_1
+; WIN-X86-NEXT:    jne LBB7_1
 ; WIN-X86-NEXT:  # %bb.2:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
-; WIN-X86-NEXT:    jmp LBB8_3
-; WIN-X86-NEXT:  LBB8_1:
+; WIN-X86-NEXT:    jmp LBB7_3
+; WIN-X86-NEXT:  LBB7_1:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
-; WIN-X86-NEXT:  LBB8_3:
+; WIN-X86-NEXT:  LBB7_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
 ; WIN-X86-NEXT:    movl 4(%ecx), %edx
 ; WIN-X86-NEXT:    leal -12(%ebp), %esp
@@ -1364,6 +1253,5 @@ declare fp128 @llvm.experimental.constrained.fadd.f128(fp128, fp128, metadata, m
 declare fp128 @llvm.experimental.constrained.fsub.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fdiv.f128(fp128, fp128, metadata, metadata)
-declare fp128 @llvm.experimental.constrained.powi.f128(fp128, i32, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f128(fp128, fp128, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f128(fp128, fp128, metadata, metadata)

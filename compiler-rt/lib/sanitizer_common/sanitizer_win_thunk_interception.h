@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_win_defs.h"
 
 extern "C" {
 __declspec(dllimport) bool __cdecl __sanitizer_override_function(
@@ -53,8 +54,8 @@ void initialize_thunks(const sanitizer_thunk *begin,
         sanitizer_export,                                              \
         reinterpret_cast<__sanitizer::uptr>(local_function));          \
   }                                                                    \
-  __pragma(section(".INTR$M", long, read)) __declspec(allocate(        \
-      ".INTR$M")) int (*__sanitizer_static_thunk_##local_function)() = \
+  __pragma(section(".INTR$M", long, read)) IN_SECTION(".INTR$M") int ( \
+      *__sanitizer_static_thunk_##local_function)() =                  \
       intercept_##local_function;
 
 // ------------------ Weak symbol registration macros ---------------------- //
@@ -85,4 +86,4 @@ void initialize_thunks(const sanitizer_thunk *begin,
   __pragma(section(".WEAK$M", long, read)) __declspec(allocate(         \
       ".WEAK$M")) int (*__sanitizer_register_weak_##local_function)() = \
       register_weak_##local_function;
-#endif  // SANITIZER_WIN_STATIC_RUNTIME_THUNK_H
+#endif  // SANITIZER_WIN_THUNK_INTERCEPTION_H

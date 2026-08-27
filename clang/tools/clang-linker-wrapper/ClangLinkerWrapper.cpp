@@ -439,6 +439,18 @@ namespace amdgcn {
 // NOTE: copied from HIPUtility.cpp.
 static std::string normalizeForBundler(const llvm::Triple &T,
                                        bool HasTargetID) {
+  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
+  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
+  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
+  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
+  // not match, producing hipErrorInvalidImage at load time. Force the legacy
+  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
+  // hardcoding this.
+  if (HasTargetID && T.isAMDGCN())
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
@@ -603,14 +615,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
-  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
-  // will be communicated via the -Xlinker option.
-  if (ActiveOffloadKindMask & OFK_SYCL) {
+  // clang-sycl-linker.
+  if (ActiveOffloadKindMask & OFK_SYCL)
     CmdArgs.push_back("--sycl-link");
-    CmdArgs.append(
-        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
-    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
-  }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -1027,6 +1034,8 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   if (llvm::all_of(Input, ContainsBitcode))
     DAL.AddFlagArg(nullptr, Tbl.getOption(OPT_whole_program));
 
+  llvm::Triple CurrentTT(DAL.getLastArgValue(OPT_triple_EQ));
+
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
     auto [Triple, Value] = Arg.split('=');
@@ -1038,7 +1047,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Triple));
-    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
+    else if (TT.isCompatibleWith(CurrentTT))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
                        Args.MakeArgString(Value));
   }
@@ -1054,7 +1063,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     else if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
                        Args.MakeArgString(Triple));
-    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
+    else if (TT.isCompatibleWith(CurrentTT))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
                        Args.MakeArgString(Value));
   }

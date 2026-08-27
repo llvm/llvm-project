@@ -20,15 +20,16 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include <elf.h>
-#include <sys/uio.h>
-
 #if defined(__arm64__) || defined(__aarch64__)
-#include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "Plugins/Process/Linux/NativeRegisterContextLinux_arm64dbreg.h"
 #endif
 
-#include "lldb/Host/linux/Ptrace.h"
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
 #include <asm/ptrace.h>
+#include <elf.h>
+#include <sys/ptrace.h>
+#include <sys/uio.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
 
@@ -45,6 +46,10 @@
 #endif
 #if !defined(PTRACE_TYPE_ARG4)
 #define PTRACE_TYPE_ARG4 void *
+#endif
+
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA 22
 #endif
 
 using namespace lldb;

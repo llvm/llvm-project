@@ -143,6 +143,9 @@ public:
   /// Returns true if default builders should not be generated.
   bool skipDefaultBuilders() const;
 
+  /// Returns true if the operation provides a custom properties printer.
+  bool hasCustomPropertiesPrinter() const;
+
   /// Op result iterators.
   const_value_iterator result_begin() const;
   const_value_iterator result_end() const;

@@ -120,8 +120,8 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return std::to_string(*constVal);
 
     // Check for `acc.var_name` attribute
-    if (auto varNameAttr =
-            definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
+    if (auto varNameAttr = definingOp->getDiscardableAttrOfType<VarNameAttr>(
+            getVarNameAttrName()))
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
@@ -222,8 +222,8 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
     // If this symbol is actually an acc routine or a specialized acc routine -
     // then it is expected for it to be offloaded - therefore it is valid.
-    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()) ||
-        func->hasAttr(mlir::acc::getSpecializedRoutineAttrName()))
+    if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
+        func->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName()))
       return true;
 
     // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
@@ -240,7 +240,8 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   }
 
   // A declare attribute is needed for symbol references.
-  bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
+  bool hasDeclare =
+      definingOp->hasDiscardableAttr(mlir::acc::getDeclareAttrName());
   return hasDeclare;
 }
 
@@ -261,8 +262,9 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
 
   // `acc.declare` with deviceptr marks data that is already associated with
   // the device.
-  if (auto declareAttr = defOp->getAttrOfType<mlir::acc::DeclareAttr>(
-          mlir::acc::getDeclareAttrName()))
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
     if (declareAttr.getDataClause().getValue() ==
         mlir::acc::DataClause::acc_deviceptr)
       return true;

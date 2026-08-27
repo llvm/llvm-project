@@ -734,9 +734,8 @@ optMain(int argc, char **argv,
     TLII.disableAllFunctions();
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
-    LibFunc F;
     for (const std::string &FuncName : DisableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setUnavailable(F);
       else {
         errs() << argv[0] << ": cannot disable nonexistent builtin function "
@@ -746,7 +745,7 @@ optMain(int argc, char **argv,
     }
 
     for (const std::string &FuncName : EnableBuiltins) {
-      if (TLII.getLibFunc(FuncName, F))
+      if (LibFunc F = TLII.getLibFunc(FuncName))
         TLII.setAvailable(F);
       else {
         errs() << argv[0] << ": cannot enable nonexistent builtin function "
@@ -852,8 +851,8 @@ optMain(int argc, char **argv,
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
   Passes.add(new RuntimeLibraryInfoWrapper(
-      ModuleTriple, Options->ExceptionModel, Options->FloatABIType,
-      Options->EABIVersion, Options->MCOptions.ABIName, Options->VecLib));
+      Options->ExceptionModel, Options->EABIVersion, Options->MCOptions.ABIName,
+      Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()

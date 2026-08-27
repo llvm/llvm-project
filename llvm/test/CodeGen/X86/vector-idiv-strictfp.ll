@@ -201,3 +201,84 @@ define void @test_divv_32i32_strictfp(<32 x i32> %a, <32 x i32> %b, ptr %p) noun
   store <32 x i32> %res, ptr %p
   ret void
 }
+
+define void @test_divv_7i32_strictfp(<7 x i32> %a, <7 x i32> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_7i32_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; CHECK-NEXT:    vcvtudq2pd %ymm0, %zmm0
+; CHECK-NEXT:    vdivpd {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2udq {sae}, %zmm0, %ymm0
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vextractps $2, %xmm1, 24(%rdi)
+; CHECK-NEXT:    vmovlps %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = udiv <7 x i32> %a, %b
+  store <7 x i32> %res, ptr %p
+  ret void
+}
+
+define void @test_divv_7i16_strictfp(<7 x i16> %a, <7 x i16> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_7i16_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
+; CHECK-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; CHECK-NEXT:    vmovq %xmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = udiv <7 x i16> %a, %b
+  store <7 x i16> %res, ptr %p
+  ret void
+}
+
+define void @test_divv_15i8_strictfp(<15 x i8> %a, <15 x i8> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_15i8_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vpmovdb %zmm0, %xmm0
+; CHECK-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
+; CHECK-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
+; CHECK-NEXT:    vpextrd $2, %xmm0, 8(%rdi)
+; CHECK-NEXT:    vmovq %xmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = udiv <15 x i8> %a, %b
+  store <15 x i8> %res, ptr %p
+  ret void
+}
+
+define void @test_divv_15i16_strictfp(<15 x i16> %a, <15 x i16> %b, ptr %p) nounwind strictfp {
+; CHECK-LABEL: test_divv_15i16_strictfp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; CHECK-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; CHECK-NEXT:    vdivps {rn-sae}, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq {sae}, %zmm0, %zmm0
+; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpextrw $6, %xmm1, 28(%rdi)
+; CHECK-NEXT:    vpextrd $2, %xmm1, 24(%rdi)
+; CHECK-NEXT:    vmovq %xmm1, 16(%rdi)
+; CHECK-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = udiv <15 x i16> %a, %b
+  store <15 x i16> %res, ptr %p
+  ret void
+}

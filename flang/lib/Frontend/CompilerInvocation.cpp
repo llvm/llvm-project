@@ -150,6 +150,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::DebugDirectivesOnly &&
         val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
@@ -610,6 +611,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     }
   }
 
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
+
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);
 }
@@ -929,6 +933,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
                    clang::options::OPT_fno_openacc_multiple_names_in_routine,
                    true));
+
+  // -f{no-}prefer-intrinsic-module-use-association
+  if (const auto *arg = args.getLastArg(
+          clang::options::OPT_fprefer_intrinsic_module_use_association,
+          clang::options::OPT_fno_prefer_intrinsic_module_use_association)) {
+    opts.features.Enable(
+        Fortran::common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+        arg->getOption().matches(
+            clang::options::OPT_fprefer_intrinsic_module_use_association));
+  }
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,

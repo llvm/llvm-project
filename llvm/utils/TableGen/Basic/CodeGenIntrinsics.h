@@ -134,6 +134,7 @@ struct CodeGenIntrinsic {
     Alignment,
     Dereferenceable,
     Range,
+    NoFreeObj,
   };
 
   struct ArgAttribute {

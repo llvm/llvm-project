@@ -31,7 +31,17 @@
 // LLVM-CXX2A-DAG: @_ZN7PR422765State1mE = linkonce_odr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }], comdat
 // OGCG-CXX2A-DAG: @_ZN7PR422765State1mE = linkonce_odr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }], comdat
 
-// In OGCG, f1() is emitted before the lambda.
+// CIR-LABEL: cir.func {{.*}} @_Z1fi(
+// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!rec_A>
+// CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
+// CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
+// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
+
+// LLVM-LABEL: define{{.*}} i32 @_Z1fi(
+// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
+// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
+
 // OGCG-LABEL: define{{.*}} i32 @_Z1fi(
 // OGCG:         call void {{.*}}memcpy{{.*}}({{.*}}, {{.*}} @__const._Z1fi.a
 // OGCG:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}}, i32 {{.*}}, i64 0)
@@ -86,18 +96,6 @@ int f(int i) {
   }(i, &A::x);
 }
 
-// With CIR, f1() is emitted after the lambda.
-// CIR-LABEL: cir.func {{.*}} @_Z1fi(
-// CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!rec_A>
-// CIR:         %[[A_INIT:.*]] = cir.get_global @[[F_A]] : !cir.ptr<!rec_A>
-// CIR:         cir.copy %[[A_INIT]] to %[[A_ADDR]]
-// CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CIR:         cir.call @_ZZ1fiENK3$_0clEiM1Ai({{.*}}, {{.*}}, %[[ZERO]])
-
-// LLVM-LABEL: define{{.*}} i32 @_Z1fi(
-// LLVM:         call void @llvm.memcpy{{.*}}({{.*}}, ptr align 4 @[[F_A]]
-// LLVM:         call{{.*}} i32 @"_ZZ1fiENK3$_0clEiM1Ai"(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}, i64 0)
-
 namespace PR42276 {
   class State {
     void syncDirtyObjects();
@@ -109,14 +107,6 @@ namespace PR42276 {
     using dmTy = int State::*;
     static constexpr dmTy dms[]{&State::dataMem, &State::dataMem};
   };
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
-  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
-  //
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
-  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
-  //
-  // OG-Codegen always generates these deferred, not only if they are non-const.
-  //
   // CIR-LABEL: cir.func {{.*}} @_ZN7PR422765State16syncDirtyObjectsEv(
   // LLVM-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
   // OGCG-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
@@ -143,8 +133,16 @@ namespace PR42276 {
       // OGCG-CXX2A: getelementptr inbounds [2 x i64], ptr @_ZN7PR422765State3dmsE, i64 0, i64 %{{.*}}
       sum += this->*dms[i];
   }
+  // OG-Codegen always generates these deferred, not only if they are non-const.
+  //
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  //
   // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
   // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>{{.*}})
+  //
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
   //
   // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
   // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})

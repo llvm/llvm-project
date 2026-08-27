@@ -64,7 +64,7 @@ public:
 
   bool SetData(DataExtractor &data, Status &error) override;
 
-  bool CanSetValue() override;
+  llvm::Error CanSetValue() override;
 
   lldb::VariableSP GetVariable() override { return m_variable_sp; }
 

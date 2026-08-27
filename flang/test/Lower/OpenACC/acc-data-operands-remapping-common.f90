@@ -15,7 +15,7 @@ subroutine test
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest() {
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@comm_)
-! CHECK:           %[[COPYIN_0:.*]] = acc.copyin varPtr(%[[ADDRESS_OF_0]] : !fir.ref<!fir.array<800xi8>>) -> !fir.ref<!fir.array<800xi8>> {name = "comm"}
+! CHECK:           %[[COPYIN_0:.*]] = acc.copyin varPtr(%[[ADDRESS_OF_0]] : !fir.ref<!fir.array<800xi8>>) name("comm") -> !fir.ref<!fir.array<800xi8>>
 ! CHECK:           acc.parallel combined(loop) dataOperands(%[[COPYIN_0]] : !fir.ref<!fir.array<800xi8>>) {
 ! CHECK:             %[[CONSTANT_8:.*]] = arith.constant 196 : index
 ! CHECK:             %[[COORDINATE_OF_4:.*]] = fir.coordinate_of %[[COPYIN_0]], %{{.*}} : (!fir.ref<!fir.array<800xi8>>, index) -> !fir.ref<i8>

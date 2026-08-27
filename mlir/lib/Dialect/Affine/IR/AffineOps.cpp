@@ -5233,6 +5233,9 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
 /// last k > 1 components of the delinearization basis multiply to the
 /// last component of the linearization basis, break the linearization and
 /// delinearization into two parts, peeling off the last input to linearization.
+/// The split does not apply when it would consume an entire outer-bounded
+/// delinearization basis because earlier linearization inputs still contribute
+/// to the first delinearized result.
 ///
 /// For example:
 ///    %0 = affine.linearize_index [%z, %y, %x] by (3, 2, 32) : index
@@ -5296,6 +5299,10 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
       return rewriter.notifyMatchFailure(
           delinearizeOp,
           "need at least two elements to form the basis product");
+
+    if (elemsToSplit == basis.size() && delinearizeOp.hasOuterBound())
+      return rewriter.notifyMatchFailure(
+          delinearizeOp, "split would consume entire bounded basis");
 
     Value linearizeWithoutBack = affine::AffineLinearizeIndexOp::create(
         rewriter, linearizeOp.getLoc(), linearizeOp.getLinearIndex().getType(),

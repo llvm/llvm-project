@@ -1295,6 +1295,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   // addf(x, -0) -> x
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1317,6 +1320,9 @@ void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
+    return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
     return getLhs();
 
   auto rm = getRoundingmode();

@@ -32,7 +32,7 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
+  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) structured(false) name("iArr[1]") -> !cir.ptr<!cir.array<!s32i x 10>>
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -41,11 +41,11 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 10>> {name = "fArr[1:5]", structured = false}
+  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) structured(false) name("fArr[1:5]") -> !cir.ptr<!cir.array<!cir.float x 10>>
   //
   // CHECK-NEXT: acc.loop cache(%[[CACHE1]], %[[CACHE2]] : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.array<!cir.float x 10>>) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]}
+  // CHECK-NEXT: } independent
 
 #pragma acc loop
   for(int i = 0; i < 5; ++i) {
@@ -57,7 +57,7 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
+  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) structured(false) name("iArr[1]") -> !cir.ptr<!cir.array<!s32i x 10>>
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -66,11 +66,11 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 10>> {name = "fArr[1:5]", structured = false}
+  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) structured(false) name("fArr[1:5]") -> !cir.ptr<!cir.array<!cir.float x 10>>
   //
   // CHECK-NEXT: acc.loop cache(%[[CACHE1]], %[[CACHE2]] : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.array<!cir.float x 10>>) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]}
+  // CHECK-NEXT: } independent
 
 #pragma acc parallel loop
   for(int i = 0; i < 5; ++i) {
@@ -83,7 +83,7 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
+  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) structured(false) name("iArr[1]") -> !cir.ptr<!cir.array<!s32i x 10>>
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -92,11 +92,11 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 10>> {name = "fArr[1:5]", structured = false}
+  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) structured(false) name("fArr[1:5]") -> !cir.ptr<!cir.array<!cir.float x 10>>
   //
   // CHECK-NEXT: acc.loop combined(parallel) cache(%[[CACHE1]], %[[CACHE2]] : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.array<!cir.float x 10>>) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]}
+  // CHECK-NEXT: } independent
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
@@ -113,7 +113,7 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!s32i x 10>> {name = "iArr[1]", structured = false}
+  // CHECK-NEXT: %[[CACHE1:.*]] = acc.cache varPtr(%[[IARR]] : !cir.ptr<!cir.array<!s32i x 10>>) bounds(%[[BOUNDS]]) structured(false) name("iArr[1]") -> !cir.ptr<!cir.array<!s32i x 10>>
   //
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
@@ -122,11 +122,11 @@ void acc_cache() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[FIVE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) -> !cir.ptr<!cir.array<!cir.float x 10>> {name = "fArr[1:5]", structured = false}
+  // CHECK-NEXT: %[[CACHE2:.*]] = acc.cache varPtr(%[[FARR]] : !cir.ptr<!cir.array<!cir.float x 10>>) bounds(%[[BOUNDS]]) structured(false) name("fArr[1:5]") -> !cir.ptr<!cir.array<!cir.float x 10>>
   //
   // CHECK-NEXT: acc.loop combined(parallel) cache(%[[CACHE1]], %[[CACHE2]] : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.array<!cir.float x 10>>) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]}
+  // CHECK-NEXT: } independent
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 }

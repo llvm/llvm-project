@@ -57,9 +57,7 @@ struct PtrView {
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
-  bool isRoot() const {
-    return Base == Pointee->getDescriptor()->getMetadataSize();
-  }
+  bool isRoot() const { return Base == Pointee->getMetadataSize(); }
 
   bool isConst() const {
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
@@ -132,10 +130,9 @@ struct PtrView {
 
     // Step into the containing array, if inside one.
     unsigned Next = Base - getInlineDesc()->Offset;
-    const Descriptor *Desc =
-        (Next == Pointee->getDescriptor()->getMetadataSize())
-            ? getDeclDesc()
-            : getDescriptor(Next)->Desc;
+    const Descriptor *Desc = (Next == Pointee->getMetadataSize())
+                                 ? getDeclDesc()
+                                 : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
@@ -192,9 +189,21 @@ struct PtrView {
     if (!Pointee)
       return false;
 
-    if (isUnknownSizeArray())
+    const Descriptor *Desc = getFieldDesc();
+    if (Desc->isUnknownSizeArray())
       return false;
-    return isPastEnd() || (getSize() == getOffset());
+
+    if (isPastEnd())
+      return true;
+
+    if (Offset != Base) {
+      unsigned Adjust =
+          Desc->ElemDesc ? sizeof(InlineDescriptor) : sizeof(InitMapPtr);
+      unsigned Off = Offset - Base - Adjust;
+      return Desc->getSize() == Off;
+    }
+
+    return Desc->getSize() == 0;
   }
 
   PtrView atIndex(unsigned Idx) const {
@@ -251,7 +260,7 @@ struct PtrView {
 
     unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
     unsigned ReadOffset = Base + sizeof(InitMapPtr) + ElemByteOffset;
-    assert(ReadOffset + sizeof(T) <= Pointee->getDescriptor()->getAllocSize());
+    assert(ReadOffset + sizeof(T) <= Pointee->getSize());
 
     return *reinterpret_cast<T *>(Pointee->rawData() + ReadOffset);
   }
@@ -370,7 +379,20 @@ struct TypeidPointer {
   const Type *TypeInfoType;
 };
 
-enum class Storage { Int, Block, Fn, Typeid };
+struct StringPointer {
+  const Expr *Base = nullptr;
+  unsigned ID = 0;
+  bool Decayed = false;
+
+  StringPointer decay() const { return StringPointer{Base, ID, true}; }
+  const StringLiteral *getLiteral() const {
+    if (const auto *PE = dyn_cast<PredefinedExpr>(Base))
+      return PE->getFunctionName();
+    return cast<StringLiteral>(Base);
+  }
+};
+
+enum class Storage { Int, Block, Fn, Typeid, String };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -420,6 +442,10 @@ public:
     Typeid.TypePtr = TypePtr;
     Typeid.TypeInfoType = TypeInfoType;
   }
+  Pointer(const Expr *Base, unsigned Id)
+      : Offset(0), StorageKind(Storage::String), Str{Base, Id} {}
+  Pointer(StringPointer Str, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::String), Str(Str) {}
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   explicit Pointer(PtrView V) : Pointer(V.Pointee, V.Base, V.Offset) {}
@@ -438,6 +464,8 @@ public:
 
     if (isFunctionPointer())
       return P.Fn.Func == Fn.Func && P.Offset == Offset;
+    if (isStringPointer())
+      return Str.Base == P.Str.Base && Offset == P.Offset;
 
     return P.view() == view();
   }
@@ -469,12 +497,18 @@ public:
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
-    if (isIntegralPointer())
+    switch (StorageKind) {
+    case Storage::Int:
       return Pointer(Int.Value, Int.Ty, Idx);
-    if (isFunctionPointer())
+    case Storage::Block:
+      return Pointer(view().atIndex(Idx));
+    case Storage::Fn:
       return Pointer(Fn.Func, Idx);
-
-    return Pointer(view().atIndex(Idx));
+    case Storage::String:
+      return Pointer(Str, Idx);
+    default:
+      llvm_unreachable("Unexpected pointer type in atIndex()");
+    }
   }
 
   /// Creates a pointer to a field.
@@ -514,6 +548,7 @@ public:
     case Storage::Fn:
       return !Fn.Func;
     case Storage::Typeid:
+    case Storage::String:
       return false;
     }
     llvm_unreachable("Unknown clang::interp::Storage enum");
@@ -581,6 +616,13 @@ public:
       return Fn.Func->getDecl()->getType();
     case Storage::Typeid:
       return QualType(Typeid.TypeInfoType, 0);
+    case Storage::String:
+      if (Str.Decayed)
+        return Str.getLiteral()
+            ->getType()
+            ->getAsArrayTypeUnsafe()
+            ->getElementType();
+      return Str.getLiteral()->getType();
     }
     llvm_unreachable("Unhandled StorageKind");
   }
@@ -596,6 +638,8 @@ public:
       // FIXME: Remove this and handle int ptrs specially?
       return 1;
     }
+    if (isStringPointer())
+      return Str.getLiteral()->getCharByteWidth();
 
     return view().elemSize();
   }
@@ -619,6 +663,8 @@ public:
   bool inArray() const {
     if (isBlockPointer())
       return view().inArray();
+    if (isStringPointer())
+      return true;
     return false;
   }
   bool inUnion() const {
@@ -676,11 +722,16 @@ public:
     assert(isTypeidPointer());
     return Typeid;
   }
+  [[nodiscard]] const StringPointer &asStringPointer() const {
+    assert(isStringPointer());
+    return Str;
+  }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
   bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
   bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
+  bool isStringPointer() const { return StorageKind == Storage::String; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const {
@@ -770,6 +821,8 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
+    if (isStringPointer())
+      return true;
     return view().isConst();
   }
   bool isConstInMutable() const {
@@ -805,8 +858,12 @@ public:
     return Offset;
   }
 
+  uint64_t getRawOffset() const { return Offset; }
+
   /// Returns the number of elements.
   unsigned getNumElems() const {
+    if (isStringPointer())
+      return Str.getLiteral()->getLength() + 1;
     if (!isBlockPointer())
       return ~0u;
     return view().getNumElems();
@@ -814,15 +871,22 @@ public:
 
   const Block *block() const { return BS.Pointee; }
 
-  /// If backed by actual data (i.e. a block pointer), return
+  /// If backed by actual data (i.e. a block or string pointer), return
   /// an address to that data.
   const std::byte *getRawAddress() const {
+    if (isStringPointer()) {
+      const StringLiteral *Lit = Str.getLiteral();
+      return reinterpret_cast<const std::byte *>(
+          Lit->getBytes().data() + (Offset * Lit->getCharByteWidth()));
+    }
     assert(isBlockPointer());
     return BS.Pointee->rawData() + Offset;
   }
 
   /// Returns the index into an array.
   int64_t getIndex() const {
+    if (isStringPointer())
+      return Offset;
     if (!isBlockPointer())
       return getIntegerRepresentation();
 
@@ -831,22 +895,23 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
+    if (isStringPointer())
+      return Offset == (Str.getLiteral()->getLength() + 1);
     if (!isBlockPointer())
       return false;
 
     if (!BS.Pointee)
       return false;
 
-    if (isUnknownSizeArray())
-      return false;
-
-    return isPastEnd() || (getSize() == getOffset());
+    return view().isOnePastEnd();
   }
 
   /// Checks if the pointer points past the end of the object.
   bool isPastEnd() const {
     if (isIntegralPointer())
       return false;
+    if (isStringPointer())
+      return Offset >= (Str.getLiteral()->getLength() + 1);
 
     return !isZero() && Offset > BS.Pointee->getSize();
   }
@@ -865,6 +930,20 @@ public:
 
   /// Checks whether the pointer can be dereferenced to the given PrimType.
   bool canDeref(PrimType T) const {
+    if (isStringPointer()) {
+      switch (Str.getLiteral()->getCharByteWidth()) {
+      case 1:
+        return T == PT_Sint8 || T == PT_Uint8;
+      case 2:
+        return T == PT_Sint16 || T == PT_Uint16;
+      case 4:
+        return T == PT_Sint32 || T == PT_Uint32;
+      }
+
+      return false;
+    }
+
+    assert(isBlockPointer());
     if (const Descriptor *FieldDesc = getFieldDesc()) {
       return (FieldDesc->isPrimitive() || FieldDesc->isPrimitiveArray()) &&
              FieldDesc->getPrimType() == T;
@@ -878,9 +957,35 @@ public:
     assert(isBlockPointer());
     assert(BS.Pointee);
     assert(isDereferencable());
-    assert(Offset + sizeof(T) <= BS.Pointee->getDescriptor()->getAllocSize());
-
+    assert(Offset + sizeof(T) <= BS.Pointee->getSize());
     return view().deref<T>();
+  }
+
+  template <typename T> T load() const {
+    assert(isLive() && "Invalid pointer");
+    if (isBlockPointer()) {
+      assert(BS.Pointee);
+      assert(isDereferencable());
+      assert(Offset + sizeof(T) <= BS.Pointee->getSize());
+      return view().deref<T>();
+    }
+
+    if (isStringPointer()) {
+      const StringLiteral *Lit = Str.getLiteral();
+
+      if constexpr (isFixedSizeIntegralType<T>()) {
+        // The literal does not include the nul byte.
+        if (Offset >= Lit->getLength())
+          return T::from('\0');
+        return T::from(Lit->getCodeUnit(Offset));
+      } else if constexpr (std::is_integral_v<T>) {
+        if (Offset >= Lit->getLength())
+          return '\0';
+        return Lit->getCodeUnit(Offset);
+      }
+    }
+
+    llvm_unreachable("Unexpected pointer type in load()");
   }
 
   /// Dereferences the element at index \p I.
@@ -894,6 +999,33 @@ public:
     assert(I < getFieldDesc()->getNumElems());
 
     return view().elem<T>(I);
+  }
+
+  template <typename T> T loadElem(unsigned I) const {
+    assert(isLive() && "Invalid pointer");
+    if (isBlockPointer()) {
+      assert(BS.Pointee);
+      assert(isDereferencable());
+      assert(getFieldDesc()->isPrimitiveArray());
+      assert(I < getFieldDesc()->getNumElems());
+
+      return view().elem<T>(I);
+    }
+
+    assert(isStringPointer());
+    const StringLiteral *Lit = Str.getLiteral();
+    unsigned Index = Offset + I;
+    if constexpr (isFixedSizeIntegralType<T>()) {
+      // The literal does not include the nul byte.
+      if (Index >= Lit->getLength())
+        return T::from('\0');
+      return T::from(Lit->getCodeUnit(Index));
+    } else if constexpr (std::is_integral_v<T>) {
+      if (Index >= Lit->getLength())
+        return '\0';
+      return Lit->getCodeUnit(Index);
+    }
+    llvm_unreachable("Unexpected pointer type in loadElem()");
   }
 
   bool isConstexprUnknown() const {
@@ -915,6 +1047,10 @@ public:
       return false;
 
     return true;
+  }
+
+  bool isReadablePointerType() const {
+    return StorageKind == Storage::Block || StorageKind == Storage::String;
   }
 
   /// Initializes a field.
@@ -1010,7 +1146,6 @@ public:
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
-  bool pointsToStringLiteral() const;
   /// Whether this points to a block created for an AddrLabelExpr.
   bool pointsToLabel() const;
   /// Returns the AddrLabelExpr the Pointer points to, if any.
@@ -1073,6 +1208,7 @@ private:
     BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
+    StringPointer Str;
   };
 };
 

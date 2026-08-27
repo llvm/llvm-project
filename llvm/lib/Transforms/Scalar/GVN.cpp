@@ -128,6 +128,11 @@ static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
     cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
 
+static cl::opt<uint32_t> MaxNumReachingBlocks(
+    "gvn-max-num-reaching-blocks", cl::Hidden, cl::init(200),
+    cl::desc("Max number of blocks scanned per load in the MemorySSA "
+             "reaching-value analysis (default = 200)"));
+
 // This is based on IsValueFullyAvailableInBlockNumSpeculationsMax stat.
 static cl::opt<uint32_t> MaxBBSpeculations(
     "gvn-max-block-speculations", cl::Hidden, cl::init(600),
@@ -2665,6 +2670,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
   // Do a bottom-up DFS.
   auto Worklist = InitialWorklist;
   while (!Worklist.empty()) {
+    // Match MemDep's cutoff for expensive non-local queries.
+    if (Blocks.size() > MaxNumReachingBlocks)
+      return false;
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 

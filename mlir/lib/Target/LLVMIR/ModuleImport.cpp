@@ -1113,7 +1113,8 @@ void ModuleImport::processComdat(const llvm::Comdat *comdat) {
   builder.setInsertionPointToEnd(&comdatOp.getBody().back());
   auto selectorOp = ComdatSelectorOp::create(
       builder, mlirModule.getLoc(), comdat->getName(),
-      convertComdatFromLLVM(comdat->getSelectionKind()));
+      convertComdatFromLLVM(comdat->getSelectionKind()),
+      /*sym_visibility=*/nullptr);
   auto symbolRef =
       SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
                          FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
@@ -1547,7 +1548,8 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
                   convertLinkageFromLLVM(ifunc->getLinkage()),
                   ifunc->isDSOLocal(), ifunc->getAddressSpace(),
                   convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
-                  convertVisibilityFromLLVM(ifunc->getVisibility()));
+                  convertVisibilityFromLLVM(ifunc->getVisibility()),
+                  /*sym_visibility=*/nullptr);
   return success();
 }
 
@@ -3291,18 +3293,45 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
-  // Convert non-debug metadata by using the dialect interface.
+  // Convert non-debug metadata by using the dialect interface. Metadata without
+  // a kind-specific conversion is preserved in the generic function metadata
+  // carrier.
   SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
   func->getAllMetadata(allMetadata);
+  SmallVector<StringRef> metadataNames;
+  llvmModule->getMDKindNames(metadataNames);
+  SmallVector<Attribute> functionMetadata;
   for (auto &[kind, node] : allMetadata) {
-    if (!iface.isConvertibleMetadata(kind))
+    if (kind == llvm::LLVMContext::MD_dbg)
       continue;
-    if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
+
+    llvm::MDNode *metadataNode = node;
+    auto emitUnhandledFunctionMetadataWarning = [&]() {
       emitWarning(funcOp.getLoc())
-          << "unhandled function metadata: " << diagMD(node, llvmModule.get())
-          << " on " << diag(*func);
+          << "unhandled function metadata: "
+          << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
+    };
+
+    if (iface.isConvertibleMetadata(kind)) {
+      if (succeeded(iface.setMetadataAttrs(builder, kind, metadataNode, funcOp,
+                                           *this)))
+        continue;
+      emitUnhandledFunctionMetadataWarning();
+      continue;
     }
+
+    Attribute nodeAttr = convertMetadataToAttr(metadataNode);
+    auto mdNodeAttr = dyn_cast_if_present<LLVM::MDNodeAttr>(nodeAttr);
+    if (!mdNodeAttr || kind >= metadataNames.size()) {
+      emitUnhandledFunctionMetadataWarning();
+      continue;
+    }
+
+    functionMetadata.push_back(LLVM::FunctionMetadataAttr::get(
+        context, builder.getStringAttr(metadataNames[kind]), mdNodeAttr));
   }
+  if (!functionMetadata.empty())
+    funcOp.setFunctionMetadataAttr(builder.getArrayAttr(functionMetadata));
 
   if (func->isDeclaration())
     return success();

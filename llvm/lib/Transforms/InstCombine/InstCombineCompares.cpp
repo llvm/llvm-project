@@ -115,6 +115,11 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 ///
 /// If AndCst is non-null, then the loaded value is masked with that constant
 /// before doing the comparison. This handles cases like "A[i]&4 == 0".
+///
+/// We allow multi-use cases in this fold, even though it can increase
+/// instruction count, because it appears to be mostly beneficial in practice.
+/// Even if there are multiple uses, they can often be sunk into the block
+/// guarded by the icmp.
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, GetElementPtrInst *GEP, CmpInst &ICI, ConstantInt *AndCst) {
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(GEP));

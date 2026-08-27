@@ -226,6 +226,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  dev_t
+  HDRS
+    dev_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.dev_t
+)
+
+add_proxy_header_library(
   mode_t
   HDRS
     mode_t.h
@@ -415,6 +423,14 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_sigaction
     libc.include.signal
+)
+
+add_proxy_header_library(
+  struct_sigevent
+  HDRS
+    struct_sigevent.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sigevent
 )
 
 add_proxy_header_library(
@@ -701,6 +717,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_udphdr
     libc.include.netinet_udp
+)
+
+add_proxy_header_library(
+  struct_sysinfo
+  HDRS
+    struct_sysinfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sysinfo
+    libc.include.sys_sysinfo
 )
 
 add_proxy_header_library(

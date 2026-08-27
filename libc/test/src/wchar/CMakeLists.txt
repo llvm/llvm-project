@@ -487,8 +487,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstof
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -500,8 +499,7 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcstod
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(

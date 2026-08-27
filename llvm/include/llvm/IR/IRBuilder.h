@@ -789,6 +789,16 @@ public:
   /// llvm.minimum intrinsic.
   LLVM_ABI Value *CreateFPMinimumReduce(Value *Src);
 
+  /// Create a vector float maximum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.maximumnum intrinsic.
+  LLVM_ABI Value *CreateFPMaximumNumReduce(Value *Src);
+
+  /// Create a vector float minimum reduction intrinsic of the source
+  /// vector. This variant follows the NaN and signed zero semantic of
+  /// llvm.minimumnum intrinsic.
+  LLVM_ABI Value *CreateFPMinimumNumReduce(Value *Src);
+
   /// Create a lifetime.start intrinsic.
   LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
 

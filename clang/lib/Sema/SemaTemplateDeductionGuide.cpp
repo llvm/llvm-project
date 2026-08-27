@@ -1607,6 +1607,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       AggregateDeductionCandidates[Hash] = GD;
       return GD;
     }
+    return nullptr;
   }
 
   if (CXXRecordDecl *DefRecord =

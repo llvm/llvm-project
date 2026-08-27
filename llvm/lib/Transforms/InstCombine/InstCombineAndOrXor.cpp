@@ -2382,6 +2382,39 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
 }
 
+/// The pattern div_ceil(X, P) * P, where P is a power of 2, lowers to the
+/// following conditional round-up: (X + select(C, 0, Pow2)) & -Pow2, where
+/// C is X % Pow2 == 0. This may be simplified to (X + (Pow2-1)) & -Pow2.
+static Instruction *
+foldRoundUpToPow2Alignment(BinaryOperator &I,
+                           InstCombiner::BuilderTy &Builder) {
+  const APInt *NegP;
+  Value *Add;
+  if (!match(&I, m_And(m_Value(Add), m_NegatedPower2(NegP))))
+    return nullptr;
+
+  Value *X, *Cond;
+  APInt Mask = ~*NegP;
+
+  // Match the pattern. Ensure the true arm of the select is zero, and the false
+  // one is the Pow2.
+  if (!match(Add,
+             m_OneUse(m_c_Add(m_Value(X), m_Select(m_Value(Cond), m_ZeroInt(),
+                                                   m_SpecificInt(-*NegP))))))
+    return nullptr;
+
+  // icmp ne should have already been canonicalized to the eq form for this
+  // pattern.
+  if (!match(Cond, m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                  m_And(m_Specific(X), m_SpecificInt(Mask)),
+                                  m_Zero())))
+    return nullptr;
+
+  Type *Ty = I.getType();
+  Value *NewAdd = Builder.CreateAdd(X, ConstantInt::get(Ty, Mask));
+  return BinaryOperator::CreateAnd(NewAdd, ConstantInt::get(Ty, *NegP));
+}
+
 /// Reassociate and/or expressions to see if we can fold the inner and/or ops.
 /// TODO: Make this recursive; it's a little tricky because an arbitrary
 /// number of and/or instructions might have to be created.
@@ -2908,6 +2941,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getAllOnesValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
+
+  if (Instruction *Res = foldRoundUpToPow2Alignment(I, Builder))
+    return Res;
 
   return nullptr;
 }

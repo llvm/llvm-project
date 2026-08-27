@@ -290,12 +290,12 @@ module attributes {transform.with_named_sequence} {
   // CHECK-SAME:                                                                 %[[VAL_0:.*]]: memref<8x4xf32, 1>,
   // CHECK-SAME:                                                                 %[[VAL_1:.*]]: memref<8x4xf32, 1>) -> memref<8x4xf32, 1> {
 func.func @linalg_generic_update_all_function_inputs_outputs(%arg0: memref<8x4xf32, 1>, %arg1: memref<8x4xf32, 1>) -> memref<8x4xf32, 1> {
-  // CHECK:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x4xf32, 1>
+  // CHECK:           %[[VAL_2:.*]] = memref.alloc() alignment = 64 : memref<8x4xf32, 1>
   // CHECK:           %[[VAL_3:.*]] = memref.subview %[[VAL_0]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
   // CHECK:           %[[VAL_4:.*]] = memref.subview %[[VAL_1]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
   // CHECK:           %[[VAL_5:.*]] = memref.subview %[[VAL_2]][0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
 
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x4xf32, 1>
+  %alloc = memref.alloc() alignment = 64 : memref<8x4xf32, 1>
   %subview = memref.subview %arg0[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
   %subview_0 = memref.subview %arg1[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>
   %subview_1 = memref.subview %alloc[0, 0] [4, 3] [1, 1] : memref<8x4xf32, 1> to memref<4x3xf32, strided<[4, 1]>, 1>

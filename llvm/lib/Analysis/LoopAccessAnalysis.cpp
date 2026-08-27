@@ -265,6 +265,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
     return false;
 
+  WiderTy = SE.getWiderType(WiderTy, DerefBytesSCEV->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 

@@ -74,13 +74,7 @@ void runTestsForMemCpyFunc(MemCpyFuncT MemCpyFunc) {
   // TODO: Pass a default-constructed event as a dependency in these cases
   // instead when those are implemented.
   if constexpr (!ExplicitDeps) {
-    // TODO: Remove try-catch once host-to-host copies are supported.
-    try {
-      RunTest(HostAllocF, HostAllocF);
-      assert(false);
-    } catch (const sycl::exception &e) {
-      assert(e.code() == make_error_code(errc::feature_not_supported));
-    }
+    RunTest(HostAllocF, HostAllocF);
     RunTest(HostAllocF, HostUSMAllocF);
     RunTest(HostAllocF, SharedUSMAllocF);
 

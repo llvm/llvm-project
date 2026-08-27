@@ -1039,7 +1039,7 @@ public:
     ID.AddInteger((unsigned)T->getKeyword());
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
+      Hash.AddTemplateName(T->getTypeConstraintConcept());
       ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-utils/CommandLine.h"
-#include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include <iostream>
 
 int main(int argc, char *argv[]) {
@@ -30,12 +30,12 @@ int main(int argc, char *argv[]) {
 
     if (auto Err = P.parse(argc, argv)) {
       std::cerr << "error: " << orc_rt::toString(std::move(Err)) << "\n";
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 1;
     }
 
     if (PrintHelp) {
-      P.printHelp(std::cerr, argv[0]);
+      std::cerr << P.formatHelp(argv[0]);
       return 0;
     }
   }

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/LockedAccess.h"
+#include "orc-rt/bedrock/LockedAccess.h"
 #include "gtest/gtest.h"
 
 #include <mutex>

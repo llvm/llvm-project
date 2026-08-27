@@ -11,12 +11,11 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-EPI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP2]], 4
+; CHECK-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP2]], 4
 ; CHECK-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-EPI:       [[VECTOR_PH]]:
-; CHECK-EPI-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; CHECK-EPI-NEXT:    [[N_MOD_VF:%.*]] = urem i32 39, [[TMP3]]
+; CHECK-EPI-NEXT:    [[N_MOD_VF:%.*]] = urem i32 39, [[TMP1]]
 ; CHECK-EPI-NEXT:    [[N_VEC:%.*]] = sub i32 39, [[N_MOD_VF]]
 ; CHECK-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-EPI:       [[VECTOR_BODY]]:
@@ -29,7 +28,7 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    [[TMP6:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP5]], [[TMP6]]
 ; CHECK-EPI-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
-; CHECK-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; CHECK-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; CHECK-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-EPI-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-EPI:       [[MIDDLE_BLOCK]]:
@@ -89,12 +88,11 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[TMP2]], 4
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP2]], 4
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 39, [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_PH]]:
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[N_MOD_VF:%.*]] = urem i32 39, [[TMP3]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[N_MOD_VF:%.*]] = urem i32 39, [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[N_VEC:%.*]] = sub i32 39, [[N_MOD_VF]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-PARTIAL-RED-EPI:       [[VECTOR_BODY]]:
@@ -107,7 +105,7 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP6:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP7:%.*]] = mul <vscale x 16 x i32> [[TMP5]], [[TMP6]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
-; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; CHECK-PARTIAL-RED-EPI-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-PARTIAL-RED-EPI-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-PARTIAL-RED-EPI:       [[MIDDLE_BLOCK]]:

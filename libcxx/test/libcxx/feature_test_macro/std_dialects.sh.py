@@ -30,6 +30,7 @@ class Test(unittest.TestCase):
             "c++20",
             "c++23",
             "c++26",
+            "c++29",
         ]
 
         self.assertEqual(self.ftm.std_dialects, expected)

@@ -11,8 +11,8 @@
 // CHECK:           %[[ALLOCA_0:.*]] = llvm.alloca %[[MLIR_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[ALLOCA_1:.*]] = llvm.alloca %[[MLIR_1]] x i32 {bindc_name = "j"} : (i64) -> !llvm.ptr
-// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[MLIR_4:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[LOAD_0:.*]] = llvm.load %[[ARG2]] : !llvm.ptr -> i32
 // CHECK:           %[[SEXT_0:.*]] = llvm.sext %[[LOAD_0]] : i32 to i64

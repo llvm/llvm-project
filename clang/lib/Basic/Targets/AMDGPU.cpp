@@ -197,7 +197,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                             Triple.getSubArch())
                                       : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
                   : llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
+      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::FEATURE_NONE
                                     : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
 

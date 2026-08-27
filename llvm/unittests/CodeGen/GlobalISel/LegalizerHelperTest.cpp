@@ -3228,7 +3228,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   CHECK: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
   CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY [[UV1]]
   CHECK: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES
-  CHECK: [[EXTR:%[0-9]+]]:_(s16) = G_EXTRACT [[UV3]]:_(i32), 0
+  CHECK: [[EXTR:%[0-9]+]]:_(i16) = G_EXTRACT [[UV3]]:_(i32), 0
   CHECK: [[COPY:%[0-9]+]]:_(i16) = COPY [[EXTR]]
   )";
 

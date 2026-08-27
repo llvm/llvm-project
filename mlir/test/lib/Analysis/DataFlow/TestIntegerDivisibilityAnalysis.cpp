@@ -71,7 +71,8 @@ struct TestIntegerDivisibilityAnalysisPass
       const auto *lattice =
           solver.lookupState<IntegerDivisibilityLattice>(value);
       if (!lattice || lattice->getValue().isUninitialized()) {
-        op->setAttr("divisibility", StringAttr::get(context, "uninitialized"));
+        op->setDiscardableAttr("divisibility",
+                               StringAttr::get(context, "uninitialized"));
         continue;
       }
 
@@ -80,7 +81,7 @@ struct TestIntegerDivisibilityAnalysisPass
       std::string result;
       llvm::raw_string_ostream os(result);
       os << "udiv = " << div.udiv() << ", sdiv = " << div.sdiv();
-      op->setAttr("divisibility", StringAttr::get(context, result));
+      op->setDiscardableAttr("divisibility", StringAttr::get(context, result));
     }
   }
 };

@@ -282,7 +282,7 @@ func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
   acc.kernel_environment {
     acc.compute_region {
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

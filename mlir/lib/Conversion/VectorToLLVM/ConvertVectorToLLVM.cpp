@@ -45,10 +45,9 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                          constant);
   }
@@ -60,10 +59,9 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                           constant);
   }
@@ -1479,7 +1477,9 @@ public:
     if (llvm::any_of(*targetStrides, ShapedType::isDynamic))
       return failure();
 
-    auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
+    // The offset, size and stride fields of a memref descriptor use the
+    // converted index type.
+    Type indexTy = getTypeConverter()->getIndexType();
 
     // Create descriptor.
     auto desc = MemRefDescriptor::poison(rewriter, loc, llvmTargetDescriptorTy);
@@ -1491,23 +1491,19 @@ public:
     Value ptr = sourceMemRef.alignedPtr(rewriter, loc);
     desc.setAlignedPtr(rewriter, loc, ptr);
     // Fill offset 0.
-    auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
-    auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
-    desc.setOffset(rewriter, loc, zero);
+    desc.setOffset(rewriter, loc,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy, 0));
 
     // Fill size and stride descriptors in memref.
     for (const auto &indexedSize :
          llvm::enumerate(targetMemRefType.getShape())) {
       int64_t index = indexedSize.index();
-      auto sizeAttr =
-          rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());
-      auto size = LLVM::ConstantOp::create(rewriter, loc, int64Ty, sizeAttr);
-      desc.setSize(rewriter, loc, index, size);
-      auto strideAttr = rewriter.getIntegerAttr(rewriter.getIndexType(),
-                                                (*targetStrides)[index]);
-      auto stride =
-          LLVM::ConstantOp::create(rewriter, loc, int64Ty, strideAttr);
-      desc.setStride(rewriter, loc, index, stride);
+      desc.setSize(rewriter, loc, index,
+                   LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                 indexedSize.value()));
+      desc.setStride(rewriter, loc, index,
+                     LLVM::createIndexAttrConstant(rewriter, loc, indexTy,
+                                                   (*targetStrides)[index]));
     }
 
     rewriter.replaceOp(castOp, {desc});

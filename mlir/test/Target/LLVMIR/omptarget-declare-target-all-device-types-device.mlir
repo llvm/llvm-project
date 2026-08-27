@@ -125,7 +125,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @ial_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 1.100000e+00, ptr %[[REF]], align 4
-    %map_ial = omp.map.info var_ptr(%1 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ial"}
+    %map_ial = omp.map.info var_ptr(%1 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ial") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ial -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(1.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -136,7 +136,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @eal_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 1.200000e+00, ptr %[[REF]], align 4
-    %map_eal = omp.map.info var_ptr(%13 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "eal"}
+    %map_eal = omp.map.info var_ptr(%13 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("eal") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_eal -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(1.200000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -147,7 +147,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @ihl_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 2.100000e+00, ptr %[[REF]], align 4
-    %map_ihl = omp.map.info var_ptr(%3 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ihl"}
+    %map_ihl = omp.map.info var_ptr(%3 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ihl") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ihl -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(2.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -158,7 +158,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @ehl_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 2.200000e+00, ptr %[[REF]], align 4
-    %map_ehl = omp.map.info var_ptr(%15 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ehl"}
+    %map_ehl = omp.map.info var_ptr(%15 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ehl") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ehl -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(2.200000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -169,7 +169,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @inl_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 3.100000e+00, ptr %[[REF]], align 4
-    %map_inl = omp.map.info var_ptr(%5 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "inl"}
+    %map_inl = omp.map.info var_ptr(%5 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("inl") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_inl -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(3.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -180,7 +180,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK:         omp.target:
     // CHECK:           %[[REF:.*]] = load ptr, ptr @enl_decl_tgt_ref_ptr, align 8
     // CHECK:           store float 3.200000e+00, ptr %[[REF]], align 4
-    %map_enl = omp.map.info var_ptr(%17 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "enl"}
+    %map_enl = omp.map.info var_ptr(%17 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("enl") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_enl -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(3.200000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -190,7 +190,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 4.100000e+00, ptr @iae, align 4
-    %map_iae = omp.map.info var_ptr(%7 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "iae"}
+    %map_iae = omp.map.info var_ptr(%7 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("iae") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_iae -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(4.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -200,7 +200,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 4.200000e+00, ptr @eae, align 4
-    %map_eae = omp.map.info var_ptr(%19 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "eae"}
+    %map_eae = omp.map.info var_ptr(%19 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("eae") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_eae -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(4.200000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -210,7 +210,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 5.100000e+00, ptr @ihe, align 4
-    %map_ihe = omp.map.info var_ptr(%9 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ihe"}
+    %map_ihe = omp.map.info var_ptr(%9 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ihe") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ihe -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(5.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -220,7 +220,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 5.200000e+00, ptr @ehe, align 4
-    %map_ehe = omp.map.info var_ptr(%21 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ehe"}
+    %map_ehe = omp.map.info var_ptr(%21 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ehe") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ehe -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(5.200000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -230,7 +230,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 6.100000e+00, ptr @ine, align 4
-    %map_ine = omp.map.info var_ptr(%11 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ine"}
+    %map_ine = omp.map.info var_ptr(%11 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ine") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ine -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(6.100000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr
@@ -240,7 +240,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_l{{[0-9]+}}(
     // CHECK:         omp.target:
     // CHECK:           store float 6.210000e+00, ptr @ene, align 4
-    %map_ene = omp.map.info var_ptr(%23 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) -> !llvm.ptr {name = "ene"}
+    %map_ene = omp.map.info var_ptr(%23 : !llvm.ptr, f32) map_clauses(always, from) capture(ByRef) name("ene") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%map_ene -> %arg0 : !llvm.ptr) {
       %v = llvm.mlir.constant(6.210000e+00 : f32) : f32
       llvm.store %v, %arg0 : f32, !llvm.ptr

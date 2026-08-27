@@ -295,6 +295,17 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                         llvm::MutableArrayRef<uint8_t> buffer) {
+  // A cache hit writes into `buffer` below, so check its size before that
+  // write.  Fail the same way Process::DoReadMemoryRanges does.
+  auto total_ranges_len = llvm::sum_of(
+      llvm::map_range(ranges, [](auto range) { return range.size; }));
+  assert(buffer.size() >= total_ranges_len &&
+         "MemoryCache::ReadRanges: provided buffer is too short");
+  if (buffer.size() < total_ranges_len) {
+    llvm::MutableArrayRef<uint8_t> empty;
+    return {ranges.size(), empty};
+  }
+
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;

@@ -767,9 +767,9 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
 static ConceptReference *createTrivialConceptReference(ASTContext &Context,
                                                        SourceLocation Loc,
                                                        const AutoType *AT) {
-  DeclarationNameInfo DNI =
-      DeclarationNameInfo(AT->getTypeConstraintConcept()->getDeclName(), Loc,
-                          AT->getTypeConstraintConcept()->getDeclName());
+  DeclarationName ConceptName =
+      AT->getTypeConstraintConcept().getAsTemplateDecl()->getDeclName();
+  DeclarationNameInfo DNI = DeclarationNameInfo(ConceptName, Loc, ConceptName);
   unsigned size = AT->getTypeConstraintArguments().size();
   llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
   TemplateSpecializationTypeLoc::initializeArgLocs(

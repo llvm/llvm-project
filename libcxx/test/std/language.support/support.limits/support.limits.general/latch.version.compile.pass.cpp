@@ -68,7 +68,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_latch
@@ -83,6 +83,21 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+#    ifndef __cpp_lib_latch
+#      error "__cpp_lib_latch should be defined in c++29"
+#    endif
+#    if __cpp_lib_latch != 201907L
+#      error "__cpp_lib_latch should have the value 201907L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_latch
+#      error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

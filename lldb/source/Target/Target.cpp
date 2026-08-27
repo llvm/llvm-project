@@ -66,6 +66,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
@@ -80,6 +81,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 
 using namespace lldb;
@@ -2752,7 +2754,14 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   // Some TypeSystem instances are associated with several LanguageTypes so
   // they will show up several times in the loop below. The SetVector filters
   // out all duplicates as they serve no use for the caller.
-  std::vector<lldb::TypeSystemSP> scratch_type_systems;
+  //
+  // The insertion order matters: callers such as SBTarget::GetBasicType query
+  // the TypeSystems in order and use the first one that can answer, so the
+  // result has to be a function of the languages and not of where the
+  // instances happen to live in memory.
+  llvm::SetVector<lldb::TypeSystemSP, std::vector<lldb::TypeSystemSP>,
+                  std::set<lldb::TypeSystemSP>>
+      scratch_type_systems;
 
   LanguageSet languages_for_expressions =
       Language::GetLanguagesSupportingTypeSystemsForExpressions();
@@ -2767,15 +2776,11 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
           "Language '{1}' has expression support but no scratch type "
           "system available: {0}",
           Language::GetNameForLanguageType(language));
-    else
-      if (auto ts = *type_system_or_err)
-        scratch_type_systems.push_back(ts);
+    else if (auto ts = *type_system_or_err)
+      scratch_type_systems.insert(ts);
   }
 
-  std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
-                             scratch_type_systems.end());
-  return scratch_type_systems;
+  return scratch_type_systems.takeVector();
 }
 
 PersistentExpressionState *
@@ -6021,6 +6026,13 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
 
 TargetAPIMutex Target::GetAPIMutex() {
   return TargetAPIMutex(shared_from_this());
+}
+
+std::recursive_mutex *Target::GetAPIMutexForCurrentPolicy() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.capabilities.can_bypass_target_api_mutex)
+    return nullptr;
+  return policy.view == Policy::View::Private ? &m_private_mutex : &m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.

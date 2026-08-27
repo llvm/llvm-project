@@ -117,6 +117,13 @@ ol_result_t olMemcpy(ol_queue_handle_t Queue, void *DstPtr,
                                             SrcDevice, Size);
 }
 
+ol_result_t olMemPrefetch(ol_queue_handle_t Queue, size_t Count,
+                          const void **Mems, const size_t *Sizes,
+                          ol_mem_migration_flags_t Flags) {
+  return mock::getMockLiboffload().olMemPrefetch(Queue, Count, Mems, Sizes,
+                                                 Flags);
+}
+
 ol_result_t olGetMemInfo(const void *Ptr, ol_mem_info_t PropName,
                          size_t PropSize, void *PropValue) {
   return mock::getMockLiboffload().olGetMemInfo(Ptr, PropName, PropSize,

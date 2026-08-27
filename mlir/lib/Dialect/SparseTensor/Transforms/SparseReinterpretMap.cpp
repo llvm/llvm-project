@@ -38,6 +38,12 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
+    for (Value in : op->getOperands())
+      if (auto stt = tryGetSparseTensorType(in);
+          stt && !stt->isIdentity() &&
+          stt->getEncoding().getDimToLvl().getNumSymbols() != 0)
+        return failure();
+
     // Demaps non-trivial inputs.
     bool changed = false;
     SmallVector<Value> deMappedIns(op->getOperands());
@@ -420,7 +426,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     }
 
     const StringRef sorted = "sorted";
-    if (linalgOp->hasAttr(sorted))
+    if (linalgOp->hasDiscardableAttr(sorted))
       return failure();
 
     // Pass strategy to IterationGraphSorter.
@@ -462,7 +468,7 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
 
     // Marks the GenericOp to avoid recursive matching.
     rewriter.modifyOpInPlace(linalgOp, [&]() {
-      linalgOp->setAttr(sorted, rewriter.getBoolAttr(true));
+      linalgOp->setDiscardableAttr(sorted, rewriter.getBoolAttr(true));
     });
 
     // Already sorted.
@@ -605,6 +611,8 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
 
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
+    if (stt.getEncoding().getDimToLvl().getNumSymbols() != 0)
+      return failure();
 
     SmallVector<Value> maxDimCrds;
     maxDimCrds.reserve(stt.getDimRank());
@@ -674,6 +682,8 @@ struct SparseAssembleDemapper : public OpRewritePattern<AssembleOp> {
 
     assert(hasAnySparseResult(op));
     auto stt = getSparseTensorType(op.getResult());
+    if (stt.getEncoding().getDimToLvl().getNumSymbols() != 0)
+      return failure();
     rewriter.modifyOpInPlace(
         op, [&op, &stt]() { op.getResult().setType(stt.getDemappedType()); });
     rewriter.setInsertionPointAfter(op);

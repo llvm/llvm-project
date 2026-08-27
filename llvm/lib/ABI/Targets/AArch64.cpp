@@ -51,13 +51,13 @@ private:
 
 std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
                                                     AArch64ABIKind Kind) {
-  if (Kind == AArch64ABIKind::Win64)
-    reportFatalUsageError("Win64 ABI is not supported yet for AArch64");
   return std::make_unique<AArch64TargetInfo>(TB, Kind);
 }
 
 static void reportNYI(StringRef Feature) {
-  WithColor::warning() << Feature << " is not yet implemented for AArch64\n";
+  WithColor::warning()
+      << Feature
+      << " is not yet implemented for AArch64 in the LLVM ABI library.\n";
 }
 
 ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
@@ -66,33 +66,67 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getIgnore();
 
   if (RetTy->isVector()) {
-    reportNYI("Vector return type");
+    reportNYI("Vector return type handling");
     return ArgInfo::getDirect();
   }
 
   if (!passAsAggregateType(RetTy)) {
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
-      if (IntTy->isBitInt()) {
-        reportNYI("BitInt return type");
-        return ArgInfo::getDirect();
-      }
-      if (isPromotableInteger(IntTy) && isDarwinPCS()) {
+      if (IntTy->isBitInt())
+        if (RetTy->getSizeInBits().getFixedValue() > 128)
+          return getNaturalAlignIndirect(RetTy);
+
+      if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
-      }
     }
 
     // Everything not handled above is returned directly.
     return ArgInfo::getDirect();
   }
 
-  reportNYI("Aggregate return type");
+  reportNYI("Aggregate return type handling");
   return ArgInfo::getDirect();
 }
 
 ArgInfo AArch64TargetInfo::classifyArgumentType(
     const Type *Ty, bool IsVariadicFn, bool IsNamedArg,
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
-  reportNYI("Classify argument type");
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // TODO: Handle variadic functins here when Windows Arm64 EC is supported.
+
+  if (Ty->isVector()) {
+    reportNYI("Vector argument type handling");
+    return ArgInfo::getDirect();
+  }
+
+  if (!passAsAggregateType(Ty)) {
+    if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+      if (IntTy->isBitInt())
+        if (Ty->getSizeInBits().getFixedValue() > 128)
+          return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+
+      if (isPromotableInteger(IntTy) && isDarwinPCS())
+        return ArgInfo::getExtend(IntTy);
+    }
+
+    // TODO: Legal vector types will update NSRN or NPRN.
+
+    if (Ty->isFloat())
+      NSRN = std::min(NSRN + 1, 8u);
+
+    // Everything not handled above is returned directly.
+    return ArgInfo::getDirect();
+  }
+
+  // Structures with either a non-trivial destructor or a non-trivial
+  // copy constructor are always indirect.
+  if (auto RecordRAA = getRecordArgABI(Ty)) {
+    return getNaturalAlignIndirect(Ty, RecordRAA ==
+                                           RecordArgABI::RAA_DirectInMemory);
+  }
+
+  reportNYI("Aggregate argument type handling");
   return ArgInfo::getDirect();
 }
 
