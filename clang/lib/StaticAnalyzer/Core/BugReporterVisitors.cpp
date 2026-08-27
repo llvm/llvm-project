@@ -3007,12 +3007,12 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, BExpr->getRHS(),
-                                       OutLHS, BRC, R, N, shouldPrune,
-                                       IsSameFieldName);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, BExpr->getLHS(),
-                                       OutRHS, BRC, R, N, shouldPrune,
-                                       IsSameFieldName);
+    const bool isVarLHS =
+        patternMatch(BExpr->getLHS(), BExpr, BExpr->getRHS(), OutLHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
+    const bool isVarRHS =
+        patternMatch(BExpr->getRHS(), BExpr, BExpr->getLHS(), OutRHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }
