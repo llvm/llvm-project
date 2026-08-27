@@ -37,6 +37,56 @@ namespace {
 using VPInstructionTest = VPlanTestBase;
 using VPlanSCEVTest = VPlanTestIRBase;
 
+TEST_F(VPInstructionTest, ReductionStartVectorWithScaleEqualToVF) {
+  VPlan &Plan = getPlan();
+  Type *Int64Ty = Type::getInt64Ty(C);
+  VPValue *Zero = Plan.getZero(Int64Ty);
+  VPValue *Scale = Plan.getConstantInt(32, 8);
+  VPInstruction Start(VPInstruction::ReductionStartVector, {Zero, Zero, Scale});
+
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  AssumptionCache AC(*F);
+  IRBuilder<> Builder(ScalarHeader->getTerminator());
+  VPTransformState State(nullptr, ElementCount::getFixed(8), &LI, &DT, &AC,
+                         Builder, &Plan, nullptr);
+
+  Start.execute(State);
+
+  EXPECT_EQ(FixedVectorType::get(Int64Ty, 1), State.get(&Start)->getType());
+}
+
+/// Test recipe execution for REVEC.
+TEST_F(VPInstructionTest, ExecuteWithVectorLaneTypes) {
+  VPlan &Plan = getPlan();
+  Type *Int32Ty = Type::getInt32Ty(C);
+  auto *InitialTy = FixedVectorType::get(Int32Ty, 4);
+  VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(InitialTy, 1));
+
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  AssumptionCache AC(*F);
+  IRBuilder<> Builder(ScalarHeader->getTerminator());
+  VPTransformState State(nullptr, ElementCount::getScalable(1), &LI, &DT, &AC,
+                         Builder, &Plan, nullptr);
+
+  // Create an instruction widened by VF, along with a user for all lanes.
+  VPInstruction Wide(Instruction::Add, {One, One},
+                     VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction AllLanesUser(VPInstruction::Reverse, {&Wide});
+  EXPECT_FALSE(vputils::onlyFirstLaneUsed(&Wide));
+  Wide.execute(State);
+  EXPECT_EQ(toVectorTy(InitialTy, State.VF), State.get(&Wide)->getType());
+
+  // Create an instruction for which only the first "lane" (of type InitialTy)
+  // is used, so it isn't widened.
+  VPInstruction FirstLaneOnly(Instruction::Freeze, {One});
+  VPInstruction Broadcast(VPInstruction::Broadcast, {&FirstLaneOnly});
+  EXPECT_TRUE(vputils::onlyFirstLaneUsed(&FirstLaneOnly));
+  FirstLaneOnly.execute(State);
+  EXPECT_EQ(InitialTy, State.get(&FirstLaneOnly, true)->getType());
+}
+
 TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
   const char *ModuleString = R"(
 define void @f(i32 %x) {
