@@ -234,6 +234,8 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
+- Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
+
 ### Improvements to Clang's diagnostics
 
 - More consistent rendering of Unicode characters in diagnostic messages.
