@@ -11,6 +11,7 @@ types:
   - type_name: clockid_t
   - type_name: errno_t
   - type_name: struct_timespec
+  - type_name: struct_itimerspec
   - type_name: struct_tm
   - type_name: time_t
   - type_name: timer_t
