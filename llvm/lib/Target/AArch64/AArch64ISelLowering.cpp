@@ -2229,6 +2229,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // With +sve2p2/+sme2p2 the full range of vector types are supported.
       for (auto VT :
            {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16}) {
+        // Use custom lowering for MSTORE so we can handle compressstore (using VECTOR_COMPRESS).
         setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
       }
