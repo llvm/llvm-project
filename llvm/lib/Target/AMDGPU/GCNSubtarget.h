@@ -500,6 +500,8 @@ public:
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                  const SchedRegion &Region) const override;
 
+  void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const override;
+
   void mirFileLoaded(MachineFunction &MF) const override;
 
   unsigned getMaxNumUserSGPRs() const {
@@ -963,7 +965,7 @@ public:
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(*this);
+    return AMDGPU::getMinWavesPerEU();
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,

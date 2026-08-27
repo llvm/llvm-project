@@ -1,12 +1,56 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 --check-prefixes=CHECK,DXIL -DDXIL_TY=2 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 --check-prefixes=CHECK,DXIL -DDXIL_TY=7 -DRW=0
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -o - -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s | llvm-cxxfilt | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 --check-prefixes=CHECK,SPIRV -DARRAYED=1 -DSAMPLED=1 -DIMG_FMT=0
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,DXIL -DDXIL_TY=2 -DRW=0 -DDIM=2 \
+// RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 \
+// RUN:   -DSPV_DIM=1 -DDIM=2 -DOFFSET_CONST="<i32 1, i32 2>"
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,DXIL -DDXIL_TY=7 -DRW=0 -DDIM=2 \
+// RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -DTEXTURE=Texture2DArray \
+// RUN:   -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture2DArray -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=1 -DSAMPLED=1 -DIMG_FMT=0 \
+// RUN:   -DSPV_DIM=1 -DDIM=2 -DOFFSET_CONST="<i32 1, i32 2>"
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   OFFSET_ARG         a literal offset argument
+//   TEXTURE            resource type name
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//   COORD_DIM          sample location components (DIM plus the array slice)
+//   DXIL_TY            dx.Texture resource-kind operand
+//   RW                 dx.Texture UAV operand
+//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
+//                      location)
+//   OFFSET_CONST       the offset literal as it appears in the IR
+//   ARRAYED            spirv.Image Arrayed operand
+//   SAMPLED            spirv.Image Sampled operand
+//   IMG_FMT            spirv.Image Image Format operand
+//   SPV_DIM            spirv.Image Dim operand
 
 // DXIL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
 // DXIL: %"class.hlsl::SamplerState" = type { target("dx.Sampler", 0) }
 
-// SPIRV: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// SPIRV: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
 // SPIRV: %"class.hlsl::SamplerState" = type { target("spirv.Sampler") }
 
 TEXTURE<float4> t;
@@ -36,27 +80,27 @@ float4 test_level(COORD_TYPE loc : LOC, float lod : LOD) : SV_Target {
 // CHECK: %[[COORD_VAL1:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR1]]
 // CHECK: %[[LOD_VAL1:.*]] = load float, ptr %[[LOD_ADDR1]]
 // CHECK: %[[LOD_CAST1:.*]] = fptrunc {{.*}} double {{.*}} to float
-// DXIL: call reassoc nnan ninf nsz arcp afn                         <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <2 x i32> zeroinitializer)
-// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <2 x i32> zeroinitializer)
+// DXIL: call reassoc nnan ninf nsz arcp afn                         <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <[[DIM]] x i32> zeroinitializer)
+// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], <[[COORD_DIM]] x float> %[[COORD_VAL1]], float %[[LOD_CAST1]], <[[DIM]] x i32> zeroinitializer)
 
 // CHECK: @test_offset(float vector[[[COORD_DIM]]], float)
-// CHECK: %[[CALL_OFFSET:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleLevel(hlsl::SamplerState, float vector[[[COORD_DIM]]], float, int vector[2])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <2 x i32> noundef <i32 1, i32 2>)
+// CHECK: %[[CALL_OFFSET:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleLevel(hlsl::SamplerState, float vector[[[COORD_DIM]]], float, int vector[[[DIM]]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, <[[COORD_DIM]] x float> {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, <[[DIM]] x i32> noundef [[OFFSET_CONST]])
 // CHECK: ret <4 x float> %[[CALL_OFFSET]]
 
 float4 test_offset(COORD_TYPE loc : LOC, float lod : LOD) : SV_Target {
-  return t.SampleLevel(s, loc, 0.0f, int2(1, 2));
+  return t.SampleLevel(s, loc, 0.0f, OFFSET_ARG);
 }
 
-// CHECK: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleLevel(hlsl::SamplerState, float vector[[[COORD_DIM]]], float, int vector[2])(
-// CHECK-SAME: ptr {{.*}} %[[THIS2:[^,]+]], ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}} %[[SAMPLER2:[^,]+]], <[[COORD_DIM]] x float> noundef nofpclass(nan inf) %[[COORD2:[^,]+]], float noundef nofpclass(nan inf) %[[LOD2:[^,]+]], <2 x i32> noundef %[[OFFSET2:[^)]+]])
+// CHECK: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleLevel(hlsl::SamplerState, float vector[[[COORD_DIM]]], float, int vector[[[DIM]]])(
+// CHECK-SAME: ptr {{.*}} %[[THIS2:[^,]+]], ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}} %[[SAMPLER2:[^,]+]], <[[COORD_DIM]] x float> noundef nofpclass(nan inf) %[[COORD2:[^,]+]], float noundef nofpclass(nan inf) %[[LOD2:[^,]+]], <[[DIM]] x i32> noundef %[[OFFSET2:[^)]+]])
 // CHECK: %[[THIS_ADDR2:.*]] = alloca ptr
 // CHECK: %[[COORD_ADDR2:.*]] = alloca <[[COORD_DIM]] x float>
 // CHECK: %[[LOD_ADDR2:.*]] = alloca float
-// CHECK: %[[OFFSET_ADDR2:.*]] = alloca <2 x i32>
+// CHECK: %[[OFFSET_ADDR2:.*]] = alloca <[[DIM]] x i32>
 // CHECK: store ptr %[[THIS2]], ptr %[[THIS_ADDR2]]
 // CHECK: store <[[COORD_DIM]] x float> %[[COORD2]], ptr %[[COORD_ADDR2]]
 // CHECK: store float %[[LOD2]], ptr %[[LOD_ADDR2]]
-// CHECK: store <2 x i32> %[[OFFSET2]], ptr %[[OFFSET_ADDR2]]
+// CHECK: store <[[DIM]] x i32> %[[OFFSET2]], ptr %[[OFFSET_ADDR2]]
 // CHECK: %[[THIS_VAL2:.*]] = load ptr, ptr %[[THIS_ADDR2]]
 // CHECK: %[[HANDLE_GEP2:.*]] = getelementptr inbounds nuw %"class.hlsl::[[TEXTURE]]", ptr %[[THIS_VAL2]], i32 0, i32 0
 // CHECK: %[[HANDLE2:.*]] = load target{{.*}}, ptr %[[HANDLE_GEP2]]
@@ -65,6 +109,6 @@ float4 test_offset(COORD_TYPE loc : LOC, float lod : LOD) : SV_Target {
 // CHECK: %[[COORD_VAL2:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR2]]
 // CHECK: %[[LOD_VAL2:.*]] = load float, ptr %[[LOD_ADDR2]]
 // CHECK: %[[LOD_CAST2:.*]] = fptrunc {{.*}} double {{.*}} to float
-// CHECK: %[[OFFSET_VAL2:.*]] = load <2 x i32>, ptr %[[OFFSET_ADDR2]]
-// DXIL: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
-// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <2 x i32> %[[OFFSET_VAL2]])
+// CHECK: %[[OFFSET_VAL2:.*]] = load <[[DIM]] x i32>, ptr %[[OFFSET_ADDR2]]
+// DXIL: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplelevel.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE2]], target("dx.Sampler", 0) %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])
+// SPIRV: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplelevel.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE2]], target("spirv.Sampler") %[[SAMPLER_H2]], <[[COORD_DIM]] x float> %[[COORD_VAL2]], float %[[LOD_CAST2]], <[[DIM]] x i32> %[[OFFSET_VAL2]])

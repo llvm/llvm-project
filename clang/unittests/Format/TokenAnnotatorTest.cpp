@@ -694,6 +694,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_EnumRBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsExportBlock) {
+  auto Tokens = annotate("export {\n"
+                         "int foo();\n"
+                         "}");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_ExportLBrace);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsDefaultedAndDeletedFunctions) {
   auto Tokens = annotate("auto operator<=>(const T &) const & = default;");
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;

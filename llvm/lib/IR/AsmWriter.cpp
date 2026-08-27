@@ -2700,6 +2700,18 @@ static void writeDIObjCProperty(raw_ostream &Out, const DIObjCProperty *N,
   Out << ")";
 }
 
+static void writeDIProperty(raw_ostream &Out, const DIProperty *N,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DIProperty(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printMetadata("type", N->getRawType());
+  Printer.printMetadata("backing_storage", N->getRawBackingStorage());
+  Out << ")";
+}
+
 static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
                                   AsmWriterContext &WriterCtx) {
   Out << "!DIImportedEntity(";
