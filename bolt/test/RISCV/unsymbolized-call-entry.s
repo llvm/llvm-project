@@ -1,5 +1,5 @@
-// Test recovery of an RV64 linker-resolved call targeting an entry point
-// inside a function.
+// Test recovery of an RV64 linker-resolved call using the alternate link
+// register and targeting an entry point inside a function.
 
 // RUN: llvm-mc -triple riscv64 -mattr=-relax -filetype=obj -o %t.o %s
 // RUN: ld.lld --no-relax --emit-relocs -o %t %t.o
@@ -14,21 +14,21 @@
 // RUN: llvm-objdump -d %t.bolt | FileCheck --check-prefix=OBJDUMP %s
 
 // INPUT-LABEL: <_start>:
-// INPUT:       auipc ra, 0x200
-// INPUT-NEXT:  jalr 0x8c(ra) <target_entry>
+// INPUT:       auipc t0, 0x200
+// INPUT-NEXT:  jalr t0, 0x8c(t0) <target_entry>
 
 // BOLT-LABEL: Binary Function "_start" after building cfg {
-// BOLT:       auipc ra, {{.*}}target_entry{{.*}}
-// BOLT-NEXT:  jalr {{.*}}(ra)
+// BOLT:       auipc t0, {{.*}}target_entry{{.*}}
+// BOLT-NEXT:  jalr t0, {{.*}}(t0)
 // BOLT-LABEL: Binary Function "_start" after fix-riscv-calls {
-// BOLT:       call {{.*}}target_entry{{.*}}
+// BOLT:       call t0, {{.*}}target_entry{{.*}}
 
 // OBJDUMP-LABEL: <target>:
 // OBJDUMP:       addi a0, a0, {{(0x)?1}}
 // OBJDUMP-LABEL: <target_entry>:
 // OBJDUMP:       ret
 // OBJDUMP-LABEL: <_start>:
-// OBJDUMP:       jal {{.*}} <target_entry>
+// OBJDUMP:       jal t0, {{.*}} <target_entry>
 
   .text
   .option norvc
@@ -37,8 +37,8 @@
   .globl _start
   .type _start,@function
 _start:
-  auipc ra, 0x200
-  jalr ra, 0x8c(ra)
+  auipc t0, 0x200
+  jalr t0, 0x8c(t0)
   ret
   .size _start, .-_start
 

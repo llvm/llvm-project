@@ -21,6 +21,35 @@
 namespace llvm {
 namespace bolt {
 
+namespace {
+
+bool isLinkerResolvedControlTransfer(const MCInst &AUIPC, const MCInst &JALR) {
+  if (AUIPC.getOpcode() != RISCV::AUIPC ||
+      MCPlus::getNumPrimeOperands(AUIPC) != 2 || !AUIPC.getOperand(0).isReg() ||
+      AUIPC.getOperand(0).getReg() == RISCV::X0 ||
+      !AUIPC.getOperand(1).isImm() || JALR.getOpcode() != RISCV::JALR ||
+      MCPlus::getNumPrimeOperands(JALR) != 3 || !JALR.getOperand(0).isReg() ||
+      !JALR.getOperand(1).isReg() || !JALR.getOperand(2).isImm())
+    return false;
+
+  const MCRegister Base = AUIPC.getOperand(0).getReg();
+  if (JALR.getOperand(1).getReg() != Base)
+    return false;
+
+  const MCRegister Link = JALR.getOperand(0).getReg();
+  return Link == RISCV::X0 || Link == Base;
+}
+
+int64_t getLinkerResolvedControlTransferOffset(const MCInst &AUIPC,
+                                               const MCInst &JALR) {
+  // The symbolic AUIPC decoder passes the sign-extended 20-bit U-immediate
+  // already shifted left by 12. JALR adds its sign-extended 12-bit immediate
+  // and clears target bit zero.
+  return (AUIPC.getOperand(1).getImm() + JALR.getOperand(2).getImm()) & ~1LL;
+}
+
+} // namespace
+
 RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
                                      bool CreateNewSymbols)
     : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
@@ -101,9 +130,10 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   const Relocation *Rel =
       Function.getRelocationInRange(InstOffset, InstOffset + InstSize);
   if (!Rel) {
-    // Recover RV64 linker-resolved intra-section calls without relocations.
-    // Decode the following JALR and attach a call expression to the AUIPC
-    // before function reordering can move the caller relative to the callee.
+    // Recover RV64 linker-resolved intra-section calls and tail calls without
+    // relocations. Decode the following JALR and attach a call expression to
+    // the AUIPC before function reordering can move the caller relative to the
+    // callee.
     if (Inst.getOpcode() != RISCV::AUIPC || !CreateNewSymbols ||
         !BC.TheTriple->isRISCV64() || InstOffset + 8 > Function.getSize() ||
         Function.isDataInCodeAt(InstOffset + 4) ||
@@ -124,13 +154,19 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
 
     MCInst AUIPC = Inst;
     AUIPC.addOperand(MCOperand::createImm(Value));
-    if (!BC.MIB->isUnsymbolizedRISCVCall(AUIPC, JALR))
+    if (!isLinkerResolvedControlTransfer(AUIPC, JALR))
       return false;
 
     const uint64_t Target =
-        InstAddress + BC.MIB->getUnsymbolizedRISCVCallOffset(AUIPC, JALR);
+        InstAddress + getLinkerResolvedControlTransferOffset(AUIPC, JALR);
     BinaryFunction *TargetBF = BC.getBinaryFunctionContainingAddress(Target);
     if (!TargetBF)
+      return false;
+
+    // JALR with rd=x0 is a no-link jump. It is a tail call only when it
+    // transfers control to another function; a target in the current function
+    // is an intraprocedural long jump and must not be represented as a call.
+    if (JALR.getOperand(0).getReg() == RISCV::X0 && TargetBF == &Function)
       return false;
 
     BC.addInterproceduralReference(&Function, Target);
