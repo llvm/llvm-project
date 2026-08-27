@@ -594,14 +594,13 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
+  // Check if the target file offset is covered by the mmap event.
   auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
     return Event.Offset == FileOffset ||
            (Event.MemProtectionFlag.contains("x") &&
             Event.Offset < FileOffset &&
             FileOffset - Event.Offset < Event.Size);
   };
-  const bool MMapContainsTextSegment =
-      MMapContainsFileOffset(Binary->getTextSegmentOffset());
 
   // For user-space ELF, subtract the mmap file offset to get the runtime
   // address corresponding to file offset zero. Kernel and COFF retain their
@@ -610,14 +609,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
                                           ? Event.Address
                                           : Event.Address - Event.Offset;
 
-  // Drop the event if its image has the same base address.
-  if ((IsKernel || MMapContainsTextSegment) &&
-      RuntimeBaseAddress == Binary->getBaseAddress()) {
-    Binary->setIsLoadedByMMap(true);
-    return;
-  }
-
-  if (IsKernel || MMapContainsTextSegment) {
+  if (IsKernel || MMapContainsFileOffset(Binary->getTextSegmentOffset())) {
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
