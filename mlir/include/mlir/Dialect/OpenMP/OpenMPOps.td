@@ -224,7 +224,7 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
   let hasRegionVerifier = 1;
 }
 
-def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
+def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure, RegionBranchTerminatorOpInterface]> {
   let summary = "terminator for OpenMP regions";
   let description = [{
     A terminator operation for regions that appear in the body of OpenMP
@@ -1491,7 +1491,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 //===---------------------------------------------------------------------===//
 
 def TargetDataOp: OpenMP_Op<"target_data", traits = [
-    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>
   ], clauses = [
     OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
     OpenMP_UseDeviceAddrClause, OpenMP_UseDevicePtrClause
@@ -1654,8 +1655,10 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 
 def TargetOp : OpenMP_Op<"target", traits = [
     AttrSizedOperandSegments, BlockArgOpenMPOpInterface,
-    DeclareOpInterfaceMethods<ComposableOpInterface>, IsolatedFromAbove,
-    OutlineableOpenMPOpInterface
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+      ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+    IsolatedFromAbove, OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
