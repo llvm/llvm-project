@@ -14,6 +14,7 @@ define amdgpu_kernel void @dynamic_rounding_mode_with_high_vgprs(ptr addrspace(1
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_set_vgpr_msb 64 ; msbs: dst=1 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_mov_b32_e32 v64 /*v320*/, 0
+; CHECK-NEXT:    s_load_b32 s4, s[4:5], 0x10 nv
 ; CHECK-NEXT:    s_set_vgpr_msb 0x4001 ; msbs: dst=0 src0=1 src1=0 src2=0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_load_b128 v[0:3], v64 /*v320*/, s[0:1] offset:16 scope:SCOPE_SYS
@@ -224,7 +225,13 @@ define amdgpu_kernel void @dynamic_rounding_mode_with_high_vgprs(ptr addrspace(1
 ; CHECK-NEXT:    s_wait_xcnt 0x0
 ; CHECK-NEXT:    global_store_b128 v64 /*v320*/, v[0:3], s[2:3] offset:16 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    s_sleep_var 0x1801
+; CHECK-NEXT:    s_add_co_i32 s0, s4, -4
+; CHECK-NEXT:    s_min_u32 s0, s4, s0
+; CHECK-NEXT:    s_lshl_b32 s0, s0, 2
+; CHECK-NEXT:    s_lshr_b64 s[0:1], 0xb73e62d91c84a50f, s0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), s0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_set_vgpr_msb 0x4141 ; msbs: dst=1 src0=1 src1=0 src2=0
 ; CHECK-NEXT:    s_set_vgpr_msb 0x4100 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    v_dual_add_f32 v63, v67, v131 :: v_dual_add_f32 v62, v66, v130
 ; CHECK-NEXT:    v_dual_add_f32 v61, v65, v129 :: v_dual_add_f32 v60, v64, v128
