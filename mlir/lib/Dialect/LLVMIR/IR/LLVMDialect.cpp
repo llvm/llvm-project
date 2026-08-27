@@ -3478,7 +3478,7 @@ static int64_t getNumElements(Type t) {
 
 /// Determine the element type of `type`. Supported types are `VectorType`,
 /// `TensorType`, and `LLVMArrayType`. Everything else is treated as a scalar.
-static Type getElementType(Type type) {
+Type LLVM::getConstantElementType(Type type) {
   while (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
     type = arrayType.getElementType();
   if (auto vecType = dyn_cast<VectorType>(type))
@@ -3677,8 +3677,8 @@ LogicalResult LLVM::ConstantOp::verify() {
              << getNumElements(getType()) << " vs. " << attrNumElements;
     }
 
-    Type attrElmType = getElementType(elementsAttr.getType());
-    Type resultElmType = getElementType(getType());
+    Type attrElmType = LLVM::getConstantElementType(elementsAttr.getType());
+    Type resultElmType = LLVM::getConstantElementType(getType());
     if (auto floatType = dyn_cast<FloatType>(attrElmType))
       return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
 
