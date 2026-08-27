@@ -20,7 +20,8 @@ attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
 ; would add 64 * 10 bytes which exceeds the promotion limit.
 ; This prevents the promotion of the alloca.
 
-; CHECK: alloca
+; CHECK-LABEL: @test(
+; CHECK: %stack = alloca [10 x i8], align 1, addrspace(5)
 
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) #0 {
 
