@@ -53,8 +53,8 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 32
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
+    %2:_(i64) = G_CONSTANT i64 32
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -76,13 +76,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
-    ; CHECK-NEXT: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 36
+    ; CHECK-NEXT: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](i64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
-    %2:_(s64) = G_CONSTANT i64 36
-    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
+    %2:_(i64) = G_CONSTANT i64 36
+    G_MEMCPY %0(p0), %1(p0), %2(i64), 1 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
     RET_ReallyLR
 
 ...

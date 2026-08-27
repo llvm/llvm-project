@@ -382,6 +382,8 @@ void fir::AllocaOp::print(mlir::OpAsmPrinter &p) {
 }
 
 llvm::LogicalResult fir::AllocaOp::verify() {
+  if (mlir::isa_and_nonnull<mlir::ModuleOp>((*this)->getParentOp()))
+    return emitOpError("must not be defined at module scope");
   llvm::SmallVector<llvm::StringRef> visited;
   if (verifyInType(getInType(), visited, numShapeOperands()))
     return emitOpError("invalid type for allocation");
@@ -2429,7 +2431,7 @@ void fir::TypeInfoOp::build(mlir::OpBuilder &builder,
                             llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addRegion();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(type.getName()));
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   if (parentType)
@@ -2801,6 +2803,8 @@ mlir::Type fir::GlobalOp::resultType() {
 
 mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
+  (void)mlir::impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the optional linkage
   llvm::StringRef linkage;
   auto &builder = parser.getBuilder();
@@ -2818,7 +2822,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                             fir::GlobalOp::getSymrefAttrName(result.name),
                             result.attributes))
     return mlir::failure();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       nameAttr.getRootReference());
 
   bool simpleInitializer = false;
@@ -2864,6 +2868,8 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
+  if (mlir::StringAttr visibility = getSymVisibilityAttr())
+    p << ' ' << visibility.getValue();
   if (getLinkName())
     p << ' ' << *getLinkName();
   p << ' ';
@@ -2871,11 +2877,11 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
-                              getSymNameAttrName(), getSymrefAttrName(),
-                              getTypeAttrName(), getConstantAttrName(),
-                              getTargetAttrName(), getLinkNameAttrName(),
-                              getInitValAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(), /*elideAttrs=*/{
+          getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
+          getConstantAttrName(), getTargetAttrName(), getLinkNameAttrName(),
+          getInitValAttrName(), getSymVisibilityAttrName()});
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -2901,7 +2907,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getSymrefAttrName(result.name),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));

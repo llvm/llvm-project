@@ -132,8 +132,8 @@ Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
 
 Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                             uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
-                             KernelLaunchParamsTy LaunchParams,
+                             uint32_t DynBlockMemSize,
+                             KernelLaunchArgsTy &LaunchArgs,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   if (DynBlockMemSize > 0)
     return Plugin::error(ErrorCode::UNSUPPORTED,
@@ -149,7 +149,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
        DPxPTR(zeKernel));
 
   auto *IdStr = L0Device.getZeIdCStr();
-  bool IsCooperative = KernelArgs.Flags.Cooperative;
+  bool IsCooperative = LaunchArgs.Flags.Cooperative;
 
   if (IsCooperative && !L0Device.supportsCooperativeKernels()) {
     return Plugin::error(
@@ -162,7 +162,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   auto *Queue = *QueueOrErr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(KernelPR, KernelArgs, LaunchParams);
+  L0LaunchEnvTy KEnv(KernelPR, LaunchArgs);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
@@ -195,12 +195,12 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
   // folds group-size, per-argument set, and launch into a single call.
-  if (LaunchParams.NumArgs != KernelPR.NumKernelArgs)
+  if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
     return Plugin::error(
         ErrorCode::INVALID_ARGUMENT,
         "Number of arguments (%u) does not match the number of arguments "
         "expected by the kernel (%u)",
-        LaunchParams.NumArgs, KernelPR.NumKernelArgs);
+        LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
 
   if (auto Err = setIndirectFlags(L0Device, KEnv))
     return Err;

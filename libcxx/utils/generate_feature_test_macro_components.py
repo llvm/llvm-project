@@ -761,6 +761,11 @@ feature_test_macros = [
             "headers": ["forward_list", "list", "vector"],
         },
         {
+            "name": "__cpp_lib_initializer_list",
+            "values": {"c++14": 202511},
+            "headers": ["initializer_list"],
+        },
+        {
             "name": "__cpp_lib_inplace_vector",
             "values": {"c++26": 202406},  # P0843R14 inplace_vector
             "headers": ["inplace_vector"],
@@ -1515,6 +1520,11 @@ feature_test_macros = [
             "headers": ["functional"],
         },
         {
+            "name": "__cpp_lib_valarray",
+            "values": {"c++14": 202511},
+            "headers": ["valarray"],
+        },
+        {
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
@@ -1522,6 +1532,14 @@ feature_test_macros = [
                 "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
+        },
+        {
+            "name": "__cpp_lib_view_interface",
+            "values": {
+                "c++29": 202606,  # P3052R2 view_interface::at()
+            },
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_void_t",
@@ -1569,7 +1587,7 @@ lit_markup = {
 
 
 def get_std_dialects():
-    std_dialects = ["c++14", "c++17", "c++20", "c++23", "c++26"]
+    std_dialects = ["c++14", "c++17", "c++20", "c++23", "c++26", "c++29"]
     return list(std_dialects)
 
 

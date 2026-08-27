@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 #define LLVM_TARGETPARSER_AMDGPUTARGETPARSER_H
 
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -41,6 +42,14 @@ enum GPUKind : uint8_t {
 #define GET_AMDGPU_GPU_ENUM
 #include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
+
+/// One enumerator per frontend-visible feature bit; NUM_FEATURES is the count.
+enum AMDGPUFeature : unsigned {
+#define GET_AMDGPU_FEATURE_ENUM
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
+};
+
+using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
 /// Instruction set architecture version.
 struct IsaVersion {
@@ -99,6 +108,10 @@ enum FeatureError : uint32_t {
 };
 
 LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+
+/// The canonical GPU name for a variant name.
+LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
+
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
@@ -152,9 +165,20 @@ LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
+/// \deprecated Use getFeatureBitset and test the relevant FEAT_* bits instead.
+/// The legacy ArchFeatureKind bitfield is being removed.
+LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
+LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
 LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
 LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
+
+/// Returns \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Appends the feature name of each bit set in \p Features to \p Names.
+LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
+                              SmallVectorImpl<StringRef> &Names);
 
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)
@@ -177,6 +201,27 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
+
+/// \returns Maximum LDS in bytes a single work-group can address. This is a
+/// fixed hardware cap and does not depend on how many SIMDs a work-group runs
+/// on.
+LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
+LLVM_ABI unsigned
+getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
+/// functional block in full-SIMD mode, half of them otherwise.
+constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
+  return FullSIMDMode ? 4 : 2;
+}
+
+/// \returns Minimum number of waves per execution unit.
+constexpr unsigned getMinWavesPerEU() { return 1; }
+
+/// \returns Maximum number of waves per execution unit without any kind of
+/// limitation.
+LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
+LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns

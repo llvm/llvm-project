@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/BootstrapInfo.h"
-#include "orc-rt/Session.h"
-#include "orc-rt/move_only_function.h"
+#include "orc-rt/bedrock/BootstrapInfo.h"
+#include "orc-rt/bedrock/Session.h"
+#include "orc-rt/bedrock/move_only_function.h"
 #include "gtest/gtest.h"
 
 #include "CommonTestUtils.h"
@@ -126,4 +126,12 @@ TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
 
   EXPECT_EQ(BI.symbols().size(), 1U);
   EXPECT_EQ(BI.values().size(), 1U);
+}
+
+TEST(BootstrapInfoTest, CreateDefaultContainsSubtargetFeatures) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
+  ASSERT_TRUE(BI.values().count("orc-rt.Executor.SubtargetFeatures"));
+  EXPECT_EQ(BI.values().at("orc-rt.Executor.SubtargetFeatures"),
+            S.processInfo().targetCPUFeatures());
 }

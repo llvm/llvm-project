@@ -540,16 +540,15 @@ You can also add to the test runner options by setting the
 items which must be separate parts of the runner's command line.
 
 It is possible to customize the architecture of the test binaries and compiler
-used by appending `-A` and `-C` options respectively. For example, to test
+used by appending `--triple` and `-C` options respectively. For example, to test
 LLDB against 32-bit binaries built with a custom version of clang, do:
 
 ```
-$ cmake -DLLDB_TEST_USER_ARGS="-A;i386;-C;/path/to/custom/clang" -G Ninja
+$ cmake -DLLDB_TEST_USER_ARGS="--triple;i386-unknown-linux-gnu;-C;/path/to/custom/clang" -G Ninja
 $ ninja check-lldb
 ```
 
-Note that multiple `-A` and `-C` flags can be specified to
-`LLDB_TEST_USER_ARGS`.
+Note that multiple `-C` flags can be specified to `LLDB_TEST_USER_ARGS`.
 
 If you want to change the LLDB settings that tests run with then you can set
 the `--setting` option of the test runner via this same variable. For example
