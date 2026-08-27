@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCGOFFStreamer.h"
-#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -55,9 +54,34 @@ void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   }
 }
 
+void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCSectionGOFF *Section =
+      static_cast<MCSectionGOFF *>(getCurrentSectionOnly());
+  if (Section->isPR()) {
+    if (Section->getBeginSymbol() == nullptr)
+      Section->setBeginSymbol(Symbol);
+    else
+      getContext().reportError(
+          Loc, "only one symbol can be defined in a PR section.");
+  }
+  MCObjectStreamer::emitLabel(Symbol, Loc);
+}
+
 bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                          MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
+}
+
+void MCGOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                      Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+  MCSectionGOFF *Section =
+      Symbol->getSectionForCommonSymbol(getContext(), ByteAlignment);
+  pushSection();
+  switchSection(Section);
+  emitLabel(Symbol);
+  emitZeros(Size);
+  popSection();
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

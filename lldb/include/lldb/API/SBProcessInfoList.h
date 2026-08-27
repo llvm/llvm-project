@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBPROCESSINSTANCEINFOLIST_H
-#define LLDB_API_SBPROCESSINSTANCEINFOLIST_H
+#ifndef LLDB_API_SBPROCESSINFOLIST_H
+#define LLDB_API_SBPROCESSINFOLIST_H
 
 #include "lldb/API/SBDefines.h"
 
@@ -43,4 +43,4 @@ private:
 
 } // namespace lldb
 
-#endif // LLDB_API_SBPROCESSINSTANCEINFOLIST_H
+#endif // LLDB_API_SBPROCESSINFOLIST_H

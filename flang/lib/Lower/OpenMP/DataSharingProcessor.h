@@ -96,9 +96,15 @@ private:
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const semantics::Symbol *> implicitSymbols;
-  llvm::SetVector<const semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
+  // When true, conditional-lastprivate list items get an ordinary private copy
+  // (their in-loop working value) plus a separate reduction struct as the
+  // conditional-last accumulator.  Used by worksharing loops, where a
+  // nonmonotonic schedule can execute chunks out of order.  When false the list
+  // item is bound directly to the reduction struct (used by sections, which are
+  // lexically ordered and never need the private copy).
+  bool conditionalLpUsesPrivateCopy = false;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
@@ -107,14 +113,21 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
+  bool forceHeapAllocationForPrivateDynamicArrays = false;
   llvm::SmallPtrSet<const semantics::Symbol *, 16> mightHaveReadHostSym;
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
-  void collectSymbols(semantics::Symbol::Flag flag,
-                      llvm::SetVector<const semantics::Symbol *> &symbols);
+  void collectPrivatizedSymbols(
+      std::optional<semantics::Symbol::Flag> flag,
+      const llvm::SetVector<const semantics::Symbol *> &allSymbols,
+      const llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions,
+      llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
+  void
+  collectSymbols(semantics::Symbol::Flag flag,
+                 llvm::SetVector<const semantics::Symbol *> *symbols = nullptr);
   void collectSymbolsInNestedRegions(
       lower::pft::Evaluation &eval, semantics::Symbol::Flag flag,
       llvm::SetVector<const semantics::Symbol *> &symbolsInNestedRegions);
@@ -126,6 +139,7 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
+  void collectIndirectReferences();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps,
                  std::optional<llvm::omp::Directive> dir = std::nullopt);
   void copyLastPrivatize(mlir::Operation *op);
@@ -174,6 +188,10 @@ public:
 
   void pushLoopIV(mlir::Value iv) { loopIVs.push_back(iv); }
 
+  void setForceHeapAllocationForPrivateDynamicArrays(bool value = true) {
+    forceHeapAllocationForPrivateDynamicArrays = value;
+  }
+
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
@@ -188,6 +206,15 @@ public:
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
                        mlir::omp::PrivateClauseOps *clauseOps,
                        std::optional<llvm::omp::Directive> dir = std::nullopt);
+
+  const llvm::SetVector<const semantics::Symbol *> &
+  getConditionalLastprivateSymbols() const {
+    return conditionalLastPrivatizedSymbols;
+  }
+
+  void setConditionalLpUsesPrivateCopy(bool v) {
+    conditionalLpUsesPrivateCopy = v;
+  }
 };
 
 } // namespace omp

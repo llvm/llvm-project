@@ -228,13 +228,15 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   VFS->addFile(TestPath, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return VFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_TRUE(DepFile.has_value());
   EXPECT_EQ(llvm::sys::path::convert_to_slash(*DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
@@ -285,18 +287,55 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningTool ScanTool(Service, InterceptFS);
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return InterceptFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
   // matter, the point of the test is to check that files are not read
   // unnecessarily.
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_FALSE(DepFile.has_value());
 
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));
   EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
+}
+
+// When scanning from a TU buffer, the in-memory TU lives ONLY
+// in the overlay filesystem built from that buffer, never on the base VFS. If
+// DependencyScanningWorker::computeDependencies moves the overlay away before
+// initializing the scan CompilerInstance, the scanner falls back to the base
+// VFS, cannot find its input, and the scan fails.
+TEST(DependencyScanner, ScanDepsTUBufferOverlayReachesScan) {
+  std::vector<std::string> CommandLine = {
+      "clang", "-target", "x86_64-apple-macosx10.7", "-c", "-o", "tu.o"};
+  StringRef CWD = "/root";
+
+  // Base VFS intentionally does NOT contain the TU file.
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory(CWD);
+
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return VFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
+
+  auto Sept = llvm::sys::path::get_separator();
+  std::string TUPath = std::string(llvm::formatv("{0}root{0}tu.c", Sept));
+  auto TU = llvm::MemoryBuffer::getMemBuffer("int main(void) { return 0; }\n",
+                                             TUPath);
+
+  TextDiagnosticBuffer DiagConsumer;
+  llvm::DenseSet<ModuleID> AlreadySeen;
+  auto Result = ScanTool.getTranslationUnitDependencies(
+      CommandLine, CWD, DiagConsumer, AlreadySeen,
+      CallbackActionController::lookupUnreachableModuleOutput,
+      TU->getMemBufferRef());
+  ASSERT_TRUE(Result.has_value());
+  EXPECT_TRUE(llvm::any_of(Result->FileDeps,
+                           [](StringRef F) { return F.contains("tu.c"); }));
 }

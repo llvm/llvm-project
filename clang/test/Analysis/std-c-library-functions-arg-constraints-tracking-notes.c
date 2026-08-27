@@ -12,7 +12,7 @@ typedef typeof(sizeof(int)) size_t;
 
 int __buf_size_arg_constraint(const void *, size_t);
 void test_buf_size_concrete(void) {
-  char buf[3];                       // bugpath-note{{'buf' initialized here}}
+  char buf[3];                       // bugpath-note{{'buf' declared without an initial value}}
   int s = 4;                         // bugpath-note{{'s' initialized to 4}}
   __buf_size_arg_constraint(buf, s); // \
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint' is a buffer with size 3 but should be a buffer with size equal to or greater than the value of the 2nd argument}} \
@@ -21,7 +21,7 @@ void test_buf_size_concrete(void) {
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication(void) {
-  short buf[3];                               // bugpath-note{{'buf' initialized here}}
+  short buf[3];                               // bugpath-note{{'buf' declared without an initial value}}
   int s1 = 4;                                 // bugpath-note{{'s1' initialized to 4}}
   int s2 = sizeof(short);                     // bugpath-note{{'s2' initialized to}}
   __buf_size_arg_constraint_mul(buf, s1, s2); // \

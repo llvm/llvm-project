@@ -14,13 +14,13 @@ module overrides
     real, intent(in) :: x
     real, intent(in), device :: y
     type(realResult) result
-    result%a = x * y
+    result%a = x * (y)
   end
   elemental function multDeviceHost(x, y) result(result)
     real, intent(in), device :: x
     real, intent(in) :: y
     type(realResult) result
-    result%a = x * y
+    result%a = (x) * y
   end
   elemental subroutine assignHostResult(lhs, rhs)
     real, intent(out) :: lhs

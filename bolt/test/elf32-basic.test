@@ -1,0 +1,12 @@
+## Verify that BOLT accepts ELF32LE binaries and does not reject them with
+## the old "Only 64-bit LE ELF binaries are supported" error.
+## The binary uses EM_ARM which has no BOLT target support, so BOLT will fail
+## with "Unrecognized machine in ELF file" -- that is expected. The point is
+## that ELF32 parsing infrastructure works and does not reject the file
+## outright.
+
+RUN: yaml2obj %p/Inputs/elf32-basic.yaml -o %t.exe
+RUN: not llvm-bolt %t.exe -o /dev/null 2>&1 | FileCheck %s
+
+CHECK-NOT: Only 64-bit LE ELF binaries are supported
+CHECK: BOLT-ERROR: Unrecognized machine in ELF file

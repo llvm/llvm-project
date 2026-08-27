@@ -4,6 +4,7 @@
 #include <isl/mat.h>
 #include <isl_morph.h>
 #include <isl/polynomial.h>
+#include <isl_local.h>
 #include <isl_reordering.h>
 #include "isl_list_private.h"
 
@@ -164,6 +165,8 @@ isl_bool isl_qpolynomial_is_cst(__isl_keep isl_qpolynomial *qp,
 
 unsigned isl_qpolynomial_domain_offset(__isl_keep isl_qpolynomial *qp,
 	enum isl_dim_type type);
+__isl_give isl_local *isl_qpolynomial_get_local(
+	__isl_keep isl_qpolynomial *qp);
 
 __isl_give isl_qpolynomial *isl_qpolynomial_add_on_domain(
 	__isl_keep isl_set *dom,

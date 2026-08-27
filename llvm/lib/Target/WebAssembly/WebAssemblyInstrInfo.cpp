@@ -71,7 +71,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned CopyOpcode = WebAssembly::getCopyOpcodeForRegClass(RC);
 
   BuildMI(MBB, I, DL, get(CopyOpcode), DestReg)
-      .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 MachineInstr *WebAssemblyInstrInfo::commuteInstructionImpl(

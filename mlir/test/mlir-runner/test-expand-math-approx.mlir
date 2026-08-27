@@ -5,6 +5,7 @@
 // RUN:     -shared-libs=%mlir_runner_utils    \
 // RUN:     -shared-libs=%mlir_float16_utils   \
 // RUN: | FileCheck %s
+// XFAIL: system-aix
 
 // -------------------------------------------------------------------------- //
 // exp2f.

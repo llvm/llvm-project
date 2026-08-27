@@ -55,9 +55,9 @@ private:
   MlirPassManager passManager;
 };
 
-enum PyMlirPassDisplayMode : std::underlying_type_t<MlirPassDisplayMode> {
-  MLIR_PASS_DISPLAY_MODE_LIST = MLIR_PASS_DISPLAY_MODE_LIST,
-  MLIR_PASS_DISPLAY_MODE_PIPELINE = MLIR_PASS_DISPLAY_MODE_PIPELINE
+enum class PyMlirPassDisplayMode : std::underlying_type_t<MlirPassDisplayMode> {
+  LIST = MLIR_PASS_DISPLAY_MODE_LIST,
+  PIPELINE = MLIR_PASS_DISPLAY_MODE_PIPELINE
 };
 
 struct PyMlirExternalPass : MlirExternalPass {};
@@ -68,8 +68,8 @@ void populatePassManagerSubmodule(nb::module_ &m) {
   // Mapping of enumerated types
   //----------------------------------------------------------------------------
   nb::enum_<PyMlirPassDisplayMode>(m, "PassDisplayMode")
-      .value("LIST", MLIR_PASS_DISPLAY_MODE_LIST)
-      .value("PIPELINE", MLIR_PASS_DISPLAY_MODE_PIPELINE);
+      .value("LIST", PyMlirPassDisplayMode::LIST)
+      .value("PIPELINE", PyMlirPassDisplayMode::PIPELINE);
 
   //----------------------------------------------------------------------------
   // Mapping of MlirExternalPass
@@ -161,7 +161,7 @@ void populatePassManagerSubmodule(nb::module_ &m) {
                 passManager.get(),
                 static_cast<MlirPassDisplayMode>(displayMode));
           },
-          "displayMode"_a = MLIR_PASS_DISPLAY_MODE_PIPELINE,
+          "displayMode"_a = PyMlirPassDisplayMode::PIPELINE,
           "Enable pass statistics.")
       .def_static(
           "parse",

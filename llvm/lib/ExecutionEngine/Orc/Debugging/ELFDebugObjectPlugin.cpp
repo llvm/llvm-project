@@ -75,7 +75,14 @@ public:
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
-  Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
+  bool hasPendingTargetMem() const { return FinalizeFuture.valid(); }
+
+  Expected<ExecutorAddrRange> awaitTargetMem() {
+    assert(FinalizeFuture.valid() &&
+           "FinalizeFuture is not valid. Perhaps there is no pending target "
+           "memory transaction?");
+    return FinalizeFuture.get();
+  }
 
   void reportTargetMem(ExecutorAddrRange TargetMem) {
     FinalizePromise.set_value(TargetMem);
@@ -186,9 +193,8 @@ Error DebugObject::visitSections(GetLoadAddressFn Callback) {
 
 ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
                                            bool RequireDebugSections,
-                                           bool AutoRegisterCode, Error &Err)
-    : ES(ES), RequireDebugSections(RequireDebugSections),
-      AutoRegisterCode(AutoRegisterCode) {
+                                           Error &Err)
+    : ES(ES), RequireDebugSections(RequireDebugSections) {
   // Pass bootstrap symbol for registration function to enable debugging
   ErrorAsOutParameter _(&Err);
   Err = ES.getExecutorProcessControl().getBootstrapSymbols(
@@ -342,6 +348,12 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // register the memory range with the GDB JIT Interface in an allocation
     // action of the LinkGraph's own allocation
     DebugObject *DebugObj = getPendingDebugObj(MR);
+    assert(DebugObj && "Don't inject passes if we have no debug object");
+    // Post-allocation phases would bail out if there is no debug section,
+    // in which case we wouldn't collect target memory and therefore shouldn't
+    // wait for the transaction to finish.
+    if (!DebugObj->hasPendingTargetMem())
+      return Error::success();
     Expected<ExecutorAddrRange> R = DebugObj->awaitTargetMem();
     if (!R)
       return R.takeError();
@@ -364,9 +376,8 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
     using namespace shared;
     G.allocActions().push_back(
-        {cantFail(WrapperFunctionCall::Create<
-                  SPSArgList<SPSExecutorAddrRange, bool>>(
-             RegistrationAction, *R, AutoRegisterCode)),
+        {cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+             RegistrationAction, *R)),
          {/* no deregistration */}});
     return Error::success();
   });

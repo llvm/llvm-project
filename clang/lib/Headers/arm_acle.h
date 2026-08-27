@@ -98,6 +98,12 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __pldx(access_kind, cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, access_kind, cache_level, retention_policy, 1)
+#define __pldx_range(access_kind, retention_policy, length, count, stride,     \
+                     reuse_distance, addr)                                     \
+  __builtin_arm_range_prefetch_x(addr, access_kind, retention_policy, length,  \
+                                 count, stride, reuse_distance)
+#define __pld_range(access_kind, retention_policy, metadata, addr)             \
+  __builtin_arm_range_prefetch(addr, access_kind, retention_policy, metadata)
 #endif
 
 /* 7.6.2 Instruction prefetch */
@@ -109,6 +115,7 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __plix(cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, 0, cache_level, retention_policy, 0)
+#define __pldir(addr) __builtin_arm_prefetch_ir(addr)
 #endif
 
 /* 7.7 NOP */
@@ -215,7 +222,8 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
+  return (((__t >> 8) & 0x00ff00ff00ff00ff) |
+          ((__t << 8) & 0xff00ff00ff00ff00));
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))

@@ -21,13 +21,6 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   )
 
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
-  )
-
 set(CLANG_TOOLS_TEST_DEPS
   # For the clang-doc tests that emit bitcode files.
   llvm-bcanalyzer
@@ -40,6 +33,7 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-move
   clang-query
   clang-reorder-fields
+  clang-ssaf-src-edit-merge
   find-all-symbols
   modularize
   pp-trace
@@ -51,6 +45,9 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-resource-headers
 
   clang-tidy
+
+  # Some tests invoke clang directly (e.g., to precompile modules).
+  clang
 )
 
 # Add lit test dependencies.
@@ -91,3 +88,4 @@ add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
   )
 
 add_subdirectory(clang-doc)
+add_subdirectory(Unit)

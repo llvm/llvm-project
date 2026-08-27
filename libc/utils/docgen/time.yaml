@@ -1,0 +1,68 @@
+functions:
+  asctime:
+    c-definition: 7.27.2.1
+    in-latest-posix: ''
+  asctime_r:
+    in-latest-posix: ''
+  ctime:
+    c-definition: 7.27.2.2
+    in-latest-posix: ''
+  ctime_r:
+    in-latest-posix: ''
+  clock:
+    c-definition: 7.27.2.1
+    in-latest-posix: ''
+  clock_getcpuclockid:
+    in-latest-posix: ''
+  clock_getres:
+    in-latest-posix: ''
+  clock_gettime:
+    in-latest-posix: ''
+  clock_nanosleep:
+    in-latest-posix: ''
+  clock_settime:
+    in-latest-posix: ''
+  difftime:
+    c-definition: 7.27.2.2
+    in-latest-posix: ''
+  getdate:
+    in-latest-posix: ''
+  gmtime:
+    c-definition: 7.27.2.3
+    in-latest-posix: ''
+  gmtime_r:
+    in-latest-posix: ''
+  localtime:
+    c-definition: 7.27.2.4
+    in-latest-posix: ''
+  localtime_r:
+    in-latest-posix: ''
+  mktime:
+    c-definition: 7.27.2.3
+    in-latest-posix: ''
+  nanosleep:
+    in-latest-posix: ''
+  strftime:
+    c-definition: 7.27.3.5
+    in-latest-posix: ''
+  strftime_l:
+    in-latest-posix: ''
+  strptime:
+    in-latest-posix: ''
+  time:
+    c-definition: 7.27.2.4
+    in-latest-posix: ''
+  timespec_get:
+    c-definition: 7.27.2.5
+  timer_create:
+    in-latest-posix: ''
+  timer_delete:
+    in-latest-posix: ''
+  timer_gettime:
+    in-latest-posix: ''
+  timer_getoverrun:
+    in-latest-posix: ''
+  timer_settime:
+    in-latest-posix: ''
+  tzset:
+    in-latest-posix: ''

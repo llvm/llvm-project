@@ -83,7 +83,8 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitJumpTableAddrs(const MachineInstr *MI);
   void emitJumpTableInsts(const MachineInstr *MI);

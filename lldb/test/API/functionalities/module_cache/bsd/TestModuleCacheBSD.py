@@ -10,6 +10,8 @@ import time
 
 
 class ModuleCacheTestcaseBSD(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -34,7 +36,7 @@ class ModuleCacheTestcaseBSD(TestBase):
 
     # Requires no dSYM, so we let the Makefile make the right stuff for us
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         """
         This test has been modified to make sure .o files that don't have

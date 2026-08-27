@@ -57,6 +57,10 @@ the same `<rpath>` value.
  specified binary. If specified multiple times, only the last :option:`-id` option is
  selected. Option is ignored if the specified Mach-O binary is not a dynamic shared library.
 
+.. option:: -o <file>, --output <file>
+
+ Write the modified binary to ``<file>`` instead of updating the input file in place.
+
 .. option:: -rpath <old_rpath> <new_rpath>
 
  Change an rpath named ``<old_rpath>`` to ``<new_rpath>`` in the specified binary. Can be specified

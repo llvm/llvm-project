@@ -1,6 +1,7 @@
 # Basic tests have few LLVM and Clang dependencies, so linking it as a
 # distinct target enables faster iteration times at low cost.
 add_distinct_clang_unittest(BasicTests
+  AtomicLineLoggerTest.cpp
   CharInfoTest.cpp
   DarwinSDKInfoTest.cpp
   DiagnosticTest.cpp
@@ -16,8 +17,8 @@ add_distinct_clang_unittest(BasicTests
   clangBasic
   clangLex
   LINK_LIBS
-  LLVMTargetParser
   LLVMTestingSupport
   LLVM_COMPONENTS
   Support
+  TargetParser
   )

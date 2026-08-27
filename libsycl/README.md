@@ -3,7 +3,7 @@
 The libsycl subproject is an implementation of the SYCL runtime library as defined by the
 [SYCL 2020 specification](https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html).
 
-Subproject documentation is available at: [SYCL RT documentation](./docs).
+Subproject documentation is available at: [Libsycl documentation](./docs).
 
 libsycl runtime library and headers require C++17 support or higher.
 

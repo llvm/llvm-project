@@ -76,15 +76,14 @@ define <3 x ptr> @vector_gep_v3i32(<3 x ptr> %b, <3 x i32> %off) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    mov d4, v3.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    saddw v2.2d, v2.2d, v4.2s
 ; CHECK-SD-NEXT:    saddw v0.2d, v0.2d, v3.2s
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i32:
@@ -250,9 +249,8 @@ define <3 x ptr> @vector_gep_v3i64_base(ptr %b, <3 x i64> %off) {
 ; CHECK-SD-NEXT:    dup v1.2d, x0
 ; CHECK-SD-NEXT:    add d2, d3, d2
 ; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i64_base:

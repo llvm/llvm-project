@@ -596,7 +596,7 @@ public:
     assert(!dest.isPreemptible);
     if (std::optional<uint32_t> index =
             ctx.in.ppc64LongBranchTarget->addEntry(&dest, addend)) {
-      ctx.mainPart->relaDyn->addRelativeReloc(
+      ctx.in.relaDyn->addRelativeReloc(
           ctx.target->relativeRel, *ctx.in.ppc64LongBranchTarget,
           *index * UINT64_C(8), dest,
           addend + getPPC64GlobalEntryToLocalEntryOffset(ctx, dest.stOther),
@@ -629,16 +629,16 @@ void Thunk::setOffset(uint64_t newOffset) {
   offset = newOffset;
 }
 
-// AArch64 Thunk base class.
-static uint64_t getAArch64ThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
-  uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);
-  return v;
+uint64_t Thunk::getDestVA() const {
+  return destination.isInPlt(ctx) ? destination.getPltVA(ctx)
+                                  : destination.getVA(ctx, addend);
 }
 
+// AArch64 Thunk base class.
 bool AArch64Thunk::getMayUseShortThunk() {
   if (!mayUseShortThunk)
     return false;
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   mayUseShortThunk = llvm::isInt<28>(s - p);
   if (!mayUseShortThunk)
@@ -651,7 +651,7 @@ void AArch64Thunk::writeTo(uint8_t *buf) {
     writeLong(buf);
     return;
   }
-  uint64_t s = getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   write32(ctx, buf, 0x14000000); // b S
   ctx.target->relocateNoSym(buf, R_AARCH64_CALL26, s - p);
@@ -674,9 +674,7 @@ void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 8, R_AARCH64_ABS64, s);
 }
@@ -707,9 +705,7 @@ void AArch64ABSXOLongThunk::writeLong(uint8_t *buf) {
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf + 0, R_AARCH64_MOVW_UABS_G0_NC, s);
   ctx.target->relocateNoSym(buf + 4, R_AARCH64_MOVW_UABS_G1_NC, s);
@@ -737,9 +733,7 @@ void AArch64ADRPThunk::writeLong(uint8_t *buf) {
   // if mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
-  uint64_t s = mayNeedLandingPad
-                   ? landingPad->getVA(ctx, 0)
-                   : getAArch64ThunkDestVA(ctx, destination, addend);
+  uint64_t s = mayNeedLandingPad ? landingPad->getVA(ctx, 0) : getDestVA();
   uint64_t p = getThunkTargetSym()->getVA(ctx);
   memcpy(buf, data, sizeof(data));
   ctx.target->relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
@@ -1316,8 +1310,9 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(dr.section);
 }
 
-void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t gotPltVA,
-                                const InputFile *file, int64_t addend) {
+void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t p,
+                                uint64_t gotPltVA, const InputFile *file,
+                                std::optional<int64_t> addend) {
   if (!ctx.arg.isPic) {
     write32(ctx, buf + 0, 0x3d600000 | (gotPltVA + 0x8000) >> 16); // lis r11,ha
     write32(ctx, buf + 4, 0x816b0000 | (uint16_t)gotPltVA); // lwz r11,l(r11)
@@ -1326,34 +1321,52 @@ void elf::writePPC32PltCallStub(Ctx &ctx, uint8_t *buf, uint64_t gotPltVA,
     return;
   }
   uint32_t offset;
-  if (addend >= 0x8000) {
+  uint32_t reg;
+  uint64_t written = 0;
+  if (!addend) {
+    // We're a (position-independent) IPLT entry, so cannot assume anything
+    // about what value the caller left in r30 as this could be an indirect
+    // call.
+    write32(ctx, buf + 0, 0x7c0802a6);  //    mflr r0
+    write32(ctx, buf + 4, 0x429f0005);  //    bcl 20, 31, 1f
+    write32(ctx, buf + 8, 0x7d6802a6);  // 1: mflr r11
+    write32(ctx, buf + 12, 0x7c0803a6); //    mtlr r0
+    offset = gotPltVA - p - 8;
+    reg = 11;
+    written = 16;
+  } else if (*addend >= 0x8000) {
     // The stub loads an address relative to r30 (.got2+Addend). Addend is
     // almost always 0x8000. The address of .got2 is different in another object
     // file, so a stub cannot be shared.
+    reg = 30;
     offset = gotPltVA -
              (ctx.in.ppc32Got2->getParent()->getVA() +
-              (file->ppc32Got2 ? file->ppc32Got2->outSecOff : 0) + addend);
+              (file->ppc32Got2 ? file->ppc32Got2->outSecOff : 0) + *addend);
   } else {
     // The stub loads an address relative to _GLOBAL_OFFSET_TABLE_ (which is
     // currently the address of .got).
+    reg = 30;
     offset = gotPltVA - ctx.in.got->getVA();
   }
   uint16_t ha = (offset + 0x8000) >> 16, l = (uint16_t)offset;
   if (ha == 0) {
-    write32(ctx, buf + 0, 0x817e0000 | l); // lwz r11,l(r30)
-    write32(ctx, buf + 4, 0x7d6903a6);     // mtctr r11
-    write32(ctx, buf + 8, 0x4e800420);     // bctr
-    write32(ctx, buf + 12, 0x60000000);    // nop
+    write32(ctx, buf + written + 0,
+            0x81600000 | (reg << 16) | l);        // lwz r11,l(r[11|30])
+    write32(ctx, buf + written + 4, 0x7d6903a6);  // mtctr r11
+    write32(ctx, buf + written + 8, 0x4e800420);  // bctr
+    write32(ctx, buf + written + 12, 0x60000000); // nop
   } else {
-    write32(ctx, buf + 0, 0x3d7e0000 | ha); // addis r11,r30,ha
-    write32(ctx, buf + 4, 0x816b0000 | l);  // lwz r11,l(r11)
-    write32(ctx, buf + 8, 0x7d6903a6);      // mtctr r11
-    write32(ctx, buf + 12, 0x4e800420);     // bctr
+    write32(ctx, buf + written + 0,
+            0x3d600000 | (reg << 16) | ha);          // addis r11,r[11|30],ha
+    write32(ctx, buf + written + 4, 0x816b0000 | l); // lwz r11,l(r11)
+    write32(ctx, buf + written + 8, 0x7d6903a6);     // mtctr r11
+    write32(ctx, buf + written + 12, 0x4e800420);    // bctr
   }
 }
 
 void PPC32PltCallStub::writeTo(uint8_t *buf) {
-  writePPC32PltCallStub(ctx, buf, destination.getGotPltVA(ctx), file, addend);
+  writePPC32PltCallStub(ctx, buf, getThunkTargetSym()->getVA(ctx),
+                        destination.getGotPltVA(ctx), file, addend);
 }
 
 void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
@@ -1402,21 +1415,32 @@ void PPC32LongThunk::writeTo(uint8_t *buf) {
   write32(ctx, buf + 4, 0x4e800420); // bctr
 }
 
-void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, int64_t offset) {
+void elf::writePPC64LoadAndBranch(Ctx &ctx, uint8_t *buf, uint64_t p,
+                                  uint64_t addr, bool toc) {
+  uint64_t offset;
+  uint32_t reg;
+  if (toc) {
+    offset = addr - getPPC64TocBase(ctx);
+    reg = 2;
+  } else {
+    offset = addr - p;
+    reg = 12;
+  }
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
 
-  write32(ctx, buf + 0, 0x3d820000 | offHa); // addis r12, r2, OffHa
+  write32(ctx, buf + 0,
+          0x3d800000 | (reg << 16) | offHa); // addis r12, r[2|12], OffHa
   write32(ctx, buf + 4, 0xe98c0000 | offLo); // ld    r12, OffLo(r12)
   write32(ctx, buf + 8, 0x7d8903a6);         // mtctr r12
   write32(ctx, buf + 12, 0x4e800420);        // bctr
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getGotPltVA(ctx) - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(ctx, buf + 0, 0xf8410018); // std     r2,24(r1)
-  writePPC64LoadAndBranch(ctx, buf + 4, offset);
+  writePPC64LoadAndBranch(ctx, buf + 4, getThunkTargetSym()->getVA(ctx) + 4,
+                          destination.getGotPltVA(ctx));
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
@@ -1456,10 +1480,10 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(ctx, buf + nextInstOffset + 4, BCTR);  // bctr
   } else {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
-    const int64_t offsetFromTOC =
-        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-        getPPC64TocBase(ctx);
-    writePPC64LoadAndBranch(ctx, buf + 4, offsetFromTOC);
+    const uint64_t addr =
+        ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+    writePPC64LoadAndBranch(ctx, buf + 4, getThunkTargetSym()->getVA(ctx) + 4,
+                            addr);
   }
 }
 
@@ -1519,10 +1543,9 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
-  int64_t offset =
-      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-      getPPC64TocBase(ctx);
-  writePPC64LoadAndBranch(ctx, buf, offset);
+  uint64_t addr =
+      ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend);
+  writePPC64LoadAndBranch(ctx, buf, getThunkTargetSym()->getVA(ctx), addr);
 }
 
 void PPC64LongBranchThunk::addSymbols(ThunkSection &isec) {

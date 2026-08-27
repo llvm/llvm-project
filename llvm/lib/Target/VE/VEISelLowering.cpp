@@ -42,6 +42,7 @@ using namespace llvm;
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "VEGenCallingConv.inc"
 
 CCAssignFn *getReturnCC(CallingConv::ID CallConv) {
@@ -194,7 +195,7 @@ void VETargetLowering::initSPUActions() {
     LegalizeAction Act = (IntVT == MVT::i32) ? Promote : Legal;
     setOperationAction(ISD::BITREVERSE, IntVT, Act);
     setOperationAction(ISD::CTLZ, IntVT, Act);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, IntVT, Act);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, IntVT, Act);
     setOperationAction(ISD::CTPOP, IntVT, Act);
 
     // VE has only 64 bits instructions which work as i64 AND/OR/XOR operations.
@@ -1093,7 +1094,7 @@ SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
 }
 
 TargetLowering::AtomicExpansionKind
-VETargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+VETargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // We have TS1AM implementation for i8/i16/i32/i64, so use it.
   if (AI->getOperation() == AtomicRMWInst::Xchg) {
     return AtomicExpansionKind::None;

@@ -1,0 +1,62 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -mattr=+fusion-logic-imm-reg | FileCheck %s
+
+# Test logic immediate-register fusion: ANDI/ORI/XORI + AND/OR/XOR
+# This fusion combines a logic operation with an immediate followed by
+# a logic operation on registers.
+
+# CHECK: andi_and
+# CHECK: Macro fuse: {{.*}}ANDI - AND
+---
+name: andi_and
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 255
+    %4:gpr = XORI %2, 3
+    %5:gpr = AND %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: ori_or
+# CHECK: Macro fuse: {{.*}}ORI - OR
+---
+name: ori_or
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ORI %1, 15
+    %4:gpr = XORI %2, 3
+    %5:gpr = OR %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: xori_xor
+# CHECK: Macro fuse: {{.*}}XORI - XOR
+---
+name: xori_xor
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = XORI %1, 15
+    %4:gpr = XORI %2, 3
+    %5:gpr = XOR %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...

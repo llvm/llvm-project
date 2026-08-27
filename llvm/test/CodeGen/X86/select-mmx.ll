@@ -85,8 +85,8 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    orl 12(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    orl 8(%ebp), %eax
 ; X86-NEXT:    je .LBB1_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    leal 24(%ebp), %eax

@@ -146,6 +146,23 @@ llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
   return {};
 }
 
+static constexpr const char *targetABIName = "fir.target_abi";
+
+void fir::setTargetABI(mlir::ModuleOp mod, llvm::StringRef abi) {
+  if (abi.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetABIName, mlir::StringAttr::get(ctx, abi));
+}
+
+mlir::StringRef fir::getTargetABI(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(targetABIName))
+    return attr.getValue();
+
+  return {};
+}
+
 static constexpr const char *targetFeaturesName = "fir.target_features";
 
 void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {
@@ -195,6 +212,81 @@ llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
           mlir::LLVM::LLVMDialect::getCommandlineAttrName()))
     return attr;
   return {};
+}
+
+static constexpr const char *relocationModelName = "fir.relocation_model";
+
+void fir::setRelocationModel(mlir::ModuleOp mod, llvm::Reloc::Model rm) {
+  auto *ctx = mod.getContext();
+  mod->setAttr(relocationModelName,
+               mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 32),
+                                      static_cast<unsigned>(rm)));
+}
+
+llvm::Reloc::Model fir::getRelocationModel(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::IntegerAttr>(relocationModelName)) {
+    auto val = attr.getInt();
+    if (val >= llvm::Reloc::Static && val <= llvm::Reloc::ROPI_RWPI)
+      return static_cast<llvm::Reloc::Model>(val);
+  }
+  // Default to PIC_ as the conservative choice, ie don't set globals as
+  // dso_local This also matches the default in CodeGenOptions.def.
+  return llvm::Reloc::PIC_;
+}
+
+static constexpr const char *isPIEName = "fir.is_pie";
+
+void fir::setIsPIE(mlir::ModuleOp mod, bool value) {
+  if (value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(isPIEName, mlir::UnitAttr::get(ctx));
+  } else {
+    if (mod->hasAttr(isPIEName))
+      mod->removeAttr(isPIEName);
+  }
+}
+
+bool fir::getIsPIE(mlir::ModuleOp mod) { return mod->hasAttr(isPIEName); }
+
+static constexpr const char *cudaHeapAllocModeName = "fir.cuda_heap_alloc";
+
+static void setCudaHeapAllocModeOn(mlir::Operation *op,
+                                   fir::CudaHeapAllocMode mode) {
+  if (mode == fir::CudaHeapAllocMode::None) {
+    if (op->hasAttr(cudaHeapAllocModeName))
+      op->removeAttr(cudaHeapAllocModeName);
+    return;
+  }
+  llvm::StringRef value =
+      mode == fir::CudaHeapAllocMode::Unified ? "unified" : "managed";
+  op->setAttr(cudaHeapAllocModeName,
+              mlir::StringAttr::get(op->getContext(), value));
+}
+
+static fir::CudaHeapAllocMode getCudaHeapAllocModeOf(mlir::Operation *op) {
+  if (auto attr = op->getAttrOfType<mlir::StringAttr>(cudaHeapAllocModeName)) {
+    if (attr.getValue() == "unified")
+      return fir::CudaHeapAllocMode::Unified;
+    if (attr.getValue() == "managed")
+      return fir::CudaHeapAllocMode::Managed;
+  }
+  return fir::CudaHeapAllocMode::None;
+}
+
+void fir::setCudaHeapAllocMode(mlir::ModuleOp mod, CudaHeapAllocMode mode) {
+  setCudaHeapAllocModeOn(mod.getOperation(), mode);
+}
+
+fir::CudaHeapAllocMode fir::getCudaHeapAllocMode(mlir::ModuleOp mod) {
+  return getCudaHeapAllocModeOf(mod.getOperation());
+}
+
+void fir::setCudaHeapAllocMode(mlir::Operation *op, CudaHeapAllocMode mode) {
+  setCudaHeapAllocModeOn(op, mode);
+}
+
+fir::CudaHeapAllocMode fir::getCudaHeapAllocMode(mlir::Operation *op) {
+  return getCudaHeapAllocModeOf(op);
 }
 
 std::string fir::determineTargetTriple(llvm::StringRef triple) {

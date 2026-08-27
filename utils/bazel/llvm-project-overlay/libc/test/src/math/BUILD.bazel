@@ -24,6 +24,11 @@ math_mpfr_test(name = "atan2")
 
 math_mpfr_test(name = "atan2f")
 
+math_mpfr_test(
+    name = "atan2f128",
+    deps = ["//libc:__support_fputil_float128"],
+)
+
 math_mpfr_test(name = "atan")
 
 math_mpfr_test(name = "atanf")
@@ -52,6 +57,14 @@ math_mpfr_test(
 math_mpfr_test(
     name = "ceilf16",
     hdrs = ["CeilTest.h"],
+)
+
+math_mpfr_test(
+    name = "ceilf128",
+    hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_mpfr_test(name = "cos")
@@ -502,6 +515,12 @@ math_mpfr_test(
     hdrs = ["RoundTest.h"],
 )
 
+math_mpfr_test(
+    name = "roundf128",
+    hdrs = ["RoundTest.h"],
+    deps = ["//libc:__support_fputil_float128"],
+)
+
 math_mpfr_test(name = "sin")
 
 math_mpfr_test(
@@ -561,6 +580,15 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "sqrtf128",
+    hdrs = ["SqrtTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+        "//libc:__support_integer_literals",
+    ],
+)
+
+math_mpfr_test(
     name = "f16sqrt",
     hdrs = ["SqrtTest.h"],
 )
@@ -607,6 +635,8 @@ math_mpfr_test(
     hdrs = ["TruncTest.h"],
 )
 
+math_mpfr_test(name = "cbrtf16")
+
 math_mpfr_test(name = "cosf16")
 
 math_mpfr_test(name = "cospif16")
@@ -620,6 +650,13 @@ math_mpfr_test(name = "tanf16")
 math_mpfr_test(name = "tanpif16")
 
 math_mpfr_test(name = "expf16")
+
+math_mpfr_test(
+    name = "expbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
 
 math_mpfr_test(name = "exp2f16")
 

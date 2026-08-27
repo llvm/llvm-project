@@ -219,6 +219,28 @@ func.func @call_indirect_load() {
 
 // -----
 
+// Calling via a CallOpInterface op whose callee symbol is not defined in this
+// module should not crash - the pass should bail out gracefully.
+// See https://github.com/llvm/llvm-project/issues/109649
+
+// CHECK-LABEL: @global_variable
+ml_program.global private mutable @global_variable(dense<4> : tensor<4xi32>) : tensor<4xi32>
+
+// CHECK-LABEL: @call_with_unresolvable_callee
+func.func @call_with_unresolvable_callee(%arg0: memref<f32>) {
+  // Both loads must be preserved; the pass conservatively bails out when it
+  // encounters a call whose callee symbol cannot be resolved.
+  // CHECK: ml_program.global_load @global_variable
+  %0 = ml_program.global_load @global_variable : tensor<4xi32>
+  // @callee is not defined anywhere in this module.
+  test.call_and_store @callee(%arg0), %arg0 {store_before_call = false} : (memref<f32>, memref<f32>) -> ()
+  // CHECK: ml_program.global_load @global_variable
+  %1 = ml_program.global_load @global_variable : tensor<4xi32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: @global_variable
 ml_program.global private mutable @global_variable(dense<4> : tensor<4xi32>) : tensor<4xi32>
 

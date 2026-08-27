@@ -34,6 +34,7 @@ shared_library("libclang") {
     "//clang/lib/Lex",
     "//clang/lib/Sema",
     "//clang/lib/Tooling",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/IR",
     "//llvm/lib/Support",

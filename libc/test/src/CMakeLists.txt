@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;NEED_MPC;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPFR_F128;NEED_MPC;FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
@@ -16,6 +16,17 @@ function(add_fp_unittest name)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
   endif()
 
+  # TODO: To be removed when we find a workaround to run MPFR tests for
+  # emulated type where compiler doesn't support the native float128
+  # TODO: Check mpfr_buildopt_float128_p() returns non-zero.
+  if(MATH_UNITTEST_NEED_MPFR_F128)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TYPES_HAS_NATIVE_FLOAT128)
+      message(VERBOSE "Math test ${name} will be skipped as native float128 support in MPFR is not available.")
+      return()
+    endif()
+  endif()
+
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
       message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
@@ -23,25 +34,24 @@ function(add_fp_unittest name)
     endif()
   endif()
 
-  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
-    set(test_type HERMETIC_TEST_ONLY)
-  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
-    set(test_type UNIT_TEST_ONLY)
+  if(MATH_UNITTEST_FULL_BUILD_ONLY)
+    set(test_type FULL_BUILD_ONLY)
+  elseif(MATH_UNITTEST_OVERLAY_BUILD_ONLY)
+    set(test_type OVERLAY_BUILD_ONLY)
   endif()
   if(MATH_UNITTEST_NEED_MPFR)
-    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
-      message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
+    if(MATH_UNITTEST_FULL_BUILD_ONLY)
+      message(FATAL_ERROR "Full-build math test cannot require MPFR.")
     endif()
-    set(test_type UNIT_TEST_ONLY)
+    set(test_type OVERLAY_BUILD_ONLY)
     list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
-    if(NOT(LIBC_TARGET_OS_IS_DARWIN))
-      # macOS does not have libatomic.
+    if(NOT(LIBC_TARGET_OS_IS_DARWIN) AND NOT(LIBC_TARGET_OS_IS_FREEBSD))
+      # macOS/FreeBSD does not have libatomic.
       list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
     endif()
   endif()
-  list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
-  set(deps libc.hdr.math_macros)
+  set(deps libc.hdr.math_macros libc.test.UnitTest.FPTestHelpers)
   if(MATH_UNITTEST_DEPENDS)
     list(APPEND deps ${MATH_UNITTEST_DEPENDS})
   endif()
@@ -50,19 +60,24 @@ function(add_fp_unittest name)
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
-    "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+      "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
     DEPENDS
       libc.hdr.stdint_proxy
       "${deps}"
   )
-endfunction(add_fp_unittest)
+endfunction()
 
 add_subdirectory(__support)
+add_subdirectory(arpa)
 add_subdirectory(complex)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
+add_subdirectory(libgen)
+add_subdirectory(link)
 add_subdirectory(math)
+add_subdirectory(net)
+add_subdirectory(netinet)
 add_subdirectory(search)
 add_subdirectory(setjmp)
 add_subdirectory(stdbit)
@@ -71,6 +86,7 @@ add_subdirectory(stdio)
 add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(strings)
+add_subdirectory(ucontext)
 add_subdirectory(wchar)
 add_subdirectory(wctype)
 add_subdirectory(time)
@@ -80,6 +96,7 @@ add_subdirectory(unistd)
 add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(err)
   add_subdirectory(fcntl)
   add_subdirectory(poll)
   add_subdirectory(sched)
@@ -87,19 +104,25 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(termios)
 endif()
 
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
 
-add_subdirectory(arpa)
 add_subdirectory(assert)
 add_subdirectory(compiler)
 add_subdirectory(dirent)
 add_subdirectory(locale)
 add_subdirectory(nl_types)
 add_subdirectory(signal)
+add_subdirectory(regex)
 add_subdirectory(spawn)
+add_subdirectory(pwd)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
+  add_subdirectory(semaphore)
 endif()

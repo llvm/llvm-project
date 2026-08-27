@@ -15,7 +15,7 @@ branch_over_relaxable:
   jal x1, foo
 # CHECK: qc.e.jal 0x0 <branch_over_relaxable>
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM
-# CHECK-NEXT: R_RISCV_CUSTOM195 foo
+# CHECK-NEXT: R_RISCV_QC_E_CALL_PLT foo
 # CHECK-NEXT: R_RISCV_RELAX *ABS*
   bne a0, a1, branch_over_relaxable
 # CHECK-NEXT: bne a0, a1, 0x6 <branch_over_relaxable+0x6>
@@ -24,7 +24,7 @@ branch_over_relaxable:
   qc.e.bnei a0, 0x21, branch_over_relaxable
 # CHECK-NEXT: qc.e.bnei a0, 0x21, 0xa <branch_over_relaxable+0xa>
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM
-# CHECK-NEXT: R_RISCV_CUSTOM193 branch_over_relaxable
+# CHECK-NEXT: R_RISCV_QC_E_BRANCH branch_over_relaxable
 # CHECK-NOT: R_RISCV_RELAX
   ret
 # CHECK-NEXT: c.jr ra
@@ -61,9 +61,9 @@ mid_jump_over_fixed:
   .space 0x1000
 # CHECK-NEXT: ...
   j mid_jump_over_fixed
-# CHECK-NEXT: jal zero, 0x24 <mid_jump_over_fixed>
-# CHECK-NOT: R_RISCV_JAL
-# CHECK-NOT: R_RISCV_RELAX
+# CHECK-NEXT: jal zero, 0x1026 <mid_jump_over_fixed+0x1002>
+# CHECK-NEXT: R_RISCV_JAL mid_jump_over_fixed
+# CHECK-NEXT: R_RISCV_RELAX *ABS*
   ret
 # CHECK-NEXT: c.jr ra
 
@@ -79,6 +79,6 @@ mid_jump_over_relaxable:
   j mid_jump_over_relaxable
 # CHECK-NEXT: jal zero, 0x2034 <mid_jump_over_relaxable+0x1008>
 # CHECK-NEXT: R_RISCV_JAL mid_jump_over_relaxable
-# CHECK-NOT: R_RISCV_RELAX
+# CHECK-NEXT: R_RISCV_RELAX
   ret
 # CHECK-NEXT: c.jr ra

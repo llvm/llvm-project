@@ -9,8 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H
 
-#include <signal.h> // For signal numbers
-
+#include "hdr/signal_macros.h" // For signal numbers
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/macros/config.h"
 

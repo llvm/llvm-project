@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_ldexp.h>
-#include <clc/math/math.h>
-#include <clc/math/tables.h>
-#include <clc/relational/clc_isnan.h>
+#include "clc/clc_convert.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_ldexp.h"
+#include "clc/math/math.h"
+#include "clc/math/tables.h"
+#include "clc/relational/clc_isnan.h"
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_BODY <clc_exp_helper.inc>
+#define __CLC_BODY "clc_exp_helper.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -157,14 +157,15 @@ public:
   /// error or if the attribute is not present.
   llvm::StringRef PeekDIEName(dw_offset_t die_offset);
 
-  llvm::Expected<std::pair<uint64_t, bool>>
-  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override;
+  llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
+  GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const override;
 
   lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                      const llvm::DataExtractor &opcodes,
                                       lldb::offset_t &offset,
                                       RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,

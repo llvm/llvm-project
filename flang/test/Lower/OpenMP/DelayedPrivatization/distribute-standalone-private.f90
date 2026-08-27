@@ -1,7 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
-! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -o - %s 2>&1 \
-! RUN:   | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 subroutine standalone_distribute
     implicit none
@@ -26,7 +24,7 @@ end subroutine standalone_distribute
 ! CHECK:         omp.teams {
 ! CHECK:           omp.distribute
 ! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:[^,]+]],
-! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:[^ ]+]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:             omp.loop_nest {{.*}} {
 ! CHECK:               %[[VAR_PRIV_DECL:.*]]:2 = hlfir.declare %[[VAR_ARG]]
 ! CHECK:               %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]

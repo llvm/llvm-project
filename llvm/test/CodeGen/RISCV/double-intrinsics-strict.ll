@@ -281,8 +281,7 @@ define double @sincos_f64(double %a) nounwind strictfp {
 ; RV32IZFINXZDINX-NEXT:    mv s0, a1
 ; RV32IZFINXZDINX-NEXT:    mv s1, a0
 ; RV32IZFINXZDINX-NEXT:    call sin
-; RV32IZFINXZDINX-NEXT:    mv s2, a0
-; RV32IZFINXZDINX-NEXT:    mv s3, a1
+; RV32IZFINXZDINX-NEXT:    fmv.d s2, a0
 ; RV32IZFINXZDINX-NEXT:    mv a0, s1
 ; RV32IZFINXZDINX-NEXT:    mv a1, s0
 ; RV32IZFINXZDINX-NEXT:    call cos
@@ -1990,7 +1989,7 @@ define i64 @llround_f64(double %a) nounwind strictfp {
   ret i64 %1
 }
 
-define double @ldexp_f64(double %x, i32 signext %y) nounwind {
+define double @ldexp_f64(double %x, i32 signext %y) nounwind strictfp {
 ; RV32IFD-LABEL: ldexp_f64:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16

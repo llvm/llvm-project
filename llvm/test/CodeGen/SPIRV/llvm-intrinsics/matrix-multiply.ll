@@ -88,18 +88,15 @@ define internal void @test_matrix_multiply_i32_2x2_2x2() {
 
 ; Test Matrix Multiply 2x3 * 3x2 float (Result 2x2 float)
 ; CHECK-LABEL: ; -- Begin function test_matrix_multiply_f32_2x3_3x2
-; CHECK-DAG:   %[[B:[0-9]+]] = OpCompositeInsert %[[V4F32_ID]]
-; CHECK-DAG:   %[[A:[0-9]+]] = OpCompositeInsert %[[V4F32_ID]]
+; CHECK:       %[[Col0B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Col1B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Row0A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Row1A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
 ;
-; CHECK-DAG:   %[[B_Col0:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[B_Col1:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[A_Row0:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[A_Row1:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-;
-; CHECK-DAG:   %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row0]] %[[B_Col0]]
-; CHECK-DAG:   %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row1]] %[[B_Col0]]
-; CHECK-DAG:   %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row0]] %[[B_Col1]]
-; CHECK-DAG:   %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row1]] %[[B_Col1]]
+; CHECK-DAG:   %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col0B]]
+; CHECK-DAG:   %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col0B]]
+; CHECK-DAG:   %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col1B]]
+; CHECK-DAG:   %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col1B]]
 ; CHECK:       OpCompositeConstruct %[[V4F32_ID]] %[[C00]] %[[C10]] %[[C01]] %[[C11]]
 define internal void @test_matrix_multiply_f32_2x3_3x2() {
   %1 = load <6 x float>, ptr addrspace(10) @private_v6f32
@@ -144,15 +141,17 @@ define internal void @test_matrix_multiply_f32_1x2_2x2_vec() {
 }
 
 ; Test Matrix Multiply 1x2 * 2x1 float (Result 1x1 scalar - OpDot)
-; TODO(171175): The SPIR-V backend does not legalize single element vectors.
-; CHECK-DISABLE: ; -- Begin function test_matrix_multiply_f32_1x2_2x1_scalar
-; define internal void @test_matrix_multiply_f32_1x2_2x1_scalar() {
-;   %1 = load <2 x float>, ptr addrspace(10) @private_v2f32
-;   %2 = load <2 x float>, ptr addrspace(10) @private_v2f32
-;   %3 = call <1 x float> @llvm.matrix.multiply.v1f32.v2f32.v2f32(<2 x float> %1, <2 x float> %2, i32 1, i32 2, i32 1)
-;   store <1 x float> %3, ptr addrspace(10) @private_v1f32
-;   ret void
-; }
+; CHECK-LABEL: ; -- Begin function test_matrix_multiply_f32_1x2_2x1_scalar
+; CHECK:       %[[A_1x2:[0-9]+]] = OpCompositeInsert %[[V2F32_ID]] {{.*}} {{.*}} 1
+; CHECK:       %[[B_2x1:[0-9]+]] = OpCompositeInsert %[[V2F32_ID]] {{.*}} {{.*}} 1
+; CHECK:       %[[#]] = OpDot %[[Float_ID]] %[[A_1x2]] %[[B_2x1]]
+define internal void @test_matrix_multiply_f32_1x2_2x1_scalar() {
+  %1 = load <2 x float>, ptr addrspace(10) @private_v2f32
+  %2 = load <2 x float>, ptr addrspace(10) @private_v2f32
+  %3 = call <1 x float> @llvm.matrix.multiply.v1f32.v2f32.v2f32(<2 x float> %1, <2 x float> %2, i32 1, i32 2, i32 1)
+  store <1 x float> %3, ptr addrspace(10) @private_v1f32
+  ret void
+}
 
 define void @main() #0 {
   ret void
@@ -163,6 +162,6 @@ declare <4 x i32> @llvm.matrix.multiply.v4i32.v4i32.v4i32(<4 x i32>, <4 x i32>, 
 declare <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float>, <6 x float>, i32, i32, i32)
 declare <2 x float> @llvm.matrix.multiply.v2f32.v4f32.v2f32(<4 x float>, <2 x float>, i32, i32, i32)
 declare <2 x float> @llvm.matrix.multiply.v2f32.v2f32.v4f32(<2 x float>, <4 x float>, i32, i32, i32)
-; declare <1 x float> @llvm.matrix.multiply.v1f32.v2f32.v2f32(<2 x float>, <2 x float>, i32, i32, i32)
+declare <1 x float> @llvm.matrix.multiply.v1f32.v2f32.v2f32(<2 x float>, <2 x float>, i32, i32, i32)
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

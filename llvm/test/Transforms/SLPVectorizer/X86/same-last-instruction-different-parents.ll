@@ -4,7 +4,7 @@
 define i32 @test(i32 %0, i1 %1) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i1 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i32> [[TMP4]] to <2 x double>
@@ -24,8 +24,8 @@ define i32 @test(i32 %0, i1 %1) {
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x double> [ [[TMP15]], %[[BB14]] ], [ [[TMP8]], %[[BB7]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = fmul double [[TMP19]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = fptosi double [[TMP20]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP21]]

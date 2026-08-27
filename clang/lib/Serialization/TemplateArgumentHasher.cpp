@@ -22,17 +22,6 @@ using namespace clang;
 namespace {
 
 class TemplateArgumentHasher {
-  // If we bail out during the process of calculating hash values for
-  // template arguments for any reason. We're allowed to do it since
-  // TemplateArgumentHasher are only required to give the same hash value
-  // for the same template arguments, but not required to give different
-  // hash value for different template arguments.
-  //
-  // So in the worst case, it is still a valid implementation to give all
-  // inputs the same BailedOutValue as output.
-  bool BailedOut = false;
-  static constexpr unsigned BailedOutValue = 0x12345678;
-
   llvm::FoldingSetNodeID ID;
 
 public:
@@ -42,14 +31,7 @@ public:
 
   void AddInteger(unsigned V) { ID.AddInteger(V); }
 
-  unsigned getValue() {
-    if (BailedOut)
-      return BailedOutValue;
-
-    return ID.computeStableHash();
-  }
-
-  void setBailedOut() { BailedOut = true; }
+  unsigned getValue() { return ID.computeStableHash(); }
 
   void AddType(const Type *T);
   void AddQualType(QualType T);
@@ -95,8 +77,7 @@ void TemplateArgumentHasher::AddTemplateArgument(TemplateArgument TA) {
   case TemplateArgument::Expression:
     // If we meet expression in template argument, it implies
     // that the template is still dependent. It is meaningless
-    // to get a stable hash for the template. Bail out simply.
-    BailedOut = true;
+    // to get a stable hash for the template.
     break;
   case TemplateArgument::Pack:
     AddInteger(TA.pack_size());
@@ -113,10 +94,9 @@ void TemplateArgumentHasher::AddStructuralValue(const APValue &Value) {
 
   // 'APValue::Profile' uses pointer values to make hash for LValue and
   // MemberPointer, but they differ from one compiler invocation to another.
-  // It may be difficult to handle such cases. Bail out simply.
+  // It may be difficult to handle such cases.
 
   if (Kind == APValue::LValue || Kind == APValue::MemberPointer) {
-    BailedOut = true;
     return;
   }
 
@@ -138,14 +118,11 @@ void TemplateArgumentHasher::AddTemplateName(TemplateName Name) {
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
-    BailedOut = true;
     break;
   case TemplateName::UsingTemplate: {
     UsingShadowDecl *USD = Name.getAsUsingShadowDecl();
     if (USD)
       AddDecl(USD->getTargetDecl());
-    else
-      BailedOut = true;
     break;
   }
   case TemplateName::DeducedTemplate:
@@ -170,7 +147,6 @@ void TemplateArgumentHasher::AddDeclarationName(DeclarationName Name) {
   case DeclarationName::ObjCZeroArgSelector:
   case DeclarationName::ObjCOneArgSelector:
   case DeclarationName::ObjCMultiArgSelector:
-    BailedOut = true;
     break;
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
@@ -197,16 +173,29 @@ void TemplateArgumentHasher::AddDeclarationName(DeclarationName Name) {
 void TemplateArgumentHasher::AddDecl(const Decl *D) {
   const NamedDecl *ND = dyn_cast<NamedDecl>(D);
   if (!ND) {
-    BailedOut = true;
     return;
   }
 
   AddDeclarationName(ND->getDeclName());
+
+  // If this was a specialization we should take into account its template
+  // arguments. This helps to reduce collisions coming when visiting template
+  // specialization types (eg. when processing type template arguments).
+  ArrayRef<TemplateArgument> Args;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+    Args = CTSD->getTemplateArgs().asArray();
+  else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D))
+    Args = VTSD->getTemplateArgs().asArray();
+  else if (auto *FD = dyn_cast<FunctionDecl>(D))
+    if (FD->getTemplateSpecializationArgs())
+      Args = FD->getTemplateSpecializationArgs()->asArray();
+
+  for (auto &TA : Args)
+    AddTemplateArgument(TA);
 }
 
 void TemplateArgumentHasher::AddQualType(QualType T) {
   if (T.isNull()) {
-    BailedOut = true;
     return;
   }
   SplitQualType split = T.split();
@@ -216,7 +205,6 @@ void TemplateArgumentHasher::AddQualType(QualType T) {
 
 // Process a Type pointer.  Add* methods call back into TemplateArgumentHasher
 // while Visit* methods process the relevant parts of the Type.
-// Any unhandled type will make the hash computation bail out.
 class TypeVisitorHelper : public TypeVisitor<TypeVisitorHelper> {
   typedef TypeVisitor<TypeVisitorHelper> Inherited;
   llvm::FoldingSetNodeID &ID;
@@ -247,9 +235,6 @@ public:
   }
 
   void Visit(const Type *T) { Inherited::Visit(T); }
-
-  // Unhandled types. Bail out simply.
-  void VisitType(const Type *T) { Hash.setBailedOut(); }
 
   void VisitAdjustedType(const AdjustedType *T) {
     AddQualType(T->getOriginalType());

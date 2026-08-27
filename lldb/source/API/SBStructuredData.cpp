@@ -77,6 +77,10 @@ operator=(const lldb::SBStructuredData &rhs) {
   return *this;
 }
 
+void SBStructuredData::CopyImpl(lldb_private::StructuredDataImpl &new_impl) {
+  new_impl.SetObjectSP(m_impl_up->GetObjectSP());
+}
+
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 
@@ -268,7 +272,7 @@ void SBStructuredData::SetBooleanValue(bool value) {
 void SBStructuredData::SetStringValue(const char *value) {
   LLDB_INSTRUMENT_VA(this, value);
 
-  m_impl_up->SetStringValue(value);
+  m_impl_up->SetStringValue(llvm::StringRef(value));
 }
 
 void SBStructuredData::SetGenericValue(SBScriptObject value) {

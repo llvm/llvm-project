@@ -86,7 +86,7 @@ private:
 
 void ErrnoTesterChecker::evalSetErrno(CheckerContext &C,
                                       const CallEvent &Call) {
-  C.addTransition(setErrnoValue(C.getState(), C.getLocationContext(),
+  C.addTransition(setErrnoValue(C.getState(), C.getStackFrame(),
                                 Call.getArgSVal(0), Irrelevant));
 }
 
@@ -96,8 +96,7 @@ void ErrnoTesterChecker::evalGetErrno(CheckerContext &C,
 
   std::optional<SVal> ErrnoVal = getErrnoValue(State);
   assert(ErrnoVal && "Errno value should be available.");
-  State =
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), *ErrnoVal);
+  State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), *ErrnoVal);
 
   C.addTransition(State);
 }
@@ -108,11 +107,11 @@ void ErrnoTesterChecker::evalSetErrnoIfError(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
 
   ProgramStateRef StateSuccess = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(0, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(0, true));
   StateSuccess = setErrnoState(StateSuccess, MustNotBeChecked);
 
   ProgramStateRef StateFailure = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(1, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(1, true));
   StateFailure = setErrnoValue(StateFailure, C, 11, Irrelevant);
 
   C.addTransition(StateSuccess);
@@ -125,16 +124,16 @@ void ErrnoTesterChecker::evalSetErrnoIfErrorRange(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
 
   ProgramStateRef StateSuccess = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(0, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(0, true));
   StateSuccess = setErrnoState(StateSuccess, MustNotBeChecked);
 
   ProgramStateRef StateFailure = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(1, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(1, true));
   DefinedOrUnknownSVal ErrnoVal = SVB.conjureSymbolVal(Call, C.blockCount());
   StateFailure = StateFailure->assume(ErrnoVal, true);
   assert(StateFailure && "Failed to assume on an initial value.");
   StateFailure =
-      setErrnoValue(StateFailure, C.getLocationContext(), ErrnoVal, Irrelevant);
+      setErrnoValue(StateFailure, C.getStackFrame(), ErrnoVal, Irrelevant);
 
   C.addTransition(StateSuccess);
   C.addTransition(StateFailure);
@@ -146,15 +145,15 @@ void ErrnoTesterChecker::evalSetErrnoCheckState(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
 
   ProgramStateRef StateSuccess = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(0, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(0, true));
   StateSuccess = setErrnoState(StateSuccess, MustNotBeChecked);
 
   ProgramStateRef StateFailure1 = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(1, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(1, true));
   StateFailure1 = setErrnoValue(StateFailure1, C, 1, Irrelevant);
 
   ProgramStateRef StateFailure2 = State->BindExpr(
-      Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(2, true));
+      Call.getOriginExpr(), C.getStackFrame(), SVB.makeIntVal(2, true));
   StateFailure2 = setErrnoValue(StateFailure2, C, 2, MustBeChecked);
 
   C.addTransition(StateSuccess,

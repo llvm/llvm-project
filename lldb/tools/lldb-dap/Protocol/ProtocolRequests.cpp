@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
@@ -15,14 +16,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;
 
 // The 'env' field is either an object as a map of strings or as an array of
 // strings formatted like 'key=value'.
-static bool parseEnv(const json::Value &Params, StringMap<std::string> &env,
-                     json::Path P) {
+static bool parseEnv(const json::Value &Params,
+                     StringMap<lldb_dap::protocol::String> &env, json::Path P) {
   const json::Object *O = Params.getAsObject();
   if (!O) {
     P.report("expected object");
@@ -34,13 +36,15 @@ static bool parseEnv(const json::Value &Params, StringMap<std::string> &env,
     return true;
 
   if (const json::Object *env_obj = value->getAsObject()) {
-    for (const auto &kv : *env_obj) {
-      const std::optional<StringRef> value = kv.second.getAsString();
-      if (!value) {
-        P.field("env").field(kv.first).report("expected string value");
+    for (const auto &[key, val] : *env_obj) {
+      if (const std::optional<StringRef> val_str = val.getAsString()) {
+        env.insert({key.str(), val_str->str()});
+      } else if (val.getAsNull()) {
+        env.insert({key.str(), ""});
+      } else {
+        P.field("env").field(key).report("expected string value");
         return false;
       }
-      env.insert({kv.first.str(), value->str()});
     }
     return true;
   }
@@ -87,7 +91,8 @@ static bool parseTimeout(const json::Value &Params, std::chrono::seconds &S,
 
 static bool
 parseSourceMap(const json::Value &Params,
-               std::vector<std::pair<std::string, std::string>> &sourceMap,
+               std::vector<std::pair<lldb_dap::protocol::String,
+                                     lldb_dap::protocol::String>> &sourceMap,
                json::Path P) {
   const json::Object *O = Params.getAsObject();
   if (!O) {
@@ -146,8 +151,8 @@ namespace lldb_dap::protocol {
 
 bool fromJSON(const json::Value &Params, CancelArguments &CA, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("requestId", CA.requestId) &&
-         O.map("progressId", CA.progressId);
+  return O && O.mapOptional("requestId", CA.requestId) &&
+         O.mapOptional("progressId", CA.progressId);
 }
 
 bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
@@ -296,7 +301,7 @@ bool fromJSON(const json::Value &Params, Console &C, json::Path P) {
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  bool success =
+  const bool success =
       O && fromJSON(Params, LRA.configuration, P) &&
       O.mapOptional("noDebug", LRA.noDebug) &&
       O.mapOptional("launchCommands", LRA.launchCommands) &&
@@ -310,6 +315,13 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
       O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
   if (!success)
     return false;
+
+  for (std::optional<String> &io_path : LRA.stdio) {
+    // set empty paths to null.
+    if (io_path && llvm::StringRef(*io_path).trim().empty())
+      io_path.reset();
+  }
+
   // Validate that we have a well formed launch request.
   if (!LRA.launchCommands.empty() &&
       LRA.console != protocol::eConsoleInternal) {
@@ -324,6 +336,14 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
   return true;
 }
 
+bool fromJSON(const llvm::json::Value &Params, DAPSession &Ses,
+              llvm::json::Path P) {
+
+  json::ObjectMapper O(Params, P);
+  return O && O.map("targetId", Ses.targetId) &&
+         O.map("debuggerId", Ses.debuggerId);
+}
+
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -334,16 +354,15 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
                  O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
                  O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
                  O.mapOptional("coreFile", ARA.coreFile) &&
-                 O.mapOptional("targetId", ARA.targetId) &&
-                 O.mapOptional("debuggerId", ARA.debuggerId);
+                 O.mapOptional("session", ARA.session);
   if (!success)
     return false;
   // Validate that we have a well formed attach request.
   if (ARA.attachCommands.empty() && ARA.coreFile.empty() &&
       ARA.configuration.program.empty() && ARA.pid == LLDB_INVALID_PROCESS_ID &&
-      ARA.gdbRemotePort == LLDB_DAP_INVALID_PORT && !ARA.targetId.has_value()) {
+      ARA.gdbRemotePort == LLDB_DAP_INVALID_PORT && !ARA.session.has_value()) {
     P.report("expected one of 'pid', 'program', 'attachCommands', "
-             "'coreFile', 'gdb-remote-port', or 'targetId' to be specified");
+             "'coreFile', 'gdb-remote-port', or 'session' to be specified");
     return false;
   }
   // Check if we have mutually exclusive arguments.
@@ -352,13 +371,7 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
     P.report("'pid' and 'gdb-remote-port' are mutually exclusive");
     return false;
   }
-  // Validate that both debugger_id and target_id are provided together.
-  if (ARA.debuggerId.has_value() != ARA.targetId.has_value()) {
-    P.report(
-        "Both 'debuggerId' and 'targetId' must be specified together for "
-        "debugger reuse, or both must be omitted to create a new debugger");
-    return false;
-  }
+
   return true;
 }
 
@@ -397,7 +410,7 @@ json::Value toJSON(const SetVariableResponseBody &SVR) {
 
   if (!SVR.type.empty())
     Body.insert({"type", SVR.type});
-  if (SVR.variablesReference)
+  if (SVR.variablesReference.Reference())
     Body.insert({"variablesReference", SVR.variablesReference});
   if (SVR.namedVariables)
     Body.insert({"namedVariables", SVR.namedVariables});

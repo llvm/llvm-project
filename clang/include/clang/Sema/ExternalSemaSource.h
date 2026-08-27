@@ -141,7 +141,7 @@ public:
   /// be invoked multiple times; the external source should take care not to
   /// introduce the same declarations repeatedly.
   virtual void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {}
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {}
 
   /// Read the set of referenced selectors known to the
   /// external Sema source.
@@ -162,6 +162,16 @@ public:
   /// repeatedly.
   virtual void ReadWeakUndeclaredIdentifiers(
                  SmallVectorImpl<std::pair<IdentifierInfo *, WeakInfo> > &WI) {}
+
+  /// Read the set of #pragma redefine_extname'd, undeclared identifiers known
+  /// to the external Sema source.
+  ///
+  /// The external source should append its own #pragma redefine_extname'd,
+  /// undeclared identifiers to the given vector. Note that this routine may be
+  /// invoked multiple times; the external source should take care not to
+  /// introduce the same identifiers repeatedly.
+  virtual void ReadExtnameUndeclaredIdentifiers(
+      SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI) {}
 
   /// Read the set of used vtables known to the external Sema source.
   ///
@@ -229,11 +239,6 @@ public:
                                                 QualType T) {
     return false;
   }
-
-  /// Notify the external source that a lambda was assigned a mangling number.
-  /// This enables the external source to track the correspondence between
-  /// lambdas and mangling numbers if necessary.
-  virtual void AssignedLambdaNumbering(CXXRecordDecl *Lambda) {}
 
   /// LLVM-style RTTI.
   /// \{

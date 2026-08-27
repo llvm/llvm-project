@@ -154,14 +154,28 @@ class CrashLogScriptedThread(ScriptedThread):
 
     def resolve_stackframes(thread, addr_mask, target):
         frames = []
-        for frame in thread.frames:
+        for i, frame in enumerate(thread.frames):
             frame_pc = frame.pc & addr_mask
-            pc = frame_pc if frame.index == 0 or frame_pc == 0 else frame_pc - 1
+            # Skip inlined frames so LLDB can reconstruct them from
+            # debug info when it processes the concrete frames we provide.
+            # Use the inlined attribute when available (symbolicated reports),
+            # otherwise fall back to comparing PCs (non-symbolicated reports).
+            if frame.inlined:
+                continue
+            next_frame = thread.frames[i + 1] if i + 1 < len(thread.frames) else None
+            if next_frame and frame_pc == (next_frame.pc & addr_mask):
+                continue
+            # Don't subtract 1 from the first concrete frame (it's the actual
+            # PC, not a return address) or from null PCs.
+            if len(frames) == 0 or frame_pc == 0:
+                pc = frame_pc
+            else:
+                pc = frame_pc - 1
             sym_addr = lldb.SBAddress()
             sym_addr.SetLoadAddress(pc, target)
             if not sym_addr.IsValid():
                 continue
-            frames.append({"idx": frame.index, "pc": pc})
+            frames.append({"idx": len(frames), "pc": pc})
         return frames
 
     def create_stackframes(self):

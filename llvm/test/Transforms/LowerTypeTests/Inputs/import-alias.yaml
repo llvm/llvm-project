@@ -6,6 +6,8 @@ TypeIdMap:
       SizeM1BitWidth:  7
 WithGlobalValueDeadStripping: false
 CfiFunctionDefs:
-  - f
-CfiFunctionDecls:
-...
+- Name: f
+  GUID: 14740650423002898831
+- Name: f_dso_local
+  GUID: 16617365750458309383
+CfiFunctionDecls: null

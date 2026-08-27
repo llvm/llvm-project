@@ -9,6 +9,7 @@
 #include "ELFObject.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -23,7 +24,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -2171,12 +2171,19 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
                              Data.size(), Sec->Name.c_str(), Sec->Size);
 
   if (!Sec->ParentSegment) {
-    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    Sec->Size = Data.size();
-    UpdatedSections[Sec.get()] = Data;
+    // addSection modifies the container that Sec is stored in, potentially
+    // invalidating the Sec reference. We obtain the raw pointer Sec owns before
+    // calling addSection, so that it can be safely passed into replaceSections.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
+    return replaceSections({{Replaced, Modified}});
   }
+
+  // The segment writer will be in charge of updating these contents.
+  Sec->Size = Data.size();
+  UpdatedSections[Sec.get()] = Data;
 
   return Error::success();
 }
@@ -2228,7 +2235,7 @@ Error Object::removeSections(
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
   // an error here instead.
-  std::unordered_set<const SectionBase *> RemoveSections;
+  SmallPtrSet<const SectionBase *, 0> RemoveSections;
   RemoveSections.reserve(std::distance(Iter, std::end(Sections)));
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)

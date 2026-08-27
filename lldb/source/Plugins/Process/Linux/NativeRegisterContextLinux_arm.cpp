@@ -20,16 +20,17 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include <elf.h>
-#include <sys/uio.h>
-
 #if defined(__arm64__) || defined(__aarch64__)
-#include "NativeRegisterContextLinux_arm64dbreg.h"
-#include "lldb/Host/linux/Ptrace.h"
-#include <asm/ptrace.h>
+#include "Plugins/Process/Linux/NativeRegisterContextLinux_arm64dbreg.h"
 #endif
 
-#define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr))
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <elf.h>
+#include <sys/ptrace.h>
+#include <sys/uio.h>
+
+#define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
 
 #ifndef PTRACE_GETVFPREGS
 #define PTRACE_GETVFPREGS 27
@@ -44,6 +45,10 @@
 #endif
 #if !defined(PTRACE_TYPE_ARG4)
 #define PTRACE_TYPE_ARG4 void *
+#endif
+
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA 22
 #endif
 
 using namespace lldb;
@@ -68,15 +73,15 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
 
 NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(native_thread,
-                                        new RegisterInfoPOSIX_arm(target_arch)),
+    : NativeRegisterContextRegisterInfo(
+          native_thread,
+          new RegisterInfoPOSIX_arm(target_arch, /*has_tls_reg=*/true)),
       NativeRegisterContextLinux(native_thread) {
   assert(target_arch.GetMachine() == llvm::Triple::arm);
 
   ::memset(&m_fpr, 0, sizeof(m_fpr));
+  ::memset(&m_tls, 0, sizeof(m_tls));
   ::memset(&m_gpr_arm, 0, sizeof(m_gpr_arm));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -120,6 +125,11 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
     error = ReadFPR();
     if (error.Fail())
       return error;
+  } else if (IsTLS(reg)) {
+    error = ReadTLS();
+    if (error.Success())
+      reg_value.SetUInt32(m_tls.tpidruro);
+    return error;
   } else {
     uint32_t full_reg = reg;
     bool is_subreg = reg_info->invalidate_regs &&
@@ -199,6 +209,10 @@ NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
     return WriteFPR();
   }
 
+  if (IsTLS(reg_index))
+    return Status::FromErrorString(
+        "writing to a thread pointer register is not implemented");
+
   return Status::FromErrorString(
       "failed - register wasn't recognized to be a GPR or an FPR, "
       "write strategy unknown");
@@ -217,10 +231,16 @@ Status NativeRegisterContextLinux_arm::ReadAllRegisterValues(
   if (error.Fail())
     return error;
 
+  error = ReadTLS();
+  if (error.Fail())
+    return error;
+
   uint8_t *dst = data_sp->GetBytes();
   ::memcpy(dst, &m_gpr_arm, GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr, sizeof(m_fpr));
+  dst += sizeof(m_fpr);
+  ::memcpy(dst, &m_tls, sizeof(m_tls));
 
   return error;
 }
@@ -266,6 +286,8 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
   if (error.Fail())
     return error;
 
+  // Note: writing to a thread pointer register is not implemented.
+
   return error;
 }
 
@@ -281,6 +303,11 @@ bool NativeRegisterContextLinux_arm::IsFPR(unsigned reg) const {
       RegisterInfoPOSIX_arm::FPRegSet)
     return true;
   return false;
+}
+
+bool NativeRegisterContextLinux_arm::IsTLS(unsigned reg) const {
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_arm::TLSRegSet;
 }
 
 llvm::Error NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
@@ -477,6 +504,22 @@ Status NativeRegisterContextLinux_arm::WriteFPR() {
   ioVec.iov_len = GetFPRSize();
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), NT_ARM_VFP);
+#endif // __arm__
+}
+
+Status NativeRegisterContextLinux_arm::ReadTLS() {
+#ifdef __arm__
+  return NativeProcessLinux::PtraceWrapper(PTRACE_GET_THREAD_AREA,
+                                           m_thread.GetID(), nullptr,
+                                           GetTLSBuffer(), GetTLSSize());
+#else  // __aarch64__
+  Status error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_len = GetTLSSize();
+
+  return ReadRegisterSet(&ioVec, GetTLSSize(), NT_ARM_TLS);
 #endif // __arm__
 }
 

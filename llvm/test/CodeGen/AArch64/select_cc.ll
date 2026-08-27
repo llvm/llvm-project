@@ -96,9 +96,7 @@ define <2 x double> @select_olt_load_cmp(<2 x double> %a, ptr %src) {
 ; CHECK-GI-NEXT:    ldr d1, [x0]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    fcmgt v1.2s, v1.2s, #0.0
-; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-GI-NEXT:    shl v1.2d, v1.2d, #63
-; CHECK-GI-NEXT:    cmlt v1.2d, v1.2d, #0
+; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -120,12 +118,8 @@ define <4 x i32> @select_icmp_sgt(<4 x i32> %a, <4 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: select_icmp_sgt:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    mov v2.b[1], w8
-; CHECK-GI-NEXT:    mov v2.b[2], w8
-; CHECK-GI-NEXT:    mov v2.b[3], w8
 ; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    umov w8, v1.b[0]
 ; CHECK-GI-NEXT:    umov w9, v1.b[1]

@@ -37,11 +37,15 @@ function at-exit {
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
       $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
-    (python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
-      $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
-      $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
-      "${MONOREPO_ROOT}"/ninja*.log)
-    advisor_retcode=$?
+    if [[ -n "$GITHUB_PR_NUMBER" ]]; then
+      (python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
+        $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
+        $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
+        "${MONOREPO_ROOT}"/ninja*.log)
+      advisor_retcode=$?
+    else
+      advisor_retcode=$retcode
+    fi
   fi
 
   if [[ "$retcode" != "0" ]]; then

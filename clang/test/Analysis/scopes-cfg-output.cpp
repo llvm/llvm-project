@@ -907,10 +907,10 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   5: auto &i
 // CHECK-NEXT:   6: operator=
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, A &(*)(const A &)
-// CHECK-NEXT:   8: i
-// CHECK-NEXT:   9: b
-// CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const A)
-// CHECK-NEXT:  11: [B4.8] = [B4.10] (OperatorCall)
+// CHECK-NEXT:   8: b
+// CHECK-NEXT:   9: [B4.8] (ImplicitCastExpr, NoOp, const A)
+// CHECK-NEXT:  10: i
+// CHECK-NEXT:  11: [B4.10] = [B4.9] (OperatorCall)
 // CHECK-NEXT:  12: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B3
@@ -1437,14 +1437,12 @@ void test_cleanup_functions() {
 // CHECK-NEXT:    4: return;
 // CHECK-NEXT:    5: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    6: CFGScopeEnd(i)
-// CHECK-NEXT:    7: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:    1: return;
 // CHECK-NEXT:    2: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    3: CFGScopeEnd(i)
-// CHECK-NEXT:    4: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B3]

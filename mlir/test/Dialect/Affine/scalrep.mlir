@@ -988,12 +988,49 @@ func.func @scf_for_if(%arg0: memref<?xi32>, %arg1: i32) -> i32 attributes {llvm.
 func.func @zero_d_memrefs() {
   // CHECK: %[[C0:.*]] = arith.constant 0
   %c0_i32 = arith.constant 0 : i32
-  %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<i32>
+  %alloc_0 = memref.alloc() alignment = 64 : memref<i32>
   affine.store %c0_i32, %alloc_0[] : memref<i32>
   affine.for %arg0 = 0 to 9 {
     %2 = affine.load %alloc_0[] : memref<i32>
     arith.addi %2, %2 : i32
     // CHECK: arith.addi %[[C0]], %[[C0]]
   }
+  return
+}
+
+// CHECK-LABEL: func @vector_store_dead_elim_different_types
+// A vector_store with a different vector type at the same base index must NOT
+// cause the earlier vector_store to be treated as a dead store.
+// (GitHub issue #113687)
+func.func @vector_store_dead_elim_different_types(%arg0: memref<20x1xi64>) {
+  %c0 = arith.constant 0 : index
+  // CHECK-DAG: %[[CST1:.+]] = arith.constant dense<1>
+  // CHECK-DAG: %[[CST2:.+]] = arith.constant dense<2>
+  %cst1 = arith.constant dense<1> : vector<5xi64>
+  %cst2 = arith.constant dense<2> : vector<1xi64>
+  // Both stores must be preserved: the second (narrow) store does not fully
+  // overwrite the first (wide) store.
+  // CHECK: affine.vector_store %[[CST1]], %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
+  affine.vector_store %cst1, %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
+  // CHECK: affine.vector_store %[[CST2]], %arg0[%c0, %c0] : memref<20x1xi64>, vector<1xi64>
+  affine.vector_store %cst2, %arg0[%c0, %c0] : memref<20x1xi64>, vector<1xi64>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_dead_elim_same_type
+// A vector_store with the same type at the same base index should still cause
+// the earlier store to be treated as a dead store.
+func.func @vector_store_dead_elim_same_type(%arg0: memref<20x1xi64>) {
+  %c0 = arith.constant 0 : index
+  %cst1 = arith.constant dense<1> : vector<5xi64>
+  %cst2 = arith.constant dense<2> : vector<5xi64>
+  // CHECK-DAG: %[[CST2:.+]] = arith.constant dense<2>
+  // The first store is dead — the second store (same type, same index)
+  // fully overwrites it.
+  // CHECK-NOT: arith.constant dense<1>
+  // CHECK-NOT: affine.vector_store {{.*}} dense<1>
+  // CHECK: affine.vector_store %[[CST2]], %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
+  affine.vector_store %cst1, %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
+  affine.vector_store %cst2, %arg0[%c0, %c0] : memref<20x1xi64>, vector<5xi64>
   return
 }

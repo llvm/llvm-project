@@ -399,8 +399,8 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // Ignore nobuiltin of the CallBase, so that we can cover nobuiltin libcalls
   // if requested via isInstrumentableLibFunc(). Note that isAllocationFn() is
   // returning false for nobuiltin calls.
-  LibFunc Func;
-  if (TLI.getLibFunc(*Callee, Func)) {
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (Func != NotLibFunc) {
     if (isInstrumentableLibFunc(Func, CB, TLI))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
@@ -541,9 +541,9 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
     NewParams.push_back(IntPtrTy); // token ID
   TokenAllocName += Callee->getName();
   FunctionType *NewFTy = FunctionType::get(RetTy, NewParams, false);
-  FunctionCallee TokenAlloc = Mod.getOrInsertFunction(TokenAllocName, NewFTy);
-  if (Function *F = dyn_cast<Function>(TokenAlloc.getCallee()))
-    F->copyAttributesFrom(Callee); // preserve attrs
+  AttributeList NewAttrs = Callee->getAttributes();
+  FunctionCallee TokenAlloc =
+      Mod.getOrInsertFunction(TokenAllocName, NewFTy, NewAttrs);
 
   if (Key.has_value())
     TokenAllocFunctions[*Key] = TokenAlloc;

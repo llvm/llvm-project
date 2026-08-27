@@ -13,7 +13,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace llvm;
 using namespace mlir::python::nanobind_adaptors;
 
 namespace mlir {
@@ -24,6 +23,8 @@ struct TensorMapDescriptorType : PyConcreteType<TensorMapDescriptorType> {
   static constexpr IsAFunctionTy isaFunction =
       mlirTypeIsANVGPUTensorMapDescriptorType;
   static constexpr const char *pyClassName = "TensorMapDescriptorType";
+  static inline const MlirStringRef name =
+      mlirNVGPUTensorMapDescriptorTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

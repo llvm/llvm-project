@@ -6,7 +6,7 @@
 // RUN:            -target-feature +altivec -target-feature -vsx \
 // RUN:            -target-feature -power10-vector -fsyntax-only -verify %s
 
-#include <altivec.h>
+// Note: altivec.h not included to avoid inline functions requiring additional target features
 
 // Test 'vector bool __int128' type.
 

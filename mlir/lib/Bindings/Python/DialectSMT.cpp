@@ -29,7 +29,10 @@ namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 namespace smt {
 struct BoolType : PyConcreteType<BoolType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABool;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTBoolTypeGetTypeID;
   static constexpr const char *pyClassName = "BoolType";
+  static inline const MlirStringRef name = mlirSMTBoolTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -45,7 +48,10 @@ struct BoolType : PyConcreteType<BoolType> {
 
 struct BitVectorType : PyConcreteType<BitVectorType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABitVector;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTBitVectorTypeGetTypeID;
   static constexpr const char *pyClassName = "BitVectorType";
+  static inline const MlirStringRef name = mlirSMTBitVectorTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -62,7 +68,10 @@ struct BitVectorType : PyConcreteType<BitVectorType> {
 
 struct IntType : PyConcreteType<IntType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsAInt;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTIntTypeGetTypeID;
   static constexpr const char *pyClassName = "IntType";
+  static inline const MlirStringRef name = mlirSMTIntTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -82,12 +91,12 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
   IntType::bind(m);
 
   auto exportSMTLIB = [](MlirOperation module, bool inlineSingleUseValues,
-                         bool indentLetBody) {
+                         bool indentLetBody, bool emitReset) {
     CollectDiagnosticsToStringScope scope(mlirOperationGetContext(module));
     PyPrintAccumulator printAccum;
     MlirLogicalResult result = mlirTranslateOperationToSMTLIB(
         module, printAccum.getCallback(), printAccum.getUserData(),
-        inlineSingleUseValues, indentLetBody);
+        inlineSingleUseValues, indentLetBody, emitReset);
     if (mlirLogicalResultIsSuccess(result))
       return printAccum.join();
     throw nb::value_error(
@@ -98,20 +107,21 @@ static void populateDialectSMTSubmodule(nanobind::module_ &m) {
   m.def(
       "export_smtlib",
       [&exportSMTLIB](const PyOperation &module, bool inlineSingleUseValues,
-                      bool indentLetBody) {
-        return exportSMTLIB(module, inlineSingleUseValues, indentLetBody);
+                      bool indentLetBody, bool emitReset) {
+        return exportSMTLIB(module, inlineSingleUseValues, indentLetBody,
+                            emitReset);
       },
       "module"_a, "inline_single_use_values"_a = false,
-      "indent_let_body"_a = false);
+      "indent_let_body"_a = false, "emit_reset"_a = true);
   m.def(
       "export_smtlib",
       [&exportSMTLIB](PyModule &module, bool inlineSingleUseValues,
-                      bool indentLetBody) {
+                      bool indentLetBody, bool emitReset) {
         return exportSMTLIB(mlirModuleGetOperation(module.get()),
-                            inlineSingleUseValues, indentLetBody);
+                            inlineSingleUseValues, indentLetBody, emitReset);
       },
       "module"_a, "inline_single_use_values"_a = false,
-      "indent_let_body"_a = false);
+      "indent_let_body"_a = false, "emit_reset"_a = true);
 }
 } // namespace smt
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

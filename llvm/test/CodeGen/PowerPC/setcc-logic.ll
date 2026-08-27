@@ -367,8 +367,7 @@ define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xxlor v2, v2, v3
 ; CHECK-NEXT:    xxlxor v3, v3, v3
-; CHECK-NEXT:    vcmpequw v2, v2, v3
-; CHECK-NEXT:    xxlnor v2, v2, v2
+; CHECK-NEXT:    vcmpgtuw v2, v2, v3
 ; CHECK-NEXT:    blr
   %a = icmp ne <4 x i32> %P, zeroinitializer
   %b = icmp ne <4 x i32> %Q, zeroinitializer

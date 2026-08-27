@@ -27,6 +27,8 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r20 = zext i16 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r24 = sext i32 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r25 = zext i32 poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r26 = sext i64 poison to i128
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r27 = zext i64 poison to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i16 = sext <2 x i8> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i8i16 = zext <2 x i8> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i32 = sext <2 x i8> poison to <2 x i32>
@@ -39,42 +41,44 @@ define void @ext() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i16i64 = zext <2 x i16> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i64 = sext <2 x i32> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> poison to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %s2i64i128 = sext <2 x i64> poison to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %z2i64i128 = zext <2 x i64> poison to <2 x i128>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> poison to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z4i8i32 = zext <4 x i8> poison to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i64 = sext <4 x i8> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %z4i8i64 = zext <4 x i8> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s4i8i64 = sext <4 x i8> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %z4i8i64 = zext <4 x i8> poison to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i16i32 = sext <4 x i16> poison to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z4i16i32 = zext <4 x i16> poison to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s4i16i64 = sext <4 x i16> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %z4i16i64 = zext <4 x i16> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s4i32i64 = sext <4 x i32> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z4i32i64 = zext <4 x i32> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s4i16i64 = sext <4 x i16> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %z4i16i64 = zext <4 x i16> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s4i32i64 = sext <4 x i32> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %z4i32i64 = zext <4 x i32> poison to <4 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8i8i16 = sext <8 x i8> poison to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z8i8i16 = zext <8 x i8> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s8i8i32 = sext <8 x i8> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %z8i8i32 = zext <8 x i8> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %s8i8i64 = sext <8 x i8> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %z8i8i64 = zext <8 x i8> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s8i16i32 = sext <8 x i16> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z8i16i32 = zext <8 x i16> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %s8i16i64 = sext <8 x i16> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %z8i16i64 = zext <8 x i16> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %s8i32i64 = sext <8 x i32> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %z8i32i64 = zext <8 x i32> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s16i8i16 = sext <16 x i8> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z16i8i16 = zext <16 x i8> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %s16i8i32 = sext <16 x i8> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %z16i8i32 = zext <16 x i8> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %s16i8i64 = sext <16 x i8> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %z16i8i64 = zext <16 x i8> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %s16i16i32 = sext <16 x i16> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %z16i16i32 = zext <16 x i16> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %s16i16i64 = sext <16 x i16> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %z16i16i64 = zext <16 x i16> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %s16i32i64 = sext <16 x i32> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %z16i32i64 = zext <16 x i32> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s8i8i32 = sext <8 x i8> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %z8i8i32 = zext <8 x i8> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %s8i8i64 = sext <8 x i8> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %z8i8i64 = zext <8 x i8> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s8i16i32 = sext <8 x i16> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %z8i16i32 = zext <8 x i16> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %s8i16i64 = sext <8 x i16> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %z8i16i64 = zext <8 x i16> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s8i32i64 = sext <8 x i32> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %z8i32i64 = zext <8 x i32> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s16i8i16 = sext <16 x i8> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %z16i8i16 = zext <16 x i8> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %s16i8i32 = sext <16 x i8> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %z16i8i32 = zext <16 x i8> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 15 for: %s16i8i64 = sext <16 x i8> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 15 for: %z16i8i64 = zext <16 x i8> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s16i16i32 = sext <16 x i16> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %z16i16i32 = zext <16 x i16> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %s16i16i64 = sext <16 x i16> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %z16i16i64 = zext <16 x i16> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %s16i32i64 = sext <16 x i32> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %z16i32i64 = zext <16 x i32> poison to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r0 = sext i1 poison to i8
@@ -97,6 +101,8 @@ define void @ext() {
   %r20 = zext i16 poison to i64
   %r24 = sext i32 poison to i64
   %r25 = zext i32 poison to i64
+  %r26 = sext i64 poison to i128
+  %r27 = zext i64 poison to i128
 
   %s2i8i16 = sext <2 x i8> poison to <2 x i16>
   %z2i8i16 = zext <2 x i8> poison to <2 x i16>
@@ -110,6 +116,8 @@ define void @ext() {
   %z2i16i64 = zext <2 x i16> poison to <2 x i64>
   %s2i32i64 = sext <2 x i32> poison to <2 x i64>
   %z2i32i64 = zext <2 x i32> poison to <2 x i64>
+  %s2i64i128 = sext <2 x i64> poison to <2 x i128>
+  %z2i64i128 = zext <2 x i64> poison to <2 x i128>
 
   %s4i8i16 = sext <4 x i8>  poison to <4 x i16>
   %z4i8i16 = zext <4 x i8>  poison to <4 x i16>
@@ -164,30 +172,32 @@ define void @trunc() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r27 = trunc i64 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r28 = trunc i64 poison to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r29 = trunc i64 poison to i32
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r31 = trunc i128 poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i8i16 = trunc <2 x i16> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i8i32 = trunc <2 x i32> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i8i64 = trunc <2 x i64> poison to <2 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s2i16i32 = trunc <2 x i32> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i16i64 = trunc <2 x i64> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i64 = trunc <2 x i64> poison to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s2i32i128 = trunc <2 x i128> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %s4i8i16 = trunc <4 x i16> poison to <4 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = trunc <4 x i32> poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i64 = trunc <4 x i64> poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s4i8i64 = trunc <4 x i64> poison to <4 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i16i32 = trunc <4 x i32> poison to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s4i16i64 = trunc <4 x i64> poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s4i16i64 = trunc <4 x i64> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s4i32i64 = trunc <4 x i64> poison to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8i8i16 = trunc <8 x i16> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s8i8i32 = trunc <8 x i32> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %s8i8i64 = trunc <8 x i64> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s8i8i32 = trunc <8 x i32> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s8i8i64 = trunc <8 x i64> poison to <8 x i8>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8i16i32 = trunc <8 x i32> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s8i16i64 = trunc <8 x i64> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s8i32i64 = trunc <8 x i64> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s8i16i64 = trunc <8 x i64> poison to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s8i32i64 = trunc <8 x i64> poison to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s16i8i16 = trunc <16 x i16> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s16i8i32 = trunc <16 x i32> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %s16i8i64 = trunc <16 x i64> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s16i16i32 = trunc <16 x i32> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %s16i16i64 = trunc <16 x i64> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %s16i32i64 = trunc <16 x i64> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %s16i8i32 = trunc <16 x i32> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %s16i8i64 = trunc <16 x i64> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %s16i16i32 = trunc <16 x i32> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %s16i16i64 = trunc <16 x i64> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s16i32i64 = trunc <16 x i64> poison to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r8 = trunc i8 poison to i1
@@ -200,6 +210,7 @@ define void @trunc() {
   %r27 = trunc i64 poison to i8
   %r28 = trunc i64 poison to i16
   %r29 = trunc i64 poison to i32
+  %r31 = trunc i128 poison to i64
 
   %s2i8i16 = trunc <2 x i16> poison to <2 x i8>
   %s2i8i32 = trunc <2 x i32> poison to <2 x i8>
@@ -207,6 +218,7 @@ define void @trunc() {
   %s2i16i32 = trunc <2 x i32> poison to <2 x i16>
   %s2i16i64 = trunc <2 x i64> poison to <2 x i16>
   %s2i32i64 = trunc <2 x i64> poison to <2 x i32>
+  %s2i32i128 = trunc <2 x i128> poison to <2 x i64>
 
   %s4i8i16 = trunc <4 x i16> poison to <4 x i8>
   %s4i8i32 = trunc <4 x i32> poison to <4 x i8>
@@ -231,7 +243,7 @@ define void @trunc() {
   ret void
 }
 
-define i32 @casts_no_users() {
+define void @casts_no_users() {
 ; CHECK-LABEL: 'casts_no_users'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r30 = fptoui float poison to i1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r31 = fptosi float poison to i1
@@ -275,34 +287,34 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r69 = uitofp i64 poison to double
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r80 = fptrunc double poison to float
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r81 = fptrunc <2 x double> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r82 = fptrunc <4 x double> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r83 = fptrunc <8 x double> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r84 = fptrunc <16 x double> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r82 = fptrunc <4 x double> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r83 = fptrunc <8 x double> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r84 = fptrunc <16 x double> poison to <16 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %truncf64f16 = fptrunc double poison to half
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %truncv2f64f16 = fptrunc <2 x double> poison to <2 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %truncv4f64f16 = fptrunc <4 x double> poison to <4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f64f16 = fptrunc <8 x double> poison to <8 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f64f16 = fptrunc <16 x double> poison to <16 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %truncv2f64f16 = fptrunc <2 x double> poison to <2 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %truncv4f64f16 = fptrunc <4 x double> poison to <4 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %truncv8f64f16 = fptrunc <8 x double> poison to <8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %truncv16f64f16 = fptrunc <16 x double> poison to <16 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %truncv32f16 = fptrunc float poison to half
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %truncv2f32f16 = fptrunc <2 x float> poison to <2 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %truncv4f32f16 = fptrunc <4 x float> poison to <4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f32f16 = fptrunc <8 x float> poison to <8 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f32f16 = fptrunc <16 x float> poison to <16 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %truncv8f32f16 = fptrunc <8 x float> poison to <8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %truncv16f32f16 = fptrunc <16 x float> poison to <16 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r85 = fpext float poison to double
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r86 = fpext <2 x float> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r87 = fpext <4 x float> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r88 = fpext <8 x float> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r89 = fpext <16 x float> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r87 = fpext <4 x float> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r88 = fpext <8 x float> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r89 = fpext <16 x float> poison to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %extf16f32 = fpext half poison to float
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %extv2f16f32 = fpext <2 x half> poison to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %extv4f16f32 = fpext <4 x half> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f32 = fpext <8 x half> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f32 = fpext <16 x half> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %extv8f16f32 = fpext <8 x half> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %extv16f16f32 = fpext <16 x half> poison to <16 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %extf16f64 = fpext half poison to double
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv2f16f64 = fpext <2 x half> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %extv4f16f64 = fpext <4 x half> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f64 = fpext <8 x half> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f64 = fpext <16 x half> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %extv2f16f64 = fpext <2 x half> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %extv4f16f64 = fpext <4 x half> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %extv8f16f64 = fpext <8 x half> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %extv16f16f64 = fpext <16 x half> poison to <16 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r90 = fptoui <2 x float> poison to <2 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r91 = fptosi <2 x float> poison to <2 x i1>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r92 = fptoui <2 x float> poison to <2 x i8>
@@ -311,159 +323,159 @@ define i32 @casts_no_users() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r95 = fptosi <2 x float> poison to <2 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r96 = fptoui <2 x float> poison to <2 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r97 = fptosi <2 x float> poison to <2 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r98 = fptoui <2 x float> poison to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r99 = fptosi <2 x float> poison to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r100 = fptoui <2 x double> poison to <2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r101 = fptosi <2 x double> poison to <2 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r102 = fptoui <2 x double> poison to <2 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r103 = fptosi <2 x double> poison to <2 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r104 = fptoui <2 x double> poison to <2 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r105 = fptosi <2 x double> poison to <2 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r106 = fptoui <2 x double> poison to <2 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r107 = fptosi <2 x double> poison to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r98 = fptoui <2 x float> poison to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r99 = fptosi <2 x float> poison to <2 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r100 = fptoui <2 x double> poison to <2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r101 = fptosi <2 x double> poison to <2 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r102 = fptoui <2 x double> poison to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r103 = fptosi <2 x double> poison to <2 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r104 = fptoui <2 x double> poison to <2 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r105 = fptosi <2 x double> poison to <2 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r106 = fptoui <2 x double> poison to <2 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r107 = fptosi <2 x double> poison to <2 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r108 = fptoui <2 x double> poison to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r109 = fptosi <2 x double> poison to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r110 = fptoui <4 x float> poison to <4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r111 = fptosi <4 x float> poison to <4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r112 = fptoui <4 x float> poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r113 = fptosi <4 x float> poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r114 = fptoui <4 x float> poison to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r115 = fptosi <4 x float> poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: %r110 = fptoui <4 x float> poison to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: %r111 = fptosi <4 x float> poison to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r112 = fptoui <4 x float> poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r113 = fptosi <4 x float> poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r114 = fptoui <4 x float> poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r115 = fptosi <4 x float> poison to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r116 = fptoui <4 x float> poison to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r117 = fptosi <4 x float> poison to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r118 = fptoui <4 x float> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r119 = fptosi <4 x float> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r120 = fptoui <4 x double> poison to <4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r121 = fptosi <4 x double> poison to <4 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r122 = fptoui <4 x double> poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r123 = fptosi <4 x double> poison to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r124 = fptoui <4 x double> poison to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r125 = fptosi <4 x double> poison to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r126 = fptoui <4 x double> poison to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r127 = fptosi <4 x double> poison to <4 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r128 = fptoui <4 x double> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r129 = fptosi <4 x double> poison to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:1 Lat:1 SizeLat:1 for: %r130 = fptoui <8 x float> poison to <8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:1 Lat:1 SizeLat:1 for: %r131 = fptosi <8 x float> poison to <8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r132 = fptoui <8 x float> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r133 = fptosi <8 x float> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r134 = fptoui <8 x float> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %r135 = fptosi <8 x float> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r136 = fptoui <8 x float> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r137 = fptosi <8 x float> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r138 = fptoui <8 x float> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r139 = fptosi <8 x float> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r140 = fptoui <8 x double> poison to <8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r141 = fptosi <8 x double> poison to <8 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r142 = fptoui <8 x double> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r143 = fptosi <8 x double> poison to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r144 = fptoui <8 x double> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r145 = fptosi <8 x double> poison to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r146 = fptoui <8 x double> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r147 = fptosi <8 x double> poison to <8 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r148 = fptoui <8 x double> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r149 = fptosi <8 x double> poison to <8 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:83 CodeSize:1 Lat:1 SizeLat:1 for: %r150 = fptoui <16 x float> poison to <16 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:83 CodeSize:1 Lat:1 SizeLat:1 for: %r151 = fptosi <16 x float> poison to <16 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r152 = fptoui <16 x float> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %r153 = fptosi <16 x float> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r154 = fptoui <16 x float> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r155 = fptosi <16 x float> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r156 = fptoui <16 x float> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r157 = fptosi <16 x float> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r158 = fptoui <16 x float> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r159 = fptosi <16 x float> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:87 CodeSize:1 Lat:1 SizeLat:1 for: %r160 = fptoui <16 x double> poison to <16 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:87 CodeSize:1 Lat:1 SizeLat:1 for: %r161 = fptosi <16 x double> poison to <16 x i1>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:1 Lat:1 SizeLat:1 for: %r162 = fptoui <16 x double> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:1 Lat:1 SizeLat:1 for: %r163 = fptosi <16 x double> poison to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %r164 = fptoui <16 x double> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %r165 = fptosi <16 x double> poison to <16 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r166 = fptoui <16 x double> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r167 = fptosi <16 x double> poison to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r168 = fptoui <16 x double> poison to <16 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r169 = fptosi <16 x double> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r118 = fptoui <4 x float> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r119 = fptosi <4 x float> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r120 = fptoui <4 x double> poison to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r121 = fptosi <4 x double> poison to <4 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r122 = fptoui <4 x double> poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r123 = fptosi <4 x double> poison to <4 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r124 = fptoui <4 x double> poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r125 = fptosi <4 x double> poison to <4 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r126 = fptoui <4 x double> poison to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r127 = fptosi <4 x double> poison to <4 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r128 = fptoui <4 x double> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r129 = fptosi <4 x double> poison to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:25 Lat:41 SizeLat:41 for: %r130 = fptoui <8 x float> poison to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:25 Lat:41 SizeLat:41 for: %r131 = fptosi <8 x float> poison to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r132 = fptoui <8 x float> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r133 = fptosi <8 x float> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r134 = fptoui <8 x float> poison to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %r135 = fptosi <8 x float> poison to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r136 = fptoui <8 x float> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r137 = fptosi <8 x float> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r138 = fptoui <8 x float> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r139 = fptosi <8 x float> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r140 = fptoui <8 x double> poison to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r141 = fptosi <8 x double> poison to <8 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r142 = fptoui <8 x double> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r143 = fptosi <8 x double> poison to <8 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r144 = fptoui <8 x double> poison to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r145 = fptosi <8 x double> poison to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r146 = fptoui <8 x double> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r147 = fptosi <8 x double> poison to <8 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r148 = fptoui <8 x double> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r149 = fptosi <8 x double> poison to <8 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:83 CodeSize:51 Lat:83 SizeLat:83 for: %r150 = fptoui <16 x float> poison to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:83 CodeSize:51 Lat:83 SizeLat:83 for: %r151 = fptosi <16 x float> poison to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r152 = fptoui <16 x float> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 11 for: %r153 = fptosi <16 x float> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r154 = fptoui <16 x float> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r155 = fptosi <16 x float> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r156 = fptoui <16 x float> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r157 = fptosi <16 x float> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %r158 = fptoui <16 x float> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %r159 = fptosi <16 x float> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:87 CodeSize:55 Lat:87 SizeLat:87 for: %r160 = fptoui <16 x double> poison to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:87 CodeSize:55 Lat:87 SizeLat:87 for: %r161 = fptosi <16 x double> poison to <16 x i1>
+; CHECK-NEXT:  Cost Model: Found costs of 23 for: %r162 = fptoui <16 x double> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 23 for: %r163 = fptosi <16 x double> poison to <16 x i8>
+; CHECK-NEXT:  Cost Model: Found costs of 22 for: %r164 = fptoui <16 x double> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 22 for: %r165 = fptosi <16 x double> poison to <16 x i16>
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %r166 = fptoui <16 x double> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 20 for: %r167 = fptosi <16 x double> poison to <16 x i32>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r168 = fptoui <16 x double> poison to <16 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r169 = fptosi <16 x double> poison to <16 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r170 = uitofp <2 x i1> poison to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r171 = sitofp <2 x i1> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r172 = uitofp <2 x i8> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r173 = sitofp <2 x i8> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r174 = uitofp <2 x i16> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r175 = sitofp <2 x i16> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r172 = uitofp <2 x i8> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r173 = sitofp <2 x i8> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r174 = uitofp <2 x i16> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r175 = sitofp <2 x i16> poison to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r176 = uitofp <2 x i32> poison to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r177 = sitofp <2 x i32> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r178 = uitofp <2 x i64> poison to <2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r179 = sitofp <2 x i64> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: %r178 = uitofp <2 x i64> poison to <2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:5 Lat:8 SizeLat:8 for: %r179 = sitofp <2 x i64> poison to <2 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r180 = uitofp <2 x i1> poison to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r181 = sitofp <2 x i1> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r182 = uitofp <2 x i8> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r183 = sitofp <2 x i8> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r184 = uitofp <2 x i16> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r185 = sitofp <2 x i16> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r186 = uitofp <2 x i32> poison to <2 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r187 = sitofp <2 x i32> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r182 = uitofp <2 x i8> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r183 = sitofp <2 x i8> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r184 = uitofp <2 x i16> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r185 = sitofp <2 x i16> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r186 = uitofp <2 x i32> poison to <2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r187 = sitofp <2 x i32> poison to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r188 = uitofp <2 x i64> poison to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r189 = sitofp <2 x i64> poison to <2 x double>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r190 = uitofp <4 x i1> poison to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r191 = sitofp <4 x i1> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r192 = uitofp <4 x i8> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r193 = sitofp <4 x i8> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r194 = uitofp <4 x i16> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r195 = sitofp <4 x i16> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r192 = uitofp <4 x i8> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r193 = sitofp <4 x i8> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r194 = uitofp <4 x i16> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r195 = sitofp <4 x i16> poison to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r196 = uitofp <4 x i32> poison to <4 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r197 = sitofp <4 x i32> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:1 SizeLat:1 for: %r198 = uitofp <4 x i64> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:1 SizeLat:1 for: %r199 = sitofp <4 x i64> poison to <4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r200 = uitofp <4 x i1> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r201 = sitofp <4 x i1> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %r202 = uitofp <4 x i8> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %r203 = sitofp <4 x i8> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %r204 = uitofp <4 x i16> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %r205 = sitofp <4 x i16> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r206 = uitofp <4 x i32> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r207 = sitofp <4 x i32> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r208 = uitofp <4 x i64> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r209 = sitofp <4 x i64> poison to <4 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r210 = uitofp <8 x i1> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r211 = sitofp <8 x i1> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r212 = uitofp <8 x i8> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r213 = sitofp <8 x i8> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r214 = uitofp <8 x i16> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r215 = sitofp <8 x i16> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r216 = uitofp <8 x i32> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r217 = sitofp <8 x i32> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:1 Lat:1 SizeLat:1 for: %r218 = uitofp <8 x i64> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:1 Lat:1 SizeLat:1 for: %r219 = sitofp <8 x i64> poison to <8 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r220 = uitofp <8 x i1> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r221 = sitofp <8 x i1> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r222 = uitofp <8 x i8> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r223 = sitofp <8 x i8> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r224 = uitofp <8 x i16> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r225 = sitofp <8 x i16> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r226 = uitofp <8 x i16> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %r227 = sitofp <8 x i16> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r228 = uitofp <8 x i64> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r229 = sitofp <8 x i64> poison to <8 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r230 = uitofp <16 x i1> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r231 = sitofp <16 x i1> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r232 = uitofp <16 x i8> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r233 = sitofp <16 x i8> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r234 = uitofp <16 x i16> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r235 = sitofp <16 x i16> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r236 = uitofp <16 x i32> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r237 = sitofp <16 x i32> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:1 Lat:1 SizeLat:1 for: %r238 = uitofp <16 x i64> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:1 Lat:1 SizeLat:1 for: %r239 = sitofp <16 x i64> poison to <16 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %r240 = uitofp <16 x i1> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %r241 = sitofp <16 x i1> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:1 Lat:1 SizeLat:1 for: %r242 = uitofp <16 x i8> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:1 Lat:1 SizeLat:1 for: %r243 = sitofp <16 x i8> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:1 SizeLat:1 for: %r244 = uitofp <16 x i16> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:1 SizeLat:1 for: %r245 = sitofp <16 x i16> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:1 SizeLat:1 for: %r246 = uitofp <16 x i16> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:1 SizeLat:1 for: %r247 = sitofp <16 x i16> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r248 = uitofp <16 x i64> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r249 = sitofp <16 x i64> poison to <16 x double>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: %r198 = uitofp <4 x i64> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:18 SizeLat:18 for: %r199 = sitofp <4 x i64> poison to <4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r200 = uitofp <4 x i1> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r201 = sitofp <4 x i1> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %r202 = uitofp <4 x i8> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %r203 = sitofp <4 x i8> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %r204 = uitofp <4 x i16> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 9 for: %r205 = sitofp <4 x i16> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r206 = uitofp <4 x i32> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r207 = sitofp <4 x i32> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r208 = uitofp <4 x i64> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r209 = sitofp <4 x i64> poison to <4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r210 = uitofp <8 x i1> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %r211 = sitofp <8 x i1> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r212 = uitofp <8 x i8> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 10 for: %r213 = sitofp <8 x i8> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r214 = uitofp <8 x i16> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r215 = sitofp <8 x i16> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r216 = uitofp <8 x i32> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %r217 = sitofp <8 x i32> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:22 Lat:36 SizeLat:36 for: %r218 = uitofp <8 x i64> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:22 Lat:36 SizeLat:36 for: %r219 = sitofp <8 x i64> poison to <8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %r220 = uitofp <8 x i1> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %r221 = sitofp <8 x i1> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r222 = uitofp <8 x i8> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r223 = sitofp <8 x i8> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r224 = uitofp <8 x i16> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r225 = sitofp <8 x i16> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r226 = uitofp <8 x i16> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 19 for: %r227 = sitofp <8 x i16> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r228 = uitofp <8 x i64> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r229 = sitofp <8 x i64> poison to <8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %r230 = uitofp <16 x i1> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %r231 = sitofp <16 x i1> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 21 for: %r232 = uitofp <16 x i8> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 21 for: %r233 = sitofp <16 x i8> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r234 = uitofp <16 x i16> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r235 = sitofp <16 x i16> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r236 = uitofp <16 x i32> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %r237 = sitofp <16 x i32> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:72 SizeLat:72 for: %r238 = uitofp <16 x i64> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:44 Lat:72 SizeLat:72 for: %r239 = sitofp <16 x i64> poison to <16 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 15 for: %r240 = uitofp <16 x i1> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 15 for: %r241 = sitofp <16 x i1> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 39 for: %r242 = uitofp <16 x i8> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 39 for: %r243 = sitofp <16 x i8> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 38 for: %r244 = uitofp <16 x i16> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 38 for: %r245 = sitofp <16 x i16> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 38 for: %r246 = uitofp <16 x i16> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 38 for: %r247 = sitofp <16 x i16> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r248 = uitofp <16 x i64> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %r249 = sitofp <16 x i64> poison to <16 x double>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r30 = fptoui float poison to i1
   %r31 = fptosi float poison to i1
@@ -710,10 +722,10 @@ define i32 @casts_no_users() {
   %r248 = uitofp <16 x i64> poison to <16 x double>
   %r249 = sitofp <16 x i64> poison to <16 x double>
 
-  ret i32 undef
+  ret void
 }
 
-define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
+define void @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e, i128 %f) {
 ; CHECK-LABEL: 'casts_with_users'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r0 = sext i8 %a to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r1 = sext i8 %a to i32
@@ -721,24 +733,28 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r3 = sext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r4 = sext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r5 = sext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s128 = sext i64 %d to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r0, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r1, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r2, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r3, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r4, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r5, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store i128 %s128, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r6 = zext i8 %a to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r7 = zext i8 %a to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r8 = zext i8 %a to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r9 = zext i16 %b to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r10 = zext i16 %b to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %c to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z128 = zext i64 %d to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r6, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r7, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r8, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r9, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r10, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r11, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:1 SizeLat:2 for: store i128 %z128, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r12 = trunc i64 %d to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r13 = trunc i64 %d to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r14 = trunc i64 %d to i8
@@ -770,7 +786,7 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r23, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i32 %r24, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r25, ptr undef, align 8
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r12
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r0 = sext i8 %a to i16
   %r1 = sext i8 %a to i32
@@ -778,12 +794,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r3 = sext i16 %b to i32
   %r4 = sext i16 %b to i64
   %r5 = sext i32 %c to i64
+  %s128 = sext i64 %d to i128
   store i16 %r0, ptr undef
   store i32 %r1, ptr undef
   store i64 %r2, ptr undef
   store i32 %r3, ptr undef
   store i64 %r4, ptr undef
   store i64 %r5, ptr undef
+  store i128 %s128, ptr undef
 
   %r6 = zext i8 %a to i16
   %r7 = zext i8 %a to i32
@@ -791,12 +809,14 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   %r9 = zext i16 %b to i32
   %r10 = zext i16 %b to i64
   %r11 = zext i32 %c to i64
+  %z128 = zext i64 %d to i128
   store i16 %r6, ptr undef
   store i32 %r7, ptr undef
   store i64 %r8, ptr undef
   store i32 %r9, ptr undef
   store i64 %r10, ptr undef
   store i64 %r11, ptr undef
+  store i128 %z128, ptr undef
 
   %r12 = trunc i64 %d to i32
   %r13 = trunc i64 %d to i16
@@ -831,10 +851,10 @@ define i32 @casts_with_users(i8 %a, i16 %b, i32 %c, i64 %d, i1 %e) {
   store i16 %r23, ptr undef
   store i32 %r24, ptr undef
   store i64 %r25, ptr undef
-  ret i32 %r12
+  ret void
 }
 
-define i32 @bitcasts() {
+define void @bitcasts() {
 ; CHECK-LABEL: 'bitcasts'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %a = bitcast i32 poison to i32
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %b = bitcast float poison to float
@@ -844,7 +864,7 @@ define i32 @bitcasts() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f = bitcast double poison to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g = bitcast half poison to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h = bitcast i16 poison to half
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a = bitcast i32 poison to i32
   %b = bitcast float poison to float
@@ -854,14 +874,15 @@ define i32 @bitcasts() {
   %f = bitcast double poison to i64
   %g = bitcast half poison to i16
   %h = bitcast i16 poison to half
-  ret i32 undef
+  ret void
 }
 
-define i32 @load_extends() {
+define void @load_extends() {
 ; CHECK-LABEL: 'load_extends'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi8 = load i8, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi16 = load i16, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi32 = load i32, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadi64 = load i64, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i8 = load <2 x i8>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i8 = load <4 x i8>, ptr undef, align 4
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv8i8 = load <8 x i8>, ptr undef, align 8
@@ -869,6 +890,7 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i16 = load <4 x i16>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i32 = load <2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv4i32 = load <4 x i32>, ptr undef, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %loadv2i64 = load <2 x i64>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r0 = sext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r1 = zext i8 %loadi8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r2 = sext i8 %loadi8 to i32
@@ -881,6 +903,8 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r9 = zext i16 %loadi16 to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r10 = sext i32 %loadi32 to i64
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %loadi32 to i64
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r12 = sext i64 %loadi64 to i128
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r13 = zext i64 %loadi64 to i128
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
@@ -893,13 +917,16 @@ define i32 @load_extends() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v9 = zext <2 x i16> %loadv2i16 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v10 = sext <2 x i32> %loadv2i32 to <2 x i64>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:7 Lat:11 SizeLat:11 for: %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %loadi8 = load i8, ptr undef
   %loadi16 = load i16, ptr undef
   %loadi32 = load i32, ptr undef
+  %loadi64 = load i64, ptr undef
   %loadv2i8 = load <2 x i8>, ptr undef
   %loadv4i8 = load <4 x i8>, ptr undef
   %loadv8i8 = load <8 x i8>, ptr undef
@@ -907,6 +934,7 @@ define i32 @load_extends() {
   %loadv4i16 = load <4 x i16>, ptr undef
   %loadv2i32 = load <2 x i32>, ptr undef
   %loadv4i32 = load <4 x i32>, ptr undef
+  %loadv2i64 = load <2 x i64>, ptr undef
 
   %r0 = sext i8 %loadi8 to i16
   %r1 = zext i8 %loadi8 to i16
@@ -920,6 +948,8 @@ define i32 @load_extends() {
   %r9 = zext i16 %loadi16 to i64
   %r10 = sext i32 %loadi32 to i64
   %r11 = zext i32 %loadi32 to i64
+  %r12 = sext i64 %loadi64 to i128
+  %r13 = zext i64 %loadi64 to i128
 
   %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
   %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
@@ -935,11 +965,13 @@ define i32 @load_extends() {
   %v11 = zext <2 x i32> %loadv2i32 to <2 x i64>
   %v12 = sext <4 x i32> %loadv4i32 to <4 x i64>
   %v13 = zext <4 x i32> %loadv4i32 to <4 x i64>
+  %v14 = sext <2 x i64> %loadv2i64 to <2 x i128>
+  %v15 = zext <2 x i64> %loadv2i64 to <2 x i128>
 
-  ret i32 undef
+  ret void
 }
 
-define i32 @store_truncs() {
+define void @store_truncs() {
 ; CHECK-LABEL: 'store_truncs'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r0 = trunc i64 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i8 %r0, ptr undef, align 1
@@ -953,7 +985,9 @@ define i32 @store_truncs() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i16 %r4, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r5 = trunc i16 poison to i8
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i8 %r5, ptr undef, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; CHECK-NEXT:  Cost Model: Found costs of 0 for: %r6 = trunc i128 poison to i64
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i64 %r6, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r0 = trunc i64 poison to i8
   store i8 %r0, ptr undef
@@ -967,7 +1001,9 @@ define i32 @store_truncs() {
   store i16 %r4, ptr undef
   %r5 = trunc i16 poison to i8
   store i8 %r5, ptr undef
-  ret i32 undef
+  %r6 = trunc i128 poison to i64
+  store i64 %r6, ptr undef
+  ret void
 }
 
 define void @extend_extract() {
@@ -1031,58 +1067,58 @@ define void @fp16cast() {
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r95 = fptosi <2 x half> poison to <2 x i16>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r96 = fptoui <2 x half> poison to <2 x i32>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r97 = fptosi <2 x half> poison to <2 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r98 = fptoui <2 x half> poison to <2 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r99 = fptosi <2 x half> poison to <2 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r98 = fptoui <2 x half> poison to <2 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r99 = fptosi <2 x half> poison to <2 x i64>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r110 = fptoui <4 x half> poison to <4 x i1>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r111 = fptosi <4 x half> poison to <4 x i1>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r112 = fptoui <4 x half> poison to <4 x i8>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r113 = fptosi <4 x half> poison to <4 x i8>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r114 = fptoui <4 x half> poison to <4 x i16>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r115 = fptosi <4 x half> poison to <4 x i16>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r116 = fptoui <4 x half> poison to <4 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:1 Lat:1 SizeLat:1 for: %r117 = fptosi <4 x half> poison to <4 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r118 = fptoui <4 x half> poison to <4 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r119 = fptosi <4 x half> poison to <4 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r130 = fptoui <8 x half> poison to <8 x i1>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r131 = fptosi <8 x half> poison to <8 x i1>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r132 = fptoui <8 x half> poison to <8 x i8>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r133 = fptosi <8 x half> poison to <8 x i8>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: %r116 = fptoui <4 x half> poison to <4 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:12 Lat:20 SizeLat:20 for: %r117 = fptosi <4 x half> poison to <4 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r118 = fptoui <4 x half> poison to <4 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r119 = fptosi <4 x half> poison to <4 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r130 = fptoui <8 x half> poison to <8 x i1>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r131 = fptosi <8 x half> poison to <8 x i1>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r132 = fptoui <8 x half> poison to <8 x i8>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r133 = fptosi <8 x half> poison to <8 x i8>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r134 = fptoui <8 x half> poison to <8 x i16>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r135 = fptosi <8 x half> poison to <8 x i16>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:1 Lat:1 SizeLat:1 for: %r136 = fptoui <8 x half> poison to <8 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:1 Lat:1 SizeLat:1 for: %r137 = fptosi <8 x half> poison to <8 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r138 = fptoui <8 x half> poison to <8 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r139 = fptosi <8 x half> poison to <8 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r150 = fptoui <16 x half> poison to <16 x i1>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r151 = fptosi <16 x half> poison to <16 x i1>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r152 = fptoui <16 x half> poison to <16 x i8>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r153 = fptosi <16 x half> poison to <16 x i8>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r154 = fptoui <16 x half> poison to <16 x i16>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r155 = fptosi <16 x half> poison to <16 x i16>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:82 CodeSize:1 Lat:1 SizeLat:1 for: %r156 = fptoui <16 x half> poison to <16 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:82 CodeSize:1 Lat:1 SizeLat:1 for: %r157 = fptosi <16 x half> poison to <16 x i32>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:1 Lat:1 SizeLat:1 for: %r158 = fptoui <16 x half> poison to <16 x i64>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:1 Lat:1 SizeLat:1 for: %r159 = fptosi <16 x half> poison to <16 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:25 Lat:41 SizeLat:41 for: %r136 = fptoui <8 x half> poison to <8 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:25 Lat:41 SizeLat:41 for: %r137 = fptosi <8 x half> poison to <8 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r138 = fptoui <8 x half> poison to <8 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r139 = fptosi <8 x half> poison to <8 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r150 = fptoui <16 x half> poison to <16 x i1>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r151 = fptosi <16 x half> poison to <16 x i1>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r152 = fptoui <16 x half> poison to <16 x i8>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r153 = fptosi <16 x half> poison to <16 x i8>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %r154 = fptoui <16 x half> poison to <16 x i16>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %r155 = fptosi <16 x half> poison to <16 x i16>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:82 CodeSize:50 Lat:82 SizeLat:82 for: %r156 = fptoui <16 x half> poison to <16 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:82 CodeSize:50 Lat:82 SizeLat:82 for: %r157 = fptosi <16 x half> poison to <16 x i32>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:54 Lat:86 SizeLat:86 for: %r158 = fptoui <16 x half> poison to <16 x i64>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:54 Lat:86 SizeLat:86 for: %r159 = fptosi <16 x half> poison to <16 x i64>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r250 = uitofp <8 x i1> poison to <8 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r251 = sitofp <8 x i1> poison to <8 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r252 = uitofp <8 x i8> poison to <8 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r253 = sitofp <8 x i8> poison to <8 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r254 = uitofp <8 x i16> poison to <8 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %r255 = sitofp <8 x i16> poison to <8 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r256 = uitofp <8 x i32> poison to <8 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r257 = sitofp <8 x i32> poison to <8 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r258 = uitofp <8 x i64> poison to <8 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r259 = sitofp <8 x i64> poison to <8 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r260 = uitofp <16 x i1> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r261 = sitofp <16 x i1> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r262 = uitofp <16 x i8> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r263 = sitofp <16 x i8> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r264 = uitofp <16 x i16> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r265 = sitofp <16 x i16> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %r266 = uitofp <16 x i32> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %r267 = sitofp <16 x i32> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %r268 = uitofp <16 x i64> poison to <16 x half>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %r269 = sitofp <16 x i64> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r256 = uitofp <8 x i32> poison to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r257 = sitofp <8 x i32> poison to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 7 for: %r258 = uitofp <8 x i64> poison to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 7 for: %r259 = sitofp <8 x i64> poison to <8 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r260 = uitofp <16 x i1> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r261 = sitofp <16 x i1> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r262 = uitofp <16 x i8> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %r263 = sitofp <16 x i8> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %r264 = uitofp <16 x i16> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %r265 = sitofp <16 x i16> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 6 for: %r266 = uitofp <16 x i32> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 6 for: %r267 = sitofp <16 x i32> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 14 for: %r268 = uitofp <16 x i64> poison to <16 x half>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 14 for: %r269 = sitofp <16 x i64> poison to <16 x half>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-FP16-LABEL: 'fp16cast'
@@ -1104,58 +1140,58 @@ define void @fp16cast() {
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r95 = fptosi <2 x half> poison to <2 x i16>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r96 = fptoui <2 x half> poison to <2 x i32>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r97 = fptosi <2 x half> poison to <2 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r98 = fptoui <2 x half> poison to <2 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %r99 = fptosi <2 x half> poison to <2 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r98 = fptoui <2 x half> poison to <2 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:10 for: %r99 = fptosi <2 x half> poison to <2 x i64>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r110 = fptoui <4 x half> poison to <4 x i1>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r111 = fptosi <4 x half> poison to <4 x i1>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r112 = fptoui <4 x half> poison to <4 x i8>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r113 = fptosi <4 x half> poison to <4 x i8>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r114 = fptoui <4 x half> poison to <4 x i16>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r115 = fptosi <4 x half> poison to <4 x i16>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r116 = fptoui <4 x half> poison to <4 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r117 = fptosi <4 x half> poison to <4 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r118 = fptoui <4 x half> poison to <4 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:1 Lat:1 SizeLat:1 for: %r119 = fptosi <4 x half> poison to <4 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r130 = fptoui <8 x half> poison to <8 x i1>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:1 Lat:1 SizeLat:1 for: %r131 = fptosi <8 x half> poison to <8 x i1>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r132 = fptoui <8 x half> poison to <8 x i8>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r133 = fptosi <8 x half> poison to <8 x i8>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r116 = fptoui <4 x half> poison to <4 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r117 = fptosi <4 x half> poison to <4 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r118 = fptoui <4 x half> poison to <4 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:21 SizeLat:21 for: %r119 = fptosi <4 x half> poison to <4 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r130 = fptoui <8 x half> poison to <8 x i1>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:24 Lat:40 SizeLat:40 for: %r131 = fptosi <8 x half> poison to <8 x i1>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r132 = fptoui <8 x half> poison to <8 x i8>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r133 = fptosi <8 x half> poison to <8 x i8>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r134 = fptoui <8 x half> poison to <8 x i16>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r135 = fptosi <8 x half> poison to <8 x i16>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r136 = fptoui <8 x half> poison to <8 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r137 = fptosi <8 x half> poison to <8 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r138 = fptoui <8 x half> poison to <8 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:1 Lat:1 SizeLat:1 for: %r139 = fptosi <8 x half> poison to <8 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r150 = fptoui <16 x half> poison to <16 x i1>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:1 Lat:1 SizeLat:1 for: %r151 = fptosi <16 x half> poison to <16 x i1>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r152 = fptoui <16 x half> poison to <16 x i8>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r153 = fptosi <16 x half> poison to <16 x i8>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r154 = fptoui <16 x half> poison to <16 x i16>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r155 = fptosi <16 x half> poison to <16 x i16>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r156 = fptoui <16 x half> poison to <16 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %r157 = fptosi <16 x half> poison to <16 x i32>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:1 Lat:1 SizeLat:1 for: %r158 = fptoui <16 x half> poison to <16 x i64>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:1 Lat:1 SizeLat:1 for: %r159 = fptosi <16 x half> poison to <16 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %r136 = fptoui <8 x half> poison to <8 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %r137 = fptosi <8 x half> poison to <8 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r138 = fptoui <8 x half> poison to <8 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:27 Lat:43 SizeLat:43 for: %r139 = fptosi <8 x half> poison to <8 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r150 = fptoui <16 x half> poison to <16 x i1>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:49 Lat:81 SizeLat:81 for: %r151 = fptosi <16 x half> poison to <16 x i1>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r152 = fptoui <16 x half> poison to <16 x i8>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r153 = fptosi <16 x half> poison to <16 x i8>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r154 = fptoui <16 x half> poison to <16 x i16>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r155 = fptosi <16 x half> poison to <16 x i16>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 8 for: %r156 = fptoui <16 x half> poison to <16 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 8 for: %r157 = fptosi <16 x half> poison to <16 x i32>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:54 Lat:86 SizeLat:86 for: %r158 = fptoui <16 x half> poison to <16 x i64>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:86 CodeSize:54 Lat:86 SizeLat:86 for: %r159 = fptosi <16 x half> poison to <16 x i64>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r250 = uitofp <8 x i1> poison to <8 x half>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r251 = sitofp <8 x i1> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r252 = uitofp <8 x i8> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r253 = sitofp <8 x i8> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r252 = uitofp <8 x i8> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r253 = sitofp <8 x i8> poison to <8 x half>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r254 = uitofp <8 x i16> poison to <8 x half>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of 1 for: %r255 = sitofp <8 x i16> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r256 = uitofp <8 x i32> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r257 = sitofp <8 x i32> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r258 = uitofp <8 x i64> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %r259 = sitofp <8 x i64> poison to <8 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r260 = uitofp <16 x i1> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %r261 = sitofp <16 x i1> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r262 = uitofp <16 x i8> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %r263 = sitofp <16 x i8> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r264 = uitofp <16 x i16> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %r265 = sitofp <16 x i16> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %r266 = uitofp <16 x i32> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %r267 = sitofp <16 x i32> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %r268 = uitofp <16 x i64> poison to <16 x half>
-; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %r269 = sitofp <16 x i64> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r256 = uitofp <8 x i32> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r257 = sitofp <8 x i32> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 7 for: %r258 = uitofp <8 x i64> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 7 for: %r259 = sitofp <8 x i64> poison to <8 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r260 = uitofp <16 x i1> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 3 for: %r261 = sitofp <16 x i1> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %r262 = uitofp <16 x i8> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 4 for: %r263 = sitofp <16 x i8> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r264 = uitofp <16 x i16> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 2 for: %r265 = sitofp <16 x i16> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 6 for: %r266 = uitofp <16 x i32> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 6 for: %r267 = sitofp <16 x i32> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 14 for: %r268 = uitofp <16 x i64> poison to <16 x half>
+; CHECK-FP16-NEXT:  Cost Model: Found costs of 14 for: %r269 = sitofp <16 x i64> poison to <16 x half>
 ; CHECK-FP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %r30 = fptoui half poison to i1
@@ -1242,46 +1278,46 @@ define void @bf16cast() {
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %extf16f32 = fpext bfloat poison to float
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %extv2f16f32 = fpext <2 x bfloat> poison to <2 x float>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 1 for: %extv4f16f32 = fpext <4 x bfloat> poison to <4 x float>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f32 = fpext <8 x bfloat> poison to <8 x float>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f32 = fpext <16 x bfloat> poison to <16 x float>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extf16f64 = fpext bfloat poison to double
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv2f16f64 = fpext <2 x bfloat> poison to <2 x double>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %extv4f16f64 = fpext <4 x bfloat> poison to <4 x double>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f64 = fpext <8 x bfloat> poison to <8 x double>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f64 = fpext <16 x bfloat> poison to <16 x double>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %truncf16f32 = fptrunc float poison to bfloat
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %truncv2f16f32 = fptrunc <2 x float> poison to <2 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %truncv4f16f32 = fptrunc <4 x float> poison to <4 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f16f32 = fptrunc <8 x float> poison to <8 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f16f32 = fptrunc <16 x float> poison to <16 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %truncf16f64 = fptrunc double poison to bfloat
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %truncv2f16f64 = fptrunc <2 x double> poison to <2 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %truncv4f16f64 = fptrunc <4 x double> poison to <4 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f16f64 = fptrunc <8 x double> poison to <8 x bfloat>
-; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f16f64 = fptrunc <16 x double> poison to <16 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %extv8f16f32 = fpext <8 x bfloat> poison to <8 x float>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 4 for: %extv16f16f32 = fpext <16 x bfloat> poison to <16 x float>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %extf16f64 = fpext bfloat poison to double
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 2 for: %extv2f16f64 = fpext <2 x bfloat> poison to <2 x double>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 3 for: %extv4f16f64 = fpext <4 x bfloat> poison to <4 x double>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 6 for: %extv8f16f64 = fpext <8 x bfloat> poison to <8 x double>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 12 for: %extv16f16f64 = fpext <16 x bfloat> poison to <16 x double>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 8 for: %truncf16f32 = fptrunc float poison to bfloat
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 8 for: %truncv2f16f32 = fptrunc <2 x float> poison to <2 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 8 for: %truncv4f16f32 = fptrunc <4 x float> poison to <4 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 15 for: %truncv8f16f32 = fptrunc <8 x float> poison to <8 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 30 for: %truncv16f16f32 = fptrunc <16 x float> poison to <16 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 9 for: %truncf16f64 = fptrunc double poison to bfloat
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 9 for: %truncv2f16f64 = fptrunc <2 x double> poison to <2 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 10 for: %truncv4f16f64 = fptrunc <4 x double> poison to <4 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 19 for: %truncv8f16f64 = fptrunc <8 x double> poison to <8 x bfloat>
+; CHECK-NOFP16-NEXT:  Cost Model: Found costs of 38 for: %truncv16f16f64 = fptrunc <16 x double> poison to <16 x bfloat>
 ; CHECK-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'bf16cast'
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %extf16f32 = fpext bfloat poison to float
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %extv2f16f32 = fpext <2 x bfloat> poison to <2 x float>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %extv4f16f32 = fpext <4 x bfloat> poison to <4 x float>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f32 = fpext <8 x bfloat> poison to <8 x float>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f32 = fpext <16 x bfloat> poison to <16 x float>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extf16f64 = fpext bfloat poison to double
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %extv2f16f64 = fpext <2 x bfloat> poison to <2 x double>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %extv4f16f64 = fpext <4 x bfloat> poison to <4 x double>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %extv8f16f64 = fpext <8 x bfloat> poison to <8 x double>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %extv16f16f64 = fpext <16 x bfloat> poison to <16 x double>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %extv8f16f32 = fpext <8 x bfloat> poison to <8 x float>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 4 for: %extv16f16f32 = fpext <16 x bfloat> poison to <16 x float>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %extf16f64 = fpext bfloat poison to double
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %extv2f16f64 = fpext <2 x bfloat> poison to <2 x double>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 3 for: %extv4f16f64 = fpext <4 x bfloat> poison to <4 x double>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 6 for: %extv8f16f64 = fpext <8 x bfloat> poison to <8 x double>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 12 for: %extv16f16f64 = fpext <16 x bfloat> poison to <16 x double>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %truncf16f32 = fptrunc float poison to bfloat
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %truncv2f16f32 = fptrunc <2 x float> poison to <2 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 8 for: %truncv2f16f32 = fptrunc <2 x float> poison to <2 x bfloat>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %truncv4f16f32 = fptrunc <4 x float> poison to <4 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f16f32 = fptrunc <8 x float> poison to <8 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f16f32 = fptrunc <16 x float> poison to <16 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %truncv8f16f32 = fptrunc <8 x float> poison to <8 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 4 for: %truncv16f16f32 = fptrunc <16 x float> poison to <16 x bfloat>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %truncf16f64 = fptrunc double poison to bfloat
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %truncv2f16f64 = fptrunc <2 x double> poison to <2 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %truncv4f16f64 = fptrunc <4 x double> poison to <4 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %truncv8f16f64 = fptrunc <8 x double> poison to <8 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:1 SizeLat:1 for: %truncv16f16f64 = fptrunc <16 x double> poison to <16 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %truncv2f16f64 = fptrunc <2 x double> poison to <2 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 3 for: %truncv4f16f64 = fptrunc <4 x double> poison to <4 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 6 for: %truncv8f16f64 = fptrunc <8 x double> poison to <8 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 12 for: %truncv16f16f64 = fptrunc <16 x double> poison to <16 x bfloat>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %extf16f32 = fpext bfloat poison to float

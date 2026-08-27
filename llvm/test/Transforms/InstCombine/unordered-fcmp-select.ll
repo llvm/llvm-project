@@ -36,10 +36,10 @@ define float @select_min_ugt(float %a, float %b) {
 
 define float @select_min_uge(float %a, float %b) {
 ; CHECK-LABEL: @select_min_uge(
-; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
-  %cmp = fcmp nsz uge float %a, %b
+  %cmp = fcmp nnan nsz uge float %a, %b
   %sel = select fast i1 %cmp, float %b, float %a
   ret float %sel
 }
@@ -67,10 +67,10 @@ define float @select_max_ule(float %a, float %b) {
 
 define float @select_min_ult(float %a, float %b) {
 ; CHECK-LABEL: @select_min_ult(
-; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
-  %cmp = fcmp nsz ult float %a, %b
+  %cmp = fcmp nnan nsz ult float %a, %b
   %sel = select fast i1 %cmp, float %a, float %b
   ret float %sel
 }
@@ -112,12 +112,12 @@ declare void @foo(i1)
 
 define float @select_max_ugt_2_use_cmp(float %a, float %b) {
 ; CHECK-LABEL: @select_max_ugt_2_use_cmp(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp reassoc ugt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp reassoc nnan ugt float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo(i1 [[CMP]])
-; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.maxnum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nnan nsz arcp contract afn float @llvm.maxnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
-  %cmp = fcmp reassoc ugt float %a, %b
+  %cmp = fcmp nnan reassoc ugt float %a, %b
   call void @foo(i1 %cmp)
   %sel = select fast i1 %cmp, float %a, float %b
   ret float %sel
@@ -152,8 +152,8 @@ define float @pr141017(float %x) {
 
 define float @pr141017_select_nsz(float %x) {
 ; CHECK-LABEL: @pr141017_select_nsz(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %cmp = fcmp olt float %x, 0.0

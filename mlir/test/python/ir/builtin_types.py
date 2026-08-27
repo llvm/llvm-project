@@ -135,6 +135,8 @@ def testFloatTypeSubclasses():
     # CHECK: True
     print(isinstance(Type.parse("f8E8M0FNU", ctx), FloatType))
     # CHECK: True
+    print(isinstance(Type.parse("f8E5M3FNU", ctx), FloatType))
+    # CHECK: True
     print(isinstance(Type.parse("f16", ctx), FloatType))
     # CHECK: True
     print(isinstance(Type.parse("bf16", ctx), FloatType))
@@ -277,6 +279,8 @@ def testFloatType():
         print("float:", Float8E4M3B11FNUZType.get())
         # CHECK: float: f8E8M0FNU
         print("float:", Float8E8M0FNUType.get())
+        # CHECK: float: f8E5M3FNU
+        print("float:", Float8E5M3FNUType.get())
         # CHECK: float: bf16
         print("float:", BF16Type.get())
         # CHECK: float: f16
@@ -676,6 +680,7 @@ def testTypeIDs():
             (Float8E4M3B11FNUZType, Float8E4M3B11FNUZType.get()),
             (Float8E5M2FNUZType, Float8E5M2FNUZType.get()),
             (Float8E8M0FNUType, Float8E8M0FNUType.get()),
+            (Float8E5M3FNUType, Float8E5M3FNUType.get()),
             (BF16Type, BF16Type.get()),
             (F16Type, F16Type.get()),
             (F32Type, F32Type.get()),
@@ -706,6 +711,7 @@ def testTypeIDs():
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
         # CHECK: Float8E8M0FNUType(f8E8M0FNU)
+        # CHECK: Float8E5M3FNUType(f8E5M3FNU)
         # CHECK: BF16Type(bf16)
         # CHECK: F16Type(f16)
         # CHECK: F32Type(f32)
@@ -757,6 +763,49 @@ def testTypeIDs():
         vector_type = Type.parse("vector<2x3xf32>")
         # CHECK: True
         print(ShapedType(vector_type).typeid == vector_type.typeid)
+
+
+# CHECK-LABEL: TEST: testTypeName
+@run
+def testTypeName():
+    with Context():
+        # CHECK: builtin.integer
+        print(IntegerType.type_name)
+        # CHECK: builtin.index
+        print(IndexType.type_name)
+
+        # CHECK: builtin.f32
+        print(F32Type.type_name)
+        # CHECK: builtin.bf16
+        print(BF16Type.type_name)
+
+        # CHECK: builtin.none
+        print(NoneType.type_name)
+
+        # CHECK: builtin.complex
+        print(ComplexType.type_name)
+
+        # CHECK: builtin.vector
+        print(VectorType.type_name)
+
+        # CHECK: builtin.tensor
+        print(RankedTensorType.type_name)
+        # CHECK: builtin.unranked_tensor
+        print(UnrankedTensorType.type_name)
+
+        # CHECK: builtin.memref
+        print(MemRefType.type_name)
+        # CHECK: builtin.unranked_memref
+        print(UnrankedMemRefType.type_name)
+
+        # CHECK: builtin.tuple
+        print(TupleType.type_name)
+
+        # CHECK: builtin.function
+        print(FunctionType.type_name)
+
+        # CHECK: builtin.opaque
+        print(OpaqueType.type_name)
 
 
 # CHECK-LABEL: TEST: testConcreteTypesRoundTrip
@@ -815,6 +864,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: Float8E8M0FNUType
         # CHECK: Float8E8M0FNUType(f8E8M0FNU)
         print_downcasted(Float8E8M0FNUType.get())
+        # CHECK: Float8E5M3FNUType
+        # CHECK: Float8E5M3FNUType(f8E5M3FNU)
+        print_downcasted(Float8E5M3FNUType.get())
         # CHECK: BF16Type
         # CHECK: BF16Type(bf16)
         print_downcasted(BF16Type.get())

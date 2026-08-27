@@ -53,7 +53,7 @@ public:
         errs() << "\nCurrent properties: ";
         MFProps.print(errs());
         errs() << '\n';
-        report_fatal_error("MachineFunctionProperties check failed");
+        reportFatalUsageError("MachineFunctionProperties check failed");
       }
     }
 #endif // NDEBUG
@@ -135,7 +135,7 @@ public:
 
     Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       Arg.FAM = nullptr;
     }
@@ -143,7 +143,7 @@ public:
     Result &operator=(Result &&RHS) {
       FAM = RHS.FAM;
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       RHS.FAM = nullptr;
       return *this;
@@ -189,13 +189,12 @@ private:
 };
 
 class FunctionToMachineFunctionPassAdaptor
-    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
 
-  explicit FunctionToMachineFunctionPassAdaptor(
-      std::unique_ptr<PassConceptT> Pass)
+  explicit FunctionToMachineFunctionPassAdaptor(PassConceptT::unique_ptr Pass)
       : Pass(std::move(Pass)) {}
 
   /// Runs the function pass across every function in the function.
@@ -204,10 +203,8 @@ public:
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
-  static bool isRequired() { return true; }
-
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 };
 
 template <typename MachineFunctionPassT>
@@ -215,11 +212,8 @@ FunctionToMachineFunctionPassAdaptor
 createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
   return FunctionToMachineFunctionPassAdaptor(
-      std::unique_ptr<FunctionToMachineFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
+      PassModelT::create(std::move(Pass)));
 }
 
 template <>

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -44,9 +45,7 @@ class LiveRangeShrink : public MachineFunctionPass {
 public:
   static char ID;
 
-  LiveRangeShrink() : MachineFunctionPass(ID) {
-    initializeLiveRangeShrinkPass(*PassRegistry::getPassRegistry());
-  }
+  LiveRangeShrink() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

@@ -26,57 +26,90 @@
 
 using namespace riscv_dwarf;
 
-// clang-format off
-
-// I suppose EHFrame and DWARF are the same.
+// Assuming register numbers seen in eh_frame and DWARF to be the same.
 #define KIND_HELPER(reg, generic_kind)                                         \
-  {                                                                            \
-    riscv_dwarf::dwarf_##reg, riscv_dwarf::dwarf_##reg, generic_kind,          \
-    LLDB_INVALID_REGNUM, reg##_riscv                                           \
-  }
+  {riscv_dwarf::dwarf_##reg, riscv_dwarf::dwarf_##reg, generic_kind,           \
+   LLDB_INVALID_REGNUM, reg##_riscv}
 
-// Generates register kinds array for vector registers
+// Generates RegisterInfo::kinds for GPRs.
 #define GPR32_KIND(reg, generic_kind) KIND_HELPER(reg, generic_kind)
 
-// FPR register kinds array for vector registers
+// Generates RegisterInfo::kinds for FPRs.
 #define FPR32_KIND(reg, generic_kind) KIND_HELPER(reg, generic_kind)
 
-// VPR register kinds array for vector registers
+// Generates RegisterInfo::kinds for VPRs.
 #define VPR_KIND(reg, generic_kind) KIND_HELPER(reg, generic_kind)
 
-// Defines a 32-bit general purpose register
+// Generates RegisterInfo::kinds for CSRs.
+#define CSR_KIND(reg, generic_kind) KIND_HELPER(reg, generic_kind)
+
+// Defines a 32-bit GPR.
 #define DEFINE_GPR32(reg, generic_kind) DEFINE_GPR32_ALT(reg, reg, generic_kind)
 
-// Defines a 32-bit general purpose register
+// Defines a 32-bit GPR.
 #define DEFINE_GPR32_ALT(reg, alt, generic_kind)                               \
-  {                                                                            \
-    #reg, #alt, 4, GPR_OFFSET(gpr_##reg##_riscv - gpr_first_riscv),            \
-    lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    GPR32_KIND(gpr_##reg, generic_kind), nullptr, nullptr, nullptr,            \
-  }
+  {#reg,                                                                       \
+   #alt,                                                                       \
+   4,                                                                          \
+   GPR_OFFSET(gpr_##reg##_riscv - gpr_first_riscv),                            \
+   lldb::eEncodingUint,                                                        \
+   lldb::eFormatHex,                                                           \
+   GPR32_KIND(gpr_##reg, generic_kind),                                        \
+   nullptr,                                                                    \
+   nullptr,                                                                    \
+   nullptr}
 
-#define DEFINE_FPR32(reg, generic_kind) DEFINE_FPR32_ALT(reg, reg, generic_kind)
+// Defines a 32-bit FPR.
+#define DEFINE_FPR32_ALT(reg, alt, generic_kind)                               \
+  DEFINE_FPR_ALT(reg, alt, 8, generic_kind)
 
-#define DEFINE_FPR32_ALT(reg, alt, generic_kind) DEFINE_FPR_ALT(reg, alt, 4, generic_kind)
-
+// Defines a 32-bit FPR.
 #define DEFINE_FPR_ALT(reg, alt, size, generic_kind)                           \
-  {                                                                            \
-    #reg, #alt, size, FPR_OFFSET(fpr_##reg##_riscv - fpr_first_riscv),         \
-    lldb::eEncodingUint, lldb::eFormatHex,                                     \
-    FPR32_KIND(fpr_##reg, generic_kind), nullptr, nullptr, nullptr,           \
-  }
+  {#reg,                                                                       \
+   #alt,                                                                       \
+   size,                                                                       \
+   FPR_OFFSET(fpr_##reg##_riscv - fpr_first_riscv),                            \
+   lldb::eEncodingIEEE754,                                                     \
+   lldb::eFormatHex,                                                           \
+   FPR32_KIND(fpr_##reg, generic_kind),                                        \
+   nullptr,                                                                    \
+   nullptr,                                                                    \
+   nullptr}
 
+// Defines a 32-bit VPR.
 #define DEFINE_VPR(reg, generic_kind) DEFINE_VPR_ALT(reg, reg, generic_kind)
 
-// Defines a scalable vector register, with default size 128 bits
-// The byte offset 0 is a placeholder, which should be corrected at runtime.
+// Defines a scalable vector register with default size of 128 bits.
+// The byte offset of 0 is a placeholder and should be corrected at runtime.
+// Defines a 32-bit VPR.
 #define DEFINE_VPR_ALT(reg, alt, generic_kind)                                 \
-  {                                                                            \
-    #reg, #alt, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,      \
-    VPR_KIND(vpr_##reg, generic_kind), nullptr, nullptr, nullptr               \
-  }
+  {#reg,                                                                       \
+   #alt,                                                                       \
+   16,                                                                         \
+   0,                                                                          \
+   lldb::eEncodingVector,                                                      \
+   lldb::eFormatVectorOfUInt8,                                                 \
+   VPR_KIND(vpr_##reg, generic_kind),                                          \
+   nullptr,                                                                    \
+   nullptr,                                                                    \
+   nullptr}
 
-// clang-format on
+// Defines a 32-bit CSR.
+#define DEFINE_CSR32(reg, generic_kind) DEFINE_CSR32_ALT(reg, reg, generic_kind)
+
+// Defines a 32-bit CSR.
+// The byte offset of 0 is a placeholder and should be corrected at runtime.
+#define DEFINE_CSR32_ALT(reg, alt, generic_kind)                               \
+  {#reg,                                                                       \
+   #alt,                                                                       \
+   4,                                                                          \
+   0,                                                                          \
+   lldb::eEncodingUint,                                                        \
+   lldb::eFormatHex,                                                           \
+   CSR_KIND(csr_##reg, generic_kind),                                          \
+   nullptr,                                                                    \
+   nullptr,                                                                    \
+   nullptr}
 
 static lldb_private::RegisterInfo g_register_infos_riscv32_le[] = {
     // DEFINE_GPR32(name, GENERIC KIND)
@@ -180,6 +213,472 @@ static lldb_private::RegisterInfo g_register_infos_riscv32_le[] = {
     DEFINE_VPR(v29, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v30, LLDB_INVALID_REGNUM),
     DEFINE_VPR(v31, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_gpr[] = {
+    DEFINE_GPR32(pc, LLDB_REGNUM_GENERIC_PC),
+    DEFINE_GPR32_ALT(ra, x1, LLDB_REGNUM_GENERIC_RA),
+    DEFINE_GPR32_ALT(sp, x2, LLDB_REGNUM_GENERIC_SP),
+    DEFINE_GPR32_ALT(gp, x3, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(tp, x4, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t0, x5, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t1, x6, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t2, x7, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(fp, x8, LLDB_REGNUM_GENERIC_FP),
+    DEFINE_GPR32_ALT(s1, x9, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(a0, x10, LLDB_REGNUM_GENERIC_ARG1),
+    DEFINE_GPR32_ALT(a1, x11, LLDB_REGNUM_GENERIC_ARG2),
+    DEFINE_GPR32_ALT(a2, x12, LLDB_REGNUM_GENERIC_ARG3),
+    DEFINE_GPR32_ALT(a3, x13, LLDB_REGNUM_GENERIC_ARG4),
+    DEFINE_GPR32_ALT(a4, x14, LLDB_REGNUM_GENERIC_ARG5),
+    DEFINE_GPR32_ALT(a5, x15, LLDB_REGNUM_GENERIC_ARG6),
+    DEFINE_GPR32_ALT(a6, x16, LLDB_REGNUM_GENERIC_ARG7),
+    DEFINE_GPR32_ALT(a7, x17, LLDB_REGNUM_GENERIC_ARG8),
+    DEFINE_GPR32_ALT(s2, x18, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s3, x19, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s4, x20, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s5, x21, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s6, x22, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s7, x23, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s8, x24, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s9, x25, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s10, x26, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(s11, x27, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t3, x28, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t4, x29, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t5, x30, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(t6, x31, LLDB_INVALID_REGNUM),
+    DEFINE_GPR32_ALT(zero, x0, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_fpr[] = {
+    DEFINE_FPR32_ALT(ft0, f0, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft1, f1, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft2, f2, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft3, f3, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft4, f4, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft5, f5, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft6, f6, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft7, f7, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs0, f8, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs1, f9, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa0, f10, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa1, f11, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa2, f12, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa3, f13, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa4, f14, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa5, f15, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa6, f16, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fa7, f17, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs2, f18, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs3, f19, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs4, f20, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs5, f21, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs6, f22, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs7, f23, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs8, f24, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs9, f25, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs10, f26, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(fs11, f27, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft8, f28, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft9, f29, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft10, f30, LLDB_INVALID_REGNUM),
+    DEFINE_FPR32_ALT(ft11, f31, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_vpr[] = {
+    DEFINE_VPR(v0, LLDB_INVALID_REGNUM),  DEFINE_VPR(v1, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v2, LLDB_INVALID_REGNUM),  DEFINE_VPR(v3, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v4, LLDB_INVALID_REGNUM),  DEFINE_VPR(v5, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v6, LLDB_INVALID_REGNUM),  DEFINE_VPR(v7, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v8, LLDB_INVALID_REGNUM),  DEFINE_VPR(v9, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v10, LLDB_INVALID_REGNUM), DEFINE_VPR(v11, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v12, LLDB_INVALID_REGNUM), DEFINE_VPR(v13, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v14, LLDB_INVALID_REGNUM), DEFINE_VPR(v15, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v16, LLDB_INVALID_REGNUM), DEFINE_VPR(v17, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v18, LLDB_INVALID_REGNUM), DEFINE_VPR(v19, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v20, LLDB_INVALID_REGNUM), DEFINE_VPR(v21, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v22, LLDB_INVALID_REGNUM), DEFINE_VPR(v23, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v24, LLDB_INVALID_REGNUM), DEFINE_VPR(v25, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v26, LLDB_INVALID_REGNUM), DEFINE_VPR(v27, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v28, LLDB_INVALID_REGNUM), DEFINE_VPR(v29, LLDB_INVALID_REGNUM),
+    DEFINE_VPR(v30, LLDB_INVALID_REGNUM), DEFINE_VPR(v31, LLDB_INVALID_REGNUM),
+};
+
+static lldb_private::RegisterInfo g_register_infos_riscv32_csr_patch[] = {
+    DEFINE_CSR32_ALT(fflags, csr_0x001, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(frm, csr_0x002, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(fcsr, csr_0x003, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vstart, csr_0x008, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vxsat, csr_0x009, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vxrm, csr_0x00a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vcsr, csr_0x00f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sstatus, csr_0x100, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sie, csr_0x104, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(stvec, csr_0x105, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(scounteren, csr_0x106, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(senvcfg, csr_0x10a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sstateen0, csr_0x10c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sstateen1, csr_0x10d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sstateen2, csr_0x10e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sstateen3, csr_0x10f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(scountinhibit, csr_0x120, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sscratch, csr_0x140, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(sepc, csr_0x141, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(scause, csr_0x142, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(stval, csr_0x143, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(satp, csr_0x180, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsstatus, csr_0x200, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsie, csr_0x204, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vstvec, csr_0x205, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsscratch, csr_0x240, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsepc, csr_0x241, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vscause, csr_0x242, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vstval, csr_0x243, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsip, csr_0x244, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vsatp, csr_0x280, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstatus, csr_0x300, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(misa, csr_0x301, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(medeleg, csr_0x302, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mideleg, csr_0x303, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mie, csr_0x304, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mtvec, csr_0x305, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcounteren, csr_0x306, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(menvcfg, csr_0x30a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen0, csr_0x30c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen1, csr_0x30d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen2, csr_0x30e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen3, csr_0x30f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstatush, csr_0x310, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(medelegh, csr_0x312, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(menvcfgh, csr_0x31a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen0h, csr_0x31c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen1h, csr_0x31d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen2h, csr_0x31e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mstateen3h, csr_0x31f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcountinhibit, csr_0x320, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent3, csr_0x323, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent4, csr_0x324, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent5, csr_0x325, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent6, csr_0x326, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent7, csr_0x327, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent8, csr_0x328, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent9, csr_0x329, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent10, csr_0x32a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent11, csr_0x32b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent12, csr_0x32c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent13, csr_0x32d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent14, csr_0x32e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent15, csr_0x32f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent16, csr_0x330, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent17, csr_0x331, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent18, csr_0x332, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent19, csr_0x333, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent20, csr_0x334, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent21, csr_0x335, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent22, csr_0x336, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent23, csr_0x337, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent24, csr_0x338, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent25, csr_0x339, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent26, csr_0x33a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent27, csr_0x33b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent28, csr_0x33c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent29, csr_0x33d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent30, csr_0x33e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent31, csr_0x33f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mscratch, csr_0x340, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mepc, csr_0x341, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcause, csr_0x342, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mtval, csr_0x343, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mip, csr_0x344, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mtinst, csr_0x34a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mtval2, csr_0x34b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg0, csr_0x3a0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg1, csr_0x3a1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg2, csr_0x3a2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg3, csr_0x3a3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg4, csr_0x3a4, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg5, csr_0x3a5, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg6, csr_0x3a6, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg7, csr_0x3a7, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg8, csr_0x3a8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg9, csr_0x3a9, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg10, csr_0x3aa, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg11, csr_0x3ab, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg12, csr_0x3ac, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg13, csr_0x3ad, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg14, csr_0x3ae, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpcfg15, csr_0x3af, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr0, csr_0x3b0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr1, csr_0x3b1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr2, csr_0x3b2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr3, csr_0x3b3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr4, csr_0x3b4, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr5, csr_0x3b5, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr6, csr_0x3b6, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr7, csr_0x3b7, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr8, csr_0x3b8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr9, csr_0x3b9, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr10, csr_0x3ba, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr11, csr_0x3bb, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr12, csr_0x3bc, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr13, csr_0x3bd, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr14, csr_0x3be, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr15, csr_0x3bf, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr16, csr_0x3c0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr17, csr_0x3c1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr18, csr_0x3c2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr19, csr_0x3c3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr20, csr_0x3c4, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr21, csr_0x3c5, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr22, csr_0x3c6, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr23, csr_0x3c7, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr24, csr_0x3c8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr25, csr_0x3c9, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr26, csr_0x3ca, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr27, csr_0x3cb, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr28, csr_0x3cc, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr29, csr_0x3cd, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr30, csr_0x3ce, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr31, csr_0x3cf, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr32, csr_0x3d0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr33, csr_0x3d1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr34, csr_0x3d2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr35, csr_0x3d3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr36, csr_0x3d4, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr37, csr_0x3d5, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr38, csr_0x3d6, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr39, csr_0x3d7, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr40, csr_0x3d8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr41, csr_0x3d9, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr42, csr_0x3da, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr43, csr_0x3db, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr44, csr_0x3dc, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr45, csr_0x3dd, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr46, csr_0x3de, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr47, csr_0x3df, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr48, csr_0x3e0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr49, csr_0x3e1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr50, csr_0x3e2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr51, csr_0x3e3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr52, csr_0x3e4, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr53, csr_0x3e5, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr54, csr_0x3e6, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr55, csr_0x3e7, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr56, csr_0x3e8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr57, csr_0x3e9, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr58, csr_0x3ea, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr59, csr_0x3eb, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr60, csr_0x3ec, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr61, csr_0x3ed, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr62, csr_0x3ee, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(pmpaddr63, csr_0x3ef, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(scontext, csr_0x5a8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstatus, csr_0x600, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hedeleg, csr_0x602, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hideleg, csr_0x603, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hie, csr_0x604, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(htimedelta, csr_0x605, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hcounteren, csr_0x606, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hgeie, csr_0x607, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(henvcfg, csr_0x60a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen0, csr_0x60c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen1, csr_0x60d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen2, csr_0x60e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen3, csr_0x60f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hedelegh, csr_0x612, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(htimedeltah, csr_0x615, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(henvcfgh, csr_0x61a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen0h, csr_0x61c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen1h, csr_0x61d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen2h, csr_0x61e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hstateen3h, csr_0x61f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(htval, csr_0x643, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hip, csr_0x644, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hvip, csr_0x645, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(htinst, csr_0x64a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hgatp, csr_0x680, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hcontext, csr_0x6a8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent3h, csr_0x723, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent4h, csr_0x724, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent5h, csr_0x725, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent6h, csr_0x726, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent7h, csr_0x727, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent8h, csr_0x728, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent9h, csr_0x729, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent10h, csr_0x72a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent11h, csr_0x72b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent12h, csr_0x72c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent13h, csr_0x72d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent14h, csr_0x72e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent15h, csr_0x72f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent16h, csr_0x730, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent17h, csr_0x731, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent18h, csr_0x732, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent19h, csr_0x733, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent20h, csr_0x734, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent21h, csr_0x735, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent22h, csr_0x736, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent23h, csr_0x737, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent24h, csr_0x738, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent25h, csr_0x739, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent26h, csr_0x73a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent27h, csr_0x73b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent28h, csr_0x73c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent29h, csr_0x73d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent30h, csr_0x73e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmevent31h, csr_0x73f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mnscratch, csr_0x740, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mnepc, csr_0x741, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mncause, csr_0x742, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mnstatus, csr_0x744, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mseccfg, csr_0x747, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mseccfgh, csr_0x757, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(tselect, csr_0x7a0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(tdata1, csr_0x7a1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(tdata2, csr_0x7a2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(tdata3, csr_0x7a3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcontext, csr_0x7a8, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(dcsr, csr_0x7b0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(dpc, csr_0x7b1, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(dscratch0, csr_0x7b2, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(dscratch1, csr_0x7b3, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcycle, csr_0xb00, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(minstret, csr_0xb02, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter3, csr_0xb03, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter4, csr_0xb04, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter5, csr_0xb05, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter6, csr_0xb06, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter7, csr_0xb07, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter8, csr_0xb08, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter9, csr_0xb09, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter10, csr_0xb0a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter11, csr_0xb0b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter12, csr_0xb0c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter13, csr_0xb0d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter14, csr_0xb0e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter15, csr_0xb0f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter16, csr_0xb10, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter17, csr_0xb11, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter18, csr_0xb12, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter19, csr_0xb13, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter20, csr_0xb14, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter21, csr_0xb15, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter22, csr_0xb16, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter23, csr_0xb17, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter24, csr_0xb18, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter25, csr_0xb19, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter26, csr_0xb1a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter27, csr_0xb1b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter28, csr_0xb1c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter29, csr_0xb1d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter30, csr_0xb1e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter31, csr_0xb1f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mcycleh, csr_0xb80, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(minstreth, csr_0xb82, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter3h, csr_0xb83, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter4h, csr_0xb84, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter5h, csr_0xb85, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter6h, csr_0xb86, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter7h, csr_0xb87, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter8h, csr_0xb88, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter9h, csr_0xb89, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter10h, csr_0xb8a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter11h, csr_0xb8b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter12h, csr_0xb8c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter13h, csr_0xb8d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter14h, csr_0xb8e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter15h, csr_0xb8f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter16h, csr_0xb90, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter17h, csr_0xb91, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter18h, csr_0xb92, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter19h, csr_0xb93, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter20h, csr_0xb94, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter21h, csr_0xb95, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter22h, csr_0xb96, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter23h, csr_0xb97, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter24h, csr_0xb98, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter25h, csr_0xb99, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter26h, csr_0xb9a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter27h, csr_0xb9b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter28h, csr_0xb9c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter29h, csr_0xb9d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter30h, csr_0xb9e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhpmcounter31h, csr_0xb9f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(cycle, csr_0xc00, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(time, csr_0xc01, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(instret, csr_0xc02, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter3, csr_0xc03, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter4, csr_0xc04, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter5, csr_0xc05, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter6, csr_0xc06, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter7, csr_0xc07, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter8, csr_0xc08, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter9, csr_0xc09, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter10, csr_0xc0a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter11, csr_0xc0b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter12, csr_0xc0c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter13, csr_0xc0d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter14, csr_0xc0e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter15, csr_0xc0f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter16, csr_0xc10, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter17, csr_0xc11, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter18, csr_0xc12, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter19, csr_0xc13, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter20, csr_0xc14, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter21, csr_0xc15, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter22, csr_0xc16, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter23, csr_0xc17, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter24, csr_0xc18, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter25, csr_0xc19, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter26, csr_0xc1a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter27, csr_0xc1b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter28, csr_0xc1c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter29, csr_0xc1d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter30, csr_0xc1e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter31, csr_0xc1f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vl, csr_0xc20, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vtype, csr_0xc21, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(vlenb, csr_0xc22, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(cycleh, csr_0xc80, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(timeh, csr_0xc81, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(instreth, csr_0xc82, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter3h, csr_0xc83, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter4h, csr_0xc84, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter5h, csr_0xc85, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter6h, csr_0xc86, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter7h, csr_0xc87, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter8h, csr_0xc88, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter9h, csr_0xc89, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter10h, csr_0xc8a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter11h, csr_0xc8b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter12h, csr_0xc8c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter13h, csr_0xc8d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter14h, csr_0xc8e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter15h, csr_0xc8f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter16h, csr_0xc90, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter17h, csr_0xc91, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter18h, csr_0xc92, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter19h, csr_0xc93, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter20h, csr_0xc94, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter21h, csr_0xc95, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter22h, csr_0xc96, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter23h, csr_0xc97, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter24h, csr_0xc98, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter25h, csr_0xc99, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter26h, csr_0xc9a, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter27h, csr_0xc9b, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter28h, csr_0xc9c, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter29h, csr_0xc9d, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter30h, csr_0xc9e, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hpmcounter31h, csr_0xc9f, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(scountovf, csr_0xda0, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(hgeip, csr_0xe12, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mvendorid, csr_0xf11, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(marchid, csr_0xf12, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mimpid, csr_0xf13, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mhartid, csr_0xf14, LLDB_INVALID_REGNUM),
+    DEFINE_CSR32_ALT(mconfigptr, csr_0xf15, LLDB_INVALID_REGNUM),
 };
 
 #endif // DECLARE_REGISTER_INFOS_RISCV32_STRUCT

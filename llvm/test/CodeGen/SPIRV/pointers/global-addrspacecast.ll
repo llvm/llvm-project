@@ -15,7 +15,7 @@ define hidden spir_func void @Foo() {
   store i32 %v, ptr @G
   ret void
 ; CHECK:      OpLabel
-; CHECK: OpLoad %[[#type]] %[[#var]] Aligned 4
+; CHECK: OpLoad %[[#type]] %[[#var]]
 ; CHECK: OpReturn
 }
 

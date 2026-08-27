@@ -62,14 +62,13 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
 
       ```mlir
       linalg.generic #trait_attribute
-          ins(%A, %B : memref<?x?xf32, stride_specification>,
-                       memref<?x?xf32, stride_specification>)
-          outs(%C : memref<?x?xf32, stride_specification>)
+          ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+          outs(%C : memref<?x?xf32>)
           attrs = {other-optional-attributes}
           {region}
       ```
 
-    Where #trait_attributes is an alias of a dictionary attribute containing:
+    Where #trait_attribute is an alias of a dictionary attribute containing:
       - doc [optional]: a documentation string
       - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
         and output view. Such AffineMapAttr specifies the mapping between the
@@ -80,17 +79,17 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
         compile-time guarantees are provided. In the absence of such a library
         call, linalg.generic will always lower to loops.
       - iterator_types: an ArrayAttr specifying the type of the enclosing loops.
-        Each element of the list represents and iterator of one of the following
+        Each element of the list represents an iterator of one of the following
         types:
-          parallel, reduction, window
+          parallel, reduction
 
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
       #matmul_accesses = [
-        (m, n, k) -> (m, k),
-        (m, n, k) -> (k, n),
-        (m, n, k) -> (m, n)
+        affine_map<(m, n, k) -> (m, k)>,
+        affine_map<(m, n, k) -> (k, n)>,
+        affine_map<(m, n, k) -> (m, n)>
       ]
       #matmul_trait = {
         doc = "C(m, n) += A(m, k) * B(k, n)",
@@ -103,10 +102,9 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     And can be reused in multiple places as:
       ```mlir
       linalg.generic #matmul_trait
-        ins(%A, %B : memref<?x?xf32, stride_specification>,
-                     memref<?x?xf32, stride_specification>)
-        outs(%C : memref<?x?xf32, stride_specification>)
-        {other-optional-attributes} {
+        ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+        outs(%C : memref<?x?xf32>)
+        attrs = {other-optional-attributes} {
         ^bb0(%a: f32, %b: f32, %c: f32) :
           %d = arith.mulf %a, %b: f32
           %e = arith.addf %c, %d: f32
@@ -117,9 +115,9 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     This may lower to either:
       ```mlir
       call @linalg_matmul(%A, %B, %C) :
-        (memref<?x?xf32, stride_specification>,
-         memref<?x?xf32, stride_specification>,
-         memref<?x?xf32, stride_specification>)
+        (memref<?x?xf32, strided<[?, ?], offset: ?>>,
+         memref<?x?xf32, strided<[?, ?], offset: ?>>,
+         memref<?x?xf32, strided<[?, ?], offset: ?>>)
         -> ()
       ```
 
@@ -128,12 +126,12 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     scf.for %m = %c0 to %M step %c1 {
       scf.for %n = %c0 to %N step %c1 {
         scf.for %k = %c0 to %K step %c1 {
-          %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
-          %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
-          %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
+          %a = memref.load %A[%m, %k] : memref<?x?xf32>
+          %b = memref.load %B[%k, %n] : memref<?x?xf32>
+          %c = memref.load %C[%m, %n] : memref<?x?xf32>
           %d = arith.mulf %a, %b: f32
           %e = arith.addf %c, %d: f32
-          store %e, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
+          memref.store %e, %C[%m, %n] : memref<?x?xf32>
         }
       }
     }
@@ -477,6 +475,11 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
   let summary = "Static broadcast operator";
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
+
+    Each index in the `dimensions` attribute refers to a dimension of `init`
+    that is added by the operation. The indices must be unique and within the
+    rank of `init`; the sizes of the remaining (non-added) dimensions of
+    `init` must match the shape of `input`.
 
     Example:
     ```mlir
@@ -881,7 +884,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     AffineMapArrayAttr:$indexing_maps,
     DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
-  let results = (outs Variadic<AnyShaped>:$result_tensors);
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build
   //     time - is that currently the LinalgOp interface exposes methods that
   //     assume a relevant region is available to be queried at any time.
@@ -889,6 +892,13 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, regionBuilder);
+      }]>,
     OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
       "ValueRange":$outputs, "ArrayAttr":$indexingMaps,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),

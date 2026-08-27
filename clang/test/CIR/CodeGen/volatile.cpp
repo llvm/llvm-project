@@ -46,7 +46,7 @@ int test_load_field1(volatile Foo *ptr) {
 // CIR:   %{{.+}} = cir.load volatile{{.*}} %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} i32 @_Z16test_load_field1PV3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} i32 @_Z16test_load_field1PV3Foo
@@ -62,7 +62,7 @@ int test_load_field2(Foo *ptr) {
 // CIR:   %{{.+}} = cir.load volatile{{.*}} %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} i32 @_Z16test_load_field2P3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 1
 // LLVM:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} i32 @_Z16test_load_field2P3Foo
@@ -78,7 +78,7 @@ int test_load_field3(Foo *ptr) {
 // CIR:   %{{.*}} = cir.get_bitfield align(4) (#bfi_z, %[[MEMBER_ADDR:.+]] {is_volatile} : !cir.ptr<!u8i>) -> !s32i
 
 // LLVM: define {{.*}} i32 @_Z16test_load_field3P3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 2
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 2
 // LLVM:   %[[TMP1:.*]] = load volatile i8, ptr %[[MEMBER_ADDR]]
 // LLVM:   %[[TMP2:.*]] = shl i8 %[[TMP1]], 4
 // LLVM:   %[[TMP3:.*]] = ashr i8 %[[TMP2]], 4
@@ -100,7 +100,7 @@ void test_store_field1(volatile Foo *ptr) {
 // CIR:   cir.store volatile{{.*}} %{{.+}}, %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} void @_Z17test_store_field1PV3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store volatile i32 42, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} void @_Z17test_store_field1PV3Foo
@@ -116,7 +116,7 @@ void test_store_field2(Foo *ptr) {
 // CIR:   cir.store volatile{{.*}} %{{.+}}, %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} void @_Z17test_store_field2P3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 1
 // LLVM:   store volatile i32 42, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} void @_Z17test_store_field2P3Foo
@@ -132,7 +132,7 @@ void test_store_field3(Foo *ptr) {
 // CIR:   cir.set_bitfield align(4) (#bfi_z, %[[MEMBER_ADDR:.+]] : !cir.ptr<!u8i>, %1 : !s32i) {is_volatile}
 
 // LLVM: define {{.*}} void @_Z17test_store_field3P3Foo
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.Foo, ptr %{{.*}}, i32 0, i32 2
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %{{.*}}, i32 0, i32 2
 // LLVM:   %[[TMP1:.*]] = load volatile i8, ptr %[[MEMBER_ADDR]]
 // LLVM:   %[[TMP2:.*]] = and i8 %[[TMP1]], -16
 // LLVM:   %[[TMP3:.*]] = or i8 %[[TMP2]], 4
@@ -160,7 +160,7 @@ void A::set_x(int val) volatile {
 // CIR:   cir.store volatile {{.*}} %{{.*}}, %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} void @_ZNV1A5set_xEi
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.A, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store volatile i32 %{{.*}}, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} void @_ZNV1A5set_xEi
@@ -176,7 +176,7 @@ int A::get_x() volatile {
 // CIR:   cir.load volatile {{.*}} %[[MEMBER_ADDR]]
 
 // LLVM: define {{.*}} i32 @_ZNV1A5get_xEv
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.A, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]
 
 // OGCG: define {{.*}} i32 @_ZNV1A5get_xEv

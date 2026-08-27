@@ -174,63 +174,63 @@ public:
 static Error fromJson(const json::Value &V,
                       libc_benchmarks::BenchmarkOptions &Out) {
   JsonObjectMapper O(V);
-  O.map("MinDuration", Out.MinDuration);
-  O.map("MaxDuration", Out.MaxDuration);
-  O.map("InitialIterations", Out.InitialIterations);
-  O.map("MaxIterations", Out.MaxIterations);
-  O.map("MinSamples", Out.MinSamples);
-  O.map("MaxSamples", Out.MaxSamples);
-  O.map("Epsilon", Out.Epsilon);
-  O.map("ScalingFactor", Out.ScalingFactor);
-  O.map("Log", Out.Log);
+  O.map("MinDuration", Out.min_duration);
+  O.map("MaxDuration", Out.max_duration);
+  O.map("InitialIterations", Out.initial_iterations);
+  O.map("MaxIterations", Out.max_iterations);
+  O.map("MinSamples", Out.min_samples);
+  O.map("MaxSamples", Out.max_samples);
+  O.map("Epsilon", Out.epsilon);
+  O.map("ScalingFactor", Out.scaling_factor);
+  O.map("Log", Out.log);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V,
                       libc_benchmarks::StudyConfiguration &Out) {
   JsonObjectMapper O(V);
-  O.map("Function", Out.Function);
-  O.map("NumTrials", Out.NumTrials);
-  O.map("IsSweepMode", Out.IsSweepMode);
-  O.map("SweepModeMaxSize", Out.SweepModeMaxSize);
-  O.map("SizeDistributionName", Out.SizeDistributionName);
-  O.map("AccessAlignment", Out.AccessAlignment);
-  O.map("MemcmpMismatchAt", Out.MemcmpMismatchAt);
+  O.map("Function", Out.function);
+  O.map("NumTrials", Out.num_trials);
+  O.map("IsSweepMode", Out.is_sweep_mode);
+  O.map("SweepModeMaxSize", Out.sweep_mode_max_size);
+  O.map("SizeDistributionName", Out.size_distribution_name);
+  O.map("AccessAlignment", Out.access_alignment);
+  O.map("MemcmpMismatchAt", Out.memcmp_mismatch_at);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V, libc_benchmarks::CacheInfo &Out) {
   JsonObjectMapper O(V);
-  O.map("Type", Out.Type);
-  O.map("Level", Out.Level);
-  O.map("Size", Out.Size);
-  O.map("NumSharing", Out.NumSharing);
+  O.map("Type", Out.type);
+  O.map("Level", Out.level);
+  O.map("Size", Out.size);
+  O.map("NumSharing", Out.num_sharing);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V, libc_benchmarks::HostState &Out) {
   JsonObjectMapper O(V);
-  O.map("CpuName", Out.CpuName);
-  O.map("CpuFrequency", Out.CpuFrequency);
-  O.map("Caches", Out.Caches);
+  O.map("CpuName", Out.cpu_name);
+  O.map("CpuFrequency", Out.cpu_frequency);
+  O.map("Caches", Out.caches);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V, libc_benchmarks::Runtime &Out) {
   JsonObjectMapper O(V);
-  O.map("Host", Out.Host);
-  O.map("BufferSize", Out.BufferSize);
-  O.map("BatchParameterCount", Out.BatchParameterCount);
-  O.map("BenchmarkOptions", Out.BenchmarkOptions);
+  O.map("Host", Out.host);
+  O.map("BufferSize", Out.buffer_size);
+  O.map("BatchParameterCount", Out.batch_parameter_count);
+  O.map("BenchmarkOptions", Out.benchmark_options);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V, libc_benchmarks::Study &Out) {
   JsonObjectMapper O(V);
-  O.map("StudyName", Out.StudyName);
-  O.map("Runtime", Out.Runtime);
-  O.map("Configuration", Out.Configuration);
-  O.map("Measurements", Out.Measurements);
+  O.map("StudyName", Out.study_name);
+  O.map("Runtime", Out.runtime);
+  O.map("Configuration", Out.configuration);
+  O.map("Measurements", Out.measurements);
   return O.takeError();
 }
 
@@ -261,61 +261,61 @@ static StringRef serialize(const BenchmarkLog &L) {
 }
 
 static void serialize(const BenchmarkOptions &BO, json::OStream &JOS) {
-  JOS.attribute("MinDuration", seconds(BO.MinDuration));
-  JOS.attribute("MaxDuration", seconds(BO.MaxDuration));
-  JOS.attribute("InitialIterations", BO.InitialIterations);
-  JOS.attribute("MaxIterations", BO.MaxIterations);
-  JOS.attribute("MinSamples", BO.MinSamples);
-  JOS.attribute("MaxSamples", BO.MaxSamples);
-  JOS.attribute("Epsilon", BO.Epsilon);
-  JOS.attribute("ScalingFactor", BO.ScalingFactor);
-  JOS.attribute("Log", serialize(BO.Log));
+  JOS.attribute("MinDuration", seconds(BO.min_duration));
+  JOS.attribute("MaxDuration", seconds(BO.max_duration));
+  JOS.attribute("InitialIterations", BO.initial_iterations);
+  JOS.attribute("MaxIterations", BO.max_iterations);
+  JOS.attribute("MinSamples", BO.min_samples);
+  JOS.attribute("MaxSamples", BO.max_samples);
+  JOS.attribute("Epsilon", BO.epsilon);
+  JOS.attribute("ScalingFactor", BO.scaling_factor);
+  JOS.attribute("Log", serialize(BO.log));
 }
 
 static void serialize(const CacheInfo &CI, json::OStream &JOS) {
-  JOS.attribute("Type", CI.Type);
-  JOS.attribute("Level", CI.Level);
-  JOS.attribute("Size", CI.Size);
-  JOS.attribute("NumSharing", CI.NumSharing);
+  JOS.attribute("Type", CI.type);
+  JOS.attribute("Level", CI.level);
+  JOS.attribute("Size", CI.size);
+  JOS.attribute("NumSharing", CI.num_sharing);
 }
 
 static void serialize(const StudyConfiguration &SC, json::OStream &JOS) {
-  JOS.attribute("Function", SC.Function);
-  JOS.attribute("NumTrials", SC.NumTrials);
-  JOS.attribute("IsSweepMode", SC.IsSweepMode);
-  JOS.attribute("SweepModeMaxSize", SC.SweepModeMaxSize);
-  JOS.attribute("SizeDistributionName", SC.SizeDistributionName);
+  JOS.attribute("Function", SC.function);
+  JOS.attribute("NumTrials", SC.num_trials);
+  JOS.attribute("IsSweepMode", SC.is_sweep_mode);
+  JOS.attribute("SweepModeMaxSize", SC.sweep_mode_max_size);
+  JOS.attribute("SizeDistributionName", SC.size_distribution_name);
   JOS.attribute("AccessAlignment",
-                static_cast<int64_t>(SC.AccessAlignment->value()));
-  JOS.attribute("MemcmpMismatchAt", SC.MemcmpMismatchAt);
+                static_cast<int64_t>(SC.access_alignment->value()));
+  JOS.attribute("MemcmpMismatchAt", SC.memcmp_mismatch_at);
 }
 
 static void serialize(const HostState &HS, json::OStream &JOS) {
-  JOS.attribute("CpuName", HS.CpuName);
-  JOS.attribute("CpuFrequency", HS.CpuFrequency);
+  JOS.attribute("CpuName", HS.cpu_name);
+  JOS.attribute("CpuFrequency", HS.cpu_frequency);
   JOS.attributeArray("Caches", [&]() {
-    for (const auto &CI : HS.Caches)
+    for (const auto &CI : HS.caches)
       JOS.object([&]() { serialize(CI, JOS); });
   });
 }
 
 static void serialize(const Runtime &RI, json::OStream &JOS) {
-  JOS.attributeObject("Host", [&]() { serialize(RI.Host, JOS); });
-  JOS.attribute("BufferSize", RI.BufferSize);
-  JOS.attribute("BatchParameterCount", RI.BatchParameterCount);
+  JOS.attributeObject("Host", [&]() { serialize(RI.host, JOS); });
+  JOS.attribute("BufferSize", RI.buffer_size);
+  JOS.attribute("BatchParameterCount", RI.batch_parameter_count);
   JOS.attributeObject("BenchmarkOptions",
-                      [&]() { serialize(RI.BenchmarkOptions, JOS); });
+                      [&]() { serialize(RI.benchmark_options, JOS); });
 }
 
 void serializeToJson(const Study &S, json::OStream &JOS) {
   JOS.object([&]() {
-    JOS.attribute("StudyName", S.StudyName);
-    JOS.attributeObject("Runtime", [&]() { serialize(S.Runtime, JOS); });
+    JOS.attribute("StudyName", S.study_name);
+    JOS.attributeObject("Runtime", [&]() { serialize(S.runtime, JOS); });
     JOS.attributeObject("Configuration",
-                        [&]() { serialize(S.Configuration, JOS); });
-    if (!S.Measurements.empty()) {
+                        [&]() { serialize(S.configuration, JOS); });
+    if (!S.measurements.empty()) {
       JOS.attributeArray("Measurements", [&]() {
-        for (const auto &M : S.Measurements)
+        for (const auto &M : S.measurements)
           JOS.value(seconds(M));
       });
     }

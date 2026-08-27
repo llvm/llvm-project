@@ -1018,7 +1018,6 @@ private:
   /// Artificial kinds for DenseMap usage.
   enum : unsigned char {
     MO_Empty = MO_Last + 1,
-    MO_Tombstone,
   };
 
   friend struct DenseMapInfo<MachineOperand>;
@@ -1037,22 +1036,12 @@ private:
 };
 
 template <> struct DenseMapInfo<MachineOperand> {
-  static MachineOperand getEmptyKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Empty));
-  }
-  static MachineOperand getTombstoneKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Tombstone));
-  }
   static unsigned getHashValue(const MachineOperand &MO) {
     return hash_value(MO);
   }
   static bool isEqual(const MachineOperand &LHS, const MachineOperand &RHS) {
     if (LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Empty) ||
-        LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Tombstone))
+                             MachineOperand::MO_Empty))
       return LHS.getType() == RHS.getType();
     return LHS.isIdenticalTo(RHS);
   }

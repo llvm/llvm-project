@@ -48,7 +48,14 @@ private:
 
 class TypeSummaryImpl {
 public:
-  enum class Kind { eSummaryString, eScript, eBytecode, eCallback, eInternal };
+  enum class Kind {
+    eSummaryString,
+    eScript,
+    eBytecode,
+    eCallback,
+    eInternal,
+    eScriptedClass
+  };
 
   virtual ~TypeSummaryImpl() = default;
 
@@ -423,7 +430,57 @@ private:
   const ScriptSummaryFormat &operator=(const ScriptSummaryFormat &) = delete;
 };
 
+// Python-based summaries backed by a class, running an instance's
+// `get_summary` method to show data. Unlike ScriptSummaryFormat (a bare
+// function resolved once and cached), the Python object here is itself the
+// cache: it's created lazily on the first call to FormatObject (since this
+// format can be constructed via SBTypeSummary::CreateWithClassName before
+// any debugger/target context exists) and then reused across every
+// subsequent call, for every value of the matching type.
+struct ScriptedSummaryFormat : public TypeSummaryImpl {
+  std::string m_class_name;
+  lldb::ScriptedStringSummaryInterfaceSP m_interface_sp;
+
+  ScriptedSummaryFormat(const TypeSummaryImpl::Flags &flags,
+                        const char *class_name, uint32_t ptr_match_depth = 1);
+
+  ~ScriptedSummaryFormat() override = default;
+
+  const char *GetClassName() const { return m_class_name.c_str(); }
+
+  void SetClassName(const char *class_name) {
+    if (class_name)
+      m_class_name.assign(class_name);
+    else
+      m_class_name.clear();
+    m_interface_sp.reset();
+  }
+
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options) override;
+
+  std::string GetDescription() override;
+
+  std::string GetName() override;
+
+  static bool classof(const TypeSummaryImpl *S) {
+    return S->GetKind() == Kind::eScriptedClass;
+  }
+
+  typedef std::shared_ptr<ScriptedSummaryFormat> SharedPointer;
+
+private:
+  ScriptedSummaryFormat(const ScriptedSummaryFormat &) = delete;
+  const ScriptedSummaryFormat &
+  operator=(const ScriptedSummaryFormat &) = delete;
+};
+
 /// A summary formatter that is defined in LLDB formmater bytecode.
+///
+/// See `BytecodeSyntheticChildren` for the corresponding synthetic formatter.
+///
+/// Formatter bytecode documentation can be found in
+/// lldb/docs/resources/formatterbytecode.rst
 class BytecodeSummaryFormat : public TypeSummaryImpl {
   std::unique_ptr<llvm::MemoryBuffer> m_bytecode;
 

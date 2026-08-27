@@ -186,6 +186,10 @@ bool Operator::skipDefaultBuilders() const {
   return def.getValueAsBit("skipDefaultBuilders");
 }
 
+bool Operator::hasCustomPropertiesPrinter() const {
+  return def.getValueAsBit("hasCustomPropertiesPrinter");
+}
+
 auto Operator::result_begin() const -> const_value_iterator {
   return results.begin();
 }
@@ -852,7 +856,7 @@ bool Operator::hasAssemblyFormat() const {
 
 StringRef Operator::getAssemblyFormat() const {
   return TypeSwitch<const Init *, StringRef>(def.getValueInit("assemblyFormat"))
-      .Case<StringInit>([&](auto *init) { return init->getValue(); });
+      .Case([&](const StringInit *init) { return init->getValue(); });
 }
 
 void Operator::print(llvm::raw_ostream &os) const {

@@ -95,46 +95,6 @@ public:
   size_t read_count() const { return arg_counter; }
 };
 
-// Used for the GPU implementation of `printf`. This models a variadic list as a
-// simple array of pointers that are built manually by the implementation.
-template <bool packed> class StructArgList {
-  void *ptr;
-  void *end;
-
-public:
-  LIBC_INLINE StructArgList(void *ptr, size_t size)
-      : ptr(ptr), end(reinterpret_cast<unsigned char *>(ptr) + size) {}
-  LIBC_INLINE StructArgList(const StructArgList &other) {
-    ptr = other.ptr;
-    end = other.end;
-  }
-  LIBC_INLINE StructArgList() = default;
-  LIBC_INLINE ~StructArgList() = default;
-
-  LIBC_INLINE StructArgList &operator=(const StructArgList &rhs) {
-    ptr = rhs.ptr;
-    return *this;
-  }
-
-  LIBC_INLINE void *get_ptr() const { return ptr; }
-
-  template <class T> LIBC_INLINE T next_var() {
-    if (!packed)
-      ptr = reinterpret_cast<void *>(
-          align_up(reinterpret_cast<uintptr_t>(ptr), alignof(T)));
-    if (ptr >= end)
-      return T(-1);
-
-    // Memcpy because pointer alignment may be illegal given a packed struct.
-    T val;
-    inline_memcpy(&val, ptr, sizeof(T));
-
-    ptr =
-        reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ptr) + sizeof(T));
-    return val;
-  }
-};
-
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 

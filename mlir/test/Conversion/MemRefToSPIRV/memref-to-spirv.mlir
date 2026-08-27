@@ -24,12 +24,12 @@ func.func @load_store_zero_rank_float(%arg0: memref<f32, #spirv.storage_class<St
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : f32
   %0 = memref.load %arg0[] : memref<f32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : f32
@@ -43,12 +43,12 @@ func.func @load_store_zero_rank_int(%arg0: memref<i32, #spirv.storage_class<Stor
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : i32
   %0 = memref.load %arg0[] : memref<i32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : i32
@@ -89,21 +89,21 @@ func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i :
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %[[IDX:.+]]: index)
 func.func @load_aligned(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_nontemporal
 func.func @load_aligned_nontemporal(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned|Nontemporal", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32, nontemporal = true } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) nontemporal(true) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_psb
 func.func @load_aligned_psb(%src: memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>, %i : index) -> i1 {
   // CHECK: %[[VAL:.+]] = spirv.Load "PhysicalStorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
   return %0: i1
 }
 
@@ -185,7 +185,132 @@ func.func @load_store_f16_physical(%arg0: memref<f16, #spirv.storage_class<Physi
   return
 }
 
+// CHECK-LABEL: @load_store_vec4f16_physical
+func.func @load_store_vec4f16_physical(%arg0: memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  // Alignment = 4 elements * 2 bytes = 8 bytes
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 8] : vector<4xf16>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 8] : vector<4xf16>
+  %0 = memref.load %arg0[%i] : memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<5xvector<4xf16>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @load_store_vec4f32_physical
+func.func @load_store_vec4f32_physical(%arg0: memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  // Alignment = 4 elements * 4 bytes = 16 bytes
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 16] : vector<4xf32>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 16] : vector<4xf32>
+  %0 = memref.load %arg0[%i] : memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<8xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @load_store_vec4f32_dynamic_physical
+//  CHECK-SAME: (%[[ARG0:.+]]: memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>,
+func.func @load_store_vec4f32_dynamic_physical(%arg0: memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>, %i: index) {
+  //     CHECK: builtin.unrealized_conversion_cast %[[ARG0]] {{.*}} to !spirv.ptr<!spirv.struct<(!spirv.rtarray<vector<4xf32>, stride=16>
+  //     CHECK: spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned", 16] : vector<4xf32>
+  //     CHECK: spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned", 16] : vector<4xf32>
+  %0 = memref.load %arg0[%i] : memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  memref.store %0, %arg0[%i] : memref<?xvector<4xf32>, #spirv.storage_class<PhysicalStorageBuffer>>
+  return
+}
+
 } // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.1, [Shader], [SPV_KHR_storage_buffer_storage_class, SPV_KHR_no_integer_wrap_decoration]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index
+func.func @static_linearized_index(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+// The maximum linearized index is 2147483649: too large for a signed i32,
+// but representable in an unsigned i32.
+// CHECK-LABEL: @unsigned_only_linearized_index
+func.func @unsigned_only_linearized_index(
+    %arg0: memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 1073741825 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_unsigned_wrap} : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_unsigned_wrap} : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+// Do not decorate index arithmetic whose layout bounds cannot be proven.
+// CHECK-LABEL: @dynamic_linearized_index
+func.func @dynamic_linearized_index(
+    %arg0: memref<?x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul {{.*}}, %[[STRIDE]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: spirv.IAdd {{.*}}, %[[OFFSET]] : i32
+  %0 = memref.load %arg0[%row, %column] : memref<?x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index_with_spirv_1_4
+func.func @static_linearized_index_with_spirv_1_4(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: spirv.{{.*}}AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.1, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index_without_no_wrap_extension
+func.func @static_linearized_index_without_no_wrap_extension(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: spirv.{{.*}}AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
 
 // -----
 
@@ -495,21 +620,106 @@ module attributes {
   ]>, #spirv.resource_limits<>>
 } {
   func.func @load_nontemporal(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Load "StorageBuffer" %{{.+}} ["Nontemporal"] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} ["Nontemporal"] : f32
     return
   }
 
   func.func @load_nontemporal_aligned(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned|Nontemporal", 4] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned|Nontemporal", 4] : f32
     return
   }
 }
+
+// -----
+
+// Check memref.copy lowering to spirv.CopyMemory.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy
+func.func @copy() {
+  // CHECK: %[[SRC:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: %[[DST:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: spirv.CopyMemory "Function" %[[DST]], "Function" %[[SRC]]{{.*}} : !spirv.array<4 x f32>
+  %0 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  %1 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  memref.copy %0, %1 : memref<4xf32, #spirv.storage_class<Function>> to memref<4xf32, #spirv.storage_class<Function>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered when either operand is in Image storage
+// class, since spirv.CopyMemory does not apply to image memory.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [
+    Shader,
+    Image1D,
+    StorageImageExtendedFormats
+  ], [
+    SPV_KHR_storage_buffer_storage_class
+  ]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_image
+// CHECK: memref.copy
+func.func @copy_image(%arg0: memref<4xf32, #spirv.storage_class<Image>>, %arg1: memref<4xf32, #spirv.storage_class<Image>>) {
+  memref.copy %arg0, %arg1 : memref<4xf32, #spirv.storage_class<Image>> to memref<4xf32, #spirv.storage_class<Image>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered for dynamically shaped memrefs, since
+// spirv.CopyMemory requires the copied type to have a fixed size.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_dynamic_shape
+// CHECK: memref.copy
+func.func @copy_dynamic_shape(%arg0: memref<?xf32, #spirv.storage_class<StorageBuffer>>, %arg1: memref<?xf32, #spirv.storage_class<StorageBuffer>>) {
+  memref.copy %arg0, %arg1 : memref<?xf32, #spirv.storage_class<StorageBuffer>> to memref<?xf32, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check memref.copy is not lowered for dynamically shaped memrefs under the
+// Kernel addressing model either, since the converted pointer only refers to
+// a single element and does not carry the dynamic extent.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy_dynamic_shape_kernel
+// CHECK: memref.copy
+func.func @copy_dynamic_shape_kernel(%arg0: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>, %arg1: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) {
+  memref.copy %arg0, %arg1 : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, #spirv.storage_class<CrossWorkgroup>>
+  return
+}
+
+} // end module
 
 // -----
 

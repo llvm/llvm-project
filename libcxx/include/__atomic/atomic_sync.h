@@ -12,72 +12,71 @@
 #include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/invoke.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
 #  if _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 // old dylib interface kept for backwards compatibility
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile*, __cxx_contention_t) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait(void const volatile*, __cxx_contention_t) noexcept;
 
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile*) noexcept;
+_LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile*) noexcept;
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*) _NOEXCEPT;
+__libcpp_atomic_monitor(__cxx_atomic_contention_t const volatile*) noexcept;
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t) _NOEXCEPT;
+__libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention_t) noexcept;
 #    endif // !_LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 // new dylib interface
 
 // return the global contention state's current value for the address
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t
-__atomic_monitor_global(void const* __address) _NOEXCEPT;
+__atomic_monitor_global(void const* __address) noexcept;
 
 // wait on the global contention state to be changed from the given value for the address
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__atomic_wait_global_table(void const* __address, __cxx_contention_t __monitor_value) _NOEXCEPT;
+__atomic_wait_global_table(void const* __address, __cxx_contention_t __monitor_value) noexcept;
 
 // notify one waiter waiting on the global contention state for the address
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const*) noexcept;
 
 // notify all waiters waiting on the global contention state for the address
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const*) noexcept;
 
 // wait on the address directly with the native platform wait
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__atomic_wait_native(void const* __address, void const* __old_value) _NOEXCEPT;
+__atomic_wait_native(void const* __address, void const* __old_value) noexcept;
 
 // notify one waiter waiting on the address directly with the native platform wait
 template <std::size_t _Size>
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(const void*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(const void*) noexcept;
 
 // notify all waiters waiting on the address directly with the native platform wait
 template <std::size_t _Size>
-_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) _NOEXCEPT;
+_LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(const void*) noexcept;
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
@@ -90,7 +89,7 @@ struct __atomic_wait_backoff_impl {
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
   using __value_type _LIBCPP_NODEBUG      = typename __waitable_traits::__value_type;
 
-  _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
+  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = const_cast<const void*>(
           static_cast<const volatile void*>(__waitable_traits::__atomic_contention_address(__a_)));
@@ -98,18 +97,18 @@ struct __atomic_wait_backoff_impl {
       if constexpr (__has_native_atomic_wait<__value_type>) {
         auto __atomic_value = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
-          return true;
+          return __backoff_results::__poll_success;
         std::__atomic_wait_native<sizeof(__value_type)>(__contention_address, std::addressof(__atomic_value));
       } else {
         __cxx_contention_t __monitor_val = std::__atomic_monitor_global(__contention_address);
         auto __atomic_value              = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
-          return true;
+          return __backoff_results::__poll_success;
         std::__atomic_wait_global_table(__contention_address, __monitor_val);
       }
     } else {
     } // poll
-    return false;
+    return __backoff_results::__continue_poll;
   }
 };
 
@@ -144,16 +143,16 @@ struct __atomic_wait_backoff_impl {
     return __poll_(__current_val);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
+  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = __waitable_traits::__atomic_contention_address(__a_);
       __cxx_contention_t __monitor_val;
       if (__update_monitor_val_and_poll(__contention_address, __monitor_val))
-        return true;
+        return __backoff_results::__poll_success;
       std::__libcpp_atomic_wait(__contention_address, __monitor_val);
     } else {
     } // poll
-    return false;
+    return __backoff_results::__continue_poll;
   }
 };
 
@@ -260,8 +259,8 @@ _LIBCPP_HIDE_FROM_ABI void __atomic_wait(_AtomicWaitable& __a, _Tp __val, memory
   });
 }
 
-#endif // C++20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_H

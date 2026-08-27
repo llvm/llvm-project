@@ -131,6 +131,11 @@ public:
   /// retrieve them from the cache.
   const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
 
+  /// Return whether `uRead` and `uConflictingWrite` are non-conflicting
+  /// subsets, with caching.
+  bool areNonConflictingSubsetsCached(OpOperand *uRead,
+                                      OpOperand *uConflictingWrite);
+
   /// Reset cached data structures.
   void resetCache() override;
 
@@ -231,6 +236,11 @@ private:
 
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
+
+  /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
+  /// if the operands are non-conflicting subsets, `false` if they are
+  /// conflicting. The absence of an entry means uncached.
+  DenseMap<std::pair<OpOperand *, OpOperand *>, bool> nonConflictingSubsetCache;
 
   /// Set of all OpResults that were decided to bufferize in-place.
   llvm::DenseSet<OpOperand *> inplaceBufferized;

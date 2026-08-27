@@ -4,11 +4,11 @@
 define void @f1() {
 ; CHECK-LABEL: 'f1'
 ; CHECK-NEXT:  Src: store i32 0, ptr null, align 4 --> Dst: store i32 0, ptr null, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 0, ptr null, align 4 --> Dst: %2 = load i32, ptr null, align 4
-; CHECK-NEXT:    da analyze - consistent flow [|<]!
+; CHECK-NEXT:    da analyze - flow [|<]!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr null, align 4 --> Dst: %2 = load i32, ptr null, align 4
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ;
 entry:
   br label %for.1.header
@@ -36,11 +36,11 @@ exit:                                             ; preds = %for.2.body
 define void @f2() {
 ; CHECK-LABEL: 'f2'
 ; CHECK-NEXT:  Src: store i32 0, ptr null, align 4 --> Dst: store i32 0, ptr null, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ; CHECK-NEXT:  Src: store i32 0, ptr null, align 4 --> Dst: %3 = load i32, ptr null, align 4
 ; CHECK-NEXT:    da analyze - flow [|<] / assuming 1 loop level(s) fused: [S|<]!
 ; CHECK-NEXT:  Src: %3 = load i32, ptr null, align 4 --> Dst: %3 = load i32, ptr null, align 4
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ;
 entry:
   br label %for.1.header

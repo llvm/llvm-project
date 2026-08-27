@@ -173,9 +173,10 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
 
 void LivenessAnalysis::visitNonControlFlowArguments(
     RegionSuccessor &successor, ArrayRef<BlockArgument> arguments) {
+  assert(successor.isRegion() && "expected a region successor");
   Operation *parentOp = successor.getSuccessor()->getParentOp();
-  LDBG() << "visitNonControlFlowArguments visit the region # "
-         << successor.getSuccessor()->getRegionNumber() << "of "
+  LDBG() << "visitNonControlFlowArguments visit the region: #"
+         << successor.getSuccessor()->getRegionNumber() << " of "
          << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
   auto valuesToLattices = [&](Value value) { return getLatticeElement(value); };
   SmallVector<Liveness *> argumentLattices =

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) #1

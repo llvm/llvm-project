@@ -99,7 +99,6 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
   {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
   {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,            isGFX9_GFX10},
-  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250},
   {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
   {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
@@ -111,7 +110,8 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_TBA_TO_PC"},   ID_RTN_GET_TBA_TO_PC,       isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
   {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
-                                                            isGFX1250},
+                                                            isGFX1250Plus},
+  {{"MSG_RTN_SAVE_WAVE_HAS_TDM"}, ID_RTN_SAVE_WAVE_HAS_TDM, isGFX1250Plus}
 };
 
 static constexpr CustomOperand SysMsgOperands[] = {
@@ -155,6 +155,26 @@ StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
 }
 
 } // namespace SendMsg
+
+namespace WaitEvent {
+
+// clang-format off
+static constexpr CustomOperand WaitEventOperands[] = {
+  {{"{ export_ready: 0 }"},           0,                      isGFX12Plus},
+  {{"{ dont_wait_export_ready: 0 }"}, 0,                      isGFX11},
+  {{"{ dont_wait_export_ready: 1 }"}, DONT_WAIT_EXPORT_READY, isGFX11},
+  {{"{ export_ready: 1 }"},           EXPORT_READY,           isGFX12Plus}
+};
+// clang-format on
+
+int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI) {
+  return getEncodingFromOperandTable(WaitEventOperands, Name, STI);
+}
+
+StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
+  return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
+}
+} // namespace WaitEvent
 
 namespace Hwreg {
 
@@ -213,7 +233,7 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_POPS_PACKER"},            ID_POPS_PACKER,                 isGFX10},
   {{"HW_REG_WAVE_SCHED_MODE"},        ID_SCHED_MODE,                  isGFX12Plus},
   {{"HW_REG_PERF_SNAPSHOT_DATA"},     ID_PERF_SNAPSHOT_DATA_gfx11,    isGFX11},
-  {{"HW_REG_IB_STS2"},                ID_IB_STS2,                     isGFX1250},
+  {{"HW_REG_IB_STS2"},                ID_IB_STS2,                     isGFX1250Plus},
   {{"HW_REG_SHADER_CYCLES"},          ID_SHADER_CYCLES,               isGFX10_3_GFX11},
   {{"HW_REG_SHADER_CYCLES_LO"},       ID_SHADER_CYCLES,               isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_HI"},       ID_SHADER_CYCLES_HI,            isGFX12Plus},
@@ -221,8 +241,8 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_DVGPR_ALLOC_LO"},         ID_DVGPR_ALLOC_LO,              isGFX12Plus},
   {{"HW_REG_WAVE_DVGPR_ALLOC_HI"},    ID_DVGPR_ALLOC_HI,              isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_HI"},         ID_DVGPR_ALLOC_HI,              isGFX12Plus},
-  {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,            isGFX1250},
-  {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,          isGFX1250},
+  {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,            isGFX1250Plus},
+  {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,          isGFX1250Plus},
 
 };
 // clang-format on

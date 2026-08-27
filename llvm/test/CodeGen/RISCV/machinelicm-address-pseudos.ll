@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I,RV64NOFUSION %s
 ; RUN: llc -mtriple=riscv32 -relocation-model=pic -verify-machineinstrs < %s \
-; RUN:   -mattr=+auipc-addi-fusion | FileCheck -check-prefixes=RV32I,RV32FUSION %s
+; RUN:   -mattr=+fusion-auipc-addi | FileCheck -check-prefixes=RV32I,RV32FUSION %s
 ; RUN: llc -mtriple=riscv64 -relocation-model=pic -verify-machineinstrs < %s \
-; RUN:   -mattr=+auipc-addi-fusion | FileCheck -check-prefixes=RV64I,RV64FUSION %s
+; RUN:   -mattr=+fusion-auipc-addi | FileCheck -check-prefixes=RV64I,RV64FUSION %s
 
 ; Verifies that MachineLICM can hoist address generation pseudos out of loops.
 

@@ -88,7 +88,6 @@ static std::string DependencyInfoPath;
 static bool VersionOption;
 static bool NoWarningForNoSymbols;
 static bool WarningsAsErrors;
-static std::string IgnoredSyslibRoot;
 
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
@@ -148,7 +147,7 @@ static Error processFileList() {
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/false,
-                                   /*RequiresNullTerminator=*/false);
+                                   /*RequiresNullTerminator=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return createFileError(FileName, errorCodeToError(EC));
   const MemoryBuffer &Ref = *FileOrErr.get();
@@ -572,7 +571,6 @@ checkForDuplicates(const MembersPerArchitectureMap &MembersPerArch) {
       }
     }
 
-    ErrorStream.flush();
     if (ErrorData.size() > 0)
       return createStringError(std::errc::invalid_argument, ErrorData.c_str());
   }
@@ -659,9 +657,6 @@ static void parseRawArgs(int Argc, char **Argv) {
 
   if (const opt::Arg *A = Args.getLastArg(OPT_dependencyInfoPath))
     DependencyInfoPath = A->getValue();
-
-  if (const opt::Arg *A = Args.getLastArg(OPT_ignoredSyslibRoot))
-    IgnoredSyslibRoot = A->getValue();
 
   LibraryOperation =
       Args.hasArg(OPT_static) ? Operation::Static : Operation::None;

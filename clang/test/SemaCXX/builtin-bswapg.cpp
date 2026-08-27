@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 void test_basic_type_checks() {
+  static_assert(__is_same(bool, decltype(__builtin_bswapg((bool)0))), "");
   static_assert(__is_same(char, decltype(__builtin_bswapg((char)0))), "");
   static_assert(__is_same(unsigned char, decltype(__builtin_bswapg((unsigned char)0))), "");
   static_assert(__is_same(short, decltype(__builtin_bswapg((short)0))), "");
@@ -227,4 +228,6 @@ void test_bitint() {
   static_assert(__builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0), "");
   static_assert(__builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412, "");
   // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  static_assert(__builtin_bswapg((_BitInt(4))0x7) == (_BitInt(4))0x7, "");
+  // expected-error@-1 {{_BitInt type '_BitInt(4)' (4 bits) must be a multiple of 16 bits for byte swapping}}
 }

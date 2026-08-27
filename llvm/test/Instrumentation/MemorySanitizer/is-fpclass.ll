@@ -10,7 +10,7 @@ define i1 @not_isfinite_or_zero_f16(half %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 0
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 615)
+; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    store i1 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
@@ -24,7 +24,7 @@ define <2 x i1> @not_isfinite_or_zero_v2f16_pos0_neg0_vec(<2 x half> %x) sanitiz
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[X:%.*]], i32 615)
+; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[X:%.*]], /* (nan inf zero) */ i32 615)
 ; CHECK-NEXT:    store <2 x i1> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;

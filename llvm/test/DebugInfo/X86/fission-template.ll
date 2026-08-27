@@ -20,9 +20,6 @@
 ; CHECK:          DW_TAG_subprogram
 ; CHECK-NEXT:     DW_AT_linkage_name	("_Z2f2IiEvv")
 ; CHECK-NEXT:     DW_AT_name	("f2<int>")
-; CHECK:          DW_TAG_template_type_parameter
-; CHECK-NEXT:       DW_AT_type	(0x{{.*}} "int")
-; CHECK-NEXT:       DW_AT_name	("T")
 ; CHECK:      .debug_info.dwo contents:
 ; CHECK:        DW_TAG_compile_unit
 ; CHECK:          DW_TAG_subprogram

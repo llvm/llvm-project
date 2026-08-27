@@ -6,19 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
-                                                     __CLC_GENTYPE y,
-                                                     private __CLC_INTN *q);
+typedef struct __CLC_XCONCAT(__clc_remquo_ret_, __CLC_GENTYPE) {
+  __CLC_GENTYPE rem;
+  __CLC_INTN quo;
+} __CLC_XCONCAT(__clc_remquo_ret_, __CLC_GENTYPE);
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
-                                                     __CLC_GENTYPE y,
-                                                     global __CLC_INTN *q);
+#define __CLC_REMQUO_RET_GENTYPE __CLC_XCONCAT(__clc_remquo_ret_, __CLC_GENTYPE)
 
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
-                                                     __CLC_GENTYPE y,
-                                                     local __CLC_INTN *q);
+_CLC_OVERLOAD _CLC_DECL __CLC_REMQUO_RET_GENTYPE
+__clc_remquo_stret(__CLC_GENTYPE x, __CLC_GENTYPE y);
+
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
+                                                   __CLC_GENTYPE y,
+                                                   private __CLC_INTN *q);
+
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
+                                                   __CLC_GENTYPE y,
+                                                   global __CLC_INTN *q);
+
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
+                                                   __CLC_GENTYPE y,
+                                                   local __CLC_INTN *q);
 #if _CLC_GENERIC_AS_SUPPORTED
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
-                                                     __CLC_GENTYPE y,
-                                                     generic __CLC_INTN *q);
+_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
+                                                   __CLC_GENTYPE y,
+                                                   generic __CLC_INTN *q);
 #endif

@@ -1,16 +1,6 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-constraints %t -- -- -fno-delayed-template-parsing
 
-// NOLINTBEGIN
-namespace std {
-template <bool B, class T = void> struct enable_if { };
-
-template <class T> struct enable_if<true, T> { typedef T type; };
-
-template <bool B, class T = void>
-using enable_if_t = typename enable_if<B, T>::type;
-
-} // namespace std
-// NOLINTEND
+#include <utility>
 
 // Separate test file for the case where the first '>>' token part of
 // an enable_if expression correctly handles the synthesized token.

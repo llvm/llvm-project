@@ -65,9 +65,6 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   FileName = "Test.hpp";
   // Not available unless function name or fully body is selected.
   EXPECT_UNAVAILABLE(R"cpp(
-    // Not a definition
-    vo^i[[d^ ^f]]^oo();
-
     [[vo^id ]]foo[[()]] {[[
       [[(void)(5+3);
       return;]]
@@ -100,10 +97,9 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
       return;
     }]]]])cpp");
 
-  // Not available on defaulted/deleted members.
+  // Not available on deleted members.
   EXPECT_UNAVAILABLE(R"cpp(
     class Foo {
-      Fo^o() = default;
       F^oo(const Foo&) = delete;
     };)cpp");
 
@@ -164,11 +160,23 @@ TEST_F(DefineOutlineTest, ApplyTest) {
     llvm::StringRef ExpectedHeader;
     llvm::StringRef ExpectedSource;
   } Cases[] = {
-      // Simple check
+      // Simple check: Move
       {
           "void fo^o() { return; }",
           "void foo() ;",
           "void foo() { return; }",
+      },
+      // Simple check: Create
+      {
+          "void fo^o(int i = 5);",
+          "void foo(int i = 5);",
+          "void foo(int i ) {}",
+      },
+      // Simple check: Create with return value
+      {
+          "int fo^o();",
+          "int foo();",
+          "int foo() { return {}; }",
       },
       // Inline specifier.
       {
@@ -242,6 +250,18 @@ TEST_F(DefineOutlineTest, ApplyTest) {
 inline Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
 )cpp",
           ""},
+      // Default ctor
+      {
+          R"cpp(
+              class Foo {
+                F^oo() = default;
+              };)cpp",
+          R"cpp(
+              class Foo {
+                Foo() ;
+              };)cpp",
+          "Foo::Foo() = default;",
+      },
       // Virt specifiers.
       {
           R"cpp(
@@ -631,6 +651,19 @@ TEST_F(DefineOutlineTest, QualifyReturnValue) {
         class Foo {};
         Foo foo() ;)cpp",
        "Foo foo() { return {}; }"},
+      {R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> fu^nc() { return {}; }
+        };)cpp",
+       R"cpp(
+        template <typename T> class Expected {};
+        class Foo {
+          class Bar {};
+          Expected<Bar> func() ;
+        };)cpp",
+       "Expected<Foo::Bar> Foo::func() { return {}; }\n"},
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
@@ -950,6 +983,37 @@ inline void Foo::neighbor() {}
 )cpp",
           {}},
 
+      // Adjacent definition with `= default`
+      {
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void fun^c() {}
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;
+void Foo::ignored2() {}
+)cpp",
+          R"cpp(
+struct Foo {
+  void ignored1();
+  Foo();
+  void func() ;
+  void ignored2();
+};
+)cpp",
+          R"cpp(
+#include "a.hpp"
+void Foo::ignored1() {}
+Foo::Foo() = default;void Foo::func() {}
+
+void Foo::ignored2() {}
+)cpp"},
   };
 
   for (const auto &Case : Cases) {

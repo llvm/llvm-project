@@ -1,4 +1,5 @@
 ! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
 
@@ -20,19 +21,19 @@ subroutine omp_in_reduction_taskgroup()
 end subroutine omp_in_reduction_taskgroup
 
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         10
+!CHECK:   line:         [[@LINE-13]]
 !CHECK:   construct:    task
 !CHECK:   clauses:
 !CHECK:     - clause:   in_reduction
 !CHECK:       details:  '+:z'
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         14
+!CHECK:   line:         [[@LINE-15]]
 !CHECK:   construct:    taskloop
 !CHECK:   clauses:
 !CHECK:     - clause:   in_reduction
 !CHECK:       details:  '+:z'
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         9
+!CHECK:   line:         [[@LINE-26]]
 !CHECK:   construct:    taskgroup
 !CHECK:   clauses:
 !CHECK:      - clause:  task_reduction
@@ -50,13 +51,13 @@ subroutine omp_in_reduction_parallel()
 end subroutine omp_in_reduction_parallel
 
 !CHECK: - file:         {{.*}}
-!CHECK:   line:         44
+!CHECK:   line:         [[@LINE-9]]
 !CHECK:   construct:    taskloop simd
 !CHECK:   clauses:
 !CHECK:     - clause:   in_reduction
 !CHECK:       details:  '+:z'
 !CHECK:  - file:        {{.*}}
-!CHECK:    line:        43
+!CHECK:    line:        [[@LINE-16]]
 !CHECK:    construct:   parallel
 !CHECK:    clauses:
 !CHECK:      - clause:  reduction

@@ -20,14 +20,14 @@ entry:
   store i64 0, ptr @a, align 8
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %inc1 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   store volatile i32 0, ptr @x, align 4
   %inc = add nsw i64 %inc1, 1
   %cmp = icmp sgt i64 %inc1, -2
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %inc.lcssa = phi i64 [ %inc, %for.body ]
   store i64 %inc.lcssa, ptr @a, align 8
   ret void

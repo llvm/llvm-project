@@ -733,11 +733,12 @@ TEST(AllStrategies, SkipEHPad) {
   StringRef Source = "\n\
     define void @f(i32 %x) personality ptr @__CxxFrameHandler3 { \n\
     entry: \n\
+      %I = alloca i32, align 4 \n\
       invoke void @g() to label %try.cont unwind label %catch.dispatch \n\
     catch.dispatch: \n\
       %0 = catchswitch within none [label %catch] unwind to caller \n\
     catch: \n\
-      %1 = catchpad within %0 [ptr null, i32 64, ptr null] \n\
+      %1 = catchpad within %0 [ptr null, i32 64, ptr %I] \n\
       catchret from %1 to label %try.cont \n\
     try.cont: \n\
       ret void \n\
@@ -774,7 +775,7 @@ TEST(AllStrategies, SpecialTerminator) {
 
 TEST(AllStrategies, AMDGCNLegalAddrspace) {
   StringRef Source = "\n\
-    target triple = \"amdgcn-amd-amdhsa\"\n\
+    target triple = \"amdgpu7.00-amd-amdhsa\"\n\
     ; minimum values required by the fuzzer (e.g., default addrspace for allocas and globals)\n\
     target datalayout = \"A5-G1\"\n\
     define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {\n\

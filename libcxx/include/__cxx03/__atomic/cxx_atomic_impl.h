@@ -14,7 +14,6 @@
 #include <__cxx03/__config>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__type_traits/is_assignable.h>
-#include <__cxx03/__type_traits/is_trivially_copyable.h>
 #include <__cxx03/__type_traits/remove_const.h>
 #include <__cxx03/cstddef>
 
@@ -487,8 +486,6 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 
 template <typename _Tp, typename _Base = __cxx_atomic_base_impl<_Tp> >
 struct __cxx_atomic_impl : public _Base {
-  static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
-
   _LIBCPP_HIDE_FROM_ABI __cxx_atomic_impl() _NOEXCEPT = default;
   _LIBCPP_HIDE_FROM_ABI explicit __cxx_atomic_impl(_Tp __value) _NOEXCEPT : _Base(__value) {}
 };

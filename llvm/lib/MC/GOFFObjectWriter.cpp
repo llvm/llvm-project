@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
@@ -228,7 +229,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::EDAttr &Attr)
+             const GOFF::EDAttr &Attr, GOFF::ESDAlignment Alignment)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_ElementDefinition) {
     this->NameSpace = Attr.NameSpace;
@@ -242,7 +243,7 @@ public:
     BehavAttrs.setTextStyle(Attr.TextStyle);
     BehavAttrs.setBindingAlgorithm(Attr.BindAlgorithm);
     BehavAttrs.setLoadingBehavior(Attr.LoadBehavior);
-    BehavAttrs.setAlignment(Attr.Alignment);
+    BehavAttrs.setAlignment(Alignment);
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
@@ -258,14 +259,15 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
+             const GOFF::EDAttr &EDAttr, GOFF::ESDAlignment Alignment,
+             const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
-    BehavAttrs.setAlignment(EDAttr.Alignment);
+    BehavAttrs.setAlignment(Alignment);
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
@@ -278,6 +280,7 @@ public:
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
+    BehavAttrs.setIndirectReference(Attr.IsIndirectReference);
   }
 };
 
@@ -288,6 +291,16 @@ class GOFFWriter {
 
   /// Saved relocation data collected in recordRelocations().
   std::vector<GOFFRelocationEntry> &Relocations;
+
+public:
+  enum DwoMode {
+    AllSections,
+    NonDwoOnly,
+    DwoOnly,
+  };
+
+private:
+  const DwoMode Mode;
 
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
@@ -302,34 +315,59 @@ class GOFFWriter {
 
 public:
   GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm, MCSectionGOFF *RootSD,
-             std::vector<GOFFRelocationEntry> &Relocations);
+             std::vector<GOFFRelocationEntry> &Relocations, DwoMode Mode);
   uint64_t writeObject();
 };
 } // namespace
 
 GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
                        MCSectionGOFF *RootSD,
-                       std::vector<GOFFRelocationEntry> &Relocations)
-    : OS(OS), Asm(Asm), RootSD(RootSD), Relocations(Relocations) {}
+                       std::vector<GOFFRelocationEntry> &Relocations,
+                       DwoMode Mode)
+    : OS(OS), Asm(Asm), RootSD(RootSD), Relocations(Relocations), Mode(Mode) {}
+
+namespace {
+bool isDwoSection(const MCSection &Section) {
+  StringRef Name = Section.getName();
+  return (Name.ends_with(".dwo") && Name.starts_with(".debug_")) ||
+         (Name.ends_with("_DWO") && Name.starts_with("D_"));
+}
+
+bool isSectionToSkip(const MCSection &Section, GOFFWriter::DwoMode Mode) {
+  if (Mode == GOFFWriter::DwoOnly) {
+    if (!isDwoSection(Section))
+      return true;
+  } else if (Mode == GOFFWriter::NonDwoOnly) {
+    if (isDwoSection(Section))
+      return true;
+  }
+  return false;
+}
+} // namespace
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
+  if (isSectionToSkip(Section, Mode))
+    return;
+
   if (Section.isSD()) {
-    GOFFSymbol SD(Section.getName(), Section.getOrdinal(),
+    GOFFSymbol SD(Section.getExternalName(), Section.getOrdinal(),
                   Section.getSDAttributes());
     writeSymbol(SD);
   }
 
   if (Section.isED()) {
-    GOFFSymbol ED(Section.getName(), Section.getOrdinal(),
-                  Section.getParent()->getOrdinal(), Section.getEDAttributes());
+    GOFFSymbol ED(Section.getExternalName(), Section.getOrdinal(),
+                  Section.getParent()->getOrdinal(), Section.getEDAttributes(),
+                  Section.getEDAlignment());
     ED.SectionLength = Asm.getSectionAddressSize(Section);
     writeSymbol(ED);
   }
 
   if (Section.isPR()) {
     MCSectionGOFF *Parent = Section.getParent();
-    GOFFSymbol PR(Section.getName(), Section.getOrdinal(), Parent->getOrdinal(),
-                  Parent->getEDAttributes(), Section.getPRAttributes());
+    GOFFSymbol PR(Section.getExternalName(), Section.getOrdinal(),
+                  Parent->getOrdinal(), Parent->getEDAttributes(),
+                  Parent->getEDAlignment(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
@@ -346,8 +384,8 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 
 void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
-  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
-                Section.getEDAttributes().NameSpace,
+  GOFFSymbol LD(Symbol.getExternalName(), Symbol.getIndex(),
+                Section.getOrdinal(), Section.getEDAttributes().NameSpace,
                 GOFF::LDAttr{false, Symbol.getCodeData(),
                              Symbol.getBindingStrength(), Symbol.getLinkage(),
                              GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
@@ -358,11 +396,22 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.getCodeData(), Symbol.getBindingStrength(),
-                             Symbol.getLinkage(), GOFF::ESD_AMODE_64,
-                             Symbol.getBindingScope()});
-  writeSymbol(ER);
+  if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
+    MCSectionGOFF *ED = Symbol.getADA()->getParent();
+    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
+                  ED->getEDAttributes(), ED->getEDAlignment(),
+                  GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
+                               Symbol.getLinkage(), Symbol.getBindingScope(),
+                               0});
+    writeSymbol(PR);
+  } else {
+    GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
+                  RootSD->getOrdinal(),
+                  GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
+    writeSymbol(ER);
+  }
 }
 
 void GOFFWriter::defineSymbols() {
@@ -380,11 +429,20 @@ void GOFFWriter::defineSymbols() {
       continue;
     auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
     if (!Symbol.isDefined()) {
-      Symbol.setIndex(++Ordinal);
-      defineExtern(Symbol);
-    } else if (Symbol.isInEDSection()) {
-      Symbol.setIndex(++Ordinal);
-      defineLabel(Symbol);
+      if (Mode != DwoOnly) {
+        Symbol.setIndex(++Ordinal);
+        defineExtern(Symbol);
+      }
+    } else {
+      if (isSectionToSkip(Symbol.getSection(), Mode))
+        continue;
+      if (Symbol.isInEDSection()) {
+        Symbol.setIndex(++Ordinal);
+        defineLabel(Symbol);
+      } else {
+        // Symbol is in PR section, the symbol refers to the section.
+        Symbol.setIndex(Symbol.getSection().getOrdinal());
+      }
     }
   }
 }
@@ -653,7 +711,9 @@ uint64_t GOFFWriter::writeObject() {
   for (const MCSection &Section : Asm)
     writeText(static_cast<const MCSectionGOFF *>(&Section));
 
-  writeRelocations();
+  // Do not write relocations into the dwo file.
+  if (Mode != GOFFWriter::DwoOnly)
+    writeRelocations();
 
   writeEnd();
 
@@ -670,7 +730,18 @@ GOFFObjectWriter::GOFFObjectWriter(
     std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
     : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
 
+GOFFObjectWriter::GOFFObjectWriter(
+    std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS,
+    raw_pwrite_stream &DwoOS)
+    : TargetObjectWriter(std::move(MOTW)), OS(OS), DwoOS(&DwoOS) {}
+
 GOFFObjectWriter::~GOFFObjectWriter() = default;
+
+void GOFFObjectWriter::reset() {
+  Relocations.clear();
+  RootSD = nullptr;
+  MCObjectWriter::reset();
+}
 
 void GOFFObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,
@@ -691,25 +762,26 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
       Asm->reportError(
           Fixup.getLoc(),
           Twine("symbol ")
-              .concat(A.getName())
+              .concat(A.getExternalName())
               .concat(" must be defined for a relative immediate relocation"));
       return;
     }
     if (&A.getSection() != PSection) {
+      MCSectionGOFF &GOFFSection = static_cast<MCSectionGOFF &>(A.getSection());
       Asm->reportError(Fixup.getLoc(),
                        Twine("relative immediate relocation section mismatch: ")
-                           .concat(A.getSection().getName())
+                           .concat(GOFFSection.getExternalName())
                            .concat(" of symbol ")
-                           .concat(A.getName())
+                           .concat(A.getExternalName())
                            .concat(" <-> ")
-                           .concat(PSection->getName()));
+                           .concat(PSection->getExternalName()));
       return;
     }
     if (B) {
       Asm->reportError(
           Fixup.getLoc(),
           Twine("subtractive symbol ")
-              .concat(B->getName())
+              .concat(B->getExternalName())
               .concat(" not supported for a relative immediate relocation"));
       return;
     }
@@ -763,9 +835,11 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
     default:
       Con = "(unknown)";
     }
-    dbgs() << "Reloc " << N << ": " << Con << " Rptr: " << Sym->getName()
-           << " Pptr: " << PSection->getName() << " Offset: " << FixupOffset
-           << " Fixed Imm: " << FixedValue << "\n";
+    dbgs() << "Reloc " << N << ": " << Con
+           << " Rptr: " << Sym->getExternalName()
+           << " Pptr: " << PSection->getExternalName()
+           << " Offset: " << FixupOffset << " Fixed Imm: " << FixedValue
+           << "\n";
   };
   (void)DumpReloc;
 
@@ -782,7 +856,13 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
 }
 
 uint64_t GOFFObjectWriter::writeObject() {
-  uint64_t Size = GOFFWriter(OS, *Asm, RootSD, Relocations).writeObject();
+  uint64_t Size = 0;
+  if (DwoOS)
+    Size += GOFFWriter(*DwoOS, *Asm, RootSD, Relocations, GOFFWriter::DwoOnly)
+                .writeObject();
+  Size += GOFFWriter(OS, *Asm, RootSD, Relocations,
+                     DwoOS ? GOFFWriter::NonDwoOnly : GOFFWriter::AllSections)
+              .writeObject();
   return Size;
 }
 
@@ -790,4 +870,10 @@ std::unique_ptr<MCObjectWriter>
 llvm::createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                              raw_pwrite_stream &OS) {
   return std::make_unique<GOFFObjectWriter>(std::move(MOTW), OS);
+}
+
+std::unique_ptr<MCObjectWriter>
+llvm::createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                             raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS) {
+  return std::make_unique<GOFFObjectWriter>(std::move(MOTW), OS, DwoOS);
 }

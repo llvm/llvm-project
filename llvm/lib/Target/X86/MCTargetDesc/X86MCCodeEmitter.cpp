@@ -376,8 +376,7 @@ private:
                         const MCSubtargetInfo &STI,
                         bool ForceSIB = false) const;
 
-  PrefixKind emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
-                            const MCSubtargetInfo &STI,
+  PrefixKind emitPrefixImpl(const MCInst &MI, const MCSubtargetInfo &STI,
                             SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
@@ -890,17 +889,16 @@ void X86MCCodeEmitter::emitMemModRMByte(
 ///
 /// \returns one of the REX, XOP, VEX2, VEX3, EVEX if any of them is used,
 /// otherwise returns None.
-PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
+PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
                                             const MCSubtargetInfo &STI,
                                             SmallVectorImpl<char> &CB) const {
-  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
   // Emit segment override opcode prefix as needed.
-  if (MemoryOperand != -1) {
-    MemoryOperand += CurOp;
+  if (MemoryOperand != -1)
     emitSegmentOverridePrefix(MemoryOperand + X86::AddrSegmentReg, MI, CB);
-  }
 
   // Emit the repeat opcode prefix as needed.
   unsigned Flags = MI.getFlags();
@@ -918,29 +916,20 @@ PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
   switch (Form) {
   default:
     break;
-  case X86II::RawFrmDstSrc: {
+  case X86II::RawFrmDstSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(2).getReg() != X86::DS)
       emitSegmentOverridePrefix(2, MI, CB);
-    CurOp += 3; // Consume operands.
     break;
-  }
-  case X86II::RawFrmSrc: {
+  case X86II::RawFrmSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(1).getReg() != X86::DS)
       emitSegmentOverridePrefix(1, MI, CB);
-    CurOp += 2; // Consume operands.
     break;
-  }
-  case X86II::RawFrmDst: {
-    ++CurOp; // Consume operand.
-    break;
-  }
-  case X86II::RawFrmMemOffs: {
+  case X86II::RawFrmMemOffs:
     // Emit segment override opcode prefix as needed.
     emitSegmentOverridePrefix(1, MI, CB);
     break;
-  }
   }
 
   // REX prefix is optional, but if used must be immediately before the opcode
@@ -1531,17 +1520,13 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
 void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
                                   const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
+  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
 
   // Pseudo instructions don't get encoded.
   if (X86II::isPseudo(TSFlags))
     return;
 
-  unsigned CurOp = X86II::getOperandBias(Desc);
-
-  emitPrefixImpl(CurOp, MI, STI, CB);
+  emitPrefixImpl(MI, STI, CB);
 }
 
 void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
@@ -1566,7 +1551,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   uint64_t StartByte = CB.size();
 
-  PrefixKind Kind = emitPrefixImpl(CurOp, MI, STI, CB);
+  PrefixKind Kind = emitPrefixImpl(MI, STI, CB);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
@@ -1597,8 +1582,17 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   case X86II::Pseudo:
     llvm_unreachable("Pseudo instruction shouldn't be emitted");
   case X86II::RawFrmDstSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 3; // Consume operands.
+    break;
   case X86II::RawFrmSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 2; // Consume operands.
+    break;
   case X86II::RawFrmDst:
+    emitByte(BaseOpcode, CB);
+    ++CurOp; // Consume operand.
+    break;
   case X86II::PrefixByte:
     emitByte(BaseOpcode, CB);
     break;
@@ -1999,6 +1993,14 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     // Skip two trainling conditional operands encoded in EVEX prefix
     unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    // Verify that hasImm(TSFlags) matches the presence of remaining operands.
+    // Exclude forms that emit immediates in the switch above (RawFrm and
+    // AddCCFrm may consume a PC-relative operand; RawFrmImm8/16 and
+    // RawFrmMemOffs always consume their immediates there).
+    assert((!X86II::hasImm(TSFlags) || RemainingOps || Form == X86II::RawFrm ||
+            Form == X86II::AddCCFrm || Form == X86II::RawFrmImm8 ||
+            Form == X86II::RawFrmImm16 || Form == X86II::RawFrmMemOffs) &&
+           "TSFlags indicates immediate but no operand provides it");
     while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     getImmFixupKind(Desc.TSFlags),

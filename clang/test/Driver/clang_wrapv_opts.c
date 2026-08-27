@@ -18,3 +18,9 @@
 
 // RUN: %clang -### -S -fno-wrapv-pointer -fno-strict-overflow -fno-wrapv -Werror %s 2>&1 | FileCheck -check-prefix=CHECK4-POINTER %s --implicit-check-not="-fwrapv"
 // CHECK4-POINTER: "-fwrapv-pointer"
+
+// RUN: %clang -### -S --target=x86_64-windows-msvc -Werror %s 2>&1 | FileCheck -check-prefix=CHECK5 %s
+// CHECK5: "-fwrapv"
+
+// RUN: %clang -### -S -fno-wrapv --target=x86_64-windows-msvc -Werror %s 2>&1 | FileCheck -check-prefix=CHECK6 %s
+// CHECK6: "-fno-wrapv"

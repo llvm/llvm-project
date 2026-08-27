@@ -19,7 +19,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <vector>
 
 namespace clang {
 namespace doc {
@@ -108,6 +107,7 @@ enum RecordId {
   NAMESPACE_USR,
   NAMESPACE_NAME,
   NAMESPACE_PATH,
+  NAMESPACE_PARENT_USR,
   ENUM_USR,
   ENUM_NAME,
   ENUM_DEFLOCATION,
@@ -124,6 +124,7 @@ enum RecordId {
   RECORD_TAG_TYPE,
   RECORD_IS_TYPE_DEF,
   RECORD_MANGLED_NAME,
+  RECORD_PARENT_USR,
   BASE_RECORD_USR,
   BASE_RECORD_NAME,
   BASE_RECORD_PATH,
@@ -223,8 +224,8 @@ private:
     llvm::BitstreamWriter &Stream;
 
   public:
-    StreamSubBlockGuard(llvm::BitstreamWriter &Stream_, BlockId ID)
-        : Stream(Stream_) {
+    StreamSubBlockGuard(llvm::BitstreamWriter &Stream, BlockId ID)
+        : Stream(Stream) {
       // NOTE: SubBlockIDSize could theoretically be calculated on the fly,
       // based on the initialization list of records in each block.
       Stream.EnterSubblock(ID, BitCodeConstants::SubblockIDSize);
@@ -242,7 +243,7 @@ private:
   void emitRecordID(RecordId ID);
   void emitBlockID(BlockId ID);
   void emitBlockInfoBlock();
-  void emitBlockInfo(BlockId BID, const std::vector<RecordId> &RIDs);
+  void emitBlockInfo(BlockId BID, llvm::ArrayRef<RecordId> RIDs);
 
   // Emission of individual record types.
   void emitRecord(StringRef Str, RecordId ID);

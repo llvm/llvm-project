@@ -89,3 +89,101 @@ llvm.func @omp_threadprivate() {
   llvm.store %3, %5 : i32, !llvm.ptr
   llvm.return
 }
+
+// -----
+
+llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}}
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) linear_var_types([]) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error @below {{Ill-formed type attributes for linear variables}} 
+  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([]) {
+     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+       omp.yield
+     }
+  }
+  llvm.return
+}
+
+// -----
+
+omp.private {type = private} @i_private_i32 : i32
+llvm.func @simd_linear_private(%lb : i32, %ub : i32, %step : i32, %i : !llvm.ptr) {
+  // expected-error @below {{linear variables cannot appear in other data-sharing clauses}}
+  omp.simd linear(%i : !llvm.ptr = %step : i32) linear_var_types([i32])
+           private(@i_private_i32 %i -> %priv_i : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @simd_linear_ambiguous_iv(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{Could not determine the linear variable associated with the loop nest induction variable}}
+  // expected-error @below {{LLVM Translation failed for operation: omp.simd}}
+  omp.simd linear(%x : !llvm.ptr = %step : i32, %y : !llvm.ptr = %step : i32) linear_var_types([i32, i32]) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      llvm.store %iv, %x : i32, !llvm.ptr
+      llvm.store %iv, %y : i32, !llvm.ptr
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
+    %0 = omp.threadprivate %arg0 : !llvm.ptr -> !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_nested_target(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.parallel}}
+    omp.parallel {
+      omp.target kernel_type(generic) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_sibling_target(%x: !llvm.ptr, %expr: i32) {
+    omp.target kernel_type(generic) {
+      omp.terminator
+    }
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.atomic.update}}
+    omp.atomic.update %x : !llvm.ptr {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    llvm.return
+  }
+}

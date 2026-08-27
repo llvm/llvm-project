@@ -16,8 +16,8 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_SUBPROCESSMEMORY_H
 
 #include "BenchmarkResult.h"
+#include "llvm/ADT/StringMap.h"
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #ifdef _MSC_VER
@@ -44,9 +44,8 @@ public:
   // memory objects for the definitions and fills them with the specified
   // values. Arguments: MemoryDefinitions - A map from memory value names to
   // MemoryValues, ProcessID - The ID of the current process.
-  Error addMemoryDefinition(
-      std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-      pid_t ProcessID);
+  Error addMemoryDefinition(StringMap<MemoryValue> MemoryDefinitions,
+                            pid_t ProcessID);
 
   // The following function sets up the auxiliary memory by opening shared
   // memory objects backing memory definitions and putting file descriptors
@@ -55,9 +54,10 @@ public:
   // setup the memory definitions, CounterFileDescriptor - The file descriptor
   // for the performance counter that will be placed in the auxiliary memory
   // section.
-  static Expected<int> setupAuxiliaryMemoryInSubprocess(
-      std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-      pid_t ParentPID, long ParentTID, int CounterFileDescriptor);
+  static Expected<int>
+  setupAuxiliaryMemoryInSubprocess(StringMap<MemoryValue> MemoryDefinitions,
+                                   pid_t ParentPID, long ParentTID,
+                                   int CounterFileDescriptor);
 
   ~SubprocessMemory();
 

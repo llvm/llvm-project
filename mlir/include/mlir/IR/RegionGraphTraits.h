@@ -31,6 +31,8 @@ struct GraphTraits<mlir::Block *> {
     return node->succ_begin();
   }
   static ChildIteratorType child_end(NodeRef node) { return node->succ_end(); }
+
+  static unsigned getNumber(NodeRef node) { return node->getBlockID(); }
 };
 
 template <>
@@ -63,6 +65,8 @@ struct GraphTraits<const mlir::Block *> {
   static ChildIteratorType child_end(NodeRef node) {
     return const_cast<mlir::Block *>(node)->succ_end();
   }
+
+  static unsigned getNumber(NodeRef node) { return node->getBlockID(); }
 };
 
 template <>
@@ -96,6 +100,13 @@ struct GraphTraits<mlir::Region *> : public GraphTraits<mlir::Block *> {
   }
   static nodes_iterator nodes_end(GraphType fn) {
     return nodes_iterator(fn->end());
+  }
+
+  static unsigned getMaxNumber(GraphType region) {
+    return region->getMaxBlockID();
+  }
+  static unsigned getNumberEpoch(GraphType region) {
+    return region->getBlockIDEpoch();
   }
 };
 

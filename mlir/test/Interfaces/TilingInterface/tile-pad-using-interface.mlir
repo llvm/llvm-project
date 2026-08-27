@@ -198,3 +198,30 @@ module attributes {transform.with_named_sequence} {
   }
 }
 // CHECK-LABEL: func @static_pad_tensor_outer_tiling
+
+// -----
+
+#encoding = #test.tensor_encoding<"encoding">
+
+// CHECK-LABEL: func @dynamic_2d_pad_tensor_with_encoding(
+func.func @dynamic_2d_pad_tensor_with_encoding(%input_tensor: tensor<?x?xf32>,
+                                               %pad_value: f32)
+    -> tensor<?x?xf32, #encoding> {
+  %0 = tensor.pad %input_tensor low[3, 4] high[5, 3] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32, #encoding>
+// CHECK: return %{{.*}} : tensor<?x?xf32, #test.tensor_encoding<"encoding">>
+  return %0 : tensor<?x?xf32, #encoding>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b, %c = transform.structured.tile_using_for %pad tile_sizes [2, 3]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+

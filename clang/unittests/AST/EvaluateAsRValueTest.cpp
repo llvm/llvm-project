@@ -154,3 +154,54 @@ TEST(EvaluateAsRValue, LValueToRValueConversionWorks) {
                                       Args));
   }
 }
+
+class EvaluateBoundMemberFunctionVisitor
+    : public clang::DynamicRecursiveASTVisitor {
+public:
+  explicit EvaluateBoundMemberFunctionVisitor(clang::ASTContext &Ctx)
+      : Ctx(Ctx) {}
+
+  bool VisitMemberExpr(clang::MemberExpr *E) override {
+    if (llvm::isa<clang::CXXMethodDecl>(E->getMemberDecl())) {
+      clang::Expr::EvalResult Result;
+      bool EvalSucceeded = E->EvaluateAsRValue(Result, Ctx, true);
+      EXPECT_FALSE(EvalSucceeded);
+    }
+    return true;
+  }
+
+private:
+  clang::ASTContext &Ctx;
+};
+
+class EvaluateBoundMemberFunctionAction : public clang::ASTFrontendAction {
+public:
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    llvm::StringRef FilePath) override {
+    return std::make_unique<Consumer>();
+  }
+
+private:
+  class Consumer : public clang::ASTConsumer {
+  public:
+    ~Consumer() override {}
+    void HandleTranslationUnit(clang::ASTContext &Ctx) override {
+      EvaluateBoundMemberFunctionVisitor Evaluator(Ctx);
+      Evaluator.TraverseDecl(Ctx.getTranslationUnitDecl());
+    }
+  };
+};
+
+TEST(EvaluateAsRValue, FailsGracefullyOnBoundMemberExpr) {
+  std::string ModesToTest[] = {"", "-fexperimental-new-constant-interpreter"};
+  for (std::string const &Mode : ModesToTest) {
+    std::vector<std::string> Args(1, Mode);
+    Args.push_back("-std=c++23");
+    ASSERT_TRUE(runToolOnCodeWithArgs(
+        std::make_unique<EvaluateBoundMemberFunctionAction>(),
+        "struct S { void f(); };\n"
+        "void g() { S s; s.f(); }\n",
+        Args));
+  }
+}

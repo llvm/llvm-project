@@ -81,7 +81,7 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
 
         assert(DT.verify(DominatorTree::VerificationLevel::Fast) &&
                "Expecting valid dominator tree");
-        LI.verify(DT);
+        LI.verify();
         assert(LI.begin() == LI.end() &&
                "Expecting no loops left in function F");
         SE.verify();
@@ -89,9 +89,8 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI++);
         assert(Entry->getName() == "entry" && "Expecting BasicBlock entry");
-        const BranchInst *BI = dyn_cast<BranchInst>(Entry->getTerminator());
+        const UncondBrInst *BI = dyn_cast<UncondBrInst>(Entry->getTerminator());
         assert(BI && "Expecting valid branch instruction");
-        EXPECT_EQ(BI->getNumSuccessors(), (unsigned)1);
         EXPECT_EQ(BI->getSuccessor(0)->getName(), "for.end");
       });
 }
@@ -222,8 +221,8 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
 
   // With EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets branch
   // weights and llvm.loop.estimated_trip_count all to 0, so
-  // getLoopEstimatedTripCount returns std::nullopt.  It does not touch other
-  // loop metadata, if any.
+  // getLoopEstimatedTripCount returns 0.  It does not touch other loop
+  // metadata, if any.
   std::unique_ptr<Module> M = parseIR(C, IR);
   run(*M, "foo",
       [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
@@ -239,18 +238,18 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           SmallVector<uint32_t, 2> Weights;
           EXPECT_EQ(extractBranchWeights(LatchBranch, Weights), true);
           EXPECT_EQ(Weights[0], 0u);
-          EXPECT_EQ(Weights[1], 0u);
+          EXPECT_EQ(Weights[1], 1u);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
                     0);
-          EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
+          EXPECT_EQ(getLoopEstimatedTripCount(L), 0);
         }
       });
 
   // Without EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets
-  // llvm.loop.estimated_trip_count to 0, so getLoopEstimatedTripCount returns
-  // std::nullopt.  It does not touch branch weights or other loop metadata, if
-  // any.
+  // llvm.loop.estimated_trip_count to 0, so getLoopEstimatedTripCount returns 0
+  // even for the loops that have no latch branch weights.  It does not touch
+  // branch weights or other loop metadata, if any.
   M = parseIR(C, IR);
   run(*M, "foo",
       [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
@@ -272,7 +271,7 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
                     0);
-          EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
+          EXPECT_EQ(getLoopEstimatedTripCount(L), 0);
         }
       });
 }
