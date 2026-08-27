@@ -134,8 +134,8 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
-    auto [PrecedesLowerBound, WithinLowerBound] =
-        compareValueToThreshold(State, SVB, Offset, SVB.makeZeroArrayIndex());
+    auto [PrecedesLowerBound, WithinLowerBound] = compareValueToThreshold(
+        State, SVB, Offset, SVB.makeZeroArrayIndex(), Comparison::LT);
 
     if (PrecedesLowerBound) {
       // The analyzer thinks that the offset may be invalid (negative)...
