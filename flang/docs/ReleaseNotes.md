@@ -57,6 +57,11 @@ page](https://llvm.org/releases/).
 - Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
   sections. Supported formats are `zlib`, `zstd`, and `none`.
 
+- Added `-fmodule-mismatch-check=non-intrinsic` and
+  `-fmodule-mismatch-check=warn` to turn module USE checksum mismatches into a
+  warning instead of an error. `-Wno-module-file-mismatch` can be used to
+  silence even that warning.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang

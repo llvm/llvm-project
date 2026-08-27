@@ -1745,18 +1745,25 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
   CHECK(sourceFile);
 
-  bool mismatchIsError, mismatchIsWarning;
+  if (!isIntrinsic.has_value()) {
+    for (const auto &dir : context_.intrinsicModuleDirectories()) {
+      if (sourceFile->path().size() > dir.size() &&
+          sourceFile->path().find(dir) == 0) {
+        isIntrinsic = true;
+        break;
+      }
+    }
+  }
+  bool mismatchIsError;
   switch (context_.langOptions().getModuleMismatchCheck()) {
   case common::LangOptions::MMC_On:
     mismatchIsError = true;
-    mismatchIsWarning = true;
     break;
   case common::LangOptions::MMC_NonIntrinsic:
-    mismatchIsError = mismatchIsWarning = !isIntrinsic.value_or(false);
+    mismatchIsError = !isIntrinsic.value_or(false);
     break;
   case common::LangOptions::MMC_Warn:
     mismatchIsError = false;
-    mismatchIsWarning = true;
     break;
   }
   std::optional<ModuleCheckSumType> checkSum{
@@ -1776,12 +1783,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     if (mismatchIsError) {
       if (!silent) {
         Say("use", name, ancestorName,
-            "File is not the right module file for %s"_err_en_US,
+            "File is not the right module file for %s. Use -fmodule-mismatch-check=warn to turn this error into a warning."_err_en_US,
             "'"s + name.ToString() + "': "s + sourceFile->path());
       }
       return nullptr;
     } else {
-      if (!silent && mismatchIsWarning) {
+      if (!silent) {
         Warn(name, common::UsageWarning::ModuleFileMismatch, ancestorName,
             "File has a different checksum than expected for %s"_warn_en_US,
             "'"s + name.ToString() + "': "s + sourceFile->path());
@@ -1801,15 +1808,6 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
   parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};
   Scope *parentScope; // the scope this module/submodule goes into
-  if (!isIntrinsic.has_value()) {
-    for (const auto &dir : context_.intrinsicModuleDirectories()) {
-      if (sourceFile->path().size() > dir.size() &&
-          sourceFile->path().find(dir) == 0) {
-        isIntrinsic = true;
-        break;
-      }
-    }
-  }
   Scope &topScope{isIntrinsic.value_or(false) ? context_.intrinsicModulesScope()
                                               : context_.globalScope()};
   Symbol *moduleSymbol{nullptr};

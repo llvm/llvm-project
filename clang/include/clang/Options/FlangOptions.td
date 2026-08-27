@@ -137,8 +137,18 @@ def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
   DocBrief<[{This option specifies where to put .mod files for compiled modules.
 It is also added to the list of directories to be searched by an USE statement.
 The default is the current directory.}]>;
-def fmodule_mismatch_check_EQ : Joined<["-"], "fmodule-mismatch-check=">, Group<f_Group>,
-  HelpText<"Check consistency of used modules (option: on, non-intrinsic, warn)">;
+def fmodule_mismatch_check_EQ : Joined<["-"], "fmodule-mismatch-check=">,
+  Group<f_Group>,
+  HelpText<"Check consistency of used modules (option: on, non-intrinsic, warn)">,
+  DocBrief<[{Normally, when loading a .mod file, Flang checks whether the
+modules it itself depends on are the same modules from when the .mod file was
+created. If there is a mismatch, compilation fails. The option converts this
+error into a warning instead. The warning can be silenced using
+-Wno-module-file-mismatch and thus mismatches are completely ignored.
+-fmodule-mismatch-check=non-intrinsic still keeps the error for user modules
+where mismatches hint towards a build dependency problem. Mismatches of
+intrinsic modules are expected after a compiler upgrade. Upgraded intrinsic
+modules are supposed to be backwards-compatible.}]>;
 
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;
