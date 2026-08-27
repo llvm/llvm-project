@@ -3595,13 +3595,13 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
 
   // Allocate a new save id.
   const uint32_t save_id = GetNextSavedRegistersID();
-  assert((m_saved_registers_map.find(save_id) == m_saved_registers_map.end()) &&
-         "GetNextRegisterSaveID() returned an existing register save id");
 
   // Save the register data buffer under the save id.
   {
-    std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
-    m_saved_registers_map[save_id] = register_data_sp;
+    auto saved_registers = m_saved_registers.Lock();
+    assert((saved_registers->map.find(save_id) == saved_registers->map.end()) &&
+           "GetNextRegisterSaveID() returned an existing register save id");
+    saved_registers->map[save_id] = register_data_sp;
   }
 
   // Write the response.
@@ -3645,11 +3645,11 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
   // Retrieve register state buffer, then remove from the list.
   DataBufferSP register_data_sp;
   {
-    std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
+    auto saved_registers = m_saved_registers.Lock();
 
     // Find the register set buffer for the given save id.
-    auto it = m_saved_registers_map.find(save_id);
-    if (it == m_saved_registers_map.end()) {
+    auto it = saved_registers->map.find(save_id);
+    if (it == saved_registers->map.end()) {
       LLDB_LOG(log,
                "pid {0} does not have a register set save buffer for id {1}",
                m_current_process->GetID(), save_id);
@@ -3658,7 +3658,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QRestoreRegisterState(
     register_data_sp = it->second;
 
     // Remove it from the map.
-    m_saved_registers_map.erase(it);
+    saved_registers->map.erase(it);
   }
 
   Status error = reg_context.WriteAllRegisterValues(register_data_sp);
@@ -4425,8 +4425,7 @@ lldb::tid_t GDBRemoteCommunicationServerLLGS::GetCurrentThreadID() const {
 }
 
 uint32_t GDBRemoteCommunicationServerLLGS::GetNextSavedRegistersID() {
-  std::lock_guard<std::mutex> guard(m_saved_registers_mutex);
-  return m_next_saved_registers_id++;
+  return m_saved_registers.Lock()->next_id++;
 }
 
 void GDBRemoteCommunicationServerLLGS::ClearProcessSpecificData() {
