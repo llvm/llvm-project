@@ -1193,8 +1193,8 @@ bool OmpStructureChecker::VerifyModifierRequired(
   }
   for (llvm::omp::ModifierSet s : cdesc.getModifierSets(version)) {
     auto &sdesc{llvm::omp::getDescriptor(s)};
-    // Is group is required, at least one modifier from that group must be
-    // present.
+    // If the group is required, at least one modifier from that group must
+    // be present.
     if (sdesc.getProperties(version).test(llvm::omp::Property::Required)) {
       bool present{false};
       for (llvm::omp::Modifier m : sdesc.getModifiers(version)) {
