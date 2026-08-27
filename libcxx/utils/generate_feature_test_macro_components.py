@@ -248,6 +248,7 @@ feature_test_macros = [
             "name": "__cpp_lib_bitops",
             "values": {
                 "c++20": 201907,
+                # "c++29": 202606,  # P3793R2 Better shifting
                 # "c++29": 202607,  # P3104R6 Bit permutations
             },
             "headers": ["bit"],
@@ -962,8 +963,8 @@ feature_test_macros = [
             "name": "__cpp_lib_map_lookup",
             "values": {
                 "c++29": 202606
-            },  # P3091R6 Better Lookups for map , unordered_map , and flat_map
-            "headers": ["map"],
+            },  # P3091R6 Better Lookups for map, unordered_map, and flat_map
+            "headers": ["flat_map", "map", "unordered_map"],
             "unimplemented": True,
         },
         {
@@ -1352,8 +1353,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_simd_bitops",
             "values": {
-                "c++29": 202607
-            },  # P3772R2 std::simd overloads for bit permutations
+                # "c++29": 202606 # P3793R2 Better shifting
+                "c++29": 202607 # P3772R2 std::simd overloads for bit permutations
+            },
             "headers": ["simd"],
             "unimplemented": True,
         },
@@ -1495,7 +1497,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_thread_attributes",
             "values": {"c++29": 202606},  # P2019R9 Thread attributes
-            "headers": ["compare"],
+            "headers": ["thread"],
             "unimplemented": True,
         },
         {
