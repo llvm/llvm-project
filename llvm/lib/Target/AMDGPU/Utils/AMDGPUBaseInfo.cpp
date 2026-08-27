@@ -2615,9 +2615,7 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
-  if (isGFX1250(STI))
-    return false;
-  return isGFX10Plus(STI);
+  return STI.getFeatureBits().test(FeatureSupportsWGP);
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
