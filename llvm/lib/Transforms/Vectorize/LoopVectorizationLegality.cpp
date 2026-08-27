@@ -68,7 +68,8 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
+      Predicate(FK_Undefined), Scalable(SK_Unspecified),
+      FPReordering(FK_Undefined), TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -206,6 +207,9 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 bool LoopVectorizeHints::allowReordering() const {
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
+  if ((ForceKind)FPReordering != FK_Undefined)
+    return HintsAllowReordering && ((ForceKind)FPReordering == FK_Enabled);
+
   ElementCount EC = getWidth();
   return Opts.hints_allow_reordering &&
          (getForce() == LoopVectorizeHints::FK_Enabled ||
@@ -285,6 +289,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
       break;
     }
   }
+
+  if (Name == "vectorize.fp_reordering")
+    FPReordering = (Val != 0) ? FK_Enabled : FK_Disabled;
 }
 
 static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
