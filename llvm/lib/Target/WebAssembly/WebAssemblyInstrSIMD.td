@@ -413,7 +413,7 @@ defm STORE_V128_A64 :
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : StorePat<vec.vt, store, "STORE_V128">;
+defm : StorePat<vec.vt, V128, store, "STORE_V128">;
 }
 
 // Store lane
@@ -903,7 +903,7 @@ defm BITSELECT :
   SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins), [],
          "v128.bitselect\t$dst, $v1, $v2, $c", "v128.bitselect", 82>;
 
-foreach vec = StdVecs in
+foreach vec = AllVecs in
 def : Pat<(vec.vt (int_wasm_bitselect
             (vec.vt V128:$v1), (vec.vt V128:$v2), (vec.vt V128:$c))),
           (BITSELECT $v1, $v2, $c)>;
