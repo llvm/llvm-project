@@ -130,6 +130,13 @@
 // RUN:     --implicit-check-not='"--emit-fatbin-only"'
 // CHK-RDC-EMBED: "-cc1"{{.*}} "-fsycl-is-host"{{.*}} "-fembed-offload-object=
 
+/// -v reaches the per-TU device finalize and the wrapper itself.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fno-sycl-rdc -v -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NORDC-VERBOSE %s
+// CHK-NORDC-VERBOSE: clang-linker-wrapper{{.*}} "--device-compiler=spirv64-unknown-unknown=-v"
+// CHK-NORDC-VERBOSE-SAME: "--wrapper-verbose"
+// CHK-NORDC-VERBOSE-SAME: "--emit-fatbin-only"
+
 /// -flto on a SYCL command line requests *host* LTO. It must not divert the
 /// per-TU device finalize to llvm-lto, which would write bitcode where a
 /// finalized device image is expected; the device link is unaffected and the

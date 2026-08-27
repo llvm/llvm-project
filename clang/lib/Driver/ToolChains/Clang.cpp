@@ -9869,12 +9869,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_slp_vectorize,
       OPT_hipstdpar};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
-  // Suppress verbose output for non-RDC fat binaries because it confuses
+  // Suppress verbose output for HIP non-RDC fat binaries because it confuses
   // CMake implicit linker argument parsing.
-  bool SuppressNoRDCVerbose =
-      JA.getType() == types::TY_SYCL_FATBIN ||
-      (JA.getType() == types::TY_HIP_FATBIN &&
-       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false));
+  bool SuppressHIPNoRDCVerbose =
+      JA.getType() == types::TY_HIP_FATBIN &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
   auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
     return TC.getVFS().exists(
         TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
@@ -9896,7 +9895,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
-    if (A->getOption().matches(OPT_v) && SuppressNoRDCVerbose)
+    if (A->getOption().matches(OPT_v) && SuppressHIPNoRDCVerbose)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
@@ -10014,7 +10013,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("--host-triple=" +
                                          getToolChain().getTripleString()));
 
-  if (Args.hasArg(options::OPT_v) && !SuppressNoRDCVerbose)
+  if (Args.hasArg(options::OPT_v) && !SuppressHIPNoRDCVerbose)
     CmdArgs.push_back("--wrapper-verbose");
   if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ)) {
     CmdArgs.push_back(
