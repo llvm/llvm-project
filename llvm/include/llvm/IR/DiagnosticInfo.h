@@ -89,6 +89,7 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
+  DK_UnsupportedTargetIntrinsic,
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
@@ -1123,6 +1124,29 @@ public:
   }
 
   const Twine &getMessage() const { return Msg; }
+
+  void print(DiagnosticPrinter &DP) const override;
+};
+
+/// Diagnostic information for unsupported target intrinsics in backend.
+class LLVM_ABI DiagnosticInfoUnsupportedTargetIntrinsic
+    : public DiagnosticInfoWithLocationBase {
+private:
+  unsigned IntrinsicID;
+  StringRef RequiredFeatures;
+
+public:
+  DiagnosticInfoUnsupportedTargetIntrinsic(
+      const Function &Fn, unsigned IntrinsicID,
+      const DiagnosticLocation &Loc = DiagnosticLocation());
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_UnsupportedTargetIntrinsic;
+  }
+
+  unsigned getIntrinsicID() const { return IntrinsicID; }
+  StringRef getRequiredFeatures() const { return RequiredFeatures; }
+  std::string getMessage() const;
 
   void print(DiagnosticPrinter &DP) const override;
 };

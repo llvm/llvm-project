@@ -19,10 +19,11 @@
 namespace llvm {
 class GCNTargetMachine;
 class StringRef;
+class Triple;
 } // end namespace llvm
 
 std::unique_ptr<llvm::GCNTargetMachine>
-createAMDGPUTargetMachine(std::string TStr, llvm::StringRef CPU,
+createAMDGPUTargetMachine(const llvm::Triple &TT, llvm::StringRef CPU,
                           llvm::StringRef FS);
 
 class AMDGPUTestBase : public testing::Test {

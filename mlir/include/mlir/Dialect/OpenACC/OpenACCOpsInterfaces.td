@@ -73,6 +73,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isConstant", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Check if the global variable has an initializer", "bool",
+      "hasInitializer", (ins), [{
+        return false;
+      }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
     InterfaceMethod<"Check if the global variable is device data",
@@ -139,6 +143,28 @@ def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationO
       return $_op->emitOpError("must be memory effect free");
     return ::mlir::success();
   }];
+}
+
+def OutlineIdentityOperandOpInterface
+    : OpInterface<"OutlineIdentityOperandOpInterface"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    An interface for operations with an "identity" operand (e.g. FIR's
+    dummy scope handle) that must never be duplicated, unlike operands
+    handled by `OutlineRematerializationOpInterface`. When such an
+    operation is sunk/cloned into an offload region and the operand would
+    otherwise reference a value outside it, drop the operand instead of
+    cloning it; implementations must preserve correctness some other way
+    (e.g. FIR's dominance-based scope lookup fallback).
+  }];
+
+  let methods = [
+    InterfaceMethod<"Drop any identity operands from this operation "
+                      "instance that reference values defined outside its "
+                      "containing region.",
+                      "void", "dropOutlinedIdentityOperands", (ins), [{}]>,
+  ];
 }
 
 def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {

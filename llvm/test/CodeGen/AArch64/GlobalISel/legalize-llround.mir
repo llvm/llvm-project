@@ -11,15 +11,15 @@ body:             |
     ; CHECK-LABEL: name: s64_s32_legal
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:_(s32) = COPY $s0
-    ; CHECK-NEXT: %llround:_(s64) = G_LLROUND %copy(s32)
-    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC %llround(s64)
-    ; CHECK-NEXT: $w0 = COPY %trunc(s32)
+    ; CHECK-NEXT: %copy:_(f32) = COPY $s0
+    ; CHECK-NEXT: %llround:_(i64) = G_LLROUND %copy(f32)
+    ; CHECK-NEXT: %trunc:_(i32) = G_TRUNC %llround(i64)
+    ; CHECK-NEXT: $w0 = COPY %trunc(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %copy:_(s32) = COPY $s0
-    %llround:_(s64) = G_LLROUND %copy(s32)
-    %trunc:_(s32) = G_TRUNC %llround
-    $w0 = COPY %trunc(s32)
+    %copy:_(f32) = COPY $s0
+    %llround:_(i64) = G_LLROUND %copy(f32)
+    %trunc:_(i32) = G_TRUNC %llround
+    $w0 = COPY %trunc(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -31,11 +31,11 @@ body:             |
     ; CHECK-LABEL: name: s64_s64_legal
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:_(s64) = COPY $d0
-    ; CHECK-NEXT: %llround:_(s64) = G_LLROUND %copy(s64)
-    ; CHECK-NEXT: $x0 = COPY %llround(s64)
+    ; CHECK-NEXT: %copy:_(f64) = COPY $d0
+    ; CHECK-NEXT: %llround:_(i64) = G_LLROUND %copy(f64)
+    ; CHECK-NEXT: $x0 = COPY %llround(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy:_(s64) = COPY $d0
-    %llround:_(s64) = G_LLROUND %copy(s64)
+    %copy:_(f64) = COPY $d0
+    %llround:_(i64) = G_LLROUND %copy(f64)
     $x0 = COPY %llround
     RET_ReallyLR implicit $x0

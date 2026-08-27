@@ -14,7 +14,7 @@ void doSomeWork();
 
 @interface SomeObjC : NSObject {
   CheckedObj* _unchecked1;
-// expected-warning@-1{{Instance variable '_unchecked1' in 'SomeObjC' is a raw pointer to CheckedPtr capable type 'CheckedObj'}}  
+// expected-warning@-1{{Instance variable '_unchecked1' (of 'SomeObjC') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}  
   CheckedPtr<CheckedObj> _counted1;
   [[clang::suppress]] CheckedObj* _unchecked2;
 }
@@ -23,7 +23,7 @@ void doSomeWork();
 
 @implementation SomeObjC {
   CheckedObj* _unchecked3;
-// expected-warning@-1{{Instance variable '_unchecked3' in 'SomeObjC' is a raw pointer to CheckedPtr capable type 'CheckedObj'}}
+// expected-warning@-1{{Instance variable '_unchecked3' (of 'SomeObjC') is a raw pointer to CheckedPtr-capable type 'CheckedObj'}}
   CheckedPtr<CheckedObj> _counted2;
   [[clang::suppress]] CheckedObj* _unchecked4;
 }

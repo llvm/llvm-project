@@ -1,0 +1,140 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv32-linux-gnu -x=mir < %s \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler -stop-after=machine-scheduler 2>&1 \
+# RUN:   -mattr=+xqcili,+fusion-qc-e-li-load-store \
+# RUN:   | FileCheck %s
+
+# CHECK: qc_e_li_lb
+# CHECK: Macro fuse: {{.*}}QC_E_LI - LB
+---
+name: qc_e_li_lb
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    %4:gpr = LB %2, 4
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: qc_e_li_lh
+# CHECK: Macro fuse: {{.*}}QC_E_LI - LH
+---
+name: qc_e_li_lh
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    %4:gpr = LH %2, 4
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: qc_e_li_lw
+# CHECK: Macro fuse: {{.*}}QC_E_LI - LW
+---
+name: qc_e_li_lw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    %4:gpr = LW %2, 4
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: qc_e_li_lbu
+# CHECK: Macro fuse: {{.*}}QC_E_LI - LBU
+---
+name: qc_e_li_lbu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    %4:gpr = LBU %2, 4
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+# CHECK: qc_e_li_lhu
+# CHECK: Macro fuse: {{.*}}QC_E_LI - LHU
+---
+name: qc_e_li_lhu
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    %4:gpr = LHU %2, 4
+    $x10 = COPY %3
+    $x11 = COPY %4
+    PseudoRET
+...
+
+
+# CHECK: qc_e_li_sb
+# CHECK: Macro fuse: {{.*}}QC_E_LI - SB
+---
+name: qc_e_li_sb
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    SB %3, %2, 4
+    $x10 = COPY %3
+    PseudoRET
+...
+
+
+# CHECK: qc_e_li_sh
+# CHECK: Macro fuse: {{.*}}QC_E_LI - SH
+---
+name: qc_e_li_sh
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    SH %3, %2, 4
+    $x10 = COPY %3
+    PseudoRET
+...
+
+# CHECK: qc_e_li_sw
+# CHECK: Macro fuse: {{.*}}QC_E_LI - SW
+---
+name: qc_e_li_sw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10
+    %1:gpr = COPY $x10
+    %2:gprnox0 = QC_E_LI 1
+    %3:gpr = XORI %1, 2
+    SW %3, %2, 4
+    $x10 = COPY %3
+    PseudoRET
+...

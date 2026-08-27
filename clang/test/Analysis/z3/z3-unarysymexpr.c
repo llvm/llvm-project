@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s \
-// RUN:  -analyzer-constraints=z3
+// RUN:  -analyzer-constraints=unsupported-z3
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:  -analyzer-checker=core,debug.ExprInspection \
 // RUN:  -analyzer-config crosscheck-with-z3=true
@@ -59,4 +59,11 @@ long z3_crash3(long a) {
     return *c; // expected-warning{{Dereference of undefined pointer value (loaded from variable 'c')}}
   }
   return 0;
+}
+
+// Previously Z3 analysis crashed in this case, validate
+// that this no longer happens.
+// no-crash: GH #205037
+int unary_operand_in_binary_op(int size, int mask) {
+  return size & ~mask;
 }

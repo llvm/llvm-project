@@ -39,7 +39,7 @@ func.func @firstpriv_implicit() {
   %c1336 = arith.constant 1336 : i32
   %alloc = memref.alloca() : memref<i32>
   memref.store %c1336, %alloc[] : memref<i32>
-  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) -> memref<i32> {implicit = true, name = "t"}
+  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) implicit(true) name("t") -> memref<i32>
   acc.parallel firstprivate(%fp : memref<i32>) {
     %c1 = arith.constant 1 : i32
     %v = memref.load %fp[] : memref<i32>
@@ -55,7 +55,7 @@ func.func @firstpriv_explicit() {
   %c1336 = arith.constant 1336 : i32
   %alloc = memref.alloca() : memref<i32>
   memref.store %c1336, %alloc[] : memref<i32>
-  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) -> memref<i32> {name = "t"}
+  %fp = acc.firstprivate varPtr(%alloc : memref<i32>) recipe(@firstprivatization_memref_i32) name("t") -> memref<i32>
   acc.parallel firstprivate(%fp : memref<i32>) {
     %c1 = arith.constant 1 : i32
     %v = memref.load %fp[] : memref<i32>
@@ -70,12 +70,12 @@ func.func @firstpriv_explicit() {
 func.func @private_loop_implicit(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index
   %c1 = arith.constant 1 : index
-  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = "x"}
+  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("x") -> memref<i64>
   acc.loop private(%priv : memref<i64>) control(%siv : index) = (%c1 : index) to (%c16 : index) step (%c1 : index) {
     %iv_i64 = arith.index_cast %siv : index to i64
     memref.store %iv_i64, %priv[] : memref<i64>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -83,12 +83,12 @@ func.func @private_loop_implicit(%arg0 : memref<i64>) {
 func.func @private_loop_unknown(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index
   %c1 = arith.constant 1 : index
-  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = ""}
+  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("") -> memref<i64>
   acc.loop private(%priv : memref<i64>) control(%siv : index) = (%c1 : index) to (%c16 : index) step (%c1 : index) {
     %iv_i64 = arith.index_cast %siv : index to i64
     memref.store %iv_i64, %priv[] : memref<i64>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -96,13 +96,13 @@ func.func @private_loop_unknown(%arg0 : memref<i64>) {
 func.func @private_explicit(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index
   %c1 = arith.constant 1 : index
-  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {name = "x"}
+  %priv = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) name("x") -> memref<i64>
   acc.parallel private(%priv : memref<i64>) {
     acc.loop control(%siv : index) = (%c1 : index) to (%c16 : index) step (%c1 : index) {
       %iv_i64 = arith.index_cast %siv : index to i64
       memref.store %iv_i64, %priv[] : memref<i64>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   return
@@ -110,8 +110,8 @@ func.func @private_explicit(%arg0 : memref<i64>) {
 
 // CHECK-LABEL: func.func @multi_private_implicit
 func.func @multi_private_implicit(%arg0 : memref<i64>, %arg1 : memref<i64>) {
-  %privA = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = "a"}
-  %privB = acc.private varPtr(%arg1 : memref<i64>) recipe(@privatization_memref_i64) -> memref<i64> {implicit = true, name = "b"}
+  %privA = acc.private varPtr(%arg0 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("a") -> memref<i64>
+  %privB = acc.private varPtr(%arg1 : memref<i64>) recipe(@privatization_memref_i64) implicit(true) name("b") -> memref<i64>
   acc.parallel private(%privA, %privB : memref<i64>, memref<i64>) {
     acc.yield
   }

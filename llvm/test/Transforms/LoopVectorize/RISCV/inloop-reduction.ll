@@ -20,9 +20,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; OUTLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], [[UMAX]]
 ; OUTLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; OUTLOOP:       vector.ph:
-; OUTLOOP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; OUTLOOP-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 2
-; OUTLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP3]]
+; OUTLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP1]]
 ; OUTLOOP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; OUTLOOP:       vector.body:
@@ -32,7 +30,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; OUTLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP7]], align 2
 ; OUTLOOP-NEXT:    [[TMP9:%.*]] = sext <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x i32>
 ; OUTLOOP-NEXT:    [[TMP10]] = add <vscale x 4 x i32> [[VEC_PHI]], [[TMP9]]
-; OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; OUTLOOP-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; OUTLOOP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OUTLOOP:       middle.block:
@@ -71,9 +69,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], [[UMAX]]
 ; INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INLOOP:       vector.ph:
-; INLOOP-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; INLOOP-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 3
-; INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP3]]
+; INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], [[TMP1]]
 ; INLOOP-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INLOOP:       vector.body:
@@ -84,7 +80,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; INLOOP-NEXT:    [[TMP9:%.*]] = sext <vscale x 8 x i16> [[WIDE_LOAD]] to <vscale x 8 x i32>
 ; INLOOP-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP9]])
 ; INLOOP-NEXT:    [[TMP11]] = add i32 [[VEC_PHI]], [[TMP10]]
-; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; INLOOP-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; INLOOP:       middle.block:
@@ -201,9 +197,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; OUTLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; OUTLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; OUTLOOP:       vector.ph:
-; OUTLOOP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; OUTLOOP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; OUTLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; OUTLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; OUTLOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[START:%.*]], i64 0
 ; OUTLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -214,7 +208,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; OUTLOOP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; OUTLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; OUTLOOP-NEXT:    [[TMP10]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]])
-; OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; OUTLOOP-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; OUTLOOP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; OUTLOOP:       middle.block:
@@ -246,9 +240,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; INLOOP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; INLOOP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INLOOP:       vector.ph:
-; INLOOP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; INLOOP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; INLOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; INLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[START:%.*]], i64 0
 ; INLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -259,7 +251,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; INLOOP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 4
 ; INLOOP-NEXT:    [[TMP5]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]])
-; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; INLOOP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; INLOOP:       middle.block:

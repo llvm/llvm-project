@@ -86,6 +86,8 @@ define void @align_with_offset_less_than_align(ptr %ptr) {
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -104,8 +106,9 @@ define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -856,6 +859,24 @@ define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
   %p2 = getelementptr i8, ptr %p, i64 %i
   %cmp = icmp ne ptr %p2, null
   call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_move_fixpoint(ptr %ptr) {
+; CHECK-LABEL: @nonnull_move_fixpoint(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[PTR2:%.*]] = load ptr, ptr [[PTR]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[PTR2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = load ptr, ptr %ptr, align 8
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  br label %bb
+
+bb:
+  store i32 0, ptr %ptr2, align 4
   ret void
 }
 

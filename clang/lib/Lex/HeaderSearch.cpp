@@ -887,19 +887,22 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 }
 
 void HeaderSearch::diagnoseHeaderShadowing(
-    StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
-    SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+    StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+    ConstSearchDirIterator FromDir,
     ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
     bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
 
-  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
-      DiagnosedShadowing)
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc))
     return;
   // Ignore diagnostics from system headers.
   if (MainLoopIt && MainLoopIt->isSystemHeaderDirectory())
     return;
 
-  DiagnosedShadowing = true;
+  // Only consider each file once per spelling it was found under. Note that
+  // this also suppresses the search below for files that turn out not to be
+  // shadowed at all.
+  if (!ShadowCheckedHeaders[Filename].insert(FE).second)
+    return;
 
   // Indicates that file is first found in the includer's directory
   if (!MainLoopIt) {
@@ -907,11 +910,11 @@ void HeaderSearch::diagnoseHeaderShadowing(
       const auto &IncluderAndDir = Includers[i];
       SmallString<1024> TmpDir = IncluderAndDir.second.getName();
       llvm::sys::path::append(TmpDir, Filename);
-      if (auto File = getFileMgr().getOptionalFileRef(TmpDir, false, false)) {
-        if (&File->getFileEntry() == *FE)
+      if (auto File = getFileMgr().getOptionalFileRef(TmpDir)) {
+        if (*File == FE)
           continue;
         Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-            << Filename << (*FE).getDir().getName()
+            << Filename << FE.getDir().getName()
             << IncluderAndDir.second.getName();
         return;
       }
@@ -932,11 +935,11 @@ void HeaderSearch::diagnoseHeaderShadowing(
       continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
-    if (auto File = getFileMgr().getOptionalFileRef(TmpPath, false, false)) {
-      if (&File->getFileEntry() == *FE)
+    if (auto File = getFileMgr().getOptionalFileRef(TmpPath)) {
+      if (*File == FE)
         continue;
       Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-          << Filename << (*FE).getDir().getName() << It->getName();
+          << Filename << FE.getDir().getName() << It->getName();
       return;
     }
   }
@@ -991,7 +994,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
-  bool DiagnosedShadowing = false;
 
   // Check to see if the file is in the #includer's directory. This cannot be
   // based on CurDir, because each includer could be a #include of a
@@ -1025,9 +1027,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
-        diagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
-                                FromDir, Includers, isAngled,
-                                &IncluderAndDir - Includers.begin(), nullptr);
+        diagnoseHeaderShadowing(Filename, *FE, IncludeLoc, FromDir, Includers,
+                                isAngled, &IncluderAndDir - Includers.begin(),
+                                nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1162,8 +1164,13 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    diagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
-                            FromDir, Includers, isAngled, -1, It);
+    // In MSVC compatibility mode we may have already found the file in one of
+    // the includers' directories. That file is the one that ends up being used
+    // (see checkMSVCHeaderSearch() below), so reporting this one as the chosen
+    // candidate would be wrong.
+    if (!MSFE)
+      diagnoseHeaderShadowing(Filename, *File, IncludeLoc, FromDir, Includers,
+                              isAngled, -1, It);
 
     CurDir = It;
 

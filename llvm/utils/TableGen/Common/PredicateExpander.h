@@ -52,16 +52,15 @@ public:
 
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
-  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal,
-                             StringRef FunctionMapper);
+  void expandCheckImmOperandCommon(raw_ostream &OS, int OpIndex, int ImmVal,
+                                   StringRef FunctionMapper,
+                                   StringRef CmpOperator);
   void expandCheckImmOperand(raw_ostream &OS, int OpIndex, StringRef ImmVal,
-                             StringRef FunctionMapperer);
+                             StringRef FunctionMapper);
   void expandCheckImmOperandSimple(raw_ostream &OS, int OpIndex,
                                    StringRef FunctionMapper);
-  void expandCheckImmOperandLT(raw_ostream &OS, int OpIndex, int ImmVal,
-                               StringRef FunctionMapper);
-  void expandCheckImmOperandGT(raw_ostream &OS, int OpIndex, int ImmVal,
-                               StringRef FunctionMapper);
+  void expandCheckImmOperandRange(raw_ostream &OS, int OpIndex, int StartVal,
+                                  int EndVal, StringRef FunctionMapper);
   void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg,
                              StringRef FunctionMapper);
   void expandCheckRegOperandSimple(raw_ostream &OS, int OpIndex,

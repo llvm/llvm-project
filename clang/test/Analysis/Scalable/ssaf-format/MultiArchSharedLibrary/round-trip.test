@@ -1,0 +1,55 @@
+// Round-trip tests: read a MultiArchSharedLibrary JSON input, write it
+// back out, and diff the result against the original.
+//
+// MultiArchSharedLibrary has only an encoding representation, so
+// --encoding is a no-op for --type multi-arch-shared-library and both
+// invocations must produce the same output.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// An empty members array is a valid (if degenerate) MultiArchSharedLibrary.
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/rt-empty-members.json -o %t/rt-empty-members.json
+// RUN: diff %S/Inputs/rt-empty-members.json %t/rt-empty-members.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library --encoding %S/Inputs/rt-empty-members.json -o %t/rt-empty-members-enc.json
+// RUN: diff %S/Inputs/rt-empty-members.json %t/rt-empty-members-enc.json
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/rt-single-member.json -o %t/rt-single-member.json
+// RUN: diff %S/Inputs/rt-single-member.json %t/rt-single-member.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library --encoding %S/Inputs/rt-single-member.json -o %t/rt-single-member-enc.json
+// RUN: diff %S/Inputs/rt-single-member.json %t/rt-single-member-enc.json
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/rt-multiple-members.json -o %t/rt-multiple-members.json
+// RUN: diff %S/Inputs/rt-multiple-members.json %t/rt-multiple-members.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library --encoding %S/Inputs/rt-multiple-members.json -o %t/rt-multiple-members-enc.json
+// RUN: diff %S/Inputs/rt-multiple-members.json %t/rt-multiple-members-enc.json
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/rt-nonempty-members.json -o %t/rt-nonempty-members.json
+// RUN: diff %S/Inputs/rt-nonempty-members.json %t/rt-nonempty-members.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library --encoding %S/Inputs/rt-nonempty-members.json -o %t/rt-nonempty-members-enc.json
+// RUN: diff %S/Inputs/rt-nonempty-members.json %t/rt-nonempty-members-enc.json
+
+// ============================================================================
+// Member sort order
+// ============================================================================
+//
+// Members are stored in a std::set keyed by TargetTriple enum components,
+// so the writer emits them in enum-tuple order regardless of input order.
+// unsorted-members-input.json lists the members as x86_64, then arm64;
+// the writer must produce the canonical (arm64, x86_64) ordering, byte
+// identical to rt-multiple-members.json.
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/unsorted-members-input.json -o %t/unsorted-members-output.json
+// RUN: diff %S/Inputs/rt-multiple-members.json %t/unsorted-members-output.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library --encoding %S/Inputs/unsorted-members-input.json -o %t/unsorted-members-output-enc.json
+// RUN: diff %S/Inputs/rt-multiple-members.json %t/unsorted-members-output-enc.json
+
+// 3-member ordering: confirms the sort isn't an accidental two-element
+// swap. The unsorted input lists x86_64, arm64, arm64_32; the writer
+// must produce (arm64, arm64_32, x86_64) — byte identical to
+// rt-three-members.json.
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/rt-three-members.json -o %t/rt-three-members.json
+// RUN: diff %S/Inputs/rt-three-members.json %t/rt-three-members.json
+// RUN: clang-ssaf-format --type multi-arch-shared-library %S/Inputs/unsorted-three-members-input.json -o %t/unsorted-three-members-output.json
+// RUN: diff %S/Inputs/rt-three-members.json %t/unsorted-three-members-output.json

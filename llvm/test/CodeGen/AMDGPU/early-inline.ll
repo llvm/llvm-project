@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -O1 -S -inline-threshold=1 -amdgpu-early-inline-all %s | FileCheck %s
 
 @c_alias = dso_local alias i32 (i32), ptr @callee
 

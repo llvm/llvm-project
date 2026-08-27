@@ -6,8 +6,8 @@
 define void @test1(ptr %a, i32 %vl, <vscale x 8 x i32> %v1, <vscale x 8 x i32> %v2) {
 ;
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[VP_OP:%.*]] = call <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32> [[V1:%.*]], <vscale x 8 x i32> [[V2:%.*]], <vscale x 8 x i1> splat (i1 true), i32 [[VL:%.*]])
-; CHECK-NEXT:    call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> [[VP_OP]], ptr nonnull [[A:%.*]], <vscale x 8 x i1> splat (i1 true), i32 [[VL]])
+; CHECK-NEXT:    [[VP_OP:%.*]] = add <vscale x 8 x i32> [[V1:%.*]], [[V2:%.*]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> [[VP_OP]], ptr nonnull [[A:%.*]], <vscale x 8 x i1> splat (i1 true), i32 [[VL:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.vp.store.nxv8i32.p0(<vscale x 8 x i32> %v1, ptr nonnull %a, <vscale x 8 x i1> splat (i1 true), i32 %vl)

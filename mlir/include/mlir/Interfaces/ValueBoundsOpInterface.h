@@ -314,6 +314,24 @@ public:
   areEquivalentSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
                       const HyperrectangularSlice &slice2);
 
+  /// Return "true" if the given value is provably non-negative. If it's
+  /// provably positive, or nothing can be proven, return "false".
+  static bool isProvablyNonNegative(Value value,
+                                    ValueBoundsConstraintSet &cstr);
+
+  /// Return "true" if the given value is provably non-positive. If it's
+  /// provably negative, or nothing can be proven, return "false".
+  static bool isProvablyNonPositive(Value value,
+                                    ValueBoundsConstraintSet &cstr);
+
+  /// Return "true" if the given value is provably positive. If it's provably
+  /// non-negative, or nothing can be proven, return "false".
+  static bool isProvablyPositive(Value value, ValueBoundsConstraintSet &cstr);
+
+  /// Return "true" if the given value is provably negative. If it's provably
+  /// non-positive, or nothing can be proven, return "false".
+  static bool isProvablyNegative(Value value, ValueBoundsConstraintSet &cstr);
+
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.
   BoundBuilder bound(Value value) { return BoundBuilder(*this, value); }
@@ -442,7 +460,10 @@ protected:
   DenseMap<ValueDim, int64_t> valueDimToPosition;
 
   /// Worklist of values/shape dimensions that have not been processed yet.
-  std::queue<int64_t> worklist;
+  /// Entries are identified by ValueDim, not by constraint-set column.
+  /// Inserting a SetDim shifts symbol columns, so a queued column index would
+  /// go stale.
+  std::queue<ValueDim> worklist;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;

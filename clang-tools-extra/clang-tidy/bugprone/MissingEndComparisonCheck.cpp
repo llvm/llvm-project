@@ -101,10 +101,10 @@ static std::optional<std::string> getStandardEndText(ASTContext &Context,
   unsigned EndIdx = 1;
   const Expr *FirstArg = Call->getArg(0);
   if (const auto *Record =
-          FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
-    if (Record->getIdentifier() && Record->getName().ends_with("_policy"))
-      EndIdx = 2;
-  }
+          FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl();
+      Record && Record->getIdentifier() &&
+      Record->getName().ends_with("_policy"))
+    EndIdx = 2;
 
   if (Call->getNumArgs() <= EndIdx)
     return std::nullopt;
@@ -204,9 +204,9 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EndExprText)
     return;
 
-  auto Diag = diag(BoolOp->getBeginLoc(),
-                   "result of standard algorithm used as 'bool'; did you "
-                   "mean to compare with the end iterator?");
+  const auto Diag = diag(BoolOp->getBeginLoc(),
+                         "result of standard algorithm used as 'bool'; did you "
+                         "mean to compare with the end iterator?");
 
   if (EndExprText->empty())
     return;

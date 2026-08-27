@@ -50,9 +50,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -1463,5 +1472,16 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

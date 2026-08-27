@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -run-pass detect-dead-lanes -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx600 -passes detect-dead-lanes -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -run-pass detect-dead-lanes -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00 -passes detect-dead-lanes -o - %s | FileCheck %s
 ...
 ---
 # Combined use/def transfer check, the basics.

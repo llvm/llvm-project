@@ -1,7 +1,7 @@
 RUN: rm -rf %t
 RUN: mkdir %t
 RUN: %dexter_regression_test_cxx_build %S/Inputs/simple_prog.cpp -o %t/test
-RUN: %dexter_regression_test_run --use-script --binary %t/test \
+RUN: %dexter_regression_test_run --binary %t/test \
 RUN:   --results-directory %t/results --source-root-dir %S/Inputs -- \
 RUN:   %S/Inputs/whole_file_test.dex 2>&1 | FileCheck %s
 RUN: diff %t/results/whole_file_test.dex %S/Inputs/whole_file_test_expected.dex

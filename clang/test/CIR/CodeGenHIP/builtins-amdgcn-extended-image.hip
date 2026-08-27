@@ -1,18 +1,15 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1100 -target-feature +extended-image-insts \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
@@ -51,6 +48,14 @@ __device__ float4 test_gather4_lz_2d_v4f32_b(float s, float t, __amdgpu_texture_
 // LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 8, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
 __device__ float4 test_gather4_lz_2d_v4f32_a(float s, float t, __amdgpu_texture_t tex, int4 samp) {
   return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(8, s, t, tex, samp, 0, 120, 110);
+}
+
+// CIR-LABEL: @_Z26test_gather4_lz_2d_v4f16_r
+// CIR: cir.call_llvm_intrinsic "amdgcn.image.gather4.lz.2d" {{.*}} : (!s32i, !cir.float, !cir.float, !cir.vector<8 x !s32i>, !cir.vector<4 x !s32i>, !cir.bool, !s32i, !s32i) -> !cir.vector<4 x !cir.f16>
+// LLVM: define{{.*}} <4 x half> @_Z26test_gather4_lz_2d_v4f16_rffu18__amdgpu_texture_tDv4_i(
+// LLVM: call {{.*}}<4 x half> @llvm.amdgcn.image.gather4.lz.2d.v4f16.f32.v8i32.v4i32(i32 1, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
+__device__ half4 test_gather4_lz_2d_v4f16_r(float s, float t, __amdgpu_texture_t tex, int4 samp) {
+  return __builtin_amdgcn_image_gather4_lz_2d_v4f16_f32(1, s, t, tex, samp, 0, 120, 110);
 }
 
 // CIR-LABEL: @_Z23test_sample_lz_1d_v4f32
