@@ -25,14 +25,17 @@
 // ... = load %ptr1, !alias.scope !{ !scope1 }
 // ... = load %ptr2, !alias.scope !{ !scope1, !scope2 }, !noalias !{ !scope1 }
 //
-// When evaluating an aliasing query, if one of the instructions is associated
+// When evaluating an aliasing query, if one of the instructions
 // has a set of noalias scopes in some domain that is a superset of the alias
 // scopes in that domain of some other instruction, then the two memory
 // accesses are assumed not to alias.
 //
-// A domain can also declare its scopes to be disjoint, in which case tagging
-// an instruction with an alias scope from that domain implicitly tags it with
-// a noalias set containing every other scope in that domain:
+// If a domain is declared as having disjoint scopes, two memory accesses are
+// assumed not to alias if the they both have entries for that domain in their
+// `alias.scope` list and their `alias.scope` lists have no scopes in common for
+// that domain. Equivalently, an instruction with a set of scopes from a
+// disjoint-scope domain in its `alias.scope` list implicitly has all other
+// scopes in that domain in its `noalias` set. For example,
 //
 // !dom1 =   metadata !{ metadata !dom1, i1 true, metadata !"disjoint domain" }
 // !scope3 = metadata !{ metadata !scope3, metadata !dom1 }
@@ -166,14 +169,16 @@ static void collectMDInDomain(const MDNode *List, const MDNode *Domain,
 
 /// Collect the set of scoped domains relevant to the noalias scopes.
 void ScopedNoAliasAAResult::collectScopedDomains(
-    const MDNode *NoAlias, SmallPtrSetImpl<const MDNode *> &Domains) {
+    const MDNode *NoAlias, SmallPtrSetImpl<const MDNode *> &Domains,
+    bool DisjointOnly) {
   if (!NoAlias)
     return;
   assert(Domains.empty() && "Domains should be empty");
   for (const MDOperand &MDOp : NoAlias->operands())
     if (const MDNode *NAMD = dyn_cast<MDNode>(MDOp))
       if (const MDNode *Domain = AliasScopeNode(NAMD).getDomain())
-        Domains.insert(Domain);
+        if (!DisjointOnly || AliasScopeDomainNode(Domain).hasDisjointScopes())
+          Domains.insert(Domain);
 }
 
 bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
@@ -211,15 +216,10 @@ bool ScopedNoAliasAAResult::mayAliasInDisjointDomains(const MDNode *Scopes1,
 
   // Collect the domains with disjoint scopes that the first access is in.
   SmallPtrSet<const MDNode *, 16> Domains;
-  for (const MDOperand &MDOp : Scopes1->operands())
-    if (const MDNode *MD = dyn_cast<MDNode>(MDOp))
-      if (const MDNode *Domain = AliasScopeNode(MD).getDomain())
-        if (AliasScopeDomainNode(Domain).hasDisjointScopes())
-          Domains.insert(Domain);
+  collectScopedDomains(Scopes1, Domains, /*DisjointOnly=*/true);
 
-  // Each access is implicitly noalias with every scope of such a domain it is
-  // not itself in, so the accesses don't alias if, for some domain, they have
-  // no scope in common.
+  // The accesses don't alias if, for some domain, both accesses use at lesat
+  // one of its scopes and have no scopes in that domain in common.
   for (const MDNode *Domain : Domains) {
     SmallPtrSet<const MDNode *, 16> Nodes2;
     collectMDInDomain(Scopes2, Domain, Nodes2);
