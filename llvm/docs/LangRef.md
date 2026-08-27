@@ -7611,6 +7611,13 @@ subset of (or equal to) the set of scopes for that domain in another
 instruction's `noalias` list, then the two memory accesses are assumed not to
 alias.
 
+If a domain is declared as having disjoint scopes, two memory accesses are
+assumed not to alias if the they both have entries for that domain in their
+`alias.scope` list and their `alias.scope` lists have no scopes in common for that
+domain. Equivalently, an instruction with a set of scopes from a disjoint-scope
+domain in its `alias.scope` list implicitly has all other scopes in that domain
+in its `noalias` set.
+
 Because scopes in one domain don't affect scopes in other domains, separate
 domains can be used to compose multiple independent noalias sets.  This is
 used for example during inlining.  As the noalias function parameters are
@@ -13785,7 +13792,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13794,7 +13801,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13803,7 +13810,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13819,14 +13826,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
