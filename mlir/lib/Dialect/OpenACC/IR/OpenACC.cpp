@@ -24,7 +24,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
@@ -595,6 +594,59 @@ ValueRange HostDataOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
+/// Whether the body of a structured `acc.loop` is proven to run.
+enum class BodyExecution {
+  /// The body runs at least once, so control cannot branch past it.
+  Always,
+  /// The body never runs, so control cannot enter it.
+  Never,
+  /// Neither could be proven, so both edges are possible.
+  Maybe
+};
+
+/// Prove whether the body of `loopOp` runs. A counted dimension whose entry
+/// test already fails at its lower bound runs exactly zero times, so a single
+/// comparison decides both `Always` and `Never`. Bounds that are not constant
+/// prove nothing.
+static BodyExecution getBodyExecution(LoopOp loopOp) {
+  // A container-like loop describes its iteration space inside the region.
+  if (loopOp.isContainerLike())
+    return BodyExecution::Maybe;
+
+  ValueRange lbs = loopOp.getLowerbound();
+  ValueRange ubs = loopOp.getUpperbound();
+  ValueRange steps = loopOp.getStep();
+  if (lbs.size() != ubs.size() || lbs.size() != steps.size())
+    return BodyExecution::Maybe;
+
+  std::optional<ArrayRef<bool>> inclusive = loopOp.getInclusiveUpperbound();
+
+  BodyExecution result = BodyExecution::Always;
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    std::optional<int64_t> lb = getConstantIntValue(lbs[i]);
+    std::optional<int64_t> ub = getConstantIntValue(ubs[i]);
+    std::optional<int64_t> step = getConstantIntValue(steps[i]);
+    // A zero step either never advances or never runs; the two are
+    // indistinguishable here.
+    if (!lb || !ub || !step || *step == 0) {
+      result = BodyExecution::Maybe;
+      continue;
+    }
+
+    // A descending dimension compares against its bound the other way round.
+    bool closed = inclusive && i < inclusive->size() && (*inclusive)[i];
+    bool runsOnce = *step > 0 ? (closed ? *lb <= *ub : *lb < *ub)
+                              : (closed ? *lb >= *ub : *lb > *ub);
+    // The dimensions are iterated as a nest, so one empty dimension empties
+    // the whole nest whatever the others do, while the body runs only if every
+    // dimension runs.
+    if (!runsOnce)
+      return BodyExecution::Never;
+  }
+
+  return result;
+}
+
 void LoopOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
   // Unstructured loops: the body may contain arbitrary CFG and early exits.
@@ -610,22 +662,17 @@ void LoopOp::getSuccessorRegions(RegionBranchPoint point,
   }
 
   // Structured loops: model a loop-shaped region graph similar to scf.for,
-  // including the trip-count refinements that drop edges the loop can never
-  // take.
-  if (std::optional<APInt> tripCount = getStaticTripCount()) {
-    if (point.isParent()) {
-      // A known-empty loop branches straight back to the parent. Otherwise
-      // the body is guaranteed to run, so nothing can branch past it.
-      if (tripCount->isZero())
-        regions.push_back(RegionSuccessor(getOperation()));
-      else
-        regions.push_back(RegionSuccessor(&getRegion()));
+  // minus the entry edge the loop is proven not to take.
+  if (point.isParent()) {
+    switch (getBodyExecution(*this)) {
+    case BodyExecution::Always:
+      regions.push_back(RegionSuccessor(&getRegion()));
       return;
-    }
-    if (tripCount->isOne()) {
-      // A single iteration has no backedge.
+    case BodyExecution::Never:
       regions.push_back(RegionSuccessor(getOperation()));
       return;
+    case BodyExecution::Maybe:
+      break;
     }
   }
 
@@ -3923,85 +3970,6 @@ bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
 
 llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
   return {&getRegion()};
-}
-
-/// Trip count of a single `acc.loop` control dimension.
-///
-/// `constantTripCount` models the exclusive `iv < ub` form used by `scf.for`.
-/// An `acc.loop` dimension is exclusive as well, unless `inclusiveUpperbound`
-/// is set for it, in which case the equivalent exclusive bound is `ub + 1`.
-static std::optional<APInt> getStaticDimTripCount(Value lb, Value ub,
-                                                  Value step, bool inclusive) {
-  // `acc.loop` bounds are plain values, so there is no static `ub - lb` to
-  // recover once the bounds themselves are not constants.
-  auto noUbMinusLb = [](Value, Value, bool) -> std::optional<llvm::APSInt> {
-    return std::nullopt;
-  };
-
-  if (!inclusive)
-    return constantTripCount(lb, ub, step, /*isSigned=*/true, noUbMinusLb);
-
-  // `iv <= ub` with matching bounds is a single iteration. This has to be
-  // answered before the conversion below, which would otherwise report the
-  // empty range that `constantTripCount` derives from matching bounds.
-  if (lb == ub) {
-    std::optional<std::pair<APInt, bool>> stepCst = getConstantAPIntValue(step);
-    if (!stepCst || stepCst->first.isZero())
-      return std::nullopt;
-    return APInt(stepCst->first.getBitWidth(), 1);
-  }
-
-  // `ub + 1` is only representable for a known upper bound that does not
-  // overflow.
-  std::optional<std::pair<APInt, bool>> ubCst = getConstantAPIntValue(ub);
-  if (!ubCst || ubCst->first.isMaxSignedValue())
-    return std::nullopt;
-  OpFoldResult exclusiveUb = IntegerAttr::get(ub.getType(), ubCst->first + 1);
-  return constantTripCount(lb, exclusiveUb, step, /*isSigned=*/true,
-                           noUbMinusLb);
-}
-
-std::optional<APInt> LoopOp::getStaticTripCount() {
-  // An unstructured or container-like loop has no counted control of its own:
-  // the iteration space is described inside the region.
-  if (getUnstructured() || isContainerLike())
-    return std::nullopt;
-
-  ValueRange lbs = getLowerbound();
-  ValueRange ubs = getUpperbound();
-  ValueRange steps = getStep();
-  if (lbs.size() != ubs.size() || lbs.size() != steps.size())
-    return std::nullopt;
-
-  std::optional<ArrayRef<bool>> inclusive = getInclusiveUpperbound();
-
-  // Collapsed dimensions are iterated as a product, so a single empty
-  // dimension makes the whole loop empty even when the others are unknown.
-  APInt tripCount(64, 1);
-  bool anyUnknown = false;
-  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
-    bool dimInclusive = inclusive && i < inclusive->size() && (*inclusive)[i];
-    std::optional<APInt> dim =
-        getStaticDimTripCount(lbs[i], ubs[i], steps[i], dimInclusive);
-    if (!dim) {
-      anyUnknown = true;
-      continue;
-    }
-    if (dim->isZero())
-      return APInt(64, 0);
-    if (dim->getActiveBits() > 64) {
-      anyUnknown = true;
-      continue;
-    }
-    bool overflow = false;
-    tripCount = tripCount.umul_ov(dim->zextOrTrunc(64), overflow);
-    if (overflow)
-      anyUnknown = true;
-  }
-
-  if (anyUnknown)
-    return std::nullopt;
-  return tripCount;
 }
 
 /// loop-control ::= `control` `(` ssa-id-and-type-list `)` `=`

@@ -172,8 +172,9 @@ func.func @last_mod_openacc_loop_dynamic(%arg0: memref<f32>, %n: i32) -> memref<
 
 // -----
 
-// structured acc.loop over a provably empty iteration space: the body is
-// never entered, so the store before the loop is the last writer.
+// structured acc.loop with matching bounds and an exclusive upper bound: the
+// entry test already fails at the lower bound, so the body never runs and the
+// store before the loop is the last writer.
 //
 // CHECK-LABEL: test_tag: acc_loop_empty_after:
 // CHECK:  operand #0
@@ -190,6 +191,59 @@ func.func @last_mod_openacc_loop_empty(%arg0: memref<f32>) -> memref<f32> {
     acc.yield
   } auto_
   memref.load %arg0[] {tag = "acc_loop_empty_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+// -----
+
+// structured acc.loop counting down with an inclusive upper bound: `lb` is
+// above `ub`, which an ascending-only comparison would misread as an empty
+// iteration space. This loop runs 10 times, so the body is guaranteed to run
+// and the store inside it is the only possible last writer.
+//
+// CHECK-LABEL: test_tag: acc_loop_descending_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - loop_region
+func.func @last_mod_openacc_loop_descending(%arg0: memref<f32>) -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+  %one = arith.constant 1.0 : f32
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  %c1_i32 = arith.constant 1 : i32
+  %cm1_i32 = arith.constant -1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  acc.loop control(%iv : i32) = (%c10_i32 : i32) to (%c1_i32 : i32)
+      step (%cm1_i32 : i32) {
+    memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
+    acc.yield
+  } auto_ inclusiveUpperbound(array<i1: true>)
+  memref.load %arg0[] {tag = "acc_loop_descending_after"} : memref<f32>
+  return %arg0 : memref<f32>
+}
+
+// -----
+
+// structured acc.loop stepping down away from an inclusive upper bound above
+// it: the body never runs, so the store before the loop is the last writer.
+// Comparing the bounds as if the step were ascending would instead prove the
+// body always runs, which is the opposite conclusion.
+//
+// CHECK-LABEL: test_tag: acc_loop_descending_empty_after:
+// CHECK:  operand #0
+// CHECK-NEXT:   - pre
+func.func @last_mod_openacc_loop_descending_empty(%arg0: memref<f32>)
+    -> memref<f32> {
+  %zero = arith.constant 0.0 : f32
+  %one = arith.constant 1.0 : f32
+  memref.store %zero, %arg0[] {tag_name = "pre"} : memref<f32>
+  %c1_i32 = arith.constant 1 : i32
+  %cm1_i32 = arith.constant -1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  acc.loop control(%iv : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)
+      step (%cm1_i32 : i32) {
+    memref.store %one, %arg0[] {tag_name = "loop_region"} : memref<f32>
+    acc.yield
+  } auto_ inclusiveUpperbound(array<i1: true>)
+  memref.load %arg0[] {tag = "acc_loop_descending_empty_after"} : memref<f32>
   return %arg0 : memref<f32>
 }
 
