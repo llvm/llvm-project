@@ -19517,10 +19517,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
-    // Combined subnodes are not costed on their own, only as a whole combined
-    // node, so only the root nodes are considered.
-    if (TE.State == TreeEntry::CombinedVectorize)
-      continue;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
