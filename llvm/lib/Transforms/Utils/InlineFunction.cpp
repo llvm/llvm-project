@@ -2014,8 +2014,9 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
       return;
 
     DebugLoc DL = TheCallDL;
-    // An inlined call without a debug location has no callsite probe of its
-    // own. Do not let it inherit the caller's probe discriminator.
+    // A call receiving the outer callsite's fallback location has no usable
+    // callsite probe of its own. Do not let it inherit the outer call's probe
+    // discriminator.
     if (isa<CallBase>(I) && DL &&
         DILocation::isPseudoProbeDiscriminator(DL->getDiscriminator()))
       DL = DL->cloneWithDiscriminator(0);
