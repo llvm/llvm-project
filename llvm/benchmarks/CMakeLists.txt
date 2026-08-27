@@ -18,6 +18,8 @@ add_benchmark(PointerUnionBM PointerUnionBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(ImmutableSetIteratorBM ImmutableSetIteratorBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(ImmutableSetBuildBM ImmutableSetBuildBM.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(ImmutableMergeBM ImmutableMergeBM.cpp PARTIAL_SOURCES_INTENDED)
+add_benchmark(CodeLayoutBench CodeLayout.cpp PARTIAL_SOURCES_INTENDED)
+target_link_libraries(CodeLayoutBench PRIVATE LLVMTransformUtils)
 
 add_benchmark(RuntimeLibcallsBench RuntimeLibcalls.cpp PARTIAL_SOURCES_INTENDED)
 add_benchmark(writeToOutputInParallelBench writeToOutputInParallel.cpp PARTIAL_SOURCES_INTENDED)

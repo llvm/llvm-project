@@ -657,13 +657,10 @@ private:
 
     // Initialize chains.
     AllChains.reserve(NumNodes);
-    HotChains.reserve(NumNodes);
     for (NodeT &Node : AllNodes) {
       // Create a chain.
       AllChains.emplace_back(Node.Index, &Node);
       Node.CurChain = &AllChains.back();
-      if (Node.ExecutionCount > 0)
-        HotChains.push_back(&AllChains.back());
     }
 
     // Initialize chain edges.
@@ -739,64 +736,91 @@ private:
 
   /// Merge pairs of chains while improving the ExtTSP objective.
   void mergeChainPairs() {
-    /// Deterministically compare pairs of chains.
-    auto compareChainPairs = [](const ChainT *A1, const ChainT *B1,
-                                const ChainT *A2, const ChainT *B2) {
-      return std::make_tuple(A1->Id, B1->Id) < std::make_tuple(A2->Id, B2->Id);
+    struct ChainPair {
+      ChainT *Pred;
+      ChainT *Succ;
+      ChainEdge *Edge;
+      MergeGainT Gain;
+      uint64_t PredId;
+      uint64_t SuccId;
     };
 
-    while (HotChains.size() > 1) {
-      ChainT *BestChainPred = nullptr;
-      ChainT *BestChainSucc = nullptr;
-      MergeGainT BestGain;
-      // Iterate over all pairs of chains.
-      for (ChainT *ChainPred : HotChains) {
-        // Get candidates for merging with the current chain.
-        for (const auto &[ChainSucc, Edge] : ChainPred->Edges) {
-          // Ignore loop edges.
+    // Keep all profitable merges ordered by gain. Chain identifiers make the
+    // choice deterministic when gains are equal.
+    auto CompareChainPairs = [](const ChainPair &L, const ChainPair &R) {
+      return std::make_tuple(-L.Gain.score(), L.PredId, L.SuccId) <
+             std::make_tuple(-R.Gain.score(), R.PredId, R.SuccId);
+    };
+    std::set<ChainPair, decltype(CompareChainPairs)> Queue(CompareChainPairs);
+
+    auto MakeChainPair = [](ChainT *Pred, ChainT *Succ, ChainEdge *Edge,
+                            MergeGainT Gain) {
+      return ChainPair{Pred, Succ, Edge, Gain, Pred->Id, Succ->Id};
+    };
+
+    auto InsertChainPair = [&](ChainT *Pred, ChainT *Succ, ChainEdge *Edge) {
+      if (Edge->isSelfEdge())
+        return;
+      if (Pred->numBlocks() + Succ->numBlocks() >= MaxChainSize)
+        return;
+
+      // Don't merge chains whose densities differ too much.
+      const double PredDensity = Pred->density();
+      const double SuccDensity = Succ->density();
+      assert(PredDensity > 0.0 && SuccDensity > 0.0 &&
+             "incorrectly computed chain densities");
+      auto [MinDensity, MaxDensity] = std::minmax(PredDensity, SuccDensity);
+      if (MaxDensity / MinDensity > MaxMergeDensityRatio)
+        return;
+
+      MergeGainT Gain = getBestMergeGain(Pred, Succ, Edge);
+      if (Gain.score() > EPS)
+        Queue.insert(MakeChainPair(Pred, Succ, Edge, Gain));
+    };
+
+    auto RemoveChainPair = [&](ChainT *Pred, ChainT *Succ, ChainEdge *Edge) {
+      if (!Edge->hasCachedMergeGain(Pred, Succ))
+        return;
+      MergeGainT Gain = Edge->getCachedMergeGain(Pred, Succ);
+      if (Gain.score() > EPS)
+        Queue.erase(MakeChainPair(Pred, Succ, Edge, Gain));
+    };
+
+    // Initialize the queue with both directions of every active edge.
+    for (ChainT &Chain : AllChains) {
+      if (Chain.Nodes.empty() || Chain.isCold())
+        continue;
+      for (const auto &[Succ, Edge] : Chain.Edges)
+        InsertChainPair(&Chain, Succ, Edge);
+    }
+
+    while (!Queue.empty()) {
+      ChainPair BestPair = *Queue.begin();
+      Queue.erase(Queue.begin());
+
+      // Only pairs adjacent to the merged chains can have their gain changed.
+      // Remove them before mutating chain identifiers or cached gains.
+      auto RemoveAdjacentPairs = [&](ChainT *Chain) {
+        for (const auto &[Adjacent, Edge] : Chain->Edges) {
           if (Edge->isSelfEdge())
             continue;
-          // Skip the merge if the combined chain violates the maximum specified
-          // size.
-          if (ChainPred->numBlocks() + ChainSucc->numBlocks() >= MaxChainSize)
-            continue;
-          // Don't merge the chains if they have vastly different densities.
-          // Skip the merge if the ratio between the densities exceeds
-          // MaxMergeDensityRatio. Smaller values of the option result in fewer
-          // merges, and hence, more chains.
-          const double ChainPredDensity = ChainPred->density();
-          const double ChainSuccDensity = ChainSucc->density();
-          assert(ChainPredDensity > 0.0 && ChainSuccDensity > 0.0 &&
-                 "incorrectly computed chain densities");
-          auto [MinDensity, MaxDensity] =
-              std::minmax(ChainPredDensity, ChainSuccDensity);
-          const double Ratio = MaxDensity / MinDensity;
-          if (Ratio > MaxMergeDensityRatio)
-            continue;
-
-          // Compute the gain of merging the two chains.
-          MergeGainT CurGain = getBestMergeGain(ChainPred, ChainSucc, Edge);
-          if (CurGain.score() <= EPS)
-            continue;
-
-          if (BestGain < CurGain ||
-              (std::abs(CurGain.score() - BestGain.score()) < EPS &&
-               compareChainPairs(ChainPred, ChainSucc, BestChainPred,
-                                 BestChainSucc))) {
-            BestGain = CurGain;
-            BestChainPred = ChainPred;
-            BestChainSucc = ChainSucc;
-          }
+          RemoveChainPair(Chain, Adjacent, Edge);
+          RemoveChainPair(Adjacent, Chain, Edge);
         }
+      };
+      RemoveAdjacentPairs(BestPair.Pred);
+      RemoveAdjacentPairs(BestPair.Succ);
+
+      mergeChains(BestPair.Pred, BestPair.Succ, BestPair.Gain.mergeOffset(),
+                  BestPair.Gain.mergeType());
+
+      // Recompute the candidates adjacent to the newly formed chain.
+      for (const auto &[Adjacent, Edge] : BestPair.Pred->Edges) {
+        if (Edge->isSelfEdge())
+          continue;
+        InsertChainPair(BestPair.Pred, Adjacent, Edge);
+        InsertChainPair(Adjacent, BestPair.Pred, Edge);
       }
-
-      // Stop merging when there is no improvement.
-      if (BestGain.score() <= EPS)
-        break;
-
-      // Merge the best pair of chains.
-      mergeChains(BestChainPred, BestChainSucc, BestGain.mergeOffset(),
-                  BestGain.mergeType());
     }
   }
 
@@ -945,8 +969,8 @@ private:
     return MergeGainT(NewScore - CurScore, MergeOffset, MergeType);
   }
 
-  /// Merge chain From into chain Into, update the list of active chains,
-  /// adjacency information, and the corresponding cached values.
+  /// Merge chain From into chain Into and update its adjacency information and
+  /// cached values.
   void mergeChains(ChainT *Into, ChainT *From, size_t MergeOffset,
                    MergeTypeT MergeType) {
     assert(Into != From && "a chain cannot be merged with itself");
@@ -967,9 +991,6 @@ private:
       MergedJumpsT MergedJumps(&SelfEdge->jumps());
       Into->Score = extTSPScore(MergedNodes, MergedJumps);
     }
-
-    // Remove the chain from the list of active chains.
-    llvm::erase(HotChains, From);
 
     // Invalidate caches.
     for (auto EdgeIt : Into->Edges)
@@ -1027,9 +1048,6 @@ private:
 
   /// All edges between the chains.
   std::vector<ChainEdge> AllEdges;
-
-  /// Active chains. The vector gets updated at runtime when chains are merged.
-  std::vector<ChainT *> HotChains;
 };
 
 /// The implementation of the Cache-Directed Sort (CDSort) algorithm for
