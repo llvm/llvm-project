@@ -5141,7 +5141,7 @@ private:
             for (const ScheduleBundle *Bundle : Bundles) {
               if (TotalOpCount == 0)
                 break;
-              const TreeEntry *TE = Bundle->getTreeEntry();
+              TreeEntry *TE = Bundle->getTreeEntry();
               if (!TE->hasReassocScalars())
                 continue;
               for (Value *V : TE->getReassocScalars()) {
@@ -5168,8 +5168,22 @@ private:
                       if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
                               .second)
                         DecrUnsched(CD, /*IsControl=*/false);
-                      ReleasedAsCopyable = true;
                     }
+                  }
+                  // The dep is released through copyable data only if this
+                  // very entry models the scalar as a copyable operand on one
+                  // of its edges, mirroring the dependency calculation;
+                  // copyable data on some other entry's edge does not cover
+                  // the dep registered for this entry.
+                  for (auto It = find(TE->Scalars, In);
+                       It != TE->Scalars.end() && !ReleasedAsCopyable;
+                       It = find(make_range(std::next(It), TE->Scalars.end()),
+                                 In)) {
+                    int Lane = std::distance(TE->Scalars.begin(), It);
+                    for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
+                      ReleasedAsCopyable |=
+                          TE->getOperand(OpIdx)[Lane] == OpI &&
+                          getScheduleCopyableData(EdgeInfo(TE, OpIdx), OpI);
                   }
                 }
                 if (!ReleasedAsCopyable) {
@@ -10981,8 +10995,58 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                          /*Extract=*/false, CostKind,
                                          AreAllValuesNonConst, UniqueValues);
     UniquesCost += ReusesCost;
-    if (UniquesCost <= InsertsCost)
+    if (UniquesCost <= InsertsCost) {
+      // Packing to a vector that occupies the same register width as the
+      // original only adds the reshuffle cost; keep the originals. Loads may
+      // instead benefit from a wider contiguous load.
+      if (S && S.getOpcode() != Instruction::Load) {
+        unsigned EltBits =
+            S.getMainOp()->getDataLayout().getTypeSizeInBits(ScalarTy);
+        unsigned MinVF = R.getMinVF(EltBits);
+        auto RegWidth = [&](unsigned N) {
+          return std::max(getFullVectorNumberOfElements(TTI, ScalarTy, N),
+                          MinVF);
+        };
+        // Keeping the originals just moves the reshuffle to the operand
+        // columns with duplicates; keep them only if at most one column has
+        // duplicates, so the total number of reshuffles does not grow.
+        auto HasExtraReshuffle = [&]() {
+          if (BuildGatherOnly)
+            return false;
+          unsigned NumDupColumns = 0;
+          for (unsigned OpIdx :
+               seq<unsigned>(S.getMainOp()->getNumOperands())) {
+            SmallPtrSet<const Value *, 16> UniqueOps;
+            for (Value *V : VL) {
+              if (isa<PoisonValue>(V))
+                continue;
+              Value *Op;
+              if (S.isCopyableElement(V)) {
+                if (OpIdx != 0)
+                  continue;
+                Op = V;
+              } else {
+                auto *I = dyn_cast<Instruction>(V);
+                if (!I || OpIdx >= I->getNumOperands())
+                  continue;
+                Op = I->getOperand(OpIdx);
+              }
+              if (!isConstant(Op) && !UniqueOps.insert(Op).second) {
+                ++NumDupColumns;
+                break;
+              }
+            }
+            if (NumDupColumns > 1)
+              return true;
+          }
+          return false;
+        };
+        return std::make_pair(true, RegWidth(NumUniqueScalarValues) >=
+                                            RegWidth(VL.size()) &&
+                                        !HasExtraReshuffle());
+      }
       return std::make_pair(true, false);
+    }
     InstructionCost CostDiff = UniquesCost - InsertsCost;
     if (CostDiff < TTI::TCC_Expensive ||
         (R.getTreeSize() == 0 && R.isReductionTree() &&
@@ -19466,6 +19530,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
+    // Combined subnodes are not costed on their own (their cost is 0), but
+    // must be included into the ancestors' subtree node lists, so that they
+    // get deleted together with the trimmed combined root.
     InstructionCost C = NodesCosts.at(&TE);
     InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
     std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
@@ -19499,8 +19566,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   };
   PriorityQueue<CostIndicesTy, SmallVector<CostIndicesTy>, FirstGreater>
       Worklist;
-  for (const auto [Idx, P] : enumerate(SubtreeCosts))
+  for (const auto [Idx, P] : enumerate(SubtreeCosts)) {
+    // Combined subnodes are not trimmed on their own, only as a whole combined
+    // node, so only the root nodes are checked and included into the worklist.
+    if (VectorizableTree[Idx]->State == TreeEntry::CombinedVectorize)
+      continue;
     Worklist.emplace(VectorizableTree[Idx].get(), P);
+  }
 
   // Narrow store trees with non-profitable immediate values - exit.
   if (!UserIgnoreList && getRootNode().getVectorFactor() < MinVF &&

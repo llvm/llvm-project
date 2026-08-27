@@ -35,12 +35,11 @@ namespace llvm {
 /// This folding set is used for two purposes:
 ///   1. Given information about a node we want to create, look up the unique
 ///      instance of the node in the set.  If the node already exists, return
-///      it, otherwise return the bucket it should be inserted into.
+///      it, otherwise return a token that makes the insertion cheap.
 ///   2. Given a node that has already been created, remove it from the set.
 ///
-/// This class is implemented as a single-link chained hash table, where the
-/// "buckets" are actually the nodes themselves (the next pointer is in the
-/// node).  The last node points back to the bucket to simplify node removal.
+/// The hash table is linear-probing open addressing with tombstone-free
+/// deletion, power-of-two capacity, and a 0.75 maximum load factor.
 ///
 /// Any node that is to be included in the folding set must be a subclass of
 /// FoldingSetNode.  The node class must also define a Profile method used to
@@ -100,6 +99,9 @@ namespace llvm {
 ///
 ///    MyNode *N = new MyNode(Name, Value);
 ///    MyFoldingSet.InsertNode(N, InsertPoint);
+///
+/// InsertPoint survives intervening insertions, but N must profile identically
+/// to the ID that produced it, or N becomes unfindable.
 ///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
@@ -180,10 +182,16 @@ public:
   FoldingSetNodeIDRef() = default;
   FoldingSetNodeIDRef(const unsigned *D, size_t S) : Data(D), Size(S) {}
 
+  static constexpr unsigned NotAHash = 0;
+
   // Compute a strong hash value used to lookup the node in the FoldingSetBase.
   // The hash value is not guaranteed to be deterministic across processes.
+  // Never returns NotAHash: FoldingSetBase uses it to keep the InsertPos token
+  // non-null and to mark a node belonging to no set.
   unsigned ComputeHash() const {
-    return static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+    unsigned Hash =
+        static_cast<unsigned>(hash_combine_range(Data, Data + Size));
+    return Hash == NotAHash ? 1 : Hash;
   }
 
   // Compute a deterministic hash value across processes that is suitable for
@@ -290,22 +298,17 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// Implements the folding set functionality. The main structure is an array of
-/// buckets.  Each bucket is indexed by the hash of the nodes it contains. The
-/// bucket itself points to the nodes contained in the bucket via a singly
-/// linked list.  The last node in the list points back to the bucket to
-/// facilitate node removal.
-///
+/// Non-templated base class for FoldingSet and ContextualFoldingSet, holding
+/// the memory management and probing that does not depend on the node type.
 class FoldingSetBase : public DebugEpochBase {
 protected:
-  /// Array of bucket chains.
+  /// Array of node pointers; a null entry marks an empty slot.
   void **Buckets = nullptr;
 
   /// Length of the Buckets array.  Always a power of 2.
   unsigned NumBuckets = 0;
 
-  /// Number of nodes in the folding set. Growth occurs when NumNodes
-  /// is greater than twice the number of buckets.
+  /// Number of nodes in the folding set.
   unsigned NumNodes = 0;
 
   LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
@@ -315,19 +318,19 @@ protected:
 
 public:
   //===--------------------------------------------------------------------===//
-  /// This class is used to maintain the singly linked bucket list in
-  /// a folding set.
+  /// This class is used to maintain node state in a folding set.
   class Node {
   private:
-    // NextInFoldingSetBucket - next link in the bucket list.
-    void *NextInFoldingSetBucket = nullptr;
+    // Hash of the node's profile, cached so that growth and removal never
+    // re-run Profile(). NotAHash while the node is in no folding set.
+    uint32_t FoldingSetHash = FoldingSetNodeIDRef::NotAHash;
 
   public:
     Node() = default;
 
     // Accessors
-    void *getNextInBucket() const { return NextInFoldingSetBucket; }
-    void SetNextInBucket(void *N) { NextInFoldingSetBucket = N; }
+    uint32_t getFoldingSetHash() const { return FoldingSetHash; }
+    void setFoldingSetHash(uint32_t Hash) { FoldingSetHash = Hash; }
   };
 
   /// Remove all nodes from the folding set.
@@ -339,13 +342,9 @@ public:
   /// Returns true if there are no nodes in the folding set.
   [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
-  /// Returns the number of nodes permitted in the folding set
-  /// before a rebucket operation is performed.
-  unsigned capacity() const {
-    // We allow a load factor of up to 2.0,
-    // so that means our capacity is NumBuckets * 2
-    return NumBuckets * 2;
-  }
+  /// Grow the number of buckets so that we can hold at least \p N nodes
+  /// before rebucketing. May allocate more space than requested.
+  LLVM_ABI void reserve(unsigned N);
 
 protected:
   /// Functions provided by the derived class to compute folding properties.
@@ -370,17 +369,22 @@ protected:
   };
 
 private:
-  /// Resize the hash table and rehash everything. \p NewBucketCount must be a
-  /// power of two, and must be greater than the old bucket count.
-  void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
+  /// Put \p N in the first empty slot following its home, without checking
+  /// capacity. Does not touch \p N, so a rehash need not dirty every node.
+  void placeNode(Node *N, uint32_t Hash);
+
+  /// Compare \p N against \p ID. Out of line to keep FoldingSetNodeID's inline
+  /// storage out of the probe loop's frame.
+  static bool nodeEquals(const FoldingSetInfo &Info, const FoldingSetBase *Self,
+                         Node *N, const FoldingSetNodeID &ID, unsigned IDHash);
+
+  /// Rehash into at least \p MinNumBuckets buckets, rounded up to a power of
+  /// two and floored at the constructor's minimum.
+  void grow(unsigned MinNumBuckets);
 
 protected:
   // The below methods are protected to encourage subclasses to provide a more
   // type-safe API.
-
-  /// Grow the number of buckets so that we can hold at least \p EltCount
-  /// nodes before rebucketing. May allocate more space than requested.
-  LLVM_ABI void reserve(unsigned EltCount, const FoldingSetInfo &Info);
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
@@ -398,9 +402,8 @@ protected:
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos.
-  LLVM_ABI void InsertNode(Node *N, void *InsertPos,
-                           const FoldingSetInfo &Info);
+  /// FindNodeOrInsertPos for an ID that \p N profiles identically to.
+  LLVM_ABI void InsertNode(Node *N, void *InsertPos);
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -497,20 +500,18 @@ public:
 public:
   using iterator = FoldingSetIterator<T>;
 
-  iterator begin() { return iterator(this, Buckets); }
-  iterator end() { return iterator(this, Buckets + NumBuckets); }
+  iterator begin() { return iterator(Buckets, Buckets + NumBuckets, this); }
+  iterator end() {
+    return iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
+  }
 
   using const_iterator = FoldingSetIterator<const T>;
 
-  const_iterator begin() const { return const_iterator(this, Buckets); }
-  const_iterator end() const {
-    return const_iterator(this, Buckets + NumBuckets);
+  const_iterator begin() const {
+    return const_iterator(Buckets, Buckets + NumBuckets, this);
   }
-
-  /// Grow the number of buckets so that we can hold at least \p EltCount
-  /// nodes before rebucketing. May allocate more space than requested.
-  void reserve(unsigned EltCount) {
-    FoldingSetBase::reserve(EltCount, getFoldingSetInfo());
+  const_iterator end() const {
+    return const_iterator(Buckets + NumBuckets, Buckets + NumBuckets, this);
   }
 
   /// Remove a node from the folding set, returning true if one
@@ -535,7 +536,7 @@ public:
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
   void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos, getFoldingSetInfo());
+    FoldingSetBase::InsertNode(N, InsertPos);
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -637,39 +638,31 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// This is the common iterator support shared by all folding sets, which knows
-/// how to walk the folding set hash table.
-class FoldingSetIteratorImpl : DebugEpochBase::HandleBase {
-protected:
-  FoldingSetNode *NodePtr;
+/// Forward iterator for FoldingSet and ContextualFoldingSet.
+template <class T> class FoldingSetIterator : DebugEpochBase::HandleBase {
+  void **Bucket = nullptr;
+  void **End = nullptr;
 
-  LLVM_ABI FoldingSetIteratorImpl(const DebugEpochBase *Epoch, void **Bucket);
-
-  LLVM_ABI void advance();
-
-  FoldingSetNode *getNode() const {
+  void advance() {
     assert(isHandleInSync() && "invalid iterator access!");
-    return NodePtr;
+    do
+      ++Bucket;
+    while (Bucket != End && *Bucket == nullptr);
   }
 
 public:
-  bool operator==(const FoldingSetIteratorImpl &RHS) const {
-    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
-    return NodePtr == RHS.NodePtr;
+  FoldingSetIterator(void **Bucket, void **End, const DebugEpochBase *Epoch)
+      : DebugEpochBase::HandleBase(Epoch), Bucket(Bucket), End(End) {
+    while (this->Bucket != this->End && *this->Bucket == nullptr)
+      ++this->Bucket;
   }
-  bool operator!=(const FoldingSetIteratorImpl &RHS) const {
-    return !(*this == RHS);
+
+  T &operator*() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    return *static_cast<T *>(*Bucket);
   }
-};
 
-template <class T> class FoldingSetIterator : public FoldingSetIteratorImpl {
-public:
-  explicit FoldingSetIterator(const DebugEpochBase *Epoch, void **Bucket)
-      : FoldingSetIteratorImpl(Epoch, Bucket) {}
-
-  T &operator*() const { return *static_cast<T *>(getNode()); }
-
-  T *operator->() const { return static_cast<T *>(getNode()); }
+  T *operator->() const { return &operator*(); }
 
   inline FoldingSetIterator &operator++() { // Preincrement
     advance();
@@ -679,6 +672,14 @@ public:
     FoldingSetIterator tmp = *this;
     ++*this;
     return tmp;
+  }
+
+  bool operator==(const FoldingSetIterator &RHS) const {
+    assert(isHandleInSync() && RHS.isHandleInSync() && "handle not in sync!");
+    return Bucket == RHS.Bucket;
+  }
+  bool operator!=(const FoldingSetIterator &RHS) const {
+    return !(*this == RHS);
   }
 };
 

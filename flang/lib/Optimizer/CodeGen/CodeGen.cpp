@@ -3854,7 +3854,7 @@ private:
     rewriter.setInsertionPointToEnd(&comdatOp.getBody().back());
     auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
         rewriter, comdatOp.getLoc(), global.getSymName(),
-        mlir::LLVM::comdat::Comdat::Any);
+        mlir::LLVM::comdat::Comdat::Any, /*sym_visibility=*/nullptr);
     global.setComdatAttr(mlir::SymbolRefAttr::get(
         rewriter.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));

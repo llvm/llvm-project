@@ -30,3 +30,107 @@ body: |
   bb.2:
     RET_ReallyLR
 ...
+
+---
+name: cbz_and_undef_source
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cbz_and_undef_source
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri undef %1:gpr32, 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY [[ANDWri]]
+  ; CHECK-NEXT:   CBZW [[COPY]], %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:gpr32sp = ANDWri undef %1:gpr32, 0
+    %2:gpr32 = COPY %0
+    CBZW %2, %bb.2
+    B %bb.1
+
+  bb.1:
+    RET_ReallyLR
+
+  bb.2:
+    RET_ReallyLR
+...
+
+# The branch condition is a COPY of an undef register.
+---
+name: cbz_copy_of_undef
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cbz_copy_of_undef
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY undef %1:gpr32
+  ; CHECK-NEXT:   CBZW [[COPY]], %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0:gpr32 = COPY undef %1:gpr32
+    CBZW %0, %bb.2
+    B %bb.1
+
+  bb.1:
+    RET_ReallyLR
+
+  bb.2:
+    RET_ReallyLR
+...
+
+# A defined AND source is still folded into a TBZ through the copy
+# chain: the undef guard must not block the ordinary case.
+---
+name: tbz_and_defined_source
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: tbz_and_defined_source
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; CHECK-NEXT:   [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[COPY]], 0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[ANDWri]]
+  ; CHECK-NEXT:   TBZW [[COPY]], 0, %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   RET_ReallyLR
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0
+
+    %3:gpr32 = COPY $w0
+    %0:gpr32sp = ANDWri %3, 0
+    %2:gpr32 = COPY %0
+    CBZW %2, %bb.2
+    B %bb.1
+
+  bb.1:
+    RET_ReallyLR
+
+  bb.2:
+    RET_ReallyLR
+...
