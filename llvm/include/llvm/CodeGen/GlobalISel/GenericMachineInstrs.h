@@ -615,6 +615,8 @@ public:
     case TargetOpcode::G_VECREDUCE_FMIN:
     case TargetOpcode::G_VECREDUCE_FMAXIMUM:
     case TargetOpcode::G_VECREDUCE_FMINIMUM:
+    case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
+    case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
     case TargetOpcode::G_VECREDUCE_ADD:
     case TargetOpcode::G_VECREDUCE_MUL:
     case TargetOpcode::G_VECREDUCE_AND:
@@ -652,6 +654,12 @@ public:
       break;
     case TargetOpcode::G_VECREDUCE_FMINIMUM:
       ScalarOpc = TargetOpcode::G_FMINIMUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
+      ScalarOpc = TargetOpcode::G_FMAXIMUMNUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
+      ScalarOpc = TargetOpcode::G_FMINIMUMNUM;
       break;
     case TargetOpcode::G_VECREDUCE_ADD:
       ScalarOpc = TargetOpcode::G_ADD;

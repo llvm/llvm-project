@@ -1666,6 +1666,19 @@ Value *SCEVExpander::FindValueInExprValueMap(
   return nullptr;
 }
 
+Value *SCEVExpander::findExistingExpansionAndDropPoisonFlags(
+    SCEVUse S, const Instruction *InsertPt) {
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  Value *V = FindValueInExprValueMap(S, InsertPt, DropPoisonGeneratingInsts);
+  if (!V)
+    return nullptr;
+  for (Instruction *I : DropPoisonGeneratingInsts) {
+    rememberFlags(I);
+    dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
+  }
+  return V;
+}
+
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
 // or expand the SCEV literally. Specifically, if the expansion is in LSRMode,
 // and the SCEV contains any sub scAddRecExpr type SCEV, it will be expanded
@@ -1733,23 +1746,17 @@ Value *SCEVExpander::expand(SCEVUse S) {
   Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
 
   // Expand the expression into instructions.
-  SmallVector<Instruction *> DropPoisonGeneratingInsts;
-  Value *V = FindValueInExprValueMap(S, &*InsertPt, DropPoisonGeneratingInsts);
+  Value *V = findExistingExpansionAndDropPoisonFlags(S, &*InsertPt);
   BasicBlock::iterator CacheAt = InsertPt;
   if (!V && InsertPt != OrigInsertPt && PostIncLoops.empty()) {
     // Hoisting the insertion point can move it above a value that already
     // computes S. Such a value is still usable: it only has to dominate the
     // point we were asked to expand at, which is where the result is used.
-    V = FindValueInExprValueMap(S, &*OrigInsertPt, DropPoisonGeneratingInsts);
+    V = findExistingExpansionAndDropPoisonFlags(S, &*OrigInsertPt);
     if (V)
       CacheAt = OrigInsertPt;
   }
-  if (V) {
-    for (Instruction *I : DropPoisonGeneratingInsts) {
-      rememberFlags(I);
-      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
-    }
-  } else {
+  if (!V) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
   }

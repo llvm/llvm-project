@@ -755,6 +755,10 @@ public:
   /// \return The vectorization hints for the loop being analyzed.
   const LoopVectorizeHints &getHints() const { return *Hints; }
 
+  /// Returns true if epilogue vectorization is considered profitable for a
+  /// main loop with vectorization factor \p VF and interleave count \p IC.
+  bool isEpilogueVectorizationProfitable(ElementCount VF, unsigned IC) const;
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 

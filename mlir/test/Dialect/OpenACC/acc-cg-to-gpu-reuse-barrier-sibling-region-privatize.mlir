@@ -41,7 +41,7 @@ func.func @sibling_regions_share_seq_loop() {
           scf.reduce
         } {acc.par_dims = #acc<par_dims[block_x]>}
         acc.yield
-      } {origin = "acc.parallel"}
+      } <{origin = "acc.parallel"}>
       // Region with a gang-private store inside a block-level predicate region.
       acc.compute_region launch(%gridA = %par_bx, %blockA = %par_tx) ins(%argA = %priv0) : (!acc.private_type<memref<i64>>) {
         %ca0 = arith.constant 0 : index
@@ -60,7 +60,7 @@ func.func @sibling_regions_share_seq_loop() {
           scf.reduce
         } {acc.par_dims = #acc<par_dims[block_x]>}
         acc.yield
-      } {origin = "acc.parallel"}
+      } <{origin = "acc.parallel"}>
     }
   }
   return

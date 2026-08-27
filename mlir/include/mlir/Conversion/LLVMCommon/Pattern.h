@@ -88,6 +88,11 @@ LogicalResult decomposeValue(OpBuilder &builder, Location loc, Value src,
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
 
+/// Creates a constant Op producing a value of `resultType` from an index-typed
+/// integer attribute.
+Value createIndexAttrConstant(OpBuilder &builder, Location loc, Type resultType,
+                              int64_t value);
+
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `memRefDesc`, using the layout map of `type`.
 /// The indices are linearized as:
