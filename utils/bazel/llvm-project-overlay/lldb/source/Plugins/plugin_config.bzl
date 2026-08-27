@@ -51,6 +51,7 @@ DEFAULT_PLUGINS = [
     "MemoryHistoryASan",
     "ObjCLanguage",
     "ObjCPlusPlusLanguage",
+    "ObjectContainerBigArchive",
     "ObjectContainerBSDArchive",
     "ObjectContainerMachOArchive",
     "ObjectContainerMachOFileset",

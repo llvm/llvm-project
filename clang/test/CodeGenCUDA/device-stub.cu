@@ -56,11 +56,11 @@
 // RUN: %clang_cc1 -cuid=123 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,LNX,NORDC,HIP,HIPNEF
 
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -aux-triple amdgpu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN
 
-// RUN: %clang_cc1 -cuid=123 -triple x86_64-pc-windows-msvc -aux-triple amdgcn -emit-llvm %s \
+// RUN: %clang_cc1 -cuid=123 -triple x86_64-pc-windows-msvc -aux-triple amdgpu -emit-llvm %s \
 // RUN:     -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,WIN,HIP,HIPNEF
 

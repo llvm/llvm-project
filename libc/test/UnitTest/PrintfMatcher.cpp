@@ -11,8 +11,8 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/printf_config.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/printf_config.h"
 
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"

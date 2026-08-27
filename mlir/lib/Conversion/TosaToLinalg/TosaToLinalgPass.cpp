@@ -146,7 +146,8 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         if (pipelineOpts.validation) {
           validationOptions = TosaValidationOptions{
               /*strictOpSpecAlignment=*/false,
-              /*allowInvalidOpDatatypeCombinations=*/false};
+              /*allowInvalidOpDatatypeCombinations=*/false,
+              /*validateFunctionSignature=*/false};
         }
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,

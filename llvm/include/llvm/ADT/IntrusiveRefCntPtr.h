@@ -60,6 +60,7 @@
 #ifndef LLVM_ADT_INTRUSIVEREFCNTPTR_H
 #define LLVM_ADT_INTRUSIVEREFCNTPTR_H
 
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -170,7 +171,7 @@ template <typename T> struct IntrusiveRefCntPtrInfo {
 /// This class increments its pointee's reference count when it is created, and
 /// decrements its refcount when it's destroyed (or is changed to point to a
 /// different object).
-template <typename T> class IntrusiveRefCntPtr {
+template <typename T> class LLVM_ATTRIBUTE_WARN_UNUSED IntrusiveRefCntPtr {
   T *Obj = nullptr;
 
 public:

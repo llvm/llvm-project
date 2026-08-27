@@ -23,6 +23,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
@@ -316,7 +317,7 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.getType()->isAnyComplexType())
     return true;
 
-  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
+  if (const Expr *Base = Ptr.getRootExpr())
     return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
   return false;
 }
@@ -476,7 +477,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
   // If we're evaluating the initializer for a constexpr variable in C23, we may
   // only read other contexpr variables. Abort here since this one isn't
   // constexpr.
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+  if (const auto *VD = S.EvaluatingDecl;
       VD && VD->isConstexpr() && S.getLangOpts().C23)
     return Invalid(S, OpPC);
 
@@ -541,17 +542,6 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
-  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
-    return true;
-  if (S.getLangOpts().CPlusPlus) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
-        << AK << S.Current->getRange(OpPC);
-  }
-  return false;
-}
-
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK) {
   if (!Ptr.isElementPastEnd() && !Ptr.isZeroSizeArray())
@@ -575,7 +565,7 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                    uint32_t Offset) {
-  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t MinOffset = Ptr.block()->getMetadataSize();
   uint32_t PtrOffset = Ptr.getByteOffset();
 
   // We subtract Offset from PtrOffset. The result must be at least
@@ -897,11 +887,11 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       S.FFDiag(Src, diag::note_constexpr_access_null) << AK;
     return false;
   }
-  // Block pointers are the only ones we can actually read from.
-  if (!Ptr.isBlockPointer())
+  // Block and string pointers are the only ones we can actually read from.
+  if (!Ptr.isReadablePointerType())
     return false;
 
-  if (!Ptr.block()->isAccessible()) {
+  if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
@@ -921,7 +911,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return diagnoseUninitialized(S, OpPC, Ptr, AK);
   if (!CheckLifetime(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
+  if (Ptr.isBlockPointer() && !CheckTemporary(S, OpPC, Ptr.block(), AK))
     return false;
 
   if (!CheckMutable(S, OpPC, Ptr))
@@ -931,7 +921,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (isConstexprUnknown(Ptr))
     return false;
 
-  if (!Ptr.isArrayRoot()) {
+  if (Ptr.isBlockPointer() && !Ptr.isArrayRoot()) {
     // According to GCC info page:
     //
     // 6.28 Compound Literals
@@ -965,10 +955,10 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// EvalEmitter to do the final lvalue-to-rvalue conversion.
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(!Ptr.isZero());
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isReadablePointerType())
     return false;
 
-  if (!Ptr.block()->isAccessible()) {
+  if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Read))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
@@ -987,7 +977,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!Ptr.isInitialized())
     return diagnoseUninitialized(S, OpPC, Ptr, AK_Read);
-  if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
+  if (Ptr.isBlockPointer() && !CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
@@ -1076,10 +1066,6 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Invalid decls have been diagnosed before.
-  if (DiagDecl->isInvalidDecl())
-    return false;
-
   // If this function is not constexpr because it is an inherited
   // non-constexpr constructor, diagnose that directly.
   const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
@@ -1122,8 +1108,8 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
     const FunctionDecl *Definition;
-    const Stmt *Body = DiagDecl->getBody(Definition);
-    if (Body && Definition)
+    bool HasBody = DiagDecl->hasBody(Definition);
+    if (HasBody && Definition)
       S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -1146,16 +1132,12 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
   const FunctionDecl *DiagDecl = F->getDecl();
   const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
+  DiagDecl->hasBody(Definition);
 
   if (!Definition && S.checkingPotentialConstantExpression() &&
       DiagDecl->isConstexpr()) {
     return false;
   }
-
-  // Implicitly constexpr.
-  if (F->isLambdaStaticInvoker())
-    return true;
 
   return diagnoseCallableDecl(S, OpPC, DiagDecl);
 }
@@ -1188,19 +1170,8 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status, FPOptions FPO) {
-  // [expr.pre]p4:
-  //   If during the evaluation of an expression, the result is not
-  //   mathematically defined [...], the behavior is undefined.
-  // FIXME: C++ rules require us to not conform to IEEE 754 here.
-  if (Result.isNan()) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
-        << /*NaN=*/true << S.Current->getRange(OpPC);
-    return S.noteUndefinedBehavior();
-  }
-
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (S.inConstantContext())
@@ -1233,6 +1204,26 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   }
 
   return true;
+}
+
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status, FPOptions FPO) {
+  // FIXME: The standard quote below is deleted by P3899R3.
+  // [expr.pre]p4:
+  //   If during the evaluation of an expression, the result is not
+  //   mathematically defined [...], the behavior is undefined.
+  // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  // FIXME: The NaN check should not be applied outside of "constant contexts"
+  // because it prevents NaN propagation and the "invalid" status is the
+  // responsibility of CheckFloatStatus.
+  if (Result.isNan()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+        << /*NaN=*/true << S.Current->getRange(OpPC);
+    return S.noteUndefinedBehavior();
+  }
+
+  return CheckFloatStatus(S, OpPC, Status, FPO);
 }
 
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
@@ -1436,7 +1427,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     // Check that new[]/delete[] or new/delete were used, not a mixture.
@@ -1572,10 +1563,7 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
       Ptr.asTypeidPointer().TypeInfoType->getAsRecordDecl());
   if (!R)
     return false;
-  const Record::Field *Field =
-      llvm::find_if(R->fields(), [=](const Record::Field &F) -> bool {
-        return F.Offset == Offset;
-      });
+  const Record::Field *Field = R->findField(Offset);
   if (!Field)
     return false;
 
@@ -1593,10 +1581,15 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool allowNullSubObj(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return Ptr.isZero() && S.emitRelaxedDiag(S.Current->getSource(OpPC).getLoc(),
+                                           diag::note_constexpr_null_subobject);
+}
+
 static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                      uint32_t Off) {
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
+      !allowNullSubObj(S, OpPC, Ptr) && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -1794,9 +1787,9 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
     return false;
 
   const FunctionDecl *Definition = nullptr;
-  const Stmt *Body = FD->getBody(Definition);
+  bool HasBody = FD->hasBody(Definition);
 
-  if (Definition && Body &&
+  if (Definition && HasBody &&
       (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
                                      Definition->hasAttr<MSConstexprAttr>())))
     return true;
@@ -1851,7 +1844,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->getBody(Definition))
+  if (!Func->getDecl()->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -1892,8 +1885,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -1985,8 +1978,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -2064,6 +2057,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
   return DynamicDecl != nullptr;
 }
 
+namespace {
 struct DynamicCastResult {
   UnsignedOrNone Offset = std::nullopt;
   bool Ambiguous = false;
@@ -2088,6 +2082,7 @@ struct DynamicCastResult {
     }
   }
 };
+} // namespace
 
 // Walk UP the type hierarchy, starting at the decl of R to find Needle.
 static DynamicCastResult findRecordBase(const ASTContext &Ctx, const Record *R,
@@ -2167,9 +2162,13 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
 
     CXXBasePaths Paths;
     getRecord(P.getBase())->isDerivedFrom(getRecord(P), Paths);
-    assert(std::distance(Paths.begin(), Paths.end()) == 1);
 
-    return Paths.front().Access == AS_private;
+    // Through virtual bases, there might be more than one "direct" base. They
+    // can have different access specifiers. They must all be private to be
+    // considered private.
+    return llvm::all_of(Paths, [](const CXXBasePath &P) -> bool {
+      return P.Access == AS_private;
+    });
   };
 
   enum {
@@ -2242,15 +2241,16 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     if (R.valid()) {
       Result = Iter.atField(*R.Offset);
       break;
-    } else if (R.Ambiguous) {
+    }
+    if (R.Ambiguous) {
       Ambiguous = true;
       break;
     }
 
-    // This moves us DOWN the type hierarchy.
-    Iter = Iter.getBase();
     if (Iter.isRoot() || !Iter.isBaseClass())
       break;
+    // This moves us DOWN the type hierarchy.
+    Iter = Iter.getBase();
   }
 
   if (Ambiguous)
@@ -2286,7 +2286,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   assert(DynamicDecl);
 
-  const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
+  const auto *StaticDecl = Func->getParentDecl();
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
@@ -2709,9 +2709,12 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
   SourceInfo E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  if (Ptr.isBlockPointer() && !Ptr.isZero())
+    S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
 
@@ -2847,13 +2850,13 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC) {
 
 bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
                                              const Pointer &RHS) {
-  if (!LHS.pointsToStringLiteral() || !RHS.pointsToStringLiteral())
-    return false;
+  assert(LHS.isStringPointer());
+  assert(RHS.isStringPointer());
 
   unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
   unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
-  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
+  const auto *LHSLit = cast<StringLiteral>(LHS.getRootExpr());
+  const auto *RHSLit = cast<StringLiteral>(RHS.getRootExpr());
 
   StringRef LHSStr(LHSLit->getBytes());
   unsigned LHSLength = LHSStr.size();
@@ -2875,11 +2878,11 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   StringRef Shorter;
   StringRef Longer;
   if (LHSLength < RHSLength) {
-    ShorterCharWidth = LHS.getFieldDesc()->getElemDataSize();
+    ShorterCharWidth = LHSLit->getCharByteWidth();
     Shorter = LHSStr;
     Longer = RHSStr;
   } else {
-    ShorterCharWidth = RHS.getFieldDesc()->getElemDataSize();
+    ShorterCharWidth = RHSLit->getCharByteWidth();
     Shorter = RHSStr;
     Longer = LHSStr;
   }
@@ -2896,8 +2899,7 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
-                                PrimType T) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr, PrimType T) {
   if (T == PT_IntAPS) {
     auto &Val = Ptr.deref<IntegralAP<true>>();
     if (!Val.singleWord()) {
@@ -2926,7 +2928,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
 }
 
 template <typename T>
-static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+static void copyPrimitiveMemory(InterpState &S, PtrView Ptr) {
   assert(needsAlloc<T>());
   if constexpr (std::is_same_v<T, MemberPointer>) {
     auto &Val = Ptr.deref<MemberPointer>();
@@ -2943,7 +2945,7 @@ static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
   }
 }
 
-static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+static void finishGlobalRecurse(InterpState &S, PtrView Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     for (const Record::Field &Fi : R->fields()) {
       if (Fi.Desc->isPrimitive()) {
@@ -2967,7 +2969,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (!needsAlloc(PT))
         return;
       assert(NumElems >= 1);
-      const Pointer EP = Ptr.atIndex(0);
+      PtrView EP = Ptr.atIndex(0);
       bool AllSingleWord = true;
       TYPE_SWITCH_ALLOC(PT, {
         if (!EP.deref<T>().singleWord()) {
@@ -2978,13 +2980,13 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
       if (AllSingleWord)
         return;
       for (unsigned I = 1; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I);
+        PtrView EP = Ptr.atIndex(I);
         copyPrimitiveMemory(S, EP, PT);
       }
     } else {
       assert(D->isCompositeArray());
       for (unsigned I = 0; I != D->getNumElems(); ++I) {
-        const Pointer EP = Ptr.atIndex(I).narrow();
+        PtrView EP = Ptr.atIndex(I).narrow();
         finishGlobalRecurse(S, EP);
       }
     }
@@ -2994,7 +2996,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
 bool FinishInitGlobal(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  finishGlobalRecurse(S, Ptr);
+  finishGlobalRecurse(S, Ptr.view());
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
     Ptr.activate();
@@ -3012,6 +3014,11 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
+  case CastKind::ReinterpretPtrToInt:
+    // Don't emit anything as we'll emit diag
+    // for this in CheckPointerToIntegralCast
+    assert(!Fatal);
+    return true;
   case CastKind::ReinterpretLike:
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
@@ -3080,7 +3087,7 @@ static bool castBackMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength - 1;
   bool IsDerivedMember = NewPathLength != 0;
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
 
   S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
@@ -3096,7 +3103,7 @@ static bool appendToMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
 
@@ -3180,7 +3187,7 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(Entry);
 
@@ -3223,7 +3230,7 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.
-constexpr bool OpReturns(Opcode Op) {
+[[maybe_unused]] static constexpr bool OpReturns(Opcode Op) {
   return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
          Op == OP_RetSint8 || Op == OP_RetUint8 || Op == OP_RetSint16 ||
          Op == OP_RetUint16 || Op == OP_RetSint32 || Op == OP_RetUint32 ||

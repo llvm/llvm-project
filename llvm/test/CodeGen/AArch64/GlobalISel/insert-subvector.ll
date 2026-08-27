@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SD %s
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-GI %s
 
-; CHECK-GI:         warning: Instruction selection used fallback path for insert_v8i32_v4i32_high
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for insert_v8i32_v4i32_low
-
 define <4 x i32> @insert_v4i32_v2i32_high(<4 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: insert_v4i32_v2i32_high:
 ; CHECK:       // %bb.0: // %entry

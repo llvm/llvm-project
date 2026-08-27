@@ -354,8 +354,8 @@ static bool DefersSameTypeParameters(
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
     "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
-    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
-    "size", "sizeof", "ubound"};
+    "allocated", "associated", "kind", "len", "lbound", "loc", "present",
+    "shape", "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -1125,8 +1125,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // CUDA specific checks
   // TODO: These are disabled in OpenACC constructs, which may not be
-  // correct when the target is not a GPU.
-  if (!intrinsic &&
+  // correct when the target is not a GPU. Statement functions are inlined
+  // during lowering, so CUDA data attributes do not apply to their dummies.
+  if (!intrinsic && !procedure.isStmtFunction &&
       !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
       !FindOpenACCConstructContaining(scope)) {
     std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
@@ -1142,10 +1143,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
     dummyDataAttr = dummy.cudaDataAttr;
     // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
-    // device subprograms
-    if (procedure.cudaSubprogramAttrs.value_or(
-            common::CUDASubprogramAttrs::Host) !=
-            common::CUDASubprogramAttrs::Host &&
+    // device subprograms. An OpenACC routine called from CUDA device code has
+    // the same implicit-device dummy-argument behavior.
+    bool isDeviceCallee{procedure.cudaSubprogramAttrs.value_or(
+                            common::CUDASubprogramAttrs::Host) !=
+            common::CUDASubprogramAttrs::Host ||
+        (procedure.hasOpenACCRoutine && FindCUDADeviceContext(scope))};
+    if (isDeviceCallee &&
         !dummy.attrs.test(
             characteristics::DummyDataObject::Attr::Allocatable) &&
         !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)) {
@@ -1162,8 +1166,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (!actualDataAttr &&
           (!actualFirstSymbol || IsValue(*actualFirstSymbol) ||
               IsFunctionResult(*actualFirstSymbol)) &&
-          (*procedure.cudaSubprogramAttrs ==
-              common::CUDASubprogramAttrs::Device)) {
+          (procedure.cudaSubprogramAttrs &&
+              *procedure.cudaSubprogramAttrs ==
+                  common::CUDASubprogramAttrs::Device)) {
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }

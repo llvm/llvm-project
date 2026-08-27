@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx906 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1011 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.06-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu10.11-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu10.12-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 typedef half __attribute__((ext_vector_type(2))) half2;

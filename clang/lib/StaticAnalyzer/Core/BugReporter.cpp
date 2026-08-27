@@ -2850,9 +2850,9 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
     if (!Pred) {
       PathDiagnosticPieceRef LastPiece;
       for (auto &V : visitors) {
-        V->finalizeVisitor(BRC, ErrorNode, *R);
+        V->finalizeVisitor(ErrorNode, BRC, *R);
 
-        if (auto Piece = V->getEndPath(BRC, ErrorNode, *R)) {
+        if (auto Piece = V->getEndPath(ErrorNode, BRC, *R)) {
           assert(!LastPiece &&
                  "There can only be one final piece in a diagnostic.");
           assert(Piece->getKind() == PathDiagnosticPiece::Kind::Event &&

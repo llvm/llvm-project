@@ -49,12 +49,12 @@ bool exprHasBitFlagWithSpelling(const Expr *Flags, const SourceManager &SM,
     return MacroName == FlagName;
   }
   // If it's a binary OR operation.
-  if (const auto *BO = dyn_cast<BinaryOperator>(Flags))
-    if (BO->getOpcode() == BinaryOperatorKind::BO_Or)
-      return exprHasBitFlagWithSpelling(BO->getLHS()->IgnoreParenCasts(), SM,
-                                        LangOpts, FlagName) ||
-             exprHasBitFlagWithSpelling(BO->getRHS()->IgnoreParenCasts(), SM,
-                                        LangOpts, FlagName);
+  if (const auto *BO = dyn_cast<BinaryOperator>(Flags);
+      BO && BO->getOpcode() == BinaryOperatorKind::BO_Or)
+    return exprHasBitFlagWithSpelling(BO->getLHS()->IgnoreParenCasts(), SM,
+                                      LangOpts, FlagName) ||
+           exprHasBitFlagWithSpelling(BO->getRHS()->IgnoreParenCasts(), SM,
+                                      LangOpts, FlagName);
 
   // Otherwise, assume it has the flag.
   return true;
@@ -97,13 +97,12 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
   if (FirstStmt->getStmtClass() != SecondStmt->getStmtClass())
     return false;
 
-  if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt)) {
+  if (isa<Expr>(FirstStmt) && isa<Expr>(SecondStmt) &&
+      (cast<Expr>(FirstStmt)->containsErrors() ||
+       cast<Expr>(SecondStmt)->containsErrors()))
     // If we have errors in expressions, we will be unable
     // to accurately profile and compute hashes for each statements.
-    if (cast<Expr>(FirstStmt)->containsErrors() ||
-        cast<Expr>(SecondStmt)->containsErrors())
-      return false;
-  }
+    return false;
 
   llvm::FoldingSetNodeID DataFirst, DataSecond;
   FirstStmt->Profile(DataFirst, Context, Canonical);

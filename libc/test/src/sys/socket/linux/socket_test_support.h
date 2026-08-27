@@ -1,26 +1,65 @@
-//===-- Helpers for socket tests --------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Helpers for socket tests.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_SRC_SYS_SOCKET_LINUX_SOCKET_TEST_SUPPORT_H
 #define LLVM_LIBC_TEST_SRC_SYS_SOCKET_LINUX_SOCKET_TEST_SUPPORT_H
 
+#include "hdr/fcntl_macros.h"
 #include "hdr/sys_socket_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/struct_sockaddr_un.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
+#include "src/fcntl/open.h"
 #include "src/string/strncpy.h"
 #include "src/string/strnlen.h"
+#include "src/unistd/chdir.h"
+#include "src/unistd/close.h"
+#include "src/unistd/fchdir.h"
 #include "test/UnitTest/LibcTest.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
+
+// In Bazel tests, the absolute path to the test output directory exceeds the
+// 108-byte limit of struct sockaddr_un::sun_path. To create AF_UNIX filesystem
+// sockets safely, this RAII class saves the current working directory, changes
+// into the writable test file directory (so short relative filenames can be
+// used), and resets CWD when destroyed.
+class TestDirectoryScope {
+  int cwd_fd;
+
+public:
+  TestDirectoryScope()
+      : cwd_fd(LIBC_NAMESPACE::open(".", O_DIRECTORY | O_CLOEXEC)) {
+    if (cwd_fd < 0)
+      __builtin_trap();
+    if (LIBC_NAMESPACE::chdir(libc_make_test_file_path(".")) != 0)
+      __builtin_trap();
+  }
+  ~TestDirectoryScope() {
+    if (cwd_fd >= 0) {
+      int fchdir_ret = LIBC_NAMESPACE::fchdir(cwd_fd);
+      int close_ret = LIBC_NAMESPACE::close(cwd_fd);
+      if (fchdir_ret != 0 || close_ret != 0)
+        __builtin_trap();
+    }
+  }
+
+  TestDirectoryScope(const TestDirectoryScope &) = delete;
+  TestDirectoryScope &operator=(const TestDirectoryScope &) = delete;
+};
 
 [[nodiscard]] LIBC_INLINE bool make_sockaddr_un(cpp::string_view path,
                                                 struct sockaddr_un &sun) {

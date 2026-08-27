@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/span.h"
+#include "orc-rt/bedrock/span.h"
 #include "gtest/gtest.h"
 
-#include <sstream>
 #include <string>
 
 using namespace orc_rt;

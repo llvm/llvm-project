@@ -9,8 +9,11 @@
 
 common --enable_bzlmod --noenable_workspace
 
-# TODO: Remove lit test reliance on this
-common --legacy_external_runfiles
+# Force the runfiles layout without the legacy `external/<repo>/...` mirror,
+# to match the Bazel 9+ default once --legacy_external_runfiles is removed.
+# All lit_expand_template callers use `File.short_path` (`../<repo>/...`
+# form) so no target relies on the legacy layout.
+common --nolegacy_external_runfiles
 
 # Prevent automatic __init__.py generation from confusing some lit tests.
 common --incompatible_default_to_explicit_init_py
@@ -155,6 +158,15 @@ build:windows --cxxopt=/bigobj --host_cxxopt=/bigobj
 
 build:msvc --config=windows
 
+# Match LLVM's default MSVC conformance flags. Unlike the other flags here,
+# /Zc:__cplusplus only applies to C++ compilations.
+build:msvc --copt=/Zc:inline --host_copt=/Zc:inline
+build:msvc --cxxopt=/Zc:__cplusplus --host_cxxopt=/Zc:__cplusplus
+build:msvc --copt=/permissive- --host_copt=/permissive-
+
+# CMake enables the conforming preprocessor for cl.exe, but not clang-cl.
+build:msvc --copt=/Zc:preprocessor --host_copt=/Zc:preprocessor
+
 build:msvc --copt=/WX --host_copt=/WX    # Treat warnings as errors...
 # ...but disable the ones that are violated
 build:msvc --copt=/wd4141 --host_copt=/wd4141 # inline used more than once
@@ -180,6 +192,12 @@ build:clang-cl --config=windows
 
 # Switch from MSVC to the `clang-cl` compiler.
 build:clang-cl --compiler=clang-cl
+
+# Match the conformance flags CMake applies to clang-cl. /Zc:preprocessor is
+# intentionally only part of the MSVC configuration above.
+build:clang-cl --copt=/Zc:inline --host_copt=/Zc:inline
+build:clang-cl --cxxopt=/Zc:__cplusplus --host_cxxopt=/Zc:__cplusplus
+build:clang-cl --copt=/permissive- --host_copt=/permissive-
 
 # Use Clang's internal warning flags instead of the ones that sometimes map
 # through to MSVC's flags.
@@ -217,6 +235,19 @@ build:hermetic-toolchain --@llvm-project//llvm:pfm=disable
 
 # TODO: Remove once @llvm is updated >0.7.1
 build:hermetic-toolchain --copt=-Wno-modules-import-nested-redundant --host_copt=-Wno-modules-import-nested-redundant
+
+###############################################################################
+# Options for Emscripten WebAssembly builds.
+###############################################################################
+
+build:wasm --platforms=@emsdk//:platform_wasm
+# Match LLVM's single-threaded config and shut the runtime down when main returns.
+build:wasm --features=-use_pthreads,exit_runtime
+# Make the default CLI artifact use Node's host filesystem; browser builds override this to 0.
+build:wasm --linkopt=-sNODERAWFS=1
+
+# TODO: zstd unconditionally enables pthreads on non-Windows targets.
+build:wasm --@llvm-project//third-party:llvm_enable_zstd=false
 
 ###############################################################################
 # Options for continuous integration.

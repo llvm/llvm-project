@@ -3,7 +3,7 @@ from lldbsuite.test.concurrent_base import ConcurrentEventsBase
 from lldbsuite.test.lldbtest import TestBase
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 @skipIfWindows
 @skipIf  # See llvm/llvm-project/#205297
 class ConcurrentManyBreakpoints(ConcurrentEventsBase):

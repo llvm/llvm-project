@@ -24,6 +24,13 @@ void test() {
   delete[] p;
 }
 
+// Each wrapper defaults to a weak alias to the trapping __empty_global_delete
+// (matching MSVC's weak-external-with-default; this also works under Arm64EC,
+// unlike an /alternatename directive). These aliases are emitted before the
+// function definitions.
+// CHECK-DAG: @"?__global_delete@@YAXPEAX_K@Z" = weak alias void (ptr, i64), ptr @"?__empty_global_delete@@YAXPEAX_K@Z"
+// CHECK-DAG: @"?__global_array_delete@@YAXPEAX_K@Z" = weak alias void (ptr, i64), ptr @"?__empty_global_delete@@YAXPEAX_K@Z"
+
 // The VDD dispatches between class and global delete: the array path uses the
 // __global_array_delete wrapper, the scalar path uses __global_delete.
 // CHECK-LABEL: define weak dso_local noundef ptr @"??_EDerived@@UEAAPEAXI@Z"
@@ -43,6 +50,3 @@ void test() {
 // type in this TU, and no dllexport class).
 // CHECK-NOT: define {{.*}}void @"?__global_delete@@YAXPEAX_K@Z"
 // CHECK-NOT: define {{.*}}void @"?__global_array_delete@@YAXPEAX_K@Z"
-
-// Verify the /ALTERNATENAME linker directive.
-// CHECK: !{!"/alternatename:?__global_delete@@YAXPEAX_K@Z=?__empty_global_delete@@YAXPEAX_K@Z"}

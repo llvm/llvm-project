@@ -132,8 +132,8 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, AllocMarker),
       ReservedSpace(PN.getNumOperands()) {
-  NumUserOperands = PN.getNumOperands();
   allocHungoffUses(PN.getNumOperands());
+  setNumHungOffUseOperands(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   FMF = PN.FMF;
@@ -252,8 +252,8 @@ LandingPadInst::LandingPadInst(Type *RetTy, unsigned NumReservedValues,
 LandingPadInst::LandingPadInst(const LandingPadInst &LP)
     : Instruction(LP.getType(), Instruction::LandingPad, AllocMarker),
       ReservedSpace(LP.getNumOperands()) {
-  NumUserOperands = LP.getNumOperands();
   allocHungoffUses(LP.getNumOperands());
+  setNumHungOffUseOperands(LP.getNumOperands());
   Use *OL = getOperandList();
   const Use *InOL = LP.getOperandList();
   for (unsigned I = 0, E = ReservedSpace; I != E; ++I)
@@ -270,8 +270,8 @@ LandingPadInst *LandingPadInst::Create(Type *RetTy, unsigned NumReservedClauses,
 
 void LandingPadInst::init(unsigned NumReservedValues, const Twine &NameStr) {
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(0);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(0);
   setName(NameStr);
   setCleanup(false);
 }
@@ -1128,8 +1128,8 @@ void CatchSwitchInst::init(Value *ParentPad, BasicBlock *UnwindDest,
   assert(ParentPad && NumReservedValues);
 
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
 
   Op<0>() = ParentPad;
   if (UnwindDest) {
@@ -1208,18 +1208,15 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-
 UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
+                  AllocMarker, InsertBefore) {
   Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::UncondBr,
+                  AllocMarker) {
   Op<-1>() = BI.Op<-1>();
   SubclassOptionalData = BI.SubclassOptionalData;
 }
@@ -1235,8 +1232,8 @@ void CondBrInst::AssertOK() {
 
 CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                        InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
-                 AllocMarker, InsertBefore) {
+    : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::CondBr,
+                  AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
   Op<-2>() = IfTrue;
@@ -1247,8 +1244,8 @@ CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
 }
 
 CondBrInst::CondBrInst(const CondBrInst &BI)
-    : BranchInst(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
-                 AllocMarker) {
+    : Instruction(Type::getVoidTy(BI.getContext()), Instruction::CondBr,
+                  AllocMarker) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = BI.Op<-3>();
   Op<-2>() = BI.Op<-2>();
@@ -1263,9 +1260,6 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
-
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1412,7 +1406,9 @@ StoreInst::StoreInst(Value *Val, Value *Ptr,
                      const LoadStoreInstProperties &Props,
                      InsertPosition InsertBefore)
     : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
-                Props.SSID, InsertBefore) {}
+                Props.SSID, InsertBefore) {
+  setElementwise(Props.IsElementwise);
+}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -4121,8 +4117,8 @@ CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
 void SwitchInst::init(Value *Value, BasicBlock *Default, unsigned NumReserved) {
   assert(Value && Default && NumReserved);
   ReservedSpace = NumReserved;
-  setNumHungOffUseOperands(2);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(2);
 
   Op<0>() = Value;
   Op<1>() = Default;
@@ -4316,9 +4312,9 @@ SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
 void IndirectBrInst::init(Value *Address, unsigned NumDests) {
   assert(Address && Address->getType()->isPointerTy() &&
          "Address of indirectbr must be a pointer");
-  ReservedSpace = 1+NumDests;
-  setNumHungOffUseOperands(1);
+  ReservedSpace = 1 + NumDests;
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(1);
 
   Op<0>() = Address;
 }
@@ -4345,8 +4341,8 @@ IndirectBrInst::IndirectBrInst(Value *Address, unsigned NumCases,
 IndirectBrInst::IndirectBrInst(const IndirectBrInst &IBI)
     : Instruction(Type::getVoidTy(IBI.getContext()), Instruction::IndirectBr,
                   AllocMarker) {
-  NumUserOperands = IBI.NumUserOperands;
   allocHungoffUses(IBI.getNumOperands());
+  setNumHungOffUseOperands(IBI.NumUserOperands);
   Use *OL = getOperandList();
   const Use *InOL = IBI.getOperandList();
   for (unsigned i = 0, E = IBI.getNumOperands(); i != E; ++i)
@@ -4460,8 +4456,8 @@ LoadInst *LoadInst::cloneImpl() const {
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), getProperties(),
+                       /*InsertBefore=*/nullptr);
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {

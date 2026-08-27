@@ -1,4 +1,4 @@
-! RUN: bbc -pft-test -o %t %s | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -pft-test -o %t %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the intended nodes from the parse-tree
 ! Coarray and OpenMP related nodes are tested in other files.
@@ -306,7 +306,7 @@ subroutine sub2()
 5 j = j + 1
 6 i = i + j/2
 
-  ! CHECK: <<DoConstruct!>>
+  ! CHECK: <<DoConstruct>>
   do1: do k=1,10
     ! CHECK: <<DoConstruct!>>
     do2: do l=5,20
@@ -317,7 +317,7 @@ subroutine sub2()
     end do do2
     ! CHECK: <<End DoConstruct!>>
   end do do1
-  ! CHECK: <<End DoConstruct!>>
+  ! CHECK: <<End DoConstruct>>
 
   ! CHECK: PauseStmt
   pause 7

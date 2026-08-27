@@ -1341,12 +1341,12 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const AddressRange &range,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
-      *this, range, addr_context, step_in_target, stop_other_threads,
+      *this, range, addr_context, step_in_target.str(), stop_other_threads,
       step_in_avoids_code_without_debug_info,
       step_out_avoids_code_without_debug_info));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
@@ -1356,7 +1356,7 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 // Call the QueueThreadPlanForStepInRange method which takes an address range.
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
@@ -1469,7 +1469,7 @@ void Thread::PushProviderFrameList(StackFrameListSP frames) {
   HostThread current(Host::GetCurrentThread());
   auto &stack = m_active_frame_providers_by_thread[current];
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PushProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PushProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), stack.size(), stack.size() + 1);
   stack.push_back(std::move(frames));
 }
@@ -1481,7 +1481,7 @@ void Thread::PopProviderFrameList() {
   size_t pre_pop_depth =
       (it != m_active_frame_providers_by_thread.end()) ? it->second.size() : 0;
   LLDB_LOG(GetLog(LLDBLog::Thread),
-           "Thread::PopProviderFrameList: tid = 0x{0:x}, depth = {1} -> {2}",
+           "Thread::PopProviderFrameList: tid = {0:x}, depth = {1} -> {2}",
            GetID(), pre_pop_depth, pre_pop_depth ? pre_pop_depth - 1 : 0);
   assert(it != m_active_frame_providers_by_thread.end() && !it->second.empty());
   if (it == m_active_frame_providers_by_thread.end() || it->second.empty())
@@ -1621,7 +1621,7 @@ StackFrameListSP Thread::GetStackFrameList() {
           *this, input_frames, m_prev_frames_sp, true, last_provider, last_id);
     } else {
       LLDB_LOG(GetLog(LLDBLog::Thread),
-               "Missing frame provider (id = {0}) in Thread #{1:x}}", last_id,
+               "Missing frame provider (id = {0}) in Thread #{1:x}", last_id,
                GetID());
     }
   }
@@ -2156,21 +2156,21 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                             bool print_json_thread, bool print_json_stopinfo) {
   const bool stop_format = false;
   DumpUsingSettingsFormat(strm, 0, stop_format);
-  strm.Printf("\n");
+  strm.PutCString("\n");
 
   StructuredData::ObjectSP thread_info = GetExtendedInfo();
 
   if (print_json_thread || print_json_stopinfo) {
     if (thread_info && print_json_thread) {
       thread_info->Dump(strm);
-      strm.Printf("\n");
+      strm.PutCString("\n");
     }
 
     if (print_json_stopinfo && m_stop_info_sp) {
       StructuredData::ObjectSP stop_info = m_stop_info_sp->GetExtendedInfo();
       if (stop_info) {
         stop_info->Dump(strm);
-        strm.Printf("\n");
+        strm.PutCString("\n");
       }
     }
 
@@ -2201,7 +2201,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     bool printed_breadcrumb = false;
     if (breadcrumb && breadcrumb->GetType() == eStructuredDataTypeDictionary) {
       if (printed_activity)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Dictionary *breadcrumb_dict =
           breadcrumb->GetAsDictionary();
       StructuredData::ObjectSP breadcrumb_text =
@@ -2215,7 +2215,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     }
     if (messages && messages->GetType() == eStructuredDataTypeArray) {
       if (printed_breadcrumb)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Array *messages_array = messages->GetAsArray();
       const size_t msg_count = messages_array->GetSize();
       if (msg_count > 0) {
@@ -2302,8 +2302,8 @@ Status Thread::StepIn(bool source_step,
     if (source_step && frame_sp && frame_sp->HasDebugInformation()) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = QueueThreadPlanForStepInRange(
-          abort_other_plans, sc.line_entry, sc, nullptr, run_mode, error,
-          step_in_avoids_code_without_debug_info,
+          abort_other_plans, sc.line_entry, sc, llvm::StringRef(), run_mode,
+          error, step_in_avoids_code_without_debug_info,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
