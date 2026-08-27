@@ -1576,22 +1576,27 @@ define i16 @test_v8i16_signbits(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: test_v8i16_signbits:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %ecx
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    xorb %ch, %cl
-; SSE-NEXT:    setnp %al
-; SSE-NEXT:    negl %eax
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE-NEXT:    pxor %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm1
+; SSE-NEXT:    movd %xmm1, %eax
 ; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: test_v8i16_signbits:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    xorb %ch, %cl
-; AVX-NEXT:    setnp %al
-; AVX-NEXT:    negl %eax
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    ret{{[l|q]}}
   %c = icmp eq <8 x i16> %a0, %a1
