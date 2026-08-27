@@ -48,6 +48,34 @@ static cl::opt<bool> ReplaceEliminatedMBToNop(
 
 namespace {
 
+#define AMO_CASES                                                              \
+  CASE(AMSWAP, B)                                                              \
+  CASE(AMSWAP, H)                                                              \
+  CASE(AMSWAP, W)                                                              \
+  CASE(AMSWAP, D)                                                              \
+  CASE(AMADD, B)                                                               \
+  CASE(AMADD, H)                                                               \
+  CASE(AMADD, W)                                                               \
+  CASE(AMADD, D)                                                               \
+  CASE(AMAND, W)                                                               \
+  CASE(AMAND, D)                                                               \
+  CASE(AMOR, W)                                                                \
+  CASE(AMOR, D)                                                                \
+  CASE(AMXOR, W)                                                               \
+  CASE(AMXOR, D)                                                               \
+  CASE(AMMAX, W)                                                               \
+  CASE(AMMAX, D)                                                               \
+  CASE(AMMAX, WU)                                                              \
+  CASE(AMMAX, DU)                                                              \
+  CASE(AMMIN, W)                                                               \
+  CASE(AMMIN, D)                                                               \
+  CASE(AMMIN, WU)                                                              \
+  CASE(AMMIN, DU)                                                              \
+  CASE(AMCAS, B)                                                               \
+  CASE(AMCAS, H)                                                               \
+  CASE(AMCAS, W)                                                               \
+  CASE(AMCAS, D)
+
 static std::optional<std::pair<StringRef, StringRef>> parseMB(StringRef Asm) {
   auto T1 = llvm::getToken(Asm);
   if (!T1.first.equals_insensitive("dbar"))
@@ -72,60 +100,11 @@ isAsmMB(const MachineInstr &MI) {
 }
 
 static StringRef getAMDB(StringRef Name) {
-  return StringSwitch<StringRef>(Name.lower())
-      .Case("amswap.b", "amswap_db.b")
-      .Case("amswap.h", "amswap_db.h")
-      .Case("amswap.w", "amswap_db.w")
-      .Case("amswap.d", "amswap_db.d")
-      .Case("amswap_db.b", "amswap_db.b")
-      .Case("amswap_db.h", "amswap_db.h")
-      .Case("amswap_db.w", "amswap_db.w")
-      .Case("amswap_db.d", "amswap_db.d")
-      .Case("amadd.b", "amadd_db.b")
-      .Case("amadd.h", "amadd_db.h")
-      .Case("amadd.w", "amadd_db.w")
-      .Case("amadd.d", "amadd_db.d")
-      .Case("amadd_db.b", "amadd_db.b")
-      .Case("amadd_db.h", "amadd_db.h")
-      .Case("amadd_db.w", "amadd_db.w")
-      .Case("amadd_db.d", "amadd_db.d")
-      .Case("amand.w", "amand_db.w")
-      .Case("amand.d", "amand_db.d")
-      .Case("amand_db.w", "amand_db.w")
-      .Case("amand_db.d", "amand_db.d")
-      .Case("amor.w", "amor_db.w")
-      .Case("amor.d", "amor_db.d")
-      .Case("amor_db.w", "amor_db.w")
-      .Case("amor_db.d", "amor_db.d")
-      .Case("amxor.w", "amxor_db.w")
-      .Case("amxor.d", "amxor_db.d")
-      .Case("amxor_db.w", "amxor_db.w")
-      .Case("amxor_db.d", "amxor_db.d")
-      .Case("ammax.w", "ammax_db.w")
-      .Case("ammax.d", "ammax_db.d")
-      .Case("ammax_db.w", "ammax_db.w")
-      .Case("ammax_db.d", "ammax_db.d")
-      .Case("ammin.w", "ammin_db.w")
-      .Case("ammin.d", "ammin_db.d")
-      .Case("ammin_db.w", "ammin_db.w")
-      .Case("ammin_db.d", "ammin_db.d")
-      .Case("ammax.wu", "ammax_db.wu")
-      .Case("ammax.du", "ammax_db.du")
-      .Case("ammax_db.wu", "ammax_db.wu")
-      .Case("ammax_db.du", "ammax_db.du")
-      .Case("ammin.wu", "ammin_db.wu")
-      .Case("ammin.du", "ammin_db.du")
-      .Case("ammin_db.wu", "ammin_db.wu")
-      .Case("ammin_db.du", "ammin_db.du")
-      .Case("amcas.b", "amcas_db.b")
-      .Case("amcas.h", "amcas_db.h")
-      .Case("amcas.w", "amcas_db.w")
-      .Case("amcas.d", "amcas_db.d")
-      .Case("amcas_db.b", "amcas_db.b")
-      .Case("amcas_db.h", "amcas_db.h")
-      .Case("amcas_db.w", "amcas_db.w")
-      .Case("amcas_db.d", "amcas_db.d")
-      .Default({});
+#define CASE(Name, Suffix)                                                     \
+  .Case(#Name "." #Suffix, #Name "_DB." #Suffix)                               \
+      .Case(#Name "_DB." #Suffix, #Name "_DB." #Suffix)
+  return StringSwitch<StringRef>(Name.upper()) AMO_CASES.Default({});
+#undef CASE
 }
 
 static std::optional<std::pair<StringRef, StringRef>> parseAM(StringRef Asm) {
@@ -187,88 +166,16 @@ static bool isSC(const MachineInstr &MI) {
 }
 
 static std::optional<unsigned> isAM(const MachineInstr &MI) {
+#define CASE(Name, Suffix)                                                     \
+  case LoongArch::Name##_##Suffix:                                             \
+  case LoongArch::Name##__DB_##Suffix:                                         \
+    return LoongArch::Name##__DB_##Suffix;
   switch (MI.getOpcode()) {
-  case LoongArch::AMSWAP_B:
-  case LoongArch::AMSWAP__DB_B:
-    return LoongArch::AMSWAP__DB_B;
-  case LoongArch::AMSWAP_H:
-  case LoongArch::AMSWAP__DB_H:
-    return LoongArch::AMSWAP__DB_H;
-  case LoongArch::AMSWAP_W:
-  case LoongArch::AMSWAP__DB_W:
-    return LoongArch::AMSWAP__DB_W;
-  case LoongArch::AMSWAP_D:
-  case LoongArch::AMSWAP__DB_D:
-    return LoongArch::AMSWAP__DB_D;
-  case LoongArch::AMADD_B:
-  case LoongArch::AMADD__DB_B:
-    return LoongArch::AMADD__DB_B;
-  case LoongArch::AMADD_H:
-  case LoongArch::AMADD__DB_H:
-    return LoongArch::AMADD__DB_H;
-  case LoongArch::AMADD_W:
-  case LoongArch::AMADD__DB_W:
-    return LoongArch::AMADD__DB_W;
-  case LoongArch::AMADD_D:
-  case LoongArch::AMADD__DB_D:
-    return LoongArch::AMADD__DB_D;
-  case LoongArch::AMAND_W:
-  case LoongArch::AMAND__DB_W:
-    return LoongArch::AMAND__DB_W;
-  case LoongArch::AMAND_D:
-  case LoongArch::AMAND__DB_D:
-    return LoongArch::AMAND__DB_D;
-  case LoongArch::AMOR_W:
-  case LoongArch::AMOR__DB_W:
-    return LoongArch::AMOR__DB_W;
-  case LoongArch::AMOR_D:
-  case LoongArch::AMOR__DB_D:
-    return LoongArch::AMOR__DB_D;
-  case LoongArch::AMXOR_W:
-  case LoongArch::AMXOR__DB_W:
-    return LoongArch::AMXOR__DB_W;
-  case LoongArch::AMXOR_D:
-  case LoongArch::AMXOR__DB_D:
-    return LoongArch::AMXOR__DB_D;
-  case LoongArch::AMMAX_W:
-  case LoongArch::AMMAX__DB_W:
-    return LoongArch::AMMAX__DB_W;
-  case LoongArch::AMMAX_D:
-  case LoongArch::AMMAX__DB_D:
-    return LoongArch::AMMAX__DB_D;
-  case LoongArch::AMMIN_W:
-  case LoongArch::AMMIN__DB_W:
-    return LoongArch::AMMIN__DB_W;
-  case LoongArch::AMMIN_D:
-  case LoongArch::AMMIN__DB_D:
-    return LoongArch::AMMIN__DB_D;
-  case LoongArch::AMMAX_WU:
-  case LoongArch::AMMAX__DB_WU:
-    return LoongArch::AMMAX__DB_WU;
-  case LoongArch::AMMAX_DU:
-  case LoongArch::AMMAX__DB_DU:
-    return LoongArch::AMMAX__DB_DU;
-  case LoongArch::AMMIN_WU:
-  case LoongArch::AMMIN__DB_WU:
-    return LoongArch::AMMIN__DB_WU;
-  case LoongArch::AMMIN_DU:
-  case LoongArch::AMMIN__DB_DU:
-    return LoongArch::AMMIN__DB_DU;
-  case LoongArch::AMCAS_B:
-  case LoongArch::AMCAS__DB_B:
-    return LoongArch::AMCAS__DB_B;
-  case LoongArch::AMCAS_H:
-  case LoongArch::AMCAS__DB_H:
-    return LoongArch::AMCAS__DB_H;
-  case LoongArch::AMCAS_W:
-  case LoongArch::AMCAS__DB_W:
-    return LoongArch::AMCAS__DB_W;
-  case LoongArch::AMCAS_D:
-  case LoongArch::AMCAS__DB_D:
-    return LoongArch::AMCAS__DB_D;
+    AMO_CASES
   default:
     return std::nullopt;
   }
+#undef CASE
 }
 
 static bool isSafeToSkip(const MachineInstr &MI) {
