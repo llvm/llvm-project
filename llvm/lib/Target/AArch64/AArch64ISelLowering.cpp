@@ -27784,6 +27784,9 @@ static SDValue
 performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG);
 
+static SDValue performNarrowInterleavedStoreCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG);
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -27813,6 +27816,9 @@ static SDValue performSTORECombine(SDNode *N,
                         ST->getAAInfo());
 
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
+    return Res;
+
+  if (SDValue Res = performNarrowInterleavedStoreCombine(N, DCI, DAG))
     return Res;
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
@@ -28038,6 +28044,71 @@ static SDValue getNarrowMaskForInterleavedOps(SelectionDAG &DAG, SDLoc &DL,
   EC = EC.divideCoefficientBy(RequiredNumParts);
   return DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::getVectorVT(MVT::i1, EC),
                      WideMask->getOperand(0));
+}
+
+// Turn store(concat(vector_interleave(v0..vN-1))) into a store of a wide
+// BUILD_VECTOR that gathers the interleaved lanes when the sub-vector type is
+// too narrow for a structured stN store.
+// Type legalization widens the narrow inputs to NEON-sized vectors and
+// LowerBUILD_VECTOR can reconstruct the gather as one or more table lookups.
+static SDValue performNarrowInterleavedStoreCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (!DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  StoreSDNode *ST = cast<StoreSDNode>(N);
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
+    return SDValue();
+
+  SDValue Value = ST->getValue();
+  if (!Value.hasOneUse())
+    return SDValue();
+
+  SmallVector<SDValue, 4> Inputs;
+  if (!isSequentialConcatOfVectorInterleave(Value.getNode(), Inputs))
+    return SDValue();
+
+  unsigned Factor = Inputs.size();
+  if (Factor != 2 && Factor != 3 && Factor != 4)
+    return SDValue();
+
+  EVT SubVT = Inputs[0].getValueType();
+  if (!SubVT.isFixedLengthVector())
+    return SDValue();
+
+  unsigned SubBits = SubVT.getFixedSizeInBits();
+  if (SubBits >= 128 || SubBits == 64)
+    return SDValue();
+
+  EVT EltVT = SubVT.getVectorElementType();
+  unsigned EltBits = EltVT.getFixedSizeInBits();
+  if (EltBits % 8 != 0)
+    return SDValue();
+
+  // ReconstructShuffle's tbl3/tbl4 path requires more than 4 elements.
+  unsigned SubElts = SubVT.getVectorNumElements();
+  unsigned WideElts = SubElts * Factor;
+  if (WideElts <= 4)
+    return SDValue();
+
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT, WideElts);
+  assert(WideVT == ST->getMemoryVT() &&
+         "Gathered vector must match the interleaved store's memory type");
+
+  SDLoc DL(N);
+  EVT ExtractVT =
+      EltVT.isInteger() && EltVT.bitsLT(MVT::i32) ? MVT::i32 : EltVT;
+  SmallVector<SDValue, 16> Elts(WideElts);
+  for (unsigned I = 0; I < WideElts; ++I)
+    Elts[I] =
+        DAG.getExtractVectorElt(DL, ExtractVT, Inputs[I % Factor], I / Factor);
+  SDValue Wide = DAG.getBuildVector(WideVT, DL, Elts);
+
+  return DAG.getStore(ST->getChain(), DL, Wide, ST->getBasePtr(),
+                      ST->getMemOperand());
 }
 
 static SDValue
