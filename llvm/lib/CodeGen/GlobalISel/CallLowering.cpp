@@ -858,12 +858,12 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     }
 
     if (NumParts != 1 || NewLLT != OrigTy) {
-      Args[i].Regs.clear();
+      Args[i].Regs.resize(NumParts);
       for (unsigned Part = 0; Part < NumParts; Part++) {
         if (ArgLocs[j + Part].getLocInfo() == CCValAssign::Indirect)
-          Args[i].Regs.push_back(MRI.createGenericVirtualRegister(PointerTy));
+          Args[i].Regs[Part] = MRI.createGenericVirtualRegister(PointerTy);
         else
-          Args[i].Regs.push_back(MRI.createGenericVirtualRegister(NewLLT));
+          Args[i].Regs[Part] = (MRI.createGenericVirtualRegister(NewLLT));
       }
     }
 
@@ -1062,8 +1062,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         }
         if (Part < Args[i].Regs.size())
           Args[i].Regs[Part] = LoadedPart;
-        else
-          Args[i].Regs.push_back(LoadedPart);
+
         IndirectIdx++;
       }
     }
