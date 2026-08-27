@@ -3130,6 +3130,55 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // min(x / C1, C2) -> min(x, C1 * C2) / C1
+    // max(x / C1, C2) -> max(x, C1 * C2) / C1
+    // min(x * C1, C2) -> min(x, C2 / C1) * C1
+    // max(x * C1, C2) -> max(x, C2 / C1) * C1
+    if (match(Arg1, m_APFloat(C2))) {
+      Value *X;
+      const APFloat *C1;
+      if (match(Arg0, m_OneUse(m_FMul(m_Value(X), m_APFloat(C1)))) ||
+          match(Arg0, m_OneUse(m_FDiv(m_Value(X), m_APFloat(C1))))) {
+        auto *FPOp = cast<Instruction>(Arg0);
+        bool IsDiv = FPOp->getOpcode() == Instruction::FDiv;
+        if (FPOp->hasAllowReassoc() && FPOp->hasNoSignedZeros() &&
+            II->hasAllowReassoc() && II->hasNoSignedZeros() &&
+            (IsDiv || !C1->isZero())) {
+          APFloat C3 = *C2;
+          if (IsDiv)
+            C3.multiply(*C1, APFloat::rmNearestTiesToEven);
+          else
+            C3.divide(*C1, APFloat::rmNearestTiesToEven);
+
+          bool IsNegative = C1->isNegative();
+          Intrinsic::ID NewIID = IID;
+          if (IsNegative) {
+            switch (IID) {
+            case Intrinsic::maxnum: NewIID = Intrinsic::minnum; break;
+            case Intrinsic::minnum: NewIID = Intrinsic::maxnum; break;
+            case Intrinsic::maximumnum: NewIID = Intrinsic::minimumnum; break;
+            case Intrinsic::minimumnum: NewIID = Intrinsic::maximumnum; break;
+            case Intrinsic::maximum: NewIID = Intrinsic::minimum; break;
+            case Intrinsic::minimum: NewIID = Intrinsic::maximum; break;
+            default: llvm_unreachable("unexpected intrinsic ID");
+            }
+          }
+
+          Value *NewMinMax = Builder.CreateBinaryIntrinsic(
+              NewIID, X, ConstantFP::get(Arg0->getType(), C3),
+              FMFSource::intersect(II, FPOp));
+
+          Value *NewOp =
+              IsDiv ? Builder.CreateFDivFMF(NewMinMax, FPOp->getOperand(1),
+                                            FMFSource::intersect(II, FPOp))
+                    : Builder.CreateFMulFMF(NewMinMax, FPOp->getOperand(1),
+                                            FMFSource::intersect(II, FPOp));
+          return replaceInstUsesWith(*II, NewOp);
+        }
+      }
+    }
+
+
     // m((fpext X), (fpext Y)) -> fpext (m(X, Y))
     if (match(Arg0, m_FPExt(m_Value(X))) && match(Arg1, m_FPExt(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse()) &&
