@@ -889,8 +889,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   return false;
 }
 
-static bool visitOrTree(Value *Root,
-                        function_ref<bool(Value *)> VisitOperand) {
+static bool visitOrTree(Value *Root, function_ref<bool(Value *)> VisitOperand) {
   SmallVector<Value *, 4> Worklist = {Root};
   SmallPtrSet<Value *, 4> Visited = {Root};
   while (!Worklist.empty()) {
@@ -910,8 +909,7 @@ static bool visitOrTree(Value *Root,
 }
 
 static bool isValueInOrTree(const Value *V, Value *Root) {
-  return V == Root ||
-         visitOrTree(Root, [V](Value *Op) { return V == Op; });
+  return V == Root || visitOrTree(Root, [V](Value *Op) { return V == Op; });
 }
 
 static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
