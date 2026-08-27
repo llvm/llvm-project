@@ -809,7 +809,7 @@ define i32 @phi_trans6(ptr noalias nocapture readonly %x, i1 %cond) {
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[L1:%.*]] = phi i32 [ [[L0]], %[[ENTRY]] ], [ [[L1_PRE:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE]] ]
-; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %latch]
+; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LATCH_HEADER_CRIT_EDGE]]
@@ -850,7 +850,7 @@ define i32 @phi_trans7(ptr noalias nocapture readonly %x, i1 %cond) {
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; CHECK-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
-; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %latch]
+; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -891,7 +891,7 @@ define i32 @phi_trans8(ptr noalias nocapture readonly %x, i1 %cond) {
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
-; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %latch]
+; CHECK-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
@@ -1359,7 +1359,8 @@ define void @test_escape1() nounwind {
 ; CHECK-NEXT:    [[X:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
 ; CHECK-NEXT:    call void @use() #[[ATTR3]]
-; CHECK-NEXT:    call void @use3(ptr [[X]], ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2)) #[[ATTR3]]
+; CHECK-NEXT:    [[DEAD:%.*]] = load ptr, ptr [[X]], align 8
+; CHECK-NEXT:    call void @use3(ptr [[X]], ptr [[DEAD]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca ptr, align 8

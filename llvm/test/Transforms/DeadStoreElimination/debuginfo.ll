@@ -18,7 +18,7 @@ define ptr @test_salvage(i32 %arg) {
   %p = tail call ptr @malloc(i32 4)
   %DEAD = add i32 %arg, 1
   store i32 %DEAD, ptr %p
-  call void @test_f()
+  call void @test_f() nosync
   store i32 0, ptr %p
   ret ptr %p
 }
