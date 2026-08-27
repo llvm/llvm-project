@@ -35093,7 +35093,6 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
   // The wider Neon shapes left here have no single instruction, so leave them
   // to the generic expansion, which chains the two-way reductions above.
   if (!Subtarget->isSVEorStreamingSVEAvailable() &&
-      OpVT.isFixedLengthVector() &&
       OpVT.getVectorNumElements() > 2 * ResultVT.getVectorNumElements())
     return SDValue();
 

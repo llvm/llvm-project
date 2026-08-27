@@ -13993,8 +13993,7 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
       MulEC.hasKnownScalarFactor(AccEC) ? MulEC.getKnownScalarFactor(AccEC) : 0;
   unsigned WidthRatio =
       AccVT.getScalarSizeInBits() / MulOpVT.getScalarSizeInBits();
-  if (Opc != ISD::PARTIAL_REDUCE_FMLA && CountRatio > 2 &&
-      2 * WidthRatio >= CountRatio) {
+  if (Opc != ISD::PARTIAL_REDUCE_FMLA && CountRatio > 2 && WidthRatio >= 2) {
     LLVMContext &Ctx = *DAG.getContext();
     EVT ProdVT = MulOpVT.widenIntegerVectorElementType(Ctx);
 
@@ -14004,7 +14003,7 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
       return DAG.getNode(Opc, DL, AccVT, Acc,
                          DAG.getNode(Opc, DL, RungVT,
                                      DAG.getConstant(0, DL, RungVT), MulLHS,
-                                     DAG.getConstant(1, DL, MulOpVT)),
+                                     MulRHS),
                          DAG.getConstant(1, DL, RungVT));
     }
 
