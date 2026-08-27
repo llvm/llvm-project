@@ -1,0 +1,192 @@
+# RUN: yaml2obj %s -o %t.obj
+#
+# ARM64 .pdata entries are two 32-bit fields: BeginAddress and UnwindData.
+# The helper functions have identical code bytes, but their live .pdata records
+# point to different .xdata records. ICF must keep the helpers separate, so both
+# .pdata records remain live.
+#
+# RUN: lld-link %t.obj -dll -noentry -out:%t.dll -verbose 2>&1 | FileCheck --check-prefix=ICF-LOG --implicit-check-not="duplicate .pdata entry" %s
+# RUN: llvm-readobj --sections %t.dll | FileCheck --check-prefix=ICF %s
+# ICF-LOG: ICF needed
+# ICF:      Name: .text
+# ICF-NEXT: VirtualSize: 0x14
+# ICF:      Name: .pdata
+# ICF-NEXT: VirtualSize: 0x10
+#
+# RUN: lld-link %t.obj -dll -noentry -out:%t_noicf.dll -opt:noicf
+# RUN: llvm-readobj --sections %t_noicf.dll | FileCheck --check-prefix=NOICF %s
+# NOICF:      Name: .text
+# NOICF-NEXT: VirtualSize: 0x14
+# NOICF:      Name: .pdata
+# NOICF-NEXT: VirtualSize: 0x10
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: []
+sections:
+  - Name:            '.text$parent_a'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C0035FD6
+  - Name:            '.text$parent_b'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     1F2003D5C0035FD6
+  - Name:            '.text$helper'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C0035FD6
+  - Name:            '.text$helper'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     C0035FD6
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '01000000'
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '02000000'
+  - Name:            '.pdata$parent_a'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      helper_a
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      xdata_sym
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+  - Name:            '.pdata$parent_b'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      helper_b
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      xdata_b_sym
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    SectionData:     202D6578706F72743A706172656E745F61202D6578706F72743A706172656E745F62
+symbols:
+  - Name:            '.text$parent_a'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1111111111
+      Number:          1
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            parent_a
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '.text$parent_b'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2222222222
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            parent_b
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '.text$helper'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3333333333
+      Number:          3
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            helper_a
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '.text$helper'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3333333333
+      Number:          4
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            helper_b
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            xdata_sym
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            xdata_b_sym
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '.pdata$parent_a'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 2
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '.pdata$parent_b'
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 2
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+...
