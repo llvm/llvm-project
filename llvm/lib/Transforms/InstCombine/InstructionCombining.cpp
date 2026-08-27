@@ -5575,6 +5575,13 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   if (isa<AllocaInst>(I))
     return false;
 
+  // Don't sink a freeze if its operand has other uses. freezeOtherUses moves
+  // the freeze up to the operand definition so it can replace those uses;
+  // sinking it back down fights that and can infinite-loop when some uses
+  // (e.g. a phi of an invoke result on the normal edge) are never replaced.
+  if (isa<FreezeInst>(I) && !I->getOperand(0)->hasOneUse())
+    return false;
+
   // Do not sink into catchswitch blocks.
   if (isa<CatchSwitchInst>(DestBlock->getTerminator()))
     return false;
