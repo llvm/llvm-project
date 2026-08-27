@@ -5844,13 +5844,13 @@ void VPlanTransforms::lowerSafeUniformLoads(VPlan &Plan,
                             /*AC=*/nullptr, &LI)))
         continue;
       DebugLoc DbgLoc = UniformGather->getDebugLoc();
-      auto *ScalarLoad =
-          new VPReplicateRecipe(&LI, Addr, /*IsSingleScalar=*/true,
-                                /*Mask=*/nullptr, {}, *UniformGather, DbgLoc);
+      VPBuilder Builder(UniformGather);
+      VPSingleDefRecipe *ScalarLoad = VPBuilder::createSingleScalarOp(
+          Instruction::Load, Addr,
+          /*Mask=*/nullptr, {}, *UniformGather, DbgLoc, &LI);
       ScalarLoad->insertBefore(UniformGather);
-      auto *Broadcast =
-          new VPInstruction(VPInstruction::Broadcast, {ScalarLoad});
-      Broadcast->insertBefore(UniformGather);
+      VPInstruction *Broadcast =
+          Builder.createNaryOp(VPInstruction::Broadcast, ScalarLoad, DbgLoc);
       UniformGather->replaceAllUsesWith(Broadcast);
       UniformGather->eraseFromParent();
     }
