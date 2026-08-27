@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include <cctype>
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
@@ -708,6 +709,7 @@ void HybridPerfReader::unwindSamples() {
 
 /// Parse a hex address from \p Str.
 static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
+  Str = Str.take_while([](char C) { return !isspace(C); });
   if (Str.consume_front("0x") != HasPrefix)
     return true;
   return Str.getAsInteger(16, Addr);
@@ -1264,6 +1266,7 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
     // Detect sample with call stack
     int32_t Count = 0;
     while (!TraceIt.isAtEoF() &&
+           !isLBRSample(TraceIt.getCurrentLine(), false) &&
            !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false)) {
       Count++;
       TraceIt.advance();
