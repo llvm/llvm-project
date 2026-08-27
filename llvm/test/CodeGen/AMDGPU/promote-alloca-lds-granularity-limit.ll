@@ -4,7 +4,7 @@
 attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
 
 ; This is a regression test for a bug in getMaxLocalMemSizeWithWaveCount
-; which does not round to the LDS allocation block size, leading
+; which did not round to the LDS allocation block size, leading
 ; AMDGPUPromoteAlloca pass to overestimate the available LDS.
 
 ; We have LocalMemorySize = 163840, allowing for floor(163840/ 12800)
@@ -13,14 +13,14 @@ attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
 
 ; Without aligning down to the LDS granularity of 1280 in
 ; getMaxLocalMemSizeWithWaveCount, the limit in alloca promotion is
-; 163840 / 12 = 13653 bytes which leads to promotion of the alloca
+; 163840 / 12 = 13653 bytes which led to the promotion of the alloca
 ; in the function.
 
 ; With rounding down, the promotion limit is 12800 bytes. The alloca
 ; would add 64 * 10 bytes which exceeds the promotion limit.
+; This prevents the promotion of the alloca.
 
-; FIXME The alloca should not get promoted
-; CHECK-NOT: alloca
+; CHECK: alloca
 
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %idx) #0 {
 
