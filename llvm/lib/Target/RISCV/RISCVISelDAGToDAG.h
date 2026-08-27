@@ -119,12 +119,10 @@ public:
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
                    bool OneUse);
-  template <bool OneUse = false>
-  bool selectSETNE(SDValue N, SDValue &Val) {
+  template <bool OneUse = false> bool selectSETNE(SDValue N, SDValue &Val) {
     return selectSETCC(N, ISD::SETNE, Val, OneUse);
   }
-  template <bool OneUse = false>
-  bool selectSETEQ(SDValue N, SDValue &Val) {
+  template <bool OneUse = false> bool selectSETEQ(SDValue N, SDValue &Val) {
     return selectSETCC(N, ISD::SETEQ, Val, OneUse);
   }
 
