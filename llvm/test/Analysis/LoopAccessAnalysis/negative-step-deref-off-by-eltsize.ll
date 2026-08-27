@@ -4,7 +4,7 @@
 ; Reverse loop loading 4 i32 elements whose access range exactly fills the
 ; dereferenceable region (deref(16), reads bytes [0, 16)).
 ;
-; TODO: LAA should recognise that this AR fits within the deref
+; LAA should recognise that this AR fits within the deref
 ; region and produce tight bounds (Low: %A, High: %A + 16).
 ;
 ; Pseudocode:
@@ -28,10 +28,10 @@ define void @reverse_reaches_base(ptr dereferenceable(16) %A, ptr dereferenceabl
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (16 + %B)<nuw>)
+; CHECK-NEXT:          (Low: %B High: (16 + %B)<nuw>)
 ; CHECK-NEXT:            Member: {(12 + %B)<nuw>,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (16 + %A)<nuw>)
+; CHECK-NEXT:          (Low: %A High: (16 + %A)<nuw>)
 ; CHECK-NEXT:            Member: {(12 + %A)<nuw>,+,-4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -67,7 +67,7 @@ exit.done:
 ; The top i32 read at byte 13 covers [13, 17), but deref(16) only
 ; guarantees [0, 16) — bytes at/after 16 may or may not be dereferenceable.
 ;
-; TODO: LAA must not assume the AR fits in the deref region and should
+; LAA must not assume the AR fits in the deref region and should
 ; fall back to the wide low bound.
 ;
 ; Pseudocode:
@@ -90,10 +90,10 @@ define void @reverse_top_spills(ptr dereferenceable(16) %A, ptr dereferenceable(
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (5 + %B)<nuw> High: (17 + %B))
+; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (17 + %B))
 ; CHECK-NEXT:            Member: {(13 + %B)<nuw>,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (5 + %A)<nuw> High: (17 + %A))
+; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (17 + %A))
 ; CHECK-NEXT:            Member: {(13 + %A)<nuw>,+,-4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
