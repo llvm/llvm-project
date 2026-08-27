@@ -202,10 +202,10 @@ private:
   /// must be preceded by S_NOP to avoid the hazard.
   bool needNopBeforeSetVGPRMSB(MachineBasicBlock::instr_iterator I);
 
-  /// Handle an S_SETREG variant targeting MODE register. On certain hardware,
-  /// this instruction clobbers VGPR MSB bits[12:19], so we need to restore
-  /// the current mode. \returns true if the instruction was modified or a
-  /// new one was inserted.
+  /// Handle an S_SETREG variant targeting MODE register. S_SETREG_IMM32_B32
+  /// aliases imm32[12:19] with the VGPR MSBs, S_SETREG_B32 clobbers them
+  /// unconditionally since its value is unknown at compile time. \returns
+  /// true if the instruction was modified or a new one was inserted.
   bool handleSetregMode(MachineInstr &MI);
 
   /// Update bits[12:19] of the imm operand in an S_SETREG_IMM32_B32 variant to
