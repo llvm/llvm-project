@@ -14,7 +14,7 @@
 #include "ScriptedInterface.h"
 
 namespace lldb_private {
-class ScriptedFrameProviderInterface : public ScriptedInterface {
+class ScriptedFrameProviderInterface : virtual public ScriptedInterface {
 public:
   virtual bool AppliesToThread(llvm::StringRef class_name,
                                lldb::ThreadSP thread_sp) {

@@ -27,6 +27,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -102,6 +103,10 @@ static cl::opt<unsigned> GatherOptSearchLimit(
     "aarch64-search-limit", cl::Hidden, cl::init(2048),
     cl::desc("Restrict range of instructions to search for the "
              "machine-combiner gather pattern optimization"));
+
+static cl::opt<bool> UseCompactUnwindFrameRecordForOutlinedFunctions(
+    "aarch64-outliner-compact-unwind-frame", cl::Hidden, cl::init(true),
+    cl::desc("Use a frame record for Mach-O non-leaf outlined functions"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(STI, RI, AArch64::ADJCALLSTACKDOWN,
@@ -911,7 +916,7 @@ bool llvm::optimizeTerminators(MachineBasicBlock *MBB,
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
   while (Register::isVirtualRegister(VReg)) {
     const MachineInstr *DefMI = MRI.getVRegDef(VReg);
-    if (!DefMI->isFullCopy())
+    if (!DefMI || !DefMI->isFullCopy())
       return VReg;
     VReg = DefMI->getOperand(1).getReg();
   }
@@ -929,6 +934,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
   const MachineInstr *DefMI = MRI.getVRegDef(VReg);
+  if (!DefMI)
+    return 0;
   unsigned Opc = 0;
   unsigned SrcReg = 0;
   switch (DefMI->getOpcode()) {
@@ -5736,37 +5743,33 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   return MIB.addReg(Reg, State, SubIdx);
 }
 
-static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
-                                        unsigned NumRegs) {
-  // We really want the positive remainder mod 32 here, that happens to be
-  // easily obtainable with a mask.
-  return ((DestReg - SrcReg) & 0x1f) < NumRegs;
-}
-
 void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         const DebugLoc &DL, MCRegister DestReg,
                                         MCRegister SrcReg, bool KillSrc,
-                                        unsigned Opcode,
                                         ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() && "Unexpected register copy without NEON");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned NumRegs = Indices.size();
+  MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[0]);
+  assert(!AArch64::PNRRegClass.contains(DestSubReg) &&
+         "Unexpected predicate tuple copy");
+  unsigned MaxRegs = AArch64::PPRRegClass.contains(DestSubReg) ? 15 : 31;
 
   int SubReg = 0, End = NumRegs, Incr = 1;
-  if (forwardCopyWillClobberTuple(DestEncoding, SrcEncoding, NumRegs)) {
+  // Copy in reverse if a forward copy will clobber the tuple
+  if (((DestEncoding - SrcEncoding) & MaxRegs) < NumRegs) {
     SubReg = NumRegs - 1;
     End = -1;
     Incr = -1;
   }
 
   for (; SubReg != End; SubReg += Incr) {
-    const MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opcode));
-    AddSubReg(MIB, DestReg, Indices[SubReg], RegState::Define, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], {}, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], getKillRegState(KillSrc), TRI);
+    DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
+    MCRegister SrcSubReg = TRI->getSubReg(SrcReg, Indices[SubReg]);
+    copyPhysRegImpl(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
   }
 }
 
@@ -5827,13 +5830,12 @@ static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
   return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
 }
 
-void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, bool KillSrc,
-                                   bool RenamableDest,
-                                   bool RenamableSrc) const {
-  ++NumCopyInstrs;
+void AArch64InstrInfo::copyPhysRegImpl(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       const DebugLoc &DL, Register DestReg,
+                                       Register SrcReg, bool KillSrc,
+                                       bool RenamableDest,
+                                       bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       AArch64::GPR32spRegClass.contains(SrcReg)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
@@ -5986,6 +5988,16 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Copy a predicate register pair by copying the individual sub-registers.
+  if (AArch64::PPR2RegClass.contains(DestReg) &&
+      AArch64::PPR2RegClass.contains(SrcReg)) {
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE predicate register.");
+    static const unsigned Indices[] = {AArch64::psub0, AArch64::psub1};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
+    return;
+  }
+
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
@@ -6005,8 +6017,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(Subtarget.isSVEorStreamingSVEAvailable() &&
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6017,8 +6028,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6031,8 +6041,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6041,8 +6050,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2, AArch64::dsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6051,8 +6059,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6060,8 +6067,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::DDRegClass.contains(DestReg) &&
       AArch64::DDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6070,8 +6076,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2, AArch64::qsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6080,8 +6085,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6089,8 +6093,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::QQRegClass.contains(DestReg) &&
       AArch64::QQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6354,6 +6357,18 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
+}
+
+void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
+  ++NumCopyInstrs;
+  copyPhysRegImpl(MBB, I, DL, DestReg, SrcReg, KillSrc, RenamableDest,
+                  RenamableSrc);
+  return;
 }
 
 static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
@@ -10085,15 +10100,19 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(VReg);
+  if (!DefMI)
+    return false;
 
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
     Register CopyVReg = DefMI->getOperand(1).getReg();
+    if (!CopyVReg.isVirtual())
+      return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
-    if (!MRI->hasOneDef(CopyVReg))
-      return false;
     DefMI = MRI->getVRegDef(CopyVReg);
+    if (!DefMI)
+      return false;
   }
 
   switch (DefMI->getOpcode()) {
@@ -10120,7 +10139,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!NewReg.isVirtual())
       return false;
 
-    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+    if (!MRI->getVRegDef(NewReg))
+      return false;
 
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI.getOperand(1).getMBB();
@@ -10314,6 +10334,59 @@ enum MachineOutlinerMBBFlags {
   HasCalls = 0x4,
   UnsafeRegsDead = 0x8
 };
+
+/// Return true if the frame-record form of the outlined prologue is enabled for
+/// the target of \p MF.
+///
+/// A non-leaf outlined function must save LR. On MachO, saving LR alone
+/// (str x30) has no compact unwind encoding, so we get a large DWARF FDE
+/// instead. Saving FP and LR as a frame record (stp x29, x30 ; mov x29, sp)
+/// gets the small FRAME encoding, and costs one extra instruction.
+static bool isCompactUnwindFrameRecordEnabled(const MachineFunction &MF) {
+  return UseCompactUnwindFrameRecordForOutlinedFunctions &&
+         MF.getTarget().getTargetTriple().isOSBinFormatMachO();
+}
+
+/// Return true if the outlined function in \p MBB should save FP and LR as a
+/// frame record instead of saving LR alone.
+static bool shouldUseCompactUnwindFrameRecordForOutlinedFunction(
+    const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Only worth it if the function has unwind info to shrink.
+  if (!isCompactUnwindFrameRecordEnabled(MF) ||
+      !MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF))
+    return false;
+
+  // Only safe if the outlined code never touches FP, since we overwrite it.
+  LiveRegUnits LRU(*MF.getSubtarget().getRegisterInfo());
+  for (const MachineInstr &MI : MBB.instrs())
+    LRU.accumulate(MI);
+  return LRU.available(AArch64::FP);
+}
+
+/// Predict what the above will answer, for use while costing candidates. The
+/// outlined function does not exist yet, so answer from \p RepeatedSequenceLocs
+/// instead. This is only an estimate; buildOutlinedFrame() makes the call.
+static bool predictCompactUnwindFrameRecordForOutlinedFunction(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    const TargetRegisterInfo &TRI) {
+  if (!isCompactUnwindFrameRecordEnabled(*RepeatedSequenceLocs.front().getMF()))
+    return false;
+
+  // The outlined function is nounwind only if every candidate is, so it has
+  // unwind info if any candidate does.
+  if (llvm::none_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+        const MachineFunction &MF = *C.getMF();
+        return MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF);
+      }))
+    return false;
+
+  // FP is free in the outlined function only if it is free in every candidate.
+  return llvm::all_of(RepeatedSequenceLocs, [&TRI](outliner::Candidate &C) {
+    return C.isAvailableInsideSeq(AArch64::FP, TRI);
+  });
+}
 
 Register
 AArch64InstrInfo::findRegisterToSaveLRTo(outliner::Candidate &C) const {
@@ -10781,6 +10854,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
       // Save + restore LR.
       NumBytesToCreateFrame += 8;
+
+      // Add the extra mov if we will save a frame record instead of just LR.
+      if (predictCompactUnwindFrameRecordForOutlinedFunction(
+              RepeatedSequenceLocs, TRI))
+        NumBytesToCreateFrame += 4;
     }
   }
 
@@ -11213,32 +11291,75 @@ void AArch64InstrInfo::buildOutlinedFrame(
         OF.FrameConstructionID == MachineOutlinerThunk)
       Et = std::prev(MBB.end());
 
-    // Insert a save before the outlined region
-    MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
-                                .addReg(AArch64::SP, RegState::Define)
-                                .addReg(AArch64::LR)
+    // There is a call in the range, so we must save LR. Save it as part of a
+    // frame record when that gives us a smaller compact unwind encoding.
+    if (shouldUseCompactUnwindFrameRecordForOutlinedFunction(MBB)) {
+      // FP is saved here, so it must be live-in.
+      if (!MBB.isLiveIn(AArch64::FP))
+        MBB.addLiveIn(AArch64::FP);
+
+      // stp x29, x30, [sp, #-16]!   (the pre-index imm is scaled by 8: -2 * 8)
+      MachineInstr *STPXpre = BuildMI(MF, DebugLoc(), get(AArch64::STPXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::FP)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-2);
+      It = MBB.insert(It, STPXpre);
+
+      // mov x29, sp  (add x29, sp, #0), so x29 points at the frame record.
+      MachineInstr *SetFP = BuildMI(MF, DebugLoc(), get(AArch64::ADDXri))
+                                .addReg(AArch64::FP, RegState::Define)
                                 .addReg(AArch64::SP)
-                                .addImm(-16);
-    It = MBB.insert(It, STRXpre);
+                                .addImm(0)
+                                .addImm(0);
+      MBB.insertAfter(It, SetFP);
 
-    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+      // Describe the frame record with FP as the CFA. The encoder needs all
+      // three to pick FRAME. No need to check for unwind info here: we only
+      // get here if the function has it.
+      CFIInstBuilder CFIBuilder(MBB, std::next(SetFP->getIterator()),
+                                MachineInstr::FrameSetup);
+      CFIBuilder.buildDefCFA(AArch64::FP, 16);
+      CFIBuilder.buildOffset(AArch64::LR, -8);
+      CFIBuilder.buildOffset(AArch64::FP, -16);
 
-      // Add a CFI saying the stack was moved 16 B down.
-      CFIBuilder.buildDefCFAOffset(16);
+      // ldp x29, x30, [sp], #16
+      MachineInstr *LDPXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDPXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::FP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(2);
+      Et = MBB.insert(Et, LDPXpost);
+    } else {
+      // Insert a save before the outlined region
+      MachineInstr *STRXpre = BuildMI(MF, DebugLoc(), get(AArch64::STRXpre))
+                                  .addReg(AArch64::SP, RegState::Define)
+                                  .addReg(AArch64::LR)
+                                  .addReg(AArch64::SP)
+                                  .addImm(-16);
+      It = MBB.insert(It, STRXpre);
 
-      // Add a CFI saying that the LR that we want to find is now 16 B higher
-      // than before.
-      CFIBuilder.buildOffset(AArch64::LR, -16);
+      if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
+        CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+
+        // Add a CFI saying the stack was moved 16 B down.
+        CFIBuilder.buildDefCFAOffset(16);
+
+        // Add a CFI saying that the LR that we want to find is now 16 B higher
+        // than before.
+        CFIBuilder.buildOffset(AArch64::LR, -16);
+      }
+
+      // Insert a restore before the terminator for the function.
+      MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
+                                   .addReg(AArch64::SP, RegState::Define)
+                                   .addReg(AArch64::LR, RegState::Define)
+                                   .addReg(AArch64::SP)
+                                   .addImm(16);
+      Et = MBB.insert(Et, LDRXpost);
     }
-
-    // Insert a restore before the terminator for the function.
-    MachineInstr *LDRXpost = BuildMI(MF, DebugLoc(), get(AArch64::LDRXpost))
-                                 .addReg(AArch64::SP, RegState::Define)
-                                 .addReg(AArch64::LR, RegState::Define)
-                                 .addReg(AArch64::SP)
-                                 .addImm(16);
-    Et = MBB.insert(Et, LDRXpost);
   }
 
   auto RASignCondition = FI->getSignReturnAddressCondition();
@@ -11374,10 +11495,10 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
   } else {
-    // This is a streaming-compatible function without SVE. We don't have full
-    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
-    // So given `movi v..` would be illegal use `fmov d..` instead.
-    assert(STI.hasNEON() && "Expected to have NEON.");
+    // No Advanced SIMD (streaming-compatible without SVE, or +nosimd), so use
+    // `fmov d...` instead of `movi v...`; writing `d` also clears the upper
+    // 64 bits.
+    assert(STI.hasFPARMv8() && "Expected FP to be available.");
     Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
     BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }
@@ -11969,7 +12090,7 @@ static bool isDefinedOutside(Register Reg, const MachineBasicBlock *BB) {
   if (!Reg.isVirtual())
     return false;
   const MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  return MRI.getVRegDef(Reg)->getParent() != BB;
+  return MRI.getDefBlock(Reg) != BB;
 }
 
 /// If Reg is an induction variable, return true and set some parameters

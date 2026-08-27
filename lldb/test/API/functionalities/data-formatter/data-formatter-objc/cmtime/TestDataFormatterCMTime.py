@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 
 class CMTimeDataFormatterTestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test_nsindexpath_with_run_command(self):
         """Test formatters for CMTime."""
         self.build()

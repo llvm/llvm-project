@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
   if (argv[1][0] == 'i') {
     // ICALL-DIAG: runtime error: control flow integrity check for type 'void *(int)' failed during indirect function call
     // ICALL-DIAG-NEXT: dynamic.so+0x{{[[:xdigit:]]+}}): note: create_B() {{(\(.cfi_jt\) )?}}defined here
-    // ICALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+    // ICALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
     // ICALL-NODIAG-NOT: runtime error: control flow integrity check {{.*}} during indirect function call
     p = ((void *(*)(int))create_B)(42);
   } else {
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
   if (argv[1][1] == 'c') {
     // CAST-DIAG: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
     // CAST-DIAG-NEXT: note: vtable is of type '{{(struct )?}}B'
-    // CAST-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+    // CAST-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     // CAST-NODIAG-NOT: runtime error: control flow integrity check {{.*}} during cast to unrelated type
     a = (A*)p;
   } else {
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   // VCALL-DIAG: runtime error: control flow integrity check for type 'A' failed during virtual call
   // VCALL-DIAG-NEXT: note: vtable is of type '{{(struct )?}}B'
-  // VCALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+  // VCALL-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-vcall
   // VCALL-NODIAG-NOT: runtime error: control flow integrity check {{.*}} during virtual call
   if (argv[1][2] == 'v') {
     a->f(); // UB here

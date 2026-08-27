@@ -893,14 +893,14 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v8i32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpcmpgtd %ymm1, %ymm2, %k0
-; AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX512BW-NEXT:    vpcmpgtd %ymm2, %ymm0, %k0
+; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
-; AVX512BW-NEXT:    vpsrad $31, %ymm1, %ymm0
-; AVX512BW-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1 {%k1}
-; AVX512BW-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512BW-NEXT:    kxorw %k0, %k1, %k1
+; AVX512BW-NEXT:    vpsrad $31, %ymm2, %ymm0
+; AVX512BW-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm2 {%k1}
+; AVX512BW-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512BW-NEXT:    retq
   %z = call <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32> %x, <8 x i32> %y)
   ret <8 x i32> %z
@@ -1101,14 +1101,14 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ;
 ; AVX512-LABEL: v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtd %zmm1, %zmm2, %k0
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vpcmpgtd %zmm2, %zmm0, %k0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpsrad $31, %zmm1, %zmm0
-; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm1 {%k1}
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
+; AVX512-NEXT:    kxorw %k0, %k1, %k1
+; AVX512-NEXT:    vpsrad $31, %zmm2, %zmm0
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm2 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32> %x, <16 x i32> %y)
   ret <16 x i32> %z
@@ -1442,14 +1442,14 @@ define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
 ;
 ; AVX512BW-LABEL: v4i64:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpcmpgtq %ymm1, %ymm2, %k0
-; AVX512BW-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX512BW-NEXT:    vpaddq %ymm1, %ymm0, %ymm2
+; AVX512BW-NEXT:    vpcmpgtq %ymm2, %ymm0, %k0
+; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpcmpgtq %ymm1, %ymm0, %k1
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
-; AVX512BW-NEXT:    vpsraq $63, %ymm1, %ymm0
-; AVX512BW-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm1 {%k1}
-; AVX512BW-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512BW-NEXT:    kxorw %k0, %k1, %k1
+; AVX512BW-NEXT:    vpsraq $63, %ymm2, %ymm0
+; AVX512BW-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm2 {%k1}
+; AVX512BW-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512BW-NEXT:    retq
   %z = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> %x, <4 x i64> %y)
   ret <4 x i64> %z
@@ -1796,14 +1796,14 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ;
 ; AVX512-LABEL: v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpgtq %zmm1, %zmm2, %k0
-; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vpcmpgtq %zmm2, %zmm0, %k0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1
-; AVX512-NEXT:    kxorw %k1, %k0, %k1
-; AVX512-NEXT:    vpsraq $63, %zmm1, %zmm0
-; AVX512-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1 {%k1}
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
+; AVX512-NEXT:    kxorw %k0, %k1, %k1
+; AVX512-NEXT:    vpsraq $63, %zmm2, %zmm0
+; AVX512-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm2 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> %x, <8 x i64> %y)
   ret <8 x i64> %z

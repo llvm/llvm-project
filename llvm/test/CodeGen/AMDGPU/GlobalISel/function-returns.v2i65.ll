@@ -6,8 +6,8 @@ define <2 x i65> @v2i65_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x i65>) = G_LOAD [[DEF]](p1) :: (load (<2 x i65>) from `ptr addrspace(1) poison`, align 32, addrspace 1)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x s96>) = G_ANYEXT [[LOAD]](<2 x i65>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ANYEXT]](<2 x s96>)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i96>) = G_ANYEXT [[LOAD]](<2 x i65>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ANYEXT]](<2 x i96>)
   ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
   ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](i32)

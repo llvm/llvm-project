@@ -9,21 +9,6 @@
 #ifndef LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 #define LLDB_INTERPRETER_SCRIPTINTERPRETER_H
 
-#include "lldb/API/SBAttachInfo.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBData.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBError.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBExecutionContext.h"
-#include "lldb/API/SBFrameList.h"
-#include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBMemoryRegionInfo.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBSymbolContext.h"
-#include "lldb/API/SBThread.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -37,7 +22,6 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
-#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -531,53 +515,9 @@ public:
   virtual SanitizedScriptingModuleName
   GetSanitizedScriptingModuleName(llvm::StringRef name);
 
-  lldb::DataExtractorSP
-  GetDataExtractorFromSBData(const lldb::SBData &data) const;
-
-  Status GetStatusFromSBError(const lldb::SBError &error) const;
-
-  Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
-
-  lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
-
-  lldb::ThreadSP GetOpaqueTypeFromSBThread(const lldb::SBThread &exe_ctx) const;
-
-  lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
-
-  SymbolContext
-  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
-
-  lldb::BreakpointSP
-  GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
-
-  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
-      const lldb::SBBreakpointLocation &break_loc) const;
-
-  CommandReturnObject *GetOpaqueTypeFromSBCommandReturnObject(
-      const lldb::SBCommandReturnObject &cmd_retobj) const;
-
-  lldb::DebuggerSP
-  GetOpaqueTypeFromSBDebugger(const lldb::SBDebugger &debugger) const;
-
-  lldb::ProcessAttachInfoSP
-  GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;
-
-  lldb::ProcessLaunchInfoSP
-  GetOpaqueTypeFromSBLaunchInfo(const lldb::SBLaunchInfo &launch_info) const;
-
-  std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
-      const lldb::SBMemoryRegionInfo &mem_region) const;
-
-  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
-      const lldb::SBExecutionContext &exe_ctx) const;
-
-  lldb::StackFrameListSP
-  GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
-
-  lldb::ValueObjectSP
-  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
-
-  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
+  /// Get the debugger associated with this script interpreter.
+  Debugger &GetDebugger() { return m_debugger; }
+  const Debugger &GetDebugger() const { return m_debugger; }
 
 protected:
   Debugger &m_debugger;

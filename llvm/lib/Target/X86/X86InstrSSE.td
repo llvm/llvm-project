@@ -146,24 +146,14 @@ def : Pat<(v2i64 immAllZerosV), (V_SET0)>;
 def : Pat<(v2f64 immAllZerosV), (V_SET0)>;
 }
 
-
-// The same as done above but for AVX.  The 256-bit AVX1 ISA doesn't support PI,
-// and doesn't need it because on sandy bridge the register is set to zero
-// at the rename stage without using any execution unit, so SET0PSY
-// and SET0PDY can be used for vector int instructions without penalty
-let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
-    isPseudo = 1, Predicates = [NoAVX512], SchedRW = [WriteZero] in {
-def AVX_SET0 : I<0, Pseudo, (outs VR256:$dst), (ins), "",
-                 [(set VR256:$dst, (v8i32 immAllZerosV))]>;
-}
-
 let Predicates = [NoAVX512] in {
-def : Pat<(v32i8 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v16i16 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v16f16 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v4i64 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v8f32 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v4f64 immAllZerosV), (AVX_SET0)>;
+def : Pat<(v32i8 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v16i16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v16f16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v8i32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v8f32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v4i64 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v4f64 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 }
 
 // We set canFoldAsLoad because this can be converted to a constant-pool
@@ -7347,7 +7337,8 @@ def VINSERTF128rmi : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
 // with YMM register containing zero.
 // FIXME: Avoid producing vxorps to clear the fake inputs.
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v8i32 immAllOnesV), (VCMPPSYrri (AVX_SET0), (AVX_SET0), 0xf)>;
+def : Pat<(v8i32 immAllOnesV), (VCMPPSYrri (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm),
+                                           (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm), 0xf)>;
 }
 
 multiclass vinsert_lowering<string InstrStr, string PermStr,

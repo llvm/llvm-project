@@ -782,8 +782,6 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::AVX1_SETALLONES:
   case X86::AVX2_SETALLONES:
   case X86::AVX512_128_SET0:
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0:
   case X86::AVX512_128_SETALLONES:
   case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
@@ -791,7 +789,6 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
   case X86::AVX512_FsFLD0F128:
-  case X86::AVX_SET0:
   case X86::FsFLD0SD:
   case X86::FsFLD0SS:
   case X86::FsFLD0SH:
@@ -3653,12 +3650,12 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
   // Directly invoke the MC-layer routine for real (i.e., non-pseudo)
   // instructions (fast case).
   if (!X86II::isPseudo(Desc.TSFlags)) {
-    int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemRefIdx = X86II::getMemoryOperandIdx(Desc);
     if (MemRefIdx >= 0)
-      return MemRefIdx + X86II::getOperandBias(Desc);
+      return MemRefIdx;
 #ifdef EXPENSIVE_CHECKS
     assert(none_of(Desc.operands(), IsMemOp) &&
-           "Got false negative from X86II::getMemoryOperandNo()!");
+           "Got false negative from X86II::getMemoryOperandIdx()!");
 #endif
     return -1;
   }
@@ -3980,10 +3977,8 @@ bool X86InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 static int getJumpTableIndexFromAddr(const MachineInstr &MI) {
-  const MCInstrDesc &Desc = MI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
-  assert(MemRefBegin >= 0 && "instr should have memory operand");
-  MemRefBegin += X86II::getOperandBias(Desc);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MI.getDesc());
+  assert(MemRefBegin >= 0 && "Expected a memory operand");
 
   const MachineOperand &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
   if (!MO.isJTI())
@@ -4580,12 +4575,9 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
 std::optional<ExtAddrMode>
 X86InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
                                       const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemI.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MemI.getDesc());
   if (MemRefBegin < 0)
     return std::nullopt;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   auto &BaseOp = MemI.getOperand(MemRefBegin + X86::AddrBaseReg);
   if (!BaseOp.isReg()) // Can be an MO_FrameIndex
@@ -4704,12 +4696,9 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &MemOp, SmallVectorImpl<const MachineOperand *> &BaseOps,
     int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
-  const MCInstrDesc &Desc = MemOp.getDesc();
-  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int MemRefBegin = X86II::getMemoryOperandIdx(MemOp.getDesc());
   if (MemRefBegin < 0)
     return false;
-
-  MemRefBegin += X86II::getOperandBias(Desc);
 
   const MachineOperand *BaseOp =
       &MemOp.getOperand(MemRefBegin + X86::AddrBaseReg);
@@ -5013,6 +5002,27 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   }
   default:
     return false;
+  }
+}
+
+inline static bool isCmpRedundantAfterLTZCNT(Register SrcReg, Register SrcReg2,
+                                             int64_t ImmMask, int64_t ImmValue,
+                                             const MachineInstr &OI) {
+  switch (OI.getOpcode()) {
+  default:
+    return false;
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr: {
+    if (ImmMask != 0 && !SrcReg2.isValid() && ImmValue == 1 &&
+        OI.getOperand(1).isReg() && SrcReg == OI.getOperand(1).getReg()) {
+      return true;
+    }
+    return false;
+  }
   }
 }
 
@@ -5466,11 +5476,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2.isPhysical())
     return false;
   MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
-  assert(SrcRegDef && "Must have a definition (SSA)");
+  if (!SrcRegDef)
+    return false;
 
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  MachineInstr *LTZCNTInst = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
@@ -5553,6 +5565,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
 
+        if (isCmpRedundantAfterLTZCNT(SrcReg, SrcReg2, CmpMask, CmpValue,
+                                      Inst)) {
+          LTZCNTInst = &Inst;
+          break;
+        }
+
         // MOV32r0 is implemented with xor which clobbers condition code. It is
         // safe to move up, if the definition to EFLAGS is dead and earlier
         // instructions do not read or write EFLAGS.
@@ -5577,7 +5595,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       }
     }
 
-    if (MI || Sub)
+    if (MI || Sub || LTZCNTInst)
       break;
 
     // Reached the begin of the basic block. If it has exactly one predecessor,
@@ -5738,6 +5756,15 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         return false;
       }
       ShouldUpdateCC = true;
+    }
+
+    if (LTZCNTInst) {
+      unsigned InstCode = Instr.getOpcode();
+      if (!X86::isADC(InstCode) && !X86::isSBB(InstCode) &&
+          !X86::isRCL(InstCode) && !X86::isRCR(InstCode))
+        return false;
+
+      MI = LTZCNTInst;
     }
 
     if (ShouldUpdateCC && ReplacementCC != OldCC) {
@@ -6337,16 +6364,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::FsFLD0SH:
   case X86::FsFLD0F128:
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VXORPSrr : X86::XORPSrr));
-  case X86::AVX_SET0: {
-    assert(HasAVX && "AVX not supported");
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-    Register SrcReg = MIB.getReg(0);
-    Register XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
-    MIB->getOperand(0).setReg(XReg);
-    Expand2AddrUndef(MIB, get(X86::VXORPSrr));
-    MIB.addReg(SrcReg, RegState::ImplicitDefine);
-    return true;
-  }
   case X86::AVX512_128_SET0:
   case X86::AVX512_FsFLD0SH:
   case X86::AVX512_FsFLD0SS:
@@ -6362,26 +6379,6 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     SrcReg =
         TRI->getMatchingSuperReg(SrcReg, X86::sub_xmm, &X86::VR512RegClass);
     MIB->getOperand(0).setReg(SrcReg);
-    return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
-  }
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0: {
-    bool HasVLX = Subtarget.hasVLX();
-    Register SrcReg = MIB.getReg(0);
-    const TargetRegisterInfo *TRI = &getRegisterInfo();
-    if (HasVLX || TRI->getEncodingValue(SrcReg) < 16) {
-      Register XReg = TRI->getSubReg(SrcReg, X86::sub_xmm);
-      MIB->getOperand(0).setReg(XReg);
-      Expand2AddrUndef(MIB, get(HasVLX ? X86::VPXORDZ128rr : X86::VXORPSrr));
-      MIB.addReg(SrcReg, RegState::ImplicitDefine);
-      return true;
-    }
-    if (MI.getOpcode() == X86::AVX512_256_SET0) {
-      // No VLX so we must reference a zmm.
-      MCRegister ZReg =
-          TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
-      MIB->getOperand(0).setReg(ZReg);
-    }
     return Expand2AddrUndef(MIB, get(X86::VPXORDZrr));
   }
   case X86::MOVSHPmr:
@@ -8486,14 +8483,11 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
     Alignment = (*LoadMI.memoperands_begin())->getAlign();
   else
     switch (LoadOpc) {
-    case X86::AVX512_512_SET0:
     case X86::AVX512_512_SETALLONES:
       Alignment = Align(64);
       break;
     case X86::AVX2_SETALLONES:
     case X86::AVX1_SETALLONES:
-    case X86::AVX_SET0:
-    case X86::AVX512_256_SET0:
     case X86::AVX512_256_SETALLONES:
       Alignment = Align(32);
       break;
@@ -8557,10 +8551,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   case X86::V_SETALLONES:
   case X86::AVX2_SETALLONES:
   case X86::AVX1_SETALLONES:
-  case X86::AVX_SET0:
   case X86::AVX512_128_SET0:
-  case X86::AVX512_256_SET0:
-  case X86::AVX512_512_SET0:
   case X86::AVX512_128_SETALLONES:
   case X86::AVX512_256_SETALLONES:
   case X86::AVX512_512_SETALLONES:
@@ -8617,17 +8608,10 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
     case X86::AVX512_512_SETALLONES:
       IsAllOnes = true;
       [[fallthrough]];
-    case X86::AVX512_512_SET0:
-      Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
-                                16);
-      break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
     case X86::AVX512_256_SETALLONES:
       IsAllOnes = true;
-      [[fallthrough]];
-    case X86::AVX512_256_SET0:
-    case X86::AVX_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 8);
 
@@ -8704,7 +8688,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true,
-                               CopyMI);
+                               CopyMI, VRM);
 }
 
 MachineInstr *
@@ -10905,13 +10889,14 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     if (!ST.hasAVX())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX_SET0), Reg);
+    BuildMI(MBB, Iter, DL, get(X86::V_SET0), TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VR512RegClass.contains(Reg)) {
     // ZMM#
     if (!ST.hasAVX512())
       return;
 
-    BuildMI(MBB, Iter, DL, get(X86::AVX512_512_SET0), Reg);
+    BuildMI(MBB, Iter, DL, get(X86::AVX512_128_SET0),
+            TRI.getSubReg(Reg, X86::sub_xmm));
   } else if (X86::VK1RegClass.contains(Reg) || X86::VK2RegClass.contains(Reg) ||
              X86::VK4RegClass.contains(Reg) || X86::VK8RegClass.contains(Reg) ||
              X86::VK16RegClass.contains(Reg)) {

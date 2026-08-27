@@ -10,6 +10,8 @@
 #define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
@@ -18,12 +20,14 @@
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
 #include <__pstl/cpu_algos/mismatch.h>
+#include <__pstl/cpu_algos/reverse.h>
+#include <__pstl/cpu_algos/search.h>
+#include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -104,6 +108,18 @@ struct __merge<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __mismatch<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_mismatch<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __reverse<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_reverse<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __search_n<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_search_n<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __stable_sort<__std_thread_backend_tag, _ExecutionPolicy>
