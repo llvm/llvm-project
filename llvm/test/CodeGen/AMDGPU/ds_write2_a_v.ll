@@ -474,9 +474,7 @@ define void @ds_write2_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    buffer_store_dword v18, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_accvgpr_write_b32 a19, v31 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
-; GCN-NEXT:    v_accvgpr_read_b32 v1, a1
-; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
-; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
+; GCN-NEXT:    ds_write2_b32 v0, a1, a2 offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v19 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, v20 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, v21 ; Reload Reuse
@@ -1025,11 +1023,7 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    buffer_store_dword v20, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_accvgpr_write_b32 a21, v31 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
-; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
-; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
-; GCN-NEXT:    v_accvgpr_read_b32 v4, a4
-; GCN-NEXT:    v_accvgpr_read_b32 v5, a5
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
+; GCN-NEXT:    ds_write2_b64 v0, a[2:3], a[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v21 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, v22 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, v23 ; Reload Reuse
