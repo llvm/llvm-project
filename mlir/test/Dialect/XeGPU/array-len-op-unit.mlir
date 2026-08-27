@@ -351,7 +351,7 @@ func.func @test_incompatible_load_layout(%arg0: memref<4096x4096xf16>)
   %c0 = arith.constant 0 : index
   %tdesc = xegpu.create_nd_tdesc %arg0
       : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x64xf16>
-  %load = xegpu.load_nd %tdesc[%c0, %c0] {layout = #layout}
+  %load = xegpu.load_nd %tdesc[%c0, %c0] <{layout = #layout}>
       : !xegpu.tensor_desc<32x64xf16> -> vector<32x64xf16>
   %e = vector.extract_strided_slice %load
       offsets = [0, 0], sizes = [16, 16], strides = [1, 1]
@@ -375,7 +375,7 @@ func.func @test_incompatible_prefetch_layout(%arg0: memref<4096x4096xf16>) {
   %c0 = arith.constant 0 : index
   %tdesc = xegpu.create_nd_tdesc %arg0
       : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x64xf16>
-  xegpu.prefetch_nd %tdesc[%c0, %c0] {layout = #layout}
+  xegpu.prefetch_nd %tdesc[%c0, %c0] <{layout = #layout}>
       : !xegpu.tensor_desc<32x64xf16>
   return
 }
@@ -402,9 +402,9 @@ func.func @test_compatible_layouts(%arg0: memref<4096x4096xf16>)
   %tdesc = xegpu.create_nd_tdesc %arg0
       : memref<4096x4096xf16>
         -> !xegpu.tensor_desc<32x64xf16, #layout>
-  xegpu.prefetch_nd %tdesc[%c0, %c0] {layout = #layout}
+  xegpu.prefetch_nd %tdesc[%c0, %c0] <{layout = #layout}>
       : !xegpu.tensor_desc<32x64xf16, #layout>
-  %load = xegpu.load_nd %tdesc[%c0, %c0] {layout = #layout}
+  %load = xegpu.load_nd %tdesc[%c0, %c0] <{layout = #layout}>
       : !xegpu.tensor_desc<32x64xf16, #layout> -> vector<32x64xf16>
   %e = vector.extract_strided_slice %load
       offsets = [0, 48], sizes = [16, 16], strides = [1, 1]
