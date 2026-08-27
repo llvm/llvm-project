@@ -126,9 +126,11 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   SCEVUseT() : Base(nullptr, 0) {}
   SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
-  /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
-  SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
-      : Base(S, static_cast<unsigned>(Flags) >> 1) {}
+  /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped. \p S
+  /// must be an expression supporting flags. Only flags not already present on
+  /// \p S are added. Note that the expression may gain flags also part of the
+  /// SCEVUse later, via settNoWrapFlags.
+  SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags);
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
