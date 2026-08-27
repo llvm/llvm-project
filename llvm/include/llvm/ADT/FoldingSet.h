@@ -128,13 +128,6 @@ template <typename T> struct DefaultFoldingSetTrait {
   // can override this to provide more efficient implementations.
   static inline bool Equals(T &X, const FoldingSetNodeID &ID, unsigned IDHash,
                             FoldingSetNodeID &TempID);
-
-  // ComputeHash - Compute a hash value for X, using TempID to
-  // compute a temporary ID if necessary. The default implementation
-  // just calls Profile and does a regular hash computation.
-  // Implementations can override this to provide more efficient
-  // implementations.
-  static inline unsigned ComputeHash(T &X, FoldingSetNodeID &TempID);
 };
 
 /// This trait class is used to define behavior of how to "profile" (in the
@@ -160,8 +153,6 @@ template <typename T, typename Ctx> struct DefaultContextualFoldingSetTrait {
 
   static inline bool Equals(T &X, const FoldingSetNodeID &ID, unsigned IDHash,
                             FoldingSetNodeID &TempID, Ctx Context);
-  static inline unsigned ComputeHash(T &X, FoldingSetNodeID &TempID,
-                                     Ctx Context);
 };
 
 /// Like FoldingSetTrait, but for ContextualFoldingSets.
@@ -361,11 +352,6 @@ protected:
     bool (*NodeEquals)(const FoldingSetBase *Self, Node *N,
                        const FoldingSetNodeID &ID, unsigned IDHash,
                        FoldingSetNodeID &TempID);
-
-    /// Instantiations of the FoldingSet template implement this function to
-    /// compute a hash value for the given node.
-    unsigned (*ComputeNodeHash)(const FoldingSetBase *Self, Node *N,
-                                FoldingSetNodeID &TempID);
   };
 
 private:
@@ -419,24 +405,12 @@ inline bool DefaultFoldingSetTrait<T>::Equals(T &X, const FoldingSetNodeID &ID,
   FoldingSetTrait<T>::Profile(X, TempID);
   return TempID == ID;
 }
-template <typename T>
-inline unsigned
-DefaultFoldingSetTrait<T>::ComputeHash(T &X, FoldingSetNodeID &TempID) {
-  FoldingSetTrait<T>::Profile(X, TempID);
-  return TempID.ComputeHash();
-}
 template <typename T, typename Ctx>
 inline bool DefaultContextualFoldingSetTrait<T, Ctx>::Equals(
     T &X, const FoldingSetNodeID &ID, unsigned /*IDHash*/,
     FoldingSetNodeID &TempID, Ctx Context) {
   ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
   return TempID == ID;
-}
-template <typename T, typename Ctx>
-inline unsigned DefaultContextualFoldingSetTrait<T, Ctx>::ComputeHash(
-    T &X, FoldingSetNodeID &TempID, Ctx Context) {
-  ContextualFoldingSetTrait<T, Ctx>::Profile(X, TempID, Context);
-  return TempID.ComputeHash();
 }
 
 //===----------------------------------------------------------------------===//
@@ -468,16 +442,6 @@ class FoldingSetImpl : public FoldingSetBase, public Trait::ContextStorage {
           else
             return Trait::Equals(
                 *static_cast<T *>(N), ID, IDHash, TempID,
-                static_cast<const FoldingSetImpl *>(Base)->getContext());
-        },
-        // ComputeNodeHash
-        [](const FoldingSetBase *Base, FoldingSetNode *N,
-           FoldingSetNodeID &TempID) {
-          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-            return Trait::ComputeHash(*static_cast<T *>(N), TempID);
-          else
-            return Trait::ComputeHash(
-                *static_cast<T *>(N), TempID,
                 static_cast<const FoldingSetImpl *>(Base)->getContext());
         }};
     return Info;
