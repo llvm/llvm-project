@@ -119,8 +119,10 @@ define <2 x float> @frem_v2f32(<2 x float> %unused, <2 x float> %a, <2 x float> 
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    fmov d0, d1
 ; ARMPL-NEXT:    // kill: def $d2 killed $d2 def $q2
+; ARMPL-NEXT:    fmov d0, d1
+; ARMPL-NEXT:    mov v2.d[1], v2.d[0]
+; ARMPL-NEXT:    mov v0.d[1], v0.d[0]
 ; ARMPL-NEXT:    mov v1.16b, v2.16b
 ; ARMPL-NEXT:    bl armpl_vfmodq_f32
 ; ARMPL-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -132,8 +134,10 @@ define <2 x float> @frem_v2f32(<2 x float> %unused, <2 x float> %a, <2 x float> 
 ; SLEEF-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; SLEEF-NEXT:    .cfi_def_cfa_offset 16
 ; SLEEF-NEXT:    .cfi_offset w30, -16
-; SLEEF-NEXT:    fmov d0, d1
 ; SLEEF-NEXT:    // kill: def $d2 killed $d2 def $q2
+; SLEEF-NEXT:    fmov d0, d1
+; SLEEF-NEXT:    mov v2.d[1], v2.d[0]
+; SLEEF-NEXT:    mov v0.d[1], v0.d[0]
 ; SLEEF-NEXT:    mov v1.16b, v2.16b
 ; SLEEF-NEXT:    bl _ZGVnN4vv_fmodf
 ; SLEEF-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -150,10 +154,8 @@ define <1 x double> @frem_v1f64(<1 x double> %unused, <1 x double> %a, <1 x doub
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    fmov d0, d1
-; ARMPL-NEXT:    // kill: def $d2 killed $d2 def $q2
-; ARMPL-NEXT:    mov v1.16b, v2.16b
-; ARMPL-NEXT:    bl armpl_vfmodq_f64
-; ARMPL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; ARMPL-NEXT:    fmov d1, d2
+; ARMPL-NEXT:    bl fmod
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
 ;
@@ -163,10 +165,8 @@ define <1 x double> @frem_v1f64(<1 x double> %unused, <1 x double> %a, <1 x doub
 ; SLEEF-NEXT:    .cfi_def_cfa_offset 16
 ; SLEEF-NEXT:    .cfi_offset w30, -16
 ; SLEEF-NEXT:    fmov d0, d1
-; SLEEF-NEXT:    // kill: def $d2 killed $d2 def $q2
-; SLEEF-NEXT:    mov v1.16b, v2.16b
-; SLEEF-NEXT:    bl _ZGVnN2vv_fmod
-; SLEEF-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; SLEEF-NEXT:    fmov d1, d2
+; SLEEF-NEXT:    bl fmod
 ; SLEEF-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; SLEEF-NEXT:    ret
   %res = frem <1 x double> %a, %b

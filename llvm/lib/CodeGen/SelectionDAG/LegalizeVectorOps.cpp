@@ -2204,8 +2204,12 @@ bool VectorLegalizer::tryExpandVecMathCall(
     } else {
       SDValue Op = Node->getOperand(I);
       assert(Op.getValueType() == VT && "mismatch in vector types");
-      if (CallVT != VT)
-        Op = DAG.getInsertSubvector(DL, DAG.getPOISON(CallVT), Op, 0);
+      if (CallVT != VT) {
+        unsigned NumConcat =
+            CallVT.getVectorMinNumElements() / VT.getVectorMinNumElements();
+        SmallVector<SDValue, 4> Ops(NumConcat, Op);
+        Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, CallVT, Ops);
+      }
       assert(Op.getValueType() == EVT::getEVT(ParamTy, true) &&
              "mismatch in value type and call argument type");
       Args.emplace_back(Op, ParamTy);
