@@ -338,13 +338,16 @@ public:
     if ((ST->isStreamingSVEAvailable() && ST->hasSME2p2()))
       return Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16;
 
-    return ((ST->hasSVE2p2() || ST->hasSME2p2()) && (Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16)) || Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
+    return ((ST->hasSVE2p2() || ST->hasSME2p2()) &&
+            (Ty->isIntegerTy(8) || Ty->getScalarSizeInBits() == 16)) ||
+           Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
            Ty->isIntegerTy(64);
   }
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!(ST->isSVEAvailable() || (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    if (!(ST->isSVEAvailable() ||
+          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
       return false;
 
     if (isa<FixedVectorType>(DataType) &&
