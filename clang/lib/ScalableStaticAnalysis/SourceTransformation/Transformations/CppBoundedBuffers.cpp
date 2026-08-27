@@ -250,12 +250,14 @@ public:
         Decls(Decls), Returns(Returns) {}
 
   bool VisitVarDecl(VarDecl *D) override {
-    collect(D, D->getType(), getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType(),
+            getQualifiedEntityName(D, TUNamespace, LUNamespace));
     return true;
   }
 
   bool VisitFieldDecl(FieldDecl *D) override {
-    collect(D, D->getType(), getQualifiedEntityName(D, TUNamespace, LUNamespace));
+    collect(D, D->getType(),
+            getQualifiedEntityName(D, TUNamespace, LUNamespace));
     return true;
   }
 

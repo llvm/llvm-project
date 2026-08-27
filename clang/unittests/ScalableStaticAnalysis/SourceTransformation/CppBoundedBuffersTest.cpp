@@ -94,7 +94,7 @@ std::optional<EntityName> paramEntity(StringRef Fn, unsigned Idx,
 
 std::optional<EntityName> returnEntity(StringRef Fn, ASTContext &Ctx) {
   return getQualifiedEntityNameForReturn(findFnByName(Fn, Ctx),
-                                        testTUNamespace(), testLUNamespace());
+                                         testTUNamespace(), testLUNamespace());
 }
 
 struct Captured {
