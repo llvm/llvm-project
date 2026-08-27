@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "TargetLowering/LowerModule.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/IRMapping.h"
@@ -248,7 +249,7 @@ struct LoweringPreparePass
     } else if (useARMGuardVarABI()) {
       // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
       const unsigned sizeTypeSize =
-          astCtx->getTypeSize(astCtx->getSignedSizeType());
+          getTargetInfo().getTypeWidth(getTargetInfo().getSignedSizeType());
       guardTy =
           cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
       guardAlignment =
@@ -276,7 +277,7 @@ struct LoweringPreparePass
       // for non-ELF and non-Wasm object formats, so only do it for ELF and
       // Wasm.
       bool hasComdat = globalOp.getComdat();
-      const llvm::Triple &triple = astCtx->getTargetInfo().getTriple();
+      const llvm::Triple &triple = getTargetInfo().getTriple();
       // TODO(cir): for now, we're just setting comdat to true, but it should
       // contain a comdat reference name here instead.
       if (!isLocalVarDecl && hasComdat &&
@@ -297,6 +298,14 @@ struct LoweringPreparePass
   /// -----------
 
   clang::ASTContext *astCtx;
+
+  /// Target/ABI facts sourced from the module's own attributes.
+  std::unique_ptr<cir::LowerModule> lowerModule;
+
+  const clang::TargetInfo &getTargetInfo() const {
+    assert(lowerModule && "LoweringPrepare requires a module with a triple");
+    return lowerModule->getTarget();
+  }
 
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
@@ -388,7 +397,7 @@ struct LoweringPreparePass
 
     llvm::StringLiteral nameAtExit = "__cxa_atexit";
     if (tls)
-      nameAtExit = astCtx->getTargetInfo().getTriple().isOSDarwin()
+      nameAtExit = getTargetInfo().getTriple().isOSDarwin()
                        ? llvm::StringLiteral("_tlv_atexit")
                        : llvm::StringLiteral("__cxa_thread_atexit");
 
@@ -3028,6 +3037,9 @@ void LoweringPreparePass::runOnOperation() {
   mlir::Operation *op = getOperation();
   if (isa<::mlir::ModuleOp>(op))
     mlirModule = cast<::mlir::ModuleOp>(op);
+
+  if (mlirModule)
+    lowerModule = cir::createLowerModule(mlirModule);
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
