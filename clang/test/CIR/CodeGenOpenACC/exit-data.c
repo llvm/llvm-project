@@ -12,33 +12,33 @@ void acc_data(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar")
 
 #pragma acc exit data copyout(zero, alwaysout: parmVar)
-  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) structured(false) name("parmVar") <modifiers = "zero,alwaysout"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.exit_data dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
-  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "zero,alwaysout">
 
 #pragma acc exit data copyout(zero, alwaysout: parmVar) async
-  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async dataClause(acc_copyout) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async dataClause(acc_copyout) structured(false) name("parmVar") <modifiers = "zero,alwaysout"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.exit_data async dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
-  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "zero,alwaysout">
 
 #pragma acc exit data async copyout(zero, alwaysout: parmVar)
-  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async dataClause(acc_copyout) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async dataClause(acc_copyout) structured(false) name("parmVar") <modifiers = "zero,alwaysout"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.exit_data async dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
-  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "zero,alwaysout">
 
 #pragma acc exit data finalize copyout(zero, alwaysout: parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
-  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) dataClause(acc_copyout) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) dataClause(acc_copyout) structured(false) name("parmVar") <modifiers = "zero,alwaysout"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.exit_data async(%[[PARM_CAST]] : si32) dataOperands(%[[GDP]] : !cir.ptr<!s32i>) finalize
-  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "zero,alwaysout">
 
 #pragma acc exit data async(parmVar) copyout(zero, alwaysout: parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
-  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) dataClause(acc_copyout) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) dataClause(acc_copyout) structured(false) name("parmVar") <modifiers = "zero,alwaysout"> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.exit_data async(%[[PARM_CAST]] : si32) dataOperands(%[[GDP]] : !cir.ptr<!s32i>)
-  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <{modifiers = #acc<data_clause_modifier zero,alwaysout>}>
+  // CHECK-NEXT: acc.copyout accPtr(%[[GDP]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) structured(false) name("parmVar") <modifiers = "zero,alwaysout">
 
 #pragma acc exit data delete(parmVar) finalize
   // CHECK-NEXT: %[[GDP:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_delete) structured(false) name("parmVar") -> !cir.ptr<!s32i>

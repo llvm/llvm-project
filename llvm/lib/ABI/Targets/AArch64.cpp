@@ -119,6 +119,13 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     return ArgInfo::getDirect();
   }
 
+  // Structures with either a non-trivial destructor or a non-trivial
+  // copy constructor are always indirect.
+  if (auto RecordRAA = getRecordArgABI(Ty)) {
+    return getNaturalAlignIndirect(Ty, RecordRAA ==
+                                           RecordArgABI::RAA_DirectInMemory);
+  }
+
   reportNYI("Aggregate argument type handling");
   return ArgInfo::getDirect();
 }

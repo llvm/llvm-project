@@ -17,7 +17,7 @@ func.func @bound_vector_call(%arg0: memref<4xf32>) {
       func.call @wrapped_vector(%arg10) : (memref<4xf32>) -> ()
     }
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 

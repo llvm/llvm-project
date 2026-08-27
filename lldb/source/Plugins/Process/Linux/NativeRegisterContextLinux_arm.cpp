@@ -15,7 +15,6 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -25,8 +24,11 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux_arm64dbreg.h"
 #endif
 
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
 #include <asm/ptrace.h>
 #include <elf.h>
+#include <sys/ptrace.h>
 #include <sys/uio.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
@@ -44,6 +46,10 @@
 #endif
 #if !defined(PTRACE_TYPE_ARG4)
 #define PTRACE_TYPE_ARG4 void *
+#endif
+
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA 22
 #endif
 
 using namespace lldb;
