@@ -6,11 +6,11 @@
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:  -DTARGET=dx -DFNATTRS="hidden noundef" -DFFNATTRS="nofpclass(nan inf)"
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-library %s \
 // RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:  -DTARGET=spv -DFNATTRS="hidden spir_func noundef" -DFFNATTRS="nofpclass(nan inf)"
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s --check-prefixes=CHECK,NO_HALF \
 // RUN:  -DTARGET=spv -DFNATTRS="hidden spir_func noundef" -DFFNATTRS="nofpclass(nan inf)"
@@ -55,6 +55,12 @@ int3 test_clamp_int3(int3 p0, int3 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] <4 x i32> @_Z15test_clamp_int4
 // CHECK: call <4 x i32> @llvm.[[TARGET]].sclamp.v4i32
 int4 test_clamp_int4(int4 p0, int4 p1) { return clamp(p0, p1,p1); }
+
+// CHECK: define [[FNATTRS]] <5 x i32> @
+// CHECK: call <5 x i32> @llvm.[[TARGET]].sclamp.v5i32
+vector<int, 5> test_clamp_int5(vector<int, 5> p0, vector<int, 5> p1) {
+	return clamp(p0, p1, p1);
+}
 
 // CHECK: define [[FNATTRS]] i32 @_Z15test_clamp_uint
 // CHECK: call i32 @llvm.[[TARGET]].uclamp.i32(

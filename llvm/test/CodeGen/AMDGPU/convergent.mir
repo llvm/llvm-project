@@ -4,7 +4,7 @@
 # Ensure that WMMA, PERMLANE, and DPP instructions are marked as convergent to prevent
 # machine-sink from sinking them.
 
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic -run-pass=machine-sink %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu12-amd-amdhsa -run-pass=machine-sink %s -o - | FileCheck %s
 
 ################################################################################
 # WMMA instructions

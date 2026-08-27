@@ -31,6 +31,19 @@ TEST(BuildNamespaceTest, DifferentKinds) {
   EXPECT_NE(CU, LU);
 }
 
+TEST(BuildNamespaceTest, WithKind) {
+  BuildNamespace Bare(BuildNamespaceKind::StaticLibrary, "libmulti");
+  BuildNamespace Wrapper =
+      Bare.withKind(BuildNamespaceKind::MultiArchStaticLibrary);
+
+  // The name is preserved and only the kind changes.
+  EXPECT_EQ(Wrapper, BuildNamespace(BuildNamespaceKind::MultiArchStaticLibrary,
+                                    "libmulti"));
+  // The original is left unmodified.
+  EXPECT_EQ(Bare,
+            BuildNamespace(BuildNamespaceKind::StaticLibrary, "libmulti"));
+}
+
 // NestedBuildNamespace Tests
 
 TEST(NestedBuildNamespaceTest, DefaultConstruction) {
@@ -83,6 +96,8 @@ TEST(BuildNamespaceKindTest, FormatProvider) {
             "CompilationUnit");
   EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::LinkUnit).str(),
             "LinkUnit");
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::StaticLibrary).str(),
+            "StaticLibrary");
 }
 
 TEST(BuildNamespaceKindTest, StreamOutputCompilationUnit) {
@@ -95,6 +110,12 @@ TEST(BuildNamespaceKindTest, StreamOutputLinkUnit) {
   std::string S;
   llvm::raw_string_ostream(S) << BuildNamespaceKind::LinkUnit;
   EXPECT_EQ(S, "LinkUnit");
+}
+
+TEST(BuildNamespaceKindTest, StreamOutputStaticLibrary) {
+  std::string S;
+  llvm::raw_string_ostream(S) << BuildNamespaceKind::StaticLibrary;
+  EXPECT_EQ(S, "StaticLibrary");
 }
 
 TEST(BuildNamespaceTest, FormatProvider) {

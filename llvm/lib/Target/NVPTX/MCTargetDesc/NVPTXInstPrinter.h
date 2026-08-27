@@ -44,6 +44,11 @@ public:
                     raw_ostream &O, StringRef Modifier = {});
   void printAtomicCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                        raw_ostream &O, StringRef Modifier = {});
+  void printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
+                                    const MCSubtargetInfo &STI, raw_ostream &O,
+                                    StringRef Modifier = {});
+  void printCachePolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O);
   void printMmaCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
@@ -54,18 +59,20 @@ public:
                                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printHexu32imm(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                       raw_ostream &O);
-  void printProtoIdent(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                       raw_ostream &O);
   void printPrmtMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
   void printTmaReductionMode(const MCInst *MI, int OpNum,
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printCTAGroup(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  void printEvictPolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O, StringRef Modifier = {});
   void printCallOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &O, StringRef Modifier = {});
   void printFTZFlag(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printMultimem(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                     raw_ostream &O);
   void printNegatedPredicate(const MCInst *MI, int OpNum,
                              const MCSubtargetInfo &STI, raw_ostream &O);
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx950 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgpu9.50--amdpal <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 6
@@ -131,7 +131,7 @@
 ; CHECK-NEXT:        .entry_point_symbol:    hs_shader
 ; CHECK-NEXT:        .forward_progress: false
 ; CHECK-NEXT:        .ieee_mode:      false
-; CHECK-NEXT:        .lds_size:       0xa00
+; CHECK-NEXT:        .lds_size:       0x1400
 ; CHECK-NEXT:        .mem_ordered:    false
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0

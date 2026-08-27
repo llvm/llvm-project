@@ -1,18 +1,17 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM %}
+// RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa,instcombine | FileCheck %s --check-prefixes=LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa,instcombine | FileCheck %s --check-prefixes=LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=CIR %}
 
 //=============================================================================
 // NOTES
 //
-// Tests for vector subtraction intrinsics: Subtraction, Widening subtraction, Narrowing subtraction and Saturating subtract elements.
+// Tests for scalar and vector subtraction intrinsics: Subtraction, Widening
+// subtraction, Narrowing subtraction and Saturating subtract elements.
 //
 // ACLE section headings based on v2025Q2 of the ACLE specification:
 //  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#subtract
-//
-// TODO: Migrate Narrowing subtraction and Saturating subtract test cases.
 //
 //=============================================================================
 
@@ -280,7 +279,7 @@ int16x8_t test_vsubl_s8(int8x8_t a, int8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
 // LLVM: [[VMOVL0:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
 // LLVM: [[VMOVL1:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
-// LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SUB_I:%.*]] = sub nsw <8 x i16> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <8 x i16> [[SUB_I]]
   return vsubl_s8(a, b);
 }
@@ -293,13 +292,9 @@ int32x4_t test_vsubl_s16(int16x4_t a, int16x4_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<4 x !s32i>
 
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL0:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
-// LLVM: [[VMOVL1:%.*]] = sext <4 x i16> [[TMP3]] to <4 x i32>
-// LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[VMOVL0:%.*]] = sext <4 x i16> [[A]] to <4 x i32>
+// LLVM: [[VMOVL1:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
+// LLVM: [[SUB_I:%.*]] = sub nsw <4 x i32> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubl_s16(a, b);
 }
@@ -312,13 +307,9 @@ int64x2_t test_vsubl_s32(int32x2_t a, int32x2_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<2 x !s64i>
 
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL0:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
-// LLVM: [[VMOVL1:%.*]] = sext <2 x i32> [[TMP3]] to <2 x i64>
-// LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[VMOVL0:%.*]] = sext <2 x i32> [[A]] to <2 x i64>
+// LLVM: [[VMOVL1:%.*]] = sext <2 x i32> [[B]] to <2 x i64>
+// LLVM: [[SUB_I:%.*]] = sub nsw <2 x i64> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubl_s32(a, b);
 }
@@ -333,7 +324,7 @@ uint16x8_t test_vsubl_u8(uint8x8_t a, uint8x8_t b) {
 // LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
 // LLVM: [[VMOVL0:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
 // LLVM: [[VMOVL1:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
-// LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SUB_I:%.*]] = sub nsw <8 x i16> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <8 x i16> [[SUB_I]]
   return vsubl_u8(a, b);
 }
@@ -346,13 +337,9 @@ uint32x4_t test_vsubl_u16(uint16x4_t a, uint16x4_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<4 x !u32i>
 
 // LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL0:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
-// LLVM: [[VMOVL1:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i32>
-// LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[VMOVL0:%.*]] = zext <4 x i16> [[A]] to <4 x i32>
+// LLVM: [[VMOVL1:%.*]] = zext <4 x i16> [[B]] to <4 x i32>
+// LLVM: [[SUB_I:%.*]] = sub nsw <4 x i32> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubl_u16(a, b);
 }
@@ -365,13 +352,9 @@ uint64x2_t test_vsubl_u32(uint32x2_t a, uint32x2_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<2 x !u64i>
 
 // LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL0:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
-// LLVM: [[VMOVL1:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
-// LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[VMOVL0:%.*]] = zext <2 x i32> [[A]] to <2 x i64>
+// LLVM: [[VMOVL1:%.*]] = zext <2 x i32> [[B]] to <2 x i64>
+// LLVM: [[SUB_I:%.*]] = sub nsw <2 x i64> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubl_u32(a, b);
 }
@@ -396,9 +379,7 @@ int32x4_t test_vsubw_s16(int32x4_t a, int16x4_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<4 x !s32i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL_I:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+// LLVM: [[VMOVL_I:%.*]] = sext <4 x i16> [[B]] to <4 x i32>
 // LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[A]], [[VMOVL_I]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubw_s16(a, b);
@@ -411,9 +392,7 @@ int64x2_t test_vsubw_s32(int64x2_t a, int32x2_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<2 x !s64i>
 
 // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL_I:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+// LLVM: [[VMOVL_I:%.*]] = sext <2 x i32> [[B]] to <2 x i64>
 // LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[A]], [[VMOVL_I]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubw_s32(a, b);
@@ -439,9 +418,7 @@ uint32x4_t test_vsubw_u16(uint32x4_t a, uint16x4_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<4 x !u32i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL_I:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+// LLVM: [[VMOVL_I:%.*]] = zext <4 x i16> [[B]] to <4 x i32>
 // LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[A]], [[VMOVL_I]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubw_u16(a, b);
@@ -454,9 +431,7 @@ uint64x2_t test_vsubw_u32(uint64x2_t a, uint32x2_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<2 x !u64i>
 
 // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL_I:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+// LLVM: [[VMOVL_I:%.*]] = zext <2 x i32> [[B]] to <2 x i64>
 // LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[A]], [[VMOVL_I]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubw_u32(a, b);
@@ -470,11 +445,11 @@ int16x8_t test_vsubl_high_s8(int8x16_t a, int8x16_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<8 x !s16i>
 
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[A]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL0:%.*]] = sext <8 x i8> [[SHUFFLE0]] to <8 x i16>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL1:%.*]] = sext <8 x i8> [[SHUFFLE1]] to <8 x i16>
-// LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SUB_I:%.*]] = sub nsw <8 x i16> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <8 x i16> [[SUB_I]]
   return vsubl_high_s8(a, b);
 }
@@ -487,15 +462,11 @@ int32x4_t test_vsubl_high_s16(int16x8_t a, int16x8_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<4 x !s32i>
 
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE0]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL0:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE1]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
-// LLVM: [[VMOVL1:%.*]] = sext <4 x i16> [[TMP3]] to <4 x i32>
-// LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL0:%.*]] = sext <4 x i16> [[SHUFFLE0]] to <4 x i32>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL1:%.*]] = sext <4 x i16> [[SHUFFLE1]] to <4 x i32>
+// LLVM: [[SUB_I:%.*]] = sub nsw <4 x i32> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubl_high_s16(a, b);
 }
@@ -508,15 +479,11 @@ int64x2_t test_vsubl_high_s32(int32x4_t a, int32x4_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<2 x !s64i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[A]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE0]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL0:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE1]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
-// LLVM: [[VMOVL1:%.*]] = sext <2 x i32> [[TMP3]] to <2 x i64>
-// LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL0:%.*]] = sext <2 x i32> [[SHUFFLE0]] to <2 x i64>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL1:%.*]] = sext <2 x i32> [[SHUFFLE1]] to <2 x i64>
+// LLVM: [[SUB_I:%.*]] = sub nsw <2 x i64> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubl_high_s32(a, b);
 }
@@ -529,11 +496,11 @@ uint16x8_t test_vsubl_high_u8(uint8x16_t a, uint8x16_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<8 x !u16i>
 
 // LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> [[A]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL0:%.*]] = zext <8 x i8> [[SHUFFLE0]] to <8 x i16>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL1:%.*]] = zext <8 x i8> [[SHUFFLE1]] to <8 x i16>
-// LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SUB_I:%.*]] = sub nsw <8 x i16> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <8 x i16> [[SUB_I]]
   return vsubl_high_u8(a, b);
 }
@@ -546,15 +513,11 @@ uint32x4_t test_vsubl_high_u16(uint16x8_t a, uint16x8_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<4 x !u32i>
 
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE0]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL0:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP2:%.*]] = bitcast <4 x i16> [[SHUFFLE1]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <4 x i16>
-// LLVM: [[VMOVL1:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i32>
-// LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <8 x i16> [[A]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL0:%.*]] = zext <4 x i16> [[SHUFFLE0]] to <4 x i32>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL1:%.*]] = zext <4 x i16> [[SHUFFLE1]] to <4 x i32>
+// LLVM: [[SUB_I:%.*]] = sub nsw <4 x i32> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubl_high_u16(a, b);
 }
@@ -567,15 +530,11 @@ uint64x2_t test_vsubl_high_u32(uint32x4_t a, uint32x4_t b) {
 // CIR: {{%.*}} = cir.sub [[VMOVL0]], [[VMOVL1]] : !cir.vector<2 x !u64i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE0:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[A]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE0]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL0:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-// LLVM: [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP2:%.*]] = bitcast <2 x i32> [[SHUFFLE1]] to <8 x i8>
-// LLVM: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to <2 x i32>
-// LLVM: [[VMOVL1:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
-// LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[VMOVL0]], [[VMOVL1]]
+// LLVM: [[SHUFFLE0:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL0:%.*]] = zext <2 x i32> [[SHUFFLE0]] to <2 x i64>
+// LLVM: [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL1:%.*]] = zext <2 x i32> [[SHUFFLE1]] to <2 x i64>
+// LLVM: [[SUB_I:%.*]] = sub nsw <2 x i64> [[VMOVL0]], [[VMOVL1]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubl_high_u32(a, b);
 }
@@ -587,7 +546,7 @@ int16x8_t test_vsubw_high_s8(int16x8_t a, int8x16_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<8 x !s16i>
 
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL_I:%.*]] = sext <8 x i8> [[SHUFFLE_I]] to <8 x i16>
 // LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[A]], [[VMOVL_I]]
 // LLVM: ret <8 x i16> [[SUB_I]]
@@ -601,10 +560,8 @@ int32x4_t test_vsubw_high_s16(int32x4_t a, int16x8_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<4 x !s32i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL_I:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL_I:%.*]] = sext <4 x i16> [[SHUFFLE_I]] to <4 x i32>
 // LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[A]], [[VMOVL_I]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubw_high_s16(a, b);
@@ -617,10 +574,8 @@ int64x2_t test_vsubw_high_s32(int64x2_t a, int32x4_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<2 x !s64i>
 
 // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL_I:%.*]] = sext <2 x i32> [[TMP1]] to <2 x i64>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL_I:%.*]] = sext <2 x i32> [[SHUFFLE_I]] to <2 x i64>
 // LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[A]], [[VMOVL_I]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubw_high_s32(a, b);
@@ -633,7 +588,7 @@ uint16x8_t test_vsubw_high_u8(uint16x8_t a, uint8x16_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<8 x !u16i>
 
 // LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> [[B]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // LLVM: [[VMOVL_I:%.*]] = zext <8 x i8> [[SHUFFLE_I]] to <8 x i16>
 // LLVM: [[SUB_I:%.*]] = sub <8 x i16> [[A]], [[VMOVL_I]]
 // LLVM: ret <8 x i16> [[SUB_I]]
@@ -647,10 +602,8 @@ uint32x4_t test_vsubw_high_u16(uint32x4_t a, uint16x8_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<4 x !u32i>
 
 // LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> [[B]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[SHUFFLE_I]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
-// LLVM: [[VMOVL_I:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x i16> [[B]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM: [[VMOVL_I:%.*]] = zext <4 x i16> [[SHUFFLE_I]] to <4 x i32>
 // LLVM: [[SUB_I:%.*]] = sub <4 x i32> [[A]], [[VMOVL_I]]
 // LLVM: ret <4 x i32> [[SUB_I]]
   return vsubw_high_u16(a, b);
@@ -663,11 +616,768 @@ uint64x2_t test_vsubw_high_u32(uint64x2_t a, uint32x4_t b) {
 // CIR: {{%.*}} = cir.sub {{%.*}}, [[VMOVL_I]] : !cir.vector<2 x !u64i>
 
 // LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
-// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[B]], <2 x i32> <i32 2, i32 3>
-// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[SHUFFLE_I]] to <8 x i8>
-// LLVM: [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
-// LLVM: [[VMOVL_I:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+// LLVM: [[SHUFFLE_I:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+// LLVM: [[VMOVL_I:%.*]] = zext <2 x i32> [[SHUFFLE_I]] to <2 x i64>
 // LLVM: [[SUB_I:%.*]] = sub <2 x i64> [[A]], [[VMOVL_I]]
 // LLVM: ret <2 x i64> [[SUB_I]]
   return vsubw_high_u32(a, b);
+}
+
+//===----------------------------------------------------------------------===//
+// 2.1.1.5.3. Narrowing subtraction
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#narrowing-subtraction
+//===----------------------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vhsub_s8(
+// CIR-LABEL: @vhsub_s8(
+int8x8_t test_vhsub_s8(int8x8_t v1, int8x8_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[V1:%.*]], <8 x i8> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.shsub.v8i8(<8 x i8> [[V1]], <8 x i8> [[V2]])
+  // LLVM: ret <8 x i8> [[RES]]
+  return vhsub_s8(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsub_s16(
+// CIR-LABEL: @vhsub_s16(
+int16x4_t test_vhsub_s16(int16x4_t v1, int16x4_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[V1:%.*]], <4 x i16> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.shsub.v4i16(<4 x i16> [[V1]], <4 x i16> [[V2]])
+  // LLVM: ret <4 x i16> [[RES]]
+  return vhsub_s16(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsub_s32(
+// CIR-LABEL: @vhsub_s32(
+int32x2_t test_vhsub_s32(int32x2_t v1, int32x2_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[V1:%.*]], <2 x i32> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.shsub.v2i32(<2 x i32> [[V1]], <2 x i32> [[V2]])
+  // LLVM: ret <2 x i32> [[RES]]
+  return vhsub_s32(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsub_u8(
+// CIR-LABEL: @vhsub_u8(
+uint8x8_t test_vhsub_u8(uint8x8_t v1, uint8x8_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[V1:%.*]], <8 x i8> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.uhsub.v8i8(<8 x i8> [[V1]], <8 x i8> [[V2]])
+  // LLVM: ret <8 x i8> [[RES]]
+  return vhsub_u8(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsub_u16(
+// CIR-LABEL: @vhsub_u16(
+uint16x4_t test_vhsub_u16(uint16x4_t v1, uint16x4_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[V1:%.*]], <4 x i16> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.uhsub.v4i16(<4 x i16> [[V1]], <4 x i16> [[V2]])
+  // LLVM: ret <4 x i16> [[RES]]
+  return vhsub_u16(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsub_u32(
+// CIR-LABEL: @vhsub_u32(
+uint32x2_t test_vhsub_u32(uint32x2_t v1, uint32x2_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[V1:%.*]], <2 x i32> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.uhsub.v2i32(<2 x i32> [[V1]], <2 x i32> [[V2]])
+  // LLVM: ret <2 x i32> [[RES]]
+  return vhsub_u32(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_s8(
+// CIR-LABEL: @vhsubq_s8(
+int8x16_t test_vhsubq_s8(int8x16_t v1, int8x16_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <16 x i8> {{.*}}[[V1:%.*]], <16 x i8> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.shsub.v16i8(<16 x i8> [[V1]], <16 x i8> [[V2]])
+  // LLVM: ret <16 x i8> [[RES]]
+  return vhsubq_s8(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_s16(
+// CIR-LABEL: @vhsubq_s16(
+int16x8_t test_vhsubq_s16(int16x8_t v1, int16x8_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[V1:%.*]], <8 x i16> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.shsub.v8i16(<8 x i16> [[V1]], <8 x i16> [[V2]])
+  // LLVM: ret <8 x i16> [[RES]]
+  return vhsubq_s16(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_s32(
+// CIR-LABEL: @vhsubq_s32(
+int32x4_t test_vhsubq_s32(int32x4_t v1, int32x4_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.shsub"
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[V1:%.*]], <4 x i32> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.shsub.v4i32(<4 x i32> [[V1]], <4 x i32> [[V2]])
+  // LLVM: ret <4 x i32> [[RES]]
+  return vhsubq_s32(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_u8(
+// CIR-LABEL: @vhsubq_u8(
+uint8x16_t test_vhsubq_u8(uint8x16_t v1, uint8x16_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <16 x i8> {{.*}}[[V1:%.*]], <16 x i8> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <16 x i8> @llvm.aarch64.neon.uhsub.v16i8(<16 x i8> [[V1]], <16 x i8> [[V2]])
+  // LLVM: ret <16 x i8> [[RES]]
+  return vhsubq_u8(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_u16(
+// CIR-LABEL: @vhsubq_u16(
+uint16x8_t test_vhsubq_u16(uint16x8_t v1, uint16x8_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[V1:%.*]], <8 x i16> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i16> @llvm.aarch64.neon.uhsub.v8i16(<8 x i16> [[V1]], <8 x i16> [[V2]])
+  // LLVM: ret <8 x i16> [[RES]]
+  return vhsubq_u16(v1, v2);
+}
+
+// LLVM-LABEL: @test_vhsubq_u32(
+// CIR-LABEL: @vhsubq_u32(
+uint32x4_t test_vhsubq_u32(uint32x4_t v1, uint32x4_t v2) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uhsub"
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[V1:%.*]], <4 x i32> {{.*}}[[V2:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i32> @llvm.aarch64.neon.uhsub.v4i32(<4 x i32> [[V1]], <4 x i32> [[V2]])
+  // LLVM: ret <4 x i32> [[RES]]
+  return vhsubq_u32(v1, v2);
+}
+
+// LLVM-LABEL: @test_vsubhn_s16(
+// CIR-LABEL: @vsubhn_s16(
+int8x8_t test_vsubhn_s16(int16x8_t a, int16x8_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <8 x i16> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <8 x i16> [[SUB]], splat (i16 8)
+  // LLVM: [[TR:%.*]] = trunc nuw <8 x i16> [[SH]] to <8 x i8>
+  // LLVM: ret <8 x i8> [[TR]]
+  return vsubhn_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_s32(
+// CIR-LABEL: @vsubhn_s32(
+int16x4_t test_vsubhn_s32(int32x4_t a, int32x4_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <4 x i32> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <4 x i32> [[SUB]], splat (i32 16)
+  // LLVM: [[TR:%.*]] = trunc nuw <4 x i32> [[SH]] to <4 x i16>
+  // LLVM: ret <4 x i16> [[TR]]
+  return vsubhn_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_s64(
+// CIR-LABEL: @vsubhn_s64(
+int32x2_t test_vsubhn_s64(int64x2_t a, int64x2_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <2 x i64> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <2 x i64> [[SUB]], splat (i64 32)
+  // LLVM: [[TR:%.*]] = trunc nuw <2 x i64> [[SH]] to <2 x i32>
+  // LLVM: ret <2 x i32> [[TR]]
+  return vsubhn_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_u16(
+// CIR-LABEL: @vsubhn_u16(
+uint8x8_t test_vsubhn_u16(uint16x8_t a, uint16x8_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <8 x i16> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <8 x i16> [[SUB]], splat (i16 8)
+  // LLVM: [[TR:%.*]] = trunc nuw <8 x i16> [[SH]] to <8 x i8>
+  // LLVM: ret <8 x i8> [[TR]]
+  return vsubhn_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_u32(
+// CIR-LABEL: @vsubhn_u32(
+uint16x4_t test_vsubhn_u32(uint32x4_t a, uint32x4_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <4 x i32> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <4 x i32> [[SUB]], splat (i32 16)
+  // LLVM: [[TR:%.*]] = trunc nuw <4 x i32> [[SH]] to <4 x i16>
+  // LLVM: ret <4 x i16> [[TR]]
+  return vsubhn_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_u64(
+// CIR-LABEL: @vsubhn_u64(
+uint32x2_t test_vsubhn_u64(uint64x2_t a, uint64x2_t b) {
+  // CIR: cir.sub
+  // CIR: cir.shift(right
+  // CIR: cir.cast integral
+
+  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <2 x i64> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <2 x i64> [[SUB]], splat (i64 32)
+  // LLVM: [[TR:%.*]] = trunc nuw <2 x i64> [[SH]] to <2 x i32>
+  // LLVM: ret <2 x i32> [[TR]]
+  return vsubhn_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_s16(
+// CIR-LABEL: @vsubhn_high_s16(
+int8x16_t test_vsubhn_high_s16(int8x8_t r, int16x8_t a, int16x8_t b) {
+  // CIR: cir.call @vsubhn_s16(
+  // CIR: cir.call @vcombine_s8(
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[R:%.*]], <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <8 x i16> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <8 x i16> [[SUB]], splat (i16 8)
+  // LLVM: [[TR:%.*]] = trunc nuw <8 x i16> [[SH]] to <8 x i8>
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i8> [[R]], <8 x i8> [[TR]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: ret <16 x i8> [[RES]]
+  return vsubhn_high_s16(r, a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_s32(
+// CIR-LABEL: @vsubhn_high_s32(
+int16x8_t test_vsubhn_high_s32(int16x4_t r, int32x4_t a, int32x4_t b) {
+  // CIR: cir.call @vsubhn_s32(
+  // CIR: cir.call @vcombine_s16(
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[R:%.*]], <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <4 x i32> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <4 x i32> [[SUB]], splat (i32 16)
+  // LLVM: [[TR:%.*]] = trunc nuw <4 x i32> [[SH]] to <4 x i16>
+  // LLVM: [[RES:%.*]] = shufflevector <4 x i16> [[R]], <4 x i16> [[TR]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: ret <8 x i16> [[RES]]
+  return vsubhn_high_s32(r, a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_s64(
+// CIR-LABEL: @vsubhn_high_s64(
+int32x4_t test_vsubhn_high_s64(int32x2_t r, int64x2_t a, int64x2_t b) {
+  // CIR: cir.call @vsubhn_s64(
+  // CIR: cir.call @vcombine_s32(
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[R:%.*]], <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <2 x i64> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <2 x i64> [[SUB]], splat (i64 32)
+  // LLVM: [[TR:%.*]] = trunc nuw <2 x i64> [[SH]] to <2 x i32>
+  // LLVM: [[RES:%.*]] = shufflevector <2 x i32> [[R]], <2 x i32> [[TR]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: ret <4 x i32> [[RES]]
+  return vsubhn_high_s64(r, a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_u16(
+// CIR-LABEL: @vsubhn_high_u16(
+uint8x16_t test_vsubhn_high_u16(uint8x8_t r, uint16x8_t a, uint16x8_t b) {
+  // CIR: cir.call @vsubhn_u16(
+  // CIR: cir.call @vcombine_u8(
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[R:%.*]], <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <8 x i16> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <8 x i16> [[SUB]], splat (i16 8)
+  // LLVM: [[TR:%.*]] = trunc nuw <8 x i16> [[SH]] to <8 x i8>
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i8> [[R]], <8 x i8> [[TR]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: ret <16 x i8> [[RES]]
+  return vsubhn_high_u16(r, a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_u32(
+// CIR-LABEL: @vsubhn_high_u32(
+uint16x8_t test_vsubhn_high_u32(uint16x4_t r, uint32x4_t a, uint32x4_t b) {
+  // CIR: cir.call @vsubhn_u32(
+  // CIR: cir.call @vcombine_u16(
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[R:%.*]], <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <4 x i32> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <4 x i32> [[SUB]], splat (i32 16)
+  // LLVM: [[TR:%.*]] = trunc nuw <4 x i32> [[SH]] to <4 x i16>
+  // LLVM: [[RES:%.*]] = shufflevector <4 x i16> [[R]], <4 x i16> [[TR]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: ret <8 x i16> [[RES]]
+  return vsubhn_high_u32(r, a, b);
+}
+
+// LLVM-LABEL: @test_vsubhn_high_u64(
+// CIR-LABEL: @vsubhn_high_u64(
+uint32x4_t test_vsubhn_high_u64(uint32x2_t r, uint64x2_t a, uint64x2_t b) {
+  // CIR: cir.call @vsubhn_u64(
+  // CIR: cir.call @vcombine_u32(
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[R:%.*]], <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[SUB:%.*]] = sub <2 x i64> [[A]], [[B]]
+  // LLVM: [[SH:%.*]] = lshr <2 x i64> [[SUB]], splat (i64 32)
+  // LLVM: [[TR:%.*]] = trunc nuw <2 x i64> [[SH]] to <2 x i32>
+  // LLVM: [[RES:%.*]] = shufflevector <2 x i32> [[R]], <2 x i32> [[TR]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: ret <4 x i32> [[RES]]
+  return vsubhn_high_u64(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_s16(
+// CIR-LABEL: @vrsubhn_s16(
+int8x8_t test_vrsubhn_s16(int16x8_t a, int16x8_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> [[A]], <8 x i16> [[B]])
+  // LLVM: ret <8 x i8> [[RES]]
+  return vrsubhn_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_s32(
+// CIR-LABEL: @vrsubhn_s32(
+int16x4_t test_vrsubhn_s32(int32x4_t a, int32x4_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> [[A]], <4 x i32> [[B]])
+  // LLVM: ret <4 x i16> [[RES]]
+  return vrsubhn_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_s64(
+// CIR-LABEL: @vrsubhn_s64(
+int32x2_t test_vrsubhn_s64(int64x2_t a, int64x2_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> [[A]], <2 x i64> [[B]])
+  // LLVM: ret <2 x i32> [[RES]]
+  return vrsubhn_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_u16(
+// CIR-LABEL: @vrsubhn_u16(
+uint8x8_t test_vrsubhn_u16(uint16x8_t a, uint16x8_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> [[A]], <8 x i16> [[B]])
+  // LLVM: ret <8 x i8> [[RES]]
+  return vrsubhn_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_u32(
+// CIR-LABEL: @vrsubhn_u32(
+uint16x4_t test_vrsubhn_u32(uint32x4_t a, uint32x4_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> [[A]], <4 x i32> [[B]])
+  // LLVM: ret <4 x i16> [[RES]]
+  return vrsubhn_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_u64(
+// CIR-LABEL: @vrsubhn_u64(
+uint32x2_t test_vrsubhn_u64(uint64x2_t a, uint64x2_t b) {
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.rsubhn"
+
+  // LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[RES:%.*]] = call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> [[A]], <2 x i64> [[B]])
+  // LLVM: ret <2 x i32> [[RES]]
+  return vrsubhn_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_s16(
+// CIR-LABEL: @vrsubhn_high_s16(
+int8x16_t test_vrsubhn_high_s16(int8x8_t r, int16x8_t a, int16x8_t b) {
+  // CIR: cir.call @vrsubhn_s16(
+  // CIR: cir.call @vcombine_s8(
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[R:%.*]], <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> [[A]], <8 x i16> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i8> [[R]], <8 x i8> [[TMP]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: ret <16 x i8> [[RES]]
+  return vrsubhn_high_s16(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_s32(
+// CIR-LABEL: @vrsubhn_high_s32(
+int16x8_t test_vrsubhn_high_s32(int16x4_t r, int32x4_t a, int32x4_t b) {
+  // CIR: cir.call @vrsubhn_s32(
+  // CIR: cir.call @vcombine_s16(
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[R:%.*]], <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> [[A]], <4 x i32> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <4 x i16> [[R]], <4 x i16> [[TMP]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: ret <8 x i16> [[RES]]
+  return vrsubhn_high_s32(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_s64(
+// CIR-LABEL: @vrsubhn_high_s64(
+int32x4_t test_vrsubhn_high_s64(int32x2_t r, int64x2_t a, int64x2_t b) {
+  // CIR: cir.call @vrsubhn_s64(
+  // CIR: cir.call @vcombine_s32(
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[R:%.*]], <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> [[A]], <2 x i64> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <2 x i32> [[R]], <2 x i32> [[TMP]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: ret <4 x i32> [[RES]]
+  return vrsubhn_high_s64(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_u16(
+// CIR-LABEL: @vrsubhn_high_u16(
+uint8x16_t test_vrsubhn_high_u16(uint8x8_t r, uint16x8_t a, uint16x8_t b) {
+  // CIR: cir.call @vrsubhn_u16(
+  // CIR: cir.call @vcombine_u8(
+
+  // LLVM-SAME: <8 x i8> {{.*}}[[R:%.*]], <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> [[A]], <8 x i16> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i8> [[R]], <8 x i8> [[TMP]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: ret <16 x i8> [[RES]]
+  return vrsubhn_high_u16(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_u32(
+// CIR-LABEL: @vrsubhn_high_u32(
+uint16x8_t test_vrsubhn_high_u32(uint16x4_t r, uint32x4_t a, uint32x4_t b) {
+  // CIR: cir.call @vrsubhn_u32(
+  // CIR: cir.call @vcombine_u16(
+
+  // LLVM-SAME: <4 x i16> {{.*}}[[R:%.*]], <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> [[A]], <4 x i32> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <4 x i16> [[R]], <4 x i16> [[TMP]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: ret <8 x i16> [[RES]]
+  return vrsubhn_high_u32(r, a, b);
+}
+
+// LLVM-LABEL: @test_vrsubhn_high_u64(
+// CIR-LABEL: @vrsubhn_high_u64(
+uint32x4_t test_vrsubhn_high_u64(uint32x2_t r, uint64x2_t a, uint64x2_t b) {
+  // CIR: cir.call @vrsubhn_u64(
+  // CIR: cir.call @vcombine_u32(
+
+  // LLVM-SAME: <2 x i32> {{.*}}[[R:%.*]], <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+  // LLVM: [[TMP:%.*]] = call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> [[A]], <2 x i64> [[B]])
+  // LLVM: [[RES:%.*]] = shufflevector <2 x i32> [[R]], <2 x i32> [[TMP]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: ret <4 x i32> [[RES]]
+  return vrsubhn_high_u64(r, a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.5.4.  Scalar saturating subtract
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#saturating-subtract
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vqsubb_s8(
+// CIR-LABEL: @vqsubb_s8(
+int8_t test_vqsubb_s8(int8_t a, int8_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.sqsub" [[INS0]], [[INS1]] : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>) -> !cir.vector<8 x !s8i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<8 x !s8i>
+
+  // LLVM-SAME: i8 {{.*}} [[A:%.*]], i8 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+  // LLVM: [[VQSUBB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_S8_I]], i64 0
+  // LLVM: ret i8 [[TMP2]]
+  return vqsubb_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubh_s16(
+// CIR-LABEL: @vqsubh_s16(
+int16_t test_vqsubh_s16(int16_t a, int16_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.sqsub" [[INS0]], [[INS1]] : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>) -> !cir.vector<4 x !s16i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<4 x !s16i>
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]], i16 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM: [[VQSUBH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_S16_I]], i64 0
+  // LLVM: ret i16 [[TMP2]]
+  return vqsubh_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubs_s32(
+// CIR-LABEL: @vqsubs_s32(
+int32_t test_vqsubs_s32(int32_t a, int32_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!s32i, !s32i) -> !s32i
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]], i32 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sqsub.i32(i32 [[A]], i32 [[B]])
+  // LLVM: ret i32 [[VQSUBS_S32_I]]
+  return vqsubs_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubd_s64(
+// CIR-LABEL: @vqsubd_s64(
+int64_t test_vqsubd_s64(int64_t a, int64_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!s64i, !s64i) -> !s64i
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sqsub.i64(i64 [[A]], i64 [[B]])
+  // LLVM: ret i64 [[VQSUBD_S64_I]]
+  return vqsubd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubb_u8(
+// CIR-LABEL: @vqsubb_u8(
+uint8_t test_vqsubb_u8(uint8_t a, uint8_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uqsub" [[INS0]], [[INS1]] : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>) -> !cir.vector<8 x !u8i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<8 x !u8i>
+
+  // LLVM-SAME: i8 {{.*}} [[A:%.*]], i8 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <8 x i8> poison, i8 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+  // LLVM: [[VQSUBB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqsub.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <8 x i8> [[VQSUBB_U8_I]], i64 0
+  // LLVM: ret i8 [[TMP2]]
+  return vqsubb_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubh_u16(
+// CIR-LABEL: @vqsubh_u16(
+uint16_t test_vqsubh_u16(uint16_t a, uint16_t b) {
+  // CIR: [[INS0:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+  // CIR: [[INS1:%.*]] = cir.vec.insert {{%.*}}, {{%.*}}[{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+  // CIR: [[RES:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.uqsub" [[INS0]], [[INS1]] : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>) -> !cir.vector<4 x !u16i>
+  // CIR: {{%.*}} = cir.vec.extract [[RES]][{{%.*}} : !u64i] : !cir.vector<4 x !u16i>
+
+  // LLVM-SAME: i16 {{.*}} [[A:%.*]], i16 {{.*}} [[B:%.*]])
+  // LLVM: [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
+  // LLVM: [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM: [[VQSUBH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqsub.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
+  // LLVM: [[TMP2:%.*]] = extractelement <4 x i16> [[VQSUBH_U16_I]], i64 0
+  // LLVM: ret i16 [[TMP2]]
+  return vqsubh_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubs_u32(
+// CIR-LABEL: @vqsubs_u32(
+uint32_t test_vqsubs_u32(uint32_t a, uint32_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!u32i, !u32i) -> !u32i
+
+  // LLVM-SAME: i32 {{.*}} [[A:%.*]], i32 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBS_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uqsub.i32(i32 [[A]], i32 [[B]])
+  // LLVM: ret i32 [[VQSUBS_U32_I]]
+  return vqsubs_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubd_u64(
+// CIR-LABEL: @vqsubd_u64(
+uint64_t test_vqsubd_u64(uint64_t a, uint64_t b) {
+  // CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!u64i, !u64i) -> !u64i
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]])
+  // LLVM: [[VQSUBD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uqsub.i64(i64 [[A]], i64 [[B]])
+  // LLVM: ret i64 [[VQSUBD_U64_I]]
+  return vqsubd_u64(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.5.4.  Vector saturating subtract
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#saturating-subtract
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vqsub_s8(
+// CIR-LABEL: @vqsub_s8(
+int8x8_t test_vqsub_s8(int8x8_t a, int8x8_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<8 x !s8i>, !cir.vector<8 x !s8i>) -> !cir.vector<8 x !s8i>
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqsub.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[VQSUB_V_I]]
+  return vqsub_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_s16(
+// CIR-LABEL: @vqsub_s16(
+int16x4_t test_vqsub_s16(int16x4_t a, int16x4_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<4 x !s16i>, !cir.vector<4 x !s16i>) -> !cir.vector<4 x !s16i>
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqsub.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[VQSUB_V_I]]
+  return vqsub_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_s32(
+// CIR-LABEL: @vqsub_s32(
+int32x2_t test_vqsub_s32(int32x2_t a, int32x2_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<2 x !s32i>, !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqsub.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[VQSUB_V_I]]
+  return vqsub_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_s64(
+// CIR-LABEL: @vqsub_s64(
+int64x1_t test_vqsub_s64(int64x1_t a, int64x1_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<1 x !s64i>, !cir.vector<1 x !s64i>) -> !cir.vector<1 x !s64i>
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]], <1 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.sqsub.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[VQSUB_V_I]]
+  return vqsub_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_u8(
+// CIR-LABEL: @vqsub_u8(
+uint8x8_t test_vqsub_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>) -> !cir.vector<8 x !u8i>
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]], <8 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqsub.v8i8(<8 x i8> [[A]], <8 x i8> [[B]])
+// LLVM: ret <8 x i8> [[VQSUB_V_I]]
+  return vqsub_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_u16(
+// CIR-LABEL: @vqsub_u16(
+uint16x4_t test_vqsub_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<4 x !u16i>, !cir.vector<4 x !u16i>) -> !cir.vector<4 x !u16i>
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]], <4 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqsub.v4i16(<4 x i16> [[A]], <4 x i16> [[B]])
+// LLVM: ret <4 x i16> [[VQSUB_V_I]]
+  return vqsub_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_u32(
+// CIR-LABEL: @vqsub_u32(
+uint32x2_t test_vqsub_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<2 x !u32i>, !cir.vector<2 x !u32i>) -> !cir.vector<2 x !u32i>
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]], <2 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <2 x i32> @llvm.aarch64.neon.uqsub.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+// LLVM: ret <2 x i32> [[VQSUB_V_I]]
+  return vqsub_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsub_u64(
+// CIR-LABEL: @vqsub_u64(
+uint64x1_t test_vqsub_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<1 x !u64i>, !cir.vector<1 x !u64i>) -> !cir.vector<1 x !u64i>
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]], <1 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUB_V_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.uqsub.v1i64(<1 x i64> [[A]], <1 x i64> [[B]])
+// LLVM: ret <1 x i64> [[VQSUB_V_I]]
+  return vqsub_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_s8(
+// CIR-LABEL: @vqsubq_s8(
+int8x16_t test_vqsubq_s8(int8x16_t a, int8x16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<16 x !s8i>, !cir.vector<16 x !s8i>) -> !cir.vector<16 x !s8i>
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.sqsub.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[VQSUBQ_V_I]]
+  return vqsubq_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_s16(
+// CIR-LABEL: @vqsubq_s16(
+int16x8_t test_vqsubq_s16(int16x8_t a, int16x8_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.sqsub.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[VQSUBQ_V_I]]
+  return vqsubq_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_s32(
+// CIR-LABEL: @vqsubq_s32(
+int32x4_t test_vqsubq_s32(int32x4_t a, int32x4_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqsub.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[VQSUBQ_V_I]]
+  return vqsubq_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_s64(
+// CIR-LABEL: @vqsubq_s64(
+int64x2_t test_vqsubq_s64(int64x2_t a, int64x2_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.sqsub" {{%.*}}, {{%.*}} : (!cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>) -> !cir.vector<2 x !s64i>
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqsub.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[VQSUBQ_V_I]]
+  return vqsubq_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_u8(
+// CIR-LABEL: @vqsubq_u8(
+uint8x16_t test_vqsubq_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>) -> !cir.vector<16 x !u8i>
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]], <16 x i8> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.uqsub.v16i8(<16 x i8> [[A]], <16 x i8> [[B]])
+// LLVM: ret <16 x i8> [[VQSUBQ_V_I]]
+  return vqsubq_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_u16(
+// CIR-LABEL: @vqsubq_u16(
+uint16x8_t test_vqsubq_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>) -> !cir.vector<8 x !u16i>
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]], <8 x i16> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <8 x i16> @llvm.aarch64.neon.uqsub.v8i16(<8 x i16> [[A]], <8 x i16> [[B]])
+// LLVM: ret <8 x i16> [[VQSUBQ_V_I]]
+  return vqsubq_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_u32(
+// CIR-LABEL: @vqsubq_u32(
+uint32x4_t test_vqsubq_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]], <4 x i32> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.uqsub.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
+// LLVM: ret <4 x i32> [[VQSUBQ_V_I]]
+  return vqsubq_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vqsubq_u64(
+// CIR-LABEL: @vqsubq_u64(
+uint64x2_t test_vqsubq_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.uqsub" {{%.*}}, {{%.*}} : (!cir.vector<2 x !u64i>, !cir.vector<2 x !u64i>) -> !cir.vector<2 x !u64i>
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]], <2 x i64> {{.*}} [[B:%.*]])
+// LLVM: [[VQSUBQ_V_I:%.*]] = call <2 x i64> @llvm.aarch64.neon.uqsub.v2i64(<2 x i64> [[A]], <2 x i64> [[B]])
+// LLVM: ret <2 x i64> [[VQSUBQ_V_I]]
+  return vqsubq_u64(a, b);
 }

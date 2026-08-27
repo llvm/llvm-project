@@ -258,17 +258,17 @@ public:
 
   void ClearIOHandlers();
 
-  bool EnableLog(llvm::StringRef channel,
-                 llvm::ArrayRef<const char *> categories,
-                 llvm::StringRef log_file, uint32_t log_options,
-                 size_t buffer_size, LogHandlerKind log_handler_kind,
-                 llvm::raw_ostream &error_stream);
+  llvm::Error EnableLog(llvm::StringRef channel,
+                        llvm::ArrayRef<const char *> categories,
+                        llvm::StringRef log_file, uint32_t log_options,
+                        size_t buffer_size, LogHandlerKind log_handler_kind);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
   /// Copy this debugger's file-backed log files into the given directory, for
-  /// inclusion in a diagnostics bundle. Best-effort; failures are skipped.
-  void CopyLogFilesToDirectory(const FileSpec &dir);
+  /// inclusion in a diagnostics bundle. Returns the names of the files that
+  /// were copied. Best-effort: files that cannot be copied are skipped.
+  std::vector<std::string> CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
@@ -348,7 +348,7 @@ public:
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
 
-  bool GetUseAutosuggestion() const;
+  AutosuggestionMode GetAutosuggestionMode() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
@@ -457,6 +457,10 @@ public:
 
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Whether the statusline can be drawn: show-statusline is enabled and the
+  /// output is an escape-code-capable terminal.
+  bool StatuslineSupported();
 
   /// Flush cached state (e.g. stale execution context in the statusline).
   void FlushStatusLine();
@@ -717,7 +721,6 @@ protected:
   /// @}
 
   bool IsEscapeCodeCapableTTY();
-  bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);

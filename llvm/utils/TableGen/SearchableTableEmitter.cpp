@@ -96,6 +96,8 @@ struct GenericTable {
   std::unique_ptr<SearchIndex> PrimaryKey;
   SmallVector<std::unique_ptr<SearchIndex>, 2> Indices;
 
+  bool AllowSparseTable;
+
   const GenericField *getFieldByName(StringRef Name) const {
     for (const auto &Field : Fields) {
       if (Name == Field.Name)
@@ -495,19 +497,25 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   auto emitComparator = [&](bool LHSIsKey, bool RHSIsKey) {
     for (const auto &Field : Index.Fields) {
       if (isa<StringRecTy>(Field.RecType)) {
+        std::string LHSVar = "LHS" + Field.Name + "Str";
+        std::string RHSVar = "RHS" + Field.Name + "Str";
+        std::string CmpVar = "Cmp" + Field.Name;
         if (LHSIsKey)
-          OS << "      StringRef LHSStr = LHS." << Field.Name << ";\n";
+          OS << "      StringRef " << LHSVar << " = LHS." << Field.Name
+             << ";\n";
         else
-          OS << "      StringRef LHSStr = " << Table.Name << "Strings[LHS."
-             << Field.Name << "];\n";
+          OS << "      StringRef " << LHSVar << " = " << Table.Name
+             << "Strings[LHS." << Field.Name << "];\n";
         if (RHSIsKey)
-          OS << "      StringRef RHSStr = RHS." << Field.Name << ";\n";
+          OS << "      StringRef " << RHSVar << " = RHS." << Field.Name
+             << ";\n";
         else
-          OS << "      StringRef RHSStr = " << Table.Name << "Strings[RHS."
-             << Field.Name << "];\n";
-        OS << "      int Cmp" << Field.Name << " = LHSStr.compare(RHSStr);\n";
-        OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
-        OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
+          OS << "      StringRef " << RHSVar << " = " << Table.Name
+             << "Strings[RHS." << Field.Name << "];\n";
+        OS << "      int " << CmpVar << " = " << LHSVar << ".compare(" << RHSVar
+           << ");\n";
+        OS << "      if (" << CmpVar << " < 0) return true;\n";
+        OS << "      if (" << CmpVar << " > 0) return false;\n";
       } else if (Field.Enum) {
         // Explicitly cast to unsigned, because the signedness of enums is
         // compiler-dependent.
@@ -610,25 +618,57 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
 
   StringToOffsetTable StrTab;
 
+  SmallVector<const Record *, 0> SparseEntries;
+  ArrayRef<const Record *> Entries;
+  unsigned DirectLookupSlots = 0;
+  if (Table.AllowSparseTable) {
+    const auto *KeyBits = cast<BitsRecTy>(Table.PrimaryKey->Fields[0].RecType);
+    DirectLookupSlots = 1u << KeyBits->getNumBits();
+    SparseEntries.resize(DirectLookupSlots);
+    StringRef KeyFieldName = Table.PrimaryKey->Fields[0].Name;
+    for (const Record *Entry : Table.Entries) {
+      uint64_t Key = static_cast<uint64_t>(getInt(Entry, KeyFieldName));
+      assert(Key < DirectLookupSlots && "key exceeds table size");
+      if (SparseEntries[Key])
+        PrintFatalError(Entry, Twine("In table '") + Table.Name +
+                                   "', duplicate primary key value " +
+                                   Twine(Key));
+      SparseEntries[Key] = Entry;
+    }
+    Entries = SparseEntries;
+  } else {
+    Entries = Table.Entries;
+  }
+
   // The primary data table contains all the fields defined for this map.
   OS << "constexpr " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
-  for (const auto &[Idx, Entry] : enumerate(Table.Entries)) {
+  for (const auto &[Idx, Entry] : enumerate(Entries)) {
     OS << "  { ";
-
     ListSeparator LS;
-    for (const auto &Field : Table.Fields) {
-      OS << LS;
-      const Init *Value = Entry->getValueInit(Field.Name);
-      if (const auto *SI = dyn_cast<StringInit>(Value);
-          SI && !Field.IsCode && !SI->hasCodeFormat()) {
-        OS << StrTab.GetOrAddStringOffset(Value->getAsUnquotedString())
-           << " /* " << primaryRepresentation(Table.Locs[0], Field, Value)
-           << " */";
-      } else {
-        OS << primaryRepresentation(Table.Locs[0], Field, Value);
+    if (Entry) {
+      for (const auto &Field : Table.Fields) {
+        OS << LS;
+        const Init *Value = Entry->getValueInit(Field.Name);
+        if (const auto *SI = dyn_cast<StringInit>(Value);
+            SI && !Field.IsCode && !SI->hasCodeFormat()) {
+          OS << StrTab.GetOrAddStringOffset(Value->getAsUnquotedString())
+             << " /* " << primaryRepresentation(Table.Locs[0], Field, Value)
+             << " */";
+        } else {
+          OS << primaryRepresentation(Table.Locs[0], Field, Value);
+        }
+      }
+    } else if (Table.AllowSparseTable) {
+      // For empty rows emit a sentinel value as a key, so we can return null
+      // during lookup. Value is constructed such that LookupKey != KeyField.
+      for (const auto &Field : Table.Fields) {
+        OS << LS;
+        if (Field.Name == Table.PrimaryKey->Fields[0].Name)
+          OS << "0x" << (Idx == 0 ? 1 : 0);
+        else
+          OS << "{}";
       }
     }
-
     OS << " }, // " << Idx << "\n";
   }
   OS << " };\n";
@@ -637,11 +677,24 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
   // The lookup function might add more strings.
   std::string LookupFunction;
   raw_string_ostream LFOS(LookupFunction);
-  // Indexes are sorted "{ Thing, PrimaryIdx }" arrays, so that a binary
-  // search can be performed by "Thing".
-  if (Table.PrimaryKey)
+  if (Table.AllowSparseTable) {
+    LFOS << "\n";
+    emitLookupDeclaration(Table, *Table.PrimaryKey, LFOS);
+    LFOS << " {\n";
+    const GenericField &Field = Table.PrimaryKey->Fields[0];
+    LFOS << "  if (" << Field.Name << " >= " << DirectLookupSlots << ")\n";
+    LFOS << "    return nullptr;\n";
+    LFOS << "  const auto *Entry = &" << Table.Name << "[" << Field.Name
+         << "];\n";
+    LFOS << "  return Entry->" << Field.Name << " == " << Field.Name
+         << " ? Entry : nullptr;\n";
+    LFOS << "}\n";
+  } else if (Table.PrimaryKey) {
+    // Indexes are sorted "{ Thing, PrimaryIdx }" arrays, so that a binary
+    // search can be performed by "Thing".
     emitLookupFunction(Table, *Table.PrimaryKey, /*IsPrimary=*/true, StrTab,
                        LFOS);
+  }
   for (const auto &Index : Table.Indices)
     emitLookupFunction(Table, *Index, /*IsPrimary=*/false, StrTab, LFOS);
 
@@ -794,6 +847,34 @@ void SearchableTableEmitter::collectTableEntries(
   });
 }
 
+static bool canUseSparseTable(const Record *TableRec,
+                              const std::unique_ptr<GenericTable> &Table) {
+  if (TableRec->getValueAsBit("DisallowSparseTable"))
+    return false;
+
+  // Sparse tables are only supported with a single primary key.
+  if (Table->PrimaryKey->Fields.size() != 1)
+    return false;
+
+  const auto *KeyBits =
+      dyn_cast<BitsRecTy>(Table->PrimaryKey->Fields[0].RecType);
+
+  // Sparse tables only support `bits` key.
+  if (!KeyBits)
+    return false;
+
+  // Sparse tables are not compatible with PrimaryKeyReturnRange.
+  if (TableRec->getValueAsBit("PrimaryKeyReturnRange"))
+    return false;
+
+  // Only support tables up to 4k in size.
+  constexpr unsigned MaxKeyBits = 12;
+  if (KeyBits->getNumBits() > MaxKeyBits)
+    return false;
+
+  return true;
+}
+
 void SearchableTableEmitter::run(raw_ostream &OS) {
   // Emit tables in a deterministic order to avoid needless rebuilds.
   SmallVector<std::unique_ptr<GenericTable>, 4> Tables;
@@ -897,6 +978,8 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                         [&](const Record *LHS, const Record *RHS) {
                           return compareBy(LHS, RHS, *Table->PrimaryKey);
                         });
+
+      Table->AllowSparseTable = canUseSparseTable(TableRec, Table);
     }
 
     TableMap.try_emplace(TableRec, Table.get());
@@ -918,6 +1001,9 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
         Table, IndexRec->getValue("Key"), IndexRec->getName(),
         IndexRec->getValueAsListOfStrings("Key"),
         IndexRec->getValueAsBit("EarlyOut"), /*ReturnRange*/ false));
+
+    // Sparse tables with secondary search indices are not supported.
+    Table.AllowSparseTable = false;
   }
 
   // Translate legacy tables.

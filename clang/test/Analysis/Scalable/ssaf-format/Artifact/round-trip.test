@@ -38,3 +38,38 @@
 // RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc.json
 // RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-lu-empty.json -o %t/rt-lu-empty-enc-explicit.json
 // RUN: diff %S/Inputs/rt-lu-empty.json %t/rt-lu-empty-enc-explicit.json
+
+// StaticLibrary appears only in the ArtifactEncoding variant (the archiver
+// tool and the linker pass member payloads through encoded), so it
+// round-trips only via --encoding here.
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-static-library-empty.json -o %t/rt-static-library-empty-enc.json
+// RUN: diff %S/Inputs/rt-static-library-empty.json %t/rt-static-library-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-static-library-empty.json -o %t/rt-static-library-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-static-library-empty.json %t/rt-static-library-empty-enc-explicit.json
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-static-library-empty.json -o %t/rt-multi-arch-static-library-empty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-static-library-empty.json %t/rt-multi-arch-static-library-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-static-library-empty.json -o %t/rt-multi-arch-static-library-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-static-library-empty.json %t/rt-multi-arch-static-library-empty-enc-explicit.json
+
+// Non-empty MultiArchStaticLibrary routed through the auto-mode --encoding
+// dispatcher exercises both arch-slice writers and the inner TUSummaryEncoding
+// path inside the StaticLibrary member.
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-static-library-nonempty.json -o %t/rt-multi-arch-static-library-nonempty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-static-library-nonempty.json %t/rt-multi-arch-static-library-nonempty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-static-library-nonempty.json -o %t/rt-multi-arch-static-library-nonempty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-static-library-nonempty.json %t/rt-multi-arch-static-library-nonempty-enc-explicit.json
+
+// MultiArchSharedLibrary, like its sibling, appears only in the
+// ArtifactEncoding variant; round-trip both empty and non-empty fixtures.
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-shared-library-empty.json -o %t/rt-multi-arch-shared-library-empty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-empty.json %t/rt-multi-arch-shared-library-empty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-shared-library-empty.json -o %t/rt-multi-arch-shared-library-empty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-empty.json %t/rt-multi-arch-shared-library-empty-enc-explicit.json
+
+// RUN: clang-ssaf-format --encoding %S/Inputs/rt-multi-arch-shared-library-nonempty.json -o %t/rt-multi-arch-shared-library-nonempty-enc.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-nonempty.json %t/rt-multi-arch-shared-library-nonempty-enc.json
+// RUN: clang-ssaf-format --type auto --encoding %S/Inputs/rt-multi-arch-shared-library-nonempty.json -o %t/rt-multi-arch-shared-library-nonempty-enc-explicit.json
+// RUN: diff %S/Inputs/rt-multi-arch-shared-library-nonempty.json %t/rt-multi-arch-shared-library-nonempty-enc-explicit.json

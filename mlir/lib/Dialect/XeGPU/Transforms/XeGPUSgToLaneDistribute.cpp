@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
@@ -357,6 +358,11 @@ struct SgToLaneElementWise : public ConversionPattern {
 
 /// Distributes a subgroup-level arith ConstantOp to lane-level arith
 /// ConstantOp.
+///
+/// Splat constants are rebuilt with the lane-local vector type. Non-splat
+/// constants are distributed by extracting each lane_data-sized block from
+/// the full constant and inserting it at the correct position in the
+/// distributed vector using insert_strided_slice.
 struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -367,11 +373,11 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
     if (!resultType)
       return failure();
 
-    // Only handle dense vector constants
-    auto dense = dyn_cast<SplatElementsAttr>(op.getValue());
-    if (!dense)
+    // Only handle dense vector constants.
+    auto denseAttr = dyn_cast<DenseElementsAttr>(op.getValue());
+    if (!denseAttr)
       return rewriter.notifyMatchFailure(
-          op, "only dense splat vector constants are supported");
+          op, "only dense vector constants are supported");
 
     xegpu::DistributeLayoutAttr layout =
         xegpu::getTemporaryLayout(llvm::cast<OpResult>(op.getResult()));
@@ -387,12 +393,83 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
           op, "unable to compute lane vector type from the layout");
 
     VectorType newResultType = laneShapeOrFailure.value();
-    auto sclarValue = dense.getSplatValue<Attribute>();
-    auto newDenseAttr = DenseElementsAttr::get(newResultType, sclarValue);
+    Location loc = op.getLoc();
 
-    auto newOp = arith::ConstantOp::create(rewriter, op.getLoc(), newResultType,
-                                           newDenseAttr);
-    rewriter.replaceOp(op, newOp.getResult());
+    // Splat constants: every lane gets the same value, so just rebuild the
+    // splat with the distributed type.
+    if (denseAttr.isSplat()) {
+      auto scalarValue = denseAttr.getSplatValue<Attribute>();
+      auto newDenseAttr = DenseElementsAttr::get(newResultType, scalarValue);
+      auto newOp =
+          arith::ConstantOp::create(rewriter, loc, newResultType, newDenseAttr);
+      rewriter.replaceOp(op, newOp.getResult());
+      return success();
+    }
+
+    // Non-splat constants: each lane extracts the elements it owns from the
+    // full constant using the distributed coordinates from the layout.
+    auto fullConst =
+        arith::ConstantOp::create(rewriter, loc, resultType, denseAttr);
+
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto maybeCoordsVec = layout.computeDistributedCoords(
+        rewriter, loc, laneId, resultType.getShape());
+    if (failed(maybeCoordsVec))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute distributed coordinates from layout");
+
+    SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
+    SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+    ArrayRef<int64_t> distShape = newResultType.getShape();
+    int64_t rank = newResultType.getRank();
+
+    // Each lane owns one lane_data-sized block per distribution unit.
+    // computeDistributedCoords returns those block starts in row-major order
+    // over the block grid (distShape / laneData).
+    SmallVector<int64_t> blockGridShape(rank);
+    for (int64_t d = 0; d < rank; d++)
+      blockGridShape[d] = distShape[d] / laneData[d];
+    SmallVector<int64_t> blockGridStrides = computeStrides(blockGridShape);
+
+    auto blockType = VectorType::get(laneData, newResultType.getElementType());
+    SmallVector<int64_t> unitTile(rank, 1);
+    SmallVector<int64_t> strides(rank, 1);
+
+    Value result = arith::ConstantOp::create(
+        rewriter, loc, newResultType, rewriter.getZeroAttr(newResultType));
+
+    for (auto [blockIdx, blockStart] : llvm::enumerate(coordsVec)) {
+      // Gather the block's elements from the full constant. The block start is
+      // lane-dynamic, so extract element-by-element (row-major over lane_data)
+      // instead.
+      SmallVector<Value> blockElems;
+      for (SmallVector<int64_t> off :
+           StaticTileOffsetRange(laneData, unitTile)) {
+        SmallVector<OpFoldResult> pos(rank);
+        for (int64_t d = 0; d < rank; d++)
+          pos[d] = getAsOpFoldResult(arith::AddIOp::create(
+              rewriter, loc, blockStart[d],
+              arith::ConstantIndexOp::create(rewriter, loc, off[d])));
+        blockElems.push_back(vector::ExtractOp::create(
+            rewriter, loc, fullConst.getResult(), pos));
+      }
+
+      // Rebuild the block keeping its lane_data shape, then place it with
+      // insert_strided_slice so the block keeps its orientation in the
+      // distributed vector (e.g. a [2, 1] block stays a vertical 2x1 slice).
+      Value block =
+          vector::FromElementsOp::create(rewriter, loc, blockType, blockElems);
+      SmallVector<int64_t> blockGridPos =
+          delinearize(blockIdx, blockGridStrides);
+      SmallVector<int64_t> offsets(rank);
+      for (int64_t d = 0; d < rank; d++)
+        offsets[d] = blockGridPos[d] * laneData[d];
+      result = vector::InsertStridedSliceOp::create(rewriter, loc, block,
+                                                    result, offsets, strides);
+    }
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -1588,6 +1665,102 @@ shuffleDataAsLaneLayoutChange(ConversionPatternRewriter &rewriter, Location loc,
   return res;
 }
 
+/// Repacks `src`'s `lane_data` along `repackDim` between round-robin and
+/// contiguous form with an `xegpu.lane_shuffle`, which moves each lane's run of
+/// `k` elements across lanes while preserving the element type.
+///
+/// `inputData`/`targetData` are the `repackDim` `lane_data` of the input and
+/// target layouts; exactly one must be 1 (round-robin) and the other `k`
+/// (contiguous). Returns failure if that does not hold.
+static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
+                                       Location loc, Value src,
+                                       int64_t repackDim, int64_t inputData,
+                                       int64_t targetData) {
+  auto srcTy = dyn_cast<VectorType>(src.getType());
+  if (!srcTy)
+    return failure();
+  int64_t rank = srcTy.getRank();
+  Type elemTy = srcTy.getElementType();
+  int64_t k = srcTy.getShape()[repackDim];
+
+  bool roundRobinToContig = inputData == 1 && targetData == k;
+  bool contigToRoundRobin = inputData == k && targetData == 1;
+  if (!roundRobinToContig && !contigToRoundRobin)
+    return failure();
+
+  // Round-robin -> contiguous gathers a lane's strided elements into
+  // consecutive positions (pack); the reverse scatters them back (unpack).
+  xegpu::LaneShuffleMode mode = roundRobinToContig
+                                    ? xegpu::LaneShuffleMode::Pack
+                                    : xegpu::LaneShuffleMode::Unpack;
+  VectorType runTy = VectorType::get({k}, elemTy);
+
+  // Common case: the lane fragment is a single run (every dimension other than
+  // `repackDim` is unit), so collapse it to 1D, shuffle once, and restore it.
+  if (srcTy.getNumElements() == k) {
+    if (rank == 1)
+      return Value(
+          xegpu::LaneShuffleOp::create(rewriter, loc, runTy, src, mode));
+    Value flat = vector::ShapeCastOp::create(rewriter, loc, runTy, src);
+    Value shuffled =
+        xegpu::LaneShuffleOp::create(rewriter, loc, runTy, flat, mode);
+    return Value(vector::ShapeCastOp::create(rewriter, loc, srcTy, shuffled));
+  }
+
+  // When `repackDim` is innermost each run is a contiguous sub-vector, so it is
+  // extracted and re-inserted as a whole.
+  if (repackDim == rank - 1) {
+    SmallVector<int64_t> outerShape(srcTy.getShape().drop_back());
+    int64_t numRuns = computeProduct(outerShape);
+    SmallVector<int64_t> outerStrides = computeStrides(outerShape);
+    Value result = arith::ConstantOp::create(rewriter, loc, srcTy,
+                                             rewriter.getZeroAttr(srcTy));
+    for (int64_t i = 0; i < numRuns; ++i) {
+      SmallVector<int64_t> pos = delinearize(i, outerStrides);
+      Value run = vector::ExtractOp::create(rewriter, loc, src, pos);
+      Value shuffled =
+          xegpu::LaneShuffleOp::create(rewriter, loc, runTy, run, mode);
+      result = vector::InsertOp::create(rewriter, loc, shuffled, result, pos);
+    }
+    return result;
+  }
+
+  // Otherwise each run is strided along `repackDim`: extract the `k`-long slice
+  // (a sub-vector that is unit along every other dim), flatten it to 1D,
+  // shuffle, and insert it back.
+  SmallVector<int64_t> keptShape;
+  SmallVector<int64_t> keptDims;
+  for (int64_t d = 0; d < rank; ++d)
+    if (d != repackDim) {
+      keptShape.push_back(srcTy.getShape()[d]);
+      keptDims.push_back(d);
+    }
+  int64_t numRuns = computeProduct(keptShape);
+  SmallVector<int64_t> keptStrides = computeStrides(keptShape);
+  SmallVector<int64_t> sliceSizes(rank, 1);
+  sliceSizes[repackDim] = k;
+  SmallVector<int64_t> sliceStrides(rank, 1);
+  VectorType sliceTy = VectorType::get(sliceSizes, elemTy);
+  Value result = arith::ConstantOp::create(rewriter, loc, srcTy,
+                                           rewriter.getZeroAttr(srcTy));
+  for (int64_t i = 0; i < numRuns; ++i) {
+    SmallVector<int64_t> keptPos = delinearize(i, keptStrides);
+    SmallVector<int64_t> offsets(rank, 0);
+    for (auto [dim, coord] : llvm::zip_equal(keptDims, keptPos))
+      offsets[dim] = coord;
+    Value slice = vector::ExtractStridedSliceOp::create(
+        rewriter, loc, src, offsets, sliceSizes, sliceStrides);
+    Value run = vector::ShapeCastOp::create(rewriter, loc, runTy, slice);
+    Value repacked =
+        xegpu::LaneShuffleOp::create(rewriter, loc, runTy, run, mode);
+    Value repackedSlice =
+        vector::ShapeCastOp::create(rewriter, loc, sliceTy, repacked);
+    result = vector::InsertStridedSliceOp::create(
+        rewriter, loc, repackedSlice, result, offsets, sliceStrides);
+  }
+  return result;
+}
+
 /// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
 struct SgToLaneConvertLayout
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
@@ -1596,7 +1769,7 @@ struct SgToLaneConvertLayout
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto inputLayout = op.getInputLayoutAttr();
+    auto inputLayout = op.getEffectiveInputLayout();
     auto targetLayout = op.getTargetLayoutAttr();
     Type valType = op.getResult().getType();
 
@@ -1637,6 +1810,51 @@ struct SgToLaneConvertLayout
         FailureOr<Value> res = shuffleDataAsLaneLayoutChange(
             rewriter, op.getLoc(), adaptor.getSource(), laneLayout[0],
             targetLaneLayout[0]);
+        if (succeeded(res)) {
+          rewriter.replaceOp(op, *res);
+          return success();
+        }
+      }
+    }
+
+    // Handle a pure `lane_data` repack: `lane_layout` and `order` are unchanged
+    // and exactly one dimension's `lane_data` switches between round-robin
+    // (lane_data 1) and contiguous (lane_data == run length). The elements per
+    // lane are unchanged, but their assignment to lanes is not, so the data is
+    // moved across lanes with `xegpu.lane_shuffle`. The changed dimension must
+    // be one of the two innermost ones, since sg-to-lane distribution is 2D.
+    if (inputLayout.getEffectiveOrderAsInt() ==
+            targetLayout.getEffectiveOrderAsInt() &&
+        inputLayout.getEffectiveLaneLayoutAsInt() ==
+            targetLayout.getEffectiveLaneLayoutAsInt()) {
+      auto laneLayout = inputLayout.getEffectiveLaneLayoutAsInt();
+      auto laneData = inputLayout.getEffectiveLaneDataAsInt();
+      auto targetLaneData = targetLayout.getEffectiveLaneDataAsInt();
+      // Find the single dimension whose lane_data changed; bail out if more
+      // than one differs.
+      int64_t rank = laneData.size();
+      int64_t repackDim = -1;
+      bool multipleChanged = false;
+      for (int64_t d = 0; d < rank; ++d)
+        if (laneData[d] != targetLaneData[d]) {
+          if (repackDim != -1)
+            multipleChanged = true;
+          repackDim = d;
+        }
+
+      // `repackDim` must be the distributed dim (lane_layout != 1) and the
+      // other innermost dim non-distributed (lane_layout == 1).
+      int64_t otherDim = repackDim == rank - 1 ? rank - 2 : rank - 1;
+      bool laneLayoutOk = repackDim != -1 && laneLayout[repackDim] != 1 &&
+                          (rank < 2 || laneLayout[otherDim] == 1);
+
+      // Exactly one dimension must change, and it must be one of the two
+      // innermost (>= rank - 2).
+      if (repackDim != -1 && repackDim >= rank - 2 && !multipleChanged &&
+          laneLayoutOk) {
+        FailureOr<Value> res = repackLaneData(
+            rewriter, op.getLoc(), adaptor.getSource(), repackDim,
+            laneData[repackDim], targetLaneData[repackDim]);
         if (succeeded(res)) {
           rewriter.replaceOp(op, *res);
           return success();

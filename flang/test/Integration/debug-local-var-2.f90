@@ -1,5 +1,6 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-directives-only %s -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -37,7 +38,7 @@
 ! BOTH-LABEL: }
 
 program mn
-! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "MN", {{.*}})
+! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "mn", {{.*}})
 
 ! BOTH-DAG: ![[TYI32:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer(kind=8)", size: 64, encoding: DW_ATE_signed)

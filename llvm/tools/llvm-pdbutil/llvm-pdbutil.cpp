@@ -81,6 +81,7 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -663,7 +664,12 @@ cl::opt<std::string>
 cl::opt<std::string> InputFilename(cl::Positional,
                                    cl::desc("<input YAML file>"), cl::Required,
                                    cl::sub(YamlToPdbSubcommand));
-}
+
+cl::opt<unsigned>
+    DocNum("docnum", cl::init(1),
+           cl::desc("Read specified document from input (default = 1)"),
+           cl::sub(YamlToPdbSubcommand));
+} // namespace yaml2pdb
 
 namespace pdb2yaml {
 cl::opt<bool> All("all",
@@ -728,6 +734,10 @@ cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump section headers."),
                                  cl::cat(FileOptions),
                                  cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpSectionContribs("section-contribs",
+                                  cl::desc("dump section contributions"),
+                                  cl::cat(FileOptions),
+                                  cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -793,7 +803,7 @@ cl::opt<bool> DXContainer("dxcontainer",
 
 static ExitOnError ExitOnErr;
 
-static void yamlToPdb(StringRef Path) {
+static void yamlToPdb(StringRef Path, unsigned DocNum) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
@@ -803,9 +813,19 @@ static void yamlToPdb(StringRef Path) {
     ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
+  if (DocNum == 0)
+    ExitOnErr(createStringError(
+        "document numbers are 1-based, there is no 0th document"));
+
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
   llvm::yaml::Input In(Buffer->getBuffer());
+  for (unsigned CurrentDoc = 1; CurrentDoc < DocNum; ++CurrentDoc) {
+    if (!In.nextDocument())
+      ExitOnErr(createFileError(
+          Path, createStringErrorV("cannot find the {0}{1} document", DocNum,
+                                   getOrdinalSuffix(DocNum))));
+  }
   pdb::yaml::PdbObject YamlObj(Allocator);
   In >> YamlObj;
 
@@ -902,6 +922,30 @@ static void yamlToPdb(StringRef Path) {
         Allocator, MI.Subsections, Strings));
     for (auto &SS : CodeViewSubsections) {
       ModiBuilder.addDebugSubsection(SS);
+    }
+  }
+
+  if (Dbi.SectionContribs) {
+    // DbiStreamBuilder only supports writing Ver60 section contribs.
+    if (Dbi.SectionContribs->Version !=
+        PdbRaw_DbiSecContribVer::DbiSecContribVer60)
+      ExitOnErr(createStringError(
+          "Only DBI section contrib Version Ver60 is supported"));
+
+    for (const auto &Contrib : Dbi.SectionContribs->Items) {
+      SectionContrib SC;
+      SC.ISect = Contrib.ISect;
+      SC.Padding[0] = 0;
+      SC.Padding[1] = 0;
+      SC.Off = Contrib.Off;
+      SC.Size = Contrib.Size;
+      SC.Characteristics = Contrib.Characteristics;
+      SC.Imod = Contrib.Imod;
+      SC.Padding2[0] = 0;
+      SC.Padding2[1] = 0;
+      SC.DataCrc = Contrib.DataCrc;
+      SC.RelocCrc = Contrib.RelocCrc;
+      DbiBuilder.addSectionContrib(SC);
     }
   }
 
@@ -1624,6 +1668,7 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DumpModuleFiles = true;
       opts::pdb2yaml::DumpModuleSyms = true;
       opts::pdb2yaml::DumpSectionHeaders = true;
+      opts::pdb2yaml::DumpSectionContribs = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
     }
@@ -1632,10 +1677,8 @@ int main(int Argc, const char **Argv) {
     if (opts::pdb2yaml::DumpModuleSyms || opts::pdb2yaml::DumpModuleFiles)
       opts::pdb2yaml::DumpModules = true;
 
-    if (opts::pdb2yaml::DumpModules)
-      opts::pdb2yaml::DbiStream = true;
-
-    if (opts::pdb2yaml::DumpSectionHeaders)
+    if (opts::pdb2yaml::DumpModules || opts::pdb2yaml::DumpSectionHeaders ||
+        opts::pdb2yaml::DumpSectionContribs)
       opts::pdb2yaml::DbiStream = true;
   }
 
@@ -1686,7 +1729,7 @@ int main(int Argc, const char **Argv) {
       sys::path::replace_extension(OutputFilename, ".pdb");
       opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename);
     }
-    yamlToPdb(opts::yaml2pdb::InputFilename);
+    yamlToPdb(opts::yaml2pdb::InputFilename, opts::yaml2pdb::DocNum);
   } else if (opts::DiaDumpSubcommand) {
     llvm::for_each(opts::diadump::InputFilenames, dumpDia);
   } else if (opts::PrettySubcommand) {

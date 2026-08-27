@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -491,6 +491,12 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Compute size.
   size_t oldSize = size;
   finalizeContents();
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (size < oldSize)
+    size = oldSize;
+
   return size != oldSize;
 }
 
@@ -601,10 +607,6 @@ static uint64_t getMipsPageCount(uint64_t size) {
 MipsGotSection::MipsGotSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got", SHT_PROGBITS,
                        SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
-
-void MipsGotSection::addConstant(const Relocation &r) {
-  relocations.push_back(r);
-}
 
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
@@ -901,33 +903,35 @@ void MipsGotSection::build() {
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
-      uint64_t offset = p.second * ctx.arg.wordsize;
+      uint64_t off = p.second * ctx.arg.wordsize;
       if (s == nullptr) {
         if (ctx.arg.shared)
-          ctx.in.relaDyn->addReloc(
-              {ctx.target->tlsModuleIndexRel, this, offset});
+          ctx.in.relaDyn->addReloc({ctx.target->tlsModuleIndexRel, this, off});
         else
           addConstant(
-              {R_ADDEND, ctx.target->symbolicRel, offset, 1, ctx.dummySym});
+              {R_ADDEND, ctx.target->symbolicRel, off, 1, ctx.dummySym});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
-        if (!s->isPreemptible && !ctx.arg.shared)
-          // Write one to the GOT slot.
-          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
-        else
-          ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
-                                         offset, *s);
-        offset += ctx.arg.wordsize;
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
-        if (s->isPreemptible)
+        uint64_t offsetOff = off + ctx.arg.wordsize;
+        if (s->isPreemptible) {
+          ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel, *this,
+                                         off, *s);
           ctx.in.relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
-                                         offset, *s);
-        else
-          addConstant({R_ABS, ctx.target->tlsOffsetRel, offset, 0, s});
+                                         offsetOff, *s);
+        } else {
+          if (ctx.arg.shared)
+            ctx.in.relaDyn->addReloc(
+                {ctx.target->tlsModuleIndexRel, this, off});
+          else
+            // Write one to the GOT slot.
+            addConstant({R_ADDEND, ctx.target->symbolicRel, off, 1, s});
+          addConstant({R_ABS, ctx.target->tlsOffsetRel, offsetOff, 0, s});
+        }
       }
     }
 
@@ -1442,7 +1446,7 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return inputSec->getVA(offsetInSec);
+  return inputSec->getRelocVA(offsetInSec);
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
@@ -1523,9 +1527,14 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->link = 0;
 
-  if (ctx.in.relaPlt.get() == this && ctx.in.gotPlt->getParent()) {
-    getParent()->flags |= ELF::SHF_INFO_LINK;
-    getParent()->info = ctx.in.gotPlt->getParent()->sectionIndex;
+  if (ctx.in.relaPlt.get() == this) {
+    InputSection *sec = ctx.target->usesGotPlt
+                            ? static_cast<InputSection *>(ctx.in.gotPlt.get())
+                            : static_cast<InputSection *>(ctx.in.plt.get());
+    if (sec->getParent()) {
+      getParent()->flags |= ELF::SHF_INFO_LINK;
+      getParent()->info = sec->getParent()->sectionIndex;
+    }
   }
 }
 
@@ -2005,34 +2014,57 @@ void SymbolTableBaseSection::finalizeContents() {
     s.sym->dynsymIndex = ++i;
 }
 
-// The ELF spec requires that all local symbols precede global symbols, so we
-// sort symbol entries in this function. (For .dynsym, we don't do that because
-// symbols for dynamic linking are inherently all globals.)
+// The ELF spec requires local symbols to precede globals. We additionally group
+// the locals by file, each led by its first STT_FILE.
 //
-// Aside from above, we put local symbols in groups starting with the STT_FILE
-// symbol. That is convenient for purpose of identifying where are local symbols
-// coming from.
+// From firstGlobalIdx on, a local cannot be attributed to a file (a demoted
+// global, or a thunk/errata patch added later). Move these after the per-file
+// groups, behind the synthetic STT_FILE synthSttFileSym.
 void SymbolTableBaseSection::sortSymTabSymbols() {
-  // Move all local symbols before global symbols.
-  auto e = std::stable_partition(
-      symbols.begin(), symbols.end(),
-      [](const SymbolTableEntry &s) { return s.sym->isLocal(); });
-  size_t numLocals = e - symbols.begin();
-  getParent()->info = numLocals + 1;
-
-  // We want to group the local symbols by file. For that we rebuild the local
-  // part of the symbols vector. We do not need to care about the STT_FILE
-  // symbols, they are already naturally placed first in each group. That
-  // happens because STT_FILE is always the first symbol in the object and hence
-  // precede all other local symbols we add for a file.
-  MapVector<InputFile *, SmallVector<SymbolTableEntry, 0>> arr;
-  for (const SymbolTableEntry &s : llvm::make_range(symbols.begin(), e))
-    arr[s.sym->file].push_back(s);
+  MapVector<InputFile *, SmallVector<SymbolTableEntry, 0>> fileToLocals;
+  SmallVector<SymbolTableEntry, 0> localized, globals;
+  SymbolTableEntry fileEntry{};
+  for (size_t i = 0, e = symbols.size(); i != e; ++i) {
+    const SymbolTableEntry &s = symbols[i];
+    if (!s.sym->isLocal())
+      globals.push_back(s);
+    else if (s.sym == synthSttFileSym)
+      fileEntry = s;
+    else if (synthSttFileSym && i >= firstGlobalIdx)
+      localized.push_back(s);
+    else
+      fileToLocals[s.sym->file].push_back(s);
+  }
 
   auto i = symbols.begin();
-  for (auto &p : arr)
+  for (auto &p : fileToLocals)
     for (SymbolTableEntry &entry : p.second)
       *i++ = entry;
+  if (synthSttFileSym) {
+    *i++ = fileEntry;
+    i = std::copy(localized.begin(), localized.end(), i);
+  }
+  getParent()->info = i - symbols.begin() + 1;
+  std::copy(globals.begin(), globals.end(), i);
+}
+
+// A symbol converted to STB_LOCAL cannot be reliably attributed to a file:
+// within a file's group the wrong STT_FILE would claim it, as a file may hold
+// several STT_FILE symbols (relocatable output) or none. Like GNU ld, when the
+// output has an STT_FILE, add a synthetic empty-name STT_FILE.
+void SymbolTableBaseSection::maybeAddSttFile() {
+  ArrayRef<SymbolTableEntry> syms = symbols;
+  if (llvm::none_of(syms.take_front(firstGlobalIdx),
+                    [](const SymbolTableEntry &s) { return s.sym->isFile(); }))
+    return;
+  if (llvm::any_of(
+          syms.drop_front(firstGlobalIdx),
+          [](const SymbolTableEntry &s) { return s.sym->isLocal(); })) {
+    synthSttFileSym =
+        makeDefined(ctx, ctx.internalFile, "", STB_LOCAL, STV_DEFAULT, STT_FILE,
+                    /*value=*/0, /*size=*/0, nullptr);
+    addSymbol(synthSttFileSym);
+  }
 }
 
 void SymbolTableBaseSection::addSymbol(Symbol *b) {
@@ -4086,6 +4118,32 @@ InputSection *ThunkSection::getTargetInputSection() const {
   return t->getTargetInputSection();
 }
 
+// Move forward thunks to the right half and sort them by destination VA:
+//
+// dstA, dstB, [backward A, B], [forward D, C], dstC, dstD
+//
+// A forward thunk's distance grows when a thunk after it grows. Ordering
+// forward thunks by descending destination keeps the most promotable ones
+// lowest, where their growth stays below the rest. A backward thunk's distance
+// grows only with a promotion before it, already applied by
+// ThunkSection::assignOffsets when we reach it, so backward thunks need no
+// ordering and stay ahead of forward thunks in creation order.
+void ThunkSection::sortByDestination() {
+  uint64_t base = getVA();
+  SmallVector<std::pair<uint64_t, Thunk *>, 0> keys;
+  keys.resize_for_overwrite(thunks.size());
+  for (auto [i, t] : enumerate(thunks))
+    keys[i] = {t->getDestVA(), t};
+  auto *forward =
+      std::stable_partition(keys.begin(), keys.end(),
+                            [base](const auto &k) { return k.first <= base; });
+  std::stable_sort(forward, keys.end(), [](const auto &a, const auto &b) {
+    return a.first > b.first;
+  });
+  for (auto [i, p] : llvm::enumerate(keys))
+    thunks[i] = p.second;
+}
+
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
   bool changed = false;
@@ -4520,7 +4578,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
   // section in the absence of PHDRS/SECTIONS commands.
   if (ctx.arg.zRelro &&
-      ((ctx.script->phdrsCommands.empty() && !ctx.script->hasSectionsCommand) ||
+      ((!ctx.script->hasPhdrsCommands() && !ctx.script->hasSectionsCommand) ||
        ctx.script->seenRelroEnd)) {
     ctx.in.relroPadding = std::make_unique<RelroPaddingSection>(ctx);
     add(*ctx.in.relroPadding);

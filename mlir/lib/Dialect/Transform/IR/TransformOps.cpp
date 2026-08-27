@@ -390,11 +390,6 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   // Non-isolated case: gather the ops manually because the op-list
   // GreedyPatternRewriteDriver overload only performs a single iteration and
   // does not simplify regions. CSE is driven externally to reach a fixpoint.
-  SmallVector<Operation *> ops;
-  target->walk([&](Operation *nestedOp) {
-    if (target != nestedOp)
-      ops.push_back(nestedOp);
-  });
 
   // One or two iterations should be sufficient. Stop iterating after a certain
   // threshold to make debugging easier.
@@ -402,6 +397,12 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   int64_t iteration = 0;
   bool cseChanged = false;
   do {
+    SmallVector<Operation *> ops;
+    target->walk([&](Operation *nestedOp) {
+      if (target != nestedOp)
+        ops.push_back(nestedOp);
+    });
+
     if (failed(applyOpPatternsGreedily(ops, frozenPatterns, config))) {
       return emitSilenceableFailure(target)
              << "greedy pattern application failed";
@@ -2549,8 +2550,8 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
                                        SequenceBodyBuilderFn bodyBuilder,
                                        ArrayRef<NamedAttribute> attrs,
                                        ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(symName));
+  state.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(symName);
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(FunctionType::get(builder.getContext(),
                                                      rootType, resultTypes)));

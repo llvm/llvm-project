@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -147,9 +155,9 @@ if(CLANG_BUILT_STANDALONE)
 
       get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
-      # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+      # On Win32 hosts, provide an option to specify the path to the Unix tools.
       if( WIN32 AND NOT CYGWIN )
-        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to Unix tools for Windows")
       endif()
     else()
       set(LLVM_INCLUDE_TESTS OFF)
@@ -552,7 +560,12 @@ add_subdirectory(tools)
 add_subdirectory(runtime)
 
 option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
-add_subdirectory(examples)
+option(CLANG_INCLUDE_EXAMPLES
+       "Generate build targets for the Clang examples."
+       ${LLVM_INCLUDE_EXAMPLES})
+if (CLANG_INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 if(APPLE)
   # this line is needed as a cleanup to ensure that any CMakeCaches with the old

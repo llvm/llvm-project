@@ -3,7 +3,7 @@
 // Device-side compilation must emit coverage mapping sections and call the
 // GPU profile instrumentation runtime.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1100 \
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - %s \
 // RUN:   -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s
 

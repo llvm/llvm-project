@@ -155,6 +155,14 @@ extern cl::opt<QFloatMode> QFloatModeValue;
 // Master flag to enable XQF generations
 cl::opt<bool> EnableHVXXQFloat("enable-xqf-gen", cl::init(false),
                                cl::desc("Enable XQFloat generations"));
+// Master flag to remove extraneous qf to sf/hf conversions
+cl::opt<bool>
+    EnableConversionsRemoval("enable-rem-conv", cl::init(false),
+                             cl::desc("Enable extraneous conversions removal"));
+
+// Diagnostic flags
+cl::opt<bool> PrintDebug("debug-print", cl::init(false),
+                         cl::desc("Print function mir after transformation"));
 // This vector contains the opcodes which generate qf32 from add/subtract
 static constexpr unsigned XQFPAdd32[] = {
     // vector add instructions
@@ -253,10 +261,473 @@ private:
       OriginalMI; // Hold the instructions to be deleted
 };
 
+// Print machine function
+static void debug_print([[maybe_unused]] MachineFunction &MF) {
+  dbgs() << "\n=== Printing function ===\n";
+#ifndef NDEBUG
+  for (MachineBasicBlock &MBB : MF)
+    MBB.dump();
+#endif // NDEBUG
+}
+
 // This class removes redundant vector convert instructions from qf to hf/sf.
 // Additionally, it relaces use of sf/hf registers with qf types.
 // The resulting code is complete without dangling instructions.
 // FIXME: Liveness is not preserved.
+class VectorConvertRemove {
+
+public:
+  VectorConvertRemove(MachineFunction &_MF, MachineRegisterInfo *_MRI,
+                      const HexagonSubtarget *_HST)
+      : MF(_MF), MRI(_MRI), HST(_HST) {
+    HII = HST->getInstrInfo();
+  }
+
+  void run();
+
+private:
+  MachineFunction &MF;
+  MachineRegisterInfo *MRI;
+  const HexagonSubtarget *HST;
+  const HexagonInstrInfo *HII;
+
+  enum Operation { Add16, Add32, Sub16, Sub32, Mul16, Mul32 };
+  // Helper functions
+  void handle_addsub_sf_sf(MachineInstr &, Register &, Register &, Register &,
+                           bool);
+  void handle_addsub_qf_sf(MachineInstr &, Register &, Register &, Register &,
+                           bool);
+  void handle_addsubmul_hf_hf(MachineInstr &, Register &, Register &,
+                              Register &, Operation);
+  void handle_addsubmul_qf_hf(MachineInstr &, Register &, Register &,
+                              Register &, Operation);
+  void handle_qf32_mul_sf_sf(MachineInstr &, Register &, Register &,
+                             Register &);
+  bool checkHVXUses32(MachineInstr *, MachineInstr *);
+  bool checkHVXUses16(MachineInstr *, MachineInstr *);
+  unsigned getOperation(Operation, bool, bool);
+
+  // List which holds conversion instructions
+  SmallPtrSet<MachineInstr *, 16> ConvInstrList;
+  // List which holds qf handling instructions
+  std::vector<MachineInstr *> SfHfInstrList;
+};
+
+// both : both operands are replaced
+unsigned VectorConvertRemove::getOperation(Operation Op, bool firstOpQf,
+                                           bool secOpQf) {
+  if (firstOpQf && secOpQf) {
+    switch (Op) {
+    case Add16:
+      return Hexagon::V6_vadd_qf16;
+    case Add32:
+      return Hexagon::V6_vadd_qf32;
+    case Sub16:
+      return Hexagon::V6_vsub_qf16;
+    case Sub32:
+      return Hexagon::V6_vsub_qf32;
+    case Mul16:
+      return Hexagon::V6_vmpy_qf16;
+    case Mul32:
+      return Hexagon::V6_vmpy_qf32_qf16;
+    }
+  } else if (firstOpQf) {
+    switch (Op) {
+    case Add16:
+      return Hexagon::V6_vadd_qf16_mix;
+    case Add32:
+      return Hexagon::V6_vadd_qf32_mix;
+    case Sub16:
+      return Hexagon::V6_vsub_qf16_mix;
+    case Sub32:
+      return Hexagon::V6_vsub_qf32_mix;
+    case Mul16:
+      return Hexagon::V6_vmpy_qf16_mix_hf;
+    case Mul32:
+      return Hexagon::V6_vmpy_qf32_mix_hf;
+    }
+  } else if (secOpQf) {
+    switch (Op) {
+    case Sub16:
+      return Hexagon::V6_vsub_hf_mix;
+    case Sub32:
+      return Hexagon::V6_vsub_sf_mix;
+    default:
+      break;
+    }
+  } else {
+  }
+  llvm_unreachable("Unknown opcode and operand combination!");
+}
+
+// Return false if there are multiple instructions where the qf32 is used
+// other than the instruction for which it is called
+bool VectorConvertRemove::checkHVXUses32(MachineInstr *MI,
+                                         MachineInstr *UseMI) {
+  Register convReg = MI->getOperand(0).getReg();
+  // Iterate over all uses of the Def we are analyzing
+  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
+    MachineInstr *UMI = MO.getParent();
+    if (UMI == UseMI)
+      continue;
+    // Since the convert cannot be deleted, we set the operand as NOT kill
+    MI->getOperand(1).setIsKill(false);
+    return false;
+  }
+  return true;
+}
+
+// Return false if there are multiple instructions where the qf16 is used
+// other than the instruction for which it is called
+bool VectorConvertRemove::checkHVXUses16(MachineInstr *MI,
+                                         MachineInstr *UseMI) {
+  Register convReg = MI->getOperand(0).getReg();
+  // Iterate over all uses of the Def we are analyzing
+  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
+    MachineInstr *UMI = MO.getParent();
+    if (UMI == UseMI)
+      continue;
+    // Since the convert cannot be deleted, we set the operand as NOT kill
+    MI->getOperand(1).setIsKill(false);
+    return false;
+  }
+  return true;
+}
+
+// Removes converts feeding to op(sf,sf), and replaces its sf operands with qf
+void VectorConvertRemove::handle_addsub_sf_sf(MachineInstr &MI, Register &Reg1,
+                                              Register &Reg2, Register &Dest,
+                                              bool isAdd) {
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  bool firstConv = false, secConv = false;
+  bool DefOp1_del = false, DefOp2_del = false;
+  Register Src1, Src2;
+
+  MachineInstr *DefOp1 = MRI->getVRegDef(Reg1);
+  MachineInstr *DefOp2 = MRI->getVRegDef(Reg2);
+  // check if the first operand is from a convert operation
+  if (DefOp1->getOpcode() == Hexagon::V6_vconv_sf_qf32) {
+    if (checkHVXUses32(DefOp1, &MI))
+      DefOp1_del = true;
+    Src1 = DefOp1->getOperand(1).getReg();
+    firstConv = true;
+  }
+
+  // check if the second operand is from a convert operation
+  if (DefOp2->getOpcode() == Hexagon::V6_vconv_sf_qf32) {
+    if (checkHVXUses32(DefOp2, &MI))
+      DefOp2_del = true;
+    Src2 = DefOp2->getOperand(1).getReg();
+    secConv = true;
+  }
+
+  if (firstConv && secConv) {
+    BuildMI(MBB, MI, DL,
+            HII->get(getOperation(isAdd ? Operation::Add32 : Operation::Sub32,
+                                  true, true)),
+            Dest)
+        .addReg(Src1)
+        .addReg(Src2);
+    SfHfInstrList.push_back(&MI);
+  } else if (firstConv) {
+    BuildMI(MBB, MI, DL,
+            HII->get(getOperation(isAdd ? Operation::Add32 : Operation::Sub32,
+                                  true, false)),
+            Dest)
+        .addReg(Src1)
+        .addReg(Reg2);
+    SfHfInstrList.push_back(&MI);
+  } else if (secConv) {
+    // For v79, there is no provision for 2nd op being qf for add/sub
+    if (HST->useHVXV81Ops()) {
+      if (isAdd)
+        BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vadd_qf32_mix), Dest)
+            .addReg(Src2)
+            .addReg(Reg1);
+      else
+        BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vsub_sf_mix), Dest)
+            .addReg(Reg1)
+            .addReg(Src2);
+      SfHfInstrList.push_back(&MI);
+      // For v79, there is no provision for 2nd op being qf for add/sub. Since
+      // add is commutative, the ops can be rotated.
+    } else if (HST->useHVXV79Ops()) {
+      // for vadd we interchange the ops, for vsub we ignore
+      if (isAdd) {
+        BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vadd_qf32_mix), Dest)
+            .addReg(Src2)
+            .addReg(Reg1);
+        SfHfInstrList.push_back(&MI);
+      } else // don't delete the convert instruction for vsub
+        DefOp2_del = false;
+    }
+  }
+
+  if (DefOp1_del)
+    ConvInstrList.insert(DefOp1);
+  if (DefOp2_del)
+    ConvInstrList.insert(DefOp2);
+}
+
+// Removes converts feeding to op(hf,hf), and replaces its hf operands with qf
+void VectorConvertRemove::handle_addsubmul_hf_hf(MachineInstr &MI,
+                                                 Register &Reg1, Register &Reg2,
+                                                 Register &Dest, Operation Op) {
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  bool firstConv = false, secConv = false;
+  bool DefOp1_del = false, DefOp2_del = false;
+  bool isSub = Op == Operation::Sub16;
+  Register Src1, Src2;
+
+  MachineInstr *DefOp1 = MRI->getVRegDef(Reg1);
+  MachineInstr *DefOp2 = MRI->getVRegDef(Reg2);
+  // check if the first operand is from a convert operation
+  if (DefOp1->getOpcode() == Hexagon::V6_vconv_hf_qf16) {
+    if (checkHVXUses16(DefOp1, &MI))
+      DefOp1_del = true;
+    Src1 = DefOp1->getOperand(1).getReg();
+    firstConv = true;
+  }
+
+  // check if the second operand is from a convert operation
+  if (DefOp2->getOpcode() == Hexagon::V6_vconv_hf_qf16) {
+    if (checkHVXUses16(DefOp2, &MI))
+      DefOp2_del = true;
+    Src2 = DefOp2->getOperand(1).getReg();
+    secConv = true;
+  }
+
+  if (firstConv && secConv) {
+    BuildMI(MBB, MI, DL, HII->get(getOperation(Op, true, true)), Dest)
+        .addReg(Src1)
+        .addReg(Src2);
+    SfHfInstrList.push_back(&MI);
+  } else if (firstConv) {
+    BuildMI(MBB, MI, DL, HII->get(getOperation(Op, true, false)), Dest)
+        .addReg(Src1)
+        .addReg(Reg2);
+    SfHfInstrList.push_back(&MI);
+  } else if (secConv) {
+    // For v81, we interchange the ops for vadd/vmul
+    // for vsub we use qf as second operand
+    if (HST->useHVXV81Ops()) {
+      if (!isSub)
+        BuildMI(MBB, MI, DL, HII->get(getOperation(Op, true, false)), Dest)
+            .addReg(Src2)
+            .addReg(Reg1);
+      else
+        BuildMI(MBB, MI, DL, HII->get(getOperation(Op, false, true)), Dest)
+            .addReg(Reg1)
+            .addReg(Src2);
+      SfHfInstrList.push_back(&MI);
+    } else if (HST->useHVXV79Ops()) {
+      // for vadd/vmul we interchange the ops, for vsub we ignore
+      if (!isSub) {
+        BuildMI(MBB, MI, DL, HII->get(getOperation(Op, true, false)), Dest)
+            .addReg(Src2)
+            .addReg(Reg1);
+        SfHfInstrList.push_back(&MI);
+      } else // don't delete the convert instruction for vsub
+        DefOp2_del = false;
+    }
+  }
+
+  if (DefOp1_del)
+    ConvInstrList.insert(DefOp1);
+  if (DefOp2_del)
+    ConvInstrList.insert(DefOp2);
+}
+
+// Removes converts feeding to op(qf,sf), and replaces its sf operands with qf
+void VectorConvertRemove::handle_addsub_qf_sf(MachineInstr &MI, Register &Reg1,
+                                              Register &Reg2, Register &Dest,
+                                              bool isAdd) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register Src;
+  bool conv = false;
+
+  MachineInstr *DefOp = MRI->getVRegDef(Reg2);
+  // check if the second operand is from a convert operation
+  if (DefOp->getOpcode() == Hexagon::V6_vconv_sf_qf32) {
+    if (checkHVXUses32(DefOp, &MI))
+      ConvInstrList.insert(DefOp);
+    Src = DefOp->getOperand(1).getReg();
+    conv = true;
+  }
+
+  if (conv) {
+    BuildMI(MBB, MI, DL,
+            HII->get(isAdd ? Hexagon::V6_vadd_qf32 : Hexagon::V6_vsub_qf32),
+            Dest)
+        .addReg(Reg1)
+        .addReg(Src);
+    SfHfInstrList.push_back(&MI);
+  }
+}
+
+// Removes converts feeding to op(qf,hf), and replaces its hf operands with qf
+void VectorConvertRemove::handle_addsubmul_qf_hf(MachineInstr &MI,
+                                                 Register &Reg1, Register &Reg2,
+                                                 Register &Dest, Operation Op) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register Src;
+  bool conv = false;
+
+  MachineInstr *DefOp = MRI->getVRegDef(Reg2);
+  // check if the second operand is from a convert operation
+  if (DefOp->getOpcode() == Hexagon::V6_vconv_hf_qf16) {
+    if (checkHVXUses16(DefOp, &MI))
+      ConvInstrList.insert(DefOp);
+    Src = DefOp->getOperand(1).getReg();
+    conv = true;
+  }
+
+  if (conv) {
+    BuildMI(MBB, MI, DL, HII->get(getOperation(Op, true, true)), Dest)
+        .addReg(Reg1)
+        .addReg(Src);
+    SfHfInstrList.push_back(&MI);
+  }
+}
+
+// Removes converts feeding to op(sf,sf), and replaces its sf operands with qf
+void VectorConvertRemove::handle_qf32_mul_sf_sf(MachineInstr &MI,
+                                                Register &Reg1, Register &Reg2,
+                                                Register &Dest) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register Src1, Src2;
+  bool firstConv = false, secConv = false;
+
+  MachineInstr *DefOp1 = MRI->getVRegDef(Reg1);
+  MachineInstr *DefOp2 = MRI->getVRegDef(Reg2);
+
+  if (DefOp1->getOpcode() == Hexagon::V6_vconv_sf_qf32 &&
+      DefOp2->getOpcode() == Hexagon::V6_vconv_sf_qf32) {
+    // If yes, we can remove the convert
+    if (checkHVXUses32(DefOp1, &MI) && checkHVXUses32(DefOp2, &MI)) {
+      ConvInstrList.insert(DefOp1);
+      ConvInstrList.insert(DefOp2);
+    }
+    Src1 = DefOp1->getOperand(1).getReg();
+    Src2 = DefOp2->getOperand(1).getReg();
+    firstConv = true;
+    secConv = true;
+  }
+
+  // If both are true, then only replace with qf32 = vmpy(qf32, qf32)
+  if (firstConv && secConv) {
+    BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vmpy_qf32), Dest)
+        .addReg(Src1)
+        .addReg(Src2);
+    SfHfInstrList.push_back(&MI);
+  }
+}
+
+void VectorConvertRemove::run() {
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      // Skip if the instruction does not have two operands,
+      // or is a bundle instruction
+      // or is a debug instruction
+      if (MI.getNumOperands() != 3 || MI.isDebugInstr())
+        continue;
+
+      auto Op1 = MI.getOperand(1);
+      if (!Op1.isReg())
+        continue;
+      auto Op2 = MI.getOperand(2);
+      if (!Op2.isReg())
+        continue;
+      auto Op0 = MI.getOperand(0);
+      if (!Op0.isReg())
+        continue;
+      Register Reg1 = Op1.getReg();
+      Register Reg2 = Op2.getReg();
+      Register Dest = Op0.getReg();
+
+      switch (MI.getOpcode()) {
+      // TODO Handle the new vsub instructions
+      // qf32 = vadd(sf, sf)
+      case Hexagon::V6_vadd_sf:
+        handle_addsub_sf_sf(MI, Reg1, Reg2, Dest, true);
+        break;
+      // qf32 = vsub(sf, sf)
+      case Hexagon::V6_vsub_sf:
+        handle_addsub_sf_sf(MI, Reg1, Reg2, Dest, false);
+        break;
+      // qf32 = vadd(qf32, sf)
+      case Hexagon::V6_vadd_qf32_mix:
+        handle_addsub_qf_sf(MI, Reg1, Reg2, Dest, true);
+        break;
+      // qf32 = vsub(qf32, sf)
+      case Hexagon::V6_vsub_qf32_mix:
+        handle_addsub_qf_sf(MI, Reg1, Reg2, Dest, false);
+        break;
+      // qf16 = vadd(hf, hf)
+      case Hexagon::V6_vadd_hf:
+        handle_addsubmul_hf_hf(MI, Reg1, Reg2, Dest, Operation::Add16);
+        break;
+      // qf16 = vsub(hf, hf)
+      case Hexagon::V6_vsub_hf:
+        handle_addsubmul_hf_hf(MI, Reg1, Reg2, Dest, Operation::Sub16);
+        break;
+      // qf16 = vadd(qf16, hf)
+      case Hexagon::V6_vadd_qf16_mix:
+        handle_addsubmul_qf_hf(MI, Reg1, Reg2, Dest, Operation::Add16);
+        break;
+      // qf16 = vsub(qf16, hf)
+      case Hexagon::V6_vsub_qf16_mix:
+        handle_addsubmul_qf_hf(MI, Reg1, Reg2, Dest, Operation::Sub16);
+        break;
+      // qf32 = vmpy(sf, sf)
+      case Hexagon::V6_vmpy_qf32_sf:
+        handle_qf32_mul_sf_sf(MI, Reg1, Reg2, Dest);
+        break;
+      // qf32 = vmpy(hf, hf)
+      case Hexagon::V6_vmpy_qf32_hf:
+        handle_addsubmul_hf_hf(MI, Reg1, Reg2, Dest, Operation::Mul32);
+        break;
+      // qf32 = vmpy(qf16, hf)
+      case Hexagon::V6_vmpy_qf32_mix_hf:
+        handle_addsubmul_qf_hf(MI, Reg1, Reg2, Dest, Operation::Mul32);
+        break;
+      // qf16 = vmpy(hf, hf)
+      case Hexagon::V6_vmpy_qf16_hf:
+        handle_addsubmul_hf_hf(MI, Reg1, Reg2, Dest, Operation::Mul16);
+        break;
+      // qf16 = vmpy(qf16, hf)
+      case Hexagon::V6_vmpy_qf16_mix_hf:
+        handle_addsubmul_qf_hf(MI, Reg1, Reg2, Dest, Operation::Mul16);
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
+  // Delete the vadd/vsub/vmpy instructions
+  for (MachineInstr *sfhfMI : SfHfInstrList) {
+    LLVM_DEBUG(dbgs() << "deleting sf/hf instruction ");
+    LLVM_DEBUG(sfhfMI->dump());
+    sfhfMI->eraseFromParent();
+  }
+  // Delete conversion instructions
+  for (MachineInstr *convMI : ConvInstrList) {
+    LLVM_DEBUG(dbgs() << "deleting conversion instruction");
+    LLVM_DEBUG(convMI->dump());
+    convMI->eraseFromParent();
+  }
+}
+
 char HexagonXQFloatGenerator::ID = 0;
 
 } // namespace
@@ -923,8 +1394,8 @@ bool HexagonXQFloatGenerator::convertNormalizeMultOp32(
         .addReg(R_mpy)
         .addReg(VR2);
     BuildMI(MBB, MI, DL, HII->get(Hexagon::V6_vmpy_qf32), Dest)
-        .addReg(input_mpy2)
-        .addReg(Reg2);
+        .addReg(Reg1)
+        .addReg(input_mpy2);
   } else {
     // we do nothing if the inputs are not fromadder/subtracter/multiplier unit
     return false;
@@ -1651,6 +2122,16 @@ bool HexagonXQFloatGenerator::runOnMachineFunction(MachineFunction &MF) {
   HST = &MF.getSubtarget<HexagonSubtarget>();
   HII = HST->getInstrInfo();
   MRI = &MF.getRegInfo();
+
+  if (EnableConversionsRemoval &&
+      !(QFloatModeValue == QFloatMode::StrictIEEE)) {
+    VectorConvertRemove VCR(MF, MRI, HST);
+    VCR.run();
+    LLVM_DEBUG(dbgs() << "\nExtraneous conversion instructions removed for "
+                      << MF.getName());
+    if (PrintDebug)
+      debug_print(MF);
+  }
 
   switch (QFloatModeValue) {
   case QFloatMode::StrictIEEE:

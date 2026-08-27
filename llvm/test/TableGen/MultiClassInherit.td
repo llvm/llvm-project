@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // "zing = 4" x 28
 // CHECK: zing = 4

@@ -82,10 +82,13 @@ inline constexpr const char *FailedToReadObjectAtIndex =
 
 inline constexpr const char *MismatchedSummaryType =
     "expected '{0}' for field '{1}' but got '{2}'";
+inline constexpr const char *MismatchedNestedNamespace =
+    "field '{0}' does not equal the enclosing artifact's namespace";
 inline constexpr const char *UnknownArtifactType =
     "unknown value '{0}' for field '{1}': expected '{2}', '{3}', or '{4}'";
 inline constexpr const char *UnknownArtifactEncodingType =
-    "unknown value '{0}' for field '{1}': expected '{2}', or '{3}'";
+    "unknown value '{0}' for field '{1}': expected '{2}', '{3}', '{4}', '{5}', "
+    "or '{6}'";
 
 inline constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
     "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
@@ -148,6 +151,19 @@ inline constexpr const char *JSONTypeValueTUSummary = "TUSummary";
 
 /// Value written to \c JSONTypeKey for serialized \c LUSummary files.
 inline constexpr const char *JSONTypeValueLUSummary = "LUSummary";
+
+/// Value written to \c JSONTypeKey for serialized \c StaticLibrary files.
+inline constexpr const char *JSONTypeValueStaticLibrary = "StaticLibrary";
+
+/// Value written to \c JSONTypeKey for serialized \c MultiArchStaticLibrary
+/// files.
+inline constexpr const char *JSONTypeValueMultiArchStaticLibrary =
+    "MultiArchStaticLibrary";
+
+/// Value written to \c JSONTypeKey for serialized \c MultiArchSharedLibrary
+/// files.
+inline constexpr const char *JSONTypeValueMultiArchSharedLibrary =
+    "MultiArchSharedLibrary";
 
 /// Value written to \c JSONTypeKey for serialized \c WPASuite files.
 inline constexpr const char *JSONTypeValueWPASuite = "WPASuite";

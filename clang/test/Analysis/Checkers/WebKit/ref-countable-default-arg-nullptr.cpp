@@ -12,13 +12,13 @@ public:
 
 void someFunction(Obj*, Obj* = nullptr);
 void otherFunction(Obj*, Obj* = Obj::get());
-// expected-warning@-1{{Call argument is uncounted and unsafe [alpha.webkit.UncountedCallArgsChecker]}}
+// expected-warning@-1{{Function argument 'Obj::get()' (to 'otherFunction') is a raw pointer to RefPtr-capable type 'Obj'}}
 void anotherFunction(Obj*, Obj* = Obj::create().get());
 
 void otherFunction() {
   someFunction(nullptr);
   someFunction(Obj::get());
-  // expected-warning@-1{{Call argument is uncounted and unsafe [alpha.webkit.UncountedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'Obj::get()' (to 'someFunction') is a raw pointer to RefPtr-capable type 'Obj'}}
   someFunction(Obj::create().get());
   otherFunction(nullptr);
   anotherFunction(nullptr);

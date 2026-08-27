@@ -22,3 +22,23 @@ define i1 @ugt_i1(i1 %p, i1 %q) {
   %r = icmp ugt i1 %p, %q
   ret i1 %r
 }
+
+define <4 x i1> @ult_v4i1(<4 x i1> %p, <4 x i1> %q) {
+; CHECK-LABEL: define <4 x i1> @ult_v4i1(
+; CHECK-SAME: <4 x i1> [[P:%.*]], <4 x i1> [[Q:%.*]]) {
+; CHECK:    [[NOT:%.*]] = xor <4 x i1> [[P]], splat (i1 true)
+; CHECK:    [[R:%.*]] = and <4 x i1> [[Q]], [[NOT]]
+; CHECK:    ret <4 x i1> [[R]]
+  %r = icmp ult <4 x i1> %p, %q
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @ugt_v4i1(<4 x i1> %p, <4 x i1> %q) {
+; CHECK-LABEL: define <4 x i1> @ugt_v4i1(
+; CHECK-SAME: <4 x i1> [[P:%.*]], <4 x i1> [[Q:%.*]]) {
+; CHECK:    [[NOT:%.*]] = xor <4 x i1> [[Q]], splat (i1 true)
+; CHECK:    [[R:%.*]] = and <4 x i1> [[P]], [[NOT]]
+; CHECK:    ret <4 x i1> [[R]]
+  %r = icmp ugt <4 x i1> %p, %q
+  ret <4 x i1> %r
+}

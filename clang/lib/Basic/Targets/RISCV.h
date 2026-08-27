@@ -15,6 +15,7 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
@@ -116,10 +117,6 @@ public:
   bool hasBFloat16Type() const override { return true; }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;

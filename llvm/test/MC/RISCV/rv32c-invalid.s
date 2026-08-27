@@ -42,7 +42,7 @@ c.jalr  zero
 c.mv  ra, x0
 # CHECK: :[[#@LINE-1]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0
-# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:16: error: unexpected extra operand for instruction
 
 ## GPRNoX2
 c.lui x2, 4
@@ -92,7 +92,9 @@ c.addi t0, %hi(foo)
 
 ## simm6nonzero
 c.nop 32
-# CHECK: :[[#@LINE-1]]:7: error: immediate must be non-zero in the range [-32, 31]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:7: note: unexpected extra operand for instruction
+# CHECK: :[[#@LINE-3]]:7: note: immediate must be non-zero in the range [-32, 31]
 
 ## c_lui_imm
 c.lui t0, 0
@@ -106,14 +108,15 @@ c.lui t0, 0x1000000
 c.lui t0, foo
 # CHECK: [[#@LINE-1]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]
 
-## uimm8_lsb00
+## uimm8_lsb00_optional
 c.lwsp  ra, 256(sp)
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 c.swsp  ra, -4(sp)
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]
-## uimm7_lsb00
+## uimm7_lsb00_optional
 c.lw  s0, -4(sp)
 # CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+
 c.sw  s0, 128(sp)
 # CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
 

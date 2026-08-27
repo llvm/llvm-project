@@ -10,7 +10,6 @@
 #define FORTRAN_SEMANTICS_UNPARSE_WITH_SYMBOLS_H_
 
 #include "flang/Parser/characters.h"
-#include <iosfwd>
 
 namespace llvm {
 class raw_ostream;

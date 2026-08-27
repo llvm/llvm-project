@@ -140,7 +140,7 @@ exception_cleanup_func(_Unwind_Reason_Code reason, _Unwind_Exception* unwind_exc
     __cxa_decrement_exception_refcount(unwind_exception + 1);
 }
 
-static _LIBCXXABI_NORETURN void failed_throw(__cxa_exception* exception_header) {
+[[noreturn]] static void failed_throw(__cxa_exception* exception_header) {
 //  Section 2.5.3 says:
 //      * For purposes of this ABI, several things are considered exception handlers:
 //      ** A terminate() call due to a throw.

@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -574,10 +575,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
@@ -746,8 +745,11 @@ public:
                const TargetInstrInfo *TII = nullptr)
       : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
-      Def = MRI.getVRegDef(Reg);
-      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
+      if (DI != MRI.def_end()) {
+        Def = DI->getParent();
+        DefIdx = DI.getOperandNo();
+      }
     }
   }
 
@@ -961,6 +963,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(
     return false;
 
   LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
   ++NumCmps;
 
   // The eliminated compare may have been the extra use preventing a
@@ -1024,11 +1027,19 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
   SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
+
+  // Remember the last suitable source in case the search meets an invalid
+  // source.
+  bool FoundSuitable = false;
+  RegSubRegPair SuitablePair = RegSubReg;
+  bool Aborted = false;
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (CurSrcPair.Reg.isPhysical())
-      return false;
+    if (CurSrcPair.Reg.isPhysical()) {
+      Aborted = true;
+      break;
+    }
 
     ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
 
@@ -1037,8 +1048,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
     while (true) {
       ValueTrackerResult Res = ValTracker.getNextSource();
       // Abort at the end of a chain (without finding a suitable source).
-      if (!Res.isValid())
-        return false;
+      if (!Res.isValid()) {
+        Aborted = true;
+        break;
+      }
 
       // Insert the Def -> Use entry for the recently found source.
       auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
@@ -1052,7 +1065,7 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         if (CurSrcRes.getNumSources() > 1) {
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
-          return false;
+          Aborted = true;
         }
         break;
       }
@@ -1064,7 +1077,8 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
         PHICount++;
         if (PHICount >= RewritePHILimit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
-          return false;
+          Aborted = true;
+          break;
         }
 
         for (unsigned i = 0; i < NumSrcs; ++i)
@@ -1077,8 +1091,10 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (CurSrcPair.Reg.isPhysical())
-        return false;
+      if (CurSrcPair.Reg.isPhysical()) {
+        Aborted = true;
+        break;
+      }
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
@@ -1091,10 +1107,31 @@ bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
         continue;
 
+      // Don't stop at the first suitable source if it is still a subregister;
+      // keep tracing to try to reach a deeper source. Remember it.
+      if (CurSrcPair.SubReg != 0) {
+        SuitablePair = CurSrcPair;
+        FoundSuitable = true;
+        continue;
+      }
+
       // We found a suitable source, and are done with this chain.
       break;
     }
+
+    // A dead-ended chain ends all exploration
+    if (Aborted)
+      break;
   } while (!SrcToLook.empty());
+
+  if (Aborted) {
+    // If aborted with an invalid source, restore the suitable so far, if any.
+    if (!FoundSuitable)
+      return false;
+
+    CurSrcPair = SuitablePair;
+    RewriteMap.erase(SuitablePair);
+  }
 
   // If we did not find a more suitable source, there is nothing to optimize.
   return CurSrcPair.Reg != Reg;
@@ -1722,8 +1759,6 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -1843,7 +1878,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }

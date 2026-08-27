@@ -24,10 +24,12 @@ using namespace lldb_protocol::mcp;
 TEST(MCPServerInfoTest, JSONRoundtrip) {
   ServerInfo info;
   info.connection_uri = "unix:///tmp/test.sock";
+  info.pid = 4321;
 
   Expected<ServerInfo> deserialized = roundtripJSON(info);
   ASSERT_THAT_EXPECTED(deserialized, Succeeded());
   EXPECT_EQ(deserialized->connection_uri, info.connection_uri);
+  EXPECT_EQ(deserialized->pid, info.pid);
 }
 
 TEST(MCPServerInfoTest, EmptyHandleRemoveIsNoOp) {

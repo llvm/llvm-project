@@ -2,9 +2,6 @@
 
 # LLVM GitHub User Guide
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -29,12 +26,12 @@ describes the typical workflow of creating a Pull Request and getting it reviewe
 and accepted. This is meant as an overview of the GitHub workflow, for complete
 documentation refer to [GitHub's documentation](https://docs.github.com/pull-requests).
 
-```{note}
+:::{note}
 If you are using a Pull Request for purposes other than review
 (eg: precommit CI results, convenient web-based reverts, etc)
 add the [skip-precommit-approval](https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval)
 label to the PR.
-```
+:::
 
 ### GitHub Tools
 
@@ -71,11 +68,11 @@ gh pr create
 When prompted select to create and use your own fork and follow
 the instructions to add more information needed.
 
-```{note}
+:::{note}
 When you let the GitHub CLI create a fork of llvm-project to
 your user, it will change the git "remotes" so that "origin" points
 to your fork and "upstream" points to the main llvm-project repository.
-```
+:::
 
 ### Updating Pull Requests
 
@@ -119,11 +116,11 @@ or in some dependent code.
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
 
-```{note}
+:::{note}
 This guide assumes that the PR branch only has 1 author. If you are
 collaborating with others on a single branch, be careful how and when you push
 changes. `--force-with-lease` may be useful in this situation.
-```
+:::
 
 ### Approvals
 
@@ -140,7 +137,7 @@ After your PR is approved, ensure that:
     messages of commits in the PR will **not** be used.
   * You have set a valid email address in your GitHub account, see {ref}`github-email-address`.
 
-```{note}
+:::{note}
 The LLVM Project monorepo on GitHub is configured to always use "Squash
 and Merge" as the pull request merge option when using the web interface.
 With this option, GitHub uses the PR summary as the default commit
@@ -149,7 +146,7 @@ message.
 Users with write access who can merge PRs have a final opportunity to edit
 the commit title and message before merging. However, this option is not
 available to contributors without write access.
-```
+:::
 
 At this point, you can merge your changes. If you do not have write permissions
 for the repository, the merge button in GitHub's web interface will be
@@ -234,7 +231,7 @@ To separate related changes or to break down a larger PR into smaller, reviewabl
 pieces, use "stacked pull requests" — this helps make the review process
 smoother.
 
-```{note}
+:::{note}
 The LLVM Project monorepo on GitHub is configured to always use "Squash and
 Merge" as the pull request merge option. As a result, each PR results in
 exactly one commit being merged into the project.
@@ -243,7 +240,7 @@ This means that stacked pull requests are the only available option for
 landing a series of related changes. In contrast, submitting a PR with
 multiple commits and merging them as-is (without squashing) is not supported
 in LLVM.
-```
+:::
 
 While GitHub does not natively support stacked pull requests, there are several
 common alternatives.
@@ -291,7 +288,7 @@ Your options are as follows:
    stacked PRs. These tools are also based on using user branches
    in `llvm/llvm-project`.
 
-```{note}
+:::{note}
 When not using user branches, GitHub will not display proper diffs for
 subsequent PRs in a stack. Instead, it will show a combined diff that
 includes all commits from earlier PRs.
@@ -302,7 +299,7 @@ For example: “The first N commits are from the base PR.”
 
 You can avoid this issue by using user branches directly in the
 `llvm/llvm-project` repository.
-```
+:::
 
 
 ### Using Graphite for stacked Pull Requests
@@ -349,7 +346,7 @@ may cause problems for some configurations after it lands. You will be notified
 if this happens and the community is ready to help you fix the problems.
 
 This process is described in detail
-{ref}`here <MyFirstTypoFix Issues After Landing Your PR>`.
+{ref}`here <myfirsttypofix-issues-after-landing-your-pr>`.
 
 
 ### Checking out another PR locally

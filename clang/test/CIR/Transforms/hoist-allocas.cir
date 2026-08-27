@@ -110,4 +110,89 @@ module {
   // CHECK-NEXT:   }
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
+
+  cir.func @l4() {
+    omp.target kernel_type(generic) {
+      omp.parallel {
+        cir.scope {
+          %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+          %1 = cir.const #cir.int<0> : !s32i
+          cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+        }
+        omp.terminator
+      }
+      omp.terminator
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @l4
+  // CHECK-NEXT:   omp.target kernel_type(generic) {
+  // CHECK-NEXT:     omp.parallel {
+  // CHECK-NEXT:       %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+  // CHECK-NEXT:       cir.scope {
+  // CHECK-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:         cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:       }
+  // CHECK-NEXT:       omp.terminator
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     omp.terminator
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @l5() {
+    omp.target kernel_type(generic) {
+      cir.scope {
+        %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+        %1 = cir.const #cir.int<0> : !s32i
+        cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      }
+      omp.terminator
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @l5
+  // CHECK-NEXT:   omp.target kernel_type(generic) {
+  // CHECK-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+  // CHECK-NEXT:     cir.scope {
+  // CHECK-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:       cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     omp.terminator
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @l6() {
+    cir.scope {
+      %0 = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    }
+    omp.target kernel_type(generic) {
+      cir.scope {
+        %2 = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+        %3 = cir.const #cir.int<0> : !s32i
+        cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
+      }
+      omp.terminator
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @l6
+  // CHECK-NEXT:   %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:     cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   omp.target kernel_type(generic) {
+  // CHECK-NEXT:     %[[J:.*]] = cir.alloca "j" align(4) init : !cir.ptr<!s32i>
+  // CHECK-NEXT:     cir.scope {
+  // CHECK-NEXT:       %[[ZERO2:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:       cir.store %[[ZERO2]], %[[J]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:     omp.terminator
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
 }
