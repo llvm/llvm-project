@@ -221,35 +221,6 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   if (getNumLocalVars() == 0)
     return PresburgerRelation(*this);
 
-  // Move all the non-div locals to the end, as the current API to
-  // SymbolicLexOpt requires these to form a contiguous range.
-  //
-  // Take a copy so we can perform mutations.
-  IntegerRelation copy = *this;
-  std::vector<MaybeLocalRepr> reprs(getNumLocalVars());
-  copy.getLocalReprs(&reprs);
-
-  // Iterate through all the locals. The last `numNonDivLocals` are the locals
-  // that have been scanned already and do not have division representations.
-  unsigned numNonDivLocals = 0;
-  unsigned offset = copy.getVarKindOffset(VarKind::Local);
-  for (unsigned i = 0, e = copy.getNumLocalVars(); i < e - numNonDivLocals;) {
-    if (!reprs[i]) {
-      // Whenever we come across a local that does not have a division
-      // representation, we swap it to the `numNonDivLocals`-th last position
-      // and increment `numNonDivLocal`s. `reprs` also needs to be swapped.
-      copy.swapVar(offset + i, offset + e - numNonDivLocals - 1);
-      std::swap(reprs[i], reprs[e - numNonDivLocals - 1]);
-      ++numNonDivLocals;
-      continue;
-    }
-    ++i;
-  }
-
-  // If there are no non-div locals, we're done.
-  if (numNonDivLocals == 0)
-    return PresburgerRelation(*this);
-
   // We computeSymbolicIntegerLexMin by considering the non-div locals as
   // "non-symbols" and considering everything else as "symbols". This will
   // compute a function mapping assignments to "symbols" to the
@@ -261,10 +232,29 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // exists, which is the union of the domain of the returned lexmin function
   // and the returned set of assignments to the "symbols" that makes the lexmin
   // unbounded.
+
+  // Construct a BitVector that identifies which variables we would like to
+  // treat as symbols. We want to treat all variables as "symbols" except for
+  // the locals that don't have a division representation.
+  std::vector<MaybeLocalRepr> reprs(getNumLocalVars());
+  this->getLocalReprs(&reprs);
+
+  llvm::SmallBitVector isSymbol(getNumVars(), true);
+  unsigned offset = getVarKindOffset(VarKind::Local);
+  for (unsigned i = 0, e = getNumLocalVars(); i < e; ++i) {
+    isSymbol[offset + i] = reprs[i].hasRepr();
+  }
+
+  // If there are no non-div locals (non-symbols), we're done.
+  if (isSymbol.all())
+    return PresburgerRelation(*this);
+
   SymbolicLexOpt lexminResult =
-      SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
+      SymbolicLexSimplex(/*constraints=*/*this,
+                         /*symbolDomain=*/
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                             /*numDims=*/copy.getNumVars() - numNonDivLocals)))
+                             /*numDims=*/isSymbol.count())),
+                         isSymbol)
           .computeSymbolicIntegerLexMin();
   PresburgerRelation result =
       lexminResult.lexopt.getDomain().unionSet(lexminResult.unboundedDomain);
