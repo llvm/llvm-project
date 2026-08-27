@@ -15171,14 +15171,6 @@ LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
   return getLangASFromTargetAS(AS);
 }
 
-clang::LazyGenerationalDeclPtr::ValueType
-clang::LazyGenerationalDeclPtr::makeValue(const clang::ASTContext &Ctx,
-                                          Decl *Value) {
-  if (auto *Source = Ctx.getExternalSource())
-    return new (Ctx) LazyData(Source, Value);
-  return Value;
-}
-
 unsigned char ASTContext::getFixedPointScale(QualType Ty) const {
   assert(Ty->isFixedPointType());
 

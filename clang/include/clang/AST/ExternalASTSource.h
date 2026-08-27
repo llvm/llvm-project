@@ -460,7 +460,6 @@ struct LazyGenerationalDeclPtr {
 
   LazyGenerationalDeclPtr(ValueType V) : Value(V) {}
 
-  // Defined in ASTContext.cpp
   static ValueType makeValue(const ASTContext &Ctx, Decl *Value);
 
 public:
