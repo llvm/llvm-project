@@ -93,3 +93,22 @@ entry:
   store i8 %r, ptr %dst, align 1
   ret void
 }
+
+define void @no_promote_sdiv_intmin(ptr %src, ptr %dst) {
+; CHECK-LABEL: define void @no_promote_sdiv_intmin(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i8>, ptr [[SRC]], align 1
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i8> [[V]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 -128, [[E]]
+; CHECK-NEXT:    store i8 [[R]], ptr [[DST]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v = load <2 x i8>, ptr %src, align 1
+  %e = extractelement <2 x i8> %v, i32 0
+  %r = sdiv i8 -128, %e
+  store i8 %r, ptr %dst, align 1
+  ret void
+}
+
