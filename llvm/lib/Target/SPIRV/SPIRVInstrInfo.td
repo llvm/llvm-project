@@ -213,6 +213,21 @@ def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
 def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
                   "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
+def OpTypeRayQueryKHR: Op<4472, (outs TYPE:$res), (ins),
+                  "$res = OpTypeRayQueryKHR">;
+def OpTypeAccelerationStructureKHR: Op<5341, (outs TYPE:$res), (ins),
+                  "$res = OpTypeAccelerationStructureKHR">;
+def OpRayQueryInitializeKHR: Op<4473, (outs),
+                  (ins ID:$rq, ID:$accel, ID:$flags, ID:$mask, ID:$origin, ID:$tmin, ID:$dir, ID:$tmax),
+                  "OpRayQueryInitializeKHR $rq $accel $flags $mask $origin $tmin $dir $tmax">;
+def OpRayQueryProceedKHR: Op<4477, (outs ID:$res), (ins TYPE:$resType, ID:$rq),
+                  "$res = OpRayQueryProceedKHR $resType $rq">;
+def OpRayQueryGetIntersectionTypeKHR: Op<4479, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$rq, ID:$intersection),
+                  "$res = OpRayQueryGetIntersectionTypeKHR $resType $rq $intersection">;
+def OpRayQueryGetIntersectionPrimitiveIndexKHR: Op<6023, (outs ID:$res),
+                  (ins TYPE:$resType, ID:$rq, ID:$intersection),
+                  "$res = OpRayQueryGetIntersectionPrimitiveIndexKHR $resType $rq $intersection">;
 
 // 3.42.7 Constant-Creation Instructions
 

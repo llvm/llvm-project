@@ -365,5 +365,17 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_unpackhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_spv_packhalf2x16 : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty], [IntrNoMem]>;
 
-
+  // SPV_KHR_ray_query operations. The ray query object is a function-local
+  // pointer to target("spirv.RayQueryKHR") and is mutated, so no IntrNoMem.
+  def int_spv_ray_query_initialize
+    : Intrinsic<[], [llvm_ptr_ty, llvm_any_ty, llvm_i32_ty, llvm_i32_ty,
+                     llvm_v3f32_ty, llvm_float_ty, llvm_v3f32_ty, llvm_float_ty]>;
+  def int_spv_ray_query_proceed
+    : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty]>;
+  def int_spv_ray_query_get_intersection_type
+    : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty]>;
+  // The primitive index of the candidate or committed intersection.
+  // Args: rq ptr, intersection (0/1).
+  def int_spv_ray_query_get_intersection_primitive_index
+    : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty]>;
 }

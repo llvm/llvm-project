@@ -467,6 +467,7 @@ private:
   bool selectGatherIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
                              MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
+  bool selectRayQueryInitialize(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
   bool selectPushConstantGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
@@ -799,6 +800,8 @@ static bool isOpcodeWithNoSideEffects(unsigned Opcode) {
   case SPIRV::OpTypeAccelerationStructureNV:
   case SPIRV::OpTypeCooperativeMatrixNV:
   case SPIRV::OpTypeCooperativeMatrixKHR:
+  case SPIRV::OpTypeRayQueryKHR:
+  case SPIRV::OpTypeAccelerationStructureKHR:
     return true;
   default:
     return false;
@@ -1778,6 +1781,16 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectRayQueryInitialize(MachineInstr &I) const {
+  // Operands 1..8: rq ptr, accel, rayFlags, cullMask, origin, tMin, dir, tMax.
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpRayQueryInitializeKHR));
+  for (unsigned i = 1; i < I.getNumOperands(); ++i)
+    MIB.addUse(I.getOperand(i).getReg());
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
@@ -5275,6 +5288,21 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       report_fatal_error("incompatible result and operand types in a bitcast");
     return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
   }
+  case Intrinsic::spv_ray_query_initialize:
+    return selectRayQueryInitialize(I);
+  case Intrinsic::spv_ray_query_proceed:
+    return selectOpWithSrcs(ResVReg, ResType, I, {I.getOperand(2).getReg()},
+                            SPIRV::OpRayQueryProceedKHR);
+  case Intrinsic::spv_ray_query_get_intersection_type:
+    return selectOpWithSrcs(
+        ResVReg, ResType, I,
+        {I.getOperand(2).getReg(), I.getOperand(3).getReg()},
+        SPIRV::OpRayQueryGetIntersectionTypeKHR);
+  case Intrinsic::spv_ray_query_get_intersection_primitive_index:
+    return selectOpWithSrcs(
+        ResVReg, ResType, I,
+        {I.getOperand(2).getReg(), I.getOperand(3).getReg()},
+        SPIRV::OpRayQueryGetIntersectionPrimitiveIndexKHR);
   case Intrinsic::spv_unref_global:
   case Intrinsic::spv_init_global: {
     MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());
