@@ -8,8 +8,8 @@
 ##   C  8MiB island, pad_hot_2 50MiB, D 8MiB island, pad_hot_3 50MiB
 ##
 ## With --split-functions, BOLT places the cold blocks of A/B/C/D in
-## .text.cold. With the default 120MiB function-fragment cluster size, call
-## relaxation sees:
+## .text.cold. With the default 124MiB function-fragment cluster size,
+## call relaxation sees:
 ##
 ##   normal layout:
 ##     cluster 0, .text:      A, pad_hot_0, B, pad_hot_1
@@ -17,9 +17,10 @@
 ##     cluster 2, .text.cold: A.cold, B.cold, C.cold, D.cold
 ##
 ##   --hot-functions-at-end:
-##     cluster 0, .text.cold: A.cold, B.cold, C.cold, D.cold
-##     cluster 1, .text:      A, pad_hot_0, B, pad_hot_1
-##     cluster 2, .text:      C, pad_hot_2, D, pad_hot_3
+##     cluster 0: .text.cold A.cold, B.cold, C.cold, D.cold
+##                .text A, pad_hot_0, B
+##     cluster 1: .text pad_hot_1, C, pad_hot_2, D
+##     cluster 2: .text pad_hot_3
 
 # REQUIRES: system-linux
 
@@ -37,7 +38,7 @@
 # RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C,__AArch64ADRPThunk_A \
 # RUN:   %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 # RUN: llvm-objdump -d \
-# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C,__AArch64ADRPThunk_C \
+# RUN:   --disassemble-symbols=A,B,C,D,A.cold.0,B.cold.0,C.cold.0,D.cold.0,__AArch64Thunk_A,__AArch64Thunk_C \
 # RUN:   %t.hfe.bolt | FileCheck %s --check-prefix=CHECK-HFE-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: built 3 function fragment cluster(s)
@@ -48,11 +49,10 @@
 # CHECK-BOLT: BOLT-INFO: 12 branch thunks created
 
 # CHECK-BOLT-HFE: BOLT-INFO: built 3 function fragment cluster(s)
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 calls with thunks
-# CHECK-BOLT-HFE: BOLT-INFO: 3 short thunks created
-# CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks created
-# CHECK-BOLT-HFE: BOLT-INFO: relaxed 8 cross-cluster branches
-# CHECK-BOLT-HFE: BOLT-INFO: 12 branch thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 3 calls with thunks
+# CHECK-BOLT-HFE: BOLT-INFO: 2 short thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: relaxed 4 cross-cluster branches
+# CHECK-BOLT-HFE: BOLT-INFO: 4 branch thunks created
 
 # CHECK-SECTIONS: .text
 # CHECK-SECTIONS: .text.cold
@@ -191,16 +191,8 @@ pad_hot_3:
 
 # CHECK-HFE-OUTPUT:      <A.cold.0>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} mov x0, #0x1
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64ADRPThunk_C>
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_A>
-
-# CHECK-HFE-OUTPUT:      <__AArch64ADRPThunk_C>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} adrp x16, {{.*}}
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} add x16, x16, #0x{{[0-9a-f]+}}
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} br x16
-
-# CHECK-HFE-OUTPUT:      <__AArch64Thunk_A>:
-# CHECK-HFE-OUTPUT-NEXT: {{.*}} b {{.*}} <A>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <__AArch64Thunk_C>
+# CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <A>
 
 # CHECK-HFE-OUTPUT:      <A>:
 # CHECK-HFE-OUTPUT-NEXT: {{.*}} bl {{.*}} <B>
