@@ -92,7 +92,7 @@ LLVMInitializeWebAssemblyTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeWebAssemblyPreLegalizerCombinerLegacyPass(PR);
-  initializeWebAssemblyPostLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerLegacyPass(PR);
   initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -532,7 +532,7 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPostLegalizerCombiner());
+    addPass(createWebAssemblyPostLegalizerCombinerLegacyPass());
   }
 }
 

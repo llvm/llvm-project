@@ -108,8 +108,14 @@ createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
                                      const WebAssemblySubtarget &,
                                      const WebAssemblyRegisterBankInfo &);
 
-FunctionPass *createWebAssemblyPostLegalizerCombiner();
-void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+class WebAssemblyPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<WebAssemblyPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyPostLegalizerCombinerLegacyPass();
 
 class WebAssemblyPreLegalizerCombinerPass
     : public RequiredPassInfoMixin<WebAssemblyPreLegalizerCombinerPass> {
@@ -339,6 +345,7 @@ void initializeWebAssemblyMemIntrinsicResultsLegacyPass(PassRegistry &);
 void initializeWebAssemblyNullifyDebugValueListsLegacyPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PassRegistry &);
 void initializeWebAssemblyPeepholeLegacyPass(PassRegistry &);
+void initializeWebAssemblyPostLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeWebAssemblyPreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegColoringLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingLegacyPass(PassRegistry &);
