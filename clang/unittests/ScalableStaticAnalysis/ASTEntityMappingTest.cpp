@@ -367,9 +367,8 @@ TEST(ASTEntityMappingTest, QualifiedNameFollowsLinkage) {
       getQualifiedEntityName(Internal, TUNamespace, LUNamespace) ==
       BareInternal->makeQualified(TUNamespace).makeQualified(LUNamespace));
   // getQualifiedEntityNameForReturn follows the same linkage-based rule.
-  ASSERT_TRUE(
-      getQualifiedEntityNameForReturn(Ext, TUNamespace, LUNamespace) ==
-      BareExtReturn->makeQualified(LUNamespace));
+  ASSERT_TRUE(getQualifiedEntityNameForReturn(Ext, TUNamespace, LUNamespace) ==
+              BareExtReturn->makeQualified(LUNamespace));
 }
 
 } // namespace
