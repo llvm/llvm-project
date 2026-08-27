@@ -167,9 +167,9 @@ public:
   void runOnOperation() override;
 
 private:
-  // When handling firstprivate, the initial value needs to be available on
-  // the GPU. One way to get that value there is to map the variable through
-  // global memory.
+  // When the recipe reads the original variable, its initial value needs to be
+  // available on the GPU. One way to get that value there is to map the
+  // variable through global memory.
   // Thus, when we materialize a firstprivate, we materialize it into
   // a mapping action first. This function ends up with doing the following:
   // %dev = acc.firstprivate var(%var)
@@ -180,7 +180,8 @@ private:
   // being removed. But because of the way we chain it to the
   // `acc.firstprivate_map`, then its result becomes live-in to the
   // compute region and used as the variable the initial value is loaded from.
-  void handleFirstprivateMapping(acc::FirstprivateOp firstprivateOp) const;
+  template <typename OpTy>
+  void handleInitialValueMapping(OpTy op) const;
   template <typename OpTy>
   void removeRecipe(OpTy op, ModuleOp moduleOp) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
@@ -192,15 +193,23 @@ private:
                                     acc::ACCToGPUMappingPolicy &policy) const;
 };
 
-void ACCRecipeMaterialization::handleFirstprivateMapping(
-    acc::FirstprivateOp firstprivateOp) const {
-  OpBuilder builder(firstprivateOp);
-  auto mapFirstprivateOp = acc::FirstprivateMapInitialOp::create(
-      builder, firstprivateOp.getLoc(), firstprivateOp.getVar(),
-      firstprivateOp.getStructured(), firstprivateOp.getImplicit(),
-      firstprivateOp.getBounds());
-  mapFirstprivateOp.setName(firstprivateOp.getName());
-  firstprivateOp.getVarMutable().assign(mapFirstprivateOp.getAccVar());
+template <typename OpTy>
+void ACCRecipeMaterialization::handleInitialValueMapping(OpTy op) const {
+  OpBuilder builder(op);
+  auto mapInitialOp = acc::FirstprivateMapInitialOp::create(
+      builder, op.getLoc(), op.getVar(), op.getStructured(), op.getImplicit(),
+      op.getBounds());
+  mapInitialOp.setName(op.getName());
+  op.getVarMutable().assign(mapInitialOp.getAccVar());
+}
+
+// Whether a recipe region reads the variable it privatizes - a descriptor
+// recipe loads it for the bounds, while a scalar one ignores it. Both init and
+// destroy receive it as their first argument.
+static bool readsVar(Region &region) {
+  if (region.empty() || region.getNumArguments() == 0)
+    return false;
+  return !region.getArgument(0).use_empty();
 }
 
 template <typename OpTy>
@@ -447,7 +456,7 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::FirstprivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << firstprivateOp << "\n"
                               << symbolRef << "\n");
-      handleFirstprivateMapping(firstprivateOp);
+      handleInitialValueMapping(firstprivateOp);
       if (failed(
               materialize(firstprivateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
@@ -466,6 +475,9 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::PrivateRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << privateOp << "\n"
                               << symbolRef << "\n");
+      if (readsVar(recipeOp.getInitRegion()) ||
+          readsVar(recipeOp.getDestroyRegion()))
+        handleInitialValueMapping(privateOp);
       if (failed(materialize(privateOp, recipeOp, accOp, accSupport, policy)))
         return failure();
     }
