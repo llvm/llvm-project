@@ -165,9 +165,9 @@ define float @fold_abs_in_branch_phi(float %arg1, float %arg2) {
 ; GFX10-NEXT:  .LBB5_2: ; %header
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x40400000, v0
-; GFX10-NEXT:    v_cmp_lt_f32_e32 vcc_lo, -1.0, v0
-; GFX10-NEXT:    s_cbranch_vccnz .LBB5_2
-; GFX10-NEXT:  .LBB5_3: ; %Flow1
+; GFX10-NEXT:    v_cmp_ge_f32_e32 vcc_lo, -1.0, v0
+; GFX10-NEXT:    s_cbranch_vccz .LBB5_2
+; GFX10-NEXT:  .LBB5_3: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:

@@ -34,7 +34,7 @@ define fastcc i32 @foo() #0 {
   ; CHECK-NEXT:   $vcc_lo = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.1):
-  ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK-NEXT:   liveins: $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo

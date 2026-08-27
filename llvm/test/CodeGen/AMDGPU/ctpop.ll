@@ -1644,26 +1644,17 @@ define amdgpu_kernel void @ctpop_i32_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_cmp_lg_u32 s6, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_2
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_load_dword s6, s[2:3], 0x1
-; SI-NEXT:    s_mov_b64 s[2:3], 0
+; SI-NEXT:    s_load_dword s4, s[2:3], 0x1
 ; SI-NEXT:    s_branch .LBB14_3
-; SI-NEXT:  .LBB14_2:
-; SI-NEXT:    s_mov_b64 s[2:3], -1
-; SI-NEXT:    ; implicit-def: $sgpr6
-; SI-NEXT:  .LBB14_3: ; %Flow
-; SI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; SI-NEXT:    s_cselect_b32 s2, 1, 0
-; SI-NEXT:    s_cmp_lg_u32 s2, 1
-; SI-NEXT:    s_cbranch_scc1 .LBB14_5
-; SI-NEXT:  ; %bb.4: ; %if
+; SI-NEXT:  .LBB14_2: ; %if
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_bcnt1_i32_b32 s6, s2
-; SI-NEXT:  .LBB14_5: ; %endif
+; SI-NEXT:    s_bcnt1_i32_b32 s4, s2
+; SI-NEXT:  .LBB14_3: ; %endif
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s6
+; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -1675,26 +1666,17 @@ define amdgpu_kernel void @ctpop_i32_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_cmp_lg_u32 s6, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB14_2
 ; VI-NEXT:  ; %bb.1: ; %else
-; VI-NEXT:    s_load_dword s6, s[2:3], 0x4
-; VI-NEXT:    s_mov_b64 s[2:3], 0
+; VI-NEXT:    s_load_dword s4, s[2:3], 0x4
 ; VI-NEXT:    s_branch .LBB14_3
-; VI-NEXT:  .LBB14_2:
-; VI-NEXT:    s_mov_b64 s[2:3], -1
-; VI-NEXT:    ; implicit-def: $sgpr6
-; VI-NEXT:  .LBB14_3: ; %Flow
-; VI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; VI-NEXT:    s_cselect_b32 s2, 1, 0
-; VI-NEXT:    s_cmp_lg_u32 s2, 1
-; VI-NEXT:    s_cbranch_scc1 .LBB14_5
-; VI-NEXT:  ; %bb.4: ; %if
+; VI-NEXT:  .LBB14_2: ; %if
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bcnt1_i32_b32 s6, s2
-; VI-NEXT:  .LBB14_5: ; %endif
+; VI-NEXT:    s_bcnt1_i32_b32 s4, s2
+; VI-NEXT:  .LBB14_3: ; %endif
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s6
+; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -1741,24 +1723,15 @@ define amdgpu_kernel void @ctpop_i32_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; SI-GISEL-NEXT:    s_mov_b32 s6, 1
 ; SI-GISEL-NEXT:    s_cbranch_scc0 .LBB14_2
 ; SI-GISEL-NEXT:  ; %bb.1: ; %else
 ; SI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x1
-; SI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; SI-GISEL-NEXT:    s_branch .LBB14_3
-; SI-GISEL-NEXT:  .LBB14_2:
-; SI-GISEL-NEXT:    ; implicit-def: $sgpr2
-; SI-GISEL-NEXT:  .LBB14_3: ; %Flow
-; SI-GISEL-NEXT:    s_xor_b32 s3, s6, 1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
-; SI-GISEL-NEXT:    s_cbranch_scc1 .LBB14_5
-; SI-GISEL-NEXT:  ; %bb.4: ; %if
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:  .LBB14_2: ; %if
 ; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0xd
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_bcnt1_i32_b32 s2, s2
-; SI-GISEL-NEXT:  .LBB14_5: ; %endif
+; SI-GISEL-NEXT:  .LBB14_3: ; %endif
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -1772,24 +1745,15 @@ define amdgpu_kernel void @ctpop_i32_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; VI-GISEL-NEXT:    s_mov_b32 s6, 1
 ; VI-GISEL-NEXT:    s_cbranch_scc0 .LBB14_2
 ; VI-GISEL-NEXT:  ; %bb.1: ; %else
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x4
-; VI-GISEL-NEXT:    s_mov_b32 s6, 0
 ; VI-GISEL-NEXT:    s_branch .LBB14_3
-; VI-GISEL-NEXT:  .LBB14_2:
-; VI-GISEL-NEXT:    ; implicit-def: $sgpr2
-; VI-GISEL-NEXT:  .LBB14_3: ; %Flow
-; VI-GISEL-NEXT:    s_xor_b32 s3, s6, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
-; VI-GISEL-NEXT:    s_cbranch_scc1 .LBB14_5
-; VI-GISEL-NEXT:  ; %bb.4: ; %if
-; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-GISEL-NEXT:  .LBB14_2: ; %if
 ; VI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x34
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_bcnt1_i32_b32 s2, s2
-; VI-GISEL-NEXT:  .LBB14_5: ; %endif
+; VI-GISEL-NEXT:  .LBB14_3: ; %endif
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1

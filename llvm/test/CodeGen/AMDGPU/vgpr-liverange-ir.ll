@@ -161,7 +161,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT:   S_BRANCH %bb.2
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5.if.end:
-  ; SI-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
+  ; SI-NEXT:   successors: %bb.1(0x7c000000), %bb.6(0x04000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[PHI3]], %bb.2, [[V_MUL_F32_e64_]], %bb.3
   ; SI-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[PHI2]], %bb.2, [[V_ADD_U32_e64_]], %bb.3
@@ -482,7 +482,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   S_BRANCH %bb.7
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2.if.then9:
-  ; SI-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   S_CBRANCH_SCC0 %bb.4, implicit undef $scc
   ; SI-NEXT: {{  $}}

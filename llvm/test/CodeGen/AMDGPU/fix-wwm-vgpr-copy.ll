@@ -15,9 +15,9 @@ define amdgpu_hs void @wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 1, 4, s[2:3]
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_mov_b64 exec, s[2:3]
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb42
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:  .LBB0_2: ; %bb602
@@ -70,9 +70,9 @@ define amdgpu_hs void @strict_wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 1, 4, s[2:3]
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_mov_b64 exec, s[2:3]
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb42
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:  .LBB1_2: ; %bb602

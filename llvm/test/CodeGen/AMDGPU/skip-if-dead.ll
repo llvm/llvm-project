@@ -965,7 +965,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; SI-NEXT:    s_cbranch_vccnz .LBB10_2
-; SI-NEXT:  .LBB10_4: ; %Flow1
+; SI-NEXT:  .LBB10_4: ; %Flow
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -1010,7 +1010,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX10-WAVE64-NEXT:    s_cbranch_vccnz .LBB10_1
-; GFX10-WAVE64-NEXT:  .LBB10_3: ; %Flow1
+; GFX10-WAVE64-NEXT:  .LBB10_3: ; %Flow
 ; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX10-WAVE64-NEXT:    global_store_dword v[0:1], v0, off
@@ -1053,7 +1053,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-WAVE32-NEXT:    s_cbranch_vccnz .LBB10_1
-; GFX10-WAVE32-NEXT:  .LBB10_3: ; %Flow1
+; GFX10-WAVE32-NEXT:  .LBB10_3: ; %Flow
 ; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX10-WAVE32-NEXT:    global_store_dword v[0:1], v0, off
@@ -1096,7 +1096,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB10_1
-; GFX11-NEXT:  .LBB10_3: ; %Flow1
+; GFX11-NEXT:  .LBB10_3: ; %Flow
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
