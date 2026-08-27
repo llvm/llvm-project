@@ -24,6 +24,9 @@ i&
   i&  /* inline comment */  
   /* comment 2 */  
   =4
+! CHECK: i=42
+i&
+/* c */ &= 42
 
 ! Multi-line comment.
 ! CHECK: i=5
@@ -45,6 +48,13 @@ i&
  * line */
 !$omp llel
 !$omp end parallel
+! CHECK: !$OMP PARALLEL DO
+! CHECK: !$OMP END PARALLEL DO
+!$omp parallel do &
+/* c */ !$omp private(i)
+  do i = 1, 10
+  end do
+!$omp end parallel do
 
 ! Source line continuation after macro expansion.
 ! CHECK: i=12

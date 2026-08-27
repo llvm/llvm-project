@@ -662,6 +662,16 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
   return p;
 }
 
+// If `cComment` is non-null, C-style comments are skipped, and `*cComment`
+// is set to point to the first C-style comment found, or to null if none
+// were found.
+// If `cComment` is null, C-style comments are not skipped.
+//
+// The returned first C-style comment is used to emit a warning if that
+// comment is actually consumed. This is consistent with how C-style
+// comment warnings are emitted elsewhere: only the first one is warned
+// about, then SkipCComments is called, which may skip multiple C-style
+// comments.
 const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
     const char *p, const char **cComment) const {
   const char *firstCComment{nullptr};
