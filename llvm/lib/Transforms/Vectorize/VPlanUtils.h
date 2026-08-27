@@ -230,6 +230,11 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 LLVM_ABI_FOR_TEST VPValue *
 reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
 
+inline VPValue *reconstructSSA(VPBasicBlock *VPBB,
+                               DenseMap<VPBasicBlock *, VPValue *> &&Defs) {
+  return reconstructSSA(VPBB, Defs);
+}
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.

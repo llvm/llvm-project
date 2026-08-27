@@ -1924,8 +1924,8 @@ TEST_F(VPUtilsTest, ReconstructSSA) {
   auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB2->appendRecipe(Def2);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}, {VPBB2, Def2}};
-  auto *Res = cast<VPPhi>(vputils::reconstructSSA(VPBB4, Defs));
+  auto *Res = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB2, Def2}}));
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def2);
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Def1);
 }
@@ -1956,8 +1956,8 @@ TEST_F(VPUtilsTest, ReconstructSSAPoisonExample) {
   auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB1->appendRecipe(Def1);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Poison}, {VPBB2, Def1}};
-  auto *Res = cast<VPPhi>(vputils::reconstructSSA(VPBB4, Defs));
+  auto *Res = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Poison}, {VPBB2, Def1}}));
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def1);
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Poison);
 }
@@ -1993,8 +1993,8 @@ TEST_F(VPUtilsTest, ReconstructSSAMultiplePhis) {
   auto *Def3 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB3->appendRecipe(Def3);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB2, Def2}, {VPBB3, Def3}};
-  auto *Phi6 = cast<VPPhi>(vputils::reconstructSSA(VPBB6, Defs));
+  auto *Phi6 = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB6, {{VPBB2, Def2}, {VPBB3, Def3}}));
   EXPECT_EQ(Phi6->getIncomingValueForBlock(VPBB5), Def3);
   EXPECT_TRUE(isa<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4)));
 
@@ -2026,8 +2026,7 @@ TEST_F(VPUtilsTest, ReconstructSSAFold) {
   VPBB1->appendRecipe(Def);
 
   // Check that phis with all equal incoming values are folded away.
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB2, Def}, {VPBB3, Def}};
-  EXPECT_EQ(vputils::reconstructSSA(VPBB4, Defs), Def);
+  EXPECT_EQ(vputils::reconstructSSA(VPBB4, {{VPBB2, Def}, {VPBB3, Def}}), Def);
 }
 
 TEST_F(VPUtilsTest, ReconstructSSACycle) {
@@ -2057,8 +2056,8 @@ TEST_F(VPUtilsTest, ReconstructSSACycle) {
   auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB3->appendRecipe(Def2);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}, {VPBB3, Def2}};
-  auto *Phi1 = cast<VPPhi>(vputils::reconstructSSA(VPBB4, Defs));
+  auto *Phi1 = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB3, Def2}}));
   EXPECT_EQ(Phi1->getIncomingValueForBlock(VPBB3), Def2);
   EXPECT_TRUE(isa<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2)));
 
@@ -2083,8 +2082,7 @@ TEST_F(VPUtilsTest, ReconstructSSAUnreachableCycle) {
   auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB1->appendRecipe(Def1);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}};
-  EXPECT_DEATH(vputils::reconstructSSA(VPBB2, Defs),
+  EXPECT_DEATH(vputils::reconstructSSA(VPBB2, {{VPBB1, Def1}}),
                "VPlan without any entry node without predecessors");
 }
 
@@ -2107,8 +2105,7 @@ TEST_F(VPUtilsTest, ReconstructSSAUnreachableCyclePredecessor) {
   auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB1->appendRecipe(Def1);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}};
-  EXPECT_DEATH(vputils::reconstructSSA(VPBB3, Defs),
+  EXPECT_DEATH(vputils::reconstructSSA(VPBB3, {{VPBB1, Def1}}),
                "VPlan without any entry node without predecessors");
 }
 #endif
@@ -2136,8 +2133,8 @@ TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessor) {
   auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB2->appendRecipe(Def2);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}, {VPBB2, Def2}};
-  auto *Phi = cast<VPPhi>(vputils::reconstructSSA(VPBB3, Defs));
+  auto *Phi = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB3, {{VPBB1, Def1}, {VPBB2, Def2}}));
   EXPECT_EQ(Phi->getIncomingValue(0), Def1);
   EXPECT_EQ(Phi->getIncomingValue(1), Def1);
   EXPECT_EQ(Phi->getIncomingValue(2), Def2);
@@ -2162,10 +2159,8 @@ TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessorAllEqual) {
   auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB1->appendRecipe(Def1);
 
-  DenseMap<VPBasicBlock *, VPValue *> Defs = {{VPBB1, Def1}};
-  EXPECT_EQ(vputils::reconstructSSA(VPBB3, Defs), Def1);
-  Defs = {{VPBB1, Def1}};
-  EXPECT_EQ(vputils::reconstructSSA(VPBB2, Defs), Def1);
+  EXPECT_EQ(vputils::reconstructSSA(VPBB3, {{VPBB1, Def1}}), Def1);
+  EXPECT_EQ(vputils::reconstructSSA(VPBB2, {{VPBB1, Def1}}), Def1);
 }
 
 TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
