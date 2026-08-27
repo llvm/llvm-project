@@ -111,8 +111,14 @@ createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
 FunctionPass *createWebAssemblyPostLegalizerCombiner();
 void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
 
-FunctionPass *createWebAssemblyPreLegalizerCombiner();
-void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
+class WebAssemblyPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<WebAssemblyPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyPreLegalizerCombinerLegacyPass();
 
 // ISel and immediate followup passes.
 class WebAssemblyISelDAGToDAGPass : public SelectionDAGISelPass {
@@ -333,6 +339,7 @@ void initializeWebAssemblyMemIntrinsicResultsLegacyPass(PassRegistry &);
 void initializeWebAssemblyNullifyDebugValueListsLegacyPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PassRegistry &);
 void initializeWebAssemblyPeepholeLegacyPass(PassRegistry &);
+void initializeWebAssemblyPreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegColoringLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyLegacyPass(PassRegistry &);
