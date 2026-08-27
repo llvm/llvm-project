@@ -53768,6 +53768,52 @@ static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
   return SDValue();
 }
 
+// Matches the following pattern:
+//
+//   (or (and X, HighBitsMask(C)), (srl Y, C)) --> (fshl (srl X, BW-C), Y, BW-C)
+static SDValue combineDisjointORToSHLD(SDNode *N, SDLoc &DL, SelectionDAG &DAG,
+										const X86Subtarget &Subtarget) {
+	using namespace SDPatternMatch;
+
+	N->dump();
+
+	// Bail if the OR is not disjoint or if SHLD is slow
+	if (!N->getFlags().hasDisjoint() || Subtarget.isSHLDSlow())
+		return SDValue();
+
+	EVT VT = N->getValueType(0);
+	APInt Mask;
+	uint64_t ShiftAmount;
+	SDValue X, Y;
+
+	bool Match = sd_match(N, 
+			m_Or( m_OneUse(m_And( m_Value(X), m_ConstInt(Mask))), 
+					 m_OneUse(m_Shl( m_Value(Y), m_ConstInt(ShiftAmount)))));
+
+	// Max bit-width of operands
+	uint64_t MaxMaskBitWidth = VT.getSizeInBits();
+
+	// Check for Mask and ShiftAmount
+	//
+	// (shl Y, ShiftAmount) fills the top (MaxMaskBitWidth - ShiftAmount) bits,
+	// so X must keep exactly the low ShiftAmount.
+	APInt ExpectedMask = APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount);
+
+	bool Applicable = Match && (ShiftAmount > 0) 
+							&& (ShiftAmount < MaxMaskBitWidth)
+							&& (Mask == ExpectedMask);
+
+	if (!Applicable)
+		return SDValue();
+
+	uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount;
+	SDValue ShVal = DAG.getShiftAmountConstant(InvShAmt, VT, DL);
+	SDValue SHLVal = DAG.getNode(ISD::SHL, DL, VT, X, ShVal);
+	SDValue fin = DAG.getNode(ISD::FSHR, DL, VT, Y, SHLVal, ShVal);
+
+	return fin;
+}
+
 static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
                          const X86Subtarget &Subtarget) {
@@ -53829,6 +53875,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineOrWithGF2P8AFFINEQB(N, dl, DAG, VT))
     return R;
+
+  if (SDValue R = combineDisjointORToSHLD(N, dl, DAG, Subtarget))
+  	  return R;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
