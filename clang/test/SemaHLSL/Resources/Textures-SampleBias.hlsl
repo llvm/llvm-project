@@ -46,40 +46,33 @@ void main() {
   tex.SampleBias(samp, loc, bias, offset);
   tex.SampleBias(samp, loc, bias, offset, clamp);
 #else
-  // This type has no overload that takes an offset.
-  // nooffset-note@* {{'SampleBias' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 4}}
-  tex.SampleBias(samp, loc, bias, offset);
+  // This type has no overload that takes an offset, but it does have one that
+  // takes a clamp, so the 4th parameter is the clamp.
+  tex.SampleBias(samp, loc, bias, clamp);
 
-  // nooffset-note@* {{'SampleBias' declared here}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 5}}
-  tex.SampleBias(samp, loc, bias, offset, clamp);
+  // Passing an offset therefore selects the clamp overload and truncates.
+  // nooffset-warning@+1 {{implicit conversion turns vector to scalar}}
+  tex.SampleBias(samp, loc, bias, offset);
 #endif
 
   // Too few arguments.
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 2 were provided}}
   // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 2 were provided}}
-  // nooffset-note@* {{'SampleBias' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleBias'}}
-  // nooffset-error@+1 {{too few arguments to function call, expected 3, have 2}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 2 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleBias'}}
   tex.SampleBias(samp, loc);
 
   // Too many arguments.
   // offset-note@*:* {{candidate function not viable: requires 5 arguments, but 6 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 6 were provided}}
-  // nooffset-note@* {{'SampleBias' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleBias'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 6}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 6 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 6 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleBias'}}
   tex.SampleBias(samp, loc, bias, offset, clamp, 0);
 
   // Invalid argument types.
   // offset-note@*:* {{no known conversion from 'const char[8]' to 'float' for 5th argument}}
-  // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 5 were provided}}
-  // offset-note@*:* {{candidate function not viable: requires 3 arguments, but 5 were provided}}
-  // nooffset-note@* {{'SampleBias' declared here}}
-  // offset-error@+2 {{no matching member function for call to 'SampleBias'}}
-  // nooffset-error@+1 {{too many arguments to function call, expected 3, have 5}}
+  // expected-note@*:* {{candidate function not viable: requires 4 arguments, but 5 were provided}}
+  // expected-note@*:* {{candidate function not viable: requires 3 arguments, but 5 were provided}}
+  // expected-error@+1 {{no matching member function for call to 'SampleBias'}}
   tex.SampleBias(samp, loc, bias, offset, "invalid");
 }
