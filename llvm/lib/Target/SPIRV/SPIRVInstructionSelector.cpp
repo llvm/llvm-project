@@ -22,6 +22,7 @@
 #include "SPIRVTypeInst.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -4475,6 +4476,7 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
                                              MachineInstr &I) const {
 
   unsigned Opcode;
+  MachineBasicBlock &BB = *I.getParent();
 
   if (STI.canUseExtension(
           SPIRV::Extension::SPV_EXT_demote_to_helper_invocation) ||
@@ -4483,15 +4485,13 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
   } else {
     Opcode = SPIRV::OpKill;
     // OpKill must be the last operation of any basic block.
-    for (MachineInstr *NextI = I.getNextNode(); NextI;) {
-      MachineInstr *ToErase = NextI;
-      NextI = NextI->getNextNode();
-      GR.invalidateMachineInstr(ToErase);
-      ToErase->eraseFromParent();
+    for (MachineInstr &ToErase : make_early_inc_range(
+             make_range(std::next(I.getIterator()), BB.instr_end()))) {
+      GR.invalidateMachineInstr(&ToErase);
+      ToErase.eraseFromParent();
     }
   }
 
-  MachineBasicBlock &BB = *I.getParent();
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .constrainAllUses(TII, TRI, RBI);
   return true;
