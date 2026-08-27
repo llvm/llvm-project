@@ -10038,6 +10038,15 @@ def fhlsl_spv_use_unknown_image_format
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
 
+def fhlsl_spv_use_legacy_buffer_matrix_order
+    : Flag<["-"], "fspv-use-legacy-buffer-matrix-order">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Assume the legacy matrix order (row major) when accessing "
+               "raw buffers (e.g. ByteAddressBuffer). Defaults to column "
+               "major.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvUseLegacyBufferMatrixOrder">>;
+
 def fhlsl_spv_enable_maximal_reconvergence
     : Flag<["-"], "fspv-enable-maximal-reconvergence">,
       Group<dxc_Group>,

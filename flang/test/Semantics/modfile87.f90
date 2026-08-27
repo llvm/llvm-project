@@ -8,7 +8,7 @@
 ! submodule's subprogram must still be emitted.
 
 !--- m.f90
-module modfile85m
+module modfile87m
   interface
     module subroutine inside_one()
     end subroutine
@@ -16,7 +16,7 @@ module modfile85m
 end module
 
 !--- s.f90
-submodule (modfile85m) modfile85s
+submodule (modfile87m) modfile87s
 contains
   subroutine inside_one()
   end subroutine

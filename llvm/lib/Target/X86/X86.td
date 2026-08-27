@@ -501,14 +501,6 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow",
                                        [], InlineIgnore>;
 
-def TuningSlowPDEP : SubtargetFeature<"slow-pdep", "IsPDEPSlow", "true",
-                                       "PDEP instruction is slow",
-                                       [], InlineIgnore>;
-
-def TuningSlowPEXT : SubtargetFeature<"slow-pext", "IsPEXTSlow", "true",
-                                       "PEXT instruction is slow",
-                                       [], InlineIgnore>;
-
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)",
                                         [], InlineIgnore>;
@@ -1654,10 +1646,7 @@ def ProcessorFeatures {
                                                      FeatureMOVBE,
                                                      FeatureRDRAND,
                                                      FeatureMWAITX];
-  list<SubtargetFeature> BdVer4AdditionalTuning = [TuningSlowPDEP,
-                                                   TuningSlowPEXT];
-  list<SubtargetFeature> BdVer4Tuning =
-    !listconcat(BdVer3Tuning, BdVer4AdditionalTuning);
+  list<SubtargetFeature> BdVer4Tuning = BdVer3Tuning;
   list<SubtargetFeature> BdVer4Features =
     !listconcat(BdVer3Features, BdVer4AdditionalFeatures);
 
@@ -1707,8 +1696,6 @@ def ProcessorFeatures {
                                      TuningFastMOVBE,
                                      TuningFastImm16,
                                      TuningSlowDivide64,
-                                     TuningSlowPDEP,
-                                     TuningSlowPEXT,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
@@ -1727,11 +1714,8 @@ def ProcessorFeatures {
                                                   FeatureVAES,
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
-  list<SubtargetFeature> ZN3RemoveTuning = [TuningSlowPDEP,
-                                            TuningSlowPEXT,
-                                            TuningSlowSHLD];
   list<SubtargetFeature> ZN3Tuning =
-    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), ZN3RemoveTuning);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
