@@ -67,6 +67,7 @@ private:
 
   bool isRegInGprb(Register Reg) const;
   bool isRegInFprb(Register Reg) const;
+  bool isWorthFoldingAdd(Register AddResult) const;
 
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
@@ -155,7 +156,8 @@ private:
   }
 
   ComplexRendererFns renderVLOp(MachineOperand &Root) const;
-
+  ComplexRendererFns renderAddiPair(Register BaseReg, int64_t AddiImm,
+                                    int64_t OffsetImm) const;
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
@@ -574,6 +576,22 @@ RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::renderAddiPair(Register BaseReg, int64_t AddiImm,
+                                         int64_t OffsetImm) const {
+  return {{[=](MachineInstrBuilder &MIB) {
+             Register Tmp = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+             MachineInstr *Addi =
+                 BuildMI(*MIB->getParent(), *MIB.getInstr(), MIB->getDebugLoc(),
+                         TII.get(RISCV::ADDI), Tmp)
+                     .addReg(BaseReg)
+                     .addImm(AddiImm);
+             constrainSelectedInstRegOperands(*Addi, TII, TRI, RBI);
+             MIB.addReg(Tmp);
+           },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(OffsetImm); }}};
+}
+
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   if (!Root.isReg())
     return std::nullopt;
@@ -603,10 +621,32 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
       return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
                [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
     }
+
+    // Large constant offset. Fold a -2048/2047 adjustment so the whole
+    // constant can be split across an ADDI and the load/store offset.
+    if (RHSC >= -4096 && RHSC <= 4094) {
+      int64_t Adj = RHSC < 0 ? -2048 : 2047;
+      return renderAddiPair(LHS.getReg(), Adj, RHSC - Adj);
+    }
+
+    if (isWorthFoldingAdd(Root.getReg()))
+      if (auto Fns = computeConstAddr(RHSC, /*IsPrefetch=*/false, LHS.getReg()))
+        return Fns;
   }
 
-  // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
-  // the combiner?
+  // Bare constant address. IRTranslator lowers inttoptr(C) to
+  // G_INTTOPTR(G_CONSTANT); look through it to reach the constant.
+  if (RootDef->getOpcode() == TargetOpcode::G_INTTOPTR) {
+    MachineInstr *SrcDef = MRI->getVRegDef(RootDef->getOperand(1).getReg());
+    if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT)
+      RootDef = SrcDef;
+  }
+  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    int64_t CVal = RootDef->getOperand(1).getCImm()->getSExtValue();
+    if (auto Fns = computeConstAddr(CVal, /*IsPrefetch=*/false, Register()))
+      return Fns;
+  }
+
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }}};
 }
@@ -650,19 +690,7 @@ RISCVInstructionSelector::selectAddrRegImmLsb00000(MachineOperand &Root) const {
     // Large constant: fold a -2048/2016 adjustment to save an instruction.
     if ((-2049 >= RHSC && RHSC >= -4096) || (4063 >= RHSC && RHSC >= 2017)) {
       int64_t Adj = RHSC < 0 ? -2048 : 2016;
-      int64_t AdjustedOffset = RHSC - Adj;
-      Register BaseReg = LHS.getReg();
-      return {{[=](MachineInstrBuilder &MIB) {
-                 Register Tmp = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-                 MachineInstr *Addi =
-                     BuildMI(*MIB->getParent(), *MIB.getInstr(),
-                             MIB->getDebugLoc(), TII.get(RISCV::ADDI), Tmp)
-                         .addReg(BaseReg)
-                         .addImm(AdjustedOffset);
-                 constrainSelectedInstRegOperands(*Addi, TII, TRI, RBI);
-                 MIB.addReg(Tmp);
-               },
-               [=](MachineInstrBuilder &MIB) { MIB.addImm(Adj); }}};
+      return renderAddiPair(LHS.getReg(), RHSC - Adj, Adj);
     }
 
     // Otherwise split the constant into Hi (materialized + added to the base)
@@ -1685,6 +1713,29 @@ bool RISCVInstructionSelector::isRegInGprb(Register Reg) const {
 
 bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
   return RBI.getRegBank(Reg, *MRI, TRI)->getID() == RISCV::FPRBRegBankID;
+}
+
+// A G_PTR_ADD result is worth splitting into Hi (materialized) +
+// Lo12 (folded offset) only if every user is a plain scalar load/store
+// using it as the address. Otherwise the ADD is selected on its own with
+// the full materialized constant, making the Hi materialization here redundant.
+bool RISCVInstructionSelector::isWorthFoldingAdd(Register AddResult) const {
+  for (const MachineOperand &Use : MRI->use_operands(AddResult)) {
+    const MachineInstr *User = Use.getParent();
+    auto *LdSt = dyn_cast<GLoadStore>(User);
+    if (!LdSt)
+      return false;
+    // Must be used as the pointer, not the stored value.
+    if (LdSt->getPointerReg() != AddResult)
+      return false;
+    if (isStrongerThanMonotonic(LdSt->getMMO().getSuccessOrdering()))
+      return false;
+    // Only scalar integer/f16/f32/f64 memory (exclude vectors, f128, ...).
+    LLT Ty = MRI->getType(User->getOperand(0).getReg());
+    if (!Ty.isScalar() || Ty.getSizeInBits() > 64)
+      return false;
+  }
+  return true;
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
