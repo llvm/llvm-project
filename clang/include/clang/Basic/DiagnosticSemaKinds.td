@@ -11471,14 +11471,6 @@ def err_noreturn_has_return_expr : Error<
 def warn_noreturn_coroutine : Warning<
   "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
   InGroup<InvalidNoreturn>;
-def err_carries_dependency_missing_on_first_decl : Error<
-  "%select{function|parameter}0 declared '[[carries_dependency]]' "
-  "after its first declaration">;
-def note_carries_dependency_missing_first_decl : Note<
-  "declaration missing '[[carries_dependency]]' attribute is here">;
-def err_carries_dependency_param_not_function_decl : Error<
-  "'[[carries_dependency]]' attribute only allowed on parameter in a function "
-  "declaration or lambda">;
 def err_block_not_allowed_on : Error<
   "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
   "%NonlocalVariable{a nonlocal variable}|"
