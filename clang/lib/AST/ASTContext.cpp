@@ -15171,7 +15171,7 @@ LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
   return getLangASFromTargetAS(AS);
 }
 
-typename clang::LazyGenerationalDeclPtr::ValueType
+clang::LazyGenerationalDeclPtr::ValueType
 clang::LazyGenerationalDeclPtr::makeValue(const clang::ASTContext &Ctx,
                                           Decl *Value) {
   if (auto *Source = Ctx.getExternalSource())
