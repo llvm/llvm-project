@@ -32,6 +32,13 @@ Version 24.0
   Symbol added: _ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE
   Symbol added: _ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE
 
+* [libc++] Add <debugging> functions
+
+  All platforms
+  -------------
+  Symbol added: __ZNSt3__119is_debugger_presentEv
+  Symbol added: __ZNSt3__112__breakpointEv
+
 ------------
 Version 23.0
 ------------

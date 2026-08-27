@@ -46,8 +46,6 @@
 #  include <unistd.h>
 #endif
 
-_LIBCPP_EXPORTED_FROM_ABI volatile int __gnu_cxx::debugger_signal_for_breakpoint = 0;
-
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmissing-prototypes")
 
@@ -68,9 +66,6 @@ void __breakpoint() noexcept {
 // `is_debugger_present()` implementation
 
 OVERRIDABLE_FUNCTION bool is_debugger_present() noexcept {
-  if (__gnu_cxx::debugger_signal_for_breakpoint != 0)
-    return true;
-
 #if defined(_WIN32)
 
   return IsDebuggerPresent();

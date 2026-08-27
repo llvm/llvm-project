@@ -364,7 +364,6 @@
 {'is_defined': False, 'name': '___cxa_vec_new3', 'type': 'U'}
 {'is_defined': False, 'name': '___dynamic_cast', 'type': 'U'}
 {'is_defined': False, 'name': '___gxx_personality_v0', 'type': 'U'}
-{'is_defined': True, 'name': '__ZN9__gnu_cxx30debugger_signal_for_breakpointE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNKSt10bad_typeid4whatEv', 'type': 'I'}
 {'is_defined': True, 'name': '__ZNKSt11logic_error4whatEv', 'type': 'I'}
 {'is_defined': True, 'name': '__ZNKSt12bad_any_cast4whatEv', 'type': 'FUNC'}
