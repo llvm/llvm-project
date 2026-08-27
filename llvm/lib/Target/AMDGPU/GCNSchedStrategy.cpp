@@ -2804,10 +2804,18 @@ bool RewriteMFMAFormStage::rewrite(
         isRecolorSafe(DstReg, DstReachingUses, RewriteCandsSet, /*IsDst=*/true);
     for (MachineOperand *RUOp : DstReachingUses) {
       MachineInstr *UserMI = RUOp->getParent();
-      // A group-member MFMA reads the AGPR result directly; any other user can
-      // only avoid a bridge if it accepts an AGPR operand.
-      bool CanReadAGPR = TII->isMAI(*UserMI) ? RewriteCandsSet.contains(UserMI)
-                                             : useAcceptsAGPR(RUOp, TII, SRI);
+      // Decide whether this reaching use can read the dst's AGPR form directly
+      // or needs an AGPR->VGPR bridge copy.
+      //   - A group-member MFMA always reads the AGPR result directly.
+      //   - Any other user can skip the bridge only when the dst is recolored
+      //     to AGPR (DstRecolorSafe) and its operand accepts an AGPR. When the
+      //     dst is unsafe, its original reg stays VGPR, so every non-MFMA user
+      //     must go through a bridge copy.
+      bool CanReadAGPR;
+      if (TII->isMAI(*UserMI))
+        CanReadAGPR = RewriteCandsSet.contains(UserMI);
+      else
+        CanReadAGPR = DstRecolorSafe && useAcceptsAGPR(RUOp, TII, SRI);
       if (!CanReadAGPR &&
           find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
         DstReachingUseCopies.push_back(RUOp);
@@ -2832,6 +2840,11 @@ bool RewriteMFMAFormStage::rewrite(
     // reg to carry the AGPR-form value and record the mapping, leaving the
     // original dst reg in VGPR form.
     if (DstReachingUses.empty() && !DstRecolorSafe) {
+      // Exclusion must already have dropped any dst that was bridged as an
+      // earlier MFMA's src2, so it cannot be pre-mapped when we reach here.
+      assert(
+          !RedefMap.contains(DstReg) &&
+          "empty-use dst unexpectedly already mapped -- exclusion missed it");
       const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
       const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
       MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
@@ -2850,6 +2863,23 @@ bool RewriteMFMAFormStage::rewrite(
       DAG.LIS->InsertMachineInstrInMaps(*Bridge);
     }
 
+    // Unsafe dst with no def to bridge: no copy needed, but it must still be
+    // mapped so reclassification recolors the mapped reg instead of illegally
+    // recoloring the original VGPR dst to AGPR.
+    if (DstUseDefsReplace.empty() && !DstRecolorSafe) {
+      auto RI = RedefMap.find(DstReg);
+      if (RI != RedefMap.end()) {
+        MappedReg = RI->second;
+      } else {
+        assert(!ReachingDefCopyMap.contains(DstReg));
+        const TargetRegisterClass *DstRC = DAG.MRI.getRegClass(DstReg);
+        const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(DstRC);
+
+        // Track the mapping of the original register to the new register.
+        MappedReg = DAG.MRI.createVirtualRegister(VGPRRC);
+        RedefMap[DstReg] = MappedReg;
+      }
+    }
     if (!DstUseDefsReplace.empty()) {
       auto RI = RedefMap.find(DstReg);
       if (RI != RedefMap.end()) {

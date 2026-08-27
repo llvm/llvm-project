@@ -2505,9 +2505,9 @@ body:             |
   ; CHECK-NEXT:   KILL [[COPY2]], [[COPY5]], [[COPY3]], [[COPY6]], [[COPY4]], [[COPY1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 [[DEF11]], [[DS_READ_B128_gfx9_]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vreg_128_align2 = COPY [[COPY]]
+  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 [[DEF11]], [[COPY7]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   KILL [[DEF17]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF12]], [[DEF13]], [[COPY7]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
