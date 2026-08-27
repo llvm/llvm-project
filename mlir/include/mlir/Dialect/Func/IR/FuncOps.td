@@ -121,13 +121,7 @@ def CallOp : Func_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)`
-    oilist<`,`>(
-        `arg_attrs` `=` $arg_attrs
-      | `res_attrs` `=` $res_attrs
-      | `no_inline` $no_inline
-    )
-    attr-dict `:`
+    $callee `(` $operands `)` prop-dict attr-dict `:`
     functional-type($operands, results)
   }];
 }
