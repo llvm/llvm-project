@@ -4,6 +4,8 @@
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE42
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2,+fast-vector-fdiv | FileCheck %s --check-prefixes=AVX2-FAST-FDIV
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mcpu=c86-4g-m4 | FileCheck %s --check-prefixes=AVX2-FAST-FDIV
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512
 ; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512
 ;
@@ -576,6 +578,17 @@ define i32 @fdiv(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:35 SizeLat:3 for: %V4F64 = fdiv <4 x double> undef, undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:2 Lat:70 SizeLat:6 for: %V8F64 = fdiv <8 x double> undef, undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; AVX2-FAST-FDIV-LABEL: 'fdiv'
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %F32 = fdiv float undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %V4F32 = fdiv <4 x float> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:3 for: %V8F32 = fdiv <8 x float> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:2 Lat:26 SizeLat:6 for: %V16F32 = fdiv <16 x float> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %F64 = fdiv double undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %V2F64 = fdiv <2 x double> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:3 for: %V4F64 = fdiv <4 x double> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:40 SizeLat:6 for: %V8F64 = fdiv <8 x double> undef, undef
+; AVX2-FAST-FDIV-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512-LABEL: 'fdiv'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:1 for: %F32 = fdiv float undef, undef
