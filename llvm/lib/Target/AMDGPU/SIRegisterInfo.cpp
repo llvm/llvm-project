@@ -3265,15 +3265,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // after). Only bail out when there is no frame register, or a VGPR
       // operand is needed but none could be scavenged.
       if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
-        int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
+        int SVfromSSOpcode =
+            AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
+        int SVfromSVSOpcode =
+            AMDGPU::getFlatScratchInstSVfromSVS(MI->getOpcode());
+        int SVOpcode = SVfromSSOpcode != -1 ? SVfromSSOpcode : SVfromSVSOpcode;
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
           // SV form encodes only the offset in vaddr; an SS-form scratch op
           // keeps its FI in the SGPR saddr, so this is only reached with no
           // frame register.
           assert(!FrameReg &&
                  "SV-form fallback cannot encode a frame register");
-          Register TmpVGPR = RS->scavengeRegisterBackwards(
-              AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
 
           // Fold as much of the constant offset as possible into the SV form
           // instruction's immediate offset field, and materialize the
@@ -3285,12 +3287,31 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           auto [ImmOffset, RemainderOffset] =
               TII->splitFlatOffset(FullOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                    AMDGPU::FlatAddrSpace::FlatScratch);
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpVGPR)
-              .addImm(RemainderOffset);
+
+          Register UsedVAddr;
+          if (MachineOperand *VAddr =
+                  TII->getNamedOperand(*MI, AMDGPU::OpName::vaddr)) {
+            // SVS form: add RemainderOffset to vaddr.
+            Register Src = VAddr->getReg();
+            Register Dst = VAddr->isKill() ? Src
+                                           : RS->scavengeRegisterBackwards(
+                                                 AMDGPU::VGPR_32RegClass, MI,
+                                                 false, 0, /*AllowSpill=*/true);
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_U32_e32), Dst)
+                .addImm(RemainderOffset)
+                .addReg(Src, getKillRegState(VAddr->isKill()));
+            UsedVAddr = Dst;
+          } else {
+            // SS form: no vaddr, materialize remainder as vgpr.
+            UsedVAddr = RS->scavengeRegisterBackwards(
+                AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), UsedVAddr)
+                .addImm(RemainderOffset);
+          }
           BuildMI(*MBB, MI, DL, TII->get(SVOpcode))
-              .add(MI->getOperand(0)) // $vdata
-              .addReg(TmpVGPR)        // $vaddr
-              .addImm(ImmOffset)      // $offset
+              .add(MI->getOperand(0))            // $vdata
+              .addReg(UsedVAddr, RegState::Kill) // $vaddr
+              .addImm(ImmOffset)                 // $offset
               .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::cpol));
           MI->eraseFromParent();
           return true;
