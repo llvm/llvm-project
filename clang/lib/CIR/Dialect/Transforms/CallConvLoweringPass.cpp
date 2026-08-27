@@ -856,7 +856,7 @@ void CallConvLoweringPass::runOnOperation() {
     // and no translation unit can ever call or define it with real argument
     // data.  Leave it unclassified.
     cir::FuncType fnTy = f.getFunctionType();
-    if (isX86 && f.isDeclaration() &&
+    if (f.isDeclaration() &&
         (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
          llvm::any_of(fnTy.getInputs(), hasIncompleteRecordByValue)))
       return;
