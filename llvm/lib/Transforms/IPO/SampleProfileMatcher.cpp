@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -880,15 +881,24 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   if (CandidateByBaseName.empty())
     return;
 
+  // StringMap iterates in hash order, and the order below decides which
+  // profiles get merged into NewlyLoadedProfiles first. Sort by basename so
+  // the result does not depend on the hash table layout.
+  SmallVector<std::pair<StringRef, FunctionId>> Candidates;
+  Candidates.reserve(CandidateByBaseName.size());
+  for (const auto &Entry : CandidateByBaseName)
+    Candidates.emplace_back(Entry.first(), Entry.second);
+  llvm::sort(Candidates, llvm::less_first());
+
   // Load candidate profiles on demand, match, and flatten.
   DenseSet<StringRef> ToLoad;
-  for (auto &[BaseName, ProfId] : CandidateByBaseName)
+  for (const auto &[BaseName, ProfId] : Candidates)
     ToLoad.insert(ProfId.stringRef());
   Reader.read(ToLoad);
 
   unsigned MatchCount = 0;
   SampleProfileMap NewlyLoadedProfiles;
-  for (auto &[BaseName, ProfId] : CandidateByBaseName) {
+  for (const auto &[BaseName, ProfId] : Candidates) {
     if (!isProfileUnused(ProfId))
       continue;
     Function *OrphanFunc = OrphansByBaseName.lookup(BaseName);
