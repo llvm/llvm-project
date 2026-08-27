@@ -177,8 +177,8 @@ public:
     /// with any other flag.
     RawSectionExclude = 1 << 3,
 
-    RawSectionFlagsMask =
-        RawSectionAlloc | RawSectionWrite | RawSectionExec | RawSectionExclude
+    RawSectionFlagsMask = RawSectionAlloc | RawSectionWrite | RawSectionExec |
+        RawSectionExclude
   };
 
   /// Checks whether \p Flags is a valid combination of RawSectionFlags.
