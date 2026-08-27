@@ -61,83 +61,199 @@ body:            |
     %4:areg_64 = IMPLICIT_DEF
     %5:vreg_128_align2 = IMPLICIT_DEF
 
-    ; Check virtual register uses
+    ; Check virtual register uses: an unaligned tuple is a misalignment, and its
+    ; class is also wrong for the aligned operand.
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 %0:vreg_64_align2, %1:vreg_64
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_64_Align2 register, but got a VReg_64 register
     GLOBAL_STORE_DWORDX2 %0, %1, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX3 %0:vreg_64_align2, %2:vreg_96
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_96_Align2 register, but got a VReg_96 register
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX4 %0:vreg_64_align2, %3:vreg_128
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_128_Align2 register, but got a VReg_128 register
     GLOBAL_STORE_DWORDX4 %0, %3, 0, 0, implicit $exec
 
-    ; Check virtual registers with subregisters
+    ; Check virtual registers with subregisters.
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 %0:vreg_64_align2, %3.sub0_sub1:vreg_128
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: VReg_128.sub0_sub1 cannot be used for AV_64_Align2 operands.
     GLOBAL_STORE_DWORDX2 %0, %3.sub0_sub1, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 %0:vreg_64_align2, %3.sub2_sub3:vreg_128
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: VReg_128.sub2_sub3 cannot be used for AV_64_Align2 operands.
     GLOBAL_STORE_DWORDX2 %0, %3.sub2_sub3, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 %0:vreg_64_align2, %3.sub1_sub2:vreg_128
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: VReg_128.sub1_sub2 cannot be used for AV_64_Align2 operands.
     GLOBAL_STORE_DWORDX2 %0, %3.sub1_sub2, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 %0:vreg_64_align2, %5.sub1_sub2:vreg_128_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: VReg_128_Align2.sub1_sub2 cannot be used for AV_64_Align2 operands.
     GLOBAL_STORE_DWORDX2 %0, %5.sub1_sub2, 0, 0, implicit $exec
 
-    ; Check physical register uses
+    ; Check physical register uses.
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr3_vgpr4
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr3_vgpr4 is not a AV_64_Align2 register.
     GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr3_vgpr4_vgpr5 is not a AV_96_Align2 register.
     GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr3_vgpr4_vgpr5_vgpr6 is not a AV_128_Align2 register.
     GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr3_vgpr4_vgpr5_vgpr6, 0, 0, implicit $exec
 
-    ; Check virtual register defs
+    ; Check virtual register defs.
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: %6:vreg_64 = GLOBAL_LOAD_DWORDX2 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_64_Align2 register, but got a VReg_64 register
     %6:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: %7:vreg_96 = GLOBAL_LOAD_DWORDX3 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_96_Align2 register, but got a VReg_96 register
     %7:vreg_96 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_128_Align2 register, but got a VReg_128 register
     %8:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
 
+    ; Check physical register defs.
     ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr1_vgpr2 = GLOBAL_LOAD_DWORDX2 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr1_vgpr2 is not a AV_64_Align2 register.
     $vgpr1_vgpr2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX3 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr1_vgpr2_vgpr3 is not a AV_96_Align2 register.
     $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr1_vgpr2_vgpr3_vgpr4 = GLOBAL_LOAD_DWORDX4 %0:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: $vgpr1_vgpr2_vgpr3_vgpr4 is not a AV_128_Align2 register.
     $vgpr1_vgpr2_vgpr3_vgpr4 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
 
-    ; Check AGPRs
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; Check AGPRs.
     %9:vgpr_32 = IMPLICIT_DEF
     %10:areg_64 = IMPLICIT_DEF
     %11:areg_128_align2 = IMPLICIT_DEF
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: DS_WRITE_B64_gfx9 %9:vgpr_32, %10:areg_64
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: Expected a AV_64_Align2 register, but got a AReg_64 register
     DS_WRITE_B64_gfx9 %9, %10, 0, 0, implicit $exec
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: DS_WRITE_B64_gfx9 %9:vgpr_32, %11.sub1_sub2:areg_128_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: AReg_128_Align2.sub1_sub2 cannot be used for AV_64_Align2 operands.
     DS_WRITE_B64_gfx9 %9, %11.sub1_sub2, 0, 0, implicit $exec
 
-    ; Check aligned vgprs for FP32 Packed Math instructions.
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; Check aligned vgprs for FP32 Packed Math instructions. Each register
+    ; operand is checked individually: an unaligned VGPR is an alignment error,
+    ; while an AGPR is a register-bank mismatch for these VGPR|SGPR (VS_64)
+    ; operands and is reported as an illegal register instead. These instructions
+    ; also emit unrelated operand-format diagnostics, so only the meaningful
+    ; alignment/bank error is matched per instruction.
     %12:vreg_64 = IMPLICIT_DEF
     %13:vreg_64_align2 = IMPLICIT_DEF
     %14:areg_96_align2 = IMPLICIT_DEF
+
+    ; odd def $vgpr3_vgpr4 (v3) is a misaligned VGPR pair
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr3_vgpr4 = V_PK_MOV_B32
     $vgpr3_vgpr4 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %12:vreg_64, 11, %13:vreg_64_align2
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %12, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13:vreg_64_align2, 11, %12:vreg_64
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %14 is an AGPR - a bank mismatch, not an alignment problem
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %14 is an AGPR - a bank mismatch, not an alignment problem
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
+    ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_ADD_F32 0, %14.sub1_sub2, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %12:vreg_64, 11, %13:vreg_64_align2
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %12, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13:vreg_64_align2, 11, %12:vreg_64
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %12, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %14 is an AGPR - a bank mismatch, not an alignment problem
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %14 is an AGPR - a bank mismatch, not an alignment problem
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2:areg_96_align2, 11, %13:vreg_64_align2
+    ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = V_PK_MUL_F32 0, %14.sub1_sub2, 11, %13, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair (even aligned); src %14 is an AGPR (bank mismatch)
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %12:vreg_64, 8, %13:vreg_64_align2, 11, %14.sub0_sub1:areg_96_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: AReg_96_Align2.sub0_sub1 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %12, 8, %13, 11, %14.sub0_sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %12 is an unaligned VGPR pair (even aligned); src %14 is an AGPR (bank mismatch)
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13:vreg_64_align2, 8, %12:vreg_64, 11, %14.sub0_sub1:areg_96_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: AReg_96_Align2.sub0_sub1 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13, 8, %12, 11, %14.sub0_sub1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; src %14 is an AGPR - a bank mismatch (both %13 sources are aligned)
+    ; CHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13:vreg_64_align2, 8, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+    ; CHECK: - instruction: $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13:vreg_64_align2, 8, %13:vreg_64_align2, 11, %14.sub1_sub2:areg_96_align2
+    ; CHECK: AReg_96_Align2.sub1_sub2 cannot be used for VS_64_Align2 operands.
     $vgpr0_vgpr1 = nofpexcept V_PK_FMA_F32 8, %13, 8, %13, 11, %14.sub1_sub2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 
